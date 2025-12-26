@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.UrlType;
@@ -49,8 +49,7 @@ public class ImportPnpOperationValidator {
   private static final String EXPORT_TYPE_DYNAMIC = "dynamic";
   private static final String EXPORT_TYPE_STATIC = "static";
 
-  @Nonnull
-  private final ServerConfiguration serverConfiguration;
+  @Nonnull private final ServerConfiguration serverConfiguration;
 
   /**
    * Constructor for ImportPnpOperationValidator.
@@ -69,14 +68,10 @@ public class ImportPnpOperationValidator {
    * @return the validation result containing the ImportPnpRequest and any issues
    */
   public PreAsyncValidationResult<ImportPnpRequest> validateParametersRequest(
-      @Nonnull final RequestDetails requestDetails,
-      @Nonnull final Parameters parameters
-  ) {
+      @Nonnull final RequestDetails requestDetails, @Nonnull final Parameters parameters) {
     // Validate that PnP configuration is present.
     final PnpConfiguration pnpConfig =
-        serverConfiguration.getImport() != null
-        ? serverConfiguration.getImport().getPnp()
-        : null;
+        serverConfiguration.getImport() != null ? serverConfiguration.getImport().getPnp() : null;
     if (pnpConfig == null) {
       throw new InvalidUserInputError(
           "Ping and pull import is not configured. Please configure pathling.import.pnp settings.");
@@ -86,35 +81,35 @@ public class ImportPnpOperationValidator {
     if ((pnpConfig.getPrivateKeyJwk() == null || pnpConfig.getPrivateKeyJwk().isBlank())
         && (pnpConfig.getClientSecret() == null || pnpConfig.getClientSecret().isBlank())) {
       throw new InvalidUserInputError(
-          "Ping and pull authentication is not configured. Please provide either privateKeyJwk or clientSecret.");
+          "Ping and pull authentication is not configured. Please provide either privateKeyJwk or"
+              + " clientSecret.");
     }
 
     // Extract exportUrl parameter (required).
-    final String exportUrl = Objects.requireNonNull(
-        ParamUtil.extractFromPart(
-            parameters.getParameter(),
-            "exportUrl",
-            UrlType.class,
-            UrlType::getValue,
-            false,
-            null,
-            false,
-            new InvalidUserInputError("Missing required parameter: exportUrl")
-        ),
-        "exportUrl must not be null"
-    );
+    final String exportUrl =
+        Objects.requireNonNull(
+            ParamUtil.extractFromPart(
+                parameters.getParameter(),
+                "exportUrl",
+                UrlType.class,
+                UrlType::getValue,
+                false,
+                null,
+                false,
+                new InvalidUserInputError("Missing required parameter: exportUrl")),
+            "exportUrl must not be null");
 
     // Extract exportType parameter (optional, defaults to "dynamic").
-    final String exportType = ParamUtil.extractFromPart(
-        parameters.getParameter(),
-        "exportType",
-        Coding.class,
-        Coding::getCode,
-        true,
-        EXPORT_TYPE_DYNAMIC,
-        false,
-        new InvalidUserInputError("Invalid exportType")
-    );
+    final String exportType =
+        ParamUtil.extractFromPart(
+            parameters.getParameter(),
+            "exportType",
+            CodeType.class,
+            CodeType::getCode,
+            true,
+            EXPORT_TYPE_DYNAMIC,
+            false,
+            new InvalidUserInputError("Invalid exportType"));
 
     // Validate exportType.
     if (!EXPORT_TYPE_DYNAMIC.equals(exportType) && !EXPORT_TYPE_STATIC.equals(exportType)) {
@@ -124,43 +119,40 @@ public class ImportPnpOperationValidator {
 
     // Note: inputSource parameter is accepted but ignored for backwards compatibility.
 
-    // Extract mode parameter (optional, defaults to OVERWRITE).
-    final SaveMode saveMode = ParamUtil.extractFromPart(
-        parameters.getParameter(),
-        "mode",
-        Coding.class,
-        coding -> SaveMode.fromCode(coding.getCode()),
-        true,
-        SaveMode.OVERWRITE,
-        false,
-        new InvalidUserInputError("Unknown mode.")
-    );
+    // Extract saveMode parameter (optional, defaults to OVERWRITE).
+    final SaveMode saveMode =
+        ParamUtil.extractFromPart(
+            parameters.getParameter(),
+            "saveMode",
+            CodeType.class,
+            code -> SaveMode.fromCode(code.getCode()),
+            true,
+            SaveMode.OVERWRITE,
+            false,
+            new InvalidUserInputError("Unknown saveMode."));
 
     // Extract inputFormat parameter (optional, defaults to NDJSON).
-    final ImportFormat importFormat = ParamUtil.extractFromPart(
-        parameters.getParameter(),
-        "inputFormat",
-        Coding.class,
-        coding -> parseImportFormat(coding.getCode()),
-        true,
-        ImportFormat.NDJSON,
-        false,
-        new InvalidUserInputError("Unknown format.")
-    );
+    final ImportFormat importFormat =
+        ParamUtil.extractFromPart(
+            parameters.getParameter(),
+            "inputFormat",
+            CodeType.class,
+            code -> parseImportFormat(code.getCode()),
+            true,
+            ImportFormat.NDJSON,
+            false,
+            new InvalidUserInputError("Unknown format."));
 
-    final ImportPnpRequest importPnpRequest = new ImportPnpRequest(
-        requestDetails.getCompleteUrl(),
-        exportUrl,
-        exportType,
-        saveMode,
-        importFormat
-    );
+    final ImportPnpRequest importPnpRequest =
+        new ImportPnpRequest(
+            requestDetails.getCompleteUrl(), exportUrl, exportType, saveMode, importFormat);
 
-    final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidation.validateAcceptHeader(requestDetails, false),
-            OperationValidation.validatePreferHeader(requestDetails, false))
-        .flatMap(Collection::stream)
-        .toList();
+    final List<OperationOutcome.OperationOutcomeIssueComponent> issues =
+        Stream.of(
+                OperationValidation.validateAcceptHeader(requestDetails, false),
+                OperationValidation.validatePreferHeader(requestDetails, false))
+            .flatMap(Collection::stream)
+            .toList();
 
     return new PreAsyncValidationResult<>(importPnpRequest, issues);
   }
@@ -181,5 +173,4 @@ public class ImportPnpOperationValidator {
       throw new InvalidUserInputError(e.getMessage());
     }
   }
-
 }

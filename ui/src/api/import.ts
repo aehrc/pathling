@@ -100,14 +100,14 @@ function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
   if (options.exportType) {
     parameters.parameter!.push({
       name: "exportType",
-      valueCoding: { code: options.exportType },
+      valueCode: options.exportType,
     });
   }
 
   if (options.saveMode) {
     parameters.parameter!.push({
-      name: "mode",
-      valueCoding: { code: options.saveMode },
+      name: "saveMode",
+      valueCode: options.saveMode,
     });
   }
 

@@ -23,12 +23,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UrlType;
 import org.springframework.stereotype.Component;
 
@@ -50,45 +49,41 @@ public class ImportOperationValidator {
    * @return the validation result containing the ImportRequest and any issues
    */
   public PreAsyncValidation.PreAsyncValidationResult<ImportRequest> validateParametersRequest(
-      @Nonnull final RequestDetails requestDetails,
-      @Nonnull final Parameters parameters
-  ) {
+      @Nonnull final RequestDetails requestDetails, @Nonnull final Parameters parameters) {
     // Note: inputSource parameter is accepted but ignored for backwards compatibility.
 
     // Extract input parameters.
-    final Collection<ParametersParameterComponent> inputParts = ParamUtil.extractManyFromParameters(
-        parameters.getParameter(),
-        "input",
-        ParametersParameterComponent.class,
-        false,
-        Collections.emptyList(),
-        false,
-        new InvalidUserInputError("The input may not be empty.")
-    );
+    final Collection<ParametersParameterComponent> inputParts =
+        ParamUtil.extractManyFromParameters(
+            parameters.getParameter(),
+            "input",
+            ParametersParameterComponent.class,
+            false,
+            Collections.emptyList(),
+            false,
+            new InvalidUserInputError("The input may not be empty."));
 
-    final Map<String, Collection<String>> input = inputParts.stream()
-        .map(this::mapInputFieldsFromParameters)
-        .filter(Objects::nonNull)
-        .filter(this::filterUnsupportedResourceTypes)
-        .collect(Collectors.groupingBy(
-            InputParams::resourceType,
-            Collectors.mapping(InputParams::url, Collectors.toCollection(ArrayList::new))
-        ));
+    final Map<String, Collection<String>> input =
+        inputParts.stream()
+            .map(this::mapInputFieldsFromParameters)
+            .filter(Objects::nonNull)
+            .filter(this::filterUnsupportedResourceTypes)
+            .collect(
+                Collectors.groupingBy(
+                    InputParams::resourceType,
+                    Collectors.mapping(InputParams::url, Collectors.toCollection(ArrayList::new))));
 
     final SaveMode saveMode = getSaveModeFromParameters(parameters);
     final ImportFormat importFormat = getImportFormatFromParameters(parameters);
-    final ImportRequest importRequest = new ImportRequest(
-        requestDetails.getCompleteUrl(),
-        input,
-        saveMode,
-        importFormat
-    );
+    final ImportRequest importRequest =
+        new ImportRequest(requestDetails.getCompleteUrl(), input, saveMode, importFormat);
 
-    final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidation.validateAcceptHeader(requestDetails, false),
-            OperationValidation.validatePreferHeader(requestDetails, false))
-        .flatMap(Collection::stream)
-        .toList();
+    final List<OperationOutcome.OperationOutcomeIssueComponent> issues =
+        Stream.of(
+                OperationValidation.validateAcceptHeader(requestDetails, false),
+                OperationValidation.validatePreferHeader(requestDetails, false))
+            .flatMap(Collection::stream)
+            .toList();
 
     return new PreAsyncValidationResult<>(importRequest, issues);
   }
@@ -103,9 +98,7 @@ public class ImportOperationValidator {
   @SuppressWarnings({"ConstantValue", "ConstantConditions", "java:S2583"})
   // Null checks needed despite @Nonnull - Jackson can deserialize nulls.
   public PreAsyncValidation.PreAsyncValidationResult<ImportRequest> validateJsonRequest(
-      @Nonnull final RequestDetails requestDetails,
-      @Nonnull final ImportManifest manifest
-  ) {
+      @Nonnull final RequestDetails requestDetails, @Nonnull final ImportManifest manifest) {
     // Validate required fields (null checks needed because Jackson may deserialize nulls).
     // Note: inputSource is accepted but ignored for backwards compatibility.
     if (manifest.inputFormat() == null || manifest.inputFormat().isBlank()) {
@@ -116,32 +109,31 @@ public class ImportOperationValidator {
     }
 
     // Parse and validate input array.
-    final Map<String, Collection<String>> input = manifest.input().stream()
-        .map(this::mapInputFieldsFromJson)
-        .filter(this::filterUnsupportedResourceTypes)
-        .collect(Collectors.groupingBy(
-            InputParams::resourceType,
-            Collectors.mapping(InputParams::url, Collectors.toCollection(ArrayList::new))
-        ));
+    final Map<String, Collection<String>> input =
+        manifest.input().stream()
+            .map(this::mapInputFieldsFromJson)
+            .filter(this::filterUnsupportedResourceTypes)
+            .collect(
+                Collectors.groupingBy(
+                    InputParams::resourceType,
+                    Collectors.mapping(InputParams::url, Collectors.toCollection(ArrayList::new))));
 
     // Parse format and mode.
     final ImportFormat importFormat = parseImportFormat(manifest.inputFormat());
-    final SaveMode saveMode = manifest.mode() != null && !manifest.mode().isBlank()
-                              ? SaveMode.fromCode(manifest.mode())
-                              : SaveMode.OVERWRITE; // Default to OVERWRITE.
+    final SaveMode saveMode =
+        manifest.mode() != null && !manifest.mode().isBlank()
+            ? SaveMode.fromCode(manifest.mode())
+            : SaveMode.OVERWRITE; // Default to OVERWRITE.
 
-    final ImportRequest importRequest = new ImportRequest(
-        requestDetails.getCompleteUrl(),
-        input,
-        saveMode,
-        importFormat
-    );
+    final ImportRequest importRequest =
+        new ImportRequest(requestDetails.getCompleteUrl(), input, saveMode, importFormat);
 
-    final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidation.validateAcceptHeader(requestDetails, false),
-            OperationValidation.validatePreferHeader(requestDetails, false))
-        .flatMap(Collection::stream)
-        .toList();
+    final List<OperationOutcome.OperationOutcomeIssueComponent> issues =
+        Stream.of(
+                OperationValidation.validateAcceptHeader(requestDetails, false),
+                OperationValidation.validatePreferHeader(requestDetails, false))
+            .flatMap(Collection::stream)
+            .toList();
 
     return new PreAsyncValidationResult<>(importRequest, issues);
   }
@@ -149,8 +141,8 @@ public class ImportOperationValidator {
   private boolean filterUnsupportedResourceTypes(final InputParams inputParams) {
     final String resourceType = inputParams.resourceType();
     try {
-      final boolean supported = FhirServer.supportedResourceTypes()
-          .contains(ResourceType.fromCode(resourceType));
+      final boolean supported =
+          FhirServer.supportedResourceTypes().contains(ResourceType.fromCode(resourceType));
       if (!supported) {
         throw new InvalidUserInputError(
             "The resource type '%s' is not supported.".formatted(resourceType));
@@ -169,26 +161,24 @@ public class ImportOperationValidator {
     return ParamUtil.extractFromPart(
         parameters.getParameter(),
         "inputFormat",
-        Coding.class,
-        coding -> parseImportFormat(coding.getCode()),
+        CodeType.class,
+        code -> parseImportFormat(code.getCode()),
         true,
         ImportFormat.NDJSON, // Default to NDJSON.
         false,
-        new InvalidUserInputError("Unknown format.")
-    );
+        new InvalidUserInputError("Unknown format."));
   }
 
   private SaveMode getSaveModeFromParameters(final Parameters parameters) {
     return ParamUtil.extractFromPart(
         parameters.getParameter(),
         "saveMode",
-        Coding.class,
-        coding -> SaveMode.fromCode(coding.getCode()),
+        CodeType.class,
+        code -> SaveMode.fromCode(code.getCode()),
         true,
         SaveMode.OVERWRITE, // Default to OVERWRITE.
         false,
-        new InvalidUserInputError("Unknown saveMode.")
-    );
+        new InvalidUserInputError("Unknown saveMode."));
   }
 
   /**
@@ -208,12 +198,7 @@ public class ImportOperationValidator {
     }
   }
 
-  private record InputParams(
-      String resourceType,
-      String url
-  ) {
-
-  }
+  private record InputParams(String resourceType, String url) {}
 
   @Nullable
   private InputParams mapInputFieldsFromParameters(final ParametersParameterComponent part) {
@@ -256,7 +241,8 @@ public class ImportOperationValidator {
     try {
       return ResourceType.fromCode(resourceType).toCode();
     } catch (final FHIRException e) {
-      // For custom types, return the type as-is. Validation happens in filterUnsupportedResourceTypes.
+      // For custom types, return the type as-is. Validation happens in
+      // filterUnsupportedResourceTypes.
       return resourceType;
     }
   }
@@ -272,8 +258,7 @@ public class ImportOperationValidator {
         false,
         null,
         false,
-        new InvalidUserInputError("Missing url part in input parameter.")
-    );
+        new InvalidUserInputError("Missing url part in input parameter."));
   }
 
   @Nullable
@@ -282,8 +267,8 @@ public class ImportOperationValidator {
     return ParamUtil.extractFromPart(
         partContainingResourceTypeAndUrl,
         "resourceType",
-        Coding.class,
-        Coding::getCode,
+        CodeType.class,
+        CodeType::getCode,
         false,
         null,
         false,

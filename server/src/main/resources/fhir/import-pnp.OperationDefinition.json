@@ -36,6 +36,14 @@
       "max": "1",
       "documentation": "Controls how data is merged with existing resources. Possible values are 'error' (fail if resources exist), 'overwrite' (delete and replace all existing resources; default), 'append' (add new resources without modifying existing), 'ignore' (skip if resources exist), and 'merge' (match by ID and update or add as appropriate). This parameter is an extension to the SMART Bulk Data Import proposal that is specific to the Pathling implementation.",
       "type": "code"
+    },
+    {
+      "name": "inputFormat",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "The MIME type of the input files. Supported values are 'application/fhir+ndjson' (default), 'application/x-pathling-parquet', and 'application/x-pathling-delta+parquet'.",
+      "type": "code"
     }
   ]
 }

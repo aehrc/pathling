@@ -68,23 +68,17 @@ class ImportPnpOperationIT {
 
   private static WireMockServer wireMockServer;
 
-  @LocalServerPort
-  int port;
+  @LocalServerPort int port;
 
-  @Autowired
-  WebTestClient webTestClient;
+  @Autowired WebTestClient webTestClient;
 
-  @TempDir
-  private static Path warehouseDir;
+  @TempDir private static Path warehouseDir;
 
-  @Autowired
-  private TestDataSetup testDataSetup;
+  @Autowired private TestDataSetup testDataSetup;
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
   private IParser parser;
 
@@ -112,7 +106,8 @@ class ImportPnpOperationIT {
     registry.add("pathling.import.pnp.clientId", () -> "test-client");
     registry.add("pathling.import.pnp.clientSecret", () -> "test-secret");
     registry.add("pathling.import.pnp.scope", () -> "system/*.read");
-    registry.add("pathling.import.pnp.tokenEndpoint",
+    registry.add(
+        "pathling.import.pnp.tokenEndpoint",
         () -> "http://localhost:" + wireMockServer.port() + "/oauth/token");
   }
 
@@ -120,9 +115,11 @@ class ImportPnpOperationIT {
   void setup() {
     parser = fhirContext.newJsonParser();
 
-    webTestClient = webTestClient.mutate()
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
-        .build(); // 100 MB
+    webTestClient =
+        webTestClient
+            .mutate()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .build(); // 100 MB
 
     // Reset WireMock stubs before each test.
     wireMockServer.resetAll();
@@ -133,89 +130,102 @@ class ImportPnpOperationIT {
     FileUtils.cleanDirectory(warehouseDir.toFile());
   }
 
-  /**
-   * Sets up WireMock stubs for a complete bulk export workflow.
-   */
+  /** Sets up WireMock stubs for a complete bulk export workflow. */
   private void setupSuccessfulBulkExportStubs() {
     final String baseUrl = "http://localhost:" + wireMockServer.port();
 
     // Stub 1: OAuth token endpoint.
-    wireMockServer.stubFor(post(urlEqualTo("/oauth/token"))
-        .willReturn(aResponse()
-            .withStatus(200)
-            .withHeader("Content-Type", "application/json")
-            .withBody("""
-                {
-                  "access_token": "test-access-token",
-                  "token_type": "bearer",
-                  "expires_in": 3600
-                }
-                """)));
+    wireMockServer.stubFor(
+        post(urlEqualTo("/oauth/token"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                        {
+                          "access_token": "test-access-token",
+                          "token_type": "bearer",
+                          "expires_in": 3600
+                        }
+                        """)));
 
     // Stub 2: Bulk export kick-off endpoint (GET for system-level export).
     // Use urlPathEqualTo to match regardless of query parameters.
-    wireMockServer.stubFor(get(urlPathEqualTo("/fhir/$export"))
-        .willReturn(aResponse()
-            .withStatus(202)
-            .withHeader("Content-Location", baseUrl + "/fhir/$export-status/job123")));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/fhir/$export"))
+            .willReturn(
+                aResponse()
+                    .withStatus(202)
+                    .withHeader("Content-Location", baseUrl + "/fhir/$export-status/job123")));
 
     // Stub 3: Export status endpoint - first call returns in-progress.
-    wireMockServer.stubFor(get(urlEqualTo("/fhir/$export-status/job123"))
-        .inScenario("Export Status")
-        .whenScenarioStateIs("Started")
-        .willReturn(aResponse()
-            .withStatus(202)
-            .withHeader("X-Progress", "in-progress"))
-        .willSetStateTo("In Progress"));
+    wireMockServer.stubFor(
+        get(urlEqualTo("/fhir/$export-status/job123"))
+            .inScenario("Export Status")
+            .whenScenarioStateIs("Started")
+            .willReturn(aResponse().withStatus(202).withHeader("X-Progress", "in-progress"))
+            .willSetStateTo("In Progress"));
 
     // Stub 4: Export status endpoint - subsequent calls return complete with manifest.
-    final String manifest = String.format("""
-        {
-          "transactionTime": "2025-11-11T00:00:00Z",
-          "request": "%s/fhir/$export",
-          "requiresAccessToken": false,
-          "output": [
+    final String manifest =
+        String.format(
+            """
             {
-              "type": "Patient",
-              "url": "%s/data/Patient-1.ndjson"
-            },
-            {
-              "type": "Observation",
-              "url": "%s/data/Observation-1.ndjson"
+              "transactionTime": "2025-11-11T00:00:00Z",
+              "request": "%s/fhir/$export",
+              "requiresAccessToken": false,
+              "output": [
+                {
+                  "type": "Patient",
+                  "url": "%s/data/Patient-1.ndjson"
+                },
+                {
+                  "type": "Observation",
+                  "url": "%s/data/Observation-1.ndjson"
+                }
+              ],
+              "error": []
             }
-          ],
-          "error": []
-        }
-        """, baseUrl, baseUrl, baseUrl);
+            """,
+            baseUrl, baseUrl, baseUrl);
 
-    wireMockServer.stubFor(get(urlEqualTo("/fhir/$export-status/job123"))
-        .inScenario("Export Status")
-        .whenScenarioStateIs("In Progress")
-        .willReturn(aResponse()
-            .withStatus(200)
-            .withHeader("Content-Type", "application/json")
-            .withBody(manifest)));
+    wireMockServer.stubFor(
+        get(urlEqualTo("/fhir/$export-status/job123"))
+            .inScenario("Export Status")
+            .whenScenarioStateIs("In Progress")
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(manifest)));
 
     // Stub 5: Patient NDJSON file.
-    final String patientNdjson = """
+    final String patientNdjson =
+        """
         {"resourceType":"Patient","id":"patient1","name":[{"family":"Smith","given":["John"]}]}
         {"resourceType":"Patient","id":"patient2","name":[{"family":"Jones","given":["Jane"]}]}
         """;
-    wireMockServer.stubFor(get(urlEqualTo("/data/Patient-1.ndjson"))
-        .willReturn(aResponse()
-            .withStatus(200)
-            .withHeader("Content-Type", "application/fhir+ndjson")
-            .withBody(patientNdjson)));
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/Patient-1.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(patientNdjson)));
 
     // Stub 6: Observation NDJSON file.
-    final String observationNdjson = """
+    final String observationNdjson =
+        """
         {"resourceType":"Observation","id":"obs1","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"8867-4"}]}}
         """;
-    wireMockServer.stubFor(get(urlEqualTo("/data/Observation-1.ndjson"))
-        .willReturn(aResponse()
-            .withStatus(200)
-            .withHeader("Content-Type", "application/fhir+ndjson")
-            .withBody(observationNdjson)));
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/Observation-1.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(observationNdjson)));
 
     log.info("Set up successful bulk export stubs on WireMock server");
   }
@@ -225,7 +235,8 @@ class ImportPnpOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Parameters",
           "parameter": [
@@ -241,13 +252,15 @@ class ImportPnpOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().is4xxClientError();
+        .expectStatus()
+        .is4xxClientError();
   }
 
   @Test
@@ -263,7 +276,8 @@ class ImportPnpOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Parameters",
           "parameter": [
@@ -275,18 +289,19 @@ class ImportPnpOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .header("Prefer", "respond-async")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().is4xxClientError()
+        .expectStatus()
+        .is4xxClientError()
         .expectBody()
         .jsonPath("$.issue[0].diagnostics")
-        .value(diagnostics -> assertThat(diagnostics.toString())
-            .contains("exportUrl"));
+        .value(diagnostics -> assertThat(diagnostics.toString()).contains("exportUrl"));
   }
 
   @Test
@@ -297,50 +312,59 @@ class ImportPnpOperationIT {
 
     final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
-    final String requestBody = String.format("""
-        {
-          "resourceType": "Parameters",
-          "parameter": [
+    final String requestBody =
+        String.format(
+            """
             {
-              "name": "exportUrl",
-              "valueUrl": "%s"
-            },
-            {
-              "name": "exportType",
-              "valueCoding": {
-                "code": "dynamic"
-              }
+              "resourceType": "Parameters",
+              "parameter": [
+                {
+                  "name": "exportUrl",
+                  "valueUrl": "%s"
+                },
+                {
+                  "name": "exportType",
+                  "valueCode": "dynamic"
+                }
+              ]
             }
-          ]
-        }
-        """, exportUrl);
+            """,
+            exportUrl);
 
-    final var result = webTestClient.post()
-        .uri(uri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .header("Prefer", "respond-async")
-        .bodyValue(requestBody)
-        .exchange()
-        .expectStatus().isAccepted()
-        .expectHeader().exists(HttpHeaders.CONTENT_LOCATION)
-        .returnResult(String.class);
+    final var result =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists(HttpHeaders.CONTENT_LOCATION)
+            .returnResult(String.class);
 
-    final String contentLocation = result.getResponseHeaders()
-        .getFirst(HttpHeaders.CONTENT_LOCATION);
+    final String contentLocation =
+        result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
     assertThat(contentLocation).isNotNull();
     assertThat(contentLocation).contains("$job");
 
     // Poll the job status until completion.
-    await().atMost(30, TimeUnit.SECONDS)
+    await()
+        .atMost(30, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
-        .untilAsserted(() -> {
-          webTestClient.get()
-              .uri(contentLocation)
-              .header("Accept", "application/fhir+json")
-              .exchange()
-              .expectStatus().isOk();
-        });
+        .untilAsserted(
+            () -> {
+              webTestClient
+                  .get()
+                  .uri(contentLocation)
+                  .header("Accept", "application/fhir+json")
+                  .exchange()
+                  .expectStatus()
+                  .isOk();
+            });
 
     log.info("Import-pnp job without inputSource completed successfully");
   }
@@ -353,42 +377,47 @@ class ImportPnpOperationIT {
     // Use base URL for fhir-bulk-java client.
     final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
-    final String requestBody = String.format("""
-        {
-          "resourceType": "Parameters",
-          "parameter": [
+    final String requestBody =
+        String.format(
+            """
             {
-              "name": "exportUrl",
-              "valueUrl": "%s"
-            },
-            {
-              "name": "inputSource",
-              "valueString": "http://localhost:%d/fhir"
-            },
-            {
-              "name": "exportType",
-              "valueCoding": {
-                "code": "dynamic"
-              }
+              "resourceType": "Parameters",
+              "parameter": [
+                {
+                  "name": "exportUrl",
+                  "valueUrl": "%s"
+                },
+                {
+                  "name": "inputSource",
+                  "valueString": "http://localhost:%d/fhir"
+                },
+                {
+                  "name": "exportType",
+                  "valueCode": "dynamic"
+                }
+              ]
             }
-          ]
-        }
-        """, exportUrl, wireMockServer.port());
+            """,
+            exportUrl, wireMockServer.port());
 
-    final var result = webTestClient.post()
-        .uri(uri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .header("Prefer", "respond-async")
-        .bodyValue(requestBody)
-        .exchange()
-        .expectStatus().isAccepted()
-        .expectHeader().exists(HttpHeaders.CONTENT_LOCATION)
-        .returnResult(String.class);
+    final var result =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists(HttpHeaders.CONTENT_LOCATION)
+            .returnResult(String.class);
 
     // Verify Content-Location header contains job ID.
-    final String contentLocation = result.getResponseHeaders()
-        .getFirst(HttpHeaders.CONTENT_LOCATION);
+    final String contentLocation =
+        result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
     assertThat(contentLocation).isNotNull();
     assertThat(contentLocation).contains("$job");
     assertThat(contentLocation).contains("id=");
@@ -396,15 +425,19 @@ class ImportPnpOperationIT {
     log.info("Import-pnp job created with Content-Location: {}", contentLocation);
 
     // Poll the job status until completion (200 OK indicates job is done).
-    await().atMost(30, TimeUnit.SECONDS)
+    await()
+        .atMost(30, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
-        .untilAsserted(() -> {
-          webTestClient.get()
-              .uri(contentLocation)
-              .header("Accept", "application/fhir+json")
-              .exchange()
-              .expectStatus().isOk();
-        });
+        .untilAsserted(
+            () -> {
+              webTestClient
+                  .get()
+                  .uri(contentLocation)
+                  .header("Accept", "application/fhir+json")
+                  .exchange()
+                  .expectStatus()
+                  .isOk();
+            });
 
     log.info("Import-pnp job completed successfully");
   }
@@ -415,56 +448,64 @@ class ImportPnpOperationIT {
 
     final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
-    final String requestBody = String.format("""
-        {
-          "resourceType": "Parameters",
-          "parameter": [
+    final String requestBody =
+        String.format(
+            """
             {
-              "name": "exportUrl",
-              "valueUrl": "%s"
-            },
-            {
-              "name": "inputSource",
-              "valueString": "http://localhost:%d/fhir"
-            },
-            {
-              "name": "exportType",
-              "valueCoding": {
-                "code": "static"
-              }
+              "resourceType": "Parameters",
+              "parameter": [
+                {
+                  "name": "exportUrl",
+                  "valueUrl": "%s"
+                },
+                {
+                  "name": "inputSource",
+                  "valueString": "http://localhost:%d/fhir"
+                },
+                {
+                  "name": "exportType",
+                  "valueCode": "static"
+                }
+              ]
             }
-          ]
-        }
-        """, exportUrl, wireMockServer.port());
+            """,
+            exportUrl, wireMockServer.port());
 
-    final var result = webTestClient.post()
-        .uri(uri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .header("Prefer", "respond-async")
-        .bodyValue(requestBody)
-        .exchange()
-        .expectStatus().isAccepted()
-        .expectHeader().exists(HttpHeaders.CONTENT_LOCATION)
-        .returnResult(String.class);
+    final var result =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists(HttpHeaders.CONTENT_LOCATION)
+            .returnResult(String.class);
 
-    final String contentLocation = result.getResponseHeaders()
-        .getFirst(HttpHeaders.CONTENT_LOCATION);
+    final String contentLocation =
+        result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
     assertThat(contentLocation).isNotNull();
 
     // Poll the job status - even static mode will attempt to run until the WireMock stubs respond.
-    // Since static mode uses a different URL pattern than what we've stubbed, it should eventually fail.
+    // Since static mode uses a different URL pattern than what we've stubbed, it should eventually
+    // fail.
     // For now, just verify the job was created.
-    await().atMost(10, TimeUnit.SECONDS)
+    await()
+        .atMost(10, TimeUnit.SECONDS)
         .pollInterval(500, TimeUnit.MILLISECONDS)
-        .untilAsserted(() -> {
-          webTestClient.get()
-              .uri(contentLocation)
-              .header("Accept", "application/fhir+json")
-              .exchange()
-              .expectStatus()
-              .value(status -> assertThat(status).isIn(200, 202, 400, 500));
-        });
+        .untilAsserted(
+            () -> {
+              webTestClient
+                  .get()
+                  .uri(contentLocation)
+                  .header("Accept", "application/fhir+json")
+                  .exchange()
+                  .expectStatus()
+                  .value(status -> assertThat(status).isIn(200, 202, 400, 500));
+            });
   }
-
 }

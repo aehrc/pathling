@@ -2,12 +2,11 @@ package au.csiro.pathling;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nullable;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.hl7.fhir.r4.model.Type;
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.Type;
 
 /**
  * @author Felix Naumann
@@ -19,21 +18,19 @@ public class ParamUtil {
       String partName,
       Class<T> typeClazz,
       boolean lenient,
-      RuntimeException onError
-  ) {
+      RuntimeException onError) {
     return extractManyFromParameters(parts, partName, typeClazz, false, null, lenient, onError);
   }
-  
+
   public static <T extends Type> Collection<T> extractManyFromParameters(
       Collection<ParametersParameterComponent> parts,
       String partName,
       Class<T> typeClazz,
       @Nullable Collection<T> defaultValue,
-      boolean lenient
-  ) {
+      boolean lenient) {
     return extractManyFromParameters(parts, partName, typeClazz, true, defaultValue, lenient, null);
   }
-  
+
   public static <T> Collection<T> extractManyFromParameters(
       Collection<ParametersParameterComponent> parts,
       String partName,
@@ -42,20 +39,21 @@ public class ParamUtil {
       @Nullable Collection<T> defaultValue,
       boolean lenient,
       RuntimeException onError) {
-    Collection<T> types = parts.stream()
-        .filter(param -> partName.equals(param.getName()))
-        .map(typeClazz::cast)
-        .toList();
-    if(!types.isEmpty()) {
+    Collection<T> types =
+        parts.stream()
+            .filter(param -> partName.equals(param.getName()))
+            .map(typeClazz::cast)
+            .toList();
+    if (!types.isEmpty()) {
       return types;
     }
-    if(useDefaultValueOnEmpty || lenient) {
+    if (useDefaultValueOnEmpty || lenient) {
       return defaultValue;
     }
     throw onError;
   }
 
-  public static  <T,R> R extractFromPart(
+  public static <T, R> R extractFromPart(
       Collection<ParametersParameterComponent> parts,
       String partName,
       Class<? extends T> clazz,
@@ -65,19 +63,19 @@ public class ParamUtil {
     return extractFromPart(parts, partName, clazz, mapper, false, null, lenient, onError);
   }
 
-  public static  <T,R> R extractFromPart(
+  public static <T, R> R extractFromPart(
       Collection<ParametersParameterComponent> parts,
       String partName,
       Class<? extends T> typeClazz,
       Function<T, R> mapper,
       boolean useDefaultValue,
       @Nullable R defaultValue,
-      boolean lenient
-      ) {
-    return extractFromPart(parts, partName, typeClazz, mapper, useDefaultValue, defaultValue, lenient, null);
+      boolean lenient) {
+    return extractFromPart(
+        parts, partName, typeClazz, mapper, useDefaultValue, defaultValue, lenient, null);
   }
 
-  public static  <T,R> R extractFromPart(
+  public static <T, R> R extractFromPart(
       Collection<ParametersParameterComponent> parts,
       String partName,
       Class<? extends T> typeClazz,
@@ -86,26 +84,41 @@ public class ParamUtil {
       @Nullable R defaultValue,
       boolean lenient,
       RuntimeException onError) {
-    Optional<Type> type = parts.stream()
-        .filter(param -> partName.equals(param.getName()))
-        .findFirst()
-        .map(ParametersParameterComponent::getValue);
-    if(type.isPresent()) {
-      T casted = typeClazz.cast(type.get());
+    Optional<Type> type =
+        parts.stream()
+            .filter(param -> partName.equals(param.getName()))
+            .findFirst()
+            .map(ParametersParameterComponent::getValue);
+    if (type.isPresent()) {
+      final T casted;
+      try {
+        casted = typeClazz.cast(type.get());
+      } catch (final ClassCastException e) {
+        // Convert ClassCastException to InvalidUserInputError for proper HTTP 400 response.
+        if (onError != null) {
+          onError.initCause(e);
+          throw onError;
+        }
+        throw new InvalidUserInputError(
+            "Invalid parameter type for '%s': expected %s but got %s"
+                .formatted(
+                    partName, typeClazz.getSimpleName(), type.get().getClass().getSimpleName()),
+            e);
+      }
       try {
         return mapper.apply(casted);
-      } catch (IllegalArgumentException e) {
-       if(lenient && useDefaultValue) {
-         return defaultValue;
-       }
-       if(onError != null) {
-         onError.initCause(e);
-         throw onError;
-       }
-       throw e;
+      } catch (final IllegalArgumentException e) {
+        if (lenient && useDefaultValue) {
+          return defaultValue;
+        }
+        if (onError != null) {
+          onError.initCause(e);
+          throw onError;
+        }
+        throw e;
       }
     }
-    if(useDefaultValue || lenient) {
+    if (useDefaultValue || lenient) {
       return defaultValue;
     }
     throw onError;

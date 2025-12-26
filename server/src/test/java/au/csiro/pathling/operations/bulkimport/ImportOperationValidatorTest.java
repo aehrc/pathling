@@ -8,11 +8,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
-import au.csiro.pathling.operations.bulkimport.ImportFormat;
-import au.csiro.pathling.operations.bulkimport.ImportManifest;
-import au.csiro.pathling.operations.bulkimport.ImportManifestInput;
-import au.csiro.pathling.operations.bulkimport.ImportOperationValidator;
-import au.csiro.pathling.operations.bulkimport.ImportRequest;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.MockUtil;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
@@ -20,7 +15,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
@@ -52,8 +47,7 @@ class ImportOperationValidatorTest {
     }
   }
 
-  @Autowired
-  private ImportOperationValidator importOperationValidator;
+  @Autowired private ImportOperationValidator importOperationValidator;
 
   // ========================================
   // Parameters Format Tests
@@ -62,15 +56,17 @@ class ImportOperationValidatorTest {
   @Test
   void test_parametersRequest_valid() {
     final Parameters params = minimalValidParams();
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
-    assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<ImportRequest> result =
-          importOperationValidator.validateParametersRequest(mockRequest, params);
-      assertThat(result.result()).isNotNull();
-      assertThat(result.result().input()).containsKey("Patient");
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ImportRequest> result =
+                  importOperationValidator.validateParametersRequest(mockRequest, params);
+              assertThat(result.result()).isNotNull();
+              assertThat(result.result().input()).containsKey("Patient");
+            });
   }
 
   @Test
@@ -78,27 +74,29 @@ class ImportOperationValidatorTest {
     // inputSource is optional - should not throw when missing.
     final Parameters params = new Parameters();
     params.addParameter(input("Patient", "s3://bucket/Patient.ndjson"));
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
-    assertThatNoException().isThrownBy(
-        () -> importOperationValidator.validateParametersRequest(mockRequest, params));
+    assertThatNoException()
+        .isThrownBy(() -> importOperationValidator.validateParametersRequest(mockRequest, params));
   }
 
   @ParameterizedTest
   @MethodSource("provide_input_params")
-  void test_input_params(Parameters params, Map<String, Collection<String>> expectedInput,
-      boolean valid) {
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+  void test_input_params(
+      Parameters params, Map<String, Collection<String>> expectedInput, boolean valid) {
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     if (valid) {
-      assertThatNoException().isThrownBy(() -> {
-        final PreAsyncValidationResult<ImportRequest> result =
-            importOperationValidator.validateParametersRequest(mockRequest, params);
-        assertThat(result.result()).isNotNull();
-        assertThat(result.result().input()).isEqualTo(expectedInput);
-      });
+      assertThatNoException()
+          .isThrownBy(
+              () -> {
+                final PreAsyncValidationResult<ImportRequest> result =
+                    importOperationValidator.validateParametersRequest(mockRequest, params);
+                assertThat(result.result()).isNotNull();
+                assertThat(result.result().input()).isEqualTo(expectedInput);
+              });
     } else {
       assertThatCode(() -> importOperationValidator.validateParametersRequest(mockRequest, params))
           .isInstanceOf(InvalidUserInputError.class);
@@ -111,35 +109,30 @@ class ImportOperationValidatorTest {
         arguments(
             paramsWithInputs(input("Patient", "s3://bucket/Patient.ndjson")),
             Map.of("Patient", List.of("s3a://bucket/Patient.ndjson")),
-            true
-        ),
+            true),
         // Valid multiple inputs
         arguments(
             paramsWithInputs(
                 input("Patient", "s3://bucket/Patient.ndjson"),
-                input("Observation", "s3://bucket/Observation.ndjson")
-            ),
+                input("Observation", "s3://bucket/Observation.ndjson")),
             Map.of(
                 "Patient", List.of("s3a://bucket/Patient.ndjson"),
-                "Observation", List.of("s3a://bucket/Observation.ndjson")
-            ),
-            true
-        ),
+                "Observation", List.of("s3a://bucket/Observation.ndjson")),
+            true),
         // Missing input parameter
         arguments(paramsWithOnlyInputSource(), null, false),
         // Missing resourceType
-        arguments(paramsWithInputs(inputWithoutResourceType("s3://bucket/data.ndjson")), null,
-            false),
+        arguments(
+            paramsWithInputs(inputWithoutResourceType("s3://bucket/data.ndjson")), null, false),
         // Missing url
-        arguments(paramsWithInputs(inputWithoutUrl("Patient")), null, false)
-    );
+        arguments(paramsWithInputs(inputWithoutUrl("Patient")), null, false));
   }
 
   @ParameterizedTest
   @MethodSource("provide_mode_params")
   void test_mode_param(Parameters params, SaveMode expectedMode) {
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final PreAsyncValidationResult<ImportRequest> result =
         importOperationValidator.validateParametersRequest(mockRequest, params);
@@ -153,15 +146,14 @@ class ImportOperationValidatorTest {
         arguments(paramsWithMode("merge"), SaveMode.MERGE),
         arguments(paramsWithMode("error"), SaveMode.ERROR_IF_EXISTS),
         arguments(paramsWithMode("append"), SaveMode.APPEND),
-        arguments(paramsWithMode("ignore"), SaveMode.IGNORE)
-    );
+        arguments(paramsWithMode("ignore"), SaveMode.IGNORE));
   }
 
   @ParameterizedTest
   @MethodSource("provide_format_params")
   void test_format_param(Parameters params, ImportFormat expectedFormat) {
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final PreAsyncValidationResult<ImportRequest> result =
         importOperationValidator.validateParametersRequest(mockRequest, params);
@@ -173,8 +165,7 @@ class ImportOperationValidatorTest {
         arguments(minimalValidParams(), ImportFormat.NDJSON),
         arguments(paramsWithFormat("application/fhir+ndjson"), ImportFormat.NDJSON),
         arguments(paramsWithFormat("application/x-pathling-parquet"), ImportFormat.PARQUET),
-        arguments(paramsWithFormat("application/x-pathling-delta+parquet"), ImportFormat.DELTA)
-    );
+        arguments(paramsWithFormat("application/x-pathling-delta+parquet"), ImportFormat.DELTA));
   }
 
   // ========================================
@@ -183,14 +174,14 @@ class ImportOperationValidatorTest {
 
   @Test
   void test_jsonRequest_valid() {
-    final ImportManifest manifest = new ImportManifest(
-        "application/fhir+ndjson",
-        "https://example.org/source",
-        List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
-        null
-    );
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final ImportManifest manifest =
+        new ImportManifest(
+            "application/fhir+ndjson",
+            "https://example.org/source",
+            List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
+            null);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final PreAsyncValidationResult<ImportRequest> result =
         importOperationValidator.validateJsonRequest(mockRequest, manifest);
@@ -202,29 +193,29 @@ class ImportOperationValidatorTest {
   @Test
   void jsonRequestWithoutInputSourceSucceeds() {
     // inputSource is optional - should not throw when missing.
-    final ImportManifest manifest = new ImportManifest(
-        "application/fhir+ndjson",
-        null,  // Optional
-        List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
-        null
-    );
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final ImportManifest manifest =
+        new ImportManifest(
+            "application/fhir+ndjson",
+            null, // Optional
+            List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
+            null);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
-    assertThatNoException().isThrownBy(
-        () -> importOperationValidator.validateJsonRequest(mockRequest, manifest));
+    assertThatNoException()
+        .isThrownBy(() -> importOperationValidator.validateJsonRequest(mockRequest, manifest));
   }
 
   @Test
   void test_jsonRequest_withModeParameter() {
-    final ImportManifest manifest = new ImportManifest(
-        "application/fhir+ndjson",
-        "https://example.org/source",
-        List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
-        "merge"
-    );
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final ImportManifest manifest =
+        new ImportManifest(
+            "application/fhir+ndjson",
+            "https://example.org/source",
+            List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
+            "merge");
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final PreAsyncValidationResult<ImportRequest> result =
         importOperationValidator.validateJsonRequest(mockRequest, manifest);
@@ -235,14 +226,14 @@ class ImportOperationValidatorTest {
   @ParameterizedTest
   @MethodSource("provide_mimeTypes")
   void test_mimeTypeFormatParsing(String mimeType, ImportFormat expectedFormat) {
-    final ImportManifest manifest = new ImportManifest(
-        mimeType,
-        "https://example.org/source",
-        List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
-        null
-    );
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final ImportManifest manifest =
+        new ImportManifest(
+            mimeType,
+            "https://example.org/source",
+            List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
+            null);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final PreAsyncValidationResult<ImportRequest> result =
         importOperationValidator.validateJsonRequest(mockRequest, manifest);
@@ -254,8 +245,7 @@ class ImportOperationValidatorTest {
     return Stream.of(
         arguments("application/fhir+ndjson", ImportFormat.NDJSON),
         arguments("application/x-pathling-parquet", ImportFormat.PARQUET),
-        arguments("application/x-pathling-delta+parquet", ImportFormat.DELTA)
-    );
+        arguments("application/x-pathling-delta+parquet", ImportFormat.DELTA));
   }
 
   // ========================================
@@ -268,7 +258,8 @@ class ImportOperationValidatorTest {
 
   private static Parameters paramsWithOnlyInputSource() {
     final Parameters parameters = new Parameters();
-    parameters.addParameter()
+    parameters
+        .addParameter()
         .setName("inputSource")
         .setValue(new StringType("https://example.org/source"));
     return parameters;
@@ -276,7 +267,8 @@ class ImportOperationValidatorTest {
 
   private static Parameters paramsWithInputs(ParametersParameterComponent... inputs) {
     final Parameters parameters = new Parameters();
-    parameters.addParameter()
+    parameters
+        .addParameter()
         .setName("inputSource")
         .setValue(new StringType("https://example.org/source"));
     for (final ParametersParameterComponent input : inputs) {
@@ -287,47 +279,38 @@ class ImportOperationValidatorTest {
 
   private static Parameters paramsWithMode(String modeCode) {
     final Parameters params = minimalValidParams();
-    params.addParameter()
-        .setName("saveMode")
-        .setValue(new Coding().setCode(modeCode));
+    params.addParameter().setName("saveMode").setValue(new CodeType(modeCode));
     return params;
   }
 
   private static Parameters paramsWithFormat(String formatCode) {
     final Parameters params = minimalValidParams();
-    params.addParameter()
-        .setName("inputFormat")  // Changed from "format"
-        .setValue(new Coding().setCode(formatCode));
+    params
+        .addParameter()
+        .setName("inputFormat") // Changed from "format"
+        .setValue(new CodeType(formatCode));
     return params;
   }
 
   private static ParametersParameterComponent input(String resourceType, String url) {
     final ParametersParameterComponent input = new ParametersParameterComponent();
     input.setName("input");
-    input.addPart()
-        .setName("resourceType")
-        .setValue(new Coding().setCode(resourceType));
-    input.addPart()
-        .setName("url")
-        .setValue(new UrlType(url));
+    input.addPart().setName("resourceType").setValue(new CodeType(resourceType));
+    input.addPart().setName("url").setValue(new UrlType(url));
     return input;
   }
 
   private static ParametersParameterComponent inputWithoutResourceType(String url) {
     final ParametersParameterComponent input = new ParametersParameterComponent();
     input.setName("input");
-    input.addPart()
-        .setName("url")
-        .setValue(new UrlType(url));
+    input.addPart().setName("url").setValue(new UrlType(url));
     return input;
   }
 
   private static ParametersParameterComponent inputWithoutUrl(String resourceType) {
     final ParametersParameterComponent input = new ParametersParameterComponent();
     input.setName("input");
-    input.addPart()
-        .setName("resourceType")
-        .setValue(new Coding().setCode(resourceType));
+    input.addPart().setName("resourceType").setValue(new CodeType(resourceType));
     return input;
   }
 }

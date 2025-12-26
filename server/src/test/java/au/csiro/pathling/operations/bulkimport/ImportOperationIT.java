@@ -65,14 +65,11 @@ class ImportOperationIT {
 
   private static WireMockServer wireMockServer;
 
-  @LocalServerPort
-  int port;
+  @LocalServerPort int port;
 
-  @Autowired
-  WebTestClient webTestClient;
+  @Autowired WebTestClient webTestClient;
 
-  @TempDir
-  private static Path warehouseDir;
+  @TempDir private static Path warehouseDir;
 
   @BeforeAll
   static void setupWireMock() {
@@ -94,15 +91,18 @@ class ImportOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
     // Allow imports from WireMock server.
-    registry.add("pathling.import.allowableSources",
+    registry.add(
+        "pathling.import.allowableSources",
         () -> "http://localhost:" + wireMockServer.port() + "/");
   }
 
   @BeforeEach
   void setup() {
-    webTestClient = webTestClient.mutate()
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
-        .build();
+    webTestClient =
+        webTestClient
+            .mutate()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .build();
     wireMockServer.resetAll();
     setupNdjsonFileStubs();
   }
@@ -112,42 +112,50 @@ class ImportOperationIT {
     FileUtils.cleanDirectory(warehouseDir.toFile());
   }
 
-  /**
-   * Sets up WireMock stubs for NDJSON files.
-   */
+  /** Sets up WireMock stubs for NDJSON files. */
   private void setupNdjsonFileStubs() {
-    final String patientNdjson = """
+    final String patientNdjson =
+        """
         {"resourceType":"Patient","id":"patient1","name":[{"family":"Smith","given":["John"]}]}
         {"resourceType":"Patient","id":"patient2","name":[{"family":"Jones","given":["Jane"]}]}
         """;
     // HEAD stub for Spark to check file existence.
-    wireMockServer.stubFor(head(urlEqualTo("/data/Patient.ndjson"))
-        .willReturn(aResponse()
-            .withStatus(200)
-            .withHeader("Content-Type", "application/fhir+ndjson")
-            .withHeader("Content-Length", String.valueOf(patientNdjson.length()))));
+    wireMockServer.stubFor(
+        head(urlEqualTo("/data/Patient.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withHeader("Content-Length", String.valueOf(patientNdjson.length()))));
     // GET stub for actual file content.
-    wireMockServer.stubFor(get(urlEqualTo("/data/Patient.ndjson"))
-        .willReturn(aResponse()
-            .withStatus(200)
-            .withHeader("Content-Type", "application/fhir+ndjson")
-            .withBody(patientNdjson)));
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/Patient.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(patientNdjson)));
 
-    final String observationNdjson = """
+    final String observationNdjson =
+        """
         {"resourceType":"Observation","id":"obs1","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"8867-4"}]}}
         """;
     // HEAD stub for Spark to check file existence.
-    wireMockServer.stubFor(head(urlEqualTo("/data/Observation.ndjson"))
-        .willReturn(aResponse()
-            .withStatus(200)
-            .withHeader("Content-Type", "application/fhir+ndjson")
-            .withHeader("Content-Length", String.valueOf(observationNdjson.length()))));
+    wireMockServer.stubFor(
+        head(urlEqualTo("/data/Observation.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withHeader("Content-Length", String.valueOf(observationNdjson.length()))));
     // GET stub for actual file content.
-    wireMockServer.stubFor(get(urlEqualTo("/data/Observation.ndjson"))
-        .willReturn(aResponse()
-            .withStatus(200)
-            .withHeader("Content-Type", "application/fhir+ndjson")
-            .withBody(observationNdjson)));
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/Observation.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(observationNdjson)));
 
     log.info("Set up NDJSON file stubs on WireMock server");
   }
@@ -158,61 +166,70 @@ class ImportOperationIT {
 
     final String baseUrl = "http://localhost:" + wireMockServer.port();
     final String uri = "http://localhost:" + port + "/fhir/$import";
-    final String requestBody = String.format("""
-        {
-          "resourceType": "Parameters",
-          "parameter": [
+    final String requestBody =
+        String.format(
+            """
             {
-              "name": "inputSource",
-              "valueString": "https://example.org/source"
-            },
-            {
-              "name": "input",
-              "part": [
+              "resourceType": "Parameters",
+              "parameter": [
                 {
-                  "name": "resourceType",
-                  "valueCoding": {
-                    "code": "Patient"
-                  }
+                  "name": "inputSource",
+                  "valueString": "https://example.org/source"
                 },
                 {
-                  "name": "url",
-                  "valueUrl": "%s/data/Patient.ndjson"
+                  "name": "input",
+                  "part": [
+                    {
+                      "name": "resourceType",
+                      "valueCode": "Patient"
+                    },
+                    {
+                      "name": "url",
+                      "valueUrl": "%s/data/Patient.ndjson"
+                    }
+                  ]
                 }
               ]
             }
-          ]
-        }
-        """, baseUrl);
+            """,
+            baseUrl);
 
-    final var result = webTestClient.post()
-        .uri(uri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .header("Prefer", "respond-async")
-        .bodyValue(requestBody)
-        .exchange()
-        .expectStatus().isAccepted()
-        .expectHeader().exists(HttpHeaders.CONTENT_LOCATION)
-        .returnResult(String.class);
+    final var result =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists(HttpHeaders.CONTENT_LOCATION)
+            .returnResult(String.class);
 
-    final String contentLocation = result.getResponseHeaders()
-        .getFirst(HttpHeaders.CONTENT_LOCATION);
+    final String contentLocation =
+        result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
     assertThat(contentLocation).isNotNull();
     assertThat(contentLocation).contains("$job");
 
     log.info("Import job created with Content-Location: {}", contentLocation);
 
     // Poll the job status until completion.
-    await().atMost(30, TimeUnit.SECONDS)
+    await()
+        .atMost(30, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
-        .untilAsserted(() -> {
-          webTestClient.get()
-              .uri(contentLocation)
-              .header("Accept", "application/fhir+json")
-              .exchange()
-              .expectStatus().isOk();
-        });
+        .untilAsserted(
+            () -> {
+              webTestClient
+                  .get()
+                  .uri(contentLocation)
+                  .header("Accept", "application/fhir+json")
+                  .exchange()
+                  .expectStatus()
+                  .isOk();
+            });
 
     log.info("Import job completed successfully with FHIR Parameters format");
   }
@@ -225,48 +242,61 @@ class ImportOperationIT {
     final String uri = "http://localhost:" + port + "/fhir/$import";
 
     // JSON manifest format (SMART Bulk Data Import specification).
-    final String requestBody = String.format("""
-        {
-          "inputFormat": "application/fhir+ndjson",
-          "inputSource": "https://example.org/source",
-          "input": [
+    final String requestBody =
+        String.format(
+            """
             {
-              "type": "Patient",
-              "url": "%s/data/Patient.ndjson"
+              "inputFormat": "application/fhir+ndjson",
+              "inputSource": "https://example.org/source",
+              "input": [
+                {
+                  "type": "Patient",
+                  "url": "%s/data/Patient.ndjson"
+                }
+              ],
+              "mode": "overwrite"
             }
-          ],
-          "mode": "overwrite"
-        }
-        """, baseUrl);
+            """,
+            baseUrl);
 
-    final var result = webTestClient.post()
-        .uri(uri)
-        .header("Content-Type", "application/json")  // Note: application/json, not application/fhir+json
-        .header("Accept", "application/fhir+json")
-        .header("Prefer", "respond-async")
-        .bodyValue(requestBody)
-        .exchange()
-        .expectStatus().isAccepted()
-        .expectHeader().exists(HttpHeaders.CONTENT_LOCATION)
-        .returnResult(String.class);
+    final var result =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header(
+                "Content-Type",
+                "application/json") // Note: application/json, not application/fhir+json
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists(HttpHeaders.CONTENT_LOCATION)
+            .returnResult(String.class);
 
-    final String contentLocation = result.getResponseHeaders()
-        .getFirst(HttpHeaders.CONTENT_LOCATION);
+    final String contentLocation =
+        result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
     assertThat(contentLocation).isNotNull();
     assertThat(contentLocation).contains("$job");
 
     log.info("Import job created with Content-Location: {}", contentLocation);
 
     // Poll the job status until completion.
-    await().atMost(30, TimeUnit.SECONDS)
+    await()
+        .atMost(30, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
-        .untilAsserted(() -> {
-          webTestClient.get()
-              .uri(contentLocation)
-              .header("Accept", "application/fhir+json")
-              .exchange()
-              .expectStatus().isOk();
-        });
+        .untilAsserted(
+            () -> {
+              webTestClient
+                  .get()
+                  .uri(contentLocation)
+                  .header("Accept", "application/fhir+json")
+                  .exchange()
+                  .expectStatus()
+                  .isOk();
+            });
 
     log.info("Import job completed successfully with JSON manifest format");
   }
@@ -276,7 +306,8 @@ class ImportOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir/$import";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Parameters",
           "parameter": [
@@ -289,9 +320,7 @@ class ImportOperationIT {
               "part": [
                 {
                   "name": "resourceType",
-                  "valueCoding": {
-                    "code": "Patient"
-                  }
+                  "valueCode": "Patient"
                 },
                 {
                   "name": "url",
@@ -303,56 +332,84 @@ class ImportOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         // Missing Prefer: respond-async header
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().is4xxClientError();
+        .expectStatus()
+        .is4xxClientError();
   }
 
   @Test
-  void testImportMissingInputSource() {
+  void testImportMissingInputSourceSucceeds() {
+    // inputSource is optional per the SMART Bulk Data Import spec.
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
     final String uri = "http://localhost:" + port + "/fhir/$import";
-    final String requestBody = """
-        {
-          "resourceType": "Parameters",
-          "parameter": [
+    final String requestBody =
+        String.format(
+            """
             {
-              "name": "input",
-              "part": [
+              "resourceType": "Parameters",
+              "parameter": [
                 {
-                  "name": "resourceType",
-                  "valueCoding": {
-                    "code": "Patient"
-                  }
-                },
-                {
-                  "name": "url",
-                  "valueUrl": "http://example.org/data/Patient.ndjson"
+                  "name": "input",
+                  "part": [
+                    {
+                      "name": "resourceType",
+                      "valueCode": "Patient"
+                    },
+                    {
+                      "name": "url",
+                      "valueUrl": "%s/data/Patient.ndjson"
+                    }
+                  ]
                 }
               ]
             }
-          ]
-        }
-        """;
+            """,
+            baseUrl);
 
-    webTestClient.post()
-        .uri(uri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .header("Prefer", "respond-async")
-        .bodyValue(requestBody)
-        .exchange()
-        .expectStatus().is4xxClientError()
-        .expectBody()
-        .jsonPath("$.issue[0].diagnostics")
-        .value(diagnostics -> assertThat(diagnostics.toString())
-            .contains("inputSource"));
+    final var result =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists(HttpHeaders.CONTENT_LOCATION)
+            .returnResult(String.class);
+
+    final String contentLocation =
+        result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
+    assertThat(contentLocation).isNotNull();
+    assertThat(contentLocation).contains("$job");
+
+    // Poll the job status until completion.
+    await()
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(2, TimeUnit.SECONDS)
+        .untilAsserted(
+            () -> {
+              webTestClient
+                  .get()
+                  .uri(contentLocation)
+                  .header("Accept", "application/fhir+json")
+                  .exchange()
+                  .expectStatus()
+                  .isOk();
+            });
+
+    log.info("Import job without inputSource completed successfully");
   }
-
 }
