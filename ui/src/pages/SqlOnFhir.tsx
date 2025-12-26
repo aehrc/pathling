@@ -31,8 +31,6 @@ export function SqlOnFhir() {
   const accessToken = client?.state.tokenResponse?.access_token;
   const handleUnauthorizedError = useUnauthorizedHandler();
 
-  const [hasExecuted, setHasExecuted] = useState(false);
-
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
@@ -73,7 +71,6 @@ export function SqlOnFhir() {
 
   const handleExecute = useCallback(
     (request: ViewRunRequest) => {
-      setHasExecuted(true);
       setDownloadError(null);
       viewExport.reset();
       viewRun.execute(request);
@@ -193,7 +190,7 @@ export function SqlOnFhir() {
             columns={viewRun.result?.columns}
             isLoading={viewRun.isPending}
             error={displayError}
-            hasExecuted={hasExecuted}
+            hasExecuted={viewRun.status !== "idle"}
             onExport={handleExport}
             exportJob={exportJob}
             onDownload={handleDownload}
