@@ -111,7 +111,13 @@ export function SqlOnFhirResultTable({
   }
 
   // Determine if export is available (only when there's no active job).
-  const canExport = onExport && !isExporting && (!exportJob || exportJob.status === "completed" || exportJob.status === "failed" || exportJob.status === "cancelled");
+  const canExport =
+    onExport &&
+    !isExporting &&
+    (!exportJob ||
+      exportJob.status === "completed" ||
+      exportJob.status === "failed" ||
+      exportJob.status === "cancelled");
 
   // Results table.
   return (
@@ -121,9 +127,7 @@ export function SqlOnFhirResultTable({
           <Heading size="4">Results</Heading>
           <Badge color="gray">{rows.length} rows (first 10)</Badge>
         </Flex>
-        {onExport && (
-          <ExportControls onExport={onExport} disabled={!canExport} />
-        )}
+        {onExport && <ExportControls onExport={onExport} disabled={!canExport} />}
       </Flex>
       <Box style={{ width: "100%" }}>
         <Table.Root size="1">
@@ -140,6 +144,7 @@ export function SqlOnFhirResultTable({
           </Table.Header>
           <Table.Body>
             {rows.map((row, rowIndex) => (
+              // eslint-disable-next-line @eslint-react/no-array-index-key -- Query result rows have no stable identifier.
               <Table.Row key={rowIndex}>
                 {columns?.map((column) => (
                   <Table.Cell key={column} style={{ whiteSpace: "nowrap" }}>
@@ -154,11 +159,7 @@ export function SqlOnFhirResultTable({
         </Table.Root>
       </Box>
       {exportJob && onDownload && onCancelExport && (
-        <ViewExportCard
-          job={exportJob}
-          onCancel={onCancelExport}
-          onDownload={onDownload}
-        />
+        <ViewExportCard job={exportJob} onCancel={onCancelExport} onDownload={onDownload} />
       )}
     </Box>
   );

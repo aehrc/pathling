@@ -98,8 +98,8 @@ export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProp
               Output files ({job.manifest.output.length})
             </Text>
             <Flex direction="column" gap="1">
-              {job.manifest.output.map((output, index) => (
-                <Flex key={index} justify="between" align="center">
+              {job.manifest.output.map((output) => (
+                <Flex key={output.url} justify="between" align="center">
                   <Text size="2">{getFilenameFromUrl(output.url)}</Text>
                   <Button
                     size="1"

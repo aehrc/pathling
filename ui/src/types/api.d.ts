@@ -87,10 +87,9 @@ export interface BulkExportBaseOptions extends AuthOptions {
   since?: string;
 }
 
-export interface SystemExportKickOffOptions extends BulkExportBaseOptions {}
+export type SystemExportKickOffOptions = BulkExportBaseOptions;
 
-export interface AllPatientsExportKickOffOptions
-  extends BulkExportBaseOptions {}
+export type AllPatientsExportKickOffOptions = BulkExportBaseOptions;
 
 export interface PatientExportKickOffOptions extends BulkExportBaseOptions {
   patientId: string;

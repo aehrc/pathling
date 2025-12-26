@@ -16,8 +16,13 @@ import {
   Text,
   TextField,
 } from "@radix-ui/themes";
-import { useState } from "react";
-import type { FilterInput, SearchRequest } from "../../types/search";
+import { useRef, useState } from "react";
+import type { SearchRequest } from "../../types/search";
+
+interface FilterInputWithId {
+  id: number;
+  expression: string;
+}
 
 interface ResourceSearchFormProps {
   onSubmit: (request: SearchRequest) => void;
@@ -26,16 +31,15 @@ interface ResourceSearchFormProps {
   resourceTypes: string[];
 }
 
-const DEFAULT_FILTER: FilterInput = { expression: "" };
-
 export function ResourceSearchForm({
   onSubmit,
   isLoading,
   disabled,
   resourceTypes,
 }: ResourceSearchFormProps) {
+  const idCounter = useRef(1);
   const [resourceType, setResourceType] = useState<string>(resourceTypes[0] ?? "Patient");
-  const [filters, setFilters] = useState<FilterInput[]>([{ ...DEFAULT_FILTER }]);
+  const [filters, setFilters] = useState<FilterInputWithId[]>([{ id: 0, expression: "" }]);
 
   const handleSubmit = () => {
     const request: SearchRequest = {
@@ -46,17 +50,17 @@ export function ResourceSearchForm({
   };
 
   const addFilter = () => {
-    setFilters([...filters, { ...DEFAULT_FILTER }]);
+    setFilters([...filters, { id: idCounter.current++, expression: "" }]);
   };
 
-  const removeFilter = (index: number) => {
+  const removeFilter = (id: number) => {
     if (filters.length > 1) {
-      setFilters(filters.filter((_, i) => i !== index));
+      setFilters(filters.filter((filter) => filter.id !== id));
     }
   };
 
-  const updateFilter = (index: number, expression: string) => {
-    setFilters(filters.map((f, i) => (i === index ? { expression } : f)));
+  const updateFilter = (id: number, expression: string) => {
+    setFilters(filters.map((f) => (f.id === id ? { ...f, expression } : f)));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -99,13 +103,13 @@ export function ResourceSearchForm({
             </Button>
           </Flex>
           <Flex direction="column" gap="2">
-            {filters.map((filter, index) => (
-              <Flex key={index} gap="2" align="center">
+            {filters.map((filter) => (
+              <Flex key={filter.id} gap="2" align="center">
                 <Box style={{ flex: 1 }}>
                   <TextField.Root
                     placeholder="e.g., gender = 'female'"
                     value={filter.expression}
-                    onChange={(e) => updateFilter(index, e.target.value)}
+                    onChange={(e) => updateFilter(filter.id, e.target.value)}
                     onKeyDown={handleKeyDown}
                   />
                 </Box>
@@ -113,7 +117,7 @@ export function ResourceSearchForm({
                   size="2"
                   variant="soft"
                   color="red"
-                  onClick={() => removeFilter(index)}
+                  onClick={() => removeFilter(filter.id)}
                   disabled={filters.length === 1}
                 >
                   <Cross2Icon />

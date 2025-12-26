@@ -14,7 +14,7 @@ import { completeAuth, getAndClearReturnUrl } from "../services/auth";
 export function Callback() {
   const navigate = useNavigate();
   const { setClient, setError } = useAuth();
-  const [error, setLocalError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
     async function handleCallback() {
@@ -33,7 +33,7 @@ export function Callback() {
     handleCallback();
   }, [navigate, setClient, setError]);
 
-  if (error) {
+  if (localError) {
     return (
       <Box p="6">
         <Callout.Root color="red">
@@ -43,7 +43,7 @@ export function Callback() {
           <Callout.Text>
             <Text weight="bold">Authentication Failed</Text>
             <br />
-            {error}
+            {localError}
           </Callout.Text>
         </Callout.Root>
       </Box>

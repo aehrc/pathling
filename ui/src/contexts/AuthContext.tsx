@@ -5,13 +5,7 @@
  */
 
 import type Client from "fhirclient/lib/Client";
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, type ReactNode, use, useEffect, useState } from "react";
 import { registerClearSession } from "../main";
 
 interface AuthState {
@@ -118,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSessionAndPromptLogin]);
 
   return (
-    <AuthContext.Provider
+    <AuthContext
       value={{
         ...state,
         setClient,
@@ -131,12 +125,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </AuthContext.Provider>
+    </AuthContext>
   );
 }
 
 export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
+  const context = use(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }

@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import { createContext, useContext, useReducer, useMemo, type ReactNode } from "react";
+import { createContext, use, useReducer, useMemo, type ReactNode } from "react";
 import type {
   Job,
   ExportJob,
@@ -169,7 +169,7 @@ export function JobProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <JobContext.Provider
+    <JobContext
       value={{
         ...state,
         addJob,
@@ -189,12 +189,12 @@ export function JobProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </JobContext.Provider>
+    </JobContext>
   );
 }
 
 export function useJobs(): JobContextValue {
-  const context = useContext(JobContext);
+  const context = use(JobContext);
   if (!context) {
     throw new Error("useJobs must be used within a JobProvider");
   }

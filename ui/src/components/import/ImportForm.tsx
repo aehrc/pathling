@@ -16,10 +16,16 @@ import {
   Text,
   TextField,
 } from "@radix-ui/themes";
-import { useState } from "react";
-import type { ImportFormat, ImportInput, ImportRequest, SaveMode } from "../../types/import";
+import { useRef, useState } from "react";
+import type { ImportFormat, ImportRequest, SaveMode } from "../../types/import";
 import { IMPORT_FORMATS } from "../../types/import";
 import { SaveModeField } from "./SaveModeField";
+
+interface ImportInputWithId {
+  id: number;
+  type: string;
+  url: string;
+}
 
 interface ImportFormProps {
   onSubmit: (request: ImportRequest) => void;
@@ -28,34 +34,35 @@ interface ImportFormProps {
   resourceTypes: string[];
 }
 
-const DEFAULT_INPUT: ImportInput = { type: "Patient", url: "" };
-
 export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: ImportFormProps) {
+  const idCounter = useRef(1);
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");
   const [saveMode, setSaveMode] = useState<SaveMode>("overwrite");
-  const [inputs, setInputs] = useState<ImportInput[]>([{ ...DEFAULT_INPUT }]);
+  const [inputs, setInputs] = useState<ImportInputWithId[]>([{ id: 0, type: "Patient", url: "" }]);
 
   const handleSubmit = () => {
     const request: ImportRequest = {
       inputFormat,
-      input: inputs.filter((input) => input.url.trim() !== ""),
+      input: inputs
+        .filter((input) => input.url.trim() !== "")
+        .map(({ type, url }) => ({ type, url })),
       saveMode,
     };
     onSubmit(request);
   };
 
   const addInput = () => {
-    setInputs([...inputs, { ...DEFAULT_INPUT }]);
+    setInputs([...inputs, { id: idCounter.current++, type: "Patient", url: "" }]);
   };
 
-  const removeInput = (index: number) => {
+  const removeInput = (id: number) => {
     if (inputs.length > 1) {
-      setInputs(inputs.filter((_, i) => i !== index));
+      setInputs(inputs.filter((input) => input.id !== id));
     }
   };
 
-  const updateInput = (index: number, field: keyof ImportInput, value: string) => {
-    setInputs(inputs.map((input, i) => (i === index ? { ...input, [field]: value } : input)));
+  const updateInput = (id: number, field: "type" | "url", value: string) => {
+    setInputs(inputs.map((input) => (input.id === id ? { ...input, [field]: value } : input)));
   };
 
   const isValid = inputs.some((input) => input.url.trim() !== "");
@@ -98,7 +105,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
           </Flex>
           <Flex direction="column" gap="2">
             {inputs.map((input, index) => (
-              <Flex key={index} gap="2" align="end">
+              <Flex key={input.id} gap="2" align="end">
                 <Box style={{ width: 160 }}>
                   {index === 0 && (
                     <Text size="1" color="gray" mb="1" as="div">
@@ -107,7 +114,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
                   )}
                   <Select.Root
                     value={input.type}
-                    onValueChange={(value) => updateInput(index, "type", value)}
+                    onValueChange={(value) => updateInput(input.id, "type", value)}
                   >
                     <Select.Trigger style={{ width: "100%" }} />
                     <Select.Content>
@@ -128,14 +135,14 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
                   <TextField.Root
                     placeholder="e.g., s3a://bucket/Patient.ndjson"
                     value={input.url}
-                    onChange={(e) => updateInput(index, "url", e.target.value)}
+                    onChange={(e) => updateInput(input.id, "url", e.target.value)}
                   />
                 </Box>
                 <IconButton
                   size="2"
                   variant="soft"
                   color="red"
-                  onClick={() => removeInput(index)}
+                  onClick={() => removeInput(input.id)}
                   disabled={inputs.length === 1}
                 >
                   <Cross2Icon />

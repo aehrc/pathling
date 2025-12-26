@@ -7,7 +7,7 @@
 
 import {
   createContext,
-  useContext,
+  use,
   useState,
   useCallback,
   useEffect,
@@ -60,7 +60,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [showToast]);
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext value={{ showToast }}>
       <Toast.Provider swipeDirection="right">
         {children}
         {toasts.map((toast) => (
@@ -90,12 +90,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         ))}
         <Toast.Viewport className="toast-viewport" />
       </Toast.Provider>
-    </ToastContext.Provider>
+    </ToastContext>
   );
 }
 
 export function useToast(): ToastContextValue {
-  const context = useContext(ToastContext);
+  const context = use(ToastContext);
   if (!context) {
     throw new Error("useToast must be used within a ToastProvider");
   }
