@@ -20,7 +20,7 @@ import { UploadIcon } from "@radix-ui/react-icons";
 import type { ImportFormat } from "../../types/import";
 import { IMPORT_FORMATS } from "../../types/import";
 import type { ExportType, ImportPnpRequest, PnpSaveMode } from "../../types/importPnp";
-import { EXPORT_TYPES, PNP_SAVE_MODES } from "../../types/importPnp";
+import { PNP_SAVE_MODES } from "../../types/importPnp";
 
 interface ImportPnpFormProps {
   onSubmit: (request: ImportPnpRequest) => void;
@@ -30,9 +30,9 @@ interface ImportPnpFormProps {
 
 export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFormProps) {
   const [exportUrl, setExportUrl] = useState("");
-  const [exportType, setExportType] = useState<ExportType>("dynamic");
   const [saveMode, setSaveMode] = useState<PnpSaveMode>("overwrite");
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");
+  const exportType: ExportType = "dynamic";
 
   const handleSubmit = () => {
     const request: ImportPnpRequest = {
@@ -65,31 +65,6 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
           <Text size="1" color="gray" mt="1">
             The bulk export endpoint URL of the remote FHIR server.
           </Text>
-        </Box>
-
-        <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Export type
-            </Text>
-          </Box>
-          <RadioCards.Root
-            value={exportType}
-            onValueChange={(v) => setExportType(v as ExportType)}
-            columns="2"
-            gap="2"
-          >
-            {EXPORT_TYPES.map((option) => (
-              <RadioCards.Item value={option.value} key={option.value}>
-                <Flex direction="column" width="100%">
-                  <Text weight="medium">{option.label}</Text>
-                  <Text size="1" color="gray">
-                    {option.description}
-                  </Text>
-                </Flex>
-              </RadioCards.Item>
-            ))}
-          </RadioCards.Root>
         </Box>
 
         <Box>

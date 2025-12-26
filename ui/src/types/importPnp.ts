@@ -6,8 +6,8 @@
 
 import type { ImportFormat } from "./import";
 
-// Export type: dynamic (initiate new export) or static (fetch pre-generated manifest).
-export type ExportType = "dynamic" | "static";
+// Export type for PnP import (only dynamic is currently supported).
+export type ExportType = "dynamic";
 
 // Save mode options for PnP import.
 export type PnpSaveMode = "error" | "overwrite" | "append" | "ignore" | "merge";
@@ -29,11 +29,6 @@ export const EXPORT_TYPES: {
     value: "dynamic",
     label: "Dynamic",
     description: "Initiate a new export from the server",
-  },
-  {
-    value: "static",
-    label: "Static",
-    description: "Fetch a pre-generated export manifest",
   },
 ];
 
