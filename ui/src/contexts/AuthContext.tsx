@@ -4,8 +4,8 @@
  * @author John Grimes
  */
 
-import { createContext, useContext, useState, type ReactNode } from "react";
 import type Client from "fhirclient/lib/Client";
+import { createContext, type ReactNode, useContext, useState } from "react";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -101,6 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
     // Clear any stored session data.
     sessionStorage.removeItem("SMART_KEY");
+    // Reload the page to reset the app state.
+    window.location.reload();
   };
 
   return (
