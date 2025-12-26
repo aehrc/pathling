@@ -49,6 +49,7 @@ export const useImportPnp: UseImportPnpFn = (options) => {
       kickOff: () =>
         importPnpKickOff(fhirBaseUrl!, {
           exportUrl: request.exportUrl,
+          inputSource: request.inputSource,
           exportType: "dynamic",
           saveMode: "merge",
           accessToken,

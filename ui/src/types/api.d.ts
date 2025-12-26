@@ -192,6 +192,7 @@ export interface ImportPnpKickOffOptions extends AuthOptions {
   exportUrl: string;
   exportType?: ExportType;
   saveMode?: SaveMode;
+  inputSource?: string;
 }
 
 export type ImportPnpKickOffFn = (

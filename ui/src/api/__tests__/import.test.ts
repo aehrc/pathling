@@ -231,6 +231,24 @@ describe("importPnpKickOff", () => {
     });
   });
 
+  it("includes inputSource parameter when provided", async () => {
+    const headers = new Headers();
+    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+
+    await importPnpKickOff("https://example.com/fhir", {
+      exportUrl: "https://source.com/$export",
+      inputSource: "https://source.com/fhir",
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.parameter).toContainEqual({
+      name: "inputSource",
+      valueUrl: "https://source.com/fhir",
+    });
+  });
+
   it("returns job ID from Content-Location header", async () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=pnp-job-456");

@@ -108,6 +108,13 @@ function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
     });
   }
 
+  if (options.inputSource) {
+    parameters.parameter!.push({
+      name: "inputSource",
+      valueUrl: options.inputSource,
+    });
+  }
+
   return parameters;
 }
 

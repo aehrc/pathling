@@ -189,6 +189,7 @@ export function Import() {
                   onSubmit={(request: ImportPnpRequest) => {
                     pnpImport.startWith({
                       exportUrl: request.exportUrl,
+                      inputSource: request.inputSource,
                     });
                   }}
                   isSubmitting={isPnpRunning}
