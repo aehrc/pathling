@@ -19,17 +19,17 @@
 
 import { useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { useUnauthorizedHandler } from "./useUnauthorizedHandler";
+import { checkResponse } from "../api/utils";
 
 /**
  * Hook that provides authenticated file download functionality.
  *
- * Handles Bearer token injection, 401 error handling, and blob downloads.
- * The download is triggered by programmatically creating and clicking an
- * anchor element, which prompts the browser's save dialog.
+ * Handles Bearer token injection and blob downloads. Errors (including 401)
+ * are passed to the onError callback; 401 errors are also handled globally
+ * to trigger re-authentication.
  *
  * @param onError - Optional callback for error reporting. Called with the
- * error message when a non-401 error occurs.
+ * error when the download fails.
  * @returns A function that downloads a file from the given URL. The function
  * takes the URL to fetch and the filename to use for the downloaded file.
  *
@@ -38,11 +38,10 @@ import { useUnauthorizedHandler } from "./useUnauthorizedHandler";
  * await downloadFile("https://example.com/file.ndjson", "export.ndjson");
  */
 export function useDownloadFile(
-  onError?: (message: string) => void,
+  onError?: (error: Error) => void,
 ): (url: string, filename: string) => Promise<void> {
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
-  const handleUnauthorizedError = useUnauthorizedHandler();
 
   return useCallback(
     async (url: string, filename: string) => {
@@ -53,15 +52,7 @@ export function useDownloadFile(
         }
 
         const response = await fetch(url, { headers });
-
-        if (response.status === 401) {
-          handleUnauthorizedError();
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error(`Download failed: ${response.status}`);
-        }
+        await checkResponse(response, "Download");
 
         const blob = await response.blob();
         const downloadUrl = window.URL.createObjectURL(blob);
@@ -73,9 +64,12 @@ export function useDownloadFile(
         document.body.removeChild(link);
         window.URL.revokeObjectURL(downloadUrl);
       } catch (err) {
-        onError?.(err instanceof Error ? err.message : "Download failed");
+        const error = err instanceof Error ? err : new Error("Download failed");
+        onError?.(error);
+        // Re-throw so the global handler can catch UnauthorizedError.
+        throw error;
       }
     },
-    [accessToken, handleUnauthorizedError, onError],
+    [accessToken, onError],
   );
 }

@@ -38,7 +38,7 @@ interface JobContextValue extends JobState {
     id: string,
     manifest: ExportManifest | ImportManifest | StatusManifest | ViewExportManifest,
   ) => void;
-  updateJobError: (id: string, error: string) => void;
+  updateJobError: (id: string, error: Error) => void;
   removeJob: (id: string) => void;
   clearJobs: () => void;
   getJob: (id: string) => Job | undefined;
@@ -124,7 +124,7 @@ export function JobProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateJobError = (id: string, error: string) => {
+  const updateJobError = (id: string, error: Error) => {
     dispatch({
       type: "UPDATE_JOB",
       payload: { id, updates: { error, status: "failed" } },

@@ -6,18 +6,12 @@
 
 import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Progress, Spinner, Text } from "@radix-ui/themes";
-import { useCallback } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ExportForm } from "../components/export/ExportForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import {
-  useBulkExport,
-  useDownloadFile,
-  useServerCapabilities,
-  useUnauthorizedHandler
-} from "../hooks";
+import { useBulkExport, useDownloadFile, useServerCapabilities } from "../hooks";
 import type { ExportRequest } from "../types/export";
 import type { BulkExportType } from "../types/hooks";
 
@@ -48,29 +42,14 @@ function getFilenameFromUrl(url: string): string {
 export function Export() {
   const { fhirBaseUrl } = config;
   const { isAuthenticated, setError } = useAuth();
-  const handleUnauthorizedError = useUnauthorizedHandler();
-  const handleDownloadFile = useDownloadFile(setError);
+  const handleDownloadFile = useDownloadFile((err) => setError(err.message));
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  const handleError = useCallback(
-    (errorMessage: string) => {
-      // Hook checks if message looks like 401 and handles it.
-      handleUnauthorizedError(errorMessage);
-      // Set error for non-401 errors.
-      if (!errorMessage.includes("401") && !errorMessage.toLowerCase().includes("unauthorized")) {
-        setError(errorMessage);
-      }
-    },
-    [handleUnauthorizedError, setError],
-  );
-
-  // Use the bulk export hook.
-  const { startWith, reset, cancel, status, result, error, progress, request } = useBulkExport({
-    onError: handleError,
-  });
+  // Use the bulk export hook. 401 errors are handled globally.
+  const { startWith, reset, cancel, status, result, error, progress, request } = useBulkExport();
 
   // Derive isRunning from status.
   const isRunning = status === "pending" || status === "in-progress";
@@ -162,7 +141,7 @@ export function Export() {
 
                 {error && (
                   <Text size="2" color="red">
-                    Error: {error}
+                    Error: {error.message}
                   </Text>
                 )}
 

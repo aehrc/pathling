@@ -22,9 +22,9 @@ export function BulkSubmit() {
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  // Monitor bulk submit operations.
+  // Monitor bulk submit operations. 401 errors handled globally.
   const monitor = useBulkSubmitMonitor({
-    onError: (error) => setError(error),
+    onError: (error) => setError(error.message),
   });
 
   // Show loading state while checking server capabilities.
@@ -113,7 +113,7 @@ export function BulkSubmit() {
 
                 {isError && monitor.error && (
                   <Text size="2" color="red">
-                    Error: {monitor.error}
+                    Error: {monitor.error.message}
                   </Text>
                 )}
 

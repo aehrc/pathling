@@ -14,7 +14,12 @@ import type { ImportRequest, ImportManifest } from "./import";
 import type { ImportPnpRequest } from "./importPnp";
 import type { ViewExportRequest, ViewExportManifest } from "./viewExport";
 
-export type JobType = "export" | "import" | "import-pnp" | "bulk-submit" | "view-export";
+export type JobType =
+  | "export"
+  | "import"
+  | "import-pnp"
+  | "bulk-submit"
+  | "view-export";
 
 export type JobStatus =
   | "pending"
@@ -29,7 +34,7 @@ interface BaseJob {
   pollUrl: string | null;
   status: JobStatus;
   progress: number | null;
-  error: string | null;
+  error: Error | null;
   createdAt: Date;
 }
 
@@ -65,4 +70,9 @@ export interface ViewExportJob extends BaseJob {
   manifest: ViewExportManifest | null;
 }
 
-export type Job = ExportJob | ImportJob | ImportPnpJob | BulkSubmitJob | ViewExportJob;
+export type Job =
+  | ExportJob
+  | ImportJob
+  | ImportPnpJob
+  | BulkSubmitJob
+  | ViewExportJob;

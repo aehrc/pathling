@@ -17,11 +17,9 @@ import {
   useDownloadFile,
   useSaveViewDefinition,
   useServerCapabilities,
-  useUnauthorizedHandler,
   useViewExport,
-  useViewRun
+  useViewRun,
 } from "../hooks";
-import { UnauthorizedError } from "../types/errors";
 import type { ViewDefinition, ViewExportOutputFormat, ViewRunRequest } from "../types/hooks";
 import type { ViewExportManifest } from "../types/viewExport";
 
@@ -29,35 +27,21 @@ export function SqlOnFhir() {
   const { fhirBaseUrl } = config;
   const { isAuthenticated, client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
-  const handleUnauthorizedError = useUnauthorizedHandler();
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  // View run hook for executing ViewDefinitions.
-  const viewRun = useViewRun({
-    onError: (error) => {
-      if (error instanceof UnauthorizedError) {
-        handleUnauthorizedError();
-      }
-    },
-  });
+  // View run hook for executing ViewDefinitions. 401 errors handled globally.
+  const viewRun = useViewRun();
 
   // Track download errors separately since they're not from viewRun.
   const [downloadError, setDownloadError] = useState<Error | null>(null);
-  const handleDownload = useDownloadFile((message) => setDownloadError(new Error(message)));
+  const handleDownload = useDownloadFile(setDownloadError);
 
-  // View export hook.
+  // View export hook. 401 errors handled globally.
   const viewExport = useViewExport({
-    onError: (errorMessage) => {
-      // Check if it's an unauthorized error by message.
-      if (errorMessage.includes("401") || errorMessage.toLowerCase().includes("unauthorized")) {
-        handleUnauthorizedError();
-      } else {
-        setDownloadError(new Error(errorMessage));
-      }
-    },
+    onError: setDownloadError,
   });
 
   // Derive isRunning from status.
@@ -72,14 +56,8 @@ export function SqlOnFhir() {
     [viewExport, viewRun],
   );
 
-  // Mutation for saving a ViewDefinition to the server.
-  const { mutateAsync: saveViewDefinition, isPending: isSaving } = useSaveViewDefinition({
-    onError: (error) => {
-      if (error instanceof UnauthorizedError) {
-        handleUnauthorizedError();
-      }
-    },
-  });
+  // Mutation for saving a ViewDefinition to the server. 401 errors handled globally.
+  const { mutateAsync: saveViewDefinition, isPending: isSaving } = useSaveViewDefinition();
 
   const handleExport = useCallback(
     async (format: ViewExportOutputFormat) => {
@@ -146,9 +124,8 @@ export function SqlOnFhir() {
     return <LoginRequired />;
   }
 
-  // Determine actual error to display (combine viewRun and download errors, ignore unauthorized).
-  const executionError = viewRun.error instanceof UnauthorizedError ? null : viewRun.error;
-  const displayError = executionError ?? downloadError;
+  // Combine viewRun and download errors for display.
+  const displayError = viewRun.error ?? downloadError;
 
   return (
     <>

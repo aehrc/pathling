@@ -5,7 +5,14 @@
  */
 
 import type Client from "fhirclient/lib/Client";
-import { createContext, type ReactNode, useContext, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { registerClearSession } from "../main";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -104,6 +111,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Reload the page to reset the app state.
     window.location.reload();
   };
+
+  // Register the session clearing function for global 401 handling.
+  useEffect(() => {
+    registerClearSession(clearSessionAndPromptLogin);
+  }, [clearSessionAndPromptLogin]);
 
   return (
     <AuthContext.Provider

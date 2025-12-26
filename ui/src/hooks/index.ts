@@ -42,7 +42,6 @@ export { useSaveViewDefinition } from "./useSaveViewDefinition";
 export { useDownloadFile } from "./useDownloadFile";
 export { useFhirPathSearch } from "./useFhirPathSearch";
 export { useServerCapabilities } from "./useServerCapabilities";
-export { useUnauthorizedHandler } from "./useUnauthorizedHandler";
 
 // Re-export types from the base hook.
 export type { UseAsyncJobResult } from "./useAsyncJob";

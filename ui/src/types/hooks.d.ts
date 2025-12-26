@@ -46,8 +46,8 @@ export interface AsyncJobResult<TRequest, TResult> {
   progress?: number;
   /** The final result when status is "complete". */
   result?: TResult;
-  /** Error message when status is "error". */
-  error?: string;
+  /** Error object when status is "error". */
+  error?: Error;
   /** The request that produced the current result/error. */
   request?: TRequest;
   /** Start execution with the given request. If already running, cancels and restarts. */
@@ -67,7 +67,7 @@ export interface AsyncJobOptions {
   /** Callback when job completes. */
   onComplete?: () => void;
   /** Callback when job fails. */
-  onError?: (error: string) => void;
+  onError?: (error: Error) => void;
 }
 
 // ============================================================================

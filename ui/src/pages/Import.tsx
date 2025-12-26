@@ -6,41 +6,27 @@
 
 import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Progress, Spinner, Tabs, Text } from "@radix-ui/themes";
-import { useCallback } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ImportForm } from "../components/import/ImportForm";
 import { ImportPnpForm } from "../components/import/ImportPnpForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useImport, useImportPnp, useServerCapabilities, useUnauthorizedHandler } from "../hooks";
+import { useImport, useImportPnp, useServerCapabilities } from "../hooks";
 import type { ImportRequest } from "../types/import";
 import type { ImportPnpRequest } from "../types/importPnp";
 
 export function Import() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, setError } = useAuth();
-  const handleUnauthorizedError = useUnauthorizedHandler();
+  const { isAuthenticated } = useAuth();
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  const handleError = useCallback(
-    (errorMessage: string) => {
-      // Hook checks if message looks like 401 and handles it.
-      handleUnauthorizedError(errorMessage);
-      // Set error for non-401 errors.
-      if (!errorMessage.includes("401") && !errorMessage.toLowerCase().includes("unauthorized")) {
-        setError(errorMessage);
-      }
-    },
-    [handleUnauthorizedError, setError],
-  );
-
-  // Use the import hooks.
-  const standardImport = useImport({ onError: handleError });
-  const pnpImport = useImportPnp({ onError: handleError });
+  // Use the import hooks. 401 errors are handled globally.
+  const standardImport = useImport();
+  const pnpImport = useImportPnp();
 
   // Derive running states from status.
   const isStandardRunning =
@@ -156,7 +142,7 @@ export function Import() {
 
                       {standardImport.error && (
                         <Text size="2" color="red">
-                          Error: {standardImport.error}
+                          Error: {standardImport.error.message}
                         </Text>
                       )}
 
@@ -245,7 +231,7 @@ export function Import() {
 
                       {pnpImport.error && (
                         <Text size="2" color="red">
-                          Error: {pnpImport.error}
+                          Error: {pnpImport.error.message}
                         </Text>
                       )}
 

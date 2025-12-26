@@ -26,7 +26,7 @@ export interface UseAsyncJobResult<TRequest, TResult> {
   status: AsyncJobStatus;
   progress?: number;
   result?: TResult;
-  error?: string;
+  error?: Error;
   /** The request that produced the current result/error. */
   request?: TRequest;
   /** Start execution with the given request. If already running, cancels and restarts. */
@@ -53,13 +53,13 @@ export function useAsyncJob<TRequest, TKickOffResult, TStatusResult, TResult>(
   callbacks?: {
     onProgress?: (progress: number) => void;
     onComplete?: () => void;
-    onError?: (error: string) => void;
+    onError?: (error: Error) => void;
   },
 ): UseAsyncJobResult<TRequest, TResult> {
   const [status, setStatus] = useState<AsyncJobStatus>("idle");
   const [progress, setProgress] = useState<number | undefined>(undefined);
   const [result, setResult] = useState<TResult | undefined>(undefined);
-  const [error, setError] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<Error | undefined>(undefined);
   const [request, setRequest] = useState<TRequest | undefined>(undefined);
 
   const cancelRef = useRef<(() => Promise<void>) | null>(null);
@@ -106,10 +106,10 @@ export function useAsyncJob<TRequest, TKickOffResult, TStatusResult, TResult>(
           callbacks?.onComplete?.();
         })
         .catch((err) => {
-          const message = err instanceof Error ? err.message : "Unknown error";
-          setError(message);
+          const error = err instanceof Error ? err : new Error("Unknown error");
+          setError(error);
           setStatus("error");
-          callbacks?.onError?.(message);
+          callbacks?.onError?.(error);
         });
     },
     [buildOptions, callbacks],

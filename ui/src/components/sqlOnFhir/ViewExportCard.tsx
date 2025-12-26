@@ -88,7 +88,7 @@ export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProp
 
         {job.status === "failed" && job.error && (
           <Text size="2" color="red">
-            Error: {job.error}
+            Error: {job.error.message}
           </Text>
         )}
 

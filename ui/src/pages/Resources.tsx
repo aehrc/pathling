@@ -5,7 +5,7 @@
  */
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { deleteResource } from "../api";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
@@ -15,8 +15,7 @@ import { ResourceSearchForm } from "../components/resources/ResourceSearchForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
-import { useFhirPathSearch, useServerCapabilities, useUnauthorizedHandler } from "../hooks";
-import { UnauthorizedError } from "../types/errors";
+import { useFhirPathSearch, useServerCapabilities } from "../hooks";
 import type { SearchRequest } from "../types/search";
 
 interface DeleteTarget {
@@ -30,7 +29,6 @@ export function Resources() {
   const { client, isAuthenticated } = useAuth();
   const { showToast } = useToast();
   const accessToken = client?.state.tokenResponse?.access_token;
-  const handleUnauthorizedError = useUnauthorizedHandler();
 
   const [searchRequest, setSearchRequest] = useState<SearchRequest | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState<DeleteTarget | null>(null);
@@ -40,7 +38,7 @@ export function Resources() {
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  // Execute the search query.
+  // Execute the search query. 401 errors handled globally.
   const {
     resources,
     total,
@@ -53,13 +51,6 @@ export function Resources() {
     enabled: !!searchRequest?.resourceType,
   });
 
-  // Handle search errors.
-  useEffect(() => {
-    if (searchError instanceof UnauthorizedError) {
-      handleUnauthorizedError();
-    }
-  }, [searchError, handleUnauthorizedError]);
-
   const handleSearch = (request: SearchRequest) => {
     setSearchRequest(request);
   };
@@ -69,7 +60,7 @@ export function Resources() {
     setShowDeleteDialog({ resourceType, resourceId, summary });
   };
 
-  // Handle delete confirmation - perform the delete.
+  // Handle delete confirmation - perform the delete. 401 errors handled globally.
   const handleDeleteConfirm = async () => {
     if (!showDeleteDialog) return;
 
@@ -86,16 +77,12 @@ export function Resources() {
       );
       setShowDeleteDialog(null);
       // Refresh the search results.
-      await refetch();
+      refetch();
     } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        handleUnauthorizedError();
-      } else {
-        showToast(
-          "Delete failed",
-          err instanceof Error ? err.message : "An error occurred",
-        );
-      }
+      showToast(
+        "Delete failed",
+        err instanceof Error ? err.message : "An error occurred",
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -119,10 +106,6 @@ export function Resources() {
     return <LoginRequired />;
   }
 
-  // Determine actual error to display (ignore unauthorized since it's handled separately).
-  const displayError =
-    searchError && !(searchError instanceof UnauthorizedError) ? searchError : null;
-
   // Show search form and results.
   return (
     <>
@@ -141,7 +124,7 @@ export function Resources() {
             resources={resources}
             total={total}
             isLoading={isSearching}
-            error={displayError}
+            error={searchError}
             hasSearched={searchRequest !== null}
             fhirBaseUrl={fhirBaseUrl}
             onDelete={handleDeleteClick}
