@@ -14,7 +14,7 @@ import {
   IconButton,
   Select,
   Text,
-  TextField,
+  TextField
 } from "@radix-ui/themes";
 import { useState } from "react";
 import type { ImportFormat, ImportInput, ImportRequest, SaveMode } from "../../types/import";
@@ -86,8 +86,6 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
           </Select.Root>
         </Box>
 
-        <SaveModeField value={saveMode} onChange={setSaveMode} />
-
         <Box>
           <Flex justify="between" align="center" mb="2">
             <Text as="label" size="2" weight="medium">
@@ -146,9 +144,11 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
             ))}
           </Flex>
           <Text size="1" color="gray" mt="1">
-            Supported URL schemes: http://, https://, s3a://, hdfs://, file://
+            Supported URL schemes: s3a://, hdfs://, file://
           </Text>
         </Box>
+
+        <SaveModeField value={saveMode} onChange={setSaveMode} />
 
         <Button size="3" onClick={handleSubmit} disabled={disabled || isSubmitting || !isValid}>
           <UploadIcon />
