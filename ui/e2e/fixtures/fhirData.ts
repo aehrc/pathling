@@ -148,3 +148,30 @@ export const mockErrorResponse = {
     },
   ],
 };
+
+/**
+ * Mock job status response indicating job is still in progress.
+ */
+export const mockJobStatusInProgress = {
+  status: "in-progress",
+};
+
+/**
+ * Mock job status response indicating job completed successfully.
+ */
+export const mockJobStatusComplete = {
+  status: "complete",
+  result: {
+    transactionTime: "2024-01-01T00:00:00Z",
+    request: "/$import",
+    output: [],
+  },
+};
+
+/**
+ * Mock job status response indicating job failed.
+ */
+export const mockJobStatusError = {
+  status: "error",
+  error: "Import failed: Invalid source URL",
+};
