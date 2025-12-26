@@ -29,8 +29,6 @@ import jakarta.annotation.Nonnull;
  * mode).
  * @param exportType The type of export: "dynamic" to initiate a new export, or "static" to fetch a
  * pre-generated manifest.
- * @param inputSource URI for tracking the imported data throughout its lifecycle (required by SMART
- * specification).
  * @param saveMode The save mode to use throughout the entire import operation.
  * @param importFormat The expected input format (NDJSON, Parquet, or Delta).
  * @author John Grimes
@@ -39,7 +37,6 @@ public record ImportPnpRequest(
     @Nonnull String originalRequest,
     @Nonnull String exportUrl,
     @Nonnull String exportType,
-    @Nonnull String inputSource,
     @Nonnull SaveMode saveMode,
     @Nonnull ImportFormat importFormat
 ) {

@@ -39,7 +39,6 @@ import { buildHeaders, buildUrl, checkResponse, extractJobIdFromUrl } from "./ut
  *   input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
  *   inputFormat: "application/fhir+ndjson",
  *   mode: "overwrite",
- *   inputSource: "s3://bucket/",
  *   accessToken: "token123"
  * });
  */
@@ -58,7 +57,6 @@ export async function importKickOff(
     input: options.input,
     inputFormat: options.inputFormat,
     mode: options.mode,
-    inputSource: options.inputSource,
   };
 
   const response = await fetch(url, {
@@ -105,13 +103,6 @@ function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
     parameters.parameter!.push({
       name: "mode",
       valueCoding: { code: options.saveMode },
-    });
-  }
-
-  if (options.inputSource) {
-    parameters.parameter!.push({
-      name: "inputSource",
-      valueUrl: options.inputSource,
     });
   }
 

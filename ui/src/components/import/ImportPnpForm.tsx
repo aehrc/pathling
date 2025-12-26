@@ -30,7 +30,6 @@ interface ImportPnpFormProps {
 
 export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFormProps) {
   const [exportUrl, setExportUrl] = useState("");
-  const [inputSource, setInputSource] = useState("");
   const [exportType, setExportType] = useState<ExportType>("dynamic");
   const [saveMode, setSaveMode] = useState<PnpSaveMode>("overwrite");
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");
@@ -39,14 +38,13 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
     const request: ImportPnpRequest = {
       exportUrl,
       exportType,
-      inputSource,
       saveMode,
       inputFormat,
     };
     onSubmit(request);
   };
 
-  const isValid = exportUrl.trim() !== "" && inputSource.trim() !== "";
+  const isValid = exportUrl.trim() !== "";
 
   return (
     <Card>
@@ -66,22 +64,6 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
           />
           <Text size="1" color="gray" mt="1">
             The bulk export endpoint URL of the remote FHIR server.
-          </Text>
-        </Box>
-
-        <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Input source
-            </Text>
-          </Box>
-          <TextField.Root
-            placeholder="e.g., https://example.org/fhir"
-            value={inputSource}
-            onChange={(e) => setInputSource(e.target.value)}
-          />
-          <Text size="1" color="gray" mt="1">
-            URI identifying the source of the imported data.
           </Text>
         </Box>
 

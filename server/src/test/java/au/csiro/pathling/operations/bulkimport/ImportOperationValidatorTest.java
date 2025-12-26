@@ -69,23 +69,20 @@ class ImportOperationValidatorTest {
       final PreAsyncValidationResult<ImportRequest> result =
           importOperationValidator.validateParametersRequest(mockRequest, params);
       assertThat(result.result()).isNotNull();
-      assertThat(result.result().inputSource()).isEqualTo("https://example.org/source");
       assertThat(result.result().input()).containsKey("Patient");
     });
   }
 
   @Test
-  void test_parametersRequest_missingInputSource() {
+  void parametersRequestWithoutInputSourceSucceeds() {
+    // inputSource is optional - should not throw when missing.
     final Parameters params = new Parameters();
     params.addParameter(input("Patient", "s3://bucket/Patient.ndjson"));
-    // Missing inputSource
     final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
         "respond-async", false);
 
-    assertThatCode(
-        () -> importOperationValidator.validateParametersRequest(mockRequest, params))
-        .isInstanceOf(InvalidUserInputError.class)
-        .hasMessageContaining("inputSource");
+    assertThatNoException().isThrownBy(
+        () -> importOperationValidator.validateParametersRequest(mockRequest, params));
   }
 
   @ParameterizedTest
@@ -199,24 +196,23 @@ class ImportOperationValidatorTest {
         importOperationValidator.validateJsonRequest(mockRequest, manifest);
 
     assertThat(result.result()).isNotNull();
-    assertThat(result.result().inputSource()).isEqualTo("https://example.org/source");
     assertThat(result.result().importFormat()).isEqualTo(ImportFormat.NDJSON);
   }
 
   @Test
-  void test_jsonRequest_missingInputSource() {
+  void jsonRequestWithoutInputSourceSucceeds() {
+    // inputSource is optional - should not throw when missing.
     final ImportManifest manifest = new ImportManifest(
         "application/fhir+ndjson",
-        null,  // Missing
+        null,  // Optional
         List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
         null
     );
     final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
         "respond-async", false);
 
-    assertThatCode(() -> importOperationValidator.validateJsonRequest(mockRequest, manifest))
-        .isInstanceOf(InvalidUserInputError.class)
-        .hasMessageContaining("inputSource");
+    assertThatNoException().isThrownBy(
+        () -> importOperationValidator.validateJsonRequest(mockRequest, manifest));
   }
 
   @Test

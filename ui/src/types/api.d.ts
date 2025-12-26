@@ -170,7 +170,6 @@ export interface ImportKickOffOptions extends AuthOptions {
   input: ImportInput[];
   inputFormat: ImportFormat;
   mode: ImportMode;
-  inputSource: string;
 }
 
 export interface ImportResult {
@@ -192,7 +191,6 @@ export interface ImportPnpKickOffOptions extends AuthOptions {
   exportUrl: string;
   exportType?: ExportType;
   saveMode?: SaveMode;
-  inputSource?: string;
 }
 
 export type ImportPnpKickOffFn = (

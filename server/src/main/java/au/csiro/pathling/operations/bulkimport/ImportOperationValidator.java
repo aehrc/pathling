@@ -53,20 +53,7 @@ public class ImportOperationValidator {
       @Nonnull final RequestDetails requestDetails,
       @Nonnull final Parameters parameters
   ) {
-    // Extract inputSource parameter (required by SMART spec).
-    final String inputSource = Objects.requireNonNull(
-        ParamUtil.extractFromPart(
-            parameters.getParameter(),
-            "inputSource",
-            StringType.class,
-            StringType::getValue,
-            false,
-            null,
-            false,
-            new InvalidUserInputError("Missing required parameter: inputSource")
-        ),
-        "inputSource must not be null"
-    );
+    // Note: inputSource parameter is accepted but ignored for backwards compatibility.
 
     // Extract input parameters.
     final Collection<ParametersParameterComponent> inputParts = ParamUtil.extractManyFromParameters(
@@ -92,7 +79,6 @@ public class ImportOperationValidator {
     final ImportFormat importFormat = getImportFormatFromParameters(parameters);
     final ImportRequest importRequest = new ImportRequest(
         requestDetails.getCompleteUrl(),
-        inputSource,
         input,
         saveMode,
         importFormat
@@ -121,11 +107,9 @@ public class ImportOperationValidator {
       @Nonnull final ImportManifest manifest
   ) {
     // Validate required fields (null checks needed because Jackson may deserialize nulls).
+    // Note: inputSource is accepted but ignored for backwards compatibility.
     if (manifest.inputFormat() == null || manifest.inputFormat().isBlank()) {
       throw new InvalidUserInputError("Missing required field: inputFormat");
-    }
-    if (manifest.inputSource() == null || manifest.inputSource().isBlank()) {
-      throw new InvalidUserInputError("Missing required field: inputSource");
     }
     if (manifest.input() == null || manifest.input().isEmpty()) {
       throw new InvalidUserInputError("The input may not be empty.");
@@ -148,7 +132,6 @@ public class ImportOperationValidator {
 
     final ImportRequest importRequest = new ImportRequest(
         requestDetails.getCompleteUrl(),
-        manifest.inputSource(),
         input,
         saveMode,
         importFormat

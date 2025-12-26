@@ -43,7 +43,6 @@ describe("importKickOff", () => {
       input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
       inputFormat: "application/fhir+ndjson",
       mode: "overwrite",
-      inputSource: "s3://bucket/",
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -74,14 +73,12 @@ describe("importKickOff", () => {
       input,
       inputFormat: "application/fhir+ndjson",
       mode: "merge",
-      inputSource: "s3://bucket/",
     });
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.input).toEqual(input);
     expect(body.inputFormat).toBe("application/fhir+ndjson");
     expect(body.mode).toBe("merge");
-    expect(body.inputSource).toBe("s3://bucket/");
   });
 
   it("includes Authorization header when access token provided", async () => {
@@ -94,7 +91,6 @@ describe("importKickOff", () => {
       input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
       inputFormat: "application/fhir+ndjson",
       mode: "overwrite",
-      inputSource: "s3://bucket/",
       accessToken: "test-token",
     });
 
@@ -118,7 +114,6 @@ describe("importKickOff", () => {
       input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
       inputFormat: "application/fhir+ndjson",
       mode: "overwrite",
-      inputSource: "s3://bucket/",
     });
 
     expect(result.jobId).toBe("import-job-123");
@@ -132,7 +127,6 @@ describe("importKickOff", () => {
         input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
         inputFormat: "application/fhir+ndjson",
         mode: "overwrite",
-        inputSource: "s3://bucket/",
       }),
     ).rejects.toThrow("No Content-Location header");
   });
@@ -145,7 +139,6 @@ describe("importKickOff", () => {
         input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
         inputFormat: "application/fhir+ndjson",
         mode: "overwrite",
-        inputSource: "s3://bucket/",
       }),
     ).rejects.toThrow(UnauthorizedError);
   });
@@ -158,7 +151,6 @@ describe("importKickOff", () => {
         input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
         inputFormat: "application/fhir+ndjson",
         mode: "overwrite",
-        inputSource: "s3://bucket/",
       }),
     ).rejects.toThrow("500");
   });
@@ -228,24 +220,6 @@ describe("importPnpKickOff", () => {
     expect(body.parameter).toContainEqual({
       name: "mode",
       valueCoding: { code: "overwrite" },
-    });
-  });
-
-  it("includes inputSource parameter when provided", async () => {
-    const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
-
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
-
-    await importPnpKickOff("https://example.com/fhir", {
-      exportUrl: "https://source.com/$export",
-      inputSource: "https://source.com/fhir",
-    });
-
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.parameter).toContainEqual({
-      name: "inputSource",
-      valueUrl: "https://source.com/fhir",
     });
   });
 

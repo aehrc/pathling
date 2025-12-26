@@ -201,7 +201,6 @@ function buildPnpParameters(request: ImportPnpRequest): Parameters {
     parameter: [
       { name: "exportUrl", valueUrl: request.exportUrl },
       { name: "exportType", valueCoding: { code: request.exportType } },
-      { name: "inputSource", valueString: request.inputSource },
       { name: "mode", valueCoding: { code: request.saveMode } },
       { name: "inputFormat", valueCoding: { code: request.inputFormat } },
     ],

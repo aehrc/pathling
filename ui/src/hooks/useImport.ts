@@ -55,7 +55,6 @@ export const useImport: UseImportFn = (options) => {
           })),
           inputFormat: "application/fhir+ndjson",
           mode: "merge",
-          inputSource: fhirBaseUrl!,
           accessToken,
         }),
       getJobId: (result: { jobId: string }) => result.jobId,

@@ -76,7 +76,6 @@ class ImportLockTest {
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -96,14 +95,12 @@ class ImportLockTest {
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request1 = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
     );
     final ImportRequest request2 = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -126,7 +123,6 @@ class ImportLockTest {
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -151,7 +147,6 @@ class ImportLockTest {
     final String invalidUrl = "file:///nonexistent/Patient.ndjson";
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(invalidUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -165,7 +160,6 @@ class ImportLockTest {
     final String validUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest validRequest = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(validUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON

@@ -19,7 +19,6 @@ export interface ImportInput {
 
 export interface ImportRequest {
   inputFormat: ImportFormat;
-  inputSource: string;
   input: ImportInput[];
   mode: ImportMode;
 }

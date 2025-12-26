@@ -32,14 +32,12 @@ const DEFAULT_INPUT: ImportInput = { type: "Patient", url: "" };
 
 export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: ImportFormProps) {
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");
-  const [inputSource, setInputSource] = useState("");
   const [mode, setMode] = useState<ImportMode>("overwrite");
   const [inputs, setInputs] = useState<ImportInput[]>([{ ...DEFAULT_INPUT }]);
 
   const handleSubmit = () => {
     const request: ImportRequest = {
       inputFormat,
-      inputSource,
       input: inputs.filter((input) => input.url.trim() !== ""),
       mode,
     };
@@ -60,7 +58,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
     setInputs(inputs.map((input, i) => (i === index ? { ...input, [field]: value } : input)));
   };
 
-  const isValid = inputSource.trim() !== "" && inputs.some((input) => input.url.trim() !== "");
+  const isValid = inputs.some((input) => input.url.trim() !== "");
 
   return (
     <Card>
@@ -86,22 +84,6 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
               ))}
             </Select.Content>
           </Select.Root>
-        </Box>
-
-        <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Input source
-            </Text>
-          </Box>
-          <TextField.Root
-            placeholder="e.g., https://example.com/data-source"
-            value={inputSource}
-            onChange={(e) => setInputSource(e.target.value)}
-          />
-          <Text size="1" color="gray" mt="1">
-            URI identifying the source of the imported data.
-          </Text>
         </Box>
 
         <Box>

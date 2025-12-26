@@ -269,8 +269,6 @@ export type UseImportResult = AsyncJobResult<ImportJobRequest, void>;
 export interface ImportPnpJobRequest {
   /** Export URL to import from. */
   exportUrl: string;
-  /** Input source URL for the import. */
-  inputSource?: string;
 }
 
 /**

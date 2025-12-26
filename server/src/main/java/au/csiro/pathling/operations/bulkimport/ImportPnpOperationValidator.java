@@ -34,7 +34,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UrlType;
 import org.springframework.stereotype.Component;
 
@@ -123,20 +122,7 @@ public class ImportPnpOperationValidator {
           "Invalid exportType: %s. Must be 'dynamic' or 'static'.".formatted(exportType));
     }
 
-    // Extract inputSource parameter (required by SMART spec).
-    final String inputSource = Objects.requireNonNull(
-        ParamUtil.extractFromPart(
-            parameters.getParameter(),
-            "inputSource",
-            StringType.class,
-            StringType::getValue,
-            false,
-            null,
-            false,
-            new InvalidUserInputError("Missing required parameter: inputSource")
-        ),
-        "inputSource must not be null"
-    );
+    // Note: inputSource parameter is accepted but ignored for backwards compatibility.
 
     // Extract mode parameter (optional, defaults to OVERWRITE).
     final SaveMode saveMode = ParamUtil.extractFromPart(
@@ -166,7 +152,6 @@ public class ImportPnpOperationValidator {
         requestDetails.getCompleteUrl(),
         exportUrl,
         exportType,
-        inputSource,
         saveMode,
         importFormat
     );

@@ -290,34 +290,59 @@ class ImportPnpOperationIT {
   }
 
   @Test
-  void testMissingInputSourceReturnsError() {
+  void testMissingInputSourceSucceeds() {
+    // inputSource is optional per the SMART Bulk Data Import PnP spec.
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
+    setupSuccessfulBulkExportStubs();
 
+    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
-    final String requestBody = """
+    final String requestBody = String.format("""
         {
           "resourceType": "Parameters",
           "parameter": [
             {
               "name": "exportUrl",
-              "valueUrl": "https://example.org/fhir/$export"
+              "valueUrl": "%s"
+            },
+            {
+              "name": "exportType",
+              "valueCoding": {
+                "code": "dynamic"
+              }
             }
           ]
         }
-        """;
+        """, exportUrl);
 
-    webTestClient.post()
+    final var result = webTestClient.post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .header("Prefer", "respond-async")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().is4xxClientError()
-        .expectBody()
-        .jsonPath("$.issue[0].diagnostics")
-        .value(diagnostics -> assertThat(diagnostics.toString())
-            .contains("inputSource"));
+        .expectStatus().isAccepted()
+        .expectHeader().exists(HttpHeaders.CONTENT_LOCATION)
+        .returnResult(String.class);
+
+    final String contentLocation = result.getResponseHeaders()
+        .getFirst(HttpHeaders.CONTENT_LOCATION);
+    assertThat(contentLocation).isNotNull();
+    assertThat(contentLocation).contains("$job");
+
+    // Poll the job status until completion.
+    await().atMost(30, TimeUnit.SECONDS)
+        .pollInterval(2, TimeUnit.SECONDS)
+        .untilAsserted(() -> {
+          webTestClient.get()
+              .uri(contentLocation)
+              .header("Accept", "application/fhir+json")
+              .exchange()
+              .expectStatus().isOk();
+        });
+
+    log.info("Import-pnp job without inputSource completed successfully");
   }
 
   @Test

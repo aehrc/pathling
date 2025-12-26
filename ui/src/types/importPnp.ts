@@ -15,7 +15,6 @@ export type PnpSaveMode = "error" | "overwrite" | "append" | "ignore" | "merge";
 export interface ImportPnpRequest {
   exportUrl: string;
   exportType: ExportType;
-  inputSource: string;
   saveMode: PnpSaveMode;
   inputFormat: ImportFormat;
 }

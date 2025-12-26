@@ -136,7 +136,6 @@ public class ImportPnpExecutor {
       // Create an ImportRequest from the downloaded files.
       final ImportRequest importRequest = new ImportRequest(
           pnpRequest.originalRequest(),
-          pnpRequest.inputSource(),
           downloadedFiles,
           pnpRequest.saveMode(),
           pnpRequest.importFormat()

@@ -71,6 +71,32 @@ class ImportManifestTest {
     assertThat(json).contains("\"input\":");
   }
 
+  @Test
+  void importManifestSerialisationWithoutInputSource() throws Exception {
+    // inputSource is optional per the SMART Bulk Data Import spec.
+    // Given
+    final ImportManifest manifest = new ImportManifest(
+        "application/fhir+ndjson",
+        null,
+        List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
+        "overwrite"
+    );
+
+    // When
+    final String json = objectMapper.writeValueAsString(manifest);
+
+    // Then
+    assertThat(json).isNotNull();
+    assertThat(json).contains("\"inputFormat\":\"application/fhir+ndjson\"");
+    assertThat(json).contains("\"input\":");
+    assertThat(json).contains("\"mode\":\"overwrite\"");
+    // inputSource should either be absent or null.
+    assertThat(json).satisfiesAnyOf(
+        j -> assertThat(j).doesNotContain("\"inputSource\""),
+        j -> assertThat(j).contains("\"inputSource\":null")
+    );
+  }
+
   // ========================================
   // ImportManifest Deserialisation Tests
   // ========================================
@@ -136,6 +162,32 @@ class ImportManifestTest {
     assertThat(manifest.inputSource()).isEqualTo("https://example.org/source");
     assertThat(manifest.input()).hasSize(1);
     assertThat(manifest.mode()).isNull();
+  }
+
+  @Test
+  void importManifestDeserialisationWithoutInputSource() throws Exception {
+    // inputSource is optional per the SMART Bulk Data Import spec.
+    // Given
+    final String json = """
+        {
+          "inputFormat": "application/fhir+ndjson",
+          "input": [
+            {
+              "type": "Patient",
+              "url": "s3://bucket/patients.ndjson"
+            }
+          ]
+        }
+        """;
+
+    // When
+    final ImportManifest manifest = objectMapper.readValue(json, ImportManifest.class);
+
+    // Then
+    assertThat(manifest).isNotNull();
+    assertThat(manifest.inputFormat()).isEqualTo("application/fhir+ndjson");
+    assertThat(manifest.inputSource()).isNull();
+    assertThat(manifest.input()).hasSize(1);
   }
 
   @Test

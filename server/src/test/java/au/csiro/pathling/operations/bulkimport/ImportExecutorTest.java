@@ -85,7 +85,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -114,7 +113,6 @@ class ImportExecutorTest {
     // Given
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of(
             "Patient",
             List.of("file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath()),
@@ -153,7 +151,6 @@ class ImportExecutorTest {
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -193,7 +190,6 @@ class ImportExecutorTest {
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.APPEND,
         ImportFormat.NDJSON
@@ -239,7 +235,6 @@ class ImportExecutorTest {
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest initialRequest = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -253,7 +248,6 @@ class ImportExecutorTest {
     // When - second import with ERROR_IF_EXISTS should throw because Delta table exists
     final ImportRequest errorRequest = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.ERROR_IF_EXISTS,
         ImportFormat.NDJSON
@@ -271,7 +265,6 @@ class ImportExecutorTest {
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.ERROR_IF_EXISTS,
         ImportFormat.NDJSON
@@ -307,7 +300,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of(
             "Patient", List.of(patientUrl),
             "Condition", List.of(conditionUrl)
@@ -341,7 +333,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of(
             "Patient", List.of(patientUrl),
             "Condition", List.of(conditionUrl)
@@ -370,7 +361,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -418,7 +408,6 @@ class ImportExecutorTest {
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -450,7 +439,6 @@ class ImportExecutorTest {
     final String deniedUrl = "s3://denied-bucket/Patient.ndjson";
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(deniedUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -470,7 +458,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(anyUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -504,7 +491,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of(
             "Patient", List.of(allowedUrl),
             "Condition", List.of(deniedUrl)
@@ -531,7 +517,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -554,7 +539,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -587,7 +571,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -610,7 +593,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -636,7 +618,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         originalRequestUrl,
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -658,7 +639,6 @@ class ImportExecutorTest {
 
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
-        "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
@@ -704,7 +684,6 @@ class ImportExecutorTest {
 
       final ImportRequest request = new ImportRequest(
           "http://example.com/fhir/$import",
-          "https://example.org/source",
           Map.of("Observation", List.of(observationUrl)),
           SaveMode.OVERWRITE,
           ImportFormat.NDJSON

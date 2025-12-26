@@ -192,10 +192,12 @@ public class ImportManifestInterceptor {
     private Parameters convertManifestToParameters(@Nonnull final ImportManifest manifest) {
       final Parameters parameters = new Parameters();
 
-      // Add inputSource parameter.
-      parameters.addParameter()
-          .setName("inputSource")
-          .setValue(new StringType(manifest.inputSource()));
+      // Add inputSource parameter if present (optional for backwards compatibility).
+      if (manifest.inputSource() != null && !manifest.inputSource().isBlank()) {
+        parameters.addParameter()
+            .setName("inputSource")
+            .setValue(new StringType(manifest.inputSource()));
+      }
 
       // Add inputFormat parameter if present.
       if (manifest.inputFormat() != null && !manifest.inputFormat().isBlank()) {

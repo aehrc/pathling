@@ -466,7 +466,6 @@ public class BulkSubmitExecutor {
       // Create ImportRequest with aggregated file paths.
       final ImportRequest importRequest = new ImportRequest(
           submission.submissionId(),
-          "bulk-submit",
           allFilePaths,
           SaveMode.MERGE,
           ImportFormat.NDJSON

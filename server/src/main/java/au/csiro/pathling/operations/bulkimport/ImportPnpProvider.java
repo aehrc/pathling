@@ -165,7 +165,6 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
     // Exclude originalRequest as it's already captured in the request URL.
     return "exportUrl=" + request.exportUrl()
         + "|exportType=" + request.exportType()
-        + "|inputSource=" + request.inputSource()
         + "|saveMode=" + request.saveMode()
         + "|format=" + request.importFormat();
   }

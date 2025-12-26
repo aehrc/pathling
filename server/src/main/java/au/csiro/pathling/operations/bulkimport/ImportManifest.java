@@ -29,7 +29,7 @@ import java.util.List;
  */
 public record ImportManifest(
     @Nonnull @JsonProperty("inputFormat") String inputFormat,
-    @Nonnull @JsonProperty("inputSource") String inputSource,
+    @Nullable @JsonProperty("inputSource") String inputSource,
     @Nonnull @JsonProperty("input") List<ImportManifestInput> input,
     @Nullable @JsonProperty("mode") String mode
 ) {

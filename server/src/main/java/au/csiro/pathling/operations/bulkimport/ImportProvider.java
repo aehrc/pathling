@@ -188,8 +188,7 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
         .map(entry -> entry.getKey() + ":" + sortedCollection(entry.getValue()))
         .collect(Collectors.joining(","));
 
-    return "inputSource=" + request.inputSource()
-        + "|input={" + sortedInput + "}"
+    return "input={" + sortedInput + "}"
         + "|saveMode=" + request.saveMode()
         + "|format=" + request.importFormat();
   }
