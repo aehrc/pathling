@@ -5,7 +5,7 @@
  */
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { read } from "../api";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
@@ -79,18 +79,14 @@ export function SqlOnFhir() {
   );
 
   // Mutation for saving a ViewDefinition to the server.
-  const {
-    mutateAsync: saveViewDefinition,
-    isPending: isSaving,
-    error: saveError,
-  } = useSaveViewDefinition();
-
-  // Handle unauthorized errors from save mutation.
-  useEffect(() => {
-    if (saveError instanceof UnauthorizedError) {
-      handleUnauthorizedError();
-    }
-  }, [saveError, handleUnauthorizedError]);
+  const { mutateAsync: saveViewDefinition, isPending: isSaving } =
+    useSaveViewDefinition({
+      onError: (error) => {
+        if (error instanceof UnauthorizedError) {
+          handleUnauthorizedError();
+        }
+      },
+    });
 
   const handleExport = useCallback(
     async (format: ViewExportOutputFormat) => {
