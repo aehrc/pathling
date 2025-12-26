@@ -159,7 +159,7 @@ export type ImportFormat =
   | "application/x-pathling-parquet"
   | "application/x-pathling-delta+parquet";
 
-export type ImportMode = "overwrite" | "merge";
+export type ImportMode = "overwrite" | "merge" | "append" | "ignore" | "error";
 
 export interface ImportInput {
   type: ResourceType;
@@ -191,6 +191,7 @@ export interface ImportPnpKickOffOptions extends AuthOptions {
   exportUrl: string;
   exportType?: ExportType;
   saveMode?: SaveMode;
+  inputFormat?: ImportFormat;
 }
 
 export type ImportPnpKickOffFn = (

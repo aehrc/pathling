@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-export type ImportMode = "overwrite" | "merge";
+export type SaveMode = "overwrite" | "merge" | "append" | "ignore" | "error";
 
 // MIME types for import formats.
 export type ImportFormat =
@@ -20,7 +20,7 @@ export interface ImportInput {
 export interface ImportRequest {
   inputFormat: ImportFormat;
   input: ImportInput[];
-  mode: ImportMode;
+  saveMode: SaveMode;
 }
 
 export interface ImportManifestOutput {
@@ -40,9 +40,9 @@ export const IMPORT_FORMATS: { value: ImportFormat; label: string }[] = [
   { value: "application/x-pathling-delta+parquet", label: "Delta" },
 ];
 
-// Import mode options for the form.
-export const IMPORT_MODES: {
-  value: ImportMode;
+// Save mode options for import forms.
+export const SAVE_MODES: {
+  value: SaveMode;
   label: string;
   description: string;
 }[] = [
@@ -55,5 +55,20 @@ export const IMPORT_MODES: {
     value: "merge",
     label: "Merge",
     description: "Update existing resources and add new ones",
+  },
+  {
+    value: "append",
+    label: "Append",
+    description: "Add new resources without modifying existing",
+  },
+  {
+    value: "ignore",
+    label: "Ignore",
+    description: "Skip if resources already exist",
+  },
+  {
+    value: "error",
+    label: "Error",
+    description: "Fail if resources already exist",
   },
 ];

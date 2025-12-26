@@ -106,6 +106,13 @@ function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
     });
   }
 
+  if (options.inputFormat) {
+    parameters.parameter!.push({
+      name: "inputFormat",
+      valueCode: options.inputFormat,
+    });
+  }
+
   return parameters;
 }
 

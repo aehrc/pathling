@@ -12,14 +12,14 @@ import {
   Flex,
   Heading,
   IconButton,
-  RadioCards,
   Select,
   Text,
   TextField,
 } from "@radix-ui/themes";
 import { useState } from "react";
-import type { ImportFormat, ImportInput, ImportMode, ImportRequest } from "../../types/import";
-import { IMPORT_FORMATS, IMPORT_MODES } from "../../types/import";
+import type { ImportFormat, ImportInput, ImportRequest, SaveMode } from "../../types/import";
+import { IMPORT_FORMATS } from "../../types/import";
+import { SaveModeField } from "./SaveModeField";
 
 interface ImportFormProps {
   onSubmit: (request: ImportRequest) => void;
@@ -32,14 +32,14 @@ const DEFAULT_INPUT: ImportInput = { type: "Patient", url: "" };
 
 export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: ImportFormProps) {
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");
-  const [mode, setMode] = useState<ImportMode>("overwrite");
+  const [saveMode, setSaveMode] = useState<SaveMode>("overwrite");
   const [inputs, setInputs] = useState<ImportInput[]>([{ ...DEFAULT_INPUT }]);
 
   const handleSubmit = () => {
     const request: ImportRequest = {
       inputFormat,
       input: inputs.filter((input) => input.url.trim() !== ""),
-      mode,
+      saveMode,
     };
     onSubmit(request);
   };
@@ -86,30 +86,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
           </Select.Root>
         </Box>
 
-        <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Import mode
-            </Text>
-          </Box>
-          <RadioCards.Root
-            value={mode}
-            onValueChange={(v) => setMode(v as ImportMode)}
-            columns="2"
-            gap="2"
-          >
-            {IMPORT_MODES.map((modeOption) => (
-              <RadioCards.Item value={modeOption.value} key={modeOption.value}>
-                <Flex direction="column" width="100%">
-                  <Text weight="medium">{modeOption.label}</Text>
-                  <Text size="1" color="gray">
-                    {modeOption.description}
-                  </Text>
-                </Flex>
-              </RadioCards.Item>
-            ))}
-          </RadioCards.Root>
-        </Box>
+        <SaveModeField value={saveMode} onChange={setSaveMode} />
 
         <Box>
           <Flex justify="between" align="center" mb="2">

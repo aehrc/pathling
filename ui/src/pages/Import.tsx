@@ -96,6 +96,8 @@ export function Import() {
                     standardImport.startWith({
                       sources: request.input.map((i) => i.url),
                       resourceTypes: request.input.map((i) => i.type),
+                      saveMode: request.saveMode,
+                      inputFormat: request.inputFormat,
                     });
                   }}
                   isSubmitting={isStandardRunning}
@@ -189,6 +191,8 @@ export function Import() {
                   onSubmit={(request: ImportPnpRequest) => {
                     pnpImport.startWith({
                       exportUrl: request.exportUrl,
+                      saveMode: request.saveMode,
+                      inputFormat: request.inputFormat,
                     });
                   }}
                   isSubmitting={isPnpRunning}

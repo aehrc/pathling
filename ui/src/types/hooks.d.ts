@@ -19,6 +19,7 @@
 
 import type { Bundle, Resource } from "fhir/r4";
 import type { UseQueryResult, UseMutationResult } from "@tanstack/react-query";
+import type { ImportFormat, SaveMode } from "./import";
 
 // ============================================================================
 // Common Types
@@ -251,6 +252,10 @@ export interface ImportJobRequest {
   sources: string[];
   /** Resource types to import (optional filter). */
   resourceTypes?: string[];
+  /** Save mode for the import operation. */
+  saveMode: SaveMode;
+  /** Input format for the import data. */
+  inputFormat: ImportFormat;
 }
 
 /**
@@ -269,6 +274,10 @@ export type UseImportResult = AsyncJobResult<ImportJobRequest, void>;
 export interface ImportPnpJobRequest {
   /** Export URL to import from. */
   exportUrl: string;
+  /** Save mode for the import operation. */
+  saveMode: SaveMode;
+  /** Input format for the import data. */
+  inputFormat: ImportFormat;
 }
 
 /**

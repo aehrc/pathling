@@ -11,16 +11,15 @@ import {
   Card,
   Flex,
   Heading,
-  RadioCards,
   Select,
   Text,
   TextField,
 } from "@radix-ui/themes";
 import { UploadIcon } from "@radix-ui/react-icons";
-import type { ImportFormat } from "../../types/import";
+import type { ImportFormat, SaveMode } from "../../types/import";
 import { IMPORT_FORMATS } from "../../types/import";
-import type { ExportType, ImportPnpRequest, PnpSaveMode } from "../../types/importPnp";
-import { PNP_SAVE_MODES } from "../../types/importPnp";
+import type { ExportType, ImportPnpRequest } from "../../types/importPnp";
+import { SaveModeField } from "./SaveModeField";
 
 interface ImportPnpFormProps {
   onSubmit: (request: ImportPnpRequest) => void;
@@ -30,7 +29,7 @@ interface ImportPnpFormProps {
 
 export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFormProps) {
   const [exportUrl, setExportUrl] = useState("");
-  const [saveMode, setSaveMode] = useState<PnpSaveMode>("overwrite");
+  const [saveMode, setSaveMode] = useState<SaveMode>("overwrite");
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");
   const exportType: ExportType = "dynamic";
 
@@ -67,30 +66,7 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
           </Text>
         </Box>
 
-        <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Save mode
-            </Text>
-          </Box>
-          <RadioCards.Root
-            value={saveMode}
-            onValueChange={(v) => setSaveMode(v as PnpSaveMode)}
-            columns="2"
-            gap="2"
-          >
-            {PNP_SAVE_MODES.map((option) => (
-              <RadioCards.Item value={option.value} key={option.value}>
-                <Flex direction="column" width="100%">
-                  <Text weight="medium">{option.label}</Text>
-                  <Text size="1" color="gray">
-                    {option.description}
-                  </Text>
-                </Flex>
-              </RadioCards.Item>
-            ))}
-          </RadioCards.Root>
-        </Box>
+        <SaveModeField value={saveMode} onChange={setSaveMode} />
 
         <Box>
           <Box mb="2">

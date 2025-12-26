@@ -50,7 +50,8 @@ export const useImportPnp: UseImportPnpFn = (options) => {
         importPnpKickOff(fhirBaseUrl!, {
           exportUrl: request.exportUrl,
           exportType: "dynamic",
-          saveMode: "merge",
+          saveMode: request.saveMode,
+          inputFormat: request.inputFormat,
           accessToken,
         }),
       getJobId: (result: { jobId: string }) => result.jobId,
