@@ -80,7 +80,8 @@ export async function search(
   }
 
   const queryString = searchParams.toString();
-  const url = buildUrl(baseUrl, `/${options.resourceType}`) +
+  const url =
+    buildUrl(baseUrl, `/${options.resourceType}`) +
     (queryString ? `?${queryString}` : "");
 
   const headers = buildHeaders({ accessToken: options.accessToken });

@@ -37,7 +37,9 @@ describe("importKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await importKickOff("https://example.com/fhir", {
       input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
@@ -62,7 +64,9 @@ describe("importKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     const input = [
       { type: "Patient", url: "s3://bucket/patient.ndjson" },
@@ -85,7 +89,9 @@ describe("importKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await importKickOff("https://example.com/fhir", {
       input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
@@ -106,9 +112,14 @@ describe("importKickOff", () => {
 
   it("returns job ID from Content-Location header", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=import-job-123");
+    headers.set(
+      "Content-Location",
+      "https://example.com/$job-status?id=import-job-123",
+    );
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     const result = await importKickOff("https://example.com/fhir", {
       input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
@@ -132,7 +143,9 @@ describe("importKickOff", () => {
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       importKickOff("https://example.com/fhir", {
@@ -161,7 +174,9 @@ describe("importPnpKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await importPnpKickOff("https://example.com/fhir", {
       exportUrl: "https://source.com/$export",
@@ -184,7 +199,9 @@ describe("importPnpKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await importPnpKickOff("https://example.com/fhir", {
       exportUrl: "https://source.com/$export",
@@ -204,7 +221,9 @@ describe("importPnpKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await importPnpKickOff("https://example.com/fhir", {
       exportUrl: "https://source.com/$export",
@@ -225,9 +244,14 @@ describe("importPnpKickOff", () => {
 
   it("returns job ID from Content-Location header", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=pnp-job-456");
+    headers.set(
+      "Content-Location",
+      "https://example.com/$job-status?id=pnp-job-456",
+    );
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     const result = await importPnpKickOff("https://example.com/fhir", {
       exportUrl: "https://source.com/$export",
@@ -240,7 +264,9 @@ describe("importPnpKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await importPnpKickOff("https://example.com/fhir", {
       exportUrl: "https://source.com/$export",
@@ -258,7 +284,9 @@ describe("importPnpKickOff", () => {
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       importPnpKickOff("https://example.com/fhir", {

@@ -45,7 +45,9 @@ describe("systemExportKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await systemExportKickOff("https://example.com/fhir", {});
 
@@ -65,7 +67,9 @@ describe("systemExportKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await systemExportKickOff("https://example.com/fhir", {
       types: ["Patient", "Observation"],
@@ -81,7 +85,9 @@ describe("systemExportKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await systemExportKickOff("https://example.com/fhir", {
       since: "2024-01-01T00:00:00Z",
@@ -97,7 +103,9 @@ describe("systemExportKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await systemExportKickOff("https://example.com/fhir", {
       accessToken: "test-token",
@@ -115,13 +123,20 @@ describe("systemExportKickOff", () => {
 
   it("returns polling URL from Content-Location header", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc-123");
+    headers.set(
+      "Content-Location",
+      "https://example.com/$job-status?id=abc-123",
+    );
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     const result = await systemExportKickOff("https://example.com/fhir", {});
 
-    expect(result.pollingUrl).toBe("https://example.com/$job-status?id=abc-123");
+    expect(result.pollingUrl).toBe(
+      "https://example.com/$job-status?id=abc-123",
+    );
   });
 
   it("throws error when Content-Location header missing", async () => {
@@ -133,7 +148,9 @@ describe("systemExportKickOff", () => {
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       systemExportKickOff("https://example.com/fhir", {}),
@@ -154,7 +171,9 @@ describe("allPatientsExportKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await allPatientsExportKickOff("https://example.com/fhir", {});
 
@@ -170,7 +189,9 @@ describe("patientExportKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await patientExportKickOff("https://example.com/fhir", {
       patientId: "patient-123",
@@ -188,7 +209,9 @@ describe("groupExportKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await groupExportKickOff("https://example.com/fhir", {
       groupId: "group-456",
@@ -257,7 +280,9 @@ describe("bulkExportStatus", () => {
     const headers = new Headers();
     headers.set("X-Progress", "50%");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     const result = await bulkExportStatus("https://example.com/fhir", {
       pollingUrl: "https://example.com/$job-status?id=abc",
@@ -272,7 +297,9 @@ describe("bulkExportStatus", () => {
       transactionTime: "2024-01-01T00:00:00Z",
       request: "https://example.com/$export",
       requiresAccessToken: true,
-      output: [{ type: "Patient", url: "https://example.com/files/patient.ndjson" }],
+      output: [
+        { type: "Patient", url: "https://example.com/files/patient.ndjson" },
+      ],
       error: [],
     };
 
@@ -315,7 +342,9 @@ describe("bulkExportStatus", () => {
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       bulkExportStatus("https://example.com/fhir", {
@@ -376,7 +405,9 @@ describe("bulkExportDownload", () => {
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       bulkExportDownload("https://example.com/fhir", {

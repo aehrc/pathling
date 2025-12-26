@@ -9,7 +9,7 @@ import {
   PaperPlaneIcon,
   ReaderIcon,
   TableIcon,
-  UploadIcon
+  UploadIcon,
 } from "@radix-ui/react-icons";
 import { Box, Container, Flex, Text } from "@radix-ui/themes";
 import { Link, Outlet, useLocation } from "react-router";

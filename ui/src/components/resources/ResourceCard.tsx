@@ -5,7 +5,17 @@
  */
 
 import { ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon, TrashIcon } from "@radix-ui/react-icons";
-import { Badge, Box, Card, Code, Flex, IconButton, ScrollArea, Text, Tooltip } from "@radix-ui/themes";
+import {
+  Badge,
+  Box,
+  Card,
+  Code,
+  Flex,
+  IconButton,
+  ScrollArea,
+  Text,
+  Tooltip,
+} from "@radix-ui/themes";
 import { useState } from "react";
 import type { Resource } from "fhir/r4";
 

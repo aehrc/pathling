@@ -36,8 +36,7 @@ export function DeleteConfirmationDialog({
         <AlertDialog.Title>Delete resource</AlertDialog.Title>
         <AlertDialog.Description size="2">
           <Text as="p">
-            Are you sure you want to delete this resource? This action cannot be
-            undone.
+            Are you sure you want to delete this resource? This action cannot be undone.
           </Text>
           <Text as="p" mt="2" weight="medium">
             {resourceType}/{resourceId}
@@ -50,22 +49,13 @@ export function DeleteConfirmationDialog({
         </AlertDialog.Description>
         <Flex gap="3" mt="4" justify="end">
           <AlertDialog.Cancel>
-            <Button
-              variant="soft"
-              color="gray"
-              onClick={handleCancel}
-              disabled={isDeleting}
-            >
+            <Button variant="soft" color="gray" onClick={handleCancel} disabled={isDeleting}>
               Cancel
             </Button>
           </AlertDialog.Cancel>
           <AlertDialog.Action>
             <Button color="red" onClick={onConfirm} disabled={isDeleting}>
-              {isDeleting ? (
-                <Spinner />
-              ) : (
-                <TrashIcon />
-              )}
+              {isDeleting ? <Spinner /> : <TrashIcon />}
               Delete
             </Button>
           </AlertDialog.Action>

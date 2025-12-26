@@ -18,7 +18,11 @@
  */
 
 import type { Binary } from "fhir/r4";
-import type { JobStatusOptions, JobStatusResult, JobCancelOptions } from "../types/api";
+import type {
+  JobStatusOptions,
+  JobStatusResult,
+  JobCancelOptions,
+} from "../types/api";
 import { buildHeaders, buildUrl, checkResponse } from "./utils";
 
 /**

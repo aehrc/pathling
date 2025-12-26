@@ -72,7 +72,8 @@ export const useViewExport: UseViewExportFn = (options) => {
       isComplete: (status: { status: string }) => status.status === "complete",
       getResult: (status: { result?: unknown }) =>
         status.result as UseViewExportResult["result"],
-      cancel: (jobId: string) => jobCancel(fhirBaseUrl!, { jobId, accessToken }),
+      cancel: (jobId: string) =>
+        jobCancel(fhirBaseUrl!, { jobId, accessToken }),
       pollingInterval: 3000,
     }),
     [fhirBaseUrl, accessToken],

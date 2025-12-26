@@ -44,4 +44,4 @@ export const useDelete: UseDeleteFn = (options) => {
     onSuccess: options?.onSuccess,
     onError: options?.onError,
   });
-}
+};

@@ -45,4 +45,4 @@ export const useCreate: UseCreateFn = (options) => {
     onSuccess: options?.onSuccess,
     onError: options?.onError,
   });
-}
+};

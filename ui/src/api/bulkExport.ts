@@ -73,7 +73,11 @@ async function kickOffExport(
   options: SystemExportKickOffOptions,
 ): Promise<BulkExportKickOffResult> {
   const params = buildExportParams(options);
-  const url = buildUrl(baseUrl, path, Object.keys(params).length > 0 ? params : undefined);
+  const url = buildUrl(
+    baseUrl,
+    path,
+    Object.keys(params).length > 0 ? params : undefined,
+  );
   const headers = buildHeaders({
     accessToken: options.accessToken,
     prefer: "respond-async",
@@ -88,7 +92,9 @@ async function kickOffExport(
 
   if (response.status !== 202) {
     const errorBody = await response.text();
-    throw new Error(`Export kick-off failed: ${response.status} - ${errorBody}`);
+    throw new Error(
+      `Export kick-off failed: ${response.status} - ${errorBody}`,
+    );
   }
 
   const contentLocation = response.headers.get("Content-Location");
@@ -150,7 +156,11 @@ export async function patientExportKickOff(
   baseUrl: string,
   options: PatientExportKickOffOptions,
 ): Promise<BulkExportKickOffResult> {
-  return kickOffExport(baseUrl, `/Patient/${options.patientId}/$export`, options);
+  return kickOffExport(
+    baseUrl,
+    `/Patient/${options.patientId}/$export`,
+    options,
+  );
 }
 
 /**

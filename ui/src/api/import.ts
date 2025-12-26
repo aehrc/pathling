@@ -23,7 +23,12 @@ import type {
   ImportResult,
   ImportPnpKickOffOptions,
 } from "../types/api";
-import { buildHeaders, buildUrl, checkResponse, extractJobIdFromUrl } from "./utils";
+import {
+  buildHeaders,
+  buildUrl,
+  checkResponse,
+  extractJobIdFromUrl,
+} from "./utils";
 
 /**
  * Kicks off a bulk import operation.
@@ -69,7 +74,9 @@ export async function importKickOff(
 
   if (response.status !== 202) {
     const errorBody = await response.text();
-    throw new Error(`Import kick-off failed: ${response.status} - ${errorBody}`);
+    throw new Error(
+      `Import kick-off failed: ${response.status} - ${errorBody}`,
+    );
   }
 
   const contentLocation = response.headers.get("Content-Location");
@@ -87,9 +94,7 @@ export async function importKickOff(
 function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
   const parameters: Parameters = {
     resourceType: "Parameters",
-    parameter: [
-      { name: "exportUrl", valueUrl: options.exportUrl },
-    ],
+    parameter: [{ name: "exportUrl", valueUrl: options.exportUrl }],
   };
 
   if (options.exportType) {
@@ -156,7 +161,9 @@ export async function importPnpKickOff(
 
   if (response.status !== 202) {
     const errorBody = await response.text();
-    throw new Error(`Import PnP kick-off failed: ${response.status} - ${errorBody}`);
+    throw new Error(
+      `Import PnP kick-off failed: ${response.status} - ${errorBody}`,
+    );
   }
 
   const contentLocation = response.headers.get("Content-Location");

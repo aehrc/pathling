@@ -33,9 +33,10 @@ const SMART_SERVICE_CODE = "SMART-on-FHIR";
 /**
  * Parses a CapabilityStatement to extract server capabilities.
  */
-function parseCapabilities(capability: CapabilityStatement): ServerCapabilities {
-  const serverName =
-    capability.implementation?.description || capability.name;
+function parseCapabilities(
+  capability: CapabilityStatement,
+): ServerCapabilities {
+  const serverName = capability.implementation?.description || capability.name;
   const serverVersion = capability.software?.version;
   const fhirVersion = capability.fhirVersion;
   const publisher = capability.publisher;
@@ -144,4 +145,4 @@ export const useServerCapabilities: UseServerCapabilitiesFn = (fhirBaseUrl) => {
     },
     enabled: !!fhirBaseUrl,
   });
-}
+};

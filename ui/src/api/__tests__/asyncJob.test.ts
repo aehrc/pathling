@@ -35,7 +35,10 @@ describe("executeAsyncJob", () => {
       .fn()
       .mockResolvedValueOnce({ status: "in-progress", progress: "25%" })
       .mockResolvedValueOnce({ status: "in-progress", progress: "50%" })
-      .mockResolvedValueOnce({ status: "complete", result: { data: "success" } });
+      .mockResolvedValueOnce({
+        status: "complete",
+        result: { data: "success" },
+      });
     const cancel = vi.fn();
 
     const handle = executeAsyncJob<
@@ -95,7 +98,10 @@ describe("executeAsyncJob", () => {
 
     await handle.result;
 
-    expect(onProgress).toHaveBeenCalledWith({ status: "in-progress", progress: "50%" });
+    expect(onProgress).toHaveBeenCalledWith({
+      status: "in-progress",
+      progress: "50%",
+    });
   });
 
   it("uses default polling interval of 3000ms", async () => {

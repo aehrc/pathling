@@ -82,4 +82,4 @@ export const useFhirPathSearch: UseFhirPathSearchFn = (options) => {
     error: query.error,
     refetch: query.refetch,
   };
-}
+};

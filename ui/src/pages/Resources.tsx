@@ -79,10 +79,7 @@ export function Resources() {
       // Refresh the search results.
       refetch();
     } catch (err) {
-      showToast(
-        "Delete failed",
-        err instanceof Error ? err.message : "An error occurred",
-      );
+      showToast("Delete failed", err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsDeleting(false);
     }

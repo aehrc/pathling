@@ -4,11 +4,7 @@
  * @author John Grimes
  */
 
-export type ExportLevel =
-  | "system"
-  | "all-patients"
-  | "patient"
-  | "group";
+export type ExportLevel = "system" | "all-patients" | "patient" | "group";
 
 export interface ExportRequest {
   level: ExportLevel;

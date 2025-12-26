@@ -26,7 +26,12 @@ import type {
   BulkSubmitDownloadOptions,
   BulkSubmitManifest,
 } from "../types/api";
-import { buildHeaders, buildUrl, checkResponse, extractJobIdFromUrl } from "./utils";
+import {
+  buildHeaders,
+  buildUrl,
+  checkResponse,
+  extractJobIdFromUrl,
+} from "./utils";
 
 /**
  * Type guard to check if a response is a FHIR Binary resource with data.
@@ -55,7 +60,10 @@ function buildSubmitParameters(options: BulkSubmitOptions): Parameters {
         value: options.submitter.value,
       },
     },
-    { name: "submissionStatus", valueCoding: { code: options.submissionStatus } },
+    {
+      name: "submissionStatus",
+      valueCoding: { code: options.submissionStatus },
+    },
   ];
 
   // manifestUrl is optional (not required for abort).
@@ -68,11 +76,17 @@ function buildSubmitParameters(options: BulkSubmitOptions): Parameters {
   }
 
   if (options.replacesManifestUrl) {
-    parameter.push({ name: "replacesManifestUrl", valueUrl: options.replacesManifestUrl });
+    parameter.push({
+      name: "replacesManifestUrl",
+      valueUrl: options.replacesManifestUrl,
+    });
   }
 
   if (options.oauthMetadataUrl) {
-    parameter.push({ name: "oauthMetadataUrl", valueUrl: options.oauthMetadataUrl });
+    parameter.push({
+      name: "oauthMetadataUrl",
+      valueUrl: options.oauthMetadataUrl,
+    });
   }
 
   if (options.metadata) {

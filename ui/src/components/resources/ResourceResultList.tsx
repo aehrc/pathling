@@ -95,7 +95,9 @@ export function ResourceResultList({
       <Flex align="center" gap="2" mb="4">
         <Heading size="4">Results</Heading>
         <Badge color="gray">
-          {total !== undefined ? `${total} total, first ${resources.length} shown` : `${resources.length} shown`}
+          {total !== undefined
+            ? `${total} total, first ${resources.length} shown`
+            : `${resources.length} shown`}
         </Badge>
       </Flex>
       <Flex direction="column" gap="3">

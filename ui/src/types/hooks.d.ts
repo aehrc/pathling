@@ -129,7 +129,11 @@ export interface UseCreateVariables {
 /**
  * Result of useCreate hook.
  */
-export type UseCreateResult = UseMutationResult<Resource, Error, UseCreateVariables>;
+export type UseCreateResult = UseMutationResult<
+  Resource,
+  Error,
+  UseCreateVariables
+>;
 
 /**
  * Options for useUpdate hook.
@@ -152,7 +156,11 @@ export interface UseUpdateVariables {
 /**
  * Result of useUpdate hook.
  */
-export type UseUpdateResult = UseMutationResult<Resource, Error, UseUpdateVariables>;
+export type UseUpdateResult = UseMutationResult<
+  Resource,
+  Error,
+  UseUpdateVariables
+>;
 
 /**
  * Options for useDelete hook.
@@ -177,7 +185,11 @@ export interface UseDeleteVariables {
 /**
  * Result of useDelete hook.
  */
-export type UseDeleteResult = UseMutationResult<void, Error, UseDeleteVariables>;
+export type UseDeleteResult = UseMutationResult<
+  void,
+  Error,
+  UseDeleteVariables
+>;
 
 // ============================================================================
 // Bulk Export Hooks
@@ -569,7 +581,10 @@ export interface UseViewDefinitionsOptions {
 /**
  * Result of useViewDefinitions hook.
  */
-export type UseViewDefinitionsResult = UseQueryResult<ViewDefinitionSummary[], Error>;
+export type UseViewDefinitionsResult = UseQueryResult<
+  ViewDefinitionSummary[],
+  Error
+>;
 
 /**
  * Options for useSaveViewDefinition hook.
@@ -628,7 +643,10 @@ export interface ServerCapabilities {
 /**
  * Result of useServerCapabilities hook.
  */
-export type UseServerCapabilitiesResult = UseQueryResult<ServerCapabilities, Error>;
+export type UseServerCapabilitiesResult = UseQueryResult<
+  ServerCapabilities,
+  Error
+>;
 
 // ============================================================================
 // Hook Function Types
@@ -662,7 +680,9 @@ export type UseDeleteFn = (options?: UseDeleteOptions) => UseDeleteResult;
 /**
  * Execute a bulk export operation with polling.
  */
-export type UseBulkExportFn = (options?: UseBulkExportOptions) => UseBulkExportResult;
+export type UseBulkExportFn = (
+  options?: UseBulkExportOptions,
+) => UseBulkExportResult;
 
 /**
  * Execute a standard import operation with polling.
@@ -672,12 +692,16 @@ export type UseImportFn = (options?: UseImportOptions) => UseImportResult;
 /**
  * Execute a passthrough (PnP) import operation with polling.
  */
-export type UseImportPnpFn = (options?: UseImportPnpOptions) => UseImportPnpResult;
+export type UseImportPnpFn = (
+  options?: UseImportPnpOptions,
+) => UseImportPnpResult;
 
 /**
  * Execute a bulk submit operation with polling.
  */
-export type UseBulkSubmitFn = (options?: UseBulkSubmitOptions) => UseBulkSubmitResult;
+export type UseBulkSubmitFn = (
+  options?: UseBulkSubmitOptions,
+) => UseBulkSubmitResult;
 
 /**
  * Monitor an existing bulk submit operation with polling.
@@ -694,7 +718,9 @@ export type UseViewRunFn = (options?: UseViewRunOptions) => UseViewRunResult;
 /**
  * Execute a view export operation with polling.
  */
-export type UseViewExportFn = (options?: UseViewExportOptions) => UseViewExportResult;
+export type UseViewExportFn = (
+  options?: UseViewExportOptions,
+) => UseViewExportResult;
 
 /**
  * Search for resources using FHIRPath filter expressions.

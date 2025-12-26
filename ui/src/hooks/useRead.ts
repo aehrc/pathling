@@ -45,4 +45,4 @@ export const useRead: UseReadFn = (options) => {
       }),
     enabled: options.enabled !== false && !!fhirBaseUrl && !!options.id,
   });
-}
+};

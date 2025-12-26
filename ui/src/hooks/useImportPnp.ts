@@ -59,7 +59,8 @@ export const useImportPnp: UseImportPnpFn = (options) => {
         jobStatus(fhirBaseUrl!, { jobId, accessToken }),
       isComplete: (status: { status: string }) => status.status === "complete",
       getResult: () => undefined,
-      cancel: (jobId: string) => jobCancel(fhirBaseUrl!, { jobId, accessToken }),
+      cancel: (jobId: string) =>
+        jobCancel(fhirBaseUrl!, { jobId, accessToken }),
       pollingInterval: 3000,
     }),
     [fhirBaseUrl, accessToken],

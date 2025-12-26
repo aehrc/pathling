@@ -18,7 +18,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { viewRun, viewRunStored, viewExportKickOff, viewExportDownload } from "../view";
+import {
+  viewRun,
+  viewRunStored,
+  viewExportKickOff,
+  viewExportDownload,
+} from "../view";
 import { UnauthorizedError } from "../../types/errors";
 import type { ViewDefinition } from "../../types/api";
 
@@ -44,7 +49,9 @@ const sampleViewDefinition: ViewDefinition = {
 describe("viewRun", () => {
   it("makes POST request to /ViewDefinition/$run endpoint", async () => {
     const responseStream = new ReadableStream();
-    mockFetch.mockResolvedValueOnce(new Response(responseStream, { status: 200 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(responseStream, { status: 200 }),
+    );
 
     await viewRun("https://example.com/fhir", {
       viewDefinition: sampleViewDefinition,
@@ -64,7 +71,9 @@ describe("viewRun", () => {
 
   it("includes view definition in request body as Parameters", async () => {
     const responseStream = new ReadableStream();
-    mockFetch.mockResolvedValueOnce(new Response(responseStream, { status: 200 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(responseStream, { status: 200 }),
+    );
 
     await viewRun("https://example.com/fhir", {
       viewDefinition: sampleViewDefinition,
@@ -81,7 +90,9 @@ describe("viewRun", () => {
 
   it("includes format parameter when specified", async () => {
     const responseStream = new ReadableStream();
-    mockFetch.mockResolvedValueOnce(new Response(responseStream, { status: 200 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(responseStream, { status: 200 }),
+    );
 
     await viewRun("https://example.com/fhir", {
       viewDefinition: sampleViewDefinition,
@@ -97,7 +108,9 @@ describe("viewRun", () => {
 
   it("includes limit parameter when specified", async () => {
     const responseStream = new ReadableStream();
-    mockFetch.mockResolvedValueOnce(new Response(responseStream, { status: 200 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(responseStream, { status: 200 }),
+    );
 
     await viewRun("https://example.com/fhir", {
       viewDefinition: sampleViewDefinition,
@@ -113,7 +126,9 @@ describe("viewRun", () => {
 
   it("includes Authorization header when access token provided", async () => {
     const responseStream = new ReadableStream();
-    mockFetch.mockResolvedValueOnce(new Response(responseStream, { status: 200 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(responseStream, { status: 200 }),
+    );
 
     await viewRun("https://example.com/fhir", {
       viewDefinition: sampleViewDefinition,
@@ -132,7 +147,9 @@ describe("viewRun", () => {
 
   it("returns ReadableStream on success", async () => {
     const responseStream = new ReadableStream();
-    mockFetch.mockResolvedValueOnce(new Response(responseStream, { status: 200 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(responseStream, { status: 200 }),
+    );
 
     const result = await viewRun("https://example.com/fhir", {
       viewDefinition: sampleViewDefinition,
@@ -142,7 +159,9 @@ describe("viewRun", () => {
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       viewRun("https://example.com/fhir", {
@@ -155,7 +174,9 @@ describe("viewRun", () => {
 describe("viewRunStored", () => {
   it("makes GET request to /ViewDefinition/{id}/$run endpoint", async () => {
     const responseStream = new ReadableStream();
-    mockFetch.mockResolvedValueOnce(new Response(responseStream, { status: 200 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(responseStream, { status: 200 }),
+    );
 
     await viewRunStored("https://example.com/fhir", {
       viewDefinitionId: "view-123",
@@ -174,7 +195,9 @@ describe("viewRunStored", () => {
 
   it("includes query parameters when specified", async () => {
     const responseStream = new ReadableStream();
-    mockFetch.mockResolvedValueOnce(new Response(responseStream, { status: 200 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(responseStream, { status: 200 }),
+    );
 
     await viewRunStored("https://example.com/fhir", {
       viewDefinitionId: "view-123",
@@ -191,7 +214,9 @@ describe("viewRunStored", () => {
 
   it("returns ReadableStream on success", async () => {
     const responseStream = new ReadableStream();
-    mockFetch.mockResolvedValueOnce(new Response(responseStream, { status: 200 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(responseStream, { status: 200 }),
+    );
 
     const result = await viewRunStored("https://example.com/fhir", {
       viewDefinitionId: "view-123",
@@ -201,7 +226,9 @@ describe("viewRunStored", () => {
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       viewRunStored("https://example.com/fhir", {
@@ -216,7 +243,9 @@ describe("viewExportKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await viewExportKickOff("https://example.com/fhir", {
       views: [{ viewDefinition: sampleViewDefinition }],
@@ -239,7 +268,9 @@ describe("viewExportKickOff", () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job-status?id=abc");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await viewExportKickOff("https://example.com/fhir", {
       views: [{ viewDefinition: sampleViewDefinition, name: "my-view" }],
@@ -259,9 +290,14 @@ describe("viewExportKickOff", () => {
 
   it("returns job ID from Content-Location header", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=view-export-123");
+    headers.set(
+      "Content-Location",
+      "https://example.com/$job-status?id=view-export-123",
+    );
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     const result = await viewExportKickOff("https://example.com/fhir", {
       views: [{ viewDefinition: sampleViewDefinition }],
@@ -281,7 +317,9 @@ describe("viewExportKickOff", () => {
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       viewExportKickOff("https://example.com/fhir", {
@@ -342,7 +380,9 @@ describe("viewExportDownload", () => {
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       viewExportDownload("https://example.com/fhir", {

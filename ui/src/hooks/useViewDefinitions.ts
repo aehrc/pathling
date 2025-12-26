@@ -22,7 +22,10 @@ import type { Bundle } from "fhir/r4";
 import { search } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import type { UseViewDefinitionsFn, ViewDefinitionSummary } from "../types/hooks";
+import type {
+  UseViewDefinitionsFn,
+  ViewDefinitionSummary,
+} from "../types/hooks";
 
 /**
  * Fetch available ViewDefinitions from the server.
@@ -55,4 +58,4 @@ export const useViewDefinitions: UseViewDefinitionsFn = (options) => {
     },
     enabled: options?.enabled !== false && !!fhirBaseUrl,
   });
-}
+};

@@ -18,7 +18,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bulkSubmit, bulkSubmitStatus, bulkSubmitDownload } from "../bulkSubmit";
+import {
+  bulkSubmit,
+  bulkSubmitStatus,
+  bulkSubmitDownload,
+} from "../bulkSubmit";
 import { UnauthorizedError } from "../../types/errors";
 
 const mockFetch = vi.fn();
@@ -138,7 +142,10 @@ describe("bulkSubmit", () => {
       new Response(JSON.stringify(responseParams), { status: 200 }),
     );
 
-    const result = await bulkSubmit("https://example.com/fhir", baseSubmitOptions);
+    const result = await bulkSubmit(
+      "https://example.com/fhir",
+      baseSubmitOptions,
+    );
 
     expect(result.submissionId).toBe("sub-456");
     expect(result.status).toBe("accepted");
@@ -173,7 +180,9 @@ describe("bulkSubmit", () => {
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       bulkSubmit("https://example.com/fhir", baseSubmitOptions),
@@ -189,9 +198,14 @@ describe("bulkSubmitStatus", () => {
 
   it("makes POST request to /$bulk-submit-status endpoint", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=job-123");
+    headers.set(
+      "Content-Location",
+      "https://example.com/$job-status?id=job-123",
+    );
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
     await bulkSubmitStatus("https://example.com/fhir", baseStatusOptions);
 
@@ -210,11 +224,19 @@ describe("bulkSubmitStatus", () => {
 
   it("returns pending status with job info from 202 with Content-Location", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=job-123");
+    headers.set(
+      "Content-Location",
+      "https://example.com/$job-status?id=job-123",
+    );
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
-    const result = await bulkSubmitStatus("https://example.com/fhir", baseStatusOptions);
+    const result = await bulkSubmitStatus(
+      "https://example.com/fhir",
+      baseStatusOptions,
+    );
 
     expect(result.status).toBe("in-progress");
     expect(result.jobId).toBe("job-123");
@@ -233,7 +255,10 @@ describe("bulkSubmitStatus", () => {
       new Response(JSON.stringify(manifest), { status: 200 }),
     );
 
-    const result = await bulkSubmitStatus("https://example.com/fhir", baseStatusOptions);
+    const result = await bulkSubmitStatus(
+      "https://example.com/fhir",
+      baseStatusOptions,
+    );
 
     expect(result.status).toBe("completed");
     expect(result.manifest).toEqual(manifest);
@@ -241,18 +266,28 @@ describe("bulkSubmitStatus", () => {
 
   it("returns progress from X-Progress header on 202", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=job-123");
+    headers.set(
+      "Content-Location",
+      "https://example.com/$job-status?id=job-123",
+    );
     headers.set("X-Progress", "50%");
 
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202, headers }));
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
 
-    const result = await bulkSubmitStatus("https://example.com/fhir", baseStatusOptions);
+    const result = await bulkSubmitStatus(
+      "https://example.com/fhir",
+      baseStatusOptions,
+    );
 
     expect(result.progress).toBe("50%");
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       bulkSubmitStatus("https://example.com/fhir", baseStatusOptions),
@@ -311,7 +346,9 @@ describe("bulkSubmitDownload", () => {
   });
 
   it("throws UnauthorizedError on 401 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
 
     await expect(
       bulkSubmitDownload("https://example.com/fhir", {

@@ -25,7 +25,12 @@ import type {
   ViewExportResult,
   ViewExportDownloadOptions,
 } from "../types/api";
-import { buildHeaders, buildUrl, checkResponse, extractJobIdFromUrl } from "./utils";
+import {
+  buildHeaders,
+  buildUrl,
+  checkResponse,
+  extractJobIdFromUrl,
+} from "./utils";
 
 /**
  * Runs a ViewDefinition and returns the results as a stream.
@@ -56,7 +61,15 @@ export async function viewRun(
   });
 
   const parameter: ParametersParameter[] = [
-    { name: "viewResource", resource: options.viewDefinition as Parameters["parameter"] extends (infer T)[] ? T extends { resource?: infer R } ? R : never : never },
+    {
+      name: "viewResource",
+      resource:
+        options.viewDefinition as Parameters["parameter"] extends (infer T)[]
+          ? T extends { resource?: infer R }
+            ? R
+            : never
+          : never,
+    },
   ];
 
   if (options.format) {
@@ -184,7 +197,15 @@ export async function viewExportKickOff(
     const viewParam: ParametersParameter = {
       name: "view",
       part: [
-        { name: "viewResource", resource: view.viewDefinition as Parameters["parameter"] extends (infer T)[] ? T extends { resource?: infer R } ? R : never : never },
+        {
+          name: "viewResource",
+          resource:
+            view.viewDefinition as Parameters["parameter"] extends (infer T)[]
+              ? T extends { resource?: infer R }
+                ? R
+                : never
+              : never,
+        },
       ],
     };
     if (view.name) {
@@ -216,7 +237,9 @@ export async function viewExportKickOff(
 
   if (response.status !== 202) {
     const errorBody = await response.text();
-    throw new Error(`View export kick-off failed: ${response.status} - ${errorBody}`);
+    throw new Error(
+      `View export kick-off failed: ${response.status} - ${errorBody}`,
+    );
   }
 
   const contentLocation = response.headers.get("Content-Location");

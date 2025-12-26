@@ -50,4 +50,4 @@ export const useUpdate: UseUpdateFn = (options) => {
     onSuccess: options?.onSuccess,
     onError: options?.onError,
   });
-}
+};

@@ -21,7 +21,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { create } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import type { UseSaveViewDefinitionFn, ViewDefinitionSummary } from "../types/hooks";
+import type {
+  UseSaveViewDefinitionFn,
+  ViewDefinitionSummary,
+} from "../types/hooks";
 
 /**
  * Save a ViewDefinition to the server.
@@ -37,7 +40,10 @@ export const useSaveViewDefinition: UseSaveViewDefinitionFn = (options) => {
 
   return useMutation<{ id: string; name: string }, Error, string>({
     mutationFn: async (json: string) => {
-      const parsed = JSON.parse(json) as { resourceType?: string; name?: string };
+      const parsed = JSON.parse(json) as {
+        resourceType?: string;
+        name?: string;
+      };
       if (parsed.resourceType !== "ViewDefinition") {
         throw new Error(
           "Invalid resource: resourceType must be 'ViewDefinition'",
@@ -71,4 +77,4 @@ export const useSaveViewDefinition: UseSaveViewDefinitionFn = (options) => {
     },
     onError: options?.onError,
   });
-}
+};
