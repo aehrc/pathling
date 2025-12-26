@@ -17,58 +17,94 @@
  * Author: John Grimes
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
 import { viewRun, viewRunStored } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import type { UseViewRunFn } from "../types/hooks";
+import {
+  streamToText,
+  parseNdjsonResponse,
+  extractColumns,
+} from "../utils/ndjson";
+import type {
+  UseViewRunFn,
+  ViewRunRequest,
+  ViewDefinitionResult,
+} from "../types/hooks";
 
 /**
- * Run a ViewDefinition and return results as a stream.
+ * Execute a ViewDefinition and return parsed results.
  *
- * @param options - View run options including definition or ID.
- * @returns Query result with the ReadableStream response.
+ * Provides imperative execution via the `execute` function. Handles stream
+ * consumption and NDJSON parsing internally.
+ *
+ * @param options - Optional callbacks for success and error events.
+ * @returns Hook result with status, result, error, and control functions.
  */
 export const useViewRun: UseViewRunFn = (options) => {
   const { fhirBaseUrl } = config;
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
+  const [lastRequest, setLastRequest] = useState<ViewRunRequest | undefined>(
+    undefined,
+  );
 
-  const hasInlineView = !!options.viewDefinition;
-  const hasStoredView = !!options.viewDefinitionId;
+  const mutation = useMutation<ViewDefinitionResult, Error, ViewRunRequest>({
+    mutationFn: async (request: ViewRunRequest) => {
+      if (!fhirBaseUrl) {
+        throw new Error("FHIR base URL is not configured");
+      }
 
-  return useQuery<ReadableStream, Error>({
-    queryKey: [
-      "viewRun",
-      options.viewDefinitionId,
-      options.viewDefinition?.name,
-      options.format,
-      options.limit,
-    ],
-    queryFn: async () => {
-      if (hasStoredView) {
-        return viewRunStored(fhirBaseUrl!, {
-          viewDefinitionId: options.viewDefinitionId!,
-          format: options.format,
-          limit: options.limit,
-          header: options.header,
+      let stream: ReadableStream;
+
+      if (request.mode === "stored" && request.viewDefinitionId) {
+        stream = await viewRunStored(fhirBaseUrl, {
+          viewDefinitionId: request.viewDefinitionId,
+          limit: request.limit ?? 10,
           accessToken,
         });
-      }
-      if (hasInlineView) {
-        return viewRun(fhirBaseUrl!, {
-          viewDefinition: options.viewDefinition!,
-          format: options.format,
-          limit: options.limit,
-          header: options.header,
+      } else if (request.mode === "inline" && request.viewDefinitionJson) {
+        const parsed = JSON.parse(request.viewDefinitionJson);
+        stream = await viewRun(fhirBaseUrl, {
+          viewDefinition: parsed,
+          limit: request.limit ?? 10,
           accessToken,
         });
+      } else {
+        throw new Error("Invalid request: missing view definition ID or JSON");
       }
-      throw new Error("Either viewDefinition or viewDefinitionId is required");
+
+      const ndjsonText = await streamToText(stream);
+      const rows = parseNdjsonResponse(ndjsonText);
+      const columns = extractColumns(rows);
+
+      setLastRequest(request);
+      return { columns, rows };
     },
-    enabled:
-      options.enabled !== false &&
-      !!fhirBaseUrl &&
-      (hasInlineView || hasStoredView),
+    onSuccess: options?.onSuccess,
+    onError: options?.onError,
   });
-}
+
+  const execute = useCallback(
+    (request: ViewRunRequest) => {
+      mutation.mutate(request);
+    },
+    [mutation],
+  );
+
+  const reset = useCallback(() => {
+    mutation.reset();
+    setLastRequest(undefined);
+  }, [mutation]);
+
+  return {
+    status: mutation.status,
+    result: mutation.data,
+    error: mutation.error,
+    lastRequest,
+    execute,
+    reset,
+    isPending: mutation.isPending,
+  };
+};

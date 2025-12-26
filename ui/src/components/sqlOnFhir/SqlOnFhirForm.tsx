@@ -20,13 +20,11 @@ import {
 } from "@radix-ui/themes";
 import { useState } from "react";
 import { useViewDefinitions } from "../../hooks/useViewDefinitions";
-import type {
-  CreateViewDefinitionResult,
-  ViewDefinitionExecuteRequest,
-} from "../../types/sqlOnFhir";
+import type { ViewRunRequest } from "../../types/hooks";
+import type { CreateViewDefinitionResult } from "../../types/sqlOnFhir";
 
 interface SqlOnFhirFormProps {
-  onExecute: (request: ViewDefinitionExecuteRequest) => void;
+  onExecute: (request: ViewRunRequest) => void;
   onSaveToServer: (json: string) => Promise<CreateViewDefinitionResult>;
   isExecuting: boolean;
   isSaving: boolean;

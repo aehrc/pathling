@@ -6,7 +6,7 @@
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useCallback, useEffect, useState } from "react";
-import { viewRun, viewRunStored, read } from "../api";
+import { read } from "../api";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { SqlOnFhirForm } from "../components/sqlOnFhir/SqlOnFhirForm";
@@ -19,50 +19,11 @@ import {
   useServerCapabilities,
   useUnauthorizedHandler,
   useViewExport,
+  useViewRun,
 } from "../hooks";
 import { UnauthorizedError } from "../types/errors";
-import type {
-  ViewDefinitionExecuteRequest,
-  ViewDefinitionResult,
-} from "../types/sqlOnFhir";
-import type { ViewDefinition, ViewExportOutputFormat } from "../types/hooks";
+import type { ViewDefinition, ViewExportOutputFormat, ViewRunRequest } from "../types/hooks";
 import type { ViewExportManifest } from "../types/viewExport";
-
-/**
- * Parses an NDJSON response into an array of objects.
- */
-function parseNdjsonResponse(ndjson: string): Record<string, unknown>[] {
-  return ndjson
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line) => JSON.parse(line));
-}
-
-/**
- * Extracts column names from the first row of results.
- */
-function extractColumns(rows: Record<string, unknown>[]): string[] {
-  if (rows.length === 0) return [];
-  return Object.keys(rows[0]);
-}
-
-/**
- * Reads a stream to completion and returns the text content.
- */
-async function streamToText(stream: ReadableStream): Promise<string> {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-
-  const decoder = new TextDecoder();
-  return chunks.map((chunk) => decoder.decode(chunk, { stream: true })).join("") +
-    decoder.decode();
-}
 
 export function SqlOnFhir() {
   const { fhirBaseUrl } = config;
@@ -70,20 +31,26 @@ export function SqlOnFhir() {
   const accessToken = client?.state.tokenResponse?.access_token;
   const handleUnauthorizedError = useUnauthorizedHandler();
 
-  const [executionResult, setExecutionResult] = useState<ViewDefinitionResult | null>(null);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [executionError, setExecutionError] = useState<Error | null>(null);
-
-  const handleDownload = useDownloadFile((message) =>
-    setExecutionError(new Error(message)),
-  );
   const [hasExecuted, setHasExecuted] = useState(false);
-  const [lastExecutedRequest, setLastExecutedRequest] =
-    useState<ViewDefinitionExecuteRequest | null>(null);
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
+
+  // View run hook for executing ViewDefinitions.
+  const viewRun = useViewRun({
+    onError: (error) => {
+      if (error instanceof UnauthorizedError) {
+        handleUnauthorizedError();
+      }
+    },
+  });
+
+  // Track download errors separately since they're not from viewRun.
+  const [downloadError, setDownloadError] = useState<Error | null>(null);
+  const handleDownload = useDownloadFile((message) =>
+    setDownloadError(new Error(message)),
+  );
 
   // View export hook.
   const viewExport = useViewExport({
@@ -95,7 +62,7 @@ export function SqlOnFhir() {
       ) {
         handleUnauthorizedError();
       } else {
-        setExecutionError(new Error(errorMessage));
+        setDownloadError(new Error(errorMessage));
       }
     },
   });
@@ -105,51 +72,13 @@ export function SqlOnFhir() {
     viewExport.status === "pending" || viewExport.status === "in-progress";
 
   const handleExecute = useCallback(
-    async (request: ViewDefinitionExecuteRequest) => {
-      if (!fhirBaseUrl) return;
-
-      setIsExecuting(true);
-      setExecutionError(null);
+    (request: ViewRunRequest) => {
       setHasExecuted(true);
+      setDownloadError(null);
       viewExport.reset();
-
-      try {
-        let stream: ReadableStream;
-
-        if (request.mode === "stored" && request.viewDefinitionId) {
-          stream = await viewRunStored(fhirBaseUrl, {
-            viewDefinitionId: request.viewDefinitionId,
-            limit: 10,
-            accessToken,
-          });
-        } else if (request.mode === "inline" && request.viewDefinitionJson) {
-          const parsed = JSON.parse(request.viewDefinitionJson);
-          stream = await viewRun(fhirBaseUrl, {
-            viewDefinition: parsed,
-            limit: 10,
-            accessToken,
-          });
-        } else {
-          throw new Error("Invalid request: missing view definition ID or JSON");
-        }
-
-        const ndjsonText = await streamToText(stream);
-        const rows = parseNdjsonResponse(ndjsonText);
-        const columns = extractColumns(rows);
-
-        setExecutionResult({ columns, rows });
-        setLastExecutedRequest(request);
-      } catch (err) {
-        if (err instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        } else {
-          setExecutionError(err instanceof Error ? err : new Error("Execution failed"));
-        }
-      } finally {
-        setIsExecuting(false);
-      }
+      viewRun.execute(request);
     },
-    [fhirBaseUrl, accessToken, handleUnauthorizedError, viewExport],
+    [viewExport, viewRun],
   );
 
   // Mutation for saving a ViewDefinition to the server.
@@ -168,26 +97,26 @@ export function SqlOnFhir() {
 
   const handleExport = useCallback(
     async (format: ViewExportOutputFormat) => {
-      if (!lastExecutedRequest || !fhirBaseUrl) return;
+      if (!viewRun.lastRequest || !fhirBaseUrl) return;
 
       // Get or build the view definition.
       let viewDefinition: ViewDefinition;
       if (
-        lastExecutedRequest.mode === "stored" &&
-        lastExecutedRequest.viewDefinitionId
+        viewRun.lastRequest.mode === "stored" &&
+        viewRun.lastRequest.viewDefinitionId
       ) {
         // Fetch the stored view definition.
         const resource = await read(fhirBaseUrl, {
           resourceType: "ViewDefinition",
-          id: lastExecutedRequest.viewDefinitionId,
+          id: viewRun.lastRequest.viewDefinitionId,
           accessToken,
         });
         viewDefinition = resource as ViewDefinition;
       } else if (
-        lastExecutedRequest.mode === "inline" &&
-        lastExecutedRequest.viewDefinitionJson
+        viewRun.lastRequest.mode === "inline" &&
+        viewRun.lastRequest.viewDefinitionJson
       ) {
-        viewDefinition = JSON.parse(lastExecutedRequest.viewDefinitionJson);
+        viewDefinition = JSON.parse(viewRun.lastRequest.viewDefinitionJson);
       } else {
         throw new Error("No view definition available");
       }
@@ -198,7 +127,7 @@ export function SqlOnFhir() {
         header: true,
       });
     },
-    [lastExecutedRequest, fhirBaseUrl, accessToken, viewExport],
+    [viewRun.lastRequest, fhirBaseUrl, accessToken, viewExport],
   );
 
   const handleCancelExport = () => {
@@ -241,9 +170,9 @@ export function SqlOnFhir() {
     return <LoginRequired />;
   }
 
-  // Determine actual error to display (ignore unauthorized since it's handled separately).
-  const displayError =
-    executionError && !(executionError instanceof UnauthorizedError) ? executionError : null;
+  // Determine actual error to display (combine viewRun and download errors, ignore unauthorized).
+  const executionError = viewRun.error instanceof UnauthorizedError ? null : viewRun.error;
+  const displayError = executionError ?? downloadError;
 
   return (
     <>
@@ -252,7 +181,7 @@ export function SqlOnFhir() {
           <SqlOnFhirForm
             onExecute={handleExecute}
             onSaveToServer={saveViewDefinition}
-            isExecuting={isExecuting}
+            isExecuting={viewRun.isPending}
             isSaving={isSaving}
             disabled={false}
           />
@@ -260,9 +189,9 @@ export function SqlOnFhir() {
 
         <Box style={{ flex: 1, overflowX: "auto" }}>
           <SqlOnFhirResultTable
-            rows={executionResult?.rows}
-            columns={executionResult?.columns}
-            isLoading={isExecuting}
+            rows={viewRun.result?.rows}
+            columns={viewRun.result?.columns}
+            isLoading={viewRun.isPending}
             error={displayError}
             hasExecuted={hasExecuted}
             onExport={handleExport}

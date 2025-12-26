@@ -414,27 +414,58 @@ export type ViewRunOutputFormat = "ndjson" | "csv";
 export type ViewExportOutputFormat = "ndjson" | "csv" | "parquet";
 
 /**
+ * Request to execute a ViewDefinition.
+ */
+export interface ViewRunRequest {
+  /** Execution mode: stored (by ID) or inline (by JSON). */
+  mode: "stored" | "inline";
+  /** ID of a stored ViewDefinition (required when mode is "stored"). */
+  viewDefinitionId?: string;
+  /** JSON string of the ViewDefinition (required when mode is "inline"). */
+  viewDefinitionJson?: string;
+  /** Maximum rows to return. Defaults to 10. */
+  limit?: number;
+}
+
+/**
+ * Result of executing a ViewDefinition.
+ */
+export interface ViewDefinitionResult {
+  /** Column names extracted from the first result row. */
+  columns: string[];
+  /** Array of result rows. */
+  rows: Record<string, unknown>[];
+}
+
+/**
  * Options for useViewRun hook.
  */
 export interface UseViewRunOptions {
-  /** The ViewDefinition to run (inline). */
-  viewDefinition?: ViewDefinition;
-  /** ID of a stored ViewDefinition to run. */
-  viewDefinitionId?: string;
-  /** Output format. */
-  format?: ViewRunOutputFormat;
-  /** Maximum rows to return. */
-  limit?: number;
-  /** Whether to include header row (CSV only). */
-  header?: boolean;
-  /** Whether to enable the query. */
-  enabled?: boolean;
+  /** Callback on successful execution. */
+  onSuccess?: (result: ViewDefinitionResult) => void;
+  /** Callback on error. */
+  onError?: (error: Error) => void;
 }
 
 /**
  * Result of useViewRun hook.
  */
-export type UseViewRunResult = UseQueryResult<ReadableStream, Error>;
+export interface UseViewRunResult {
+  /** Current status of the mutation. */
+  status: "idle" | "pending" | "success" | "error";
+  /** The execution result when successful. */
+  result: ViewDefinitionResult | undefined;
+  /** Error object when failed. */
+  error: Error | null;
+  /** The request that produced the current result. */
+  lastRequest: ViewRunRequest | undefined;
+  /** Execute a ViewDefinition. */
+  execute: (request: ViewRunRequest) => void;
+  /** Reset all state. */
+  reset: () => void;
+  /** Whether execution is in progress. */
+  isPending: boolean;
+}
 
 /**
  * Request parameters for view export operations.
@@ -656,9 +687,9 @@ export type UseBulkSubmitMonitorFn = (
 ) => UseBulkSubmitMonitorResult;
 
 /**
- * Run a ViewDefinition and return results as a stream.
+ * Execute a ViewDefinition and return parsed results.
  */
-export type UseViewRunFn = (options: UseViewRunOptions) => UseViewRunResult;
+export type UseViewRunFn = (options?: UseViewRunOptions) => UseViewRunResult;
 
 /**
  * Execute a view export operation with polling.
