@@ -175,3 +175,24 @@ export const mockJobStatusError = {
   status: "error",
   error: "Import failed: Invalid source URL",
 };
+
+/**
+ * Mock export manifest for bulk export completion.
+ */
+export const mockExportManifest = {
+  transactionTime: "2024-01-01T12:00:00Z",
+  request: "/$export",
+  requiresAccessToken: false,
+  output: [
+    {
+      type: "Patient",
+      url: "http://localhost:3000/export-files?file=Patient.ndjson",
+      count: 100,
+    },
+    {
+      type: "Observation",
+      url: "http://localhost:3000/export-files?file=Observation.ndjson",
+      count: 250,
+    },
+  ],
+};
