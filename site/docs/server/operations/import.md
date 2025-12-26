@@ -77,7 +77,6 @@ Send a request with `Content-Type: application/json` containing a JSON manifest:
 ```json
 {
     "inputFormat": "application/fhir+ndjson",
-    "inputSource": "https://example.com/source-system",
     "input": [
         {
             "type": "Patient",
@@ -97,11 +96,10 @@ Send a request with `Content-Type: application/json` containing a JSON manifest:
 | Field         | Cardinality | Description                                                                     |
 |---------------|-------------|---------------------------------------------------------------------------------|
 | `inputFormat` | 1..1        | The MIME type of the source files. See [Supported formats](#supported-formats). |
-| `inputSource` | 1..1        | A URI identifying the source system of the data.                                |
 | `input`       | 1..*        | An array of input file specifications.                                          |
 | `input.type`  | 1..1        | The FHIR resource type contained in the file.                                   |
 | `input.url`   | 1..1        | The URL where the source file can be retrieved.                                 |
-| `mode`        | 0..1        | Either `overwrite` (default) or `merge`. See [Import modes](#import-modes).     |
+| `mode`        | 0..1        | The import mode. See [Import modes](#import-modes). Defaults to `overwrite`.    |
 
 ### FHIR Parameters format
 
@@ -112,10 +110,6 @@ Parameters resource:
 {
     "resourceType": "Parameters",
     "parameter": [
-        {
-            "name": "inputSource",
-            "valueString": "https://example.com/source-system"
-        },
         {
             "name": "inputFormat",
             "valueCoding": {
@@ -166,9 +160,8 @@ Parameters resource:
 
 | Name                 | Cardinality | Type   | Description                                                            |
 |----------------------|-------------|--------|------------------------------------------------------------------------|
-| `inputSource`        | 1..1        | string | A URI identifying the source system of the data.                       |
 | `inputFormat`        | 0..1        | Coding | The format of the source files. Defaults to `application/fhir+ndjson`. |
-| `saveMode`           | 0..1        | Coding | Either `overwrite` (default) or `merge`.                               |
+| `saveMode`           | 0..1        | Coding | The import mode. See [Import modes](#import-modes). Defaults to `overwrite`. |
 | `input`              | 1..*        | -      | Contains parts describing each input file.                             |
 | `input.resourceType` | 1..1        | Coding | The FHIR resource type contained in the file.                          |
 | `input.url`          | 1..1        | url    | The URL where the source file can be retrieved.                        |
@@ -179,6 +172,9 @@ Parameters resource:
 |-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `overwrite` | All existing resources of the specified type are deleted and replaced with the contents of the source file. This is the default.                               |
 | `merge`     | Existing resources are matched with resources in the source file based on their ID. Existing resources are updated and new resources are added as appropriate. |
+| `append`    | Resources in the source file are added without modifying any existing resources.                                                                                |
+| `ignore`    | If the resource type already exists, the source file is ignored. Otherwise, the resources are added.                                                           |
+| `error`     | If the resource type already exists, an error is raised. Otherwise, the resources are added.                                                                    |
 
 ## Response
 
@@ -243,7 +239,6 @@ import time
 import requests
 
 BASE_URL = "https://pathling.example.com/fhir"
-INPUT_SOURCE = "https://example.com/ehr-system"
 SOURCES = [
     ("Patient", "s3a://my-bucket/fhir/Patient.ndjson"),
     ("Observation", "s3a://my-bucket/fhir/Observation.ndjson"),
@@ -254,7 +249,6 @@ SOURCES = [
 def build_parameters():
     """Build a FHIR Parameters request body."""
     parameters = [
-        {"name": "inputSource", "valueString": INPUT_SOURCE},
         {"name": "inputFormat", "valueCoding": {"code": "application/fhir+ndjson"}},
         {"name": "saveMode", "valueCoding": {"code": "overwrite"}}
     ]

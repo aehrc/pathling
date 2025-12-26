@@ -67,11 +67,15 @@ The operation requires the asynchronous request pattern. Include the
         },
         {
             "name": "exportType",
-            "valueCode": "dynamic"
+            "valueCoding": {
+                "code": "dynamic"
+            }
         },
         {
-            "name": "saveMode",
-            "valueCode": "overwrite"
+            "name": "mode",
+            "valueCoding": {
+                "code": "overwrite"
+            }
         }
     ]
 }
@@ -79,11 +83,12 @@ The operation requires the asynchronous request pattern. Include the
 
 ## Parameters
 
-| Name         | Cardinality | Type | Description                                                                                                                    |
-|--------------|-------------|------|--------------------------------------------------------------------------------------------------------------------------------|
-| `exportUrl`  | 1..1        | url  | The URL of the bulk export endpoint to import from. Can include query parameters (e.g., `$export?_type=Patient`).              |
-| `exportType` | 0..1        | code | The type of export: `dynamic` (default) includes data as of export completion, `static` includes data as of export initiation. |
-| `saveMode`   | 0..1        | code | Controls how data is merged with existing resources. See [Save modes](#save-modes).                                            |
+| Name          | Cardinality | Type   | Description                                                                                                                     |
+|---------------|-------------|--------|---------------------------------------------------------------------------------------------------------------------------------|
+| `exportUrl`   | 1..1        | url    | The URL of the bulk export endpoint to import from. Can include query parameters (e.g., `$export?_type=Patient`).               |
+| `exportType`  | 0..1        | Coding | The type of export: `dynamic` (default) includes data as of export completion, `static` includes data as of export initiation. |
+| `mode`        | 0..1        | Coding | Controls how data is merged with existing resources. See [Save modes](#save-modes). Defaults to `overwrite`.                   |
+| `inputFormat` | 0..1        | Coding | The format of source files. Defaults to `application/fhir+ndjson`. See [Supported formats](./import#supported-formats).        |
 
 ### Save modes
 
@@ -170,13 +175,13 @@ PATHLING_URL = "https://pathling.example.com/fhir"
 SOURCE_EXPORT_URL = "https://source-server.example.com/fhir/$export"
 
 
-def kick_off_import(export_url, save_mode="overwrite"):
+def kick_off_import(export_url, mode="overwrite"):
     """Initiate a ping and pull import."""
     params = {
         "resourceType": "Parameters",
         "parameter": [
             {"name": "exportUrl", "valueUrl": export_url},
-            {"name": "saveMode", "valueCode": save_mode}
+            {"name": "mode", "valueCoding": {"code": mode}}
         ]
     }
 
@@ -229,7 +234,7 @@ def main():
     """Execute the ping and pull import."""
     print(f"Starting import from: {SOURCE_EXPORT_URL}")
 
-    status_url = kick_off_import(SOURCE_EXPORT_URL, save_mode="merge")
+    status_url = kick_off_import(SOURCE_EXPORT_URL, mode="merge")
     result = poll_status(status_url)
 
     print("Result:")
