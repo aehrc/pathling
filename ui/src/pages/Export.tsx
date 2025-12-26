@@ -12,7 +12,12 @@ import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ExportForm } from "../components/export/ExportForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useDownloadFile, useBulkExport, useServerCapabilities, useUnauthorizedHandler } from "../hooks";
+import {
+  useBulkExport,
+  useDownloadFile,
+  useServerCapabilities,
+  useUnauthorizedHandler
+} from "../hooks";
 import type { ExportRequest } from "../types/export";
 import type { BulkExportType } from "../types/hooks";
 
@@ -167,8 +172,8 @@ export function Export() {
                       Output files ({result.output.length})
                     </Text>
                     <Flex direction="column" gap="1">
-                      {result.output.map((output, index) => (
-                        <Flex key={index} justify="between" align="center">
+                      {result.output.map((output) => (
+                        <Flex key={output.url} justify="between" align="center">
                           <Text size="2">
                             {getFilenameFromUrl(output.url)}
                             {output.count !== undefined && (
