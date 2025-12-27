@@ -285,3 +285,17 @@ export const mockViewRunNdjson =
  * Mock empty NDJSON response for view run with no results.
  */
 export const mockEmptyViewRunNdjson = "";
+
+// ============================================================================
+// Authentication Mocks
+// ============================================================================
+
+/**
+ * Mock SMART configuration endpoint response.
+ * Used when testing OAuth flow initiation.
+ */
+export const mockSmartConfiguration = {
+  authorization_endpoint: "https://auth.example.com/authorize",
+  token_endpoint: "https://auth.example.com/token",
+  capabilities: ["launch-standalone", "client-public"],
+};
