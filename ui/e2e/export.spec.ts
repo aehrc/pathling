@@ -365,7 +365,7 @@ test.describe("Export page", () => {
       await page.getByRole("button", { name: "Start export" }).click();
 
       // Verify status card shows export type.
-      await expect(page.getByText("System Export")).toBeVisible();
+      await expect(page.getByText("System export")).toBeVisible();
 
       // Verify output files are displayed (allow time for polling).
       await expect(page.getByText("Output files (2)")).toBeVisible({
@@ -389,7 +389,7 @@ test.describe("Export page", () => {
       await page.getByRole("button", { name: "Start export" }).click();
 
       // Verify status card shows correct export type.
-      await expect(page.getByText("Patient Type Export")).toBeVisible();
+      await expect(page.getByText("All patients export")).toBeVisible();
     });
 
     test("executes patient instance export with patient ID", async ({
@@ -411,7 +411,7 @@ test.describe("Export page", () => {
       await page.getByRole("button", { name: "Start export" }).click();
 
       // Verify status card shows correct export type.
-      await expect(page.getByText("Patient Instance Export")).toBeVisible();
+      await expect(page.getByText("Patient export")).toBeVisible();
     });
 
     test("executes group export with group ID", async ({ page }) => {
@@ -429,7 +429,7 @@ test.describe("Export page", () => {
       await page.getByRole("button", { name: "Start export" }).click();
 
       // Verify status card shows correct export type.
-      await expect(page.getByText("Group Export")).toBeVisible();
+      await expect(page.getByText("Group export")).toBeVisible();
     });
 
     test("shows progress during export", async ({ page }) => {
@@ -592,7 +592,7 @@ test.describe("Export page", () => {
       await page.getByRole("button", { name: "New Export" }).click();
 
       // Verify status card is no longer visible.
-      await expect(page.getByText("System Export")).not.toBeVisible();
+      await expect(page.getByText("System export")).not.toBeVisible();
 
       // Verify form is re-enabled.
       await expect(

@@ -12,7 +12,7 @@ import { ExportForm } from "../components/export/ExportForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useBulkExport, useDownloadFile, useServerCapabilities } from "../hooks";
-import { getExportOutputFiles, type ExportRequest } from "../types/export";
+import { type ExportRequest, getExportOutputFiles } from "../types/export";
 import type { BulkExportType } from "../types/hooks";
 
 /**
@@ -21,13 +21,13 @@ import type { BulkExportType } from "../types/hooks";
 function getExportTypeLabel(type: BulkExportType): string {
   switch (type) {
     case "system":
-      return "System Export";
+      return "System export";
     case "all-patients":
-      return "Patient Type Export";
+      return "All patients export";
     case "patient":
-      return "Patient Instance Export";
+      return "Patient export";
     case "group":
-      return "Group Export";
+      return "Group export";
   }
 }
 

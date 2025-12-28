@@ -28,10 +28,10 @@ interface ExportFormProps {
 }
 
 const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
-  { value: "system", label: "System (all resources)" },
-  { value: "all-patients", label: "Patient type (all patients)" },
-  { value: "patient", label: "Patient instance (single patient)" },
-  { value: "group", label: "Group (group members)" },
+  { value: "system", label: "All data in system" },
+  { value: "all-patients", label: "All patient data" },
+  { value: "patient", label: "Data for single patient" },
+  { value: "group", label: "Data for patients in group" },
 ];
 
 export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: ExportFormProps) {
