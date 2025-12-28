@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.operations.viewexport;
+package au.csiro.pathling.operations.view;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -30,31 +30,24 @@ import lombok.Getter;
 @Getter
 public enum ViewExportFormat {
 
-  /**
-   * Newline-delimited JSON format.
-   */
+  /** Newline-delimited JSON format. */
   NDJSON("ndjson", "application/x-ndjson", ".ndjson"),
 
-  /**
-   * Comma-separated values format.
-   */
+  /** Comma-separated values format. */
   CSV("csv", "text/csv", ".csv"),
 
-  /**
-   * Apache Parquet columnar format.
-   */
+  /** Apache Parquet columnar format. */
   PARQUET("parquet", "application/vnd.apache.parquet", ".parquet");
 
-  @Nonnull
-  private final String code;
+  @Nonnull private final String code;
 
-  @Nonnull
-  private final String contentType;
+  @Nonnull private final String contentType;
 
-  @Nonnull
-  private final String fileExtension;
+  @Nonnull private final String fileExtension;
 
-  ViewExportFormat(@Nonnull final String code, @Nonnull final String contentType,
+  ViewExportFormat(
+      @Nonnull final String code,
+      @Nonnull final String contentType,
       @Nonnull final String fileExtension) {
     this.code = code;
     this.contentType = contentType;
@@ -78,5 +71,4 @@ public enum ViewExportFormat {
         .findFirst()
         .orElse(NDJSON);
   }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.operations.viewdefinition;
+package au.csiro.pathling.operations.view;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,11 +49,10 @@ import org.springframework.context.annotation.Import;
 
 /**
  * Tests for searching ViewDefinition resources via the FHIRPath-based search endpoint.
- * <p>
- * These tests verify that ViewDefinition resources can be searched using the same FHIRPath filter
- * mechanism that works for other FHIR resources. ViewDefinition has fields like name, resource,
- * and status that should be searchable.
- * </p>
+ *
+ * <p>These tests verify that ViewDefinition resources can be searched using the same FHIRPath
+ * filter mechanism that works for other FHIR resources. ViewDefinition has fields like name,
+ * resource, and status that should be searchable.
  *
  * @author John Grimes
  */
@@ -61,17 +60,13 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class ViewDefinitionSearchTest {
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
   private CustomObjectDataSource dataSource;
 
@@ -81,11 +76,13 @@ class ViewDefinitionSearchTest {
     final List<IBaseResource> viewDefinitions = new ArrayList<>();
 
     // Patient view - active.
-    viewDefinitions.add(createViewDefinition("view-1", "patient_demographics", "Patient", "active"));
+    viewDefinitions.add(
+        createViewDefinition("view-1", "patient_demographics", "Patient", "active"));
 
     // Patient view with filters - active.
-    viewDefinitions.add(createViewDefinitionWithWhere("view-2", "active_patients", "Patient",
-        "active", "active = true"));
+    viewDefinitions.add(
+        createViewDefinitionWithWhere(
+            "view-2", "active_patients", "Patient", "active", "active = true"));
 
     // Observation view - active.
     viewDefinitions.add(createViewDefinition("view-3", "lab_results", "Observation", "active"));
@@ -94,14 +91,14 @@ class ViewDefinitionSearchTest {
     viewDefinitions.add(createViewDefinition("view-4", "diagnoses", "Condition", "draft"));
 
     // MedicationRequest view - retired.
-    viewDefinitions.add(createViewDefinition("view-5", "prescriptions", "MedicationRequest",
-        "retired"));
+    viewDefinitions.add(
+        createViewDefinition("view-5", "prescriptions", "MedicationRequest", "retired"));
 
     // Complex Patient view with nested structure.
     viewDefinitions.add(createComprehensiveViewDefinition("view-6", "patient_contacts"));
 
-    dataSource = new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders,
-        viewDefinitions);
+    dataSource =
+        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, viewDefinitions);
   }
 
   // -------------------------------------------------------------------------
@@ -154,10 +151,12 @@ class ViewDefinitionSearchTest {
     assertThat(result.size()).isEqualTo(2);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources).hasSize(2);
-    assertThat(resources).allSatisfy(r -> {
-      final ViewDefinitionResource view = (ViewDefinitionResource) r;
-      assertThat(view.getName().getValue()).isIn("patient_demographics", "active_patients");
-    });
+    assertThat(resources)
+        .allSatisfy(
+            r -> {
+              final ViewDefinitionResource view = (ViewDefinitionResource) r;
+              assertThat(view.getName().getValue()).isIn("patient_demographics", "active_patients");
+            });
   }
 
   // -------------------------------------------------------------------------
@@ -176,10 +175,12 @@ class ViewDefinitionSearchTest {
     // Then: only Patient ViewDefinitions should be returned.
     assertThat(result.size()).isEqualTo(3);
     final List<IBaseResource> resources = result.getResources(0, result.size());
-    assertThat(resources).allSatisfy(r -> {
-      final ViewDefinitionResource view = (ViewDefinitionResource) r;
-      assertThat(view.getResource().getValue()).isEqualTo("Patient");
-    });
+    assertThat(resources)
+        .allSatisfy(
+            r -> {
+              final ViewDefinitionResource view = (ViewDefinitionResource) r;
+              assertThat(view.getResource().getValue()).isEqualTo("Patient");
+            });
   }
 
   @Test
@@ -215,10 +216,12 @@ class ViewDefinitionSearchTest {
     // Then: only active ViewDefinitions should be returned.
     assertThat(result.size()).isEqualTo(4);
     final List<IBaseResource> resources = result.getResources(0, result.size());
-    assertThat(resources).allSatisfy(r -> {
-      final ViewDefinitionResource view = (ViewDefinitionResource) r;
-      assertThat(view.getStatus().getValue()).isEqualTo("active");
-    });
+    assertThat(resources)
+        .allSatisfy(
+            r -> {
+              final ViewDefinitionResource view = (ViewDefinitionResource) r;
+              assertThat(view.getStatus().getValue()).isEqualTo("active");
+            });
   }
 
   @Test
@@ -254,11 +257,13 @@ class ViewDefinitionSearchTest {
     // Then: only active Patient ViewDefinitions should be returned.
     assertThat(result.size()).isEqualTo(3);
     final List<IBaseResource> resources = result.getResources(0, result.size());
-    assertThat(resources).allSatisfy(r -> {
-      final ViewDefinitionResource view = (ViewDefinitionResource) r;
-      assertThat(view.getResource().getValue()).isEqualTo("Patient");
-      assertThat(view.getStatus().getValue()).isEqualTo("active");
-    });
+    assertThat(resources)
+        .allSatisfy(
+            r -> {
+              final ViewDefinitionResource view = (ViewDefinitionResource) r;
+              assertThat(view.getResource().getValue()).isEqualTo("Patient");
+              assertThat(view.getStatus().getValue()).isEqualTo("active");
+            });
   }
 
   // -------------------------------------------------------------------------
@@ -279,12 +284,14 @@ class ViewDefinitionSearchTest {
     assertThat(firstPage).hasSize(pageSize);
     assertThat(secondPage).hasSize(pageSize);
 
-    final List<String> firstPageIds = firstPage.stream()
-        .map(r -> ((ViewDefinitionResource) r).getIdElement().getIdPart())
-        .toList();
-    final List<String> secondPageIds = secondPage.stream()
-        .map(r -> ((ViewDefinitionResource) r).getIdElement().getIdPart())
-        .toList();
+    final List<String> firstPageIds =
+        firstPage.stream()
+            .map(r -> ((ViewDefinitionResource) r).getIdElement().getIdPart())
+            .toList();
+    final List<String> secondPageIds =
+        secondPage.stream()
+            .map(r -> ((ViewDefinitionResource) r).getIdElement().getIdPart())
+            .toList();
 
     assertThat(firstPageIds).doesNotContainAnyElementsOf(secondPageIds);
   }
@@ -293,25 +300,20 @@ class ViewDefinitionSearchTest {
   // Helper methods
   // -------------------------------------------------------------------------
 
-  /**
-   * Creates a SearchExecutor for ViewDefinition resources.
-   */
+  /** Creates a SearchExecutor for ViewDefinition resources. */
   @Nonnull
   private IBundleProvider createSearchExecutor(
       @Nonnull final Optional<StringAndListParam> filters) {
     return new SearchExecutor(
-        fhirContext,
-        dataSource,
-        fhirEncoders,
-        "ViewDefinition",
-        filters,
-        false
-    );
+        fhirContext, dataSource, fhirEncoders, "ViewDefinition", filters, false);
   }
 
   @Nonnull
-  private ViewDefinitionResource createViewDefinition(@Nonnull final String id,
-      @Nonnull final String name, @Nonnull final String resource, @Nonnull final String status) {
+  private ViewDefinitionResource createViewDefinition(
+      @Nonnull final String id,
+      @Nonnull final String name,
+      @Nonnull final String resource,
+      @Nonnull final String status) {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     view.setId(id);
     view.setName(new StringType(name));
@@ -327,8 +329,11 @@ class ViewDefinitionSearchTest {
   }
 
   @Nonnull
-  private ViewDefinitionResource createViewDefinitionWithWhere(@Nonnull final String id,
-      @Nonnull final String name, @Nonnull final String resource, @Nonnull final String status,
+  private ViewDefinitionResource createViewDefinitionWithWhere(
+      @Nonnull final String id,
+      @Nonnull final String name,
+      @Nonnull final String resource,
+      @Nonnull final String status,
       @Nonnull final String wherePath) {
     final ViewDefinitionResource view = createViewDefinition(id, name, resource, status);
 
@@ -340,8 +345,8 @@ class ViewDefinitionSearchTest {
   }
 
   @Nonnull
-  private ViewDefinitionResource createComprehensiveViewDefinition(@Nonnull final String id,
-      @Nonnull final String name) {
+  private ViewDefinitionResource createComprehensiveViewDefinition(
+      @Nonnull final String id, @Nonnull final String name) {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     view.setId(id);
     view.setName(new StringType(name));
@@ -382,5 +387,4 @@ class ViewDefinitionSearchTest {
     column.setPath(new StringType(path));
     return column;
   }
-
 }

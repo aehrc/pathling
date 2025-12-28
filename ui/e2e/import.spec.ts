@@ -9,7 +9,7 @@ import {
   mockCapabilityStatement,
   mockCapabilityStatementWithAuth,
   mockJobStatusComplete,
-  mockJobStatusInProgress
+  mockJobStatusInProgress,
 } from "./fixtures/fhirData";
 
 const TEST_JOB_ID = "test-job-123";

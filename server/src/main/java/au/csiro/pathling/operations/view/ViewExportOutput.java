@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.operations.viewexport;
+package au.csiro.pathling.operations.view;
 
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -27,9 +27,4 @@ import java.util.List;
  * @param fileUrls the list of file URLs (absolute paths) for this view's output
  * @author John Grimes
  */
-public record ViewExportOutput(
-    @Nonnull String name,
-    @Nonnull List<String> fileUrls
-) {
-
-}
+public record ViewExportOutput(@Nonnull String name, @Nonnull List<String> fileUrls) {}

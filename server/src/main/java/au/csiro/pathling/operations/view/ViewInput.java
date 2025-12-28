@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.operations.viewexport;
+package au.csiro.pathling.operations.view;
 
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
@@ -28,10 +28,7 @@ import jakarta.annotation.Nullable;
  * @param view the parsed FhirView to execute
  * @author John Grimes
  */
-public record ViewInput(
-    @Nullable String name,
-    @Nonnull FhirView view
-) {
+public record ViewInput(@Nullable String name, @Nonnull FhirView view) {
 
   /**
    * Gets the effective name for this view, using the provided name if available, otherwise falling
@@ -53,5 +50,4 @@ public record ViewInput(
     // Generate name from resource type and index.
     return view.getResource().toLowerCase() + "_" + index;
   }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.operations.viewdefinition;
+package au.csiro.pathling.operations.view;
 
 import static au.csiro.pathling.operations.bulkexport.ExportOutputFormat.NDJSON;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,24 +42,22 @@ import org.springframework.context.annotation.Import;
 
 /**
  * Tests for exporting ViewDefinition resources via the $export operation.
- * <p>
- * These tests verify that ViewDefinition resources can be included in bulk export operations using
- * the _type parameter. ViewDefinition is a custom resource type from the SQL on FHIR specification
- * that should be treated like any other exportable resource.
- * </p>
+ *
+ * <p>These tests verify that ViewDefinition resources can be included in bulk export operations
+ * using the _type parameter. ViewDefinition is a custom resource type from the SQL on FHIR
+ * specification that should be treated like any other exportable resource.
  *
  * @author John Grimes
  */
 @Import({
-    ExportOperationValidator.class,
-    FhirServerTestConfiguration.class,
-    PatientCompartmentService.class
+  ExportOperationValidator.class,
+  FhirServerTestConfiguration.class,
+  PatientCompartmentService.class
 })
 @SpringBootUnitTest
 class ViewDefinitionExportTest {
 
-  @Autowired
-  private ExportOperationValidator exportOperationValidator;
+  @Autowired private ExportOperationValidator exportOperationValidator;
 
   @SuppressWarnings("unused")
   @MockBean
@@ -86,14 +84,15 @@ class ViewDefinitionExportTest {
 
     // When: validating the request.
     // Then: validation should pass and ViewDefinition should be in the resource type filters.
-    assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<ExportRequest> result =
-          exportOperationValidator.validateRequest(mockRequest, outputFormat, now, null, types,
-              null);
-      assertThat(result.result()).isNotNull();
-      assertThat(result.result().includeResourceTypeFilters())
-          .contains("ViewDefinition");
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ExportRequest> result =
+                  exportOperationValidator.validateRequest(
+                      mockRequest, outputFormat, now, null, types, null);
+              assertThat(result.result()).isNotNull();
+              assertThat(result.result().includeResourceTypeFilters()).contains("ViewDefinition");
+            });
   }
 
   @Test
@@ -105,32 +104,36 @@ class ViewDefinitionExportTest {
 
     // When: validating the request.
     // Then: all resource types should be accepted.
-    assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<ExportRequest> result =
-          exportOperationValidator.validateRequest(mockRequest, outputFormat, now, null, types,
-              null);
-      assertThat(result.result()).isNotNull();
-      assertThat(result.result().includeResourceTypeFilters()).hasSize(3);
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ExportRequest> result =
+                  exportOperationValidator.validateRequest(
+                      mockRequest, outputFormat, now, null, types, null);
+              assertThat(result.result()).isNotNull();
+              assertThat(result.result().includeResourceTypeFilters()).hasSize(3);
+            });
   }
 
   @Test
   void exportValidatorAcceptsViewDefinitionInLenientMode() {
     // Given: a lenient export request with ViewDefinition type.
-    final RequestDetails lenientRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", true);
+    final RequestDetails lenientRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", true);
     final String outputFormat = ExportOutputFormat.asParam(NDJSON);
     final InstantType now = InstantType.now();
     final List<String> types = List.of("ViewDefinition");
 
     // When: validating the request in lenient mode.
     // Then: validation should pass.
-    assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<ExportRequest> result =
-          exportOperationValidator.validateRequest(lenientRequest, outputFormat, now, null, types,
-              null);
-      assertThat(result.result()).isNotNull();
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ExportRequest> result =
+                  exportOperationValidator.validateRequest(
+                      lenientRequest, outputFormat, now, null, types, null);
+              assertThat(result.result()).isNotNull();
+            });
   }
 
   @Test
@@ -142,13 +145,15 @@ class ViewDefinitionExportTest {
 
     // When: validating the request.
     // Then: only ViewDefinition should be in the filter.
-    assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<ExportRequest> result =
-          exportOperationValidator.validateRequest(mockRequest, outputFormat, now, null, types,
-              null);
-      assertThat(result.result()).isNotNull();
-      assertThat(result.result().includeResourceTypeFilters()).hasSize(1);
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ExportRequest> result =
+                  exportOperationValidator.validateRequest(
+                      mockRequest, outputFormat, now, null, types, null);
+              assertThat(result.result()).isNotNull();
+              assertThat(result.result().includeResourceTypeFilters()).hasSize(1);
+            });
   }
 
   // -------------------------------------------------------------------------
@@ -163,13 +168,15 @@ class ViewDefinitionExportTest {
 
     // When: validating the request.
     // Then: the format should be NDJSON.
-    assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<ExportRequest> result =
-          exportOperationValidator.validateRequest(mockRequest, outputFormat, null, null, types,
-              null);
-      assertThat(result.result()).isNotNull();
-      assertThat(result.result().outputFormat()).isEqualTo(NDJSON);
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ExportRequest> result =
+                  exportOperationValidator.validateRequest(
+                      mockRequest, outputFormat, null, null, types, null);
+              assertThat(result.result()).isNotNull();
+              assertThat(result.result().outputFormat()).isEqualTo(NDJSON);
+            });
   }
 
   // -------------------------------------------------------------------------
@@ -185,13 +192,15 @@ class ViewDefinitionExportTest {
 
     // When: validating the request.
     // Then: the since parameter should be captured.
-    assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<ExportRequest> result =
-          exportOperationValidator.validateRequest(mockRequest, outputFormat, since, null, types,
-              null);
-      assertThat(result.result()).isNotNull();
-      assertThat(result.result().since()).isEqualTo(since);
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ExportRequest> result =
+                  exportOperationValidator.validateRequest(
+                      mockRequest, outputFormat, since, null, types, null);
+              assertThat(result.result()).isNotNull();
+              assertThat(result.result().since()).isEqualTo(since);
+            });
   }
 
   @Test
@@ -204,14 +213,15 @@ class ViewDefinitionExportTest {
 
     // When: validating the request.
     // Then: both time parameters should be captured.
-    assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<ExportRequest> result =
-          exportOperationValidator.validateRequest(mockRequest, outputFormat, since, until, types,
-              null);
-      assertThat(result.result()).isNotNull();
-      assertThat(result.result().since()).isEqualTo(since);
-      assertThat(result.result().until()).isEqualTo(until);
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ExportRequest> result =
+                  exportOperationValidator.validateRequest(
+                      mockRequest, outputFormat, since, until, types, null);
+              assertThat(result.result()).isNotNull();
+              assertThat(result.result().since()).isEqualTo(since);
+              assertThat(result.result().until()).isEqualTo(until);
+            });
   }
-
 }

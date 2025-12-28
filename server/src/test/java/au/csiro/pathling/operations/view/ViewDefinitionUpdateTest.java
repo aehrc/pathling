@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.operations.viewdefinition;
+package au.csiro.pathling.operations.view;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
+import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
@@ -36,7 +37,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
-import au.csiro.pathling.FhirServer;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;

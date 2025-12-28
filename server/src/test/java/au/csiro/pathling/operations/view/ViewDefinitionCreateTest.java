@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.operations.viewdefinition;
+package au.csiro.pathling.operations.view;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -59,20 +59,15 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class ViewDefinitionCreateTest {
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
-  @Autowired
-  private CacheableDatabase cacheableDatabase;
+  @Autowired private CacheableDatabase cacheableDatabase;
 
   private Path tempDatabasePath;
   private CreateProvider createProvider;
@@ -83,8 +78,12 @@ class ViewDefinitionCreateTest {
     tempDatabasePath = Files.createTempDirectory("viewdefinition-create-test-");
 
     // Create UpdateExecutor with the temp database path.
-    final UpdateExecutor updateExecutor = new UpdateExecutor(pathlingContext, fhirEncoders,
-        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
+    final UpdateExecutor updateExecutor =
+        new UpdateExecutor(
+            pathlingContext,
+            fhirEncoders,
+            tempDatabasePath.toAbsolutePath().toString(),
+            cacheableDatabase);
 
     // Create the CreateProvider for ViewDefinition.
     createProvider = new CreateProvider(updateExecutor, fhirContext, ViewDefinitionResource.class);
@@ -149,8 +148,8 @@ class ViewDefinitionCreateTest {
   @Test
   void createViewDefinitionPersistsToDeltaLake() {
     // Given: a ViewDefinition resource.
-    final ViewDefinitionResource viewDef = createViewDefinition(null, "persisted_view",
-        "Observation");
+    final ViewDefinitionResource viewDef =
+        createViewDefinition(null, "persisted_view", "Observation");
 
     // When: creating the resource.
     final MethodOutcome outcome = createProvider.create(viewDef);
@@ -190,8 +189,8 @@ class ViewDefinitionCreateTest {
   @Test
   void createViewDefinitionPreservesContent() {
     // Given: a ViewDefinition with specific content.
-    final ViewDefinitionResource viewDef = createViewDefinition(null, "patient_demographics",
-        "Patient");
+    final ViewDefinitionResource viewDef =
+        createViewDefinition(null, "patient_demographics", "Patient");
 
     // When: creating the resource.
     final MethodOutcome outcome = createProvider.create(viewDef);
@@ -210,8 +209,8 @@ class ViewDefinitionCreateTest {
   // -------------------------------------------------------------------------
 
   @Nonnull
-  private ViewDefinitionResource createViewDefinition(final String id, @Nonnull final String name,
-      @Nonnull final String resource) {
+  private ViewDefinitionResource createViewDefinition(
+      final String id, @Nonnull final String name, @Nonnull final String resource) {
     final ViewDefinitionResource viewDef = new ViewDefinitionResource();
     if (id != null) {
       viewDef.setId(id);
@@ -244,5 +243,4 @@ class ViewDefinitionCreateTest {
       return false;
     }
   }
-
 }

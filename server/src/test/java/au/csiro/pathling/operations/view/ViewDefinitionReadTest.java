@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.operations.viewdefinition;
+package au.csiro.pathling.operations.view;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,10 +46,9 @@ import org.springframework.context.annotation.Import;
 
 /**
  * Tests for reading ViewDefinition resources via the read operation.
- * <p>
- * These tests verify that ViewDefinition resources can be read by ID, including those with complex
- * nested structures such as nested selects, where clauses, and constants.
- * </p>
+ *
+ * <p>These tests verify that ViewDefinition resources can be read by ID, including those with
+ * complex nested structures such as nested selects, where clauses, and constants.
  *
  * @author John Grimes
  */
@@ -57,14 +56,11 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class ViewDefinitionReadTest {
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
   private CustomObjectDataSource dataSource;
   private ReadExecutor readExecutor;
@@ -78,18 +74,20 @@ class ViewDefinitionReadTest {
     viewDefinitions.add(createSimpleViewDefinition("view-simple", "simple_view", "Patient"));
 
     // ViewDefinition with where clause.
-    viewDefinitions.add(createViewDefinitionWithWhere("view-filtered", "filtered_view", "Patient",
-        "active = true"));
+    viewDefinitions.add(
+        createViewDefinitionWithWhere(
+            "view-filtered", "filtered_view", "Patient", "active = true"));
 
     // ViewDefinition with constants.
-    viewDefinitions.add(createViewDefinitionWithConstant("view-const", "constant_view", "Patient",
-        "extraction_date", "2024-01-01"));
+    viewDefinitions.add(
+        createViewDefinitionWithConstant(
+            "view-const", "constant_view", "Patient", "extraction_date", "2024-01-01"));
 
     // Complex ViewDefinition with nested selects.
     viewDefinitions.add(createComplexViewDefinition("view-complex", "complex_view"));
 
-    dataSource = new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders,
-        viewDefinitions);
+    dataSource =
+        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, viewDefinitions);
     readExecutor = new ReadExecutor(dataSource, fhirEncoders);
   }
 
@@ -194,15 +192,19 @@ class ViewDefinitionReadTest {
     final SelectComponent firstSelect = view.getSelect().get(0);
     final List<ColumnComponent> columns = firstSelect.getColumn();
 
-    assertThat(columns).anySatisfy(col -> {
-      assertThat(col.getName().getValue()).isEqualTo("id");
-      assertThat(col.getPath().getValue()).isEqualTo("id");
-    });
+    assertThat(columns)
+        .anySatisfy(
+            col -> {
+              assertThat(col.getName().getValue()).isEqualTo("id");
+              assertThat(col.getPath().getValue()).isEqualTo("id");
+            });
 
-    assertThat(columns).anySatisfy(col -> {
-      assertThat(col.getName().getValue()).isEqualTo("family_name");
-      assertThat(col.getPath().getValue()).isEqualTo("name.first().family");
-    });
+    assertThat(columns)
+        .anySatisfy(
+            col -> {
+              assertThat(col.getName().getValue()).isEqualTo("family_name");
+              assertThat(col.getPath().getValue()).isEqualTo("name.first().family");
+            });
   }
 
   // -------------------------------------------------------------------------
@@ -223,8 +225,8 @@ class ViewDefinitionReadTest {
   // -------------------------------------------------------------------------
 
   @Nonnull
-  private ViewDefinitionResource createSimpleViewDefinition(@Nonnull final String id,
-      @Nonnull final String name, @Nonnull final String resource) {
+  private ViewDefinitionResource createSimpleViewDefinition(
+      @Nonnull final String id, @Nonnull final String name, @Nonnull final String resource) {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     view.setId(id);
     view.setName(new StringType(name));
@@ -240,8 +242,11 @@ class ViewDefinitionReadTest {
   }
 
   @Nonnull
-  private ViewDefinitionResource createViewDefinitionWithWhere(@Nonnull final String id,
-      @Nonnull final String name, @Nonnull final String resource, @Nonnull final String wherePath) {
+  private ViewDefinitionResource createViewDefinitionWithWhere(
+      @Nonnull final String id,
+      @Nonnull final String name,
+      @Nonnull final String resource,
+      @Nonnull final String wherePath) {
     final ViewDefinitionResource view = createSimpleViewDefinition(id, name, resource);
 
     final WhereComponent where = new WhereComponent();
@@ -252,8 +257,11 @@ class ViewDefinitionReadTest {
   }
 
   @Nonnull
-  private ViewDefinitionResource createViewDefinitionWithConstant(@Nonnull final String id,
-      @Nonnull final String name, @Nonnull final String resource, @Nonnull final String constName,
+  private ViewDefinitionResource createViewDefinitionWithConstant(
+      @Nonnull final String id,
+      @Nonnull final String name,
+      @Nonnull final String resource,
+      @Nonnull final String constName,
       @Nonnull final String constValue) {
     final ViewDefinitionResource view = createSimpleViewDefinition(id, name, resource);
 
@@ -266,8 +274,8 @@ class ViewDefinitionReadTest {
   }
 
   @Nonnull
-  private ViewDefinitionResource createComplexViewDefinition(@Nonnull final String id,
-      @Nonnull final String name) {
+  private ViewDefinitionResource createComplexViewDefinition(
+      @Nonnull final String id, @Nonnull final String name) {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     view.setId(id);
     view.setName(new StringType(name));
@@ -308,5 +316,4 @@ class ViewDefinitionReadTest {
     column.setPath(new StringType(path));
     return column;
   }
-
 }
