@@ -14,7 +14,7 @@ import {
   IconButton,
   Select,
   Text,
-  TextField,
+  TextField
 } from "@radix-ui/themes";
 import { useRef, useState } from "react";
 import type { SearchRequest } from "../../types/search";
@@ -38,7 +38,7 @@ export function ResourceSearchForm({
   resourceTypes,
 }: ResourceSearchFormProps) {
   const idCounter = useRef(1);
-  const [resourceType, setResourceType] = useState<string>(resourceTypes[0] ?? "Patient");
+  const [resourceType, setResourceType] = useState<string>("Patient");
   const [filters, setFilters] = useState<FilterInputWithId[]>([{ id: 0, expression: "" }]);
 
   const handleSubmit = () => {
