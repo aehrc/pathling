@@ -234,11 +234,11 @@ describe("importPnpKickOff", () => {
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.parameter).toContainEqual({
       name: "exportType",
-      valueCoding: { code: "static" },
+      valueCode: "static",
     });
     expect(body.parameter).toContainEqual({
-      name: "mode",
-      valueCoding: { code: "overwrite" },
+      name: "saveMode",
+      valueCode: "overwrite",
     });
   });
 
