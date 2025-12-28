@@ -39,19 +39,20 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SparkJobListener extends org.apache.spark.scheduler.SparkListener {
 
-  @Nonnull
-  private final JobRegistry jobRegistry;
+  @Nonnull private final JobRegistry jobRegistry;
 
-  @Nonnull
-  private final StageMap stageMap;
+  @Nonnull private final StageMap stageMap;
   private final SparkSession sparkSession;
 
   /**
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    * @param stageMap the {@link StageMap} used to map stages to job IDs
+   * @param sparkSession the {@link SparkSession} used to cancel job groups
    */
-  public SparkJobListener(@Nonnull final JobRegistry jobRegistry,
-                          @Nonnull final StageMap stageMap, @Lazy SparkSession sparkSession) {
+  public SparkJobListener(
+      @Nonnull final JobRegistry jobRegistry,
+      @Nonnull final StageMap stageMap,
+      @Lazy final SparkSession sparkSession) {
     this.jobRegistry = jobRegistry;
     this.stageMap = stageMap;
     this.sparkSession = sparkSession;
@@ -64,17 +65,16 @@ public class SparkJobListener extends org.apache.spark.scheduler.SparkListener {
     if (jobGroupId != null) {
       @Nullable final Job<?> job = jobRegistry.get(jobGroupId);
       if (job != null) {
-        if(job.isCancelled()) {
-          log.debug("Stage submitted called but job {} is cancelled. Cancelling the associated job group.", job.getId());
-          sparkSession.sparkContext().cancelJobGroup(job.getId());
+        if (cancelJobGroupIfCancelled(job, "Stage completed")) {
           return;
         }
         job.incrementCompletedStages();
-        log.debug("Completed stage of job {} (Total completed stages now: {})", job.getId(), job.getCompletedStages());
-      }
-      else if(jobRegistry.removedFromRegistryButStillWithSparkJobContains(jobGroupId)) {
-        log.debug("Detected a cancelled job that has been removed from the registry but has a running spark job attached to it. Cancelling the spark job.");
-        sparkSession.sparkContext().cancelJobGroup(jobGroupId);
+        log.debug(
+            "Completed stage of job {} (Total completed stages now: {})",
+            job.getId(),
+            job.getCompletedStages());
+      } else {
+        cancelOrphanedJobGroup(jobGroupId);
       }
     }
   }
@@ -82,24 +82,58 @@ public class SparkJobListener extends org.apache.spark.scheduler.SparkListener {
   @Override
   public void onStageSubmitted(final SparkListenerStageSubmitted stageSubmitted) {
     requireNonNull(stageSubmitted);
-    @Nullable final String jobGroupId = stageSubmitted.properties()
-        .getProperty("spark.jobGroup.id");
+    @Nullable
+    final String jobGroupId = stageSubmitted.properties().getProperty("spark.jobGroup.id");
     if (jobGroupId == null) {
       return;
     }
     @Nullable final Job<?> job = jobRegistry.get(jobGroupId);
     if (job != null) {
-      if(job.isCancelled()) {
-        log.info("Stage submitted called but job {} is cancelled. Cancelling the associated job group.", job.getId());
-        sparkSession.sparkContext().cancelJobGroup(job.getId());
+      if (cancelJobGroupIfCancelled(job, "Stage submitted")) {
         return;
       }
       stageMap.put(stageSubmitted.stageInfo().stageId(), jobGroupId);
       job.incrementTotalStages();
-      log.debug("Incremented total stages of job {} (Total stages now: {})", job.getId(), job.getTotalStages());
+      log.debug(
+          "Incremented total stages of job {} (Total stages now: {})",
+          job.getId(),
+          job.getTotalStages());
+    } else {
+      cancelOrphanedJobGroup(jobGroupId);
     }
-    else if(jobRegistry.removedFromRegistryButStillWithSparkJobContains(jobGroupId)) {
-      log.debug("Detected a cancelled job that has been removed from the registry but has a running spark job attached to it. Cancelling the spark job.");
+  }
+
+  /**
+   * Cancels a job group if the job has been cancelled.
+   *
+   * @param job the job to check
+   * @param eventName the name of the event that triggered the check
+   * @return true if the job was cancelled and the job group was cancelled, false otherwise
+   */
+  private boolean cancelJobGroupIfCancelled(
+      @Nonnull final Job<?> job, @Nonnull final String eventName) {
+    if (job.isCancelled()) {
+      log.debug(
+          "{} called but job {} is cancelled. Cancelling the associated job group.",
+          eventName,
+          job.getId());
+      sparkSession.sparkContext().cancelJobGroup(job.getId());
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Cancels a job group that has been removed from the registry but still has a running Spark job.
+   *
+   * @param jobGroupId the ID of the job group to cancel
+   */
+  private void cancelOrphanedJobGroup(@Nonnull final String jobGroupId) {
+    if (jobRegistry.removedFromRegistryButStillWithSparkJobContains(jobGroupId)) {
+      log.debug(
+          "Cancelled job {} was removed from the registry but still has a running Spark job."
+              + " Cancelling the Spark job.",
+          jobGroupId);
       sparkSession.sparkContext().cancelJobGroup(jobGroupId);
     }
   }
