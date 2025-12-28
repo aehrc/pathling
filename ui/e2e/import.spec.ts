@@ -573,7 +573,7 @@ test.describe("Import page", () => {
         await page.getByRole("button", { name: "Start import" }).click();
 
         // Verify status card appears.
-        await expect(page.getByText("FHIR Server Import")).toBeVisible();
+        await expect(page.getByText("FHIR server import")).toBeVisible();
         await expect(
           page.getByText("Importing from https://test.org/fhir/$export"),
         ).toBeVisible();

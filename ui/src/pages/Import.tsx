@@ -191,7 +191,7 @@ export function Import() {
                     <Flex direction="column" gap="3">
                       <Flex justify="between" align="start">
                         <Box>
-                          <Text weight="medium">FHIR Server Import</Text>
+                          <Text weight="medium">FHIR server import</Text>
                           {pnpImport.request && (
                             <Text size="1" color="gray" as="div">
                               Importing from {pnpImport.request.exportUrl}
