@@ -20,10 +20,6 @@ package au.csiro.pathling.operations.view;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
@@ -36,7 +32,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
@@ -59,34 +54,18 @@ import org.springframework.mock.web.MockHttpServletResponse;
  * @author John Grimes
  */
 @Import({
-    FhirServerTestConfiguration.class,
-    PatientCompartmentService.class
+  FhirServerTestConfiguration.class,
+  PatientCompartmentService.class,
+  ViewExecutionHelper.class
 })
 @SpringBootUnitTest
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 @Execution(ExecutionMode.CONCURRENT)
 class ViewDefinitionRunProviderTest {
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private FhirContext fhirContext;
 
-  @Autowired
-  private PathlingContext pathlingContext;
-
-  @Autowired
-  private QueryableDataSource deltaLake;
-
-  @Autowired
-  private FhirContext fhirContext;
-
-  @Autowired
-  private FhirEncoders fhirEncoders;
-
-  @Autowired
-  private PatientCompartmentService patientCompartmentService;
-
-  @Autowired
-  private ServerConfiguration serverConfiguration;
+  @Autowired private ViewExecutionHelper viewExecutionHelper;
 
   private ViewDefinitionRunProvider provider;
 
@@ -94,20 +73,11 @@ class ViewDefinitionRunProviderTest {
 
   @BeforeEach
   void setUp() {
-    provider = new ViewDefinitionRunProvider(
-        sparkSession,
-        deltaLake,
-        fhirContext,
-        fhirEncoders,
-        patientCompartmentService,
-        serverConfiguration
-    );
+    provider = new ViewDefinitionRunProvider(viewExecutionHelper);
     gson = new GsonBuilder().create();
   }
 
-  /**
-   * Parses a ViewDefinition JSON string into an IBaseResource.
-   */
+  /** Parses a ViewDefinition JSON string into an IBaseResource. */
   @Nonnull
   private IBaseResource parseViewResource(@Nonnull final String viewJson) {
     return fhirContext.newJsonParser().parseResource(viewJson);
@@ -123,8 +93,16 @@ class ViewDefinitionRunProviderTest {
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
-    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
-        List.of(inlinePatient), response);
+    provider.run(
+        viewResource,
+        "application/x-ndjson",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        response);
 
     assertThat(response.getContentType()).startsWith("application/x-ndjson");
     assertThat(response.getStatus()).isEqualTo(200);
@@ -136,8 +114,8 @@ class ViewDefinitionRunProviderTest {
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
-    provider.run(viewResource, "text/csv", null, null, null, null, null,
-        List.of(inlinePatient), response);
+    provider.run(
+        viewResource, "text/csv", null, null, null, null, null, List.of(inlinePatient), response);
 
     assertThat(response.getContentType()).startsWith("text/csv");
     assertThat(response.getStatus()).isEqualTo(200);
@@ -149,8 +127,8 @@ class ViewDefinitionRunProviderTest {
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
-    provider.run(viewResource, "text/csv", null, null, null, null, null,
-        List.of(inlinePatient), response);
+    provider.run(
+        viewResource, "text/csv", null, null, null, null, null, List.of(inlinePatient), response);
 
     final String content = response.getContentAsString();
     final String[] lines = content.split("\n");
@@ -166,8 +144,16 @@ class ViewDefinitionRunProviderTest {
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
-    provider.run(viewResource, "text/csv", new BooleanType(false), null, null, null, null,
-        List.of(inlinePatient), response);
+    provider.run(
+        viewResource,
+        "text/csv",
+        new BooleanType(false),
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        response);
 
     final String content = response.getContentAsString();
     final String[] lines = content.split("\n");
@@ -182,8 +168,8 @@ class ViewDefinitionRunProviderTest {
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
-    provider.run(viewResource, null, null, null, null, null, null,
-        List.of(inlinePatient), response);
+    provider.run(
+        viewResource, null, null, null, null, null, null, List.of(inlinePatient), response);
 
     assertThat(response.getContentType()).startsWith("application/x-ndjson");
   }
@@ -202,8 +188,8 @@ class ViewDefinitionRunProviderTest {
     invalidView.put("status", "active");
     final IBaseResource viewResource = parseViewResource(gson.toJson(invalidView));
 
-    assertThatThrownBy(() ->
-        provider.run(viewResource, null, null, null, null, null, null, null, response))
+    assertThatThrownBy(
+            () -> provider.run(viewResource, null, null, null, null, null, null, null, response))
         .isInstanceOf(Exception.class);
   }
 
@@ -213,8 +199,16 @@ class ViewDefinitionRunProviderTest {
     final IBaseResource viewResource = parseViewResource(createMultiColumnPatientView());
     final String inlinePatient = createPatientJsonWithGender("test-1", "Smith", "John", "male");
 
-    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
-        List.of(inlinePatient), response);
+    provider.run(
+        viewResource,
+        "application/x-ndjson",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        response);
 
     final String content = response.getContentAsString().trim();
     assertThat(content).contains("\"id\":\"test-1\"");
@@ -230,14 +224,22 @@ class ViewDefinitionRunProviderTest {
   void limitRestrictsRowCount() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
-    final List<String> patients = List.of(
-        createPatientJson("p1", "Smith"),
-        createPatientJson("p2", "Jones"),
-        createPatientJson("p3", "Brown")
-    );
+    final List<String> patients =
+        List.of(
+            createPatientJson("p1", "Smith"),
+            createPatientJson("p2", "Jones"),
+            createPatientJson("p3", "Brown"));
 
-    provider.run(viewResource, "application/x-ndjson", null, new IntegerType(2),
-        null, null, null, patients, response);
+    provider.run(
+        viewResource,
+        "application/x-ndjson",
+        null,
+        new IntegerType(2),
+        null,
+        null,
+        null,
+        patients,
+        response);
 
     final String content = response.getContentAsString().trim();
     final String[] lines = content.split("\n");
@@ -248,14 +250,14 @@ class ViewDefinitionRunProviderTest {
   void noLimitReturnsAllRows() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
-    final List<String> patients = List.of(
-        createPatientJson("p1", "Smith"),
-        createPatientJson("p2", "Jones"),
-        createPatientJson("p3", "Brown")
-    );
+    final List<String> patients =
+        List.of(
+            createPatientJson("p1", "Smith"),
+            createPatientJson("p2", "Jones"),
+            createPatientJson("p3", "Brown"));
 
-    provider.run(viewResource, "application/x-ndjson", null, null,
-        null, null, null, patients, response);
+    provider.run(
+        viewResource, "application/x-ndjson", null, null, null, null, null, patients, response);
 
     final String content = response.getContentAsString().trim();
     final String[] lines = content.split("\n");
@@ -272,8 +274,16 @@ class ViewDefinitionRunProviderTest {
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("inline-patient-123", "InlineFamily");
 
-    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
-        List.of(inlinePatient), response);
+    provider.run(
+        viewResource,
+        "application/x-ndjson",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        response);
 
     final String content = response.getContentAsString().trim();
     // Should contain the inline patient, not Delta Lake patients.
@@ -285,13 +295,11 @@ class ViewDefinitionRunProviderTest {
   void multipleInlineResourcesOfSameType() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
-    final List<String> patients = List.of(
-        createPatientJson("inline-1", "Family1"),
-        createPatientJson("inline-2", "Family2")
-    );
+    final List<String> patients =
+        List.of(createPatientJson("inline-1", "Family1"), createPatientJson("inline-2", "Family2"));
 
-    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
-        patients, response);
+    provider.run(
+        viewResource, "application/x-ndjson", null, null, null, null, null, patients, response);
 
     final String content = response.getContentAsString().trim();
     final String[] lines = content.split("\n");
@@ -305,13 +313,13 @@ class ViewDefinitionRunProviderTest {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     // Include both Patient and Observation, but the view only queries Patient.
-    final List<String> resources = List.of(
-        createPatientJson("patient-1", "PatientFamily"),
-        createObservationJson("obs-1", "patient-1")
-    );
+    final List<String> resources =
+        List.of(
+            createPatientJson("patient-1", "PatientFamily"),
+            createObservationJson("obs-1", "patient-1"));
 
-    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
-        resources, response);
+    provider.run(
+        viewResource, "application/x-ndjson", null, null, null, null, null, resources, response);
 
     final String content = response.getContentAsString().trim();
     // Should only return the patient data.
@@ -324,9 +332,18 @@ class ViewDefinitionRunProviderTest {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
 
-    assertThatThrownBy(() ->
-        provider.run(viewResource, null, null, null, null, null, null,
-            List.of("{ not valid fhir }"), response))
+    assertThatThrownBy(
+            () ->
+                provider.run(
+                    viewResource,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    List.of("{ not valid fhir }"),
+                    response))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("Invalid inline resource");
   }
@@ -347,8 +364,8 @@ class ViewDefinitionRunProviderTest {
   void nullResponseThrowsInvalidRequestException() {
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
 
-    assertThatThrownBy(() ->
-        provider.run(viewResource, null, null, null, null, null, null, null, null))
+    assertThatThrownBy(
+            () -> provider.run(viewResource, null, null, null, null, null, null, null, null))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("HTTP response is required");
   }
@@ -363,13 +380,21 @@ class ViewDefinitionRunProviderTest {
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("row-test-id", "RowTestFamily");
 
-    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
-        List.of(inlinePatient), response);
+    provider.run(
+        viewResource,
+        "application/x-ndjson",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        response);
 
     final String content = response.getContentAsString().trim();
     // Parse the JSON line to verify structure.
-    @SuppressWarnings("unchecked") final Map<String, Object> row = gson.fromJson(content,
-        Map.class);
+    @SuppressWarnings("unchecked")
+    final Map<String, Object> row = gson.fromJson(content, Map.class);
     assertThat(row).containsKey("id");
     assertThat(row).containsKey("family_name");
     assertThat(row.get("id")).isEqualTo("row-test-id");
@@ -381,17 +406,26 @@ class ViewDefinitionRunProviderTest {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     // Create patient without family name.
-    final String patientJson = """
+    final String patientJson =
+        """
         {"resourceType":"Patient","id":"null-test"}
         """;
 
-    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
-        List.of(patientJson), response);
+    provider.run(
+        viewResource,
+        "application/x-ndjson",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(patientJson),
+        response);
 
     final String content = response.getContentAsString().trim();
     // Should still produce valid JSON.
-    @SuppressWarnings("unchecked") final Map<String, Object> row = gson.fromJson(content,
-        Map.class);
+    @SuppressWarnings("unchecked")
+    final Map<String, Object> row = gson.fromJson(content, Map.class);
     assertThat(row).containsKey("id");
     // Null values should not be present in JSON output.
     assertThat(row.get("family_name")).isNull();
@@ -403,8 +437,8 @@ class ViewDefinitionRunProviderTest {
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("csv-test-id", "CsvTestFamily");
 
-    provider.run(viewResource, "text/csv", null, null, null, null, null,
-        List.of(inlinePatient), response);
+    provider.run(
+        viewResource, "text/csv", null, null, null, null, null, List.of(inlinePatient), response);
 
     final String content = response.getContentAsString();
     final String[] lines = content.split("\n");
@@ -460,10 +494,12 @@ class ViewDefinitionRunProviderTest {
     view.put("name", "test_patient_view");
     view.put("resource", "Patient");
     view.put("status", "active");
-    view.put("select", List.of(
-        Map.of("column", List.of(Map.of("name", "id", "path", "id"))),
-        Map.of("column", List.of(Map.of("name", "family_name", "path", "name.first().family")))
-    ));
+    view.put(
+        "select",
+        List.of(
+            Map.of("column", List.of(Map.of("name", "id", "path", "id"))),
+            Map.of(
+                "column", List.of(Map.of("name", "family_name", "path", "name.first().family")))));
     return gson.toJson(view);
   }
 
@@ -474,13 +510,15 @@ class ViewDefinitionRunProviderTest {
     view.put("name", "multi_column_patient_view");
     view.put("resource", "Patient");
     view.put("status", "active");
-    view.put("select", List.of(
-        Map.of("column", List.of(Map.of("name", "id", "path", "id"))),
-        Map.of("column", List.of(Map.of("name", "family_name", "path", "name.first().family"))),
-        Map.of("column",
-            List.of(Map.of("name", "given_name", "path", "name.first().given.first()"))),
-        Map.of("column", List.of(Map.of("name", "gender", "path", "gender")))
-    ));
+    view.put(
+        "select",
+        List.of(
+            Map.of("column", List.of(Map.of("name", "id", "path", "id"))),
+            Map.of("column", List.of(Map.of("name", "family_name", "path", "name.first().family"))),
+            Map.of(
+                "column",
+                List.of(Map.of("name", "given_name", "path", "name.first().given.first()"))),
+            Map.of("column", List.of(Map.of("name", "gender", "path", "gender")))));
     return gson.toJson(view);
   }
 
@@ -493,8 +531,10 @@ class ViewDefinitionRunProviderTest {
   }
 
   @Nonnull
-  private String createPatientJsonWithGender(@Nonnull final String id,
-      @Nonnull final String familyName, @Nonnull final String givenName,
+  private String createPatientJsonWithGender(
+      @Nonnull final String id,
+      @Nonnull final String familyName,
+      @Nonnull final String givenName,
       @Nonnull final String gender) {
     final Patient patient = new Patient();
     patient.setId(id);
@@ -504,13 +544,11 @@ class ViewDefinitionRunProviderTest {
   }
 
   @Nonnull
-  private String createObservationJson(@Nonnull final String id,
-      @Nonnull final String patientId) {
+  private String createObservationJson(@Nonnull final String id, @Nonnull final String patientId) {
     final Observation observation = new Observation();
     observation.setId(id);
     observation.setSubject(new Reference("Patient/" + patientId));
     observation.setStatus(Observation.ObservationStatus.FINAL);
     return fhirContext.newJsonParser().encodeResourceToString(observation);
   }
-
 }
