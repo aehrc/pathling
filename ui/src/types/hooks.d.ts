@@ -17,7 +17,7 @@
  * Author: John Grimes
  */
 
-import type { Bundle, Resource } from "fhir/r4";
+import type { Bundle, Parameters, Resource } from "fhir/r4";
 import type { UseQueryResult, UseMutationResult } from "@tanstack/react-query";
 import type { ImportFormat, SaveMode } from "./import";
 
@@ -224,7 +224,7 @@ export interface BulkExportRequest {
 export type UseBulkExportOptions = AsyncJobOptions;
 
 /**
- * Manifest entry for a single exported file.
+ * Manifest entry for a single exported file (extracted from Parameters).
  */
 export interface ExportManifestEntry {
   type: string;
@@ -233,15 +233,9 @@ export interface ExportManifestEntry {
 }
 
 /**
- * Complete export manifest.
+ * Export manifest is a FHIR Parameters resource containing export results.
  */
-export interface ExportManifest {
-  transactionTime: string;
-  request: string;
-  requiresAccessToken: boolean;
-  output: ExportManifestEntry[];
-  error?: ExportManifestEntry[];
-}
+export type ExportManifest = Parameters;
 
 /**
  * Result of useBulkExport hook.

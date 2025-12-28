@@ -35,6 +35,7 @@ import type {
   ExportManifest,
 } from "../types/hooks";
 import type { ResourceType } from "../types/api";
+import { getExportOutputFiles } from "../types/export";
 
 interface KickOffResult {
   pollingUrl: string;
@@ -115,7 +116,9 @@ export const useBulkExport: UseBulkExportFn = (options) => {
 
   const download = useCallback(
     async (fileName: string) => {
-      const file = job.result?.output.find((f) => f.url.endsWith(fileName));
+      if (!job.result) throw new Error("No export result available");
+      const outputFiles = getExportOutputFiles(job.result);
+      const file = outputFiles.find((f) => f.url.endsWith(fileName));
       if (!file) throw new Error(`File not found: ${fileName}`);
       return bulkExportDownload(fhirBaseUrl!, {
         fileUrl: file.url,

@@ -12,7 +12,7 @@ import { ExportForm } from "../components/export/ExportForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useBulkExport, useDownloadFile, useServerCapabilities } from "../hooks";
-import type { ExportRequest } from "../types/export";
+import { getExportOutputFiles, type ExportRequest } from "../types/export";
 import type { BulkExportType } from "../types/hooks";
 
 /**
@@ -50,6 +50,9 @@ export function Export() {
 
   // Use the bulk export hook. 401 errors are handled globally.
   const { startWith, reset, cancel, status, result, error, progress, request } = useBulkExport();
+
+  // Extract output files from the Parameters result.
+  const outputFiles = result ? getExportOutputFiles(result) : [];
 
   // Derive isRunning from status.
   const isRunning = status === "pending" || status === "in-progress";
@@ -145,13 +148,13 @@ export function Export() {
                   </Text>
                 )}
 
-                {result?.output && (
+                {outputFiles.length > 0 && (
                   <Box>
                     <Text size="2" weight="medium" mb="2">
-                      Output files ({result.output.length})
+                      Output files ({outputFiles.length})
                     </Text>
                     <Flex direction="column" gap="1">
-                      {result.output.map((output) => (
+                      {outputFiles.map((output) => (
                         <Flex key={output.url} justify="between" align="center">
                           <Text size="2">
                             {getFilenameFromUrl(output.url)}

@@ -27,7 +27,7 @@ import {
   bulkExportDownload,
 } from "../bulkExport";
 import { UnauthorizedError } from "../../types/errors";
-import type { ExportManifest } from "../../types/api";
+import type { Parameters } from "fhir/r4";
 
 const mockFetch = vi.fn();
 
@@ -226,12 +226,13 @@ describe("groupExportKickOff", () => {
 
 describe("bulkExportStatus", () => {
   it("makes GET request to polling URL", async () => {
-    const manifest: ExportManifest = {
-      transactionTime: "2024-01-01T00:00:00Z",
-      request: "https://example.com/$export",
-      requiresAccessToken: false,
-      output: [],
-      error: [],
+    const manifest: Parameters = {
+      resourceType: "Parameters",
+      parameter: [
+        { name: "transactionTime", valueInstant: "2024-01-01T00:00:00Z" },
+        { name: "request", valueString: "https://example.com/$export" },
+        { name: "requiresAccessToken", valueBoolean: false },
+      ],
     };
 
     mockFetch.mockResolvedValueOnce(
@@ -254,12 +255,13 @@ describe("bulkExportStatus", () => {
   });
 
   it("resolves relative polling URLs against base URL", async () => {
-    const manifest: ExportManifest = {
-      transactionTime: "2024-01-01T00:00:00Z",
-      request: "https://example.com/$export",
-      requiresAccessToken: false,
-      output: [],
-      error: [],
+    const manifest: Parameters = {
+      resourceType: "Parameters",
+      parameter: [
+        { name: "transactionTime", valueInstant: "2024-01-01T00:00:00Z" },
+        { name: "request", valueString: "https://example.com/$export" },
+        { name: "requiresAccessToken", valueBoolean: false },
+      ],
     };
 
     mockFetch.mockResolvedValueOnce(
@@ -293,14 +295,23 @@ describe("bulkExportStatus", () => {
   });
 
   it("returns complete status with manifest from 200 response", async () => {
-    const manifest: ExportManifest = {
-      transactionTime: "2024-01-01T00:00:00Z",
-      request: "https://example.com/$export",
-      requiresAccessToken: true,
-      output: [
-        { type: "Patient", url: "https://example.com/files/patient.ndjson" },
+    const manifest: Parameters = {
+      resourceType: "Parameters",
+      parameter: [
+        { name: "transactionTime", valueInstant: "2024-01-01T00:00:00Z" },
+        { name: "request", valueString: "https://example.com/$export" },
+        { name: "requiresAccessToken", valueBoolean: true },
+        {
+          name: "output",
+          part: [
+            { name: "type", valueCode: "Patient" },
+            {
+              name: "url",
+              valueUri: "https://example.com/files/patient.ndjson",
+            },
+          ],
+        },
       ],
-      error: [],
     };
 
     mockFetch.mockResolvedValueOnce(

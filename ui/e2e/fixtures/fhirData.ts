@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import type { Bundle, CapabilityStatement, Patient } from "fhir/r4";
+import type { Bundle, CapabilityStatement, Parameters, Patient } from "fhir/r4";
 
 /**
  * Mock CapabilityStatement without authentication required.
@@ -179,20 +179,55 @@ export const mockJobStatusError = {
 /**
  * Mock export manifest for bulk export completion.
  */
-export const mockExportManifest = {
-  transactionTime: "2024-01-01T12:00:00Z",
-  request: "/$export",
-  requiresAccessToken: false,
-  output: [
+export const mockExportManifest: Parameters = {
+  resourceType: "Parameters",
+  parameter: [
     {
-      type: "Patient",
-      url: "http://localhost:3000/export-files?file=Patient.ndjson",
-      count: 100,
+      name: "transactionTime",
+      valueInstant: "2024-01-01T12:00:00Z",
     },
     {
-      type: "Observation",
-      url: "http://localhost:3000/export-files?file=Observation.ndjson",
-      count: 250,
+      name: "request",
+      valueString: "/$export",
+    },
+    {
+      name: "requiresAccessToken",
+      valueBoolean: false,
+    },
+    {
+      name: "output",
+      part: [
+        {
+          name: "type",
+          valueCode: "Patient",
+        },
+        {
+          name: "url",
+          valueUri: "http://localhost:3000/export-files?file=Patient.ndjson",
+        },
+        {
+          name: "count",
+          valueInteger: 100,
+        },
+      ],
+    },
+    {
+      name: "output",
+      part: [
+        {
+          name: "type",
+          valueCode: "Observation",
+        },
+        {
+          name: "url",
+          valueUri:
+            "http://localhost:3000/export-files?file=Observation.ndjson",
+        },
+        {
+          name: "count",
+          valueInteger: 250,
+        },
+      ],
     },
   ],
 };

@@ -17,7 +17,7 @@
  * Author: John Grimes
  */
 
-import type { Bundle, Identifier, Resource } from "fhir/r4";
+import type { Bundle, Identifier, Parameters, Resource } from "fhir/r4";
 
 /**
  * Pathling API Client Type Definitions
@@ -113,18 +113,10 @@ export interface BulkExportStatusResult {
   manifest?: ExportManifest;
 }
 
-export interface ExportManifest {
-  transactionTime: string;
-  request: string;
-  requiresAccessToken: boolean;
-  output: ExportManifestFile[];
-  error: ExportManifestFile[];
-}
-
-export interface ExportManifestFile {
-  type: string;
-  url: string;
-}
+/**
+ * Export manifest is a FHIR Parameters resource containing export results.
+ */
+export type ExportManifest = Parameters;
 
 export interface BulkExportDownloadOptions extends AuthOptions {
   fileUrl: string;
