@@ -104,26 +104,6 @@ describe("jobStatus", () => {
     expect(result.result).toEqual(resultData);
   });
 
-  it("handles Binary-wrapped result", async () => {
-    const innerResult = { transactionTime: "2024-01-01T00:00:00Z" };
-    const binaryWrapper = {
-      resourceType: "Binary",
-      contentType: "application/json",
-      data: btoa(JSON.stringify(innerResult)),
-    };
-
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify(binaryWrapper), { status: 200 }),
-    );
-
-    const result = await jobStatus("https://example.com/fhir", {
-      jobId: "abc-123",
-    });
-
-    expect(result.status).toBe("complete");
-    expect(result.result).toEqual(innerResult);
-  });
-
   it("returns undefined progress when header not present", async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 202 }));
 

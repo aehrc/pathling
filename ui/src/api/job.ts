@@ -17,27 +17,12 @@
  * Author: John Grimes
  */
 
-import type { Binary } from "fhir/r4";
 import type {
   JobStatusOptions,
   JobStatusResult,
   JobCancelOptions,
 } from "../types/api";
 import { buildHeaders, buildUrl, checkResponse } from "./utils";
-
-/**
- * Type guard to check if a response is a FHIR Binary resource with data.
- */
-function isBinaryResource(value: unknown): value is Binary & { data: string } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "resourceType" in value &&
-    (value as { resourceType: string }).resourceType === "Binary" &&
-    "data" in value &&
-    typeof (value as { data: unknown }).data === "string"
-  );
-}
 
 /**
  * Checks the status of an async job.
@@ -80,16 +65,7 @@ export async function jobStatus(
 
   // 200 indicates job complete.
   if (response.status === 200) {
-    const responseBody: unknown = await response.json();
-
-    // Handle Binary resource wrapper.
-    let result: unknown;
-    if (isBinaryResource(responseBody)) {
-      const decodedData = atob(responseBody.data);
-      result = JSON.parse(decodedData);
-    } else {
-      result = responseBody;
-    }
+    const result: unknown = await response.json();
 
     return {
       status: "complete",

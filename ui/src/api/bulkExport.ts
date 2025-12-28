@@ -17,7 +17,6 @@
  * Author: John Grimes
  */
 
-import type { Binary } from "fhir/r4";
 import type {
   SystemExportKickOffOptions,
   AllPatientsExportKickOffOptions,
@@ -30,20 +29,6 @@ import type {
   ExportManifest,
 } from "../types/api";
 import { buildHeaders, buildUrl, resolveUrl, checkResponse } from "./utils";
-
-/**
- * Type guard to check if a response is a FHIR Binary resource with data.
- */
-function isBinaryResource(value: unknown): value is Binary & { data: string } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "resourceType" in value &&
-    (value as { resourceType: string }).resourceType === "Binary" &&
-    "data" in value &&
-    typeof (value as { data: unknown }).data === "string"
-  );
-}
 
 /**
  * Builds query parameters for bulk export operations.
@@ -220,16 +205,7 @@ export async function bulkExportStatus(
 
   // 200 indicates export complete.
   if (response.status === 200) {
-    const responseBody: unknown = await response.json();
-
-    // Handle Binary resource wrapper.
-    let manifest: ExportManifest;
-    if (isBinaryResource(responseBody)) {
-      const decodedData = atob(responseBody.data);
-      manifest = JSON.parse(decodedData) as ExportManifest;
-    } else {
-      manifest = responseBody as ExportManifest;
-    }
+    const manifest = (await response.json()) as ExportManifest;
 
     return {
       status: "complete",

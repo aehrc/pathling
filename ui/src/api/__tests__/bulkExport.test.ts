@@ -315,32 +315,6 @@ describe("bulkExportStatus", () => {
     expect(result.manifest).toEqual(manifest);
   });
 
-  it("handles Binary-wrapped manifest", async () => {
-    const manifest: ExportManifest = {
-      transactionTime: "2024-01-01T00:00:00Z",
-      request: "https://example.com/$export",
-      requiresAccessToken: false,
-      output: [],
-      error: [],
-    };
-    const binaryWrapper = {
-      resourceType: "Binary",
-      contentType: "application/json",
-      data: btoa(JSON.stringify(manifest)),
-    };
-
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify(binaryWrapper), { status: 200 }),
-    );
-
-    const result = await bulkExportStatus("https://example.com/fhir", {
-      pollingUrl: "https://example.com/$job-status?id=abc",
-    });
-
-    expect(result.status).toBe("complete");
-    expect(result.manifest).toEqual(manifest);
-  });
-
   it("throws UnauthorizedError on 401 response", async () => {
     mockFetch.mockResolvedValueOnce(
       new Response("Unauthorized", { status: 401 }),
