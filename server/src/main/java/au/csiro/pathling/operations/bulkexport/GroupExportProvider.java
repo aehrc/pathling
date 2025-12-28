@@ -22,28 +22,23 @@ import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.OUTPU
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.SINCE_PARAM_NAME;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.TYPE_PARAM_NAME;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.UNTIL_PARAM_NAME;
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.explode;
 
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.bulkexport.ExportRequest.ExportLevel;
+import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Group;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.InstantType;
@@ -60,13 +55,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class GroupExportProvider implements IResourceProvider, PreAsyncValidation<ExportRequest> {
 
-  private static final String PATIENT_REFERENCE_PREFIX = "Patient/";
-
   @Nonnull private final ExportOperationValidator exportOperationValidator;
 
   @Nonnull private final ExportOperationHelper exportOperationHelper;
 
   @Nonnull private final QueryableDataSource deltaLake;
+
+  @Nonnull private final GroupMemberService groupMemberService;
 
   @Override
   public Class<Group> getResourceType() {
@@ -79,15 +74,18 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
    * @param exportOperationValidator the export operation validator
    * @param exportOperationHelper the export operation helper
    * @param deltaLake the queryable data source
+   * @param groupMemberService the group member service
    */
   @Autowired
   public GroupExportProvider(
       @Nonnull final ExportOperationValidator exportOperationValidator,
       @Nonnull final ExportOperationHelper exportOperationHelper,
-      @Nonnull final QueryableDataSource deltaLake) {
+      @Nonnull final QueryableDataSource deltaLake,
+      @Nonnull final GroupMemberService groupMemberService) {
     this.exportOperationValidator = exportOperationValidator;
     this.exportOperationHelper = exportOperationHelper;
     this.deltaLake = deltaLake;
+    this.groupMemberService = groupMemberService;
   }
 
   /**
@@ -119,44 +117,6 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
     return exportOperationHelper.executeExport(requestDetails);
   }
 
-  /**
-   * Extracts patient IDs from a Group resource's members.
-   *
-   * @param groupId the group ID
-   * @return the set of patient IDs
-   */
-  @Nonnull
-  private Set<String> extractPatientIdsFromGroup(@Nonnull final String groupId) {
-    // Read the Group dataset and filter by ID.
-    final Dataset<Row> groupDataset = deltaLake.read("Group");
-    final Dataset<Row> filtered = groupDataset.filter(col("id").equalTo(groupId));
-
-    if (filtered.isEmpty()) {
-      throw new ResourceNotFoundException("Group/" + groupId);
-    }
-
-    // Extract patient references from member.entity.reference.
-    // The member array contains references to the group members, and entity.reference contains the
-    // reference string (e.g., "Patient/123").
-    final Dataset<Row> memberRefs =
-        filtered
-            .select(explode(col("member")).as("member"))
-            .select(col("member.entity.reference").as("reference"))
-            .filter(col("reference").startsWith(PATIENT_REFERENCE_PREFIX));
-
-    final Set<String> patientIds = new HashSet<>();
-    final List<Row> rows = memberRefs.collectAsList();
-    for (final Row row : rows) {
-      final String reference = row.getString(0);
-      if (reference != null && reference.startsWith(PATIENT_REFERENCE_PREFIX)) {
-        patientIds.add(reference.substring(PATIENT_REFERENCE_PREFIX.length()));
-      }
-    }
-
-    log.debug("Extracted {} patient IDs from Group/{}", patientIds.size(), groupId);
-    return patientIds;
-  }
-
   @Override
   @SuppressWarnings("unchecked")
   @Nonnull
@@ -171,7 +131,8 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
     final List<String> elements = (List<String>) args[5];
 
     // Extract patient IDs from the group during validation.
-    final Set<String> patientIds = extractPatientIdsFromGroup(groupId.getIdPart());
+    final Set<String> patientIds =
+        groupMemberService.extractPatientIdsFromGroup(groupId.getIdPart());
 
     return exportOperationValidator.validatePatientExportRequest(
         servletRequestDetails,

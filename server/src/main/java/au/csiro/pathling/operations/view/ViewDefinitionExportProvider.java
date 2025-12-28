@@ -18,8 +18,6 @@
 package au.csiro.pathling.operations.view;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.explode;
 
 import au.csiro.pathling.async.AsyncJobContext;
 import au.csiro.pathling.async.AsyncSupported;
@@ -33,13 +31,13 @@ import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.bulkexport.ExportResult;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
+import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.security.OperationAccess;
 import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -58,8 +56,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IdType;
@@ -83,8 +79,6 @@ import org.springframework.stereotype.Component;
 public class ViewDefinitionExportProvider
     implements PreAsyncValidation<ViewDefinitionExportRequest> {
 
-  private static final String PATIENT_REFERENCE_PREFIX = "Patient/";
-
   @Nonnull private final ViewDefinitionExportExecutor executor;
 
   @Nonnull private final JobRegistry jobRegistry;
@@ -99,6 +93,8 @@ public class ViewDefinitionExportProvider
 
   @Nonnull private final QueryableDataSource deltaLake;
 
+  @Nonnull private final GroupMemberService groupMemberService;
+
   @Nonnull private final Gson gson;
 
   /**
@@ -111,6 +107,7 @@ public class ViewDefinitionExportProvider
    * @param serverConfiguration the server configuration
    * @param fhirContext the FHIR context
    * @param deltaLake the queryable data source
+   * @param groupMemberService the group member service
    */
   @Autowired
   public ViewDefinitionExportProvider(
@@ -120,7 +117,8 @@ public class ViewDefinitionExportProvider
       @Nonnull final ExportResultRegistry exportResultRegistry,
       @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final QueryableDataSource deltaLake) {
+      @Nonnull final QueryableDataSource deltaLake,
+      @Nonnull final GroupMemberService groupMemberService) {
     this.executor = executor;
     this.jobRegistry = jobRegistry;
     this.requestTagFactory = requestTagFactory;
@@ -128,6 +126,7 @@ public class ViewDefinitionExportProvider
     this.serverConfiguration = serverConfiguration;
     this.fhirContext = fhirContext;
     this.deltaLake = deltaLake;
+    this.groupMemberService = groupMemberService;
     this.gson = new GsonBuilder().create();
   }
 
@@ -366,36 +365,9 @@ public class ViewDefinitionExportProvider
     final Set<String> allPatientIds = new HashSet<>(patientIds);
 
     for (final IdType groupId : groupIds) {
-      allPatientIds.addAll(extractPatientIdsFromGroup(groupId.getIdPart()));
+      allPatientIds.addAll(groupMemberService.extractPatientIdsFromGroup(groupId.getIdPart()));
     }
 
     return allPatientIds;
-  }
-
-  /** Extracts patient IDs from a Group resource. */
-  @Nonnull
-  private Set<String> extractPatientIdsFromGroup(@Nonnull final String groupId) {
-    final Dataset<Row> groupDataset = deltaLake.read("Group");
-    final Dataset<Row> filtered = groupDataset.filter(col("id").equalTo(groupId));
-
-    if (filtered.isEmpty()) {
-      throw new ResourceNotFoundException("Group/" + groupId);
-    }
-
-    final Dataset<Row> memberRefs =
-        filtered
-            .select(explode(col("member")).as("member"))
-            .select(col("member.entity.reference").as("reference"));
-
-    final Set<String> patientIdsFromGroup = new HashSet<>();
-    for (final Row row : memberRefs.collectAsList()) {
-      final String reference = row.getString(0);
-      if (reference != null && reference.startsWith(PATIENT_REFERENCE_PREFIX)) {
-        patientIdsFromGroup.add(reference.substring(PATIENT_REFERENCE_PREFIX.length()));
-      }
-    }
-
-    log.debug("Extracted {} patient IDs from Group/{}", patientIdsFromGroup.size(), groupId);
-    return patientIdsFromGroup;
   }
 }

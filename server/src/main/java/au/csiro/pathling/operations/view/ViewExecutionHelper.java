@@ -17,13 +17,11 @@
 
 package au.csiro.pathling.operations.view;
 
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.explode;
-
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.views.Column;
 import au.csiro.pathling.views.FhirView;
@@ -31,7 +29,6 @@ import au.csiro.pathling.views.FhirViewExecutor;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
@@ -78,8 +75,6 @@ import scala.jdk.javaapi.CollectionConverters;
 @Component
 public class ViewExecutionHelper {
 
-  private static final String PATIENT_REFERENCE_PREFIX = "Patient/";
-
   @Nonnull private final SparkSession sparkSession;
 
   @Nonnull private final QueryableDataSource deltaLake;
@@ -89,6 +84,8 @@ public class ViewExecutionHelper {
   @Nonnull private final FhirEncoders fhirEncoders;
 
   @Nonnull private final PatientCompartmentService patientCompartmentService;
+
+  @Nonnull private final GroupMemberService groupMemberService;
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
@@ -102,6 +99,7 @@ public class ViewExecutionHelper {
    * @param fhirContext the FHIR context
    * @param fhirEncoders the FHIR encoders
    * @param patientCompartmentService the patient compartment service
+   * @param groupMemberService the group member service
    * @param serverConfiguration the server configuration
    */
   @Autowired
@@ -111,12 +109,14 @@ public class ViewExecutionHelper {
       @Nonnull final FhirContext fhirContext,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final PatientCompartmentService patientCompartmentService,
+      @Nonnull final GroupMemberService groupMemberService,
       @Nonnull final ServerConfiguration serverConfiguration) {
     this.sparkSession = sparkSession;
     this.deltaLake = deltaLake;
     this.fhirContext = fhirContext;
     this.fhirEncoders = fhirEncoders;
     this.patientCompartmentService = patientCompartmentService;
+    this.groupMemberService = groupMemberService;
     this.serverConfiguration = serverConfiguration;
     this.gson = new GsonBuilder().create();
   }
@@ -275,7 +275,7 @@ public class ViewExecutionHelper {
     }
     if (groupIds != null) {
       for (final IdType groupId : groupIds) {
-        allPatientIds.addAll(extractPatientIdsFromGroup(groupId.getIdPart()));
+        allPatientIds.addAll(groupMemberService.extractPatientIdsFromGroup(groupId.getIdPart()));
       }
     }
 
@@ -300,33 +300,6 @@ public class ViewExecutionHelper {
       }
     }
     return resources;
-  }
-
-  /** Extracts patient IDs from a Group resource. */
-  @Nonnull
-  private Set<String> extractPatientIdsFromGroup(@Nonnull final String groupId) {
-    final Dataset<Row> groupDataset = deltaLake.read("Group");
-    final Dataset<Row> filtered = groupDataset.filter(col("id").equalTo(groupId));
-
-    if (filtered.isEmpty()) {
-      throw new ResourceNotFoundException("Group/" + groupId);
-    }
-
-    final Dataset<Row> memberRefs =
-        filtered
-            .select(explode(col("member")).as("member"))
-            .select(col("member.entity.reference").as("reference"));
-
-    final Set<String> patientIdsFromGroup = new HashSet<>();
-    for (final Row row : memberRefs.collectAsList()) {
-      final String reference = row.getString(0);
-      if (reference != null && reference.startsWith(PATIENT_REFERENCE_PREFIX)) {
-        patientIdsFromGroup.add(reference.substring(PATIENT_REFERENCE_PREFIX.length()));
-      }
-    }
-
-    log.debug("Extracted {} patient IDs from Group/{}", patientIdsFromGroup.size(), groupId);
-    return patientIdsFromGroup;
   }
 
   /** Applies patient compartment filter to the data source. */
