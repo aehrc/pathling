@@ -214,12 +214,10 @@ public class ViewExecutionHelper {
     final StructType schema = result.schema();
     final Iterator<Row> iterator = result.toLocalIterator();
 
-    if (outputFormat == ViewOutputFormat.NDJSON) {
-      streamNdjson(outputStream, iterator, schema);
-    } else if (outputFormat == ViewOutputFormat.JSON) {
-      writeJson(outputStream, iterator, schema);
-    } else {
-      streamCSV(outputStream, iterator, schema);
+    switch (outputFormat) {
+      case NDJSON -> streamNdjson(outputStream, iterator, schema);
+      case JSON -> writeJson(outputStream, iterator, schema);
+      default -> streamCSV(outputStream, iterator, schema);
     }
   }
 
