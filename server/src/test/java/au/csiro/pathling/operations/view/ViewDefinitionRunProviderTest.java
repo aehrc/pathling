@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.view;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
@@ -56,6 +57,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 @Import({
   FhirServerTestConfiguration.class,
   PatientCompartmentService.class,
+  GroupMemberService.class,
   ViewExecutionHelper.class
 })
 @SpringBootUnitTest
@@ -481,6 +483,137 @@ class ViewDefinitionRunProviderTest {
     assertThat(ViewOutputFormat.fromString("unknown")).isEqualTo(ViewOutputFormat.NDJSON);
     assertThat(ViewOutputFormat.fromString("")).isEqualTo(ViewOutputFormat.NDJSON);
     assertThat(ViewOutputFormat.fromString(null)).isEqualTo(ViewOutputFormat.NDJSON);
+  }
+
+  @Test
+  void viewOutputFormatParsesJsonCode() {
+    assertThat(ViewOutputFormat.fromString("json")).isEqualTo(ViewOutputFormat.JSON);
+  }
+
+  @Test
+  void viewOutputFormatParsesJsonContentType() {
+    assertThat(ViewOutputFormat.fromString("application/json")).isEqualTo(ViewOutputFormat.JSON);
+  }
+
+  // -------------------------------------------------------------------------
+  // JSON output format tests
+  // -------------------------------------------------------------------------
+
+  // Verifies that JSON output returns the correct content type.
+  @Test
+  void jsonOutputReturnsCorrectContentType() throws IOException {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final String inlinePatient = createPatientJson("test-1", "Smith");
+
+    provider.run(
+        viewResource,
+        "application/json",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        response);
+
+    assertThat(response.getContentType()).startsWith("application/json");
+    assertThat(response.getStatus()).isEqualTo(200);
+  }
+
+  // Verifies that JSON output returns an array containing a single object.
+  @Test
+  void jsonOutputReturnsArrayWithSingleRow() throws IOException {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final String inlinePatient = createPatientJson("test-1", "Smith");
+
+    provider.run(
+        viewResource, "json", null, null, null, null, null, List.of(inlinePatient), response);
+
+    final String content = response.getContentAsString();
+    // Parse as array and verify structure.
+    @SuppressWarnings("unchecked")
+    final List<Map<String, Object>> rows = gson.fromJson(content, List.class);
+    assertThat(rows).hasSize(1);
+    assertThat(rows.get(0).get("id")).isEqualTo("test-1");
+    assertThat(rows.get(0).get("family_name")).isEqualTo("Smith");
+  }
+
+  // Verifies that JSON output returns an array containing multiple objects.
+  @Test
+  void jsonOutputReturnsArrayWithMultipleRows() throws IOException {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final List<String> patients =
+        List.of(
+            createPatientJson("p1", "Smith"),
+            createPatientJson("p2", "Jones"),
+            createPatientJson("p3", "Brown"));
+
+    provider.run(viewResource, "json", null, null, null, null, null, patients, response);
+
+    final String content = response.getContentAsString();
+    @SuppressWarnings("unchecked")
+    final List<Map<String, Object>> rows = gson.fromJson(content, List.class);
+    assertThat(rows).hasSize(3);
+  }
+
+  // Verifies that each row in the JSON array matches the format of an NDJSON row.
+  @Test
+  void jsonRowFormatMatchesNdjsonRowFormat() throws IOException {
+    // Run with NDJSON format.
+    final MockHttpServletResponse ndjsonResponse = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final String inlinePatient = createPatientJson("format-test", "FormatFamily");
+
+    provider.run(
+        viewResource,
+        "ndjson",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        ndjsonResponse);
+
+    final String ndjsonContent = ndjsonResponse.getContentAsString().trim();
+    @SuppressWarnings("unchecked")
+    final Map<String, Object> ndjsonRow = gson.fromJson(ndjsonContent, Map.class);
+
+    // Run with JSON format.
+    final MockHttpServletResponse jsonResponse = new MockHttpServletResponse();
+    provider.run(
+        viewResource, "json", null, null, null, null, null, List.of(inlinePatient), jsonResponse);
+
+    final String jsonContent = jsonResponse.getContentAsString();
+    @SuppressWarnings("unchecked")
+    final List<Map<String, Object>> jsonRows = gson.fromJson(jsonContent, List.class);
+
+    // The row structure should be identical.
+    assertThat(jsonRows).hasSize(1);
+    assertThat(jsonRows.get(0)).isEqualTo(ndjsonRow);
+  }
+
+  // Verifies that the limit parameter works correctly with JSON output.
+  @Test
+  void jsonOutputRespectsLimit() throws IOException {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final List<String> patients =
+        List.of(
+            createPatientJson("p1", "Smith"),
+            createPatientJson("p2", "Jones"),
+            createPatientJson("p3", "Brown"));
+
+    provider.run(
+        viewResource, "json", null, new IntegerType(2), null, null, null, patients, response);
+
+    final String content = response.getContentAsString();
+    @SuppressWarnings("unchecked")
+    final List<Map<String, Object>> rows = gson.fromJson(content, List.class);
+    assertThat(rows).hasSize(2);
   }
 
   // -------------------------------------------------------------------------

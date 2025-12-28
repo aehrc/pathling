@@ -30,21 +30,18 @@ import lombok.Getter;
 @Getter
 public enum ViewOutputFormat {
 
-  /**
-   * Newline-delimited JSON format.
-   */
+  /** Newline-delimited JSON format. */
   NDJSON("ndjson", "application/x-ndjson"),
 
-  /**
-   * Comma-separated values format.
-   */
-  CSV("csv", "text/csv");
+  /** Comma-separated values format. */
+  CSV("csv", "text/csv"),
 
-  @Nonnull
-  private final String code;
+  /** JSON format - single document containing an array of objects. */
+  JSON("json", "application/json");
 
-  @Nonnull
-  private final String contentType;
+  @Nonnull private final String code;
+
+  @Nonnull private final String contentType;
 
   ViewOutputFormat(@Nonnull final String code, @Nonnull final String contentType) {
     this.code = code;
@@ -68,5 +65,4 @@ public enum ViewOutputFormat {
         .findFirst()
         .orElse(NDJSON);
   }
-
 }

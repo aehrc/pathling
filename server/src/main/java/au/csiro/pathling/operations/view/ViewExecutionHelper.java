@@ -216,6 +216,8 @@ public class ViewExecutionHelper {
 
     if (outputFormat == ViewOutputFormat.NDJSON) {
       streamNdjson(outputStream, iterator, schema);
+    } else if (outputFormat == ViewOutputFormat.JSON) {
+      writeJson(outputStream, iterator, schema);
     } else {
       streamCSV(outputStream, iterator, schema);
     }
@@ -373,9 +375,27 @@ public class ViewExecutionHelper {
     }
   }
 
-  /** Converts a Spark Row to a JSON string. */
+  /**
+   * Writes results as a single JSON document containing an array. Unlike NDJSON, this cannot be
+   * streamed row-by-row as it requires proper JSON array formatting.
+   */
+  private void writeJson(
+      @Nonnull final OutputStream outputStream,
+      @Nonnull final Iterator<Row> iterator,
+      @Nonnull final StructType schema)
+      throws IOException {
+    final List<Map<String, Object>> rows = new ArrayList<>();
+    while (iterator.hasNext()) {
+      final Row row = iterator.next();
+      rows.add(rowToMap(row, schema));
+    }
+    final String json = gson.toJson(rows);
+    outputStream.write(json.getBytes(StandardCharsets.UTF_8));
+  }
+
+  /** Converts a Spark Row to a Map for JSON serialisation. */
   @Nonnull
-  private String rowToJson(@Nonnull final Row row, @Nonnull final StructType schema) {
+  private Map<String, Object> rowToMap(@Nonnull final Row row, @Nonnull final StructType schema) {
     final Map<String, Object> map = new LinkedHashMap<>();
     final StructField[] fields = schema.fields();
     for (int i = 0; i < fields.length; i++) {
@@ -385,7 +405,13 @@ public class ViewExecutionHelper {
         map.put(name, convertValue(value, fields[i].dataType()));
       }
     }
-    return gson.toJson(map);
+    return map;
+  }
+
+  /** Converts a Spark Row to a JSON string. */
+  @Nonnull
+  private String rowToJson(@Nonnull final Row row, @Nonnull final StructType schema) {
+    return gson.toJson(rowToMap(row, schema));
   }
 
   /** Converts a value for JSON serialisation. */
