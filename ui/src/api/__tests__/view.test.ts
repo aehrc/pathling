@@ -17,15 +17,10 @@
  * Author: John Grimes
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  viewRun,
-  viewRunStored,
-  viewExportKickOff,
-  viewExportDownload,
-} from "../view";
-import { UnauthorizedError } from "../../types/errors";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ViewDefinition } from "../../types/api";
+import { UnauthorizedError } from "../../types/errors";
+import { viewExportDownload, viewExportKickOff, viewRun, viewRunStored } from "../view";
 
 const mockFetch = vi.fn();
 
@@ -241,7 +236,7 @@ describe("viewRunStored", () => {
 describe("viewExportKickOff", () => {
   it("makes POST request to /$viewdefinition-export endpoint", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -266,7 +261,7 @@ describe("viewExportKickOff", () => {
 
   it("includes views in request body as Parameters", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -292,7 +287,7 @@ describe("viewExportKickOff", () => {
     const headers = new Headers();
     headers.set(
       "Content-Location",
-      "https://example.com/$job-status?id=view-export-123",
+      "https://example.com/$job?id=view-export-123",
     );
 
     mockFetch.mockResolvedValueOnce(

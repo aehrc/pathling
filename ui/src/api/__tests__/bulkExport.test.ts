@@ -17,17 +17,17 @@
  * Author: John Grimes
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  systemExportKickOff,
-  allPatientsExportKickOff,
-  patientExportKickOff,
-  groupExportKickOff,
-  bulkExportStatus,
-  bulkExportDownload,
-} from "../bulkExport";
-import { UnauthorizedError } from "../../types/errors";
 import type { Parameters } from "fhir/r4";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { UnauthorizedError } from "../../types/errors";
+import {
+  allPatientsExportKickOff,
+  bulkExportDownload,
+  bulkExportStatus,
+  groupExportKickOff,
+  patientExportKickOff,
+  systemExportKickOff
+} from "../bulkExport";
 
 const mockFetch = vi.fn();
 
@@ -43,7 +43,7 @@ afterEach(() => {
 describe("systemExportKickOff", () => {
   it("makes GET request to /$export endpoint", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -65,7 +65,7 @@ describe("systemExportKickOff", () => {
 
   it("includes _type parameter when types provided", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -83,7 +83,7 @@ describe("systemExportKickOff", () => {
 
   it("includes _since parameter when provided", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -101,7 +101,7 @@ describe("systemExportKickOff", () => {
 
   it("includes Authorization header when access token provided", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -123,10 +123,7 @@ describe("systemExportKickOff", () => {
 
   it("returns polling URL from Content-Location header", async () => {
     const headers = new Headers();
-    headers.set(
-      "Content-Location",
-      "https://example.com/$job-status?id=abc-123",
-    );
+    headers.set("Content-Location", "https://example.com/$job?id=abc-123");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -134,9 +131,7 @@ describe("systemExportKickOff", () => {
 
     const result = await systemExportKickOff("https://example.com/fhir", {});
 
-    expect(result.pollingUrl).toBe(
-      "https://example.com/$job-status?id=abc-123",
-    );
+    expect(result.pollingUrl).toBe("https://example.com/$job?id=abc-123");
   });
 
   it("throws error when Content-Location header missing", async () => {
@@ -169,7 +164,7 @@ describe("systemExportKickOff", () => {
 describe("allPatientsExportKickOff", () => {
   it("makes GET request to /Patient/$export endpoint", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -187,7 +182,7 @@ describe("allPatientsExportKickOff", () => {
 describe("patientExportKickOff", () => {
   it("makes GET request to /Patient/{id}/$export endpoint", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -207,7 +202,7 @@ describe("patientExportKickOff", () => {
 describe("groupExportKickOff", () => {
   it("makes GET request to /Group/{id}/$export endpoint", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -240,11 +235,11 @@ describe("bulkExportStatus", () => {
     );
 
     await bulkExportStatus("https://example.com/fhir", {
-      pollingUrl: "https://example.com/$job-status?id=abc",
+      pollingUrl: "https://example.com/$job?id=abc",
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://example.com/$job-status?id=abc",
+      "https://example.com/$job?id=abc",
       expect.objectContaining({
         method: "GET",
         headers: expect.objectContaining({
@@ -269,11 +264,11 @@ describe("bulkExportStatus", () => {
     );
 
     await bulkExportStatus("https://example.com/fhir", {
-      pollingUrl: "/$job-status?id=abc",
+      pollingUrl: "/$job?id=abc",
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://example.com/fhir/$job-status?id=abc",
+      "https://example.com/fhir/$job?id=abc",
       expect.any(Object),
     );
   });
@@ -287,7 +282,7 @@ describe("bulkExportStatus", () => {
     );
 
     const result = await bulkExportStatus("https://example.com/fhir", {
-      pollingUrl: "https://example.com/$job-status?id=abc",
+      pollingUrl: "https://example.com/$job?id=abc",
     });
 
     expect(result.status).toBe("in-progress");
@@ -319,7 +314,7 @@ describe("bulkExportStatus", () => {
     );
 
     const result = await bulkExportStatus("https://example.com/fhir", {
-      pollingUrl: "https://example.com/$job-status?id=abc",
+      pollingUrl: "https://example.com/$job?id=abc",
     });
 
     expect(result.status).toBe("complete");
@@ -333,7 +328,7 @@ describe("bulkExportStatus", () => {
 
     await expect(
       bulkExportStatus("https://example.com/fhir", {
-        pollingUrl: "https://example.com/$job-status?id=abc",
+        pollingUrl: "https://example.com/$job?id=abc",
       }),
     ).rejects.toThrow(UnauthorizedError);
   });

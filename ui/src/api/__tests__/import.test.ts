@@ -17,9 +17,9 @@
  * Author: John Grimes
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { importKickOff, importPnpKickOff } from "../import";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnauthorizedError } from "../../types/errors";
+import { importKickOff, importPnpKickOff } from "../import";
 
 const mockFetch = vi.fn();
 
@@ -35,7 +35,7 @@ afterEach(() => {
 describe("importKickOff", () => {
   it("makes POST request to /$import endpoint", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -62,7 +62,7 @@ describe("importKickOff", () => {
 
   it("includes input array in request body", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -87,7 +87,7 @@ describe("importKickOff", () => {
 
   it("includes Authorization header when access token provided", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -114,7 +114,7 @@ describe("importKickOff", () => {
     const headers = new Headers();
     headers.set(
       "Content-Location",
-      "https://example.com/$job-status?id=import-job-123",
+      "https://example.com/$job?id=import-job-123",
     );
 
     mockFetch.mockResolvedValueOnce(
@@ -172,7 +172,7 @@ describe("importKickOff", () => {
 describe("importPnpKickOff", () => {
   it("makes POST request to /$import-pnp endpoint", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -197,7 +197,7 @@ describe("importPnpKickOff", () => {
 
   it("builds FHIR Parameters resource in request body", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -219,7 +219,7 @@ describe("importPnpKickOff", () => {
 
   it("includes optional parameters when provided", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -244,10 +244,7 @@ describe("importPnpKickOff", () => {
 
   it("returns job ID from Content-Location header", async () => {
     const headers = new Headers();
-    headers.set(
-      "Content-Location",
-      "https://example.com/$job-status?id=pnp-job-456",
-    );
+    headers.set("Content-Location", "https://example.com/$job?id=pnp-job-456");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -262,7 +259,7 @@ describe("importPnpKickOff", () => {
 
   it("includes Authorization header when access token provided", async () => {
     const headers = new Headers();
-    headers.set("Content-Location", "https://example.com/$job-status?id=abc");
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),

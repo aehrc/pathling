@@ -18,17 +18,17 @@
  */
 
 import type {
-  SystemExportKickOffOptions,
   AllPatientsExportKickOffOptions,
-  PatientExportKickOffOptions,
-  GroupExportKickOffOptions,
+  BulkExportDownloadOptions,
   BulkExportKickOffResult,
   BulkExportStatusOptions,
   BulkExportStatusResult,
-  BulkExportDownloadOptions,
   ExportManifest,
+  GroupExportKickOffOptions,
+  PatientExportKickOffOptions,
+  SystemExportKickOffOptions
 } from "../types/api";
-import { buildHeaders, buildUrl, resolveUrl, checkResponse } from "./utils";
+import { buildHeaders, buildUrl, checkResponse, resolveUrl } from "./utils";
 
 /**
  * Builds query parameters for bulk export operations.
@@ -175,7 +175,7 @@ export async function groupExportKickOff(
  *
  * @example
  * const status = await bulkExportStatus("https://example.com/fhir", {
- *   pollingUrl: "https://example.com/$job-status?id=abc",
+ *   pollingUrl: "https://example.com/$job?id=abc",
  *   accessToken: "token123"
  * });
  * if (status.status === "complete") {

@@ -17,16 +17,16 @@
  * Author: John Grimes
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+import { NotFoundError, UnauthorizedError } from "../../types/errors";
 import {
   buildHeaders,
   buildUrl,
-  resolveUrl,
   checkResponse,
   extractJobIdFromUrl,
   parseProgressHeader,
+  resolveUrl
 } from "../utils";
-import { UnauthorizedError, NotFoundError } from "../../types/errors";
 
 describe("buildHeaders", () => {
   it("returns Accept header with FHIR JSON by default", () => {
@@ -137,16 +137,13 @@ describe("resolveUrl", () => {
   });
 
   it("resolves relative URLs against base URL", () => {
-    const resolved = resolveUrl(
-      "https://example.com/fhir",
-      "/$job-status?id=123",
-    );
-    expect(resolved).toBe("https://example.com/fhir/$job-status?id=123");
+    const resolved = resolveUrl("https://example.com/fhir", "/$job?id=123");
+    expect(resolved).toBe("https://example.com/fhir/$job?id=123");
   });
 
   it("handles relative URLs without leading slash", () => {
-    const resolved = resolveUrl("https://example.com/fhir", "$job-status");
-    expect(resolved).toBe("https://example.com/fhir/$job-status");
+    const resolved = resolveUrl("https://example.com/fhir", "$job");
+    expect(resolved).toBe("https://example.com/fhir/$job");
   });
 
   it("preserves query parameters in relative URLs", () => {
@@ -208,9 +205,7 @@ describe("checkResponse", () => {
 
 describe("extractJobIdFromUrl", () => {
   it("extracts job ID from query parameter", () => {
-    const jobId = extractJobIdFromUrl(
-      "https://example.com/$job-status?id=abc-123",
-    );
+    const jobId = extractJobIdFromUrl("https://example.com/$job?id=abc-123");
     expect(jobId).toBe("abc-123");
   });
 
@@ -233,7 +228,7 @@ describe("extractJobIdFromUrl", () => {
   });
 
   it("handles relative URLs with query parameters", () => {
-    const jobId = extractJobIdFromUrl("/$job-status?id=relative-id");
+    const jobId = extractJobIdFromUrl("/$job?id=relative-id");
     expect(jobId).toBe("relative-id");
   });
 });

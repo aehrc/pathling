@@ -17,11 +17,7 @@
  * Author: John Grimes
  */
 
-import type {
-  JobStatusOptions,
-  JobStatusResult,
-  JobCancelOptions,
-} from "../types/api";
+import type { JobCancelOptions, JobStatusOptions, JobStatusResult } from "../types/api";
 import { buildHeaders, buildUrl, checkResponse } from "./utils";
 
 /**
@@ -46,7 +42,7 @@ export async function jobStatus(
   baseUrl: string,
   options: JobStatusOptions,
 ): Promise<JobStatusResult> {
-  const url = buildUrl(baseUrl, "/$job-status", { id: options.jobId });
+  const url = buildUrl(baseUrl, "/$job", { id: options.jobId });
   const headers = buildHeaders({ accessToken: options.accessToken });
 
   const response = await fetch(url, {
@@ -97,7 +93,7 @@ export async function jobCancel(
   baseUrl: string,
   options: JobCancelOptions,
 ): Promise<void> {
-  const url = buildUrl(baseUrl, "/$job-status", { id: options.jobId });
+  const url = buildUrl(baseUrl, "/$job", { id: options.jobId });
   const headers = buildHeaders({ accessToken: options.accessToken });
 
   const response = await fetch(url, {

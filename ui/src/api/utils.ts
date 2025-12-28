@@ -117,8 +117,8 @@ export function buildUrl(
  *
  * @example
  * // Relative URL resolved against base.
- * resolveUrl("https://example.com/fhir", "/$job-status?id=123")
- * // "https://example.com/fhir/$job-status?id=123"
+ * resolveUrl("https://example.com/fhir", "/$job?id=123")
+ * // "https://example.com/fhir/$job?id=123"
  */
 export function resolveUrl(baseUrl: string, url: string): string {
   // Check if URL is already absolute.
@@ -174,7 +174,7 @@ export async function checkResponse(
  * Extracts a job ID from a poll URL.
  *
  * Supports two URL formats:
- * - Query parameter: `/$job-status?id=abc-123`
+ * - Query parameter: `/$job?id=abc-123`
  * - Path segment: `/jobs/abc-123` or `/job/abc-123`
  *
  * @param url - The URL to extract the job ID from.
@@ -182,7 +182,7 @@ export async function checkResponse(
  * @throws {Error} When job ID cannot be extracted from the URL.
  *
  * @example
- * extractJobIdFromUrl("https://example.com/$job-status?id=abc-123")
+ * extractJobIdFromUrl("https://example.com/$job?id=abc-123")
  * // "abc-123"
  *
  * @example

@@ -17,13 +17,9 @@
  * Author: John Grimes
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  bulkSubmit,
-  bulkSubmitStatus,
-  bulkSubmitDownload,
-} from "../bulkSubmit";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnauthorizedError } from "../../types/errors";
+import { bulkSubmit, bulkSubmitDownload, bulkSubmitStatus } from "../bulkSubmit";
 
 const mockFetch = vi.fn();
 
@@ -198,10 +194,7 @@ describe("bulkSubmitStatus", () => {
 
   it("makes POST request to /$bulk-submit-status endpoint", async () => {
     const headers = new Headers();
-    headers.set(
-      "Content-Location",
-      "https://example.com/$job-status?id=job-123",
-    );
+    headers.set("Content-Location", "https://example.com/$job?id=job-123");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -224,10 +217,7 @@ describe("bulkSubmitStatus", () => {
 
   it("returns pending status with job info from 202 with Content-Location", async () => {
     const headers = new Headers();
-    headers.set(
-      "Content-Location",
-      "https://example.com/$job-status?id=job-123",
-    );
+    headers.set("Content-Location", "https://example.com/$job?id=job-123");
 
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 202, headers }),
@@ -266,10 +256,7 @@ describe("bulkSubmitStatus", () => {
 
   it("returns progress from X-Progress header on 202", async () => {
     const headers = new Headers();
-    headers.set(
-      "Content-Location",
-      "https://example.com/$job-status?id=job-123",
-    );
+    headers.set("Content-Location", "https://example.com/$job?id=job-123");
     headers.set("X-Progress", "50%");
 
     mockFetch.mockResolvedValueOnce(

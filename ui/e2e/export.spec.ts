@@ -33,7 +33,7 @@ async function setupStandardMocks(page: import("@playwright/test").Page) {
     await route.fulfill({
       status: 202,
       headers: {
-        "Content-Location": `http://localhost:3000/fhir/$job-status?id=${TEST_JOB_ID}`,
+        "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
         "Access-Control-Expose-Headers": "Content-Location",
       },
       body: "",
@@ -41,7 +41,7 @@ async function setupStandardMocks(page: import("@playwright/test").Page) {
   });
 
   // Mock job status to return complete immediately with manifest.
-  await page.route("**/$job-status*", async (route) => {
+  await page.route("**/$job*", async (route) => {
     if (route.request().method() === "GET") {
       await route.fulfill({
         status: 200,
@@ -89,14 +89,14 @@ async function setupDelayedJobMocks(
     await route.fulfill({
       status: 202,
       headers: {
-        "Content-Location": `http://localhost:3000/fhir/$job-status?id=${TEST_JOB_ID}`,
+        "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
         "Access-Control-Expose-Headers": "Content-Location",
       },
       body: "",
     });
   });
 
-  await page.route("**/$job-status*", async (route) => {
+  await page.route("**/$job*", async (route) => {
     if (route.request().method() === "GET") {
       pollAttempts++;
       if (pollAttempts < pollCount) {
@@ -503,14 +503,14 @@ test.describe("Export page", () => {
         await route.fulfill({
           status: 202,
           headers: {
-            "Content-Location": `http://localhost:3000/fhir/$job-status?id=${TEST_JOB_ID}`,
+            "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
             "Access-Control-Expose-Headers": "Content-Location",
           },
           body: "",
         });
       });
 
-      await page.route("**/$job-status*", async (route) => {
+      await page.route("**/$job*", async (route) => {
         // Always return in-progress to keep the job running.
         await route.fulfill({
           status: 202,
@@ -646,14 +646,14 @@ test.describe("Export page", () => {
         await route.fulfill({
           status: 202,
           headers: {
-            "Content-Location": `http://localhost:3000/fhir/$job-status?id=${TEST_JOB_ID}`,
+            "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
             "Access-Control-Expose-Headers": "Content-Location",
           },
           body: "",
         });
       });
 
-      await page.route("**/$job-status*", async (route) => {
+      await page.route("**/$job*", async (route) => {
         await route.fulfill({
           status: 500,
           contentType: "application/fhir+json",

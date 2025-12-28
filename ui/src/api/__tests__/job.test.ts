@@ -17,9 +17,9 @@
  * Author: John Grimes
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { jobStatus, jobCancel } from "../job";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnauthorizedError } from "../../types/errors";
+import { jobCancel, jobStatus } from "../job";
 
 const mockFetch = vi.fn();
 
@@ -43,7 +43,7 @@ describe("jobStatus", () => {
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://example.com/fhir/$job-status?id=abc-123",
+      "https://example.com/fhir/$job?id=abc-123",
       expect.objectContaining({
         method: "GET",
         headers: expect.objectContaining({
@@ -145,7 +145,7 @@ describe("jobCancel", () => {
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://example.com/fhir/$job-status?id=abc-123",
+      "https://example.com/fhir/$job?id=abc-123",
       expect.objectContaining({
         method: "DELETE",
         headers: expect.objectContaining({
