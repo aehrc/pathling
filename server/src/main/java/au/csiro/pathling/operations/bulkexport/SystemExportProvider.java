@@ -9,8 +9,8 @@ import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
-import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -22,36 +22,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class SystemExportProvider implements PreAsyncValidation<ExportRequest> {
 
-  /**
-   * The name of the output format parameter.
-   */
+  /** The name of the output format parameter. */
   public static final String OUTPUT_FORMAT_PARAM_NAME = "_outputFormat";
 
-  /**
-   * The name of the since parameter.
-   */
+  /** The name of the since parameter. */
   public static final String SINCE_PARAM_NAME = "_since";
 
-  /**
-   * The name of the until parameter.
-   */
+  /** The name of the until parameter. */
   public static final String UNTIL_PARAM_NAME = "_until";
 
-  /**
-   * The name of the type parameter.
-   */
+  /** The name of the type parameter. */
   public static final String TYPE_PARAM_NAME = "_type";
 
-  /**
-   * The name of the elements parameter.
-   */
+  /** The name of the elements parameter. */
   public static final String ELEMENTS_PARAM_NAME = "_elements";
 
-  @Nonnull
-  private final ExportOperationValidator exportOperationValidator;
+  @Nonnull private final ExportOperationValidator exportOperationValidator;
 
-  @Nonnull
-  private final ExportOperationHelper exportOperationHelper;
+  @Nonnull private final ExportOperationHelper exportOperationHelper;
 
   /**
    * Constructs a new SystemExportProvider.
@@ -60,7 +48,8 @@ public class SystemExportProvider implements PreAsyncValidation<ExportRequest> {
    * @param exportOperationHelper the export operation helper
    */
   @Autowired
-  public SystemExportProvider(@Nonnull final ExportOperationValidator exportOperationValidator,
+  public SystemExportProvider(
+      @Nonnull final ExportOperationValidator exportOperationValidator,
       @Nonnull final ExportOperationHelper exportOperationHelper) {
     this.exportOperationValidator = exportOperationValidator;
     this.exportOperationHelper = exportOperationHelper;
@@ -82,14 +71,13 @@ public class SystemExportProvider implements PreAsyncValidation<ExportRequest> {
   @AsyncSupported
   @Nullable
   @SuppressWarnings("unused")
-  public Binary export(
+  public Parameters export(
       @Nullable @OperationParam(name = OUTPUT_FORMAT_PARAM_NAME) final String outputFormat,
       @Nullable @OperationParam(name = SINCE_PARAM_NAME) final InstantType since,
       @Nullable @OperationParam(name = UNTIL_PARAM_NAME) final InstantType until,
       @Nullable @OperationParam(name = TYPE_PARAM_NAME) final List<String> type,
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) final List<String> elements,
-      @Nonnull final ServletRequestDetails requestDetails
-  ) {
+      @Nonnull final ServletRequestDetails requestDetails) {
     return exportOperationHelper.executeExport(requestDetails);
   }
 

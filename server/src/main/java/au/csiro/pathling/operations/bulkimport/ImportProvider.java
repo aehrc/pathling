@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.operations.bulkimport;
 
-import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-
 import au.csiro.pathling.async.AsyncJobContext;
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.Job;
@@ -26,7 +24,6 @@ import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.async.RequestTag;
 import au.csiro.pathling.async.RequestTagFactory;
-import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
@@ -41,7 +38,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Parameters;
@@ -59,23 +55,17 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ImportProvider implements PreAsyncValidation<ImportRequest> {
 
-  @Nonnull
-  private final ImportExecutor executor;
+  @Nonnull private final ImportExecutor executor;
 
-  @Nonnull
-  private final ImportOperationValidator importOperationValidator;
+  @Nonnull private final ImportOperationValidator importOperationValidator;
 
-  @Nonnull
-  private final RequestTagFactory requestTagFactory;
+  @Nonnull private final RequestTagFactory requestTagFactory;
 
-  @Nonnull
-  private final JobRegistry jobRegistry;
+  @Nonnull private final JobRegistry jobRegistry;
 
-  @Nonnull
-  private final ImportResultRegistry importResultRegistry;
+  @Nonnull private final ImportResultRegistry importResultRegistry;
 
-  @Nonnull
-  private final ObjectMapper objectMapper;
+  @Nonnull private final ObjectMapper objectMapper;
 
   /**
    * @param executor An {@link ImportExecutor} to use in executing import requests
@@ -84,7 +74,8 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
    * @param jobRegistry registry for async jobs
    * @param importResultRegistry registry for import results
    */
-  public ImportProvider(@Nonnull final ImportExecutor executor,
+  public ImportProvider(
+      @Nonnull final ImportExecutor executor,
       @Nonnull final ImportOperationValidator importOperationValidator,
       @Nonnull final RequestTagFactory requestTagFactory,
       @Nonnull final JobRegistry jobRegistry,
@@ -102,7 +93,7 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
    * (application/json) request formats aligned with the SMART Bulk Data Import specification.
    *
    * @param parameters A FHIR {@link Parameters} object describing the import request (when using
-   * application/fhir+json)
+   *     application/fhir+json)
    * @param requestDetails the {@link ServletRequestDetails} containing HAPI inferred info
    * @return A FHIR {@link Parameters} resource describing the result
    */
@@ -111,7 +102,8 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
   @OperationAccess("import")
   @AsyncSupported
   @Nullable
-  public Parameters importOperation(@ResourceParam final Parameters parameters,
+  public Parameters importOperation(
+      @ResourceParam final Parameters parameters,
       @Nonnull final ServletRequestDetails requestDetails) {
     log.debug("Received $import request");
 
@@ -121,31 +113,28 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
     // operation runs asynchronously, avoiding the need to access the servlet request which may
     // have been recycled by Tomcat.
     @SuppressWarnings("unchecked")
-    final Job<ImportRequest> ownJob = AsyncJobContext.getCurrentJob()
-        .map(job -> (Job<ImportRequest>) job)
-        .orElseGet(() -> {
-          // Fallback for cases where async context is not available.
-          final PreAsyncValidationResult<ImportRequest> validationResult = preAsyncValidate(
-              requestDetails, new Object[]{parameters});
-          final String operationCacheKey = computeCacheKeyComponent(
-              Objects.requireNonNull(validationResult.result(),
-                  "Validation result should not be null for a valid request"));
-          final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication,
-              operationCacheKey);
-          return jobRegistry.get(ownTag);
-        });
+    final Job<ImportRequest> ownJob =
+        AsyncJobContext.getCurrentJob()
+            .map(job -> (Job<ImportRequest>) job)
+            .orElseGet(
+                () -> {
+                  // Fallback for cases where async context is not available.
+                  final PreAsyncValidationResult<ImportRequest> validationResult =
+                      preAsyncValidate(requestDetails, new Object[] {parameters});
+                  final String operationCacheKey =
+                      computeCacheKeyComponent(
+                          Objects.requireNonNull(
+                              validationResult.result(),
+                              "Validation result should not be null for a valid request"));
+                  final RequestTag ownTag =
+                      requestTagFactory.createTag(
+                          requestDetails, authentication, operationCacheKey);
+                  return jobRegistry.get(ownTag);
+                });
 
     if (ownJob == null) {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
     }
-    // Check that the user requesting the result is the same user that started the job.
-    final Optional<String> currentUserId = getCurrentUserId(authentication);
-    if (currentUserId.isPresent() && !ownJob.getOwnerId().equals(currentUserId)) {
-      throw new AccessDeniedError(
-          "The requested result is not owned by the current user '%s'.".formatted(
-              currentUserId.orElse("null")));
-    }
-
     final ImportRequest importRequest = ownJob.getPreAsyncValidationResult();
     if (ownJob.isCancelled()) {
       return null;
@@ -172,9 +161,7 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
     } else {
       // Handle FHIR Parameters (application/fhir+json) format.
       return importOperationValidator.validateParametersRequest(
-          servletRequestDetails,
-          (Parameters) params[0]
-      );
+          servletRequestDetails, (Parameters) params[0]);
     }
   }
 
@@ -183,14 +170,19 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
   public String computeCacheKeyComponent(@Nonnull final ImportRequest request) {
     // Build a deterministic cache key from request parameters.
     // Exclude originalRequest as it's already captured in the request URL.
-    final String sortedInput = request.input().entrySet().stream()
-        .sorted(Entry.comparingByKey())
-        .map(entry -> entry.getKey() + ":" + sortedCollection(entry.getValue()))
-        .collect(Collectors.joining(","));
+    final String sortedInput =
+        request.input().entrySet().stream()
+            .sorted(Entry.comparingByKey())
+            .map(entry -> entry.getKey() + ":" + sortedCollection(entry.getValue()))
+            .collect(Collectors.joining(","));
 
-    return "input={" + sortedInput + "}"
-        + "|saveMode=" + request.saveMode()
-        + "|format=" + request.importFormat();
+    return "input={"
+        + sortedInput
+        + "}"
+        + "|saveMode="
+        + request.saveMode()
+        + "|format="
+        + request.importFormat();
   }
 
   @Nonnull
@@ -210,10 +202,8 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
     try {
       // Read the raw request body.
       final HttpServletRequest httpRequest = servletRequestDetails.getServletRequest();
-      final ImportManifest manifest = objectMapper.readValue(
-          httpRequest.getInputStream(),
-          ImportManifest.class
-      );
+      final ImportManifest manifest =
+          objectMapper.readValue(httpRequest.getInputStream(), ImportManifest.class);
       return importOperationValidator.validateJsonRequest(servletRequestDetails, manifest);
     } catch (final IOException e) {
       throw new InvalidUserInputError("Failed to parse JSON request body: " + e.getMessage(), e);

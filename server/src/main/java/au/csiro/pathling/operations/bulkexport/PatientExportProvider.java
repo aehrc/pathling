@@ -36,9 +36,9 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
-import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Patient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -51,11 +51,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class PatientExportProvider implements IResourceProvider, PreAsyncValidation<ExportRequest> {
 
-  @Nonnull
-  private final ExportOperationValidator exportOperationValidator;
+  @Nonnull private final ExportOperationValidator exportOperationValidator;
 
-  @Nonnull
-  private final ExportOperationHelper exportOperationHelper;
+  @Nonnull private final ExportOperationHelper exportOperationHelper;
 
   @Override
   public Class<Patient> getResourceType() {
@@ -69,7 +67,8 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
    * @param exportOperationHelper the export operation helper
    */
   @Autowired
-  public PatientExportProvider(@Nonnull final ExportOperationValidator exportOperationValidator,
+  public PatientExportProvider(
+      @Nonnull final ExportOperationValidator exportOperationValidator,
       @Nonnull final ExportOperationHelper exportOperationHelper) {
     this.exportOperationValidator = exportOperationValidator;
     this.exportOperationHelper = exportOperationHelper;
@@ -92,14 +91,13 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
   @AsyncSupported
   @Nullable
   @SuppressWarnings("unused")
-  public Binary exportAllPatients(
+  public Parameters exportAllPatients(
       @Nullable @OperationParam(name = OUTPUT_FORMAT_PARAM_NAME) final String outputFormat,
       @Nullable @OperationParam(name = SINCE_PARAM_NAME) final InstantType since,
       @Nullable @OperationParam(name = UNTIL_PARAM_NAME) final InstantType until,
       @Nullable @OperationParam(name = TYPE_PARAM_NAME) final List<String> type,
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) final List<String> elements,
-      @Nonnull final ServletRequestDetails requestDetails
-  ) {
+      @Nonnull final ServletRequestDetails requestDetails) {
     return exportOperationHelper.executeExport(requestDetails);
   }
 
@@ -121,15 +119,14 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
   @AsyncSupported
   @Nullable
   @SuppressWarnings("unused")
-  public Binary exportSinglePatient(
+  public Parameters exportSinglePatient(
       @IdParam final IdType patientId,
       @Nullable @OperationParam(name = OUTPUT_FORMAT_PARAM_NAME) final String outputFormat,
       @Nullable @OperationParam(name = SINCE_PARAM_NAME) final InstantType since,
       @Nullable @OperationParam(name = UNTIL_PARAM_NAME) final InstantType until,
       @Nullable @OperationParam(name = TYPE_PARAM_NAME) final List<String> type,
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) final List<String> elements,
-      @Nonnull final ServletRequestDetails requestDetails
-  ) {
+      @Nonnull final ServletRequestDetails requestDetails) {
     return exportOperationHelper.executeExport(requestDetails);
   }
 
@@ -140,7 +137,8 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
       @Nonnull final ServletRequestDetails servletRequestDetails, @Nonnull final Object[] args) {
     // Determine if this is a type-level or instance-level operation based on args.
     // Type-level: args = [outputFormat, since, until, type, elements, requestDetails]
-    // Instance-level: args = [patientId, outputFormat, since, until, type, elements, requestDetails]
+    // Instance-level: args = [patientId, outputFormat, since, until, type, elements,
+    // requestDetails]
     final boolean isInstanceLevel = args.length > 0 && args[0] instanceof IdType;
 
     final ExportLevel exportLevel;
@@ -171,14 +169,6 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
     }
 
     return exportOperationValidator.validatePatientExportRequest(
-        servletRequestDetails,
-        exportLevel,
-        patientIds,
-        outputFormat,
-        since,
-        until,
-        type,
-        elements);
+        servletRequestDetails, exportLevel, patientIds, outputFormat, since, until, type, elements);
   }
-
 }

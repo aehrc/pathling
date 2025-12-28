@@ -17,15 +17,12 @@
 
 package au.csiro.pathling.operations.bulkexport;
 
-import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-
 import au.csiro.pathling.async.AsyncJobContext;
 import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.RequestTag;
 import au.csiro.pathling.async.RequestTagFactory;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.errors.AccessDeniedError;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
@@ -33,8 +30,7 @@ import jakarta.annotation.Nullable;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
-import org.hl7.fhir.r4.model.Binary;
+import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -47,20 +43,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExportOperationHelper {
 
-  @Nonnull
-  private final ExportExecutor exportExecutor;
+  @Nonnull private final ExportExecutor exportExecutor;
 
-  @Nonnull
-  private final JobRegistry jobRegistry;
+  @Nonnull private final JobRegistry jobRegistry;
 
-  @Nonnull
-  private final RequestTagFactory requestTagFactory;
+  @Nonnull private final RequestTagFactory requestTagFactory;
 
-  @Nonnull
-  private final ExportResultRegistry exportResultRegistry;
+  @Nonnull private final ExportResultRegistry exportResultRegistry;
 
-  @Nonnull
-  private final ServerConfiguration serverConfiguration;
+  @Nonnull private final ServerConfiguration serverConfiguration;
 
   /**
    * Constructs a new ExportOperationHelper.
@@ -71,7 +62,8 @@ public class ExportOperationHelper {
    * @param exportResultRegistry the export result registry
    * @param serverConfiguration the server configuration
    */
-  public ExportOperationHelper(@Nonnull final ExportExecutor exportExecutor,
+  public ExportOperationHelper(
+      @Nonnull final ExportExecutor exportExecutor,
       @Nonnull final JobRegistry jobRegistry,
       @Nonnull final RequestTagFactory requestTagFactory,
       @Nonnull final ExportResultRegistry exportResultRegistry,
@@ -87,34 +79,29 @@ public class ExportOperationHelper {
    * Executes a bulk export operation using the job information from the request details.
    *
    * @param requestDetails the servlet request details
-   * @return the binary result containing the export manifest, or null if the job was cancelled
+   * @return the parameters result containing the export manifest, or null if the job was cancelled
    */
   @Nullable
-  public Binary executeExport(@Nonnull final ServletRequestDetails requestDetails) {
+  public Parameters executeExport(@Nonnull final ServletRequestDetails requestDetails) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
     // Try to get the job from the async context first. This is set by AsyncAspect when the
     // operation runs asynchronously, avoiding the need to access the servlet request which may
     // have been recycled by Tomcat.
     @SuppressWarnings("unchecked")
-    final Job<ExportRequest> ownJob = AsyncJobContext.getCurrentJob()
-        .map(job -> (Job<ExportRequest>) job)
-        .orElseGet(() -> {
-          // Fallback for cases where async context is not available.
-          final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
-          return jobRegistry.get(ownTag);
-        });
+    final Job<ExportRequest> ownJob =
+        AsyncJobContext.getCurrentJob()
+            .map(job -> (Job<ExportRequest>) job)
+            .orElseGet(
+                () -> {
+                  // Fallback for cases where async context is not available.
+                  final RequestTag ownTag =
+                      requestTagFactory.createTag(requestDetails, authentication);
+                  return jobRegistry.get(ownTag);
+                });
 
     if (ownJob == null) {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
-    }
-
-    // Check that the user requesting the result is the same user that started the job.
-    final Optional<String> currentUserId = getCurrentUserId(authentication);
-    if (currentUserId.isPresent() && !ownJob.getOwnerId().equals(currentUserId)) {
-      throw new AccessDeniedError(
-          "The requested result is not owned by the current user '%s'.".formatted(
-              currentUserId.orElse("null")));
     }
 
     final ExportRequest exportRequest = ownJob.getPreAsyncValidationResult();
@@ -128,14 +115,15 @@ public class ExportOperationHelper {
 
     // Set the Expires header to indicate when the export result will expire, based on the
     // configured value.
-    ownJob.setResponseModification(httpServletResponse -> {
-      final String expiresValue = ZonedDateTime.now(ZoneOffset.UTC)
-          .plusSeconds(serverConfiguration.getExport().getResultExpiry())
-          .format(DateTimeFormatter.RFC_1123_DATE_TIME);
-      httpServletResponse.addHeader("Expires", expiresValue);
-    });
+    ownJob.setResponseModification(
+        httpServletResponse -> {
+          final String expiresValue =
+              ZonedDateTime.now(ZoneOffset.UTC)
+                  .plusSeconds(serverConfiguration.getExport().getResultExpiry())
+                  .format(DateTimeFormatter.RFC_1123_DATE_TIME);
+          httpServletResponse.addHeader("Expires", expiresValue);
+        });
 
     return exportResponse.toOutput();
   }
-
 }

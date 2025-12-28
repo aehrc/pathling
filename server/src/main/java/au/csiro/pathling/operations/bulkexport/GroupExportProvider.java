@@ -44,10 +44,10 @@ import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Group;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -62,14 +62,11 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
 
   private static final String PATIENT_REFERENCE_PREFIX = "Patient/";
 
-  @Nonnull
-  private final ExportOperationValidator exportOperationValidator;
+  @Nonnull private final ExportOperationValidator exportOperationValidator;
 
-  @Nonnull
-  private final ExportOperationHelper exportOperationHelper;
+  @Nonnull private final ExportOperationHelper exportOperationHelper;
 
-  @Nonnull
-  private final QueryableDataSource deltaLake;
+  @Nonnull private final QueryableDataSource deltaLake;
 
   @Override
   public Class<Group> getResourceType() {
@@ -84,7 +81,8 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
    * @param deltaLake the queryable data source
    */
   @Autowired
-  public GroupExportProvider(@Nonnull final ExportOperationValidator exportOperationValidator,
+  public GroupExportProvider(
+      @Nonnull final ExportOperationValidator exportOperationValidator,
       @Nonnull final ExportOperationHelper exportOperationHelper,
       @Nonnull final QueryableDataSource deltaLake) {
     this.exportOperationValidator = exportOperationValidator;
@@ -110,15 +108,14 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
   @AsyncSupported
   @Nullable
   @SuppressWarnings("unused")
-  public Binary exportGroup(
+  public Parameters exportGroup(
       @IdParam final IdType groupId,
       @Nullable @OperationParam(name = OUTPUT_FORMAT_PARAM_NAME) final String outputFormat,
       @Nullable @OperationParam(name = SINCE_PARAM_NAME) final InstantType since,
       @Nullable @OperationParam(name = UNTIL_PARAM_NAME) final InstantType until,
       @Nullable @OperationParam(name = TYPE_PARAM_NAME) final List<String> type,
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) final List<String> elements,
-      @Nonnull final ServletRequestDetails requestDetails
-  ) {
+      @Nonnull final ServletRequestDetails requestDetails) {
     return exportOperationHelper.executeExport(requestDetails);
   }
 
@@ -141,10 +138,11 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
     // Extract patient references from member.entity.reference.
     // The member array contains references to the group members, and entity.reference contains the
     // reference string (e.g., "Patient/123").
-    final Dataset<Row> memberRefs = filtered
-        .select(explode(col("member")).as("member"))
-        .select(col("member.entity.reference").as("reference"))
-        .filter(col("reference").startsWith(PATIENT_REFERENCE_PREFIX));
+    final Dataset<Row> memberRefs =
+        filtered
+            .select(explode(col("member")).as("member"))
+            .select(col("member.entity.reference").as("reference"))
+            .filter(col("reference").startsWith(PATIENT_REFERENCE_PREFIX));
 
     final Set<String> patientIds = new HashSet<>();
     final List<Row> rows = memberRefs.collectAsList();
@@ -185,5 +183,4 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
         type,
         elements);
   }
-
 }

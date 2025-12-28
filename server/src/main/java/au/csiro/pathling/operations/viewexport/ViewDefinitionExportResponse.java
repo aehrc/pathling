@@ -18,19 +18,18 @@
 package au.csiro.pathling.operations.viewexport;
 
 import au.csiro.pathling.OperationResponse;
-import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
-import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
-import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import jakarta.annotation.Nonnull;
-import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.Getter;
 import org.apache.http.client.utils.URIBuilder;
-import org.hl7.fhir.r4.model.Binary;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.UriType;
 
 /**
  * Represents the response from a ViewDefinition export operation, containing the export manifest.
@@ -38,23 +37,15 @@ import org.hl7.fhir.r4.model.InstantType;
  * @author John Grimes
  */
 @Getter
-public class ViewDefinitionExportResponse implements OperationResponse<Binary> {
+public class ViewDefinitionExportResponse implements OperationResponse<Parameters> {
 
-  @Nonnull
-  private final ObjectMapper mapper = new ObjectMapper();
+  @Nonnull private final String kickOffRequestUrl;
 
-  @Nonnull
-  private final String kickOffRequestUrl;
+  @Nonnull private final String serverBaseUrl;
 
-  @Nonnull
-  private final String serverBaseUrl;
+  @Nonnull private final List<ViewExportOutput> outputs;
 
-  @Nonnull
-  private final List<ViewExportOutput> outputs;
-
-  /**
-   * Whether an access token is required to retrieve results.
-   */
+  /** Whether an access token is required to retrieve results. */
   private final boolean requiresAccessToken;
 
   /**
@@ -78,48 +69,39 @@ public class ViewDefinitionExportResponse implements OperationResponse<Binary> {
 
   @Nonnull
   @Override
-  public Binary toOutput() {
-    final String manifestJSON;
-    try {
-      manifestJSON = buildManifest();
-    } catch (final IOException e) {
-      throw new IllegalStateException(e);
-    }
-    final Binary binary = new Binary();
-    binary.setContentType("application/json");
-    binary.setData(manifestJSON.getBytes(StandardCharsets.UTF_8));
-    return binary;
-  }
-
-  @Nonnull
-  private String buildManifest() throws IOException {
-    final ObjectNode manifest = mapper.createObjectNode();
+  public Parameters toOutput() {
+    final Parameters parameters = new Parameters();
 
     // Ensure the base URL ends with a slash for proper URL construction.
     final String normalizedBaseUrl =
-        serverBaseUrl.endsWith("/")
-        ? serverBaseUrl
-        : serverBaseUrl + "/";
+        serverBaseUrl.endsWith("/") ? serverBaseUrl : serverBaseUrl + "/";
 
-    manifest.put("transactionTime", InstantType.now().getValueAsString());
-    manifest.put("request", kickOffRequestUrl);
-    manifest.put("requiresAccessToken", requiresAccessToken);
+    // Add transactionTime parameter.
+    parameters.addParameter().setName("transactionTime").setValue(InstantType.now());
 
-    final ArrayNode outputArray = mapper.createArrayNode();
+    // Add request parameter.
+    parameters.addParameter().setName("request").setValue(new UriType(kickOffRequestUrl));
+
+    // Add requiresAccessToken parameter.
+    parameters
+        .addParameter()
+        .setName("requiresAccessToken")
+        .setValue(new BooleanType(requiresAccessToken));
+
+    // Add output parameters.
     for (final ViewExportOutput output : outputs) {
       for (final String fileUrl : output.fileUrls()) {
-        final ObjectNode outputNode = mapper.createObjectNode();
-        outputNode.put("name", output.name());
-        outputNode.put("url", buildResultUrl(normalizedBaseUrl, fileUrl));
-        outputArray.add(outputNode);
+        final ParametersParameterComponent outputParam =
+            parameters.addParameter().setName("output");
+        outputParam.addPart().setName("name").setValue(new StringType(output.name()));
+        outputParam
+            .addPart()
+            .setName("url")
+            .setValue(new UriType(buildResultUrl(normalizedBaseUrl, fileUrl)));
       }
     }
-    manifest.set("output", outputArray);
 
-    // Not supported yet but required by the specification.
-    manifest.set("error", mapper.createArrayNode());
-
-    return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(manifest);
+    return parameters;
   }
 
   /**
@@ -130,8 +112,8 @@ public class ViewDefinitionExportResponse implements OperationResponse<Binary> {
    * @return the remote result URL
    */
   @Nonnull
-  private static String buildResultUrl(@Nonnull final String baseUrl,
-      @Nonnull final String localUrl) {
+  private static String buildResultUrl(
+      @Nonnull final String baseUrl, @Nonnull final String localUrl) {
     try {
       final String[] parts = localUrl.split("/jobs/")[1].split("/");
       final String jobUUID = parts[0];
@@ -146,5 +128,4 @@ public class ViewDefinitionExportResponse implements OperationResponse<Binary> {
       throw new InternalErrorException(e);
     }
   }
-
 }

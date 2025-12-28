@@ -15,25 +15,28 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.operations.viewexport;
+package au.csiro.pathling.operations.bulkexport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.pathling.library.io.sink.FileInformation;
+import au.csiro.pathling.library.io.sink.WriteDetails;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for {@link ViewDefinitionExportResponse}.
+ * Unit tests for {@link ExportResponse}.
  *
  * @author John Grimes
  */
-class ViewDefinitionExportResponseTest {
+class ExportResponseTest {
 
   // -------------------------------------------------------------------------
   // Manifest structure tests
@@ -41,29 +44,28 @@ class ViewDefinitionExportResponseTest {
 
   @Test
   void manifestContainsRequiredFields() {
-    // The manifest should contain transactionTime, request, requiresAccessToken, output, and
-    // error.
-    final ViewDefinitionExportResponse response =
-        new ViewDefinitionExportResponse(
-            "http://example.org/fhir/$viewdefinition-export",
-            "http://example.org/fhir",
-            List.of(),
-            false);
+    // The manifest should contain transactionTime, request, requiresAccessToken.
+    final WriteDetails writeDetails = new WriteDetails(List.of());
+
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
 
     final Parameters parameters = response.toOutput();
 
     assertThat(hasParameter(parameters, "transactionTime")).isTrue();
     assertThat(hasParameter(parameters, "request")).isTrue();
     assertThat(hasParameter(parameters, "requiresAccessToken")).isTrue();
-    // Output and error may be absent when empty.
   }
 
   @Test
   void manifestContainsKickOffRequest() {
     // The request parameter should contain the kick-off URL.
-    final String kickOffUrl = "http://example.org/fhir/$viewdefinition-export?_format=csv";
-    final ViewDefinitionExportResponse response =
-        new ViewDefinitionExportResponse(kickOffUrl, "http://example.org/fhir", List.of(), false);
+    final String kickOffUrl = "http://example.org/fhir/$export?_type=Patient";
+    final WriteDetails writeDetails = new WriteDetails(List.of());
+
+    final ExportResponse response =
+        new ExportResponse(kickOffUrl, "http://example.org/fhir", writeDetails, false);
 
     final Parameters parameters = response.toOutput();
     final String request = getStringParameter(parameters, "request");
@@ -73,12 +75,11 @@ class ViewDefinitionExportResponseTest {
 
   @Test
   void manifestShowsRequiresAccessTokenFalse() {
-    final ViewDefinitionExportResponse response =
-        new ViewDefinitionExportResponse(
-            "http://example.org/fhir/$viewdefinition-export",
-            "http://example.org/fhir",
-            List.of(),
-            false);
+    final WriteDetails writeDetails = new WriteDetails(List.of());
+
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
 
     final Parameters parameters = response.toOutput();
     final Boolean requiresAccessToken = getBooleanParameter(parameters, "requiresAccessToken");
@@ -88,12 +89,11 @@ class ViewDefinitionExportResponseTest {
 
   @Test
   void manifestShowsRequiresAccessTokenTrue() {
-    final ViewDefinitionExportResponse response =
-        new ViewDefinitionExportResponse(
-            "http://example.org/fhir/$viewdefinition-export",
-            "http://example.org/fhir",
-            List.of(),
-            true);
+    final WriteDetails writeDetails = new WriteDetails(List.of());
+
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, true);
 
     final Parameters parameters = response.toOutput();
     final Boolean requiresAccessToken = getBooleanParameter(parameters, "requiresAccessToken");
@@ -104,12 +104,11 @@ class ViewDefinitionExportResponseTest {
   @Test
   void manifestContainsTransactionTime() {
     // The transactionTime should be an instant value.
-    final ViewDefinitionExportResponse response =
-        new ViewDefinitionExportResponse(
-            "http://example.org/fhir/$viewdefinition-export",
-            "http://example.org/fhir",
-            List.of(),
-            false);
+    final WriteDetails writeDetails = new WriteDetails(List.of());
+
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
 
     final Parameters parameters = response.toOutput();
     final ParametersParameterComponent param = findParameter(parameters, "transactionTime");
@@ -124,89 +123,56 @@ class ViewDefinitionExportResponseTest {
 
   @Test
   void manifestContainsOutputEntries() {
-    // Output entries should have name and url parts.
-    final ViewExportOutput output =
-        new ViewExportOutput(
-            "patients", List.of("file:///tmp/jobs/abc-123/patients.ndjson/part-00000.json"));
+    // Output entries should have type and url parts.
+    final FileInformation fileInfo =
+        new FileInformation("Patient", "file:///tmp/jobs/abc-123/Patient.ndjson");
+    final WriteDetails writeDetails = new WriteDetails(List.of(fileInfo));
 
-    final ViewDefinitionExportResponse response =
-        new ViewDefinitionExportResponse(
-            "http://example.org/fhir/$viewdefinition-export",
-            "http://example.org/fhir",
-            List.of(output),
-            false);
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
 
     final Parameters parameters = response.toOutput();
     final List<ParametersParameterComponent> outputs = getParametersByName(parameters, "output");
 
     assertThat(outputs).hasSize(1);
 
-    final ParametersParameterComponent outputParam = outputs.get(0);
-    assertThat(getPartValue(outputParam, "name")).isEqualTo("patients");
+    final ParametersParameterComponent outputParam = outputs.getFirst();
+    assertThat(getPartValue(outputParam, "type")).isEqualTo("Patient");
     // The URL should be transformed to a result URL.
     final String url = getPartValue(outputParam, "url");
     assertThat(url).contains("$result").contains("job=abc-123");
   }
 
   @Test
-  void manifestContainsMultipleFilesPerOutput() {
-    // When an output has multiple files, each gets its own output parameter.
-    final ViewExportOutput output =
-        new ViewExportOutput(
-            "observations",
-            List.of(
-                "file:///tmp/jobs/job-id/observations.ndjson/part-00000.json",
-                "file:///tmp/jobs/job-id/observations.ndjson/part-00001.json"));
+  void manifestContainsMultipleOutputEntries() {
+    // Multiple file infos should each produce their own output parameters.
+    final FileInformation patientFile =
+        new FileInformation("Patient", "file:///tmp/jobs/job-id/Patient.ndjson");
+    final FileInformation observationFile =
+        new FileInformation("Observation", "file:///tmp/jobs/job-id/Observation.ndjson");
+    final WriteDetails writeDetails = new WriteDetails(List.of(patientFile, observationFile));
 
-    final ViewDefinitionExportResponse response =
-        new ViewDefinitionExportResponse(
-            "http://example.org/fhir/$viewdefinition-export",
-            "http://example.org/fhir",
-            List.of(output),
-            false);
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
 
     final Parameters parameters = response.toOutput();
     final List<ParametersParameterComponent> outputs = getParametersByName(parameters, "output");
 
     assertThat(outputs).hasSize(2);
-    assertThat(getPartValue(outputs.get(0), "name")).isEqualTo("observations");
-    assertThat(getPartValue(outputs.get(1), "name")).isEqualTo("observations");
+    assertThat(getPartValue(outputs.get(0), "type")).isEqualTo("Patient");
+    assertThat(getPartValue(outputs.get(1), "type")).isEqualTo("Observation");
   }
 
   @Test
-  void manifestContainsMultipleOutputs() {
-    // Multiple ViewExportOutputs each produce their own output parameters.
-    final ViewExportOutput output1 =
-        new ViewExportOutput(
-            "patients", List.of("file:///tmp/jobs/job-id/patients.csv/part-00000.csv"));
-    final ViewExportOutput output2 =
-        new ViewExportOutput(
-            "observations", List.of("file:///tmp/jobs/job-id/observations.csv/part-00000.csv"));
+  void noOutputParametersWhenNoFiles() {
+    // When there are no files, no output parameters should be present.
+    final WriteDetails writeDetails = new WriteDetails(List.of());
 
-    final ViewDefinitionExportResponse response =
-        new ViewDefinitionExportResponse(
-            "http://example.org/fhir/$viewdefinition-export",
-            "http://example.org/fhir",
-            List.of(output1, output2),
-            false);
-
-    final Parameters parameters = response.toOutput();
-    final List<ParametersParameterComponent> outputs = getParametersByName(parameters, "output");
-
-    assertThat(outputs).hasSize(2);
-    assertThat(getPartValue(outputs.get(0), "name")).isEqualTo("patients");
-    assertThat(getPartValue(outputs.get(1), "name")).isEqualTo("observations");
-  }
-
-  @Test
-  void noOutputParametersWhenNoOutputs() {
-    // When there are no outputs, no output parameters should be present.
-    final ViewDefinitionExportResponse response =
-        new ViewDefinitionExportResponse(
-            "http://example.org/fhir/$viewdefinition-export",
-            "http://example.org/fhir",
-            List.of(),
-            false);
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
 
     final Parameters parameters = response.toOutput();
     final List<ParametersParameterComponent> outputs = getParametersByName(parameters, "output");
@@ -221,20 +187,20 @@ class ViewDefinitionExportResponseTest {
   @Test
   void serverBaseUrlNormalisedWithTrailingSlash() {
     // Base URL without trailing slash should still produce valid URLs.
-    final ViewExportOutput output =
-        new ViewExportOutput(
-            "test", List.of("file:///tmp/jobs/job-id/test.ndjson/part-00000.json"));
+    final FileInformation fileInfo =
+        new FileInformation("Patient", "file:///tmp/jobs/job-id/Patient.ndjson");
+    final WriteDetails writeDetails = new WriteDetails(List.of(fileInfo));
 
-    final ViewDefinitionExportResponse response =
-        new ViewDefinitionExportResponse(
-            "http://example.org/fhir/$viewdefinition-export",
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export",
             "http://example.org/fhir", // No trailing slash.
-            List.of(output),
+            writeDetails,
             false);
 
     final Parameters parameters = response.toOutput();
     final List<ParametersParameterComponent> outputs = getParametersByName(parameters, "output");
-    final String url = getPartValue(outputs.get(0), "url");
+    final String url = getPartValue(outputs.getFirst(), "url");
 
     // Should still produce a valid URL.
     assertThat(url).startsWith("http://example.org/fhir/$result");
@@ -243,24 +209,23 @@ class ViewDefinitionExportResponseTest {
   @Test
   void serverBaseUrlWithTrailingSlashHandledCorrectly() {
     // Base URL with trailing slash should not produce double slashes.
-    final ViewExportOutput output =
-        new ViewExportOutput(
-            "test", List.of("file:///tmp/jobs/job-id/test.ndjson/part-00000.json"));
+    final FileInformation fileInfo =
+        new FileInformation("Patient", "file:///tmp/jobs/job-id/Patient.ndjson");
+    final WriteDetails writeDetails = new WriteDetails(List.of(fileInfo));
 
-    final ViewDefinitionExportResponse response =
-        new ViewDefinitionExportResponse(
-            "http://example.org/fhir/$viewdefinition-export",
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export",
             "http://example.org/fhir/", // With trailing slash.
-            List.of(output),
+            writeDetails,
             false);
 
     final Parameters parameters = response.toOutput();
     final List<ParametersParameterComponent> outputs = getParametersByName(parameters, "output");
-    final String url = getPartValue(outputs.get(0), "url");
+    final String url = getPartValue(outputs.getFirst(), "url");
 
     // Should not have double slash.
-    assertThat(url).startsWith("http://example.org/fhir/$result");
-    assertThat(url).doesNotContain("fhir//$result");
+    assertThat(url).startsWith("http://example.org/fhir/$result").doesNotContain("fhir//$result");
   }
 
   // -------------------------------------------------------------------------
@@ -271,6 +236,7 @@ class ViewDefinitionExportResponseTest {
     return parameters.getParameter().stream().anyMatch(p -> name.equals(p.getName()));
   }
 
+  @Nullable
   private static ParametersParameterComponent findParameter(
       final Parameters parameters, final String name) {
     return parameters.getParameter().stream()
@@ -284,6 +250,7 @@ class ViewDefinitionExportResponseTest {
     return parameters.getParameter().stream().filter(p -> name.equals(p.getName())).toList();
   }
 
+  @Nullable
   private static String getStringParameter(final Parameters parameters, final String name) {
     final ParametersParameterComponent param = findParameter(parameters, name);
     if (param == null || !param.hasValue()) {
@@ -292,12 +259,10 @@ class ViewDefinitionExportResponseTest {
     if (param.getValue() instanceof final UriType uriType) {
       return uriType.getValue();
     }
-    if (param.getValue() instanceof final StringType stringType) {
-      return stringType.getValue();
-    }
     return param.getValue().primitiveValue();
   }
 
+  @Nullable
   private static Boolean getBooleanParameter(final Parameters parameters, final String name) {
     final ParametersParameterComponent param = findParameter(parameters, name);
     if (param == null || !param.hasValue()) {
@@ -309,6 +274,7 @@ class ViewDefinitionExportResponseTest {
     return null;
   }
 
+  @Nullable
   private static String getPartValue(
       final ParametersParameterComponent param, final String partName) {
     return param.getPart().stream()
@@ -319,8 +285,8 @@ class ViewDefinitionExportResponseTest {
               if (p.getValue() instanceof final UriType uriType) {
                 return uriType.getValue();
               }
-              if (p.getValue() instanceof final StringType stringType) {
-                return stringType.getValue();
+              if (p.getValue() instanceof final CodeType codeType) {
+                return codeType.getValue();
               }
               return p.getValue().primitiveValue();
             })

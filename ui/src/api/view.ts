@@ -19,11 +19,11 @@
 
 import type { Parameters, ParametersParameter } from "fhir/r4";
 import type {
-  ViewRunOptions,
-  ViewRunStoredOptions,
+  ViewExportDownloadOptions,
   ViewExportKickOffOptions,
   ViewExportResult,
-  ViewExportDownloadOptions,
+  ViewRunOptions,
+  ViewRunStoredOptions,
 } from "../types/api";
 import {
   buildHeaders,

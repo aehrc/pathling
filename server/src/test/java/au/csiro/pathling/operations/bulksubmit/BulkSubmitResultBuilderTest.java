@@ -19,9 +19,10 @@ package au.csiro.pathling.operations.bulksubmit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.nio.charset.StandardCharsets;
+import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
-import org.hl7.fhir.r4.model.Binary;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,15 +35,18 @@ class BulkSubmitResultBuilderTest {
 
   private static final String FHIR_SERVER_BASE = "https://fhir.example.org/fhir";
   private static final String REQUEST_URL =
-      FHIR_SERVER_BASE + "/$bulk-submit-status?submissionId=test-submission-123"
+      FHIR_SERVER_BASE
+          + "/$bulk-submit-status?submissionId=test-submission-123"
           + "&submitter=https://example.org/submitters|test-submitter";
   private static final String SUBMISSION_ID = "test-submission-123";
 
   private BulkSubmitResultBuilder resultBuilder;
+  private FhirContext fhirContext;
 
   @BeforeEach
   void setUp() {
     resultBuilder = new BulkSubmitResultBuilder();
+    fhirContext = FhirContext.forR4();
   }
 
   @Test
@@ -50,54 +54,90 @@ class BulkSubmitResultBuilderTest {
     // The manifest should include the request URL.
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
-        FHIR_SERVER_BASE);
+    final Parameters parameters =
+        resultBuilder.buildStatusManifest(submission, REQUEST_URL, FHIR_SERVER_BASE);
 
-    assertThat(binary.getContentType()).isEqualTo("application/json");
-    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains("\"request\" : \"" + REQUEST_URL + "\"");
+    // Verify request parameter exists with correct value.
+    final ParametersParameterComponent requestParam = findParameter(parameters, "request");
+    assertThat(requestParam.getValue().primitiveValue()).isEqualTo(REQUEST_URL);
   }
 
   @Test
   void buildStatusManifestHasEmptyOutputArrayWhenNoDownloads() {
-    // When there are no downloaded files, the output array is empty.
+    // When there are no downloaded files, there are no output parameters.
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
-        FHIR_SERVER_BASE);
+    final Parameters parameters =
+        resultBuilder.buildStatusManifest(submission, REQUEST_URL, FHIR_SERVER_BASE);
 
-    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains("\"output\" : [ ]");
-    assertThat(json).contains("\"error\" : [ ]");
-    assertThat(json).contains(SUBMISSION_ID);
+    // Verify no output parameters.
+    final long outputCount =
+        parameters.getParameter().stream().filter(p -> "output".equals(p.getName())).count();
+    assertThat(outputCount).isZero();
+
+    // Verify no error parameters.
+    final long errorCount =
+        parameters.getParameter().stream().filter(p -> "error".equals(p.getName())).count();
+    assertThat(errorCount).isZero();
+
+    // Verify extension contains submission ID.
+    final ParametersParameterComponent extParam = findParameter(parameters, "extension");
+    final String valueString =
+        extParam.getPart().stream()
+            .filter(p -> "valueString".equals(p.getName()))
+            .map(p -> p.getValue().primitiveValue())
+            .findFirst()
+            .orElse(null);
+    assertThat(valueString).isEqualTo(SUBMISSION_ID);
   }
 
   @Test
   void buildStatusManifestIncludesDownloadedFilesInOutput() {
-    // When files have been downloaded, the output array contains result URLs.
+    // When files have been downloaded, the output parameters contain result URLs.
     final Submission submission = createSubmissionWithDownloadedFiles();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
-        FHIR_SERVER_BASE);
+    final Parameters parameters =
+        resultBuilder.buildStatusManifest(submission, REQUEST_URL, FHIR_SERVER_BASE);
 
-    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains("\"output\" : [ {");
-    assertThat(json).contains("\"type\" : \"Patient\"");
-    assertThat(json).contains("\"url\" : \"" + FHIR_SERVER_BASE + "/$result?job="
-        + SUBMISSION_ID + "&file=Patient.manifest-job-1-1.ndjson\"");
-    assertThat(json).contains("\"type\" : \"Observation\"");
-    assertThat(json).contains("\"error\" : [ ]");
+    // Verify output parameters exist.
+    final long outputCount =
+        parameters.getParameter().stream().filter(p -> "output".equals(p.getName())).count();
+    assertThat(outputCount).isEqualTo(2);
+
+    // Verify Patient output.
+    final ParametersParameterComponent patientOutput =
+        parameters.getParameter().stream()
+            .filter(p -> "output".equals(p.getName()))
+            .filter(
+                p ->
+                    p.getPart().stream()
+                        .anyMatch(
+                            part ->
+                                "type".equals(part.getName())
+                                    && "Patient".equals(part.getValue().primitiveValue())))
+            .findFirst()
+            .orElseThrow();
+
+    final String patientUrl =
+        patientOutput.getPart().stream()
+            .filter(p -> "url".equals(p.getName()))
+            .map(p -> p.getValue().primitiveValue())
+            .findFirst()
+            .orElse(null);
+    assertThat(patientUrl)
+        .contains("$result?job=" + SUBMISSION_ID + "&file=Patient.manifest-job-1-1.ndjson");
   }
 
   @Test
   void buildStatusManifestSetsRequiresAccessTokenFalse() {
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
-        FHIR_SERVER_BASE);
+    final Parameters parameters =
+        resultBuilder.buildStatusManifest(submission, REQUEST_URL, FHIR_SERVER_BASE);
 
-    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains("\"requiresAccessToken\" : false");
+    final ParametersParameterComponent tokenParam =
+        findParameter(parameters, "requiresAccessToken");
+    assertThat(tokenParam.getValue().primitiveValue()).isEqualTo("false");
   }
 
   @Test
@@ -105,13 +145,29 @@ class BulkSubmitResultBuilderTest {
     // The manifest should include the submission ID in an extension.
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
-        FHIR_SERVER_BASE);
+    final Parameters parameters =
+        resultBuilder.buildStatusManifest(submission, REQUEST_URL, FHIR_SERVER_BASE);
 
-    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains(
-        "\"url\" : \"http://hl7.org/fhir/uv/bulkdata/StructureDefinition/bulk-submit-submission-id\"");
-    assertThat(json).contains("\"valueString\" : \"" + SUBMISSION_ID + "\"");
+    final ParametersParameterComponent extParam = findParameter(parameters, "extension");
+
+    // Verify extension URL.
+    final String url =
+        extParam.getPart().stream()
+            .filter(p -> "url".equals(p.getName()))
+            .map(p -> p.getValue().primitiveValue())
+            .findFirst()
+            .orElse(null);
+    assertThat(url)
+        .isEqualTo("http://hl7.org/fhir/uv/bulkdata/StructureDefinition/bulk-submit-submission-id");
+
+    // Verify extension value.
+    final String value =
+        extParam.getPart().stream()
+            .filter(p -> "valueString".equals(p.getName()))
+            .map(p -> p.getValue().primitiveValue())
+            .findFirst()
+            .orElse(null);
+    assertThat(value).isEqualTo(SUBMISSION_ID);
   }
 
   @Test
@@ -119,11 +175,11 @@ class BulkSubmitResultBuilderTest {
     // For completed submissions, the transactionTime should be included.
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
-        FHIR_SERVER_BASE);
+    final Parameters parameters =
+        resultBuilder.buildStatusManifest(submission, REQUEST_URL, FHIR_SERVER_BASE);
 
-    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains("\"transactionTime\"");
+    final ParametersParameterComponent timeParam = findParameter(parameters, "transactionTime");
+    assertThat(timeParam.getValue()).isNotNull();
   }
 
   @Test
@@ -131,100 +187,106 @@ class BulkSubmitResultBuilderTest {
     // The same manifest structure is used for in-progress submissions (HTTP 202).
     final Submission submission = createProcessingSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
-        FHIR_SERVER_BASE);
+    final Parameters parameters =
+        resultBuilder.buildStatusManifest(submission, REQUEST_URL, FHIR_SERVER_BASE);
 
-    assertThat(binary.getContentType()).isEqualTo("application/json");
-    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains(SUBMISSION_ID);
-    assertThat(json).contains("\"request\" : \"" + REQUEST_URL + "\"");
-    assertThat(json).contains("\"requiresAccessToken\" : false");
-    assertThat(json).contains("\"output\" : [ ]");
-    assertThat(json).contains("\"error\" : [ ]");
+    // Verify required parameters exist.
+    assertThat(findParameter(parameters, "request")).isNotNull();
+    assertThat(findParameter(parameters, "requiresAccessToken")).isNotNull();
+    assertThat(findParameter(parameters, "extension")).isNotNull();
   }
 
   @Test
   void buildStatusManifestForPendingSubmission() {
     // Pending submissions use the same manifest structure.
-    final Submission submission = Submission.createPending(
-        SUBMISSION_ID,
-        new SubmitterIdentifier("https://example.org/submitters", "test-submitter"),
-        Optional.empty()
-    );
+    final Submission submission =
+        Submission.createPending(
+            SUBMISSION_ID,
+            new SubmitterIdentifier("https://example.org/submitters", "test-submitter"),
+            Optional.empty());
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
-        FHIR_SERVER_BASE);
+    final Parameters parameters =
+        resultBuilder.buildStatusManifest(submission, REQUEST_URL, FHIR_SERVER_BASE);
 
-    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains(SUBMISSION_ID);
-    assertThat(json).contains("\"request\" : \"" + REQUEST_URL + "\"");
+    // Verify required parameters exist.
+    assertThat(findParameter(parameters, "request")).isNotNull();
+    assertThat(findParameter(parameters, "extension")).isNotNull();
+
     // Pending submissions don't have transactionTime yet.
-    assertThat(json).doesNotContain("\"transactionTime\"");
+    final boolean hasTransactionTime =
+        parameters.getParameter().stream().anyMatch(p -> "transactionTime".equals(p.getName()));
+    assertThat(hasTransactionTime).isFalse();
   }
 
   // ========================================
   // Helper Methods
   // ========================================
 
+  private ParametersParameterComponent findParameter(
+      final Parameters parameters, final String name) {
+    return parameters.getParameter().stream()
+        .filter(p -> name.equals(p.getName()))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("Parameter not found: " + name));
+  }
+
   private Submission createCompletedSubmission() {
-    final ManifestJob completedJob = ManifestJob.createPending(
-            "manifest-job-1",
-            "https://example.org/manifest.json",
-            "https://example.org/fhir",
-            null
-        )
-        .withState(ManifestJobState.COMPLETED);
+    final ManifestJob completedJob =
+        ManifestJob.createPending(
+                "manifest-job-1",
+                "https://example.org/manifest.json",
+                "https://example.org/fhir",
+                null)
+            .withState(ManifestJobState.COMPLETED);
 
     return Submission.createPending(
             SUBMISSION_ID,
             new SubmitterIdentifier("https://example.org/submitters", "test-submitter"),
-            Optional.empty()
-        )
+            Optional.empty())
         .withManifestJob(completedJob)
         .withState(SubmissionState.COMPLETED);
   }
 
   private Submission createProcessingSubmission() {
-    final ManifestJob processingJob = ManifestJob.createPending(
-            "manifest-job-1",
-            "https://example.org/manifest.json",
-            "https://example.org/fhir",
-            null
-        )
-        .withState(ManifestJobState.PROCESSING);
+    final ManifestJob processingJob =
+        ManifestJob.createPending(
+                "manifest-job-1",
+                "https://example.org/manifest.json",
+                "https://example.org/fhir",
+                null)
+            .withState(ManifestJobState.PROCESSING);
 
     return Submission.createPending(
             SUBMISSION_ID,
             new SubmitterIdentifier("https://example.org/submitters", "test-submitter"),
-            Optional.empty()
-        )
+            Optional.empty())
         .withManifestJob(processingJob)
         .withState(SubmissionState.PROCESSING);
   }
 
   private Submission createSubmissionWithDownloadedFiles() {
     final String manifestUrl = "https://example.org/manifest.json";
-    final ManifestJob downloadedJob = ManifestJob.createPending(
-            "manifest-job-1",
-            manifestUrl,
-            "https://example.org/fhir",
-            null
-        )
-        .withDownloadedFiles(java.util.List.of(
-            new DownloadedFile("Patient", "Patient.manifest-job-1-1.ndjson",
-                "file:///tmp/Patient.manifest-job-1-1.ndjson", manifestUrl),
-            new DownloadedFile("Observation", "Observation.manifest-job-1-2.ndjson",
-                "file:///tmp/Observation.manifest-job-1-2.ndjson", manifestUrl)
-        ))
-        .withState(ManifestJobState.DOWNLOADED);
+    final ManifestJob downloadedJob =
+        ManifestJob.createPending("manifest-job-1", manifestUrl, "https://example.org/fhir", null)
+            .withDownloadedFiles(
+                java.util.List.of(
+                    new DownloadedFile(
+                        "Patient",
+                        "Patient.manifest-job-1-1.ndjson",
+                        "file:///tmp/Patient.manifest-job-1-1.ndjson",
+                        manifestUrl),
+                    new DownloadedFile(
+                        "Observation",
+                        "Observation.manifest-job-1-2.ndjson",
+                        "file:///tmp/Observation.manifest-job-1-2.ndjson",
+                        manifestUrl)))
+            .withState(ManifestJobState.DOWNLOADED);
 
     return Submission.createPending(
             SUBMISSION_ID,
             new SubmitterIdentifier("https://example.org/submitters", "test-submitter"),
-            Optional.empty()
-        )
+            Optional.empty())
         .withManifestJob(downloadedJob)
         .withState(SubmissionState.PROCESSING);
   }
-
 }

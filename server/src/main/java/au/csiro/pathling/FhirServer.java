@@ -10,6 +10,7 @@ import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import au.csiro.pathling.interceptors.BulkExportDeleteInterceptor;
+import au.csiro.pathling.interceptors.ParametersToJsonInterceptor;
 import au.csiro.pathling.interceptors.SmartConfigurationInterceptor;
 import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
 import au.csiro.pathling.operations.bulkexport.GroupExportProvider;
@@ -25,8 +26,8 @@ import au.csiro.pathling.operations.update.BatchProvider;
 import au.csiro.pathling.operations.update.UpdateProviderFactory;
 import au.csiro.pathling.operations.view.ViewDefinitionInstanceRunProvider;
 import au.csiro.pathling.operations.view.ViewDefinitionRunProvider;
-import au.csiro.pathling.read.ReadProviderFactory;
 import au.csiro.pathling.operations.viewexport.ViewDefinitionExportProvider;
+import au.csiro.pathling.read.ReadProviderFactory;
 import au.csiro.pathling.search.SearchProviderFactory;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.context.FhirContext;
@@ -37,7 +38,6 @@ import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
-import org.springframework.web.cors.CorsConfiguration;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -56,6 +56,7 @@ import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.cors.CorsConfiguration;
 import scala.jdk.javaapi.CollectionConverters;
 
 /**
@@ -66,107 +67,77 @@ import scala.jdk.javaapi.CollectionConverters;
 @SuppressWarnings("serial")
 public class FhirServer extends RestfulServer {
 
-  @Serial
-  private static final long serialVersionUID = -1519567839063860047L;
+  @Serial private static final long serialVersionUID = -1519567839063860047L;
 
-  /**
-   * The Accept header for FHIR JSON content.
-   */
+  /** The Accept header for FHIR JSON content. */
   public static final Header ACCEPT_HEADER = new Header("Accept", List.of("application/fhir+json"));
 
-  /**
-   * The Prefer header for respond-async behaviour.
-   */
-  public static final Header PREFER_RESPOND_TYPE_HEADER = new Header("Prefer",
-      List.of("respond-async"));
+  /** The Prefer header for respond-async behaviour. */
+  public static final Header PREFER_RESPOND_TYPE_HEADER =
+      new Header("Prefer", List.of("respond-async"));
 
-  /**
-   * The Prefer header for lenient handling behaviour.
-   */
-  public static final Header PREFER_LENIENT_HEADER = new Header("Prefer",
-      List.of("handling=lenient"));
+  /** The Prefer header for lenient handling behaviour. */
+  public static final Header PREFER_LENIENT_HEADER =
+      new Header("Prefer", List.of("handling=lenient"));
 
-  /**
-   * The _outputFormat parameter for specifying output format.
-   */
-  public static final Header OUTPUT_FORMAT = new Header("_outputFormat",
-      List.of("application/fhir+ndjson", "application/ndjson", "ndjson"));
+  /** The _outputFormat parameter for specifying output format. */
+  public static final Header OUTPUT_FORMAT =
+      new Header(
+          "_outputFormat", List.of("application/fhir+ndjson", "application/ndjson", "ndjson"));
 
   private static final int DEFAULT_PAGE_SIZE = 100;
   private static final int MAX_PAGE_SIZE = Integer.MAX_VALUE;
   private static final int SEARCH_MAP_SIZE = 10;
 
-  @Nonnull
-  private final transient ServerConfiguration configuration;
+  @Nonnull private final transient ServerConfiguration configuration;
 
-  @Nonnull
-  private final transient Optional<OidcConfiguration> oidcConfiguration;
+  @Nonnull private final transient Optional<OidcConfiguration> oidcConfiguration;
 
-  @Nonnull
-  private final transient Optional<JobProvider> jobProvider;
+  @Nonnull private final transient Optional<JobProvider> jobProvider;
 
-  @Nonnull
-  private final transient SystemExportProvider exportProvider;
+  @Nonnull private final transient SystemExportProvider exportProvider;
 
-  @Nonnull
-  private final transient ExportResultProvider exportResultProvider;
+  @Nonnull private final transient ExportResultProvider exportResultProvider;
 
-  @Nonnull
-  private final transient PatientExportProvider patientExportProvider;
+  @Nonnull private final transient PatientExportProvider patientExportProvider;
 
-  @Nonnull
-  private final transient GroupExportProvider groupExportProvider;
+  @Nonnull private final transient GroupExportProvider groupExportProvider;
 
-  @Nonnull
-  private final transient ImportProvider importProvider;
+  @Nonnull private final transient ImportProvider importProvider;
 
-  @Nonnull
-  private final transient ImportPnpProvider importPnpProvider;
+  @Nonnull private final transient ImportPnpProvider importPnpProvider;
 
-  @Nonnull
-  private final transient Optional<BulkSubmitProvider> bulkSubmitProvider;
+  @Nonnull private final transient Optional<BulkSubmitProvider> bulkSubmitProvider;
 
-  @Nonnull
-  private final transient Optional<BulkSubmitStatusProvider> bulkSubmitStatusProvider;
+  @Nonnull private final transient Optional<BulkSubmitStatusProvider> bulkSubmitStatusProvider;
 
-  @Nonnull
-  private final transient ErrorReportingInterceptor errorReportingInterceptor;
+  @Nonnull private final transient ErrorReportingInterceptor errorReportingInterceptor;
 
-  @Nonnull
-  private final transient EntityTagInterceptor entityTagInterceptor;
+  @Nonnull private final transient EntityTagInterceptor entityTagInterceptor;
 
   @Nonnull
   private final transient Optional<BulkExportDeleteInterceptor> bulkExportDeleteInterceptor;
 
-  @Nonnull
-  private final transient ConformanceProvider conformanceProvider;
+  @Nonnull private final transient ConformanceProvider conformanceProvider;
 
-  @Nonnull
-  private final transient SearchProviderFactory searchProviderFactory;
+  @Nonnull private final transient SearchProviderFactory searchProviderFactory;
 
-  @Nonnull
-  private final transient UpdateProviderFactory updateProviderFactory;
+  @Nonnull private final transient UpdateProviderFactory updateProviderFactory;
 
-  @Nonnull
-  private final transient CreateProviderFactory createProviderFactory;
+  @Nonnull private final transient CreateProviderFactory createProviderFactory;
 
-  @Nonnull
-  private final transient DeleteProviderFactory deleteProviderFactory;
+  @Nonnull private final transient DeleteProviderFactory deleteProviderFactory;
 
-  @Nonnull
-  private final transient ReadProviderFactory readProviderFactory;
+  @Nonnull private final transient ReadProviderFactory readProviderFactory;
 
-  @Nonnull
-  private final transient BatchProvider batchProvider;
+  @Nonnull private final transient BatchProvider batchProvider;
 
-  @Nonnull
-  private final transient ViewDefinitionRunProvider viewDefinitionRunProvider;
+  @Nonnull private final transient ViewDefinitionRunProvider viewDefinitionRunProvider;
 
   @Nonnull
   private final transient ViewDefinitionInstanceRunProvider viewDefinitionInstanceRunProvider;
 
-  @Nonnull
-  private final transient ViewDefinitionExportProvider viewDefinitionExportProvider;
+  @Nonnull private final transient ViewDefinitionExportProvider viewDefinitionExportProvider;
 
   /**
    * Constructs a new FhirServer.
@@ -197,7 +168,8 @@ public class FhirServer extends RestfulServer {
    * @param viewDefinitionInstanceRunProvider the view definition instance run provider
    * @param viewDefinitionExportProvider the view definition export provider
    */
-  public FhirServer(@Nonnull final FhirContext fhirContext,
+  public FhirServer(
+      @Nonnull final FhirContext fhirContext,
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final Optional<JobProvider> jobProvider,
@@ -342,6 +314,9 @@ public class FhirServer extends RestfulServer {
 
       registerInterceptor(new ResponseHighlighterInterceptor());
 
+      // Register interceptor to transform Parameters responses to plain JSON when requested.
+      registerInterceptor(new ParametersToJsonInterceptor());
+
       bulkExportDeleteInterceptor.ifPresent(this::registerInterceptor);
 
       // Configure paging.
@@ -366,7 +341,6 @@ public class FhirServer extends RestfulServer {
     } catch (final Exception e) {
       throw new ServletException("Error initializing AnalyticsServer", e);
     }
-
   }
 
   @Override
@@ -385,27 +359,30 @@ public class FhirServer extends RestfulServer {
     super.service(request, response);
   }
 
-  private void handleCorsPreflight(final HttpServletRequest request,
-      final HttpServletResponse response) {
+  private void handleCorsPreflight(
+      final HttpServletRequest request, final HttpServletResponse response) {
     final String origin = request.getHeader("Origin");
     if (origin != null) {
       // Check if origin is allowed.
       final List<String> allowedPatterns = configuration.getCors().getAllowedOriginPatterns();
       if (isOriginAllowed(origin, allowedPatterns)) {
         response.setHeader("Access-Control-Allow-Origin", origin);
-        response.setHeader("Access-Control-Allow-Methods",
+        response.setHeader(
+            "Access-Control-Allow-Methods",
             String.join(", ", configuration.getCors().getAllowedMethods()));
-        response.setHeader("Access-Control-Allow-Headers",
+        response.setHeader(
+            "Access-Control-Allow-Headers",
             String.join(", ", configuration.getCors().getAllowedHeaders()));
-        response.setHeader("Access-Control-Expose-Headers",
+        response.setHeader(
+            "Access-Control-Expose-Headers",
             String.join(", ", configuration.getCors().getExposedHeaders()));
-        response.setHeader("Access-Control-Max-Age",
-            String.valueOf(configuration.getCors().getMaxAge()));
+        response.setHeader(
+            "Access-Control-Max-Age", String.valueOf(configuration.getCors().getMaxAge()));
         if (configuration.getAuth().isEnabled()) {
           response.setHeader("Access-Control-Allow-Credentials", "true");
         }
-        response.setHeader("Vary", "Origin, Access-Control-Request-Method, "
-            + "Access-Control-Request-Headers");
+        response.setHeader(
+            "Vary", "Origin, Access-Control-Request-Method, " + "Access-Control-Request-Headers");
       }
     }
     response.setStatus(HttpServletResponse.SC_OK);
@@ -448,10 +425,10 @@ public class FhirServer extends RestfulServer {
 
     final CorsInterceptor corsInterceptor = new CorsInterceptor(corsConfig);
     registerInterceptor(corsInterceptor);
-    log.info("CORS interceptor registered with allowed origins: {}",
+    log.info(
+        "CORS interceptor registered with allowed origins: {}",
         configuration.getCors().getAllowedOriginPatterns());
   }
-
 
   private void configureRequestLogging() {
 
@@ -472,8 +449,8 @@ public class FhirServer extends RestfulServer {
    */
   @Nonnull
   public static Set<Enumerations.ResourceType> supportedResourceTypes() {
-    final Set<Enumerations.ResourceType> availableResourceTypes = EnumSet.allOf(
-        Enumerations.ResourceType.class);
+    final Set<Enumerations.ResourceType> availableResourceTypes =
+        EnumSet.allOf(Enumerations.ResourceType.class);
     availableResourceTypes.removeAll(unsupportedResourceTypes());
     return availableResourceTypes;
   }
@@ -496,8 +473,9 @@ public class FhirServer extends RestfulServer {
   /**
    * Checks if the given resource code represents a custom resource type that is not part of the
    * standard FHIR specification but is supported by Pathling. Custom resource types include:
+   *
    * <ul>
-   *   <li>ViewDefinition - from the SQL on FHIR specification</li>
+   *   <li>ViewDefinition - from the SQL on FHIR specification
    * </ul>
    *
    * @param resourceCode the resource type code to check
@@ -506,6 +484,4 @@ public class FhirServer extends RestfulServer {
   public static boolean isCustomResourceType(@Nonnull final String resourceCode) {
     return "ViewDefinition".equals(resourceCode);
   }
-
-
 }

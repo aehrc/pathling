@@ -53,7 +53,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Binary;
+import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,41 +80,29 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
 
   protected SystemExportProvider exportProvider;
 
-  @MockBean
-  protected ServletRequestDetails requestDetails;
+  @MockBean protected ServletRequestDetails requestDetails;
 
-  @MockBean
-  protected JobRegistry jobRegistry;
+  @MockBean protected JobRegistry jobRegistry;
 
-  @Autowired
-  protected RequestTagFactory requestTagFactory;
+  @Autowired protected RequestTagFactory requestTagFactory;
 
-  @MockBean
-  protected Job<T> job;
+  @MockBean protected Job<T> job;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private ExportOperationValidator exportOperationValidator;
+  @Autowired private ExportOperationValidator exportOperationValidator;
 
-  @Autowired
-  private ServerConfiguration serverConfiguration;
+  @Autowired private ServerConfiguration serverConfiguration;
 
-  @Autowired
-  private ExportResultRegistry exportResultRegistry;
+  @Autowired private ExportResultRegistry exportResultRegistry;
 
-  @Autowired
-  private ExportResultProvider exportResultProvider;
+  @Autowired private ExportResultProvider exportResultProvider;
 
-  @Autowired
-  private PatientCompartmentService patientCompartmentService;
+  @Autowired private PatientCompartmentService patientCompartmentService;
 
   @BeforeEach
   @SuppressWarnings("unchecked")
@@ -128,8 +116,8 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
     when(job.getId()).thenReturn(UUID.randomUUID().toString());
   }
 
-  MockHttpServletResponse performExportResult(final String jobId, final String file,
-      @Nullable final String ownerId) {
+  MockHttpServletResponse performExportResult(
+      final String jobId, final String file, @Nullable final String ownerId) {
     exportResultRegistry.put(jobId, new ExportResult(Optional.ofNullable(ownerId)));
     final MockHttpServletResponse response = new MockHttpServletResponse();
     exportResultProvider.result(jobId, file, response);
@@ -153,37 +141,42 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
   }
 
   @SuppressWarnings("unchecked")
-  JsonNode performExport(final SystemExportProvider exportProvider, final String ownerId,
-      final List<String> type, final boolean lenient) {
+  JsonNode performExport(
+      final SystemExportProvider exportProvider,
+      final String ownerId,
+      final List<String> type,
+      final boolean lenient) {
     when(job.getOwnerId()).thenReturn(Optional.ofNullable(ownerId));
     final String lenientHeader = "handling=" + lenient;
     when(requestDetails.getHeader("Prefer")).thenReturn(lenientHeader + "," + "prefer-async");
     when(requestDetails.getHeaders("Prefer")).thenReturn(List.of(lenientHeader, "prefer-async"));
 
-    final ExportRequest exportRequest = new ExportRequest(
-        "test-req",
-        "http://localhost:8080/fhir",
-        ExportOutputFormat.NDJSON,
-        null,
-        null,
-        type,
-        List.of(),
-        lenient,
-        ExportLevel.SYSTEM,
-        Set.of()
-    );
+    final ExportRequest exportRequest =
+        new ExportRequest(
+            "test-req",
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.NDJSON,
+            null,
+            null,
+            type,
+            List.of(),
+            lenient,
+            ExportLevel.SYSTEM,
+            Set.of());
     when(job.getPreAsyncValidationResult()).thenReturn((T) exportRequest);
 
-    final Binary answer = exportProvider.export(
-        requireNonNull(exportRequest.outputFormat()).toString(),
-        exportRequest.since(),
-        exportRequest.until(),
-        type,
-        null,
-        requestDetails
-    );
+    final Parameters answer =
+        exportProvider.export(
+            requireNonNull(exportRequest.outputFormat()).toString(),
+            exportRequest.since(),
+            exportRequest.until(),
+            type,
+            null,
+            requestDetails);
     try {
-      return new ObjectMapper().readTree(requireNonNull(answer).getData());
+      // Convert Parameters to JSON using FHIR context.
+      final String json = fhirContext.newJsonParser().encodeResourceToString(answer);
+      return new ObjectMapper().readTree(json);
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
@@ -191,38 +184,29 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
 
   protected SystemExportProvider setupScenario(final Path tempDir, final String... resourceTypes) {
     TestDataSetup.copyTestDataToTempDir(tempDir, resourceTypes);
-    final QueryableDataSource deltaLake = new DataSourceBuilder(pathlingContext)
-        .delta("file://" + tempDir);
+    final QueryableDataSource deltaLake =
+        new DataSourceBuilder(pathlingContext).delta("file://" + tempDir);
 
-    final ExportExecutor executor = new ExportExecutor(
-        pathlingContext,
-        deltaLake,
-        fhirContext,
-        sparkSession,
-        tempDir.resolve("delta").toString(),
-        serverConfiguration,
-        patientCompartmentService
-    );
+    final ExportExecutor executor =
+        new ExportExecutor(
+            pathlingContext,
+            deltaLake,
+            fhirContext,
+            sparkSession,
+            tempDir.resolve("delta").toString(),
+            serverConfiguration,
+            patientCompartmentService);
 
-    final ExportOperationHelper helper = new ExportOperationHelper(
-        executor,
-        jobRegistry,
-        requestTagFactory,
-        exportResultRegistry,
-        serverConfiguration
-    );
+    final ExportOperationHelper helper =
+        new ExportOperationHelper(
+            executor, jobRegistry, requestTagFactory, exportResultRegistry, serverConfiguration);
 
-    return new SystemExportProvider(
-        exportOperationValidator,
-        helper
-    );
+    return new SystemExportProvider(exportOperationValidator, helper);
   }
 
   protected void switchToUser(final String username, final String... authorities) {
-    final Jwt jwt = Jwt.withTokenValue("mock-token")
-        .header("alg", "none")
-        .claim("sub", username)
-        .build();
+    final Jwt jwt =
+        Jwt.withTokenValue("mock-token").header("alg", "none").claim("sub", username).build();
 
     final List<GrantedAuthority> grantedAuthorities =
         AuthorityUtils.createAuthorityList(authorities);
@@ -231,5 +215,29 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
         new JwtAuthenticationToken(jwt, grantedAuthorities);
 
     SecurityContextHolder.getContext().setAuthentication(authentication);
+  }
+
+  /**
+   * Extracts output URLs from the Parameters JSON structure. The Parameters resource has a
+   * "parameter" array with named entries. This method finds all "output" parameters and extracts
+   * their URL parts.
+   *
+   * @param manifest the Parameters JSON node
+   * @return list of output URL strings
+   */
+  protected List<String> getOutputUrls(final JsonNode manifest) {
+    final JsonNode parameters = manifest.get("parameter");
+    if (parameters == null || !parameters.isArray()) {
+      return List.of();
+    }
+    return java.util.stream.StreamSupport.stream(parameters.spliterator(), false)
+        .filter(p -> "output".equals(p.path("name").asText()))
+        .map(p -> p.path("part"))
+        .filter(JsonNode::isArray)
+        .flatMap(parts -> java.util.stream.StreamSupport.stream(parts.spliterator(), false))
+        .filter(part -> "url".equals(part.path("name").asText()))
+        .map(part -> part.path("valueUri").asText())
+        .filter(url -> !url.isEmpty())
+        .toList();
   }
 }

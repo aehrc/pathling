@@ -1,46 +1,54 @@
+/*
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.operations.bulkexport;
 
 import au.csiro.pathling.OperationResponse;
+import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.sink.WriteDetails;
-import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
-import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
-import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import jakarta.annotation.Nonnull;
-import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Objects;
 import lombok.Getter;
 import org.apache.http.client.utils.URIBuilder;
-import org.hl7.fhir.r4.model.Binary;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.UriType;
 
 /**
  * Represents the response from a bulk export operation, containing the export manifest.
  *
  * @author Felix Naumann
+ * @author John Grimes
  */
-public class ExportResponse implements OperationResponse<Binary> {
+public class ExportResponse implements OperationResponse<Parameters> {
 
-  @Nonnull
-  private final ObjectMapper mapper = new ObjectMapper();
+  @Nonnull private final String kickOffRequestUrl;
 
-  @Nonnull
-  private final String kickOffRequestUrl;
+  @Nonnull private final String serverBaseUrl;
 
-  @Nonnull
-  private final String serverBaseUrl;
+  @Nonnull private final WriteDetails writeDetails;
 
-  @Nonnull
-  private final WriteDetails writeDetails;
-
-  /**
-   * Whether an access token is required to retrieve results.
-   */
-  @Getter
-  private final boolean requiresAccessToken;
+  /** Whether an access token is required to retrieve results. */
+  @Getter private final boolean requiresAccessToken;
 
   /**
    * Creates a new ExportResponse.
@@ -50,8 +58,10 @@ public class ExportResponse implements OperationResponse<Binary> {
    * @param writeDetails the write details containing file information
    * @param requiresAccessToken whether access token is required to retrieve results
    */
-  public ExportResponse(@Nonnull final String kickOffRequestUrl,
-      @Nonnull final String serverBaseUrl, @Nonnull final WriteDetails writeDetails,
+  public ExportResponse(
+      @Nonnull final String kickOffRequestUrl,
+      @Nonnull final String serverBaseUrl,
+      @Nonnull final WriteDetails writeDetails,
       final boolean requiresAccessToken) {
     this.kickOffRequestUrl = kickOffRequestUrl;
     this.serverBaseUrl = serverBaseUrl;
@@ -61,47 +71,36 @@ public class ExportResponse implements OperationResponse<Binary> {
 
   @Nonnull
   @Override
-  public Binary toOutput() {
-    final String manifestJSON;
-    try {
-      manifestJSON = buildManifest(kickOffRequestUrl, serverBaseUrl, writeDetails);
-    } catch (final IOException e) {
-      throw new IllegalStateException(e);
-    }
-    final Binary binary = new Binary();
-    binary.setContentType("application/json");
-    binary.setData(manifestJSON.getBytes(StandardCharsets.UTF_8));
-    return binary;
-  }
-
-  @Nonnull
-  private String buildManifest(@Nonnull final String requestUrl,
-      @Nonnull final String baseServerUrl, @Nonnull final WriteDetails writeDetails)
-      throws IOException {
-    final ObjectNode manifest = mapper.createObjectNode();
+  public Parameters toOutput() {
+    final Parameters parameters = new Parameters();
 
     // Ensure the base URL ends with a slash for proper URL construction.
     final String normalizedBaseUrl =
-        baseServerUrl.endsWith("/")
-        ? baseServerUrl
-        : baseServerUrl + "/";
+        serverBaseUrl.endsWith("/") ? serverBaseUrl : serverBaseUrl + "/";
 
-    manifest.put("transactionTime", InstantType.now().getValueAsString());
-    manifest.put("request", requestUrl);
-    manifest.put("requiresAccessToken", requiresAccessToken);
-    final ArrayNode outputArray = mapper.createArrayNode();
-    final List<ObjectNode> objectNodes = writeDetails.fileInfos().stream()
-        .map(fileInfo -> mapper.createObjectNode()
-            .put("type", fileInfo.fhirResourceType())
-            .put("url", buildResultUrl(normalizedBaseUrl, fileInfo.absoluteUrl()))
-        )
-        .toList();
-    outputArray.addAll(objectNodes);
-    manifest.set("output", outputArray);
-    // Not supported yet but required by the specification.
-    manifest.set("deleted", mapper.createArrayNode());
-    manifest.set("error", mapper.createArrayNode());
-    return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(manifest);
+    // Add transactionTime parameter.
+    parameters.addParameter().setName("transactionTime").setValue(InstantType.now());
+
+    // Add request parameter.
+    parameters.addParameter().setName("request").setValue(new UriType(kickOffRequestUrl));
+
+    // Add requiresAccessToken parameter.
+    parameters
+        .addParameter()
+        .setName("requiresAccessToken")
+        .setValue(new BooleanType(requiresAccessToken));
+
+    // Add output parameters.
+    for (final FileInformation fileInfo : writeDetails.fileInfos()) {
+      final ParametersParameterComponent outputParam = parameters.addParameter().setName("output");
+      outputParam.addPart().setName("type").setValue(new CodeType(fileInfo.fhirResourceType()));
+      outputParam
+          .addPart()
+          .setName("url")
+          .setValue(new UriType(buildResultUrl(normalizedBaseUrl, fileInfo.absoluteUrl())));
+    }
+
+    return parameters;
   }
 
   /**
@@ -112,8 +111,8 @@ public class ExportResponse implements OperationResponse<Binary> {
    * @return the remote result URL
    */
   @Nonnull
-  private static String buildResultUrl(@Nonnull final String baseUrl,
-      @Nonnull final String localUrl) {
+  private static String buildResultUrl(
+      @Nonnull final String baseUrl, @Nonnull final String localUrl) {
     try {
       final String[] parts = localUrl.split("/jobs/")[1].split("/");
       final String jobUUID = parts[0];
@@ -168,9 +167,13 @@ public class ExportResponse implements OperationResponse<Binary> {
   @Override
   public String toString() {
     return "ExportResponse{"
-        + "kickOffRequestUrl='" + kickOffRequestUrl + '\''
-        + ", writeDetails=" + writeDetails
-        + ", requiresAccessToken=" + requiresAccessToken
+        + "kickOffRequestUrl='"
+        + kickOffRequestUrl
+        + '\''
+        + ", writeDetails="
+        + writeDetails
+        + ", requiresAccessToken="
+        + requiresAccessToken
         + '}';
   }
 }

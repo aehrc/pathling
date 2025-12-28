@@ -61,10 +61,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -76,7 +76,7 @@ import org.springframework.stereotype.Component;
  *
  * @author John Grimes
  * @see <a
- * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-ViewDefinitionExport.html">ViewDefinitionExport</a>
+ *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-ViewDefinitionExport.html">ViewDefinitionExport</a>
  */
 @Slf4j
 @Component
@@ -85,29 +85,21 @@ public class ViewDefinitionExportProvider
 
   private static final String PATIENT_REFERENCE_PREFIX = "Patient/";
 
-  @Nonnull
-  private final ViewDefinitionExportExecutor executor;
+  @Nonnull private final ViewDefinitionExportExecutor executor;
 
-  @Nonnull
-  private final JobRegistry jobRegistry;
+  @Nonnull private final JobRegistry jobRegistry;
 
-  @Nonnull
-  private final RequestTagFactory requestTagFactory;
+  @Nonnull private final RequestTagFactory requestTagFactory;
 
-  @Nonnull
-  private final ExportResultRegistry exportResultRegistry;
+  @Nonnull private final ExportResultRegistry exportResultRegistry;
 
-  @Nonnull
-  private final ServerConfiguration serverConfiguration;
+  @Nonnull private final ServerConfiguration serverConfiguration;
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull
-  private final QueryableDataSource deltaLake;
+  @Nonnull private final QueryableDataSource deltaLake;
 
-  @Nonnull
-  private final Gson gson;
+  @Nonnull private final Gson gson;
 
   /**
    * Constructs a new ViewDefinitionExportProvider.
@@ -151,14 +143,14 @@ public class ViewDefinitionExportProvider
    * @param groupIds group IDs to filter by
    * @param since filter resources modified after this timestamp
    * @param requestDetails the request details
-   * @return the binary result containing the export manifest, or null if cancelled
+   * @return the parameters result containing the export manifest, or null if cancelled
    */
   @SuppressWarnings({"unused", "java:S107"})
   @Operation(name = "viewdefinition-export", idempotent = true)
   @OperationAccess("view-export")
   @AsyncSupported
   @Nullable
-  public Binary export(
+  public Parameters export(
       @Nullable @OperationParam(name = "view.name") final List<String> viewNames,
       @Nullable @OperationParam(name = "view.viewResource") final List<IBaseResource> viewResources,
       @Nullable @OperationParam(name = "clientTrackingId") final String clientTrackingId,
@@ -167,28 +159,42 @@ public class ViewDefinitionExportProvider
       @Nullable @OperationParam(name = "patient") final List<String> patientIds,
       @Nullable @OperationParam(name = "group") final List<IdType> groupIds,
       @Nullable @OperationParam(name = "_since") final InstantType since,
-      @Nonnull final ServletRequestDetails requestDetails
-  ) {
+      @Nonnull final ServletRequestDetails requestDetails) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
     // Try to get the job from the async context first. This is set by AsyncAspect when the
     // operation runs asynchronously, avoiding the need to access the servlet request which may
     // have been recycled by Tomcat.
     @SuppressWarnings("unchecked")
-    final Job<ViewDefinitionExportRequest> ownJob = AsyncJobContext.getCurrentJob()
-        .map(job -> (Job<ViewDefinitionExportRequest>) job)
-        .orElseGet(() -> {
-          // Fallback for cases where async context is not available.
-          final PreAsyncValidationResult<ViewDefinitionExportRequest> validationResult =
-              preAsyncValidate(requestDetails, new Object[]{viewNames, viewResources,
-                  clientTrackingId, format, includeHeader, patientIds, groupIds, since});
-          final String operationCacheKey = computeCacheKeyComponent(
-              Objects.requireNonNull(validationResult.result(),
-                  "Validation result should not be null for a valid request"));
-          final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication,
-              operationCacheKey);
-          return jobRegistry.get(ownTag);
-        });
+    final Job<ViewDefinitionExportRequest> ownJob =
+        AsyncJobContext.getCurrentJob()
+            .map(job -> (Job<ViewDefinitionExportRequest>) job)
+            .orElseGet(
+                () -> {
+                  // Fallback for cases where async context is not available.
+                  final PreAsyncValidationResult<ViewDefinitionExportRequest> validationResult =
+                      preAsyncValidate(
+                          requestDetails,
+                          new Object[] {
+                            viewNames,
+                            viewResources,
+                            clientTrackingId,
+                            format,
+                            includeHeader,
+                            patientIds,
+                            groupIds,
+                            since
+                          });
+                  final String operationCacheKey =
+                      computeCacheKeyComponent(
+                          Objects.requireNonNull(
+                              validationResult.result(),
+                              "Validation result should not be null for a valid request"));
+                  final RequestTag ownTag =
+                      requestTagFactory.createTag(
+                          requestDetails, authentication, operationCacheKey);
+                  return jobRegistry.get(ownTag);
+                });
 
     if (ownJob == null) {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
@@ -198,8 +204,8 @@ public class ViewDefinitionExportProvider
     final Optional<String> currentUserId = getCurrentUserId(authentication);
     if (currentUserId.isPresent() && !ownJob.getOwnerId().equals(currentUserId)) {
       throw new AccessDeniedError(
-          "The requested result is not owned by the current user '%s'.".formatted(
-              currentUserId.orElse("null")));
+          "The requested result is not owned by the current user '%s'."
+              .formatted(currentUserId.orElse("null")));
     }
 
     final ViewDefinitionExportRequest exportRequest = ownJob.getPreAsyncValidationResult();
@@ -212,19 +218,21 @@ public class ViewDefinitionExportProvider
     final List<ViewExportOutput> outputs = executor.execute(exportRequest, ownJob.getId());
 
     // Set the Expires header.
-    ownJob.setResponseModification(httpServletResponse -> {
-      final String expiresValue = ZonedDateTime.now(ZoneOffset.UTC)
-          .plusSeconds(serverConfiguration.getExport().getResultExpiry())
-          .format(DateTimeFormatter.RFC_1123_DATE_TIME);
-      httpServletResponse.addHeader("Expires", expiresValue);
-    });
+    ownJob.setResponseModification(
+        httpServletResponse -> {
+          final String expiresValue =
+              ZonedDateTime.now(ZoneOffset.UTC)
+                  .plusSeconds(serverConfiguration.getExport().getResultExpiry())
+                  .format(DateTimeFormatter.RFC_1123_DATE_TIME);
+          httpServletResponse.addHeader("Expires", expiresValue);
+        });
 
-    final ViewDefinitionExportResponse response = new ViewDefinitionExportResponse(
-        exportRequest.originalRequest(),
-        exportRequest.serverBaseUrl(),
-        outputs,
-        serverConfiguration.getAuth().isEnabled()
-    );
+    final ViewDefinitionExportResponse response =
+        new ViewDefinitionExportResponse(
+            exportRequest.originalRequest(),
+            exportRequest.serverBaseUrl(),
+            outputs,
+            serverConfiguration.getAuth().isEnabled());
 
     return response.toOutput();
   }
@@ -232,39 +240,34 @@ public class ViewDefinitionExportProvider
   @Override
   @Nonnull
   public PreAsyncValidationResult<ViewDefinitionExportRequest> preAsyncValidate(
-      @Nonnull final ServletRequestDetails servletRequestDetails,
-      @Nonnull final Object[] params) throws InvalidRequestException {
+      @Nonnull final ServletRequestDetails servletRequestDetails, @Nonnull final Object[] params)
+      throws InvalidRequestException {
 
-    @SuppressWarnings("unchecked") final List<String> viewNames =
-        params[0] != null
-        ? (List<String>) params[0]
-        : Collections.emptyList();
+    @SuppressWarnings("unchecked")
+    final List<String> viewNames =
+        params[0] != null ? (List<String>) params[0] : Collections.emptyList();
 
-    @SuppressWarnings("unchecked") final List<IBaseResource> viewResources =
-        params[1] != null
-        ? (List<IBaseResource>) params[1]
-        : Collections.emptyList();
+    @SuppressWarnings("unchecked")
+    final List<IBaseResource> viewResources =
+        params[1] != null ? (List<IBaseResource>) params[1] : Collections.emptyList();
 
     final String clientTrackingId = (String) params[2];
     final String format = (String) params[3];
     final BooleanType includeHeader = (BooleanType) params[4];
 
-    @SuppressWarnings("unchecked") final List<String> patientIds =
-        params[5] != null
-        ? (List<String>) params[5]
-        : Collections.emptyList();
+    @SuppressWarnings("unchecked")
+    final List<String> patientIds =
+        params[5] != null ? (List<String>) params[5] : Collections.emptyList();
 
-    @SuppressWarnings("unchecked") final List<IdType> groupIds =
-        params[6] != null
-        ? (List<IdType>) params[6]
-        : Collections.emptyList();
+    @SuppressWarnings("unchecked")
+    final List<IdType> groupIds =
+        params[6] != null ? (List<IdType>) params[6] : Collections.emptyList();
 
     final InstantType since = (InstantType) params[7];
 
     // Validate that at least one view is provided.
     if (viewResources.isEmpty()) {
-      throw new InvalidRequestException(
-          "At least one view.viewResource parameter is required.");
+      throw new InvalidRequestException("At least one view.viewResource parameter is required.");
     }
 
     // Parse ViewDefinitions.
@@ -276,35 +279,33 @@ public class ViewDefinitionExportProvider
     // Determine header setting (default true).
     final boolean header = includeHeader == null || includeHeader.booleanValue();
 
-    final ViewDefinitionExportRequest request = new ViewDefinitionExportRequest(
-        servletRequestDetails.getCompleteUrl(),
-        servletRequestDetails.getFhirServerBase(),
-        views,
-        clientTrackingId,
-        ViewExportFormat.fromString(format),
-        header,
-        allPatientIds,
-        since
-    );
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            servletRequestDetails.getCompleteUrl(),
+            servletRequestDetails.getFhirServerBase(),
+            views,
+            clientTrackingId,
+            ViewExportFormat.fromString(format),
+            header,
+            allPatientIds,
+            since);
 
     return new PreAsyncValidationResult<>(request, Collections.emptyList());
   }
 
   @Override
   @Nonnull
-  public String computeCacheKeyComponent(
-      @Nonnull final ViewDefinitionExportRequest request) {
+  public String computeCacheKeyComponent(@Nonnull final ViewDefinitionExportRequest request) {
     // Build a deterministic cache key from request parameters.
     // Exclude originalRequest and serverBaseUrl as they're infrastructure details.
     final StringBuilder key = new StringBuilder();
 
     // Serialize views deterministically using JSON.
-    final String viewsJson = request.views().stream()
-        .map(v -> (v.name() != null
-                   ? v.name()
-                   : "") + ":" + gson.toJson(v.view()))
-        .sorted()
-        .collect(Collectors.joining(","));
+    final String viewsJson =
+        request.views().stream()
+            .map(v -> (v.name() != null ? v.name() : "") + ":" + gson.toJson(v.view()))
+            .sorted()
+            .collect(Collectors.joining(","));
     key.append("views=[").append(viewsJson).append("]");
 
     if (request.clientTrackingId() != null) {
@@ -316,9 +317,8 @@ public class ViewDefinitionExportProvider
 
     // Sort patient IDs for determinism.
     if (!request.patientIds().isEmpty()) {
-      final String sortedPatientIds = request.patientIds().stream()
-          .sorted()
-          .collect(Collectors.joining(","));
+      final String sortedPatientIds =
+          request.patientIds().stream().sorted().collect(Collectors.joining(","));
       key.append("|patientIds=[").append(sortedPatientIds).append("]");
     }
 
@@ -329,20 +329,15 @@ public class ViewDefinitionExportProvider
     return key.toString();
   }
 
-  /**
-   * Parses view inputs from the parameter arrays.
-   */
+  /** Parses view inputs from the parameter arrays. */
   @Nonnull
   private List<ViewInput> parseViewInputs(
-      @Nonnull final List<String> viewNames,
-      @Nonnull final List<IBaseResource> viewResources) {
+      @Nonnull final List<String> viewNames, @Nonnull final List<IBaseResource> viewResources) {
 
     final List<ViewInput> views = new ArrayList<>();
 
     for (int i = 0; i < viewResources.size(); i++) {
-      final String name = i < viewNames.size()
-                          ? viewNames.get(i)
-                          : null;
+      final String name = i < viewNames.size() ? viewNames.get(i) : null;
       final IBaseResource resource = viewResources.get(i);
       final FhirView view = parseViewDefinition(resource, i);
       views.add(new ViewInput(name, view));
@@ -351,9 +346,7 @@ public class ViewDefinitionExportProvider
     return views;
   }
 
-  /**
-   * Parses a ViewDefinition resource into a FhirView object.
-   */
+  /** Parses a ViewDefinition resource into a FhirView object. */
   @Nonnull
   private FhirView parseViewDefinition(@Nonnull final IBaseResource viewResource, final int index) {
     try {
@@ -365,13 +358,10 @@ public class ViewDefinitionExportProvider
     }
   }
 
-  /**
-   * Collects patient IDs from both patient and group parameters.
-   */
+  /** Collects patient IDs from both patient and group parameters. */
   @Nonnull
   private Set<String> collectPatientIds(
-      @Nonnull final List<String> patientIds,
-      @Nonnull final List<IdType> groupIds) {
+      @Nonnull final List<String> patientIds, @Nonnull final List<IdType> groupIds) {
 
     final Set<String> allPatientIds = new HashSet<>(patientIds);
 
@@ -382,9 +372,7 @@ public class ViewDefinitionExportProvider
     return allPatientIds;
   }
 
-  /**
-   * Extracts patient IDs from a Group resource.
-   */
+  /** Extracts patient IDs from a Group resource. */
   @Nonnull
   private Set<String> extractPatientIdsFromGroup(@Nonnull final String groupId) {
     final Dataset<Row> groupDataset = deltaLake.read("Group");
@@ -394,9 +382,10 @@ public class ViewDefinitionExportProvider
       throw new ResourceNotFoundException("Group/" + groupId);
     }
 
-    final Dataset<Row> memberRefs = filtered
-        .select(explode(col("member")).as("member"))
-        .select(col("member.entity.reference").as("reference"));
+    final Dataset<Row> memberRefs =
+        filtered
+            .select(explode(col("member")).as("member"))
+            .select(col("member.entity.reference").as("reference"));
 
     final Set<String> patientIdsFromGroup = new HashSet<>();
     for (final Row row : memberRefs.collectAsList()) {
@@ -409,5 +398,4 @@ public class ViewDefinitionExportProvider
     log.debug("Extracted {} patient IDs from Group/{}", patientIdsFromGroup.size(), groupId);
     return patientIdsFromGroup;
   }
-
 }

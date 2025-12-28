@@ -17,15 +17,17 @@
 
 package au.csiro.pathling.operations.bulksubmit;
 
-import au.csiro.pathling.shaded.com.fasterxml.jackson.core.JsonProcessingException;
-import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
-import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
-import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Binary;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.UriType;
 import org.springframework.stereotype.Component;
 
 /**
@@ -38,121 +40,101 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class BulkSubmitResultBuilder {
 
-  private static final String CONTENT_TYPE_JSON = "application/json";
-
-  @Nonnull
-  private final ObjectMapper objectMapper;
-
-  /**
-   * Creates a new BulkSubmitResultBuilder.
-   */
-  public BulkSubmitResultBuilder() {
-    this.objectMapper = new ObjectMapper();
-  }
+  private static final String SUBMISSION_ID_EXT_URL =
+      "http://hl7.org/fhir/uv/bulkdata/StructureDefinition/bulk-submit-submission-id";
 
   /**
    * Builds a status manifest for a submission.
-   * <p>
-   * This method is used for both completed (HTTP 200) and in-progress (HTTP 202) responses. The
+   *
+   * <p>This method is used for both completed (HTTP 200) and in-progress (HTTP 202) responses. The
    * manifest structure is the same in both cases, as per the Argonaut bulk submit specification.
-   * <p>
-   * Once files have been downloaded, the output array includes entries with URLs pointing to the
+   *
+   * <p>Once files have been downloaded, the output array includes entries with URLs pointing to the
    * $result operation where clients can download the files.
    *
    * @param submission The submission.
    * @param requestUrl The URL of the status request endpoint.
    * @param fhirServerBase The FHIR server base URL for building result file URLs.
-   * @return A Binary resource containing the manifest JSON.
+   * @return A Parameters resource containing the manifest.
    */
   @Nonnull
-  public Binary buildStatusManifest(
+  public Parameters buildStatusManifest(
       @Nonnull final Submission submission,
       @Nonnull final String requestUrl,
-      @Nonnull final String fhirServerBase
-  ) {
-    try {
-      final ObjectNode manifest = objectMapper.createObjectNode();
+      @Nonnull final String fhirServerBase) {
 
-      // Add submission ID extension.
-      final ArrayNode extensions = objectMapper.createArrayNode();
-      final ObjectNode submissionIdExt = objectMapper.createObjectNode();
-      submissionIdExt.put("url",
-          "http://hl7.org/fhir/uv/bulkdata/StructureDefinition/bulk-submit-submission-id");
-      submissionIdExt.put("valueString", submission.submissionId());
-      extensions.add(submissionIdExt);
-      manifest.set("extension", extensions);
+    final Parameters parameters = new Parameters();
 
-      // Determine transaction time from submission or latest manifest job completion.
-      final String transactionTime = getTransactionTime(submission);
-      if (transactionTime != null) {
-        manifest.put("transactionTime", transactionTime);
-      }
+    // Add submission ID extension parameter.
+    final ParametersParameterComponent extensionParam = parameters.addParameter();
+    extensionParam.setName("extension");
+    extensionParam.addPart().setName("url").setValue(new UriType(SUBMISSION_ID_EXT_URL));
+    extensionParam
+        .addPart()
+        .setName("valueString")
+        .setValue(new StringType(submission.submissionId()));
 
-      // Add request URL.
-      manifest.put("request", requestUrl);
+    // Determine transaction time from submission or latest manifest job completion.
+    final String transactionTime = getTransactionTime(submission);
+    if (transactionTime != null) {
+      parameters
+          .addParameter()
+          .setName("transactionTime")
+          .setValue(new InstantType(transactionTime));
+    }
 
-      // Add requiresAccessToken (always false for now).
-      manifest.put("requiresAccessToken", false);
+    // Add request URL.
+    parameters.addParameter().setName("request").setValue(new UriType(requestUrl));
 
-      // Build output array with downloaded files.
-      final ArrayNode outputArray = objectMapper.createArrayNode();
-      for (final ManifestJob job : submission.manifestJobs()) {
-        if (job.downloadedFiles() != null) {
-          for (final DownloadedFile file : job.downloadedFiles()) {
-            final ObjectNode outputEntry = objectMapper.createObjectNode();
-            outputEntry.put("type", file.resourceType());
-            outputEntry.put("url", buildResultUrl(fhirServerBase, submission.submissionId(),
-                file.fileName()));
+    // Add requiresAccessToken (always false for now).
+    parameters.addParameter().setName("requiresAccessToken").setValue(new BooleanType(false));
 
-            // Add manifestUrl extension per spec.
-            final ArrayNode outputExtensions = objectMapper.createArrayNode();
-            final ObjectNode manifestUrlExt = objectMapper.createObjectNode();
-            manifestUrlExt.put("url", "manifestUrl");
-            manifestUrlExt.put("valueUrl", file.manifestUrl());
-            outputExtensions.add(manifestUrlExt);
-            outputEntry.set("extension", outputExtensions);
-
-            outputArray.add(outputEntry);
-          }
-        }
-      }
-      manifest.set("output", outputArray);
-
-      // Build error array from failed manifest jobs that have error files.
-      final ArrayNode errorArray = objectMapper.createArrayNode();
-      for (final ManifestJob job : submission.manifestJobs()) {
-        if (job.state() == ManifestJobState.FAILED && job.errorFileName() != null) {
-          final ObjectNode errorEntry = objectMapper.createObjectNode();
-          errorEntry.put("type", "OperationOutcome");
-          // Use $result URL to serve the error NDJSON file.
-          errorEntry.put("url", buildResultUrl(fhirServerBase, submission.submissionId(),
-              job.errorFileName()));
+    // Build output parameters with downloaded files.
+    for (final ManifestJob job : submission.manifestJobs()) {
+      if (job.downloadedFiles() != null) {
+        for (final DownloadedFile file : job.downloadedFiles()) {
+          final ParametersParameterComponent outputParam = parameters.addParameter();
+          outputParam.setName("output");
+          outputParam.addPart().setName("type").setValue(new CodeType(file.resourceType()));
+          outputParam
+              .addPart()
+              .setName("url")
+              .setValue(
+                  new UriType(
+                      buildResultUrl(fhirServerBase, submission.submissionId(), file.fileName())));
 
           // Add manifestUrl extension per spec.
-          final ArrayNode errorExtensions = objectMapper.createArrayNode();
-          final ObjectNode manifestUrlExt = objectMapper.createObjectNode();
-          manifestUrlExt.put("url", "manifestUrl");
-          manifestUrlExt.put("valueUrl", job.manifestUrl());
-          errorExtensions.add(manifestUrlExt);
-          errorEntry.set("extension", errorExtensions);
-
-          errorArray.add(errorEntry);
+          final ParametersParameterComponent extPart = outputParam.addPart();
+          extPart.setName("extension");
+          extPart.addPart().setName("url").setValue(new UriType("manifestUrl"));
+          extPart.addPart().setName("valueUrl").setValue(new UriType(file.manifestUrl()));
         }
       }
-      manifest.set("error", errorArray);
-
-      final String json = objectMapper.writerWithDefaultPrettyPrinter()
-          .writeValueAsString(manifest);
-
-      final Binary binary = new Binary();
-      binary.setContentType(CONTENT_TYPE_JSON);
-      binary.setData(json.getBytes(StandardCharsets.UTF_8));
-      return binary;
-
-    } catch (final JsonProcessingException e) {
-      log.error("Failed to build status manifest", e);
-      throw new RuntimeException("Failed to build status manifest", e);
     }
+
+    // Build error parameters from failed manifest jobs that have error files.
+    for (final ManifestJob job : submission.manifestJobs()) {
+      if (job.state() == ManifestJobState.FAILED && job.errorFileName() != null) {
+        final ParametersParameterComponent errorParam = parameters.addParameter();
+        errorParam.setName("error");
+        errorParam.addPart().setName("type").setValue(new CodeType("OperationOutcome"));
+        errorParam
+            .addPart()
+            .setName("url")
+            .setValue(
+                new UriType(
+                    buildResultUrl(
+                        fhirServerBase, submission.submissionId(), job.errorFileName())));
+
+        // Add manifestUrl extension per spec.
+        final ParametersParameterComponent extPart = errorParam.addPart();
+        extPart.setName("extension");
+        extPart.addPart().setName("url").setValue(new UriType("manifestUrl"));
+        extPart.addPart().setName("valueUrl").setValue(new UriType(job.manifestUrl()));
+      }
+    }
+
+    return parameters;
   }
 
   /**
@@ -167,8 +149,7 @@ public class BulkSubmitResultBuilder {
   private static String buildResultUrl(
       @Nonnull final String fhirServerBase,
       @Nonnull final String submissionId,
-      @Nonnull final String fileName
-  ) {
+      @Nonnull final String fileName) {
     return fhirServerBase + "/$result?job=" + submissionId + "&file=" + fileName;
   }
 
@@ -188,9 +169,8 @@ public class BulkSubmitResultBuilder {
     // Otherwise, find the latest completedAt from manifest jobs.
     return submission.manifestJobs().stream()
         .map(ManifestJob::completedAt)
-        .filter(completedAt -> completedAt != null)
+        .filter(Objects::nonNull)
         .max(String::compareTo)
         .orElse(null);
   }
-
 }
