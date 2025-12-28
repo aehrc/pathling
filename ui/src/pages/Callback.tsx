@@ -6,22 +6,30 @@
 
 import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { Box, Callout, Flex, Spinner, Text } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
-import { completeAuth, getAndClearReturnUrl } from "../services/auth";
+import { clearReturnUrl, completeAuth, getReturnUrl } from "../services/auth";
 
 export function Callback() {
   const navigate = useNavigate();
   const { setClient, setError } = useAuth();
   const [localError, setLocalError] = useState<string | null>(null);
 
+  // Track whether callback has been processed to prevent double-execution.
+  const hasProcessed = useRef(false);
+
   useEffect(() => {
     async function handleCallback() {
+      if (hasProcessed.current) return;
+      hasProcessed.current = true;
+
       try {
         const client = await completeAuth();
         setClient(client);
-        const returnUrl = getAndClearReturnUrl();
+        // Get return URL before clearing - safe to call multiple times.
+        const returnUrl = getReturnUrl();
+        clearReturnUrl();
         navigate(returnUrl, { replace: true });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Authentication failed";

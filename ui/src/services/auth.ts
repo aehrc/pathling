@@ -176,13 +176,18 @@ export async function initiateAuth(fhirBaseUrl: string): Promise<void> {
 }
 
 /**
- * Gets and clears the stored return URL from before authentication.
+ * Gets the stored return URL from before authentication without clearing it.
  * Returns "/" if no URL was stored.
  */
-export function getAndClearReturnUrl(): string {
-  const returnUrl = sessionStorage.getItem(RETURN_URL_KEY);
+export function getReturnUrl(): string {
+  return sessionStorage.getItem(RETURN_URL_KEY) || "/";
+}
+
+/**
+ * Clears the stored return URL. Call this after successful navigation.
+ */
+export function clearReturnUrl(): void {
   sessionStorage.removeItem(RETURN_URL_KEY);
-  return returnUrl || "/";
 }
 
 /**

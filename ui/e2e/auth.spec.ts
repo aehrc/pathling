@@ -1,10 +1,6 @@
 /**
  * E2E tests for authentication flows.
- * Tests login prompts, OAuth initiation, and error handling.
- *
- * Note: Full OAuth callback testing is limited because the fhirclient library
- * has complex internal state requirements. Tests focus on what can be reliably
- * validated without a real OAuth provider.
+ * Tests login prompts, OAuth initiation, callback handling, and error states.
  *
  * @author John Grimes
  */
@@ -135,6 +131,62 @@ test.describe("Authentication", () => {
       // Should show authentication failed error.
       await expect(page.getByText("Authentication Failed")).toBeVisible();
     });
+
+    test("redirects to stored return URL after successful auth", async ({
+      page,
+    }) => {
+      await setupAuthRequiredMocks(page);
+
+      // Mock the token endpoint.
+      await page.route("**/token", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            access_token: "fake-access-token",
+            token_type: "Bearer",
+            expires_in: 3600,
+            scope: "openid profile user/*.read",
+          }),
+        });
+      });
+
+      // Set up fhirclient state and return URL.
+      await page.goto("/admin");
+      await page.evaluate(() => {
+        const stateKey = "test-state-key";
+
+        // fhirclient stores state key reference in SMART_KEY.
+        sessionStorage.setItem("SMART_KEY", JSON.stringify(stateKey));
+
+        // fhirclient stores actual state under the state key.
+        sessionStorage.setItem(
+          stateKey,
+          JSON.stringify({
+            clientId: "pathling-export-ui",
+            scope: "openid profile user/*.read",
+            redirectUri: window.location.origin + "/admin/callback",
+            serverUrl: window.location.origin + "/fhir",
+            tokenUri: window.location.origin + "/token",
+            key: stateKey,
+          }),
+        );
+
+        // Our return URL.
+        sessionStorage.setItem("pathling_return_url", "/resources");
+      });
+
+      // Navigate to callback with matching state param.
+      await page.goto(
+        "/admin/callback?state=test-state-key&code=fake-auth-code",
+      );
+
+      // Wait for redirect to the stored URL.
+      await page.waitForURL("**/admin/resources");
+
+      // Verify we're on the resources page.
+      await expect(page.getByText("Search resources")).toBeVisible();
+    });
   });
 
   test.describe("No auth required", () => {
@@ -175,7 +227,7 @@ test.describe("Authentication", () => {
 
       // Resources page.
       await page.goto("/admin/resources");
-      await expect(page.getByText("FHIRPath filters")).toBeVisible();
+      await expect(page.getByText("Search resources")).toBeVisible();
     });
   });
 
