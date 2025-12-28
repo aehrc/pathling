@@ -14,7 +14,7 @@ import {
   IconButton,
   Select,
   Text,
-  TextField
+  TextField,
 } from "@radix-ui/themes";
 import { useRef, useState } from "react";
 import type { SearchRequest } from "../../types/search";

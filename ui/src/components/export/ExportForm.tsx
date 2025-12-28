@@ -56,10 +56,6 @@ export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
     onSubmit(request);
   };
 
-  const selectAllTypes = () => {
-    setSelectedTypes([...resourceTypes]);
-  };
-
   const clearAllTypes = () => {
     setSelectedTypes([]);
   };
@@ -113,20 +109,17 @@ export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
 
         <Box>
           <Flex justify="between" align="center" mb="2">
-            <Text as="label" size="2" weight="medium">
-              Resource types
-            </Text>
-            <Flex gap="2">
-              <Text size="1" color="blue" style={{ cursor: "pointer" }} onClick={selectAllTypes}>
-                Select all
+            <Flex gap="2" align="baseline">
+              <Text as="label" size="2" weight="medium">
+                Resource types
               </Text>
               <Text size="1" color="gray">
-                |
-              </Text>
-              <Text size="1" color="blue" style={{ cursor: "pointer" }} onClick={clearAllTypes}>
-                Clear
+                (leave empty to export all)
               </Text>
             </Flex>
+            <Text size="1" color="blue" style={{ cursor: "pointer" }} onClick={clearAllTypes}>
+              Clear
+            </Text>
           </Flex>
           <ScrollArea
             style={{
@@ -151,9 +144,6 @@ export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
               </CheckboxCards.Root>
             </Box>
           </ScrollArea>
-          <Text size="1" color="gray" mt="1">
-            Leave empty to export all supported resource types.
-          </Text>
         </Box>
 
         <Flex gap="4">
