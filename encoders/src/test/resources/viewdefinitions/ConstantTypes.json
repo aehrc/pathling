@@ -1,0 +1,75 @@
+{
+  "resourceType": "ViewDefinition",
+  "id": "ConstantTypes",
+  "name": "constant_types_test",
+  "status": "draft",
+  "resource": "Patient",
+  "constant": [
+    {
+      "name": "base64_const",
+      "valueBase64Binary": "SGVsbG8gV29ybGQ="
+    },
+    {
+      "name": "boolean_const",
+      "valueBoolean": true
+    },
+    {
+      "name": "canonical_const",
+      "valueCanonical": "http://hl7.org/fhir/StructureDefinition/Patient"
+    },
+    {
+      "name": "code_const",
+      "valueCode": "active"
+    },
+    {
+      "name": "date_const",
+      "valueDate": "2024-01-15"
+    },
+    {
+      "name": "datetime_const",
+      "valueDateTime": "2024-01-15T10:30:00Z"
+    },
+    {
+      "name": "decimal_const",
+      "valueDecimal": 123.456
+    },
+    {
+      "name": "id_const",
+      "valueId": "example-id"
+    },
+    {
+      "name": "instant_const",
+      "valueInstant": "2024-01-15T10:30:00.123+00:00"
+    },
+    {
+      "name": "integer_const",
+      "valueInteger": 42
+    },
+    {
+      "name": "oid_const",
+      "valueOid": "urn:oid:1.2.3.4.5"
+    },
+    {
+      "name": "string_const",
+      "valueString": "Hello World"
+    },
+    {
+      "name": "time_const",
+      "valueTime": "14:30:00"
+    },
+    {
+      "name": "uri_const",
+      "valueUri": "http://example.org/fhir"
+    }
+  ],
+  "select": [
+    {
+      "column": [
+        {
+          "path": "id",
+          "name": "patient_id"
+        }
+      ]
+    }
+  ]
+}

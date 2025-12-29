@@ -20,49 +20,82 @@ package au.csiro.pathling.encoders;
 import ca.uhn.fhir.model.api.annotation.Block;
 import ca.uhn.fhir.model.api.annotation.Child;
 import ca.uhn.fhir.model.api.annotation.ResourceDef;
+import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 import org.hl7.fhir.r4.model.BackboneElement;
+import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CanonicalType;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.DateType;
+import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.DomainResource;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.OidType;
+import org.hl7.fhir.r4.model.PositiveIntType;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.TimeType;
+import org.hl7.fhir.r4.model.UnsignedIntType;
+import org.hl7.fhir.r4.model.UriType;
+import org.hl7.fhir.r4.model.UrlType;
+import org.hl7.fhir.r4.model.UuidType;
 
 /**
  * HAPI FHIR resource class for ViewDefinition from the SQL on FHIR specification.
- * <p>
- * This class allows HAPI to recognise and parse ViewDefinition resources. It mirrors the
+ *
+ * <p>This class allows HAPI to recognise and parse ViewDefinition resources. It mirrors the
  * structure of {@code au.csiro.pathling.views.FhirView} with HAPI annotations so that the JSON
  * structure is preserved during serialisation.
- * </p>
  *
  * @author John Grimes
  * @see <a
- * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
+ *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
  */
-@ResourceDef(name = "ViewDefinition",
+@SuppressWarnings({"unused", "MissingJavadoc"})
+@Setter
+@ResourceDef(
+    name = "ViewDefinition",
     profile = "http://hl7.org/fhir/uv/sql-on-fhir/StructureDefinition/ViewDefinition")
 public class ViewDefinitionResource extends DomainResource {
 
-  @Child(name = "name", min = 0, max = 1)
+  @Serial private static final long serialVersionUID = 1909997123685548098L;
+
+  @Nullable
+  @Getter
+  @Child(name = "name")
   private StringType name;
 
-  @Child(name = "resource", min = 1, max = 1)
+  @Child(name = "fhirVersion", max = Child.MAX_UNLIMITED)
+  private List<CodeType> fhirVersion;
+
+  @Nullable
+  @Getter
+  @Child(name = "resource", min = 1)
   private CodeType resource;
 
-  @Child(name = "status", min = 0, max = 1)
+  @Nullable
+  @Getter
+  @Child(name = "status")
   private CodeType status;
 
   @Child(name = "select", min = 1, max = Child.MAX_UNLIMITED)
   private List<SelectComponent> select;
 
-  @Child(name = "where", min = 0, max = Child.MAX_UNLIMITED)
+  @Child(name = "where", max = Child.MAX_UNLIMITED)
   private List<WhereComponent> where;
 
-  @Child(name = "constant", min = 0, max = Child.MAX_UNLIMITED)
+  @Child(name = "constant", max = Child.MAX_UNLIMITED)
   private List<ConstantComponent> constant;
 
+  @Nullable
   public StringType getNameElement() {
     return name;
   }
@@ -75,14 +108,18 @@ public class ViewDefinitionResource extends DomainResource {
     this.name = name;
   }
 
-  public StringType getName() {
-    return name;
+  public List<CodeType> getFhirVersion() {
+    if (fhirVersion == null) {
+      fhirVersion = new ArrayList<>();
+    }
+    return fhirVersion;
   }
 
-  public void setName(final StringType name) {
-    this.name = name;
+  public boolean hasFhirVersion() {
+    return fhirVersion != null && !fhirVersion.isEmpty();
   }
 
+  @Nullable
   public CodeType getResourceElement() {
     return resource;
   }
@@ -95,14 +132,7 @@ public class ViewDefinitionResource extends DomainResource {
     this.resource = resource;
   }
 
-  public CodeType getResource() {
-    return resource;
-  }
-
-  public void setResource(final CodeType resource) {
-    this.resource = resource;
-  }
-
+  @Nullable
   public CodeType getStatusElement() {
     return status;
   }
@@ -112,14 +142,6 @@ public class ViewDefinitionResource extends DomainResource {
   }
 
   public void setStatusElement(final CodeType status) {
-    this.status = status;
-  }
-
-  public CodeType getStatus() {
-    return status;
-  }
-
-  public void setStatus(final CodeType status) {
     this.status = status;
   }
 
@@ -134,10 +156,6 @@ public class ViewDefinitionResource extends DomainResource {
     return select != null && !select.isEmpty();
   }
 
-  public void setSelect(final List<SelectComponent> select) {
-    this.select = select;
-  }
-
   public List<WhereComponent> getWhere() {
     if (where == null) {
       where = new ArrayList<>();
@@ -147,10 +165,6 @@ public class ViewDefinitionResource extends DomainResource {
 
   public boolean hasWhere() {
     return where != null && !where.isEmpty();
-  }
-
-  public void setWhere(final List<WhereComponent> where) {
-    this.where = where;
   }
 
   public List<ConstantComponent> getConstant() {
@@ -164,15 +178,17 @@ public class ViewDefinitionResource extends DomainResource {
     return constant != null && !constant.isEmpty();
   }
 
-  public void setConstant(final List<ConstantComponent> constant) {
-    this.constant = constant;
-  }
-
   @Override
   public DomainResource copy() {
     final ViewDefinitionResource copy = new ViewDefinitionResource();
     copyValues(copy);
     copy.name = name != null ? name.copy() : null;
+    if (fhirVersion != null) {
+      copy.fhirVersion = new ArrayList<>();
+      for (final CodeType v : fhirVersion) {
+        copy.fhirVersion.add(v.copy());
+      }
+    }
     copy.resource = resource != null ? resource.copy() : null;
     copy.status = status != null ? status.copy() : null;
     if (select != null) {
@@ -196,6 +212,7 @@ public class ViewDefinitionResource extends DomainResource {
     return copy;
   }
 
+  @Nullable
   @Override
   public ResourceType getResourceType() {
     // Custom resource types return null.
@@ -212,6 +229,7 @@ public class ViewDefinitionResource extends DomainResource {
   public boolean isEmpty() {
     return super.isEmpty()
         && (name == null || name.isEmpty())
+        && (fhirVersion == null || fhirVersion.isEmpty())
         && (resource == null || resource.isEmpty())
         && (status == null || status.isEmpty())
         && (select == null || select.isEmpty())
@@ -219,25 +237,33 @@ public class ViewDefinitionResource extends DomainResource {
         && (constant == null || constant.isEmpty());
   }
 
-  /**
-   * Select clause component.
-   */
+  /** Select clause component. */
   @Block
   public static class SelectComponent extends BackboneElement {
 
-    @Child(name = "column", min = 0, max = Child.MAX_UNLIMITED)
+    @Serial private static final long serialVersionUID = -52548946806162724L;
+
+    @Setter
+    @Child(name = "column", max = Child.MAX_UNLIMITED)
     private List<ColumnComponent> column;
 
-    @Child(name = "select", min = 0, max = Child.MAX_UNLIMITED)
+    @Setter
+    @Child(name = "select", max = Child.MAX_UNLIMITED)
     private List<SelectComponent> select;
 
-    @Child(name = "forEach", min = 0, max = 1)
+    @Setter
+    @Nullable
+    @Getter
+    @Child(name = "forEach")
     private StringType forEach;
 
-    @Child(name = "forEachOrNull", min = 0, max = 1)
+    @Nullable
+    @Getter
+    @Child(name = "forEachOrNull")
     private StringType forEachOrNull;
 
-    @Child(name = "unionAll", min = 0, max = Child.MAX_UNLIMITED)
+    @Setter
+    @Child(name = "unionAll", max = Child.MAX_UNLIMITED)
     private List<SelectComponent> unionAll;
 
     public List<ColumnComponent> getColumn() {
@@ -251,10 +277,6 @@ public class ViewDefinitionResource extends DomainResource {
       return column != null && !column.isEmpty();
     }
 
-    public void setColumn(final List<ColumnComponent> column) {
-      this.column = column;
-    }
-
     public List<SelectComponent> getSelect() {
       if (select == null) {
         select = new ArrayList<>();
@@ -266,10 +288,7 @@ public class ViewDefinitionResource extends DomainResource {
       return select != null && !select.isEmpty();
     }
 
-    public void setSelect(final List<SelectComponent> select) {
-      this.select = select;
-    }
-
+    @Nullable
     public StringType getForEachElement() {
       return forEach;
     }
@@ -282,14 +301,7 @@ public class ViewDefinitionResource extends DomainResource {
       this.forEach = forEach;
     }
 
-    public StringType getForEach() {
-      return forEach;
-    }
-
-    public void setForEach(final StringType forEach) {
-      this.forEach = forEach;
-    }
-
+    @Nullable
     public StringType getForEachOrNullElement() {
       return forEachOrNull;
     }
@@ -302,12 +314,8 @@ public class ViewDefinitionResource extends DomainResource {
       this.forEachOrNull = forEachOrNull;
     }
 
-    public StringType getForEachOrNull() {
-      return forEachOrNull;
-    }
-
     public void setForEachOrNull(final StringType forEachOrNull) {
-      this.forEachOrNull = forEachOrNull;
+      setForEachOrNullElement(forEachOrNull);
     }
 
     public List<SelectComponent> getUnionAll() {
@@ -319,10 +327,6 @@ public class ViewDefinitionResource extends DomainResource {
 
     public boolean hasUnionAll() {
       return unionAll != null && !unionAll.isEmpty();
-    }
-
-    public void setUnionAll(final List<SelectComponent> unionAll) {
-      this.unionAll = unionAll;
     }
 
     @Override
@@ -354,37 +358,55 @@ public class ViewDefinitionResource extends DomainResource {
 
     @Override
     public boolean isEmpty() {
-      return super.isEmpty() && (column == null || column.isEmpty())
+      return super.isEmpty()
+          && (column == null || column.isEmpty())
           && (select == null || select.isEmpty())
-          && forEach == null && forEachOrNull == null
+          && forEach == null
+          && forEachOrNull == null
           && (unionAll == null || unionAll.isEmpty());
     }
   }
 
-  /**
-   * Column component.
-   */
+  /** Column component. */
   @Block
   public static class ColumnComponent extends BackboneElement {
 
-    @Child(name = "name", min = 1, max = 1)
+    @Serial private static final long serialVersionUID = -4337858165238555555L;
+
+    @Nullable
+    @Getter
+    @Child(name = "name", min = 1)
     private StringType name;
 
-    @Child(name = "path", min = 1, max = 1)
+    @Nullable
+    @Setter
+    @Getter
+    @Child(name = "path", min = 1)
     private StringType path;
 
-    @Child(name = "description", min = 0, max = 1)
+    @Nullable
+    @Setter
+    @Getter
+    @Child(name = "description")
     private StringType description;
 
-    @Child(name = "collection", min = 0, max = 1)
+    @Nullable
+    @Setter
+    @Getter
+    @Child(name = "collection")
     private BooleanType collection;
 
-    @Child(name = "type", min = 0, max = 1)
+    @Nullable
+    @Setter
+    @Getter
+    @Child(name = "type")
     private StringType type;
 
-    @Child(name = "tag", min = 0, max = Child.MAX_UNLIMITED)
+    @Setter
+    @Child(name = "tag", max = Child.MAX_UNLIMITED)
     private List<TagComponent> tag;
 
+    @Nullable
     public StringType getNameElement() {
       return name;
     }
@@ -397,14 +419,11 @@ public class ViewDefinitionResource extends DomainResource {
       this.name = name;
     }
 
-    public StringType getName() {
-      return name;
-    }
-
     public void setName(final StringType name) {
-      this.name = name;
+      setNameElement(name);
     }
 
+    @Nullable
     public StringType getPathElement() {
       return path;
     }
@@ -417,14 +436,7 @@ public class ViewDefinitionResource extends DomainResource {
       this.path = path;
     }
 
-    public StringType getPath() {
-      return path;
-    }
-
-    public void setPath(final StringType path) {
-      this.path = path;
-    }
-
+    @Nullable
     public StringType getDescriptionElement() {
       return description;
     }
@@ -437,14 +449,7 @@ public class ViewDefinitionResource extends DomainResource {
       this.description = description;
     }
 
-    public StringType getDescription() {
-      return description;
-    }
-
-    public void setDescription(final StringType description) {
-      this.description = description;
-    }
-
+    @Nullable
     public BooleanType getCollectionElement() {
       return collection;
     }
@@ -457,14 +462,7 @@ public class ViewDefinitionResource extends DomainResource {
       this.collection = collection;
     }
 
-    public BooleanType getCollection() {
-      return collection;
-    }
-
-    public void setCollection(final BooleanType collection) {
-      this.collection = collection;
-    }
-
+    @Nullable
     public StringType getTypeElement() {
       return type;
     }
@@ -477,14 +475,6 @@ public class ViewDefinitionResource extends DomainResource {
       this.type = type;
     }
 
-    public StringType getType() {
-      return type;
-    }
-
-    public void setType(final StringType type) {
-      this.type = type;
-    }
-
     public List<TagComponent> getTag() {
       if (tag == null) {
         tag = new ArrayList<>();
@@ -494,10 +484,6 @@ public class ViewDefinitionResource extends DomainResource {
 
     public boolean hasTag() {
       return tag != null && !tag.isEmpty();
-    }
-
-    public void setTag(final List<TagComponent> tag) {
-      this.tag = tag;
     }
 
     @Override
@@ -520,24 +506,33 @@ public class ViewDefinitionResource extends DomainResource {
 
     @Override
     public boolean isEmpty() {
-      return super.isEmpty() && name == null && path == null
-          && description == null && collection == null && type == null
+      return super.isEmpty()
+          && name == null
+          && path == null
+          && description == null
+          && collection == null
+          && type == null
           && (tag == null || tag.isEmpty());
     }
   }
 
-  /**
-   * Tag component for columns.
-   */
+  /** Tag component for columns. */
+  @Setter
+  @Getter
   @Block
   public static class TagComponent extends BackboneElement {
 
-    @Child(name = "name", min = 1, max = 1)
+    @Serial private static final long serialVersionUID = 7134093987297739952L;
+
+    @Nullable
+    @Child(name = "name", min = 1)
     private StringType name;
 
-    @Child(name = "value", min = 0, max = 1)
+    @Nullable
+    @Child(name = "value")
     private StringType value;
 
+    @Nullable
     public StringType getNameElement() {
       return name;
     }
@@ -550,14 +545,7 @@ public class ViewDefinitionResource extends DomainResource {
       this.name = name;
     }
 
-    public StringType getName() {
-      return name;
-    }
-
-    public void setName(final StringType name) {
-      this.name = name;
-    }
-
+    @Nullable
     public StringType getValueElement() {
       return value;
     }
@@ -567,14 +555,6 @@ public class ViewDefinitionResource extends DomainResource {
     }
 
     public void setValueElement(final StringType value) {
-      this.value = value;
-    }
-
-    public StringType getValue() {
-      return value;
-    }
-
-    public void setValue(final StringType value) {
       this.value = value;
     }
 
@@ -593,18 +573,23 @@ public class ViewDefinitionResource extends DomainResource {
     }
   }
 
-  /**
-   * Where clause component.
-   */
+  /** Where clause component. */
   @Block
   public static class WhereComponent extends BackboneElement {
 
-    @Child(name = "path", min = 1, max = 1)
+    @Serial private static final long serialVersionUID = -3113017430382830946L;
+
+    @Nullable
+    @Child(name = "path", min = 1)
     private StringType path;
 
-    @Child(name = "description", min = 0, max = 1)
+    @Nullable
+    @Setter
+    @Getter
+    @Child(name = "description")
     private StringType description;
 
+    @Nullable
     public StringType getPathElement() {
       return path;
     }
@@ -617,14 +602,16 @@ public class ViewDefinitionResource extends DomainResource {
       this.path = path;
     }
 
+    @Nullable
     public StringType getPath() {
-      return path;
+      return getPathElement();
     }
 
     public void setPath(final StringType path) {
-      this.path = path;
+      setPathElement(path);
     }
 
+    @Nullable
     public StringType getDescriptionElement() {
       return description;
     }
@@ -634,14 +621,6 @@ public class ViewDefinitionResource extends DomainResource {
     }
 
     public void setDescriptionElement(final StringType description) {
-      this.description = description;
-    }
-
-    public StringType getDescription() {
-      return description;
-    }
-
-    public void setDescription(final StringType description) {
       this.description = description;
     }
 
@@ -660,18 +639,44 @@ public class ViewDefinitionResource extends DomainResource {
     }
   }
 
-  /**
-   * Constant component.
-   */
+  /** Constant component. */
   @Block
   public static class ConstantComponent extends BackboneElement {
 
-    @Child(name = "name", min = 1, max = 1)
+    @Serial private static final long serialVersionUID = -8087206196316257611L;
+
+    @Nullable
+    @Child(name = "name", min = 1)
     private StringType name;
 
-    @Child(name = "value", min = 0, max = 1, type = {StringType.class, BooleanType.class})
+    @Nullable
+    @Setter
+    @Getter
+    @Child(
+        name = "value",
+        type = {
+          Base64BinaryType.class,
+          BooleanType.class,
+          CanonicalType.class,
+          CodeType.class,
+          DateType.class,
+          DateTimeType.class,
+          DecimalType.class,
+          IdType.class,
+          InstantType.class,
+          IntegerType.class,
+          OidType.class,
+          PositiveIntType.class,
+          StringType.class,
+          TimeType.class,
+          UnsignedIntType.class,
+          UriType.class,
+          UrlType.class,
+          UuidType.class
+        })
     private org.hl7.fhir.r4.model.Type value;
 
+    @Nullable
     public StringType getNameElement() {
       return name;
     }
@@ -684,24 +689,17 @@ public class ViewDefinitionResource extends DomainResource {
       this.name = name;
     }
 
+    @Nullable
     public StringType getName() {
-      return name;
+      return getNameElement();
     }
 
     public void setName(final StringType name) {
-      this.name = name;
-    }
-
-    public org.hl7.fhir.r4.model.Type getValue() {
-      return value;
+      setNameElement(name);
     }
 
     public boolean hasValue() {
       return value != null && !value.isEmpty();
-    }
-
-    public void setValue(final org.hl7.fhir.r4.model.Type value) {
-      this.value = value;
     }
 
     @Override
@@ -718,5 +716,4 @@ public class ViewDefinitionResource extends DomainResource {
       return super.isEmpty() && name == null && value == null;
     }
   }
-
 }
