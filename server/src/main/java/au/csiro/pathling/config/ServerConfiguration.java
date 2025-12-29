@@ -23,24 +23,17 @@ import org.springframework.validation.annotation.Validated;
 @Slf4j
 public class ServerConfiguration {
 
-  /**
-   * Controls the description of this server displayed within the FHIR CapabilityStatement.
-   */
-  @NotNull
-  private String implementationDescription;
+  /** Controls the description of this server displayed within the FHIR CapabilityStatement. */
+  @NotNull private String implementationDescription;
 
   /**
    * If this variable is set, all errors will be reported to a Sentry service, e.g.
    * `https://abc123@sentry.io/123456`.
    */
-  @Nullable
-  private String sentryDsn;
+  @Nullable private String sentryDsn;
 
-  /**
-   * Sets the environment that will be sent with Sentry reports.
-   */
-  @Nullable
-  private String sentryEnvironment;
+  /** Sets the environment that will be sent with Sentry reports. */
+  @Nullable private String sentryEnvironment;
 
   @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
   private String databasePath;
@@ -55,23 +48,18 @@ public class ServerConfiguration {
     return Optional.ofNullable(sentryEnvironment);
   }
 
-  @NotNull
-  private SparkConfiguration spark = SparkConfiguration.builder().build();
+  @NotNull private SparkConfiguration spark = SparkConfiguration.builder().build();
 
-  @NotNull
-  private StorageConfiguration storage = StorageConfiguration.builder().build();
+  @NotNull private StorageConfiguration storage = StorageConfiguration.builder().build();
 
-  @NotNull
-  private EncodingConfiguration encoding = EncodingConfiguration.builder().build();
+  @NotNull private EncodingConfiguration encoding = EncodingConfiguration.builder().build();
 
   @NotNull
   private TerminologyConfiguration terminology = TerminologyConfiguration.builder().build();
 
-  @NotNull
-  private AuthorizationConfiguration auth;
+  @NotNull private AuthorizationConfiguration auth;
 
-  @NotNull
-  private HttpServerCachingConfiguration httpCaching;
+  @NotNull private HttpServerCachingConfiguration httpCaching;
 
   @NotNull
   @JsonProperty("import")
@@ -90,24 +78,20 @@ public class ServerConfiguration {
   @JsonProperty("export")
   private ExportConfiguration export = new ExportConfiguration();
 
-  @NotNull
-  private AsyncConfiguration async;
+  @NotNull private AsyncConfiguration async;
 
-  @NotNull
-  private CorsConfiguration cors;
+  @NotNull private CorsConfiguration cors;
 
-  @Nullable
-  private BulkSubmitConfiguration bulkSubmit;
+  @Nullable private BulkSubmitConfiguration bulkSubmit;
 
-  @NotNull
-  private QueryConfiguration query = QueryConfiguration.builder().build();
+  @NotNull private QueryConfiguration query = QueryConfiguration.builder().build();
 
-  /**
-   * Logs the server configuration on startup.
-   */
+  /** Configuration for enabling/disabling individual server operations. */
+  @NotNull private OperationConfiguration operations = new OperationConfiguration();
+
+  /** Logs the server configuration on startup. */
   @PostConstruct
   public void logConfiguration() {
     log.debug("Server configuration: {}", this);
   }
-
 }

@@ -4,6 +4,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.cache.EntityTagInterceptor;
+import au.csiro.pathling.config.OperationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
@@ -237,71 +238,106 @@ public class FhirServer extends RestfulServer {
       addressStrategy.setServletPath("/fhir");
       setServerAddressStrategy(addressStrategy);
 
+      // Get operation configuration.
+      final OperationConfiguration ops = configuration.getOperations();
+
       // Register job provider, if async is enabled.
       jobProvider.ifPresent(this::registerProvider);
 
-      registerProvider(exportProvider);
-      registerProvider(exportResultProvider);
-      registerProvider(patientExportProvider);
-      registerProvider(groupExportProvider);
-      registerProvider(importProvider);
-      registerProvider(importPnpProvider);
+      // Register export providers based on configuration.
+      if (ops.isExportEnabled()) {
+        registerProvider(exportProvider);
+      }
+      if (ops.isPatientExportEnabled()) {
+        registerProvider(patientExportProvider);
+      }
+      if (ops.isGroupExportEnabled()) {
+        registerProvider(groupExportProvider);
+      }
 
-      // Register bulk submit providers.
-      bulkSubmitProvider.ifPresent(this::registerProvider);
-      bulkSubmitStatusProvider.ifPresent(this::registerProvider);
+      // Export result provider is needed if any export is enabled.
+      if (ops.isAnyExportEnabled()) {
+        registerProvider(exportResultProvider);
+      }
+
+      // Register import providers based on configuration.
+      if (ops.isImportEnabled()) {
+        registerProvider(importProvider);
+      }
+      if (ops.isImportPnpEnabled()) {
+        registerProvider(importPnpProvider);
+      }
+
+      // Register bulk submit providers based on configuration.
+      if (ops.isBulkSubmitEnabled()) {
+        bulkSubmitProvider.ifPresent(this::registerProvider);
+        bulkSubmitStatusProvider.ifPresent(this::registerProvider);
+      }
 
       // Register search providers for all supported resource types.
-      for (final ResourceType resourceType : supportedResourceTypes()) {
-        registerProvider(searchProviderFactory.createSearchProvider(resourceType));
+      if (ops.isSearchEnabled()) {
+        for (final ResourceType resourceType : supportedResourceTypes()) {
+          registerProvider(searchProviderFactory.createSearchProvider(resourceType));
+        }
+        // ViewDefinition search.
+        registerProvider(searchProviderFactory.createSearchProvider("ViewDefinition"));
       }
 
       // Register update providers for all supported resource types.
-      for (final ResourceType resourceType : supportedResourceTypes()) {
-        registerProvider(updateProviderFactory.createUpdateProvider(resourceType));
+      if (ops.isUpdateEnabled()) {
+        for (final ResourceType resourceType : supportedResourceTypes()) {
+          registerProvider(updateProviderFactory.createUpdateProvider(resourceType));
+        }
+        // ViewDefinition update.
+        registerProvider(updateProviderFactory.createUpdateProvider("ViewDefinition"));
       }
 
       // Register create providers for all supported resource types.
-      for (final ResourceType resourceType : supportedResourceTypes()) {
-        registerProvider(createProviderFactory.createCreateProvider(resourceType));
+      if (ops.isCreateEnabled()) {
+        for (final ResourceType resourceType : supportedResourceTypes()) {
+          registerProvider(createProviderFactory.createCreateProvider(resourceType));
+        }
+        // ViewDefinition create.
+        registerProvider(createProviderFactory.createCreateProvider("ViewDefinition"));
       }
 
       // Register read providers for all supported resource types.
-      for (final ResourceType resourceType : supportedResourceTypes()) {
-        registerProvider(readProviderFactory.createReadProvider(resourceType));
+      if (ops.isReadEnabled()) {
+        for (final ResourceType resourceType : supportedResourceTypes()) {
+          registerProvider(readProviderFactory.createReadProvider(resourceType));
+        }
+        // ViewDefinition read.
+        registerProvider(readProviderFactory.createReadProvider("ViewDefinition"));
       }
 
       // Register delete providers for all supported resource types.
-      for (final ResourceType resourceType : supportedResourceTypes()) {
-        registerProvider(deleteProviderFactory.createDeleteProvider(resourceType));
+      if (ops.isDeleteEnabled()) {
+        for (final ResourceType resourceType : supportedResourceTypes()) {
+          registerProvider(deleteProviderFactory.createDeleteProvider(resourceType));
+        }
+        // ViewDefinition delete.
+        registerProvider(deleteProviderFactory.createDeleteProvider("ViewDefinition"));
       }
 
-      // Register read provider for ViewDefinition (custom resource type).
-      registerProvider(readProviderFactory.createReadProvider("ViewDefinition"));
-
-      // Register delete provider for ViewDefinition (custom resource type).
-      registerProvider(deleteProviderFactory.createDeleteProvider("ViewDefinition"));
-
-      // Register search provider for ViewDefinition (custom resource type).
-      registerProvider(searchProviderFactory.createSearchProvider("ViewDefinition"));
-
-      // Register create provider for ViewDefinition (custom resource type).
-      registerProvider(createProviderFactory.createCreateProvider("ViewDefinition"));
-
-      // Register update provider for ViewDefinition (custom resource type).
-      registerProvider(updateProviderFactory.createUpdateProvider("ViewDefinition"));
-
       // Register batch provider.
-      registerProvider(batchProvider);
+      if (ops.isBatchEnabled()) {
+        registerProvider(batchProvider);
+      }
 
       // Register view definition run provider.
-      registerProvider(viewDefinitionRunProvider);
+      if (ops.isViewDefinitionRunEnabled()) {
+        registerProvider(viewDefinitionRunProvider);
+      }
 
       // Register view definition instance run provider.
-      registerProvider(viewDefinitionInstanceRunProvider);
+      if (ops.isViewDefinitionInstanceRunEnabled()) {
+        registerProvider(viewDefinitionInstanceRunProvider);
+      }
 
       // Register view definition export provider.
-      registerProvider(viewDefinitionExportProvider);
+      if (ops.isViewDefinitionExportEnabled()) {
+        registerProvider(viewDefinitionExportProvider);
+      }
 
       // CORS configuration.
       configureCors();

@@ -86,6 +86,44 @@ operation, which retrieves data from external FHIR bulk export endpoints.
   which should be excluded from determining that asynchronous requests are
   equivalent and can be routed to the same asynchronous job.
 
+### Operations
+
+These settings enable or disable individual server operations. All operations
+are enabled by default. When an operation is disabled, it returns a client
+error response and is excluded from the CapabilityStatement.
+
+- `pathling.operations.createEnabled` - (default: `true`) Enables CRUD create
+  operations.
+- `pathling.operations.readEnabled` - (default: `true`) Enables CRUD read
+  operations.
+- `pathling.operations.updateEnabled` - (default: `true`) Enables CRUD update
+  operations.
+- `pathling.operations.deleteEnabled` - (default: `true`) Enables CRUD delete
+  operations.
+- `pathling.operations.searchEnabled` - (default: `true`) Enables CRUD search
+  operations.
+- `pathling.operations.batchEnabled` - (default: `true`) Enables batch/transaction
+  bundle operations.
+- `pathling.operations.exportEnabled` - (default: `true`) Enables the system-level
+  [$export](./operations/export) operation.
+- `pathling.operations.patientExportEnabled` - (default: `true`) Enables the
+  Patient-level [$export](./operations/export) operation.
+- `pathling.operations.groupExportEnabled` - (default: `true`) Enables the
+  Group-level [$export](./operations/export) operation.
+- `pathling.operations.importEnabled` - (default: `true`) Enables the
+  [$import](./operations/import) operation.
+- `pathling.operations.importPnpEnabled` - (default: `true`) Enables the
+  [$import-pnp](./operations/import-pnp) operation.
+- `pathling.operations.viewDefinitionRunEnabled` - (default: `true`) Enables the
+  system-level [$viewdefinition-run](./operations/view-run) operation.
+- `pathling.operations.viewDefinitionInstanceRunEnabled` - (default: `true`)
+  Enables the instance-level [$run](./operations/view-run) operation on
+  ViewDefinition resources.
+- `pathling.operations.viewDefinitionExportEnabled` - (default: `true`) Enables
+  the [$viewdefinition-export](./operations/view-export) operation.
+- `pathling.operations.bulkSubmitEnabled` - (default: `true`) Enables the
+  [$bulk-submit](./operations/bulk-submit) operation.
+
 ### Encoding
 
 - `pathling.encoding.maxNestingLevel` - (default: `3`) Controls the maximum
