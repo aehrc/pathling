@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.view;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
@@ -63,13 +64,14 @@ public class ViewDefinitionRunProvider {
    * chunked streaming. This is the system-level operation at /fhir/$viewdefinition-run.
    *
    * @param viewResource the ViewDefinition resource
-   * @param format the output format (ndjson or csv)
+   * @param format the output format (ndjson or csv), overrides Accept header if provided
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
    * @param patientIds patient IDs to filter by
    * @param groupIds group IDs to filter by
    * @param since filter by meta.lastUpdated >= value
    * @param inlineResources FHIR resources to use instead of the main data source
+   * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
   @SuppressWarnings("java:S107")
@@ -84,11 +86,15 @@ public class ViewDefinitionRunProvider {
       @Nullable @OperationParam(name = "group") final List<IdType> groupIds,
       @Nullable @OperationParam(name = "_since") final InstantType since,
       @Nullable @OperationParam(name = "resource") final List<String> inlineResources,
+      @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
+
+    final String acceptHeader = requestDetails.getServletRequest().getHeader("Accept");
 
     viewExecutionHelper.executeView(
         viewResource,
         format,
+        acceptHeader,
         includeHeader,
         limit,
         patientIds,

@@ -89,37 +89,32 @@ class ViewDefinitionRunProviderTest {
   // Output format tests
   // -------------------------------------------------------------------------
 
-  @Test
-  void ndjsonOutputReturnsCorrectContentType() throws IOException {
+  // Verifies that each output format returns the correct content type.
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.CsvSource({
+    "application/x-ndjson, application/x-ndjson",
+    "text/csv, text/csv",
+    "application/json, application/json"
+  })
+  void outputFormatReturnsCorrectContentType(
+      final String formatParam, final String expectedContentType) {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
     provider.run(
         viewResource,
-        "application/x-ndjson",
+        formatParam,
         null,
         null,
         null,
         null,
         null,
         List.of(inlinePatient),
+        mockRequestDetails(null),
         response);
 
-    assertThat(response.getContentType()).startsWith("application/x-ndjson");
-    assertThat(response.getStatus()).isEqualTo(200);
-  }
-
-  @Test
-  void csvOutputReturnsCorrectContentType() throws IOException {
-    final MockHttpServletResponse response = new MockHttpServletResponse();
-    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
-    final String inlinePatient = createPatientJson("test-1", "Smith");
-
-    provider.run(
-        viewResource, "text/csv", null, null, null, null, null, List.of(inlinePatient), response);
-
-    assertThat(response.getContentType()).startsWith("text/csv");
+    assertThat(response.getContentType()).startsWith(expectedContentType);
     assertThat(response.getStatus()).isEqualTo(200);
   }
 
@@ -130,14 +125,23 @@ class ViewDefinitionRunProviderTest {
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
     provider.run(
-        viewResource, "text/csv", null, null, null, null, null, List.of(inlinePatient), response);
+        viewResource,
+        "text/csv",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        mockRequestDetails(null),
+        response);
 
     final String content = response.getContentAsString();
     final String[] lines = content.split("\n");
-    assertThat(lines.length).isGreaterThanOrEqualTo(2);
     // First line should be header.
-    assertThat(lines[0]).contains("id");
-    assertThat(lines[0]).contains("family_name");
+    assertThat(lines)
+        .hasSizeGreaterThanOrEqualTo(2)
+        .satisfies(l -> assertThat(l[0]).contains("id").contains("family_name"));
   }
 
   @Test
@@ -155,23 +159,32 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        mockRequestDetails(null),
         response);
 
     final String content = response.getContentAsString();
     final String[] lines = content.split("\n");
     // First line should be data, not header.
-    assertThat(lines[0]).contains("test-1");
-    assertThat(lines[0]).contains("Smith");
+    assertThat(lines[0]).contains("test-1").contains("Smith");
   }
 
   @Test
-  void defaultFormatIsNdjson() throws IOException {
+  void defaultFormatIsNdjson() {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
     provider.run(
-        viewResource, null, null, null, null, null, null, List.of(inlinePatient), response);
+        viewResource,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        mockRequestDetails(null),
+        response);
 
     assertThat(response.getContentType()).startsWith("application/x-ndjson");
   }
@@ -191,7 +204,18 @@ class ViewDefinitionRunProviderTest {
     final IBaseResource viewResource = parseViewResource(gson.toJson(invalidView));
 
     assertThatThrownBy(
-            () -> provider.run(viewResource, null, null, null, null, null, null, null, response))
+            () ->
+                provider.run(
+                    viewResource,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    mockRequestDetails(null),
+                    response))
         .isInstanceOf(Exception.class);
   }
 
@@ -210,12 +234,14 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        mockRequestDetails(null),
         response);
 
     final String content = response.getContentAsString().trim();
-    assertThat(content).contains("\"id\":\"test-1\"");
-    assertThat(content).contains("\"family_name\":\"Smith\"");
-    assertThat(content).contains("\"gender\":\"male\"");
+    assertThat(content)
+        .contains("\"id\":\"test-1\"")
+        .contains("\"family_name\":\"Smith\"")
+        .contains("\"gender\":\"male\"");
   }
 
   // -------------------------------------------------------------------------
@@ -241,11 +267,12 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         patients,
+        mockRequestDetails(null),
         response);
 
     final String content = response.getContentAsString().trim();
     final String[] lines = content.split("\n");
-    assertThat(lines.length).isEqualTo(2);
+    assertThat(lines).hasSize(2);
   }
 
   @Test
@@ -259,11 +286,20 @@ class ViewDefinitionRunProviderTest {
             createPatientJson("p3", "Brown"));
 
     provider.run(
-        viewResource, "application/x-ndjson", null, null, null, null, null, patients, response);
+        viewResource,
+        "application/x-ndjson",
+        null,
+        null,
+        null,
+        null,
+        null,
+        patients,
+        mockRequestDetails(null),
+        response);
 
     final String content = response.getContentAsString().trim();
     final String[] lines = content.split("\n");
-    assertThat(lines.length).isEqualTo(3);
+    assertThat(lines).hasSize(3);
   }
 
   // -------------------------------------------------------------------------
@@ -285,12 +321,12 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        mockRequestDetails(null),
         response);
 
     final String content = response.getContentAsString().trim();
     // Should contain the inline patient, not Delta Lake patients.
-    assertThat(content).contains("inline-patient-123");
-    assertThat(content).contains("InlineFamily");
+    assertThat(content).contains("inline-patient-123").contains("InlineFamily");
   }
 
   @Test
@@ -301,13 +337,21 @@ class ViewDefinitionRunProviderTest {
         List.of(createPatientJson("inline-1", "Family1"), createPatientJson("inline-2", "Family2"));
 
     provider.run(
-        viewResource, "application/x-ndjson", null, null, null, null, null, patients, response);
+        viewResource,
+        "application/x-ndjson",
+        null,
+        null,
+        null,
+        null,
+        null,
+        patients,
+        mockRequestDetails(null),
+        response);
 
     final String content = response.getContentAsString().trim();
     final String[] lines = content.split("\n");
-    assertThat(lines.length).isEqualTo(2);
-    assertThat(content).contains("inline-1");
-    assertThat(content).contains("inline-2");
+    assertThat(lines).hasSize(2);
+    assertThat(content).contains("inline-1").contains("inline-2");
   }
 
   @Test
@@ -321,18 +365,29 @@ class ViewDefinitionRunProviderTest {
             createObservationJson("obs-1", "patient-1"));
 
     provider.run(
-        viewResource, "application/x-ndjson", null, null, null, null, null, resources, response);
+        viewResource,
+        "application/x-ndjson",
+        null,
+        null,
+        null,
+        null,
+        null,
+        resources,
+        mockRequestDetails(null),
+        response);
 
     final String content = response.getContentAsString().trim();
     // Should only return the patient data.
-    assertThat(content).contains("patient-1");
-    assertThat(content).doesNotContain("obs-1");
+    assertThat(content).contains("patient-1").doesNotContain("obs-1");
   }
 
   @Test
   void invalidInlineResourceThrowsException() {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final List<String> invalidResources = List.of("{ not valid fhir }");
+    final ca.uhn.fhir.rest.server.servlet.ServletRequestDetails requestDetails =
+        mockRequestDetails(null);
 
     assertThatThrownBy(
             () ->
@@ -344,7 +399,8 @@ class ViewDefinitionRunProviderTest {
                     null,
                     null,
                     null,
-                    List.of("{ not valid fhir }"),
+                    invalidResources,
+                    requestDetails,
                     response))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("Invalid inline resource");
@@ -365,9 +421,13 @@ class ViewDefinitionRunProviderTest {
   @Test
   void nullResponseThrowsInvalidRequestException() {
     final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final ca.uhn.fhir.rest.server.servlet.ServletRequestDetails requestDetails =
+        mockRequestDetails(null);
 
     assertThatThrownBy(
-            () -> provider.run(viewResource, null, null, null, null, null, null, null, null))
+            () ->
+                provider.run(
+                    viewResource, null, null, null, null, null, null, null, requestDetails, null))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("HTTP response is required");
   }
@@ -391,16 +451,18 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        mockRequestDetails(null),
         response);
 
     final String content = response.getContentAsString().trim();
     // Parse the JSON line to verify structure.
     @SuppressWarnings("unchecked")
     final Map<String, Object> row = gson.fromJson(content, Map.class);
-    assertThat(row).containsKey("id");
-    assertThat(row).containsKey("family_name");
-    assertThat(row.get("id")).isEqualTo("row-test-id");
-    assertThat(row.get("family_name")).isEqualTo("RowTestFamily");
+    assertThat(row)
+        .containsKey("id")
+        .containsKey("family_name")
+        .containsEntry("id", "row-test-id")
+        .containsEntry("family_name", "RowTestFamily");
   }
 
   @Test
@@ -422,6 +484,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(patientJson),
+        mockRequestDetails(null),
         response);
 
     final String content = response.getContentAsString().trim();
@@ -440,42 +503,43 @@ class ViewDefinitionRunProviderTest {
     final String inlinePatient = createPatientJson("csv-test-id", "CsvTestFamily");
 
     provider.run(
-        viewResource, "text/csv", null, null, null, null, null, List.of(inlinePatient), response);
+        viewResource,
+        "text/csv",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        mockRequestDetails(null),
+        response);
 
     final String content = response.getContentAsString();
     final String[] lines = content.split("\n");
-    assertThat(lines.length).isGreaterThanOrEqualTo(2);
+    assertThat(lines).hasSizeGreaterThanOrEqualTo(2);
     // Header line.
-    assertThat(lines[0]).contains("id");
-    assertThat(lines[0]).contains("family_name");
+    assertThat(lines[0]).contains("id").contains("family_name");
     // Data line.
-    assertThat(lines[1]).contains("csv-test-id");
-    assertThat(lines[1]).contains("CsvTestFamily");
+    assertThat(lines[1]).contains("csv-test-id").contains("CsvTestFamily");
   }
 
   // -------------------------------------------------------------------------
   // ViewOutputFormat tests
   // -------------------------------------------------------------------------
 
-  @Test
-  void viewOutputFormatParsesNdjsonCode() {
-    assertThat(ViewOutputFormat.fromString("ndjson")).isEqualTo(ViewOutputFormat.NDJSON);
-  }
-
-  @Test
-  void viewOutputFormatParsesNdjsonContentType() {
-    assertThat(ViewOutputFormat.fromString("application/x-ndjson"))
-        .isEqualTo(ViewOutputFormat.NDJSON);
-  }
-
-  @Test
-  void viewOutputFormatParsesCsvCode() {
-    assertThat(ViewOutputFormat.fromString("csv")).isEqualTo(ViewOutputFormat.CSV);
-  }
-
-  @Test
-  void viewOutputFormatParsesCsvContentType() {
-    assertThat(ViewOutputFormat.fromString("text/csv")).isEqualTo(ViewOutputFormat.CSV);
+  // Verifies that ViewOutputFormat correctly parses format codes and content types.
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.CsvSource({
+    "ndjson, NDJSON",
+    "application/x-ndjson, NDJSON",
+    "csv, CSV",
+    "text/csv, CSV",
+    "json, JSON",
+    "application/json, JSON"
+  })
+  void viewOutputFormatParsesFormatString(final String input, final String expectedFormat) {
+    assertThat(ViewOutputFormat.fromString(input))
+        .isEqualTo(ViewOutputFormat.valueOf(expectedFormat));
   }
 
   @Test
@@ -485,41 +549,9 @@ class ViewDefinitionRunProviderTest {
     assertThat(ViewOutputFormat.fromString(null)).isEqualTo(ViewOutputFormat.NDJSON);
   }
 
-  @Test
-  void viewOutputFormatParsesJsonCode() {
-    assertThat(ViewOutputFormat.fromString("json")).isEqualTo(ViewOutputFormat.JSON);
-  }
-
-  @Test
-  void viewOutputFormatParsesJsonContentType() {
-    assertThat(ViewOutputFormat.fromString("application/json")).isEqualTo(ViewOutputFormat.JSON);
-  }
-
   // -------------------------------------------------------------------------
   // JSON output format tests
   // -------------------------------------------------------------------------
-
-  // Verifies that JSON output returns the correct content type.
-  @Test
-  void jsonOutputReturnsCorrectContentType() throws IOException {
-    final MockHttpServletResponse response = new MockHttpServletResponse();
-    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
-    final String inlinePatient = createPatientJson("test-1", "Smith");
-
-    provider.run(
-        viewResource,
-        "application/json",
-        null,
-        null,
-        null,
-        null,
-        null,
-        List.of(inlinePatient),
-        response);
-
-    assertThat(response.getContentType()).startsWith("application/json");
-    assertThat(response.getStatus()).isEqualTo(200);
-  }
 
   // Verifies that JSON output returns an array containing a single object.
   @Test
@@ -529,15 +561,23 @@ class ViewDefinitionRunProviderTest {
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
     provider.run(
-        viewResource, "json", null, null, null, null, null, List.of(inlinePatient), response);
+        viewResource,
+        "json",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        mockRequestDetails(null),
+        response);
 
     final String content = response.getContentAsString();
     // Parse as array and verify structure.
     @SuppressWarnings("unchecked")
     final List<Map<String, Object>> rows = gson.fromJson(content, List.class);
     assertThat(rows).hasSize(1);
-    assertThat(rows.get(0).get("id")).isEqualTo("test-1");
-    assertThat(rows.get(0).get("family_name")).isEqualTo("Smith");
+    assertThat(rows.getFirst()).containsEntry("id", "test-1").containsEntry("family_name", "Smith");
   }
 
   // Verifies that JSON output returns an array containing multiple objects.
@@ -551,7 +591,17 @@ class ViewDefinitionRunProviderTest {
             createPatientJson("p2", "Jones"),
             createPatientJson("p3", "Brown"));
 
-    provider.run(viewResource, "json", null, null, null, null, null, patients, response);
+    provider.run(
+        viewResource,
+        "json",
+        null,
+        null,
+        null,
+        null,
+        null,
+        patients,
+        mockRequestDetails(null),
+        response);
 
     final String content = response.getContentAsString();
     @SuppressWarnings("unchecked")
@@ -576,6 +626,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        mockRequestDetails(null),
         ndjsonResponse);
 
     final String ndjsonContent = ndjsonResponse.getContentAsString().trim();
@@ -585,7 +636,16 @@ class ViewDefinitionRunProviderTest {
     // Run with JSON format.
     final MockHttpServletResponse jsonResponse = new MockHttpServletResponse();
     provider.run(
-        viewResource, "json", null, null, null, null, null, List.of(inlinePatient), jsonResponse);
+        viewResource,
+        "json",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        mockRequestDetails(null),
+        jsonResponse);
 
     final String jsonContent = jsonResponse.getContentAsString();
     @SuppressWarnings("unchecked")
@@ -593,7 +653,7 @@ class ViewDefinitionRunProviderTest {
 
     // The row structure should be identical.
     assertThat(jsonRows).hasSize(1);
-    assertThat(jsonRows.get(0)).isEqualTo(ndjsonRow);
+    assertThat(jsonRows.getFirst()).isEqualTo(ndjsonRow);
   }
 
   // Verifies that the limit parameter works correctly with JSON output.
@@ -608,12 +668,92 @@ class ViewDefinitionRunProviderTest {
             createPatientJson("p3", "Brown"));
 
     provider.run(
-        viewResource, "json", null, new IntegerType(2), null, null, null, patients, response);
+        viewResource,
+        "json",
+        null,
+        new IntegerType(2),
+        null,
+        null,
+        null,
+        patients,
+        mockRequestDetails(null),
+        response);
 
     final String content = response.getContentAsString();
     @SuppressWarnings("unchecked")
     final List<Map<String, Object>> rows = gson.fromJson(content, List.class);
     assertThat(rows).hasSize(2);
+  }
+
+  // -------------------------------------------------------------------------
+  // Accept header tests
+  // -------------------------------------------------------------------------
+
+  // Verifies that the Accept header determines output format when _format is not provided.
+  @Test
+  void acceptHeaderDeterminesOutputFormat() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final String inlinePatient = createPatientJson("test-1", "Smith");
+
+    provider.run(
+        viewResource,
+        null, // No _format parameter.
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        mockRequestDetails("text/csv"),
+        response);
+
+    assertThat(response.getContentType()).startsWith("text/csv");
+  }
+
+  // Verifies that _format parameter takes precedence over Accept header.
+  @Test
+  void formatParamOverridesAcceptHeader() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final String inlinePatient = createPatientJson("test-1", "Smith");
+
+    provider.run(
+        viewResource,
+        "ndjson", // Explicit _format parameter.
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        mockRequestDetails("text/csv"), // Different Accept header.
+        response);
+
+    // _format should take precedence.
+    assertThat(response.getContentType()).startsWith("application/x-ndjson");
+  }
+
+  // Verifies that wildcard Accept header defaults to NDJSON.
+  @Test
+  void wildcardAcceptHeaderDefaultsToNdjson() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final String inlinePatient = createPatientJson("test-1", "Smith");
+
+    provider.run(
+        viewResource,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(inlinePatient),
+        mockRequestDetails("*/*"),
+        response);
+
+    assertThat(response.getContentType()).startsWith("application/x-ndjson");
   }
 
   // -------------------------------------------------------------------------
@@ -683,5 +823,20 @@ class ViewDefinitionRunProviderTest {
     observation.setSubject(new Reference("Patient/" + patientId));
     observation.setStatus(Observation.ObservationStatus.FINAL);
     return fhirContext.newJsonParser().encodeResourceToString(observation);
+  }
+
+  /** Creates a mock ServletRequestDetails with the specified Accept header. */
+  @Nonnull
+  private ca.uhn.fhir.rest.server.servlet.ServletRequestDetails mockRequestDetails(
+      @jakarta.annotation.Nullable final String acceptHeader) {
+    final jakarta.servlet.http.HttpServletRequest httpRequest =
+        org.mockito.Mockito.mock(jakarta.servlet.http.HttpServletRequest.class);
+    org.mockito.Mockito.when(httpRequest.getHeader("Accept")).thenReturn(acceptHeader);
+
+    final ca.uhn.fhir.rest.server.servlet.ServletRequestDetails requestDetails =
+        org.mockito.Mockito.mock(ca.uhn.fhir.rest.server.servlet.ServletRequestDetails.class);
+    org.mockito.Mockito.when(requestDetails.getServletRequest()).thenReturn(httpRequest);
+
+    return requestDetails;
   }
 }

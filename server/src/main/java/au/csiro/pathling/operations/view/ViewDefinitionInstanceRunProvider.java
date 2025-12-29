@@ -86,13 +86,14 @@ public class ViewDefinitionInstanceRunProvider implements IResourceProvider {
    * Type-level $run operation that accepts a ViewDefinition inline.
    *
    * @param viewResource the ViewDefinition resource
-   * @param format the output format (ndjson or csv)
+   * @param format the output format (ndjson or csv), overrides Accept header if provided
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
    * @param patientIds patient IDs to filter by
    * @param groupIds group IDs to filter by
    * @param since filter by meta.lastUpdated >= value
    * @param inlineResources FHIR resources to use instead of the main data source
+   * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
   @SuppressWarnings("java:S107")
@@ -107,11 +108,15 @@ public class ViewDefinitionInstanceRunProvider implements IResourceProvider {
       @Nullable @OperationParam(name = "group") final List<IdType> groupIds,
       @Nullable @OperationParam(name = "_since") final InstantType since,
       @Nullable @OperationParam(name = "resource") final List<String> inlineResources,
+      @Nonnull final ca.uhn.fhir.rest.server.servlet.ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
+
+    final String acceptHeader = requestDetails.getServletRequest().getHeader("Accept");
 
     viewExecutionHelper.executeView(
         viewResource,
         format,
+        acceptHeader,
         includeHeader,
         limit,
         patientIds,
@@ -126,13 +131,14 @@ public class ViewDefinitionInstanceRunProvider implements IResourceProvider {
    * POST requests.
    *
    * @param viewDefinitionId the ID of the stored ViewDefinition
-   * @param format the output format (ndjson or csv)
+   * @param format the output format (ndjson or csv), overrides Accept header if provided
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
    * @param patientIds patient IDs to filter by
    * @param groupIds group IDs to filter by
    * @param since filter by meta.lastUpdated >= value
    * @param inlineResources FHIR resources to use instead of the main data source
+   * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
   @SuppressWarnings("java:S107")
@@ -147,14 +153,18 @@ public class ViewDefinitionInstanceRunProvider implements IResourceProvider {
       @Nullable @OperationParam(name = "group") final List<IdType> groupIds,
       @Nullable @OperationParam(name = "_since") final InstantType since,
       @Nullable @OperationParam(name = "resource") final List<String> inlineResources,
+      @Nonnull final ca.uhn.fhir.rest.server.servlet.ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
 
     // Read the ViewDefinition by ID.
     final IBaseResource viewResource = readViewDefinition(viewDefinitionId);
 
+    final String acceptHeader = requestDetails.getServletRequest().getHeader("Accept");
+
     viewExecutionHelper.executeView(
         viewResource,
         format,
+        acceptHeader,
         includeHeader,
         limit,
         patientIds,

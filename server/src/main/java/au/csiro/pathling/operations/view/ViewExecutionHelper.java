@@ -125,7 +125,8 @@ public class ViewExecutionHelper {
    * Executes a ViewDefinition and streams the results to the HTTP response.
    *
    * @param viewResource the ViewDefinition resource to execute
-   * @param format the output format (ndjson or csv)
+   * @param format the output format (ndjson or csv), overrides Accept header if provided
+   * @param acceptHeader the HTTP Accept header value, used as fallback if format is not provided
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
    * @param patientIds patient IDs to filter by
@@ -138,6 +139,7 @@ public class ViewExecutionHelper {
   public void executeView(
       @Nonnull final IBaseResource viewResource,
       @Nullable final String format,
+      @Nullable final String acceptHeader,
       @Nullable final BooleanType includeHeader,
       @Nullable final IntegerType limit,
       @Nullable final List<String> patientIds,
@@ -153,8 +155,11 @@ public class ViewExecutionHelper {
     // Parse the ViewDefinition.
     final FhirView view = parseViewDefinition(viewResource);
 
-    // Determine output format.
-    final ViewOutputFormat outputFormat = ViewOutputFormat.fromString(format);
+    // Determine output format: _format parameter overrides Accept header.
+    final ViewOutputFormat outputFormat =
+        (format != null && !format.isBlank())
+            ? ViewOutputFormat.fromString(format)
+            : ViewOutputFormat.fromAcceptHeader(acceptHeader);
     final boolean shouldIncludeHeader = includeHeader == null || includeHeader.booleanValue();
 
     // Build the data source.
