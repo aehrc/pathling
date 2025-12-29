@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.cache;
 
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
 public interface Cacheable {
@@ -32,6 +33,5 @@ public interface Cacheable {
    * @param otherKey the string to be tested
    * @return true if the cache key matches the other string
    */
-  boolean cacheKeyMatches(String otherKey);
-
+  boolean cacheKeyMatches(@Nonnull String otherKey);
 }

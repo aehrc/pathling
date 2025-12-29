@@ -3,7 +3,6 @@ package au.csiro.pathling.cache;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.desc;
 
-import au.csiro.pathling.library.io.FileSystemPersistence;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -21,7 +20,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -41,17 +39,25 @@ import org.springframework.stereotype.Component;
 public class CacheableDatabase implements Cacheable {
 
   @Nonnull private final ThreadPoolTaskExecutor executor;
+
   private final SparkSession spark;
 
   private final String databasePath;
 
   @Nonnull @Getter private Optional<String> cacheKey;
 
+  /**
+   * Creates a new cacheable database instance.
+   *
+   * @param spark the Spark session
+   * @param databasePath the path to the database
+   * @param executor the executor for async cache invalidation
+   */
   @Autowired
   public CacheableDatabase(
-      SparkSession spark,
+      final SparkSession spark,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          String databasePath,
+          final String databasePath,
       @Nonnull final ThreadPoolTaskExecutor executor) {
     this.spark = spark;
     this.databasePath = convertS3ToS3aUrl(databasePath);
@@ -222,25 +228,5 @@ public class CacheableDatabase implements Cacheable {
   @Nonnull
   private Optional<String> buildCacheKeyFromTable(@Nonnull final DeltaTable table) {
     return latestUpdateToTable(table).map(this::cacheKeyFromTimestamp);
-  }
-
-  /**
-   * @param path the URL of the warehouse location
-   * @param resourceType the resource type to be read or written to
-   * @return the URL of the resource within the warehouse
-   */
-  @Nonnull
-  protected static String getTableUrl(
-      @Nonnull final String path, @Nonnull final String resourceType) {
-    return FileSystemPersistence.safelyJoinPaths(path, fileNameForResource(resourceType));
-  }
-
-  /**
-   * @param resourceType A HAPI {@link ResourceType} describing the type of resource
-   * @return The filename that should be used
-   */
-  @Nonnull
-  private static String fileNameForResource(@Nonnull final String resourceType) {
-    return resourceType + ".parquet";
   }
 }
