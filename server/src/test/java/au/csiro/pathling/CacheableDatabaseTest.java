@@ -36,10 +36,27 @@ class CacheableDatabaseTest {
 
   @TempDir private Path tempDir;
 
+  /**
+   * Creates a no-op executor for tests that don't need async execution. This avoids passing null to
+   * the @Nonnull executor parameter.
+   *
+   * @return a ThreadPoolTaskExecutor that does nothing when execute() is called
+   */
+  @SuppressWarnings("NullableProblems")
+  private static ThreadPoolTaskExecutor createNoOpExecutor() {
+    return new ThreadPoolTaskExecutor() {
+      @Override
+      public void execute(final Runnable task) {
+        // No-op: don't execute anything.
+      }
+    };
+  }
+
   @Test
   void cacheKeyIsEmptyIfNoFiles() {
     cacheableDatabase =
-        new CacheableDatabase(sparkSession, "file://" + tempDir.resolve("delta"), null);
+        new CacheableDatabase(
+            sparkSession, "file://" + tempDir.resolve("delta"), createNoOpExecutor());
     assertThat(cacheableDatabase.getCacheKey()).isEmpty();
   }
 
@@ -47,7 +64,8 @@ class CacheableDatabaseTest {
   void cacheKeyIsPresentWhenFilesExist() {
     TestDataSetup.copyTestDataToTempDir(tempDir);
     cacheableDatabase =
-        new CacheableDatabase(sparkSession, "file://" + tempDir.resolve("delta"), null);
+        new CacheableDatabase(
+            sparkSession, "file://" + tempDir.resolve("delta"), createNoOpExecutor());
     assertThat(cacheableDatabase.getCacheKey()).isPresent();
   }
 
@@ -55,9 +73,11 @@ class CacheableDatabaseTest {
   void cacheKeyIsSameForSameFiles() {
     TestDataSetup.copyTestDataToTempDir(tempDir);
     cacheableDatabase =
-        new CacheableDatabase(sparkSession, "file://" + tempDir.resolve("delta"), null);
-    CacheableDatabase other =
-        new CacheableDatabase(sparkSession, "file://" + tempDir.resolve("delta"), null);
+        new CacheableDatabase(
+            sparkSession, "file://" + tempDir.resolve("delta"), createNoOpExecutor());
+    final CacheableDatabase other =
+        new CacheableDatabase(
+            sparkSession, "file://" + tempDir.resolve("delta"), createNoOpExecutor());
     assertThat(cacheableDatabase.getCacheKey()).isEqualTo(other.getCacheKey());
     assertThat(cacheableDatabase.cacheKeyMatches(other.getCacheKey().orElse(""))).isTrue();
   }
@@ -67,14 +87,16 @@ class CacheableDatabaseTest {
   void cacheKeyIsDifferentWhenDeltaTableIsDeleted() {
     TestDataSetup.copyTestDataToTempDir(tempDir);
     cacheableDatabase =
-        new CacheableDatabase(sparkSession, "file://" + tempDir.resolve("delta"), null);
+        new CacheableDatabase(
+            sparkSession, "file://" + tempDir.resolve("delta"), createNoOpExecutor());
 
-    Path patientParquetPath = tempDir.resolve("delta").resolve("Patient.parquet");
+    final Path patientParquetPath = tempDir.resolve("delta").resolve("Patient.parquet");
     // BUG? https://github.com/delta-io/delta/issues/2570
     DeltaTable.forPath(sparkSession, patientParquetPath.toString()).delete();
 
-    CacheableDatabase other =
-        new CacheableDatabase(sparkSession, "file://" + tempDir.resolve("delta"), null);
+    final CacheableDatabase other =
+        new CacheableDatabase(
+            sparkSession, "file://" + tempDir.resolve("delta"), createNoOpExecutor());
     assertThat(cacheableDatabase.getCacheKey()).isNotEqualTo(other.getCacheKey());
     assertThat(cacheableDatabase.cacheKeyMatches(other.getCacheKey().orElse(""))).isFalse();
   }
@@ -136,8 +158,7 @@ class CacheableDatabaseTest {
 
     // The cache key should have changed to reflect the new timestamp.
     final String newCacheKey = cacheableDatabase.getCacheKey().orElse("");
-    assertThat(newCacheKey).isNotEmpty();
-    assertThat(newCacheKey).isNotEqualTo(originalCacheKey);
+    assertThat(newCacheKey).isNotEmpty().isNotEqualTo(originalCacheKey);
 
     executor.shutdown();
   }
