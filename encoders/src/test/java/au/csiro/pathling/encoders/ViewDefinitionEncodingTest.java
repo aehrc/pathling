@@ -31,8 +31,12 @@ import au.csiro.pathling.encoders.ViewDefinitionResource.TagComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.WhereComponent;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
-import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -44,9 +48,12 @@ import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
+import org.json.JSONException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 import scala.jdk.javaapi.CollectionConverters;
 
 /**
@@ -65,32 +72,36 @@ public class ViewDefinitionEncodingTest {
 
   @BeforeAll
   static void setUp() {
-    spark = SparkSession.builder()
-        .master("local[*]")
-        .appName("ViewDefinitionEncodingTest")
-        .config("spark.driver.bindAddress", "localhost")
-        .config("spark.driver.host", "localhost")
-        .config("spark.ui.enabled", "false")
-        .getOrCreate();
+    spark =
+        SparkSession.builder()
+            .master("local[*]")
+            .appName("ViewDefinitionEncodingTest")
+            .config("spark.driver.bindAddress", "localhost")
+            .config("spark.driver.host", "localhost")
+            .config("spark.ui.enabled", "false")
+            .getOrCreate();
 
     // Create a FhirContext and register the custom ViewDefinition resource type.
     fhirContext = FhirContext.forR4();
     fhirContext.registerCustomType(ViewDefinitionResource.class);
 
     // Create encoders with the custom FhirContext at different nesting levels.
-    // Note: Extensions must be enabled for schema matching between SchemaConverter and FhirEncoders.
-    fhirEncodersL0 = new FhirEncoders(fhirContext,
-        new R4DataTypeMappings(), 0, OPEN_TYPES, true);
-    fhirEncodersL2 = new FhirEncoders(fhirContext,
-        new R4DataTypeMappings(), 2, OPEN_TYPES, true);
+    // Note: Extensions must be enabled for schema matching between SchemaConverter and
+    // FhirEncoders.
+    fhirEncodersL0 = new FhirEncoders(fhirContext, new R4DataTypeMappings(), 0, OPEN_TYPES, true);
+    fhirEncodersL2 = new FhirEncoders(fhirContext, new R4DataTypeMappings(), 2, OPEN_TYPES, true);
 
     // Create schema converters at different nesting levels.
-    schemaConverterL0 = new SchemaConverter(fhirContext,
-        new R4DataTypeMappings(),
-        EncoderConfig.apply(0, CollectionConverters.asScala(OPEN_TYPES).toSet(), true));
-    schemaConverterL2 = new SchemaConverter(fhirContext,
-        new R4DataTypeMappings(),
-        EncoderConfig.apply(2, CollectionConverters.asScala(OPEN_TYPES).toSet(), true));
+    schemaConverterL0 =
+        new SchemaConverter(
+            fhirContext,
+            new R4DataTypeMappings(),
+            EncoderConfig.apply(0, CollectionConverters.asScala(OPEN_TYPES).toSet(), true));
+    schemaConverterL2 =
+        new SchemaConverter(
+            fhirContext,
+            new R4DataTypeMappings(),
+            EncoderConfig.apply(2, CollectionConverters.asScala(OPEN_TYPES).toSet(), true));
   }
 
   @AfterAll
@@ -135,20 +146,20 @@ public class ViewDefinitionEncodingTest {
 
   @Test
   void testSchemaConverterMatchesEncoderL0() {
-    final StructType schemaFromConverter = schemaConverterL0.resourceSchema(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL0.of(
-        ViewDefinitionResource.class);
+    final StructType schemaFromConverter =
+        schemaConverterL0.resourceSchema(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
 
     assertEquals(schemaFromConverter.treeString(), encoder.schema().treeString());
   }
 
   @Test
   void testSchemaConverterMatchesEncoderL2() {
-    final StructType schemaFromConverter = schemaConverterL2.resourceSchema(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL2.of(
-        ViewDefinitionResource.class);
+    final StructType schemaFromConverter =
+        schemaConverterL2.resourceSchema(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL2.of(ViewDefinitionResource.class);
 
     assertEquals(schemaFromConverter.treeString(), encoder.schema().treeString());
   }
@@ -237,14 +248,14 @@ public class ViewDefinitionEncodingTest {
   void testEncodeDecodeSimpleViewDefinition() {
     final ViewDefinitionResource original = createSimpleViewDefinition();
 
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL0.of(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
-        encoder);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
 
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
-    final ViewDefinitionResource decoded = resolvedEncoder.createDeserializer()
-        .apply(serializedRow);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
 
     assertTrue(original.equalsDeep(decoded));
   }
@@ -255,14 +266,14 @@ public class ViewDefinitionEncodingTest {
     final ViewDefinitionResource original = createNestedViewDefinition(2);
 
     // Use L2 encoder to preserve nesting.
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL2.of(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
-        encoder);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL2.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
 
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
-    final ViewDefinitionResource decoded = resolvedEncoder.createDeserializer()
-        .apply(serializedRow);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
 
     assertTrue(original.equalsDeep(decoded));
   }
@@ -273,14 +284,14 @@ public class ViewDefinitionEncodingTest {
     final ViewDefinitionResource original = createNestedViewDefinition(2);
 
     // Encode with L0 encoder - should prune all nested selects.
-    final ExpressionEncoder<ViewDefinitionResource> encoderL0 = fhirEncodersL0.of(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoderL0 = EncoderUtils.defaultResolveAndBind(
-        encoderL0);
+    final ExpressionEncoder<ViewDefinitionResource> encoderL0 =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoderL0 =
+        EncoderUtils.defaultResolveAndBind(encoderL0);
 
     final InternalRow serializedRow = resolvedEncoderL0.createSerializer().apply(original);
-    final ViewDefinitionResource decoded = resolvedEncoderL0.createDeserializer()
-        .apply(serializedRow);
+    final ViewDefinitionResource decoded =
+        resolvedEncoderL0.createDeserializer().apply(serializedRow);
 
     // Nested select should be empty (pruned).
     assertTrue(decoded.getSelect().get(0).getSelect().isEmpty());
@@ -296,18 +307,19 @@ public class ViewDefinitionEncodingTest {
     constant.setValue(new org.hl7.fhir.r4.model.StringType("test-value"));
     original.getConstant().add(constant);
 
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL0.of(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
-        encoder);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
 
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
-    final ViewDefinitionResource decoded = resolvedEncoder.createDeserializer()
-        .apply(serializedRow);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
 
-    assertInstanceOf(org.hl7.fhir.r4.model.StringType.class,
-        decoded.getConstant().get(0).getValue());
-    assertEquals("test-value",
+    assertInstanceOf(
+        org.hl7.fhir.r4.model.StringType.class, decoded.getConstant().get(0).getValue());
+    assertEquals(
+        "test-value",
         ((org.hl7.fhir.r4.model.StringType) decoded.getConstant().get(0).getValue()).getValue());
   }
 
@@ -321,14 +333,14 @@ public class ViewDefinitionEncodingTest {
     constant.setValue(new BooleanType(true));
     original.getConstant().add(constant);
 
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL0.of(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
-        encoder);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
 
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
-    final ViewDefinitionResource decoded = resolvedEncoder.createDeserializer()
-        .apply(serializedRow);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
 
     assertInstanceOf(BooleanType.class, decoded.getConstant().get(0).getValue());
     assertTrue(((BooleanType) decoded.getConstant().get(0).getValue()).getValue());
@@ -338,14 +350,14 @@ public class ViewDefinitionEncodingTest {
   void testEncodeDecodeWithWhereClause() {
     final ViewDefinitionResource original = createViewDefinitionWithWhere();
 
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL0.of(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
-        encoder);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
 
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
-    final ViewDefinitionResource decoded = resolvedEncoder.createDeserializer()
-        .apply(serializedRow);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
 
     assertTrue(original.equalsDeep(decoded));
     assertEquals("active = true", decoded.getWhere().get(0).getPath().getValue());
@@ -355,14 +367,14 @@ public class ViewDefinitionEncodingTest {
   void testEncodeDecodeWithTags() {
     final ViewDefinitionResource original = createViewDefinitionWithTags();
 
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL0.of(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
-        encoder);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
 
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
-    final ViewDefinitionResource decoded = resolvedEncoder.createDeserializer()
-        .apply(serializedRow);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
 
     assertTrue(original.equalsDeep(decoded));
     final TagComponent decodedTag = decoded.getSelect().get(0).getColumn().get(0).getTag().get(0);
@@ -377,9 +389,8 @@ public class ViewDefinitionEncodingTest {
     final ViewDefinitionResource view2 = createSimpleViewDefinition();
     view2.setId("view-2");
 
-    final Dataset<ViewDefinitionResource> dataset = spark.createDataset(
-        List.of(view1, view2),
-        fhirEncodersL0.of(ViewDefinitionResource.class));
+    final Dataset<ViewDefinitionResource> dataset =
+        spark.createDataset(List.of(view1, view2), fhirEncodersL0.of(ViewDefinitionResource.class));
 
     assertEquals(2, dataset.count());
 
@@ -404,14 +415,14 @@ public class ViewDefinitionEncodingTest {
     select.getColumn().add(column);
     original.getSelect().add(select);
 
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL0.of(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
-        encoder);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
 
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
-    final ViewDefinitionResource decoded = resolvedEncoder.createDeserializer()
-        .apply(serializedRow);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
 
     assertTrue(original.equalsDeep(decoded));
   }
@@ -426,14 +437,14 @@ public class ViewDefinitionEncodingTest {
     select.setForEach(new org.hl7.fhir.r4.model.StringType("name"));
     select.setForEachOrNull(new org.hl7.fhir.r4.model.StringType("address"));
 
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL0.of(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
-        encoder);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
 
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
-    final ViewDefinitionResource decoded = resolvedEncoder.createDeserializer()
-        .apply(serializedRow);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
 
     assertTrue(original.equalsDeep(decoded));
     assertEquals("name", decoded.getSelect().get(0).getForEach().getValue());
@@ -455,18 +466,19 @@ public class ViewDefinitionEncodingTest {
     select.getUnionAll().add(unionSelect);
 
     // Use L2 encoder to preserve unionAll.
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL2.of(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
-        encoder);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL2.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
 
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
-    final ViewDefinitionResource decoded = resolvedEncoder.createDeserializer()
-        .apply(serializedRow);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
 
     assertTrue(original.equalsDeep(decoded));
     assertEquals(1, decoded.getSelect().get(0).getUnionAll().size());
-    assertEquals("union_id",
+    assertEquals(
+        "union_id",
         decoded.getSelect().get(0).getUnionAll().get(0).getColumn().get(0).getName().getValue());
   }
 
@@ -495,18 +507,59 @@ public class ViewDefinitionEncodingTest {
 
     original.getSelect().add(select);
 
-    final ExpressionEncoder<ViewDefinitionResource> encoder = fhirEncodersL0.of(
-        ViewDefinitionResource.class);
-    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
-        encoder);
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
 
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
-    final ViewDefinitionResource decoded = resolvedEncoder.createDeserializer()
-        .apply(serializedRow);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
 
     assertTrue(original.equalsDeep(decoded));
     assertEquals(2, decoded.getSelect().get(0).getColumn().size());
     assertTrue(decoded.getSelect().get(0).getColumn().get(1).getCollection().getValue());
+  }
+
+  /**
+   * Round-trip test for external ViewDefinition resources loaded from JSON files. This test
+   * verifies that ViewDefinition resources can be parsed from JSON, encoded to Spark InternalRow,
+   * decoded back to ViewDefinitionResource, and serialised to JSON that matches the original.
+   */
+  @Test
+  void testRoundTripExternalViewDefinitions() throws IOException, JSONException {
+    // List all JSON files in the viewdefinitions directory.
+    final Path resourceDir = Path.of("src/test/resources/viewdefinitions");
+    final List<Path> viewDefFiles;
+    try (var stream = Files.list(resourceDir)) {
+      viewDefFiles =
+          stream.filter(p -> p.toString().endsWith(".json")).sorted().collect(Collectors.toList());
+    }
+
+    // Parse each ViewDefinition and verify round-trip encoding.
+    final IParser parser = fhirContext.newJsonParser();
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL2.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
+
+    for (final Path file : viewDefFiles) {
+      final String originalJson = Files.readString(file);
+      final ViewDefinitionResource original =
+          parser.parseResource(ViewDefinitionResource.class, originalJson);
+
+      final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
+      final ViewDefinitionResource decoded =
+          resolvedEncoder.createDeserializer().apply(serializedRow);
+
+      // Compare using JSONAssert for detailed diff on failure.
+      final String decodedJson = parser.encodeResourceToString(decoded);
+      JSONAssert.assertEquals(
+          "Round-trip failed for: " + file.getFileName(),
+          originalJson,
+          decodedJson,
+          JSONCompareMode.STRICT_ORDER);
+    }
   }
 
   // ========== TEST DATA FACTORY METHODS ==========
@@ -583,5 +636,4 @@ public class ViewDefinitionEncodingTest {
 
     return view;
   }
-
 }

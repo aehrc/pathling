@@ -1,0 +1,68 @@
+{
+  "resourceType": "ViewDefinition",
+  "name": "rv_obs_vitalsigns",
+  "resource": "Observation",
+  "status": "draft",
+  "select": [
+    {
+      "column": [
+        {
+          "name": "id",
+          "path": "id",
+          "type": "id",
+          "collection": false
+        },
+        {
+          "name": "subject_id",
+          "path": "subject.getReferenceKey()",
+          "type": "string",
+          "collection": false
+        },
+        {
+          "name": "stay_id",
+          "path": "encounter.getReferenceKey()",
+          "type": "string",
+          "collection": false
+        },
+        {
+          "name": "charttime",
+          "path": "effective.ofType(dateTime)",
+          "type": "dateTime",
+          "collection": false
+        },
+        {
+          "name": "storetime",
+          "path": "issued",
+          "type": "instant",
+          "collection": false
+        },
+        {
+          "name": "valuenum",
+          "path": "value.ofType(Quantity).value",
+          "type": "decimal",
+          "collection": false
+        },
+        {
+          "name": "valueuom",
+          "path": "value.ofType(Quantity).unit",
+          "type": "string",
+          "collection": false
+        },
+        {
+          "name": "itemid",
+          "path": "code.coding.code",
+          "type": "code",
+          "collection": false
+        }
+      ]
+    }
+  ],
+  "where": [
+    {
+      "path": "code.coding.system = 'http://mimic.mit.edu/fhir/mimic/CodeSystem/mimic-chartevents-d-items'"
+    },
+    {
+      "path": "code.coding.code = '220045' or code.coding.code = '220277' or code.coding.code = '220210' or code.coding.code = '224690'"
+    }
+  ]
+}
