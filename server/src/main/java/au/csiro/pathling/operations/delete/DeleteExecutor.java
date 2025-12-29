@@ -39,14 +39,11 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class DeleteExecutor {
 
-  @Nonnull
-  private final PathlingContext pathlingContext;
+  @Nonnull private final PathlingContext pathlingContext;
 
-  @Nonnull
-  private final String databasePath;
+  @Nonnull private final String databasePath;
 
-  @Nonnull
-  private final CacheableDatabase cacheableDatabase;
+  @Nonnull private final CacheableDatabase cacheableDatabase;
 
   /**
    * Constructs a new DeleteExecutor.
@@ -55,9 +52,10 @@ public class DeleteExecutor {
    * @param databasePath the path to the Delta database
    * @param cacheableDatabase the cacheable database for cache invalidation
    */
-  public DeleteExecutor(@Nonnull final PathlingContext pathlingContext,
-      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      @Nonnull final String databasePath,
+  public DeleteExecutor(
+      @Nonnull final PathlingContext pathlingContext,
+      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") @Nonnull
+          final String databasePath,
       @Nonnull final CacheableDatabase cacheableDatabase) {
     this.pathlingContext = pathlingContext;
     this.databasePath = databasePath;
@@ -77,8 +75,7 @@ public class DeleteExecutor {
 
     // Check if Delta table exists.
     if (!DeltaTable.isDeltaTable(spark, tablePath)) {
-      throw new ResourceNotFoundError(
-          "Resource not found: " + resourceCode + "/" + resourceId);
+      throw new ResourceNotFoundError("Resource not found: " + resourceCode + "/" + resourceId);
     }
 
     final DeltaTable table = DeltaTable.forPath(spark, tablePath);
@@ -86,16 +83,16 @@ public class DeleteExecutor {
     // Check if resource exists before deleting.
     final long count = table.toDF().filter(col("id").equalTo(resourceId)).count();
     if (count == 0) {
-      throw new ResourceNotFoundError(
-          "Resource not found: " + resourceCode + "/" + resourceId);
+      throw new ResourceNotFoundError("Resource not found: " + resourceCode + "/" + resourceId);
     }
 
     // Perform deletion.
     log.debug("Deleting {} with ID: {}", resourceCode, resourceId);
     table.delete(col("id").equalTo(resourceId));
 
-    // Invalidate the cache to ensure subsequent requests see the updated data.
-    cacheableDatabase.invalidate();
+    // Invalidate the cache to ensure subsequent requests see the updated data. Use the optimised
+    // single-table invalidation since we know exactly which table was modified.
+    cacheableDatabase.invalidate(tablePath);
   }
 
   /**
@@ -108,5 +105,4 @@ public class DeleteExecutor {
   private String getTablePath(@Nonnull final String resourceCode) {
     return safelyJoinPaths(databasePath, resourceCode + ".parquet");
   }
-
 }

@@ -106,4 +106,71 @@ class CacheableDatabaseTest {
 
     executor.shutdown();
   }
+
+  @Test
+  void invalidateWithTablePathUpdatesCacheKey() {
+    // This test verifies that invalidate(tablePath) queries only the specified table and updates
+    // the cache key based on its Delta timestamp.
+    TestDataSetup.copyTestDataToTempDir(tempDir);
+    final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.initialize();
+
+    final String databasePath = "file://" + tempDir.resolve("delta");
+    cacheableDatabase = new CacheableDatabase(sparkSession, databasePath, executor);
+    final String originalCacheKey = cacheableDatabase.getCacheKey().orElse("");
+    assertThat(originalCacheKey).isNotEmpty();
+
+    // Modify a single table to create a new Delta version with a newer timestamp.
+    final String patientTablePath = databasePath + "/Patient.parquet";
+    final DeltaTable patientTable = DeltaTable.forPath(sparkSession, patientTablePath);
+    patientTable.toDF().limit(1).write().format("delta").mode("append").save(patientTablePath);
+
+    // Call invalidate with the specific table path.
+    cacheableDatabase.invalidate(patientTablePath);
+
+    // Wait for the executor to process the task.
+    Awaitility.await()
+        .atMost(5, TimeUnit.SECONDS)
+        .pollInterval(100, TimeUnit.MILLISECONDS)
+        .until(() -> executor.getThreadPoolExecutor().getCompletedTaskCount() >= 1);
+
+    // The cache key should have changed to reflect the new timestamp.
+    final String newCacheKey = cacheableDatabase.getCacheKey().orElse("");
+    assertThat(newCacheKey).isNotEmpty();
+    assertThat(newCacheKey).isNotEqualTo(originalCacheKey);
+
+    executor.shutdown();
+  }
+
+  @Test
+  void invalidateWithTablePathCompletesQuickly() {
+    // This test verifies that invalidate(tablePath) completes in O(1) time by querying only the
+    // specified table, rather than scanning all tables in the database.
+    TestDataSetup.copyTestDataToTempDir(tempDir);
+    final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.initialize();
+
+    final String databasePath = "file://" + tempDir.resolve("delta");
+    cacheableDatabase = new CacheableDatabase(sparkSession, databasePath, executor);
+
+    final String patientTablePath = databasePath + "/Patient.parquet";
+
+    // Call invalidate with the specific table path and measure the time.
+    final long startTime = System.currentTimeMillis();
+    cacheableDatabase.invalidate(patientTablePath);
+
+    // Wait for the executor to process the task.
+    Awaitility.await()
+        .atMost(2, TimeUnit.SECONDS)
+        .pollInterval(10, TimeUnit.MILLISECONDS)
+        .until(() -> executor.getThreadPoolExecutor().getCompletedTaskCount() >= 1);
+
+    final long duration = System.currentTimeMillis() - startTime;
+
+    // The operation should complete quickly since it only queries one table.
+    assertThat(duration).isLessThan(1000);
+    assertThat(cacheableDatabase.getCacheKey()).isPresent();
+
+    executor.shutdown();
+  }
 }

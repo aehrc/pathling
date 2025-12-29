@@ -28,28 +28,31 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 /**
- * A cache-aware implementation layer between the {@link au.csiro.pathling.library.io.sink.DataSink} implementations.
- * 
- * It works on the assumption that all changes happen through the official interactions so it's always logged.
- * 
+ * A cache-aware implementation layer between the {@link au.csiro.pathling.library.io.sink.DataSink}
+ * implementations.
+ *
+ * <p>It works on the assumption that all changes happen through the official interactions so it's
+ * always logged.
+ *
  * @author Felix Naumann
  */
 @Component
 @Slf4j
 public class CacheableDatabase implements Cacheable {
 
-  @Nonnull
-  private final ThreadPoolTaskExecutor executor;
+  @Nonnull private final ThreadPoolTaskExecutor executor;
   private final SparkSession spark;
-  
+
   private final String databasePath;
-  
-  @Nonnull
-  @Getter
-  private Optional<String> cacheKey;
+
+  @Nonnull @Getter private Optional<String> cacheKey;
 
   @Autowired
-  public CacheableDatabase(SparkSession spark, @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") String databasePath, @Nonnull final ThreadPoolTaskExecutor executor) {
+  public CacheableDatabase(
+      SparkSession spark,
+      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
+          String databasePath,
+      @Nonnull final ThreadPoolTaskExecutor executor) {
     this.spark = spark;
     this.databasePath = convertS3ToS3aUrl(databasePath);
     this.cacheKey = buildCacheKeyFromStorage();
@@ -76,15 +79,16 @@ public class CacheableDatabase implements Cacheable {
   private Optional<Long> latestUpdate() {
     log.info("Querying latest snapshot from database: {}", databasePath);
 
-    @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
-        .hadoopConfiguration();
+    @Nullable
+    final org.apache.hadoop.conf.Configuration hadoopConfiguration =
+        spark.sparkContext().hadoopConfiguration();
     requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouse;
     try {
       warehouse = FileSystem.get(new URI(databasePath), hadoopConfiguration);
     } catch (final IOException | URISyntaxException e) {
-      log.debug("Unable to access warehouse location, returning empty snapshot time: {}",
-          databasePath);
+      log.debug(
+          "Unable to access warehouse location, returning empty snapshot time: {}", databasePath);
       return Optional.empty();
     }
     requireNonNull(warehouse);
@@ -93,8 +97,8 @@ public class CacheableDatabase implements Cacheable {
     try {
       warehouse.exists(new Path(databasePath));
     } catch (final IOException e) {
-      log.debug("Unable to access database location, returning empty snapshot time: {}",
-          databasePath);
+      log.debug(
+          "Unable to access database location, returning empty snapshot time: {}", databasePath);
       return Optional.empty();
     }
 
@@ -104,34 +108,36 @@ public class CacheableDatabase implements Cacheable {
     try {
       fileStatuses = warehouse.listStatus(new Path(databasePath));
     } catch (final IOException e) {
-      log.debug("Unable to access database location, returning empty snapshot time: {}",
-          databasePath);
+      log.debug(
+          "Unable to access database location, returning empty snapshot time: {}", databasePath);
       return Optional.empty();
     }
     requireNonNull(fileStatuses);
 
-    final List<Long> timestamps = Arrays.stream(fileStatuses)
-        // Get the filename of each item in the directory listing.
-        .map(fileStatus -> {
-          @Nullable final Path path = fileStatus.getPath();
-          requireNonNull(path);
-          return path.toString();
-        })
-        // Filter out any file names that don't match the pattern.
-        .filter(path -> path.matches("^[^.]+\\.parquet$"))
-        // Filter out anything that is not a Delta table.
-        .map(path -> DeltaTable.forPath(spark, path))
-        // Get the latest history entry for each Delta table.
-        .map(CacheableDatabase::latestUpdateToTable)
-        // Filter out any tables which don't have history rows.
-        .filter(Optional::isPresent)
-        // Get the timestamp from the history row.
-        .map(Optional::get)
-        .toList();
+    final List<Long> timestamps =
+        Arrays.stream(fileStatuses)
+            // Get the filename of each item in the directory listing.
+            .map(
+                fileStatus -> {
+                  @Nullable final Path path = fileStatus.getPath();
+                  requireNonNull(path);
+                  return path.toString();
+                })
+            // Filter out any file names that don't match the pattern.
+            .filter(path -> path.matches("^[^.]+\\.parquet$"))
+            // Filter out anything that is not a Delta table.
+            .map(path -> DeltaTable.forPath(spark, path))
+            // Get the latest history entry for each Delta table.
+            .map(CacheableDatabase::latestUpdateToTable)
+            // Filter out any tables which don't have history rows.
+            .filter(Optional::isPresent)
+            // Get the timestamp from the history row.
+            .map(Optional::get)
+            .toList();
 
     return timestamps.isEmpty()
-           ? Optional.empty()
-           : Optional.ofNullable(Collections.max(timestamps));
+        ? Optional.empty()
+        : Optional.ofNullable(Collections.max(timestamps));
   }
 
   /**
@@ -142,10 +148,9 @@ public class CacheableDatabase implements Cacheable {
    */
   @Nonnull
   private static Optional<Long> latestUpdateToTable(@Nonnull final DeltaTable deltaTable) {
-    @SuppressWarnings("RedundantCast") final Row[] head = (Row[]) deltaTable.history()
-        .orderBy(desc("version"))
-        .select("timestamp")
-        .head(1);
+    @SuppressWarnings("RedundantCast")
+    final Row[] head =
+        (Row[]) deltaTable.history().orderBy(desc("version")).select("timestamp").head(1);
     if (head.length != 1) {
       return Optional.empty();
     } else {
@@ -161,7 +166,7 @@ public class CacheableDatabase implements Cacheable {
   public static String convertS3ToS3aUrl(@Nonnull final String s3Url) {
     return s3Url.replaceFirst("s3:", "s3a:");
   }
-  
+
   /**
    * Converts a timestamp to a string cache key.
    *
@@ -172,7 +177,7 @@ public class CacheableDatabase implements Cacheable {
   private String cacheKeyFromTimestamp(@Nonnull final Long timestamp) {
     return Long.toString(timestamp, Character.MAX_RADIX);
   }
-  
+
   @Override
   public boolean cacheKeyMatches(@Nonnull final String otherKey) {
     return cacheKey.map(key -> key.equals(otherKey)).orElse(false);
@@ -180,14 +185,32 @@ public class CacheableDatabase implements Cacheable {
 
   /**
    * Invalidates the cache by asynchronously refreshing the cache key from the current database
-   * state. This should be called after any operation that modifies the database (create, update,
-   * delete, import).
+   * state. This method scans all tables to determine the latest timestamp and should only be used
+   * when multiple tables may have been modified (e.g., bulk import). For single-table
+   * modifications, use {@link #invalidate(String)} instead.
    */
   public void invalidate() {
-    executor.execute(() -> {
-      cacheKey = buildCacheKeyFromStorage();
-      spark.sqlContext().clearCache();
-    });
+    executor.execute(
+        () -> {
+          cacheKey = buildCacheKeyFromStorage();
+          spark.sqlContext().clearCache();
+        });
+  }
+
+  /**
+   * Invalidates the cache by querying only the specified table's timestamp. Since Delta writes
+   * happen at the current time, the modified table's timestamp will always be greater than or equal
+   * to any other table's timestamp, making this an O(1) operation instead of O(n).
+   *
+   * @param tablePath the path to the Delta table that was modified
+   */
+  public void invalidate(@Nonnull final String tablePath) {
+    executor.execute(
+        () -> {
+          final DeltaTable table = DeltaTable.forPath(spark, tablePath);
+          cacheKey = buildCacheKeyFromTable(table);
+          spark.sqlContext().clearCache();
+        });
   }
 
   /**
@@ -207,8 +230,8 @@ public class CacheableDatabase implements Cacheable {
    * @return the URL of the resource within the warehouse
    */
   @Nonnull
-  protected static String getTableUrl(@Nonnull final String path,
-      @Nonnull final String resourceType) {
+  protected static String getTableUrl(
+      @Nonnull final String path, @Nonnull final String resourceType) {
     return FileSystemPersistence.safelyJoinPaths(path, fileNameForResource(resourceType));
   }
 

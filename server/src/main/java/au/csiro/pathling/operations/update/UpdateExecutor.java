@@ -45,17 +45,13 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class UpdateExecutor {
 
-  @Nonnull
-  private final PathlingContext pathlingContext;
+  @Nonnull private final PathlingContext pathlingContext;
 
-  @Nonnull
-  private final FhirEncoders fhirEncoders;
+  @Nonnull private final FhirEncoders fhirEncoders;
 
-  @Nonnull
-  private final String databasePath;
+  @Nonnull private final String databasePath;
 
-  @Nonnull
-  private final CacheableDatabase cacheableDatabase;
+  @Nonnull private final CacheableDatabase cacheableDatabase;
 
   /**
    * Constructs a new UpdateExecutor.
@@ -65,10 +61,11 @@ public class UpdateExecutor {
    * @param databasePath the path to the Delta database
    * @param cacheableDatabase the cacheable database for cache invalidation
    */
-  public UpdateExecutor(@Nonnull final PathlingContext pathlingContext,
+  public UpdateExecutor(
+      @Nonnull final PathlingContext pathlingContext,
       @Nonnull final FhirEncoders fhirEncoders,
-      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      @Nonnull final String databasePath,
+      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") @Nonnull
+          final String databasePath,
       @Nonnull final CacheableDatabase cacheableDatabase) {
     this.pathlingContext = pathlingContext;
     this.fhirEncoders = fhirEncoders;
@@ -82,8 +79,8 @@ public class UpdateExecutor {
    * @param resourceType the type of resource being updated
    * @param resource the resource to merge
    */
-  public void merge(@Nonnull final ResourceType resourceType,
-      @Nonnull final IBaseResource resource) {
+  public void merge(
+      @Nonnull final ResourceType resourceType, @Nonnull final IBaseResource resource) {
     merge(resourceType, List.of(resource));
   }
 
@@ -93,8 +90,8 @@ public class UpdateExecutor {
    * @param resourceType the type of resources being updated
    * @param resources the resources to merge
    */
-  public void merge(@Nonnull final ResourceType resourceType,
-      @Nonnull final List<IBaseResource> resources) {
+  public void merge(
+      @Nonnull final ResourceType resourceType, @Nonnull final List<IBaseResource> resources) {
     merge(resourceType.toCode(), resources);
   }
 
@@ -118,15 +115,15 @@ public class UpdateExecutor {
    * @param resourceCode the type code of the resources (e.g., "Patient", "ViewDefinition")
    * @param resources the resources to merge
    */
-  public void merge(@Nonnull final String resourceCode,
-      @Nonnull final List<IBaseResource> resources) {
+  public void merge(
+      @Nonnull final String resourceCode, @Nonnull final List<IBaseResource> resources) {
     if (resources.isEmpty()) {
       return;
     }
 
     final SparkSession spark = pathlingContext.getSpark();
-    final Dataset<Row> updates = spark.createDataset(resources,
-        fhirEncoders.of(resourceCode)).toDF();
+    final Dataset<Row> updates =
+        spark.createDataset(resources, fhirEncoders.of(resourceCode)).toDF();
 
     log.debug("Merging {} resource(s) of type {}", resources.size(), resourceCode);
     final String tablePath = getTablePath(resourceCode);
@@ -134,7 +131,8 @@ public class UpdateExecutor {
     if (deltaTableExists(spark, tablePath)) {
       // Perform a merge operation on the existing table.
       final DeltaTable table = DeltaTable.forPath(spark, tablePath);
-      table.as("original")
+      table
+          .as("original")
           .merge(updates.as("updates"), "original.id = updates.id")
           .whenMatched()
           .updateAll()
@@ -144,14 +142,12 @@ public class UpdateExecutor {
     } else {
       // Create a new table with the resources.
       log.debug("Creating new Delta table for resource type: {}", resourceCode);
-      updates.write()
-          .format("delta")
-          .mode(SaveMode.ErrorIfExists)
-          .save(tablePath);
+      updates.write().format("delta").mode(SaveMode.ErrorIfExists).save(tablePath);
     }
 
-    // Invalidate the cache to ensure subsequent requests see the updated data.
-    cacheableDatabase.invalidate();
+    // Invalidate the cache to ensure subsequent requests see the updated data. Use the optimised
+    // single-table invalidation since we know exactly which table was modified.
+    cacheableDatabase.invalidate(tablePath);
   }
 
   /**
@@ -163,8 +159,8 @@ public class UpdateExecutor {
    * @return the prepared resource
    */
   @Nonnull
-  public static IBaseResource prepareResourceForUpdate(@Nonnull final IBaseResource resource,
-      @Nonnull final String id) {
+  public static IBaseResource prepareResourceForUpdate(
+      @Nonnull final IBaseResource resource, @Nonnull final String id) {
     // When a fullUrl with a UUID is provided within a batch, the ID gets set to a URN. We need to
     // convert this back to a naked ID before we use it in the update.
     final String originalId = resource.getIdElement().getIdPart();
@@ -173,8 +169,8 @@ public class UpdateExecutor {
       resource.setId(originalId.replaceFirst(uuidPrefix, ""));
     }
     checkUserInput(
-        resource.getIdElement().getIdPart() != null && resource.getIdElement().getIdPart()
-            .equals(id),
+        resource.getIdElement().getIdPart() != null
+            && resource.getIdElement().getIdPart().equals(id),
         "Resource ID missing or does not match supplied ID");
     return resource;
   }
@@ -197,9 +193,8 @@ public class UpdateExecutor {
    * @param tablePath the path to check
    * @return true if a Delta table exists at the path
    */
-  private static boolean deltaTableExists(@Nonnull final SparkSession spark,
-      @Nonnull final String tablePath) {
+  private static boolean deltaTableExists(
+      @Nonnull final SparkSession spark, @Nonnull final String tablePath) {
     return DeltaTable.isDeltaTable(spark, tablePath);
   }
-
 }
