@@ -5,7 +5,18 @@
  */
 
 import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
-import { Badge, Box, Card, Flex, Heading, Separator, Spinner, Table, Text } from "@radix-ui/themes";
+import {
+  Badge,
+  Box,
+  Card,
+  DataList,
+  Flex,
+  Heading,
+  Separator,
+  Spinner,
+  Table,
+  Text,
+} from "@radix-ui/themes";
 import { config } from "../config";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 
@@ -38,48 +49,50 @@ export function Dashboard() {
             Server information
           </Heading>
 
-          <Flex direction="column" gap="2">
-            <Flex justify="between">
-              <Text weight="medium">Server name</Text>
-              <Text>{capabilities.serverName || "Unknown"}</Text>
-            </Flex>
+          <DataList.Root>
+            <DataList.Item>
+              <DataList.Label minWidth="120px">Server name</DataList.Label>
+              <DataList.Value>{capabilities.serverName || "Unknown"}</DataList.Value>
+            </DataList.Item>
 
             {capabilities.serverVersion && (
-              <Flex justify="between">
-                <Text weight="medium">Version</Text>
-                <Text>{capabilities.serverVersion}</Text>
-              </Flex>
+              <DataList.Item>
+                <DataList.Label minWidth="120px">Version</DataList.Label>
+                <DataList.Value>{capabilities.serverVersion}</DataList.Value>
+              </DataList.Item>
             )}
 
-            <Flex justify="between">
-              <Text weight="medium">FHIR version</Text>
-              <Text>{capabilities.fhirVersion || "Unknown"}</Text>
-            </Flex>
+            <DataList.Item>
+              <DataList.Label minWidth="120px">FHIR version</DataList.Label>
+              <DataList.Value>{capabilities.fhirVersion || "Unknown"}</DataList.Value>
+            </DataList.Item>
 
             {capabilities.publisher && (
-              <Flex justify="between">
-                <Text weight="medium">Publisher</Text>
-                <Text>{capabilities.publisher}</Text>
-              </Flex>
+              <DataList.Item>
+                <DataList.Label minWidth="120px">Publisher</DataList.Label>
+                <DataList.Value>{capabilities.publisher}</DataList.Value>
+              </DataList.Item>
             )}
 
-            <Flex justify="between">
-              <Text weight="medium">Authentication</Text>
-              <Flex align="center" gap="1">
-                {capabilities.authRequired ? (
-                  <>
-                    <CheckCircledIcon color="var(--green-9)" />
-                    <Text color="green">SMART on FHIR</Text>
-                  </>
-                ) : (
-                  <>
-                    <CrossCircledIcon color="var(--gray-9)" />
-                    <Text color="gray">Not required</Text>
-                  </>
-                )}
-              </Flex>
-            </Flex>
-          </Flex>
+            <DataList.Item>
+              <DataList.Label minWidth="120px">Authentication</DataList.Label>
+              <DataList.Value>
+                <Flex align="center" gap="1">
+                  {capabilities.authRequired ? (
+                    <>
+                      <CheckCircledIcon color="var(--green-9)" />
+                      <Text color="green">SMART on FHIR</Text>
+                    </>
+                  ) : (
+                    <>
+                      <CrossCircledIcon color="var(--gray-9)" />
+                      <Text color="gray">Not required</Text>
+                    </>
+                  )}
+                </Flex>
+              </DataList.Value>
+            </DataList.Item>
+          </DataList.Root>
 
           {capabilities.description && (
             <>
