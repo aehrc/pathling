@@ -22,12 +22,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
+import au.csiro.pathling.shaded.com.google.gson.Gson;
+import au.csiro.pathling.shaded.com.google.gson.GsonBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.util.HashMap;
@@ -757,6 +757,37 @@ class ViewDefinitionRunProviderTest {
   }
 
   // -------------------------------------------------------------------------
+  // Constant parsing tests
+  // -------------------------------------------------------------------------
+
+  // Verifies that constants with valueCode are correctly parsed and used in FHIRPath expressions.
+  @Test
+  void constantsWithValueCodeAreParsed() throws IOException {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createPatientViewWithConstant());
+    final String matchingPatient = createPatientJsonWithGender("p1", "Smith", "John", "male");
+    final String nonMatchingPatient = createPatientJsonWithGender("p2", "Jones", "Jane", "female");
+
+    provider.run(
+        viewResource,
+        "application/x-ndjson",
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(matchingPatient, nonMatchingPatient),
+        mockRequestDetails(null),
+        response);
+
+    final String content = response.getContentAsString().trim();
+    final String[] lines = content.split("\n");
+    // Only the matching patient should be returned due to the where clause using the constant.
+    assertThat(lines).hasSize(1);
+    assertThat(content).contains("p1").doesNotContain("p2");
+  }
+
+  // -------------------------------------------------------------------------
   // Helper methods
   // -------------------------------------------------------------------------
 
@@ -823,6 +854,20 @@ class ViewDefinitionRunProviderTest {
     observation.setSubject(new Reference("Patient/" + patientId));
     observation.setStatus(Observation.ObservationStatus.FINAL);
     return fhirContext.newJsonParser().encodeResourceToString(observation);
+  }
+
+  // Creates a ViewDefinition with a constant using valueCode in the where clause.
+  @Nonnull
+  private String createPatientViewWithConstant() {
+    final Map<String, Object> view = new HashMap<>();
+    view.put("resourceType", "ViewDefinition");
+    view.put("name", "patient_view_with_constant");
+    view.put("resource", "Patient");
+    view.put("status", "active");
+    view.put("select", List.of(Map.of("column", List.of(Map.of("name", "id", "path", "id")))));
+    view.put("where", List.of(Map.of("path", "gender = %target_gender")));
+    view.put("constant", List.of(Map.of("name", "target_gender", "valueCode", "male")));
+    return gson.toJson(view);
   }
 
   /** Creates a mock ServletRequestDetails with the specified Accept header. */

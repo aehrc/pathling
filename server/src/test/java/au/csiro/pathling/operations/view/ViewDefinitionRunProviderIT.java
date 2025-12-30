@@ -20,13 +20,12 @@ package au.csiro.pathling.operations.view;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.encoders.ViewDefinitionResource;
+import au.csiro.pathling.shaded.com.google.gson.Gson;
+import au.csiro.pathling.shaded.com.google.gson.GsonBuilder;
 import ca.uhn.fhir.context.FhirContext;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import org.springframework.http.MediaType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -42,6 +41,7 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -60,16 +60,13 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @ActiveProfiles({"integration-test"})
 class ViewDefinitionRunProviderIT {
 
-  @LocalServerPort
-  int port;
+  @LocalServerPort int port;
 
-  @Autowired
-  WebTestClient webTestClient;
+  @Autowired WebTestClient webTestClient;
 
   private static Path warehouseDir;
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
   private Gson gson;
 
@@ -81,9 +78,11 @@ class ViewDefinitionRunProviderIT {
 
   @BeforeEach
   void setup() {
-    webTestClient = webTestClient.mutate()
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
-        .build();
+    webTestClient =
+        webTestClient
+            .mutate()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .build();
     gson = new GsonBuilder().create();
     // Register ViewDefinitionResource with the FhirContext so it can be serialised/parsed.
     fhirContext.registerCustomType(ViewDefinitionResource.class);
@@ -97,19 +96,24 @@ class ViewDefinitionRunProviderIT {
     patient.addName().setFamily("NdjsonTestFamily");
     final String patientJson = fhirContext.newJsonParser().encodeResourceToString(patient);
 
-    final String parametersJson = createParametersWithInlineResourcesJson(viewJson,
-        "application/x-ndjson", List.of(patientJson));
+    final String parametersJson =
+        createParametersWithInlineResourcesJson(
+            viewJson, "application/x-ndjson", List.of(patientJson));
 
-    final EntityExchangeResult<byte[]> result = webTestClient.post()
-        .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/x-ndjson")
-        .bodyValue(parametersJson)
-        .exchange()
-        .expectStatus().isOk()
-        .expectHeader().contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
-        .expectBody()
-        .returnResult();
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/x-ndjson")
+            .bodyValue(parametersJson)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectHeader()
+            .contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
+            .expectBody()
+            .returnResult();
 
     final String responseBody = new String(result.getResponseBodyContent(), StandardCharsets.UTF_8);
     log.debug("NDJSON response:\n{}", responseBody);
@@ -133,19 +137,23 @@ class ViewDefinitionRunProviderIT {
     patient.addName().setFamily("CsvTestFamily");
     final String patientJson = fhirContext.newJsonParser().encodeResourceToString(patient);
 
-    final String parametersJson = createParametersWithInlineResourcesJson(viewJson,
-        "text/csv", List.of(patientJson), true);
+    final String parametersJson =
+        createParametersWithInlineResourcesJson(viewJson, "text/csv", List.of(patientJson), true);
 
-    final EntityExchangeResult<byte[]> result = webTestClient.post()
-        .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "text/csv")
-        .bodyValue(parametersJson)
-        .exchange()
-        .expectStatus().isOk()
-        .expectHeader().contentTypeCompatibleWith(MediaType.parseMediaType("text/csv"))
-        .expectBody()
-        .returnResult();
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "text/csv")
+            .bodyValue(parametersJson)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectHeader()
+            .contentTypeCompatibleWith(MediaType.parseMediaType("text/csv"))
+            .expectBody()
+            .returnResult();
 
     final String responseBody = new String(result.getResponseBodyContent(), StandardCharsets.UTF_8);
     log.debug("CSV response:\n{}", responseBody);
@@ -174,19 +182,24 @@ class ViewDefinitionRunProviderIT {
     final String patient1Json = fhirContext.newJsonParser().encodeResourceToString(patient1);
     final String patient2Json = fhirContext.newJsonParser().encodeResourceToString(patient2);
 
-    final String parametersJson = createParametersWithInlineResourcesJson(viewJson,
-        "application/x-ndjson", List.of(patient1Json, patient2Json));
+    final String parametersJson =
+        createParametersWithInlineResourcesJson(
+            viewJson, "application/x-ndjson", List.of(patient1Json, patient2Json));
 
-    final EntityExchangeResult<byte[]> result = webTestClient.post()
-        .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/x-ndjson")
-        .bodyValue(parametersJson)
-        .exchange()
-        .expectStatus().isOk()
-        .expectHeader().contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
-        .expectBody()
-        .returnResult();
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/x-ndjson")
+            .bodyValue(parametersJson)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectHeader()
+            .contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
+            .expectBody()
+            .returnResult();
 
     final String responseBody = new String(result.getResponseBodyContent(), StandardCharsets.UTF_8);
     log.debug("Multiple inline resources response:\n{}", responseBody);
@@ -220,13 +233,15 @@ class ViewDefinitionRunProviderIT {
     parameterList.add(viewParam);
     parameters.put("parameter", parameterList);
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/x-ndjson")
         .bodyValue(gson.toJson(parameters))
         .exchange()
-        .expectStatus().is4xxClientError();
+        .expectStatus()
+        .is4xxClientError();
   }
 
   // -------------------------------------------------------------------------
@@ -241,19 +256,24 @@ class ViewDefinitionRunProviderIT {
     patient.addName().setFamily("TypeLevelFamily");
     final String patientJson = fhirContext.newJsonParser().encodeResourceToString(patient);
 
-    final String parametersJson = createParametersWithInlineResourcesJson(viewJson,
-        "application/x-ndjson", List.of(patientJson));
+    final String parametersJson =
+        createParametersWithInlineResourcesJson(
+            viewJson, "application/x-ndjson", List.of(patientJson));
 
-    final EntityExchangeResult<byte[]> result = webTestClient.post()
-        .uri("http://localhost:" + port + "/fhir/ViewDefinition/$run")
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/x-ndjson")
-        .bodyValue(parametersJson)
-        .exchange()
-        .expectStatus().isOk()
-        .expectHeader().contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
-        .expectBody()
-        .returnResult();
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/ViewDefinition/$run")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/x-ndjson")
+            .bodyValue(parametersJson)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectHeader()
+            .contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
+            .expectBody()
+            .returnResult();
 
     final String responseBody = new String(result.getResponseBodyContent(), StandardCharsets.UTF_8);
     log.debug("Type-level NDJSON response:\n{}", responseBody);
@@ -280,14 +300,23 @@ class ViewDefinitionRunProviderIT {
     final String viewId = createStoredViewDefinition("instance-ndjson-view");
 
     // Call the instance-level $run operation with GET.
-    final EntityExchangeResult<byte[]> result = webTestClient.get()
-        .uri("http://localhost:" + port + "/fhir/ViewDefinition/" + viewId + "/$run?_format=ndjson")
-        .header("Accept", "application/x-ndjson")
-        .exchange()
-        .expectStatus().isOk()
-        .expectHeader().contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
-        .expectBody()
-        .returnResult();
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .get()
+            .uri(
+                "http://localhost:"
+                    + port
+                    + "/fhir/ViewDefinition/"
+                    + viewId
+                    + "/$run?_format=ndjson")
+            .header("Accept", "application/x-ndjson")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectHeader()
+            .contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
+            .expectBody()
+            .returnResult();
 
     final String responseBody = new String(result.getResponseBodyContent(), StandardCharsets.UTF_8);
     log.debug("Instance-level NDJSON response:\n{}", responseBody);
@@ -309,14 +338,19 @@ class ViewDefinitionRunProviderIT {
     final String viewId = createStoredViewDefinition("instance-csv-view");
 
     // Call the instance-level $run operation with GET.
-    final EntityExchangeResult<byte[]> result = webTestClient.get()
-        .uri("http://localhost:" + port + "/fhir/ViewDefinition/" + viewId + "/$run?_format=csv")
-        .header("Accept", "text/csv")
-        .exchange()
-        .expectStatus().isOk()
-        .expectHeader().contentTypeCompatibleWith(MediaType.parseMediaType("text/csv"))
-        .expectBody()
-        .returnResult();
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .get()
+            .uri(
+                "http://localhost:" + port + "/fhir/ViewDefinition/" + viewId + "/$run?_format=csv")
+            .header("Accept", "text/csv")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectHeader()
+            .contentTypeCompatibleWith(MediaType.parseMediaType("text/csv"))
+            .expectBody()
+            .returnResult();
 
     final String responseBody = new String(result.getResponseBodyContent(), StandardCharsets.UTF_8);
     log.debug("Instance-level CSV response:\n{}", responseBody);
@@ -337,15 +371,23 @@ class ViewDefinitionRunProviderIT {
     final String viewId = createStoredViewDefinition("instance-limit-view");
 
     // Call the instance-level $run operation with limit.
-    final EntityExchangeResult<byte[]> result = webTestClient.get()
-        .uri("http://localhost:" + port + "/fhir/ViewDefinition/" + viewId
-            + "/$run?_format=ndjson&_limit=1")
-        .header("Accept", "application/x-ndjson")
-        .exchange()
-        .expectStatus().isOk()
-        .expectHeader().contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
-        .expectBody()
-        .returnResult();
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .get()
+            .uri(
+                "http://localhost:"
+                    + port
+                    + "/fhir/ViewDefinition/"
+                    + viewId
+                    + "/$run?_format=ndjson&_limit=1")
+            .header("Accept", "application/x-ndjson")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectHeader()
+            .contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
+            .expectBody()
+            .returnResult();
 
     final String responseBody = new String(result.getResponseBodyContent(), StandardCharsets.UTF_8);
     log.debug("Instance-level with limit response:\n{}", responseBody);
@@ -359,11 +401,16 @@ class ViewDefinitionRunProviderIT {
   @Test
   void instanceLevelRunWithNonExistentViewDefinitionReturns404() {
     // Call the instance-level $run operation with a non-existent ViewDefinition ID.
-    webTestClient.get()
-        .uri("http://localhost:" + port + "/fhir/ViewDefinition/nonexistent-view-id/$run?_format=ndjson")
+    webTestClient
+        .get()
+        .uri(
+            "http://localhost:"
+                + port
+                + "/fhir/ViewDefinition/nonexistent-view-id/$run?_format=ndjson")
         .header("Accept", "application/x-ndjson")
         .exchange()
-        .expectStatus().isNotFound();
+        .expectStatus()
+        .isNotFound();
   }
 
   @Test
@@ -396,16 +443,20 @@ class ViewDefinitionRunProviderIT {
     parameters.put("parameter", parameterList);
 
     // Call the instance-level $run operation with POST.
-    final EntityExchangeResult<byte[]> result = webTestClient.post()
-        .uri("http://localhost:" + port + "/fhir/ViewDefinition/" + viewId + "/$run")
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/x-ndjson")
-        .bodyValue(gson.toJson(parameters))
-        .exchange()
-        .expectStatus().isOk()
-        .expectHeader().contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
-        .expectBody()
-        .returnResult();
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/ViewDefinition/" + viewId + "/$run")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/x-ndjson")
+            .bodyValue(gson.toJson(parameters))
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectHeader()
+            .contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
+            .expectBody()
+            .returnResult();
 
     final String responseBody = new String(result.getResponseBodyContent(), StandardCharsets.UTF_8);
     log.debug("Instance-level POST with inline resources response:\n{}", responseBody);
@@ -419,21 +470,22 @@ class ViewDefinitionRunProviderIT {
   // Helper methods
   // -------------------------------------------------------------------------
 
-  /**
-   * Creates a ViewDefinition resource and returns its ID.
-   */
+  /** Creates a ViewDefinition resource and returns its ID. */
   @Nonnull
   private String createStoredViewDefinition(@Nonnull final String name) {
     final String viewJson = createSimplePatientView(name);
 
-    final EntityExchangeResult<byte[]> result = webTestClient.post()
-        .uri("http://localhost:" + port + "/fhir/ViewDefinition")
-        .header("Content-Type", "application/fhir+json")
-        .bodyValue(viewJson)
-        .exchange()
-        .expectStatus().isCreated()
-        .expectBody()
-        .returnResult();
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/ViewDefinition")
+            .header("Content-Type", "application/fhir+json")
+            .bodyValue(viewJson)
+            .exchange()
+            .expectStatus()
+            .isCreated()
+            .expectBody()
+            .returnResult();
 
     // Extract the ID from the Location header.
     final String location = result.getResponseHeaders().getFirst("Location");
@@ -450,10 +502,12 @@ class ViewDefinitionRunProviderIT {
     view.put("name", name);
     view.put("resource", "Patient");
     view.put("status", "active");
-    view.put("select", List.of(
-        Map.of("column", List.of(Map.of("name", "id", "path", "id"))),
-        Map.of("column", List.of(Map.of("name", "family_name", "path", "name.first().family")))
-    ));
+    view.put(
+        "select",
+        List.of(
+            Map.of("column", List.of(Map.of("name", "id", "path", "id"))),
+            Map.of(
+                "column", List.of(Map.of("name", "family_name", "path", "name.first().family")))));
     return gson.toJson(view);
   }
 
@@ -463,14 +517,18 @@ class ViewDefinitionRunProviderIT {
   }
 
   @Nonnull
-  private String createParametersWithInlineResourcesJson(@Nonnull final String viewJson,
-      @Nonnull final String format, @Nonnull final List<String> inlineResources) {
+  private String createParametersWithInlineResourcesJson(
+      @Nonnull final String viewJson,
+      @Nonnull final String format,
+      @Nonnull final List<String> inlineResources) {
     return createParametersWithInlineResourcesJson(viewJson, format, inlineResources, null);
   }
 
   @Nonnull
-  private String createParametersWithInlineResourcesJson(@Nonnull final String viewJson,
-      @Nonnull final String format, @Nonnull final List<String> inlineResources,
+  private String createParametersWithInlineResourcesJson(
+      @Nonnull final String viewJson,
+      @Nonnull final String format,
+      @Nonnull final List<String> inlineResources,
       final Boolean includeHeader) {
     // Build the Parameters resource JSON directly using Gson to avoid HAPI serialisation issues
     // with custom resource types.
@@ -505,5 +563,4 @@ class ViewDefinitionRunProviderIT {
     parameters.put("parameter", parameterList);
     return gson.toJson(parameters);
   }
-
 }

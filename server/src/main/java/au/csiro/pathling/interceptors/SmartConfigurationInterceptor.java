@@ -22,12 +22,12 @@ import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
 
 import au.csiro.pathling.security.OidcConfiguration;
+import au.csiro.pathling.shaded.com.google.gson.FieldNamingPolicy;
+import au.csiro.pathling.shaded.com.google.gson.Gson;
+import au.csiro.pathling.shaded.com.google.gson.GsonBuilder;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
-import com.google.gson.FieldNamingPolicy;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,22 +49,21 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SmartConfigurationInterceptor {
 
-  @Nonnull
-  private final String response;
+  @Nonnull private final String response;
 
   /**
    * @param issuer the required issuer of tokens
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
-   * from OIDC discovery
+   *     from OIDC discovery
    */
-  public SmartConfigurationInterceptor(@Nonnull final String issuer,
-                                       @Nonnull final OidcConfiguration oidcConfiguration) {
+  public SmartConfigurationInterceptor(
+      @Nonnull final String issuer, @Nonnull final OidcConfiguration oidcConfiguration) {
     response = buildResponse(issuer, oidcConfiguration);
   }
 
   @Nonnull
-  private static String buildResponse(@Nonnull final String issuer,
-      @Nonnull final OidcConfiguration oidcConfiguration) {
+  private static String buildResponse(
+      @Nonnull final String issuer, @Nonnull final OidcConfiguration oidcConfiguration) {
     final SmartConfiguration smartConfiguration = new SmartConfiguration();
 
     final Optional<String> authUrl = oidcConfiguration.get(AUTH_URL);
@@ -76,9 +75,10 @@ public class SmartConfigurationInterceptor {
     tokenUrl.ifPresent(smartConfiguration::setTokenEndpoint);
     revokeUrl.ifPresent(smartConfiguration::setRevocationEndpoint);
 
-    final Gson gson = new GsonBuilder()
-        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-        .create();
+    final Gson gson =
+        new GsonBuilder()
+            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            .create();
     return gson.toJson(smartConfiguration);
   }
 
@@ -93,8 +93,10 @@ public class SmartConfigurationInterceptor {
    */
   @Hook(Pointcut.SERVER_INCOMING_REQUEST_PRE_PROCESSED)
   @SuppressWarnings("unused")
-  public boolean serveUris(@Nullable final HttpServletRequest servletRequest,
-      @Nullable final HttpServletResponse servletResponse) throws IOException {
+  public boolean serveUris(
+      @Nullable final HttpServletRequest servletRequest,
+      @Nullable final HttpServletResponse servletResponse)
+      throws IOException {
     if (servletRequest == null || servletResponse == null) {
       log.warn("SMART configuration interceptor invoked with missing servlet request or response");
       return true;
@@ -124,7 +126,5 @@ public class SmartConfigurationInterceptor {
     private String revocationEndpoint;
 
     private final List<String> capabilities = Collections.singletonList("launch-standalone");
-
   }
-
 }

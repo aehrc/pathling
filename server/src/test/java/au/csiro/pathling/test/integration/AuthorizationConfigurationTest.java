@@ -22,12 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.security.OidcConfiguration.ConfigItem;
+import au.csiro.pathling.shaded.com.google.gson.FieldNamingPolicy;
+import au.csiro.pathling.shaded.com.google.gson.Gson;
+import au.csiro.pathling.shaded.com.google.gson.GsonBuilder;
+import au.csiro.pathling.shaded.com.google.gson.JsonElement;
+import au.csiro.pathling.shaded.com.google.gson.JsonParser;
 import au.csiro.pathling.test.TestResources;
-import com.google.gson.FieldNamingPolicy;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Collections;
@@ -62,46 +62,49 @@ import org.springframework.test.context.TestPropertySource;
 /**
  * @author John Grimes
  */
-@TestPropertySource(properties = {
-    "pathling.auth.enabled=true",
-    "pathling.auth.issuer=https://auth.ontoserver.csiro.au/auth/realms/aehrc",
-    "pathling.auth.audience=https://pathling.acme.com/fhir",
-    "pathling.cors.maxAge=800",
-    "pathling.cors.allowedMethods=GET,POST",
-    "pathling.cors.allowedOriginPatterns=http://foo.bar,http://boo.bar",
-    "pathling.cors.allowedHeaders=X-Mine,X-Other"
-})
+@TestPropertySource(
+    properties = {
+      "pathling.auth.enabled=true",
+      "pathling.auth.issuer=https://auth.ontoserver.csiro.au/auth/realms/aehrc",
+      "pathling.auth.audience=https://pathling.acme.com/fhir",
+      "pathling.cors.maxAge=800",
+      "pathling.cors.allowedMethods=GET,POST",
+      "pathling.cors.allowedOriginPatterns=http://foo.bar,http://boo.bar",
+      "pathling.cors.allowedHeaders=X-Mine,X-Other"
+    })
 @Tag("Tranche2")
 @Slf4j
 class AuthorizationConfigurationTest extends IntegrationTest {
 
-  @LocalServerPort
-  int port;
-  
+  @LocalServerPort int port;
+
   TestRestTemplate restTemplate;
 
-  @MockBean
-  JwtDecoder jwtDecoder;
+  @MockBean JwtDecoder jwtDecoder;
 
-  @MockBean
-  JwtAuthenticationConverter jwtAuthenticationConverter;
-  
+  @MockBean JwtAuthenticationConverter jwtAuthenticationConverter;
+
   @BeforeEach
   void setup() {
-    restTemplate = new TestRestTemplate(new RestTemplateBuilder().requestFactory(JdkClientHttpRequestFactory.class));
+    restTemplate =
+        new TestRestTemplate(
+            new RestTemplateBuilder().requestFactory(JdkClientHttpRequestFactory.class));
   }
 
   @Test
   void capabilityStatement() {
-    final String response = restTemplate
-        .getForObject("http://localhost:" + port + "/fhir/metadata", String.class);
+    final String response =
+        restTemplate.getForObject("http://localhost:" + port + "/fhir/metadata", String.class);
     assertJson(
         "responses/AuthorizationConfigurationTest/capabilityStatement.CapabilityStatement.json",
-        response, JSONCompareMode.LENIENT);
+        response,
+        JSONCompareMode.LENIENT);
   }
 
-  public static void assertJson(@Nonnull final String expectedPath,
-      @Nonnull final String actualJson, @Nonnull final JSONCompareMode compareMode) {
+  public static void assertJson(
+      @Nonnull final String expectedPath,
+      @Nonnull final String actualJson,
+      @Nonnull final JSONCompareMode compareMode) {
     final String expectedJson;
     try {
       expectedJson = TestResources.getResourceAsString(expectedPath);
@@ -120,30 +123,32 @@ class AuthorizationConfigurationTest extends IntegrationTest {
     }
   }
 
-  public static void assertJson(@Nonnull final String expectedPath,
-      @Nonnull final String actualJson) {
+  public static void assertJson(
+      @Nonnull final String expectedPath, @Nonnull final String actualJson) {
     assertJson(expectedPath, actualJson, JSONCompareMode.NON_EXTENSIBLE);
   }
 
   @Test
   void smartConfiguration() {
-    final String response = restTemplate
-        .getForObject("http://localhost:" + port + "/fhir/.well-known/smart-configuration",
-            String.class);
-    final Gson gson = new GsonBuilder()
-        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-        .create();
+    final String response =
+        restTemplate.getForObject(
+            "http://localhost:" + port + "/fhir/.well-known/smart-configuration", String.class);
+    final Gson gson =
+        new GsonBuilder()
+            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            .create();
     final SmartConfiguration smartConfiguration = gson.fromJson(response, SmartConfiguration.class);
 
-    assertEquals("https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/auth",
+    assertEquals(
+        "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/auth",
         smartConfiguration.getAuthorizationEndpoint());
-    assertEquals("https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token",
+    assertEquals(
+        "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token",
         smartConfiguration.getTokenEndpoint());
     assertEquals(
         "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/revoke",
         smartConfiguration.getRevocationEndpoint());
   }
-
 
   @Test
   void corsPreflight() throws JSONException {
@@ -152,19 +157,22 @@ class AuthorizationConfigurationTest extends IntegrationTest {
     corsHeaders.setAccessControlRequestMethod(HttpMethod.POST);
     corsHeaders.setAccessControlRequestHeaders(Arrays.asList("X-Mine", "X-Skip"));
 
-    final ResponseEntity<String> response = restTemplate
-        .exchange("http://localhost:" + port + "/fhir/$aggregate", HttpMethod.OPTIONS,
+    final ResponseEntity<String> response =
+        restTemplate.exchange(
+            "http://localhost:" + port + "/fhir/$aggregate",
+            HttpMethod.OPTIONS,
             new HttpEntity<String>(corsHeaders),
             String.class);
 
     final HttpHeaders responseHeaders = response.getHeaders();
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals("http://foo.bar", responseHeaders.getAccessControlAllowOrigin());
-    assertEquals(Arrays.asList(HttpMethod.GET, HttpMethod.POST),
+    assertEquals(
+        Arrays.asList(HttpMethod.GET, HttpMethod.POST),
         responseHeaders.getAccessControlAllowMethods());
     assertEquals(800L, responseHeaders.getAccessControlMaxAge());
-    assertEquals(Collections.singletonList("X-Mine"),
-        responseHeaders.getAccessControlAllowHeaders());
+    assertEquals(
+        Collections.singletonList("X-Mine"), responseHeaders.getAccessControlAllowHeaders());
     assertTrue(responseHeaders.getAccessControlAllowCredentials());
   }
 
@@ -173,14 +181,15 @@ class AuthorizationConfigurationTest extends IntegrationTest {
     final HttpHeaders corsHeaders = new HttpHeaders();
     corsHeaders.setOrigin("http://otgher.bar");
 
-    final ResponseEntity<String> response = restTemplate
-        .exchange("http://localhost:" + port + "/fhir/metadata", HttpMethod.GET,
+    final ResponseEntity<String> response =
+        restTemplate.exchange(
+            "http://localhost:" + port + "/fhir/metadata",
+            HttpMethod.GET,
             new HttpEntity<String>(corsHeaders),
             String.class);
 
     assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
   }
-
 
   @Getter
   @SuppressWarnings("unused")
@@ -193,7 +202,6 @@ class AuthorizationConfigurationTest extends IntegrationTest {
     String revocationEndpoint;
 
     List<String> capabilities;
-
   }
 
   @TestConfiguration
@@ -203,15 +211,16 @@ class AuthorizationConfigurationTest extends IntegrationTest {
     @Primary
     OidcConfiguration oidcConfiguration() {
       final Map<String, Object> oidcConfiguration = new HashMap<>();
-      oidcConfiguration.put(ConfigItem.AUTH_URL.getKey(),
+      oidcConfiguration.put(
+          ConfigItem.AUTH_URL.getKey(),
           "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/auth");
-      oidcConfiguration.put(ConfigItem.TOKEN_URL.getKey(),
+      oidcConfiguration.put(
+          ConfigItem.TOKEN_URL.getKey(),
           "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token");
-      oidcConfiguration.put(ConfigItem.REVOKE_URL.getKey(),
+      oidcConfiguration.put(
+          ConfigItem.REVOKE_URL.getKey(),
           "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/revoke");
       return new OidcConfiguration(oidcConfiguration);
     }
-
   }
-
 }
