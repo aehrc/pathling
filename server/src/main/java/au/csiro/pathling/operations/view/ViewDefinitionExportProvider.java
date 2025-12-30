@@ -246,14 +246,16 @@ public class ViewDefinitionExportProvider
       @Nonnull final ServletRequestDetails servletRequestDetails, @Nonnull final Object[] params)
       throws InvalidRequestException {
 
-    @SuppressWarnings("unchecked")
-    final List<String> viewNames =
-        params[0] != null ? (List<String>) params[0] : Collections.emptyList();
+    // Extract view parameters from the raw Parameters resource, since HAPI's automatic extraction
+    // does not handle nested part arrays containing resources correctly.
+    final List<ViewInput> views = extractViewInputsFromRequest(servletRequestDetails);
 
-    @SuppressWarnings("unchecked")
-    final List<IBaseResource> viewResources =
-        params[1] != null ? (List<IBaseResource>) params[1] : Collections.emptyList();
+    // Validate that at least one view is provided.
+    if (views.isEmpty()) {
+      throw new InvalidRequestException("At least one view.viewResource parameter is required.");
+    }
 
+    // Other parameters are extracted correctly by HAPI.
     final String clientTrackingId = (String) params[2];
     final String format = (String) params[3];
     final BooleanType includeHeader = (BooleanType) params[4];
@@ -267,14 +269,6 @@ public class ViewDefinitionExportProvider
         params[6] != null ? (List<IdType>) params[6] : Collections.emptyList();
 
     final InstantType since = (InstantType) params[7];
-
-    // Validate that at least one view is provided.
-    if (viewResources.isEmpty()) {
-      throw new InvalidRequestException("At least one view.viewResource parameter is required.");
-    }
-
-    // Parse ViewDefinitions.
-    final List<ViewInput> views = parseViewInputs(viewNames, viewResources);
 
     // Collect patient IDs from both patient and group parameters.
     final Set<String> allPatientIds = collectPatientIds(patientIds, groupIds);
@@ -332,18 +326,42 @@ public class ViewDefinitionExportProvider
     return key.toString();
   }
 
-  /** Parses view inputs from the parameter arrays. */
+  /**
+   * Extracts view inputs from the raw Parameters resource in the request. This method manually
+   * parses the nested view parameters because HAPI FHIR's automatic parameter extraction does not
+   * correctly handle resources nested within part arrays.
+   */
   @Nonnull
-  private List<ViewInput> parseViewInputs(
-      @Nonnull final List<String> viewNames, @Nonnull final List<IBaseResource> viewResources) {
-
+  private List<ViewInput> extractViewInputsFromRequest(
+      @Nonnull final ServletRequestDetails requestDetails) {
     final List<ViewInput> views = new ArrayList<>();
 
-    for (int i = 0; i < viewResources.size(); i++) {
-      final String name = i < viewNames.size() ? viewNames.get(i) : null;
-      final IBaseResource resource = viewResources.get(i);
-      final FhirView view = parseViewDefinition(resource, i);
-      views.add(new ViewInput(name, view));
+    final IBaseResource resource = requestDetails.getResource();
+    if (!(resource instanceof Parameters parameters)) {
+      return views;
+    }
+
+    int viewIndex = 0;
+    for (final Parameters.ParametersParameterComponent param : parameters.getParameter()) {
+      if ("view".equals(param.getName())) {
+        String viewName = null;
+        IBaseResource viewResource = null;
+
+        // Extract name and viewResource from the nested parts.
+        for (final Parameters.ParametersParameterComponent part : param.getPart()) {
+          if ("name".equals(part.getName()) && part.getValue() != null) {
+            viewName = part.getValue().primitiveValue();
+          } else if ("viewResource".equals(part.getName()) && part.getResource() != null) {
+            viewResource = part.getResource();
+          }
+        }
+
+        if (viewResource != null) {
+          final FhirView fhirView = parseViewDefinition(viewResource, viewIndex);
+          views.add(new ViewInput(viewName, fhirView));
+          viewIndex++;
+        }
+      }
     }
 
     return views;
