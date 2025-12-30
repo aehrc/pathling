@@ -39,6 +39,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 import org.apache.spark.SparkException;
+import org.apache.spark.SparkRuntimeException;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
@@ -68,7 +69,8 @@ public class ErrorHandlingInterceptor {
       @Nullable final RequestDetails requestDetails,
       @Nullable final ServletRequestDetails servletRequestDetails,
       @Nonnull final Throwable throwable,
-      @Nullable final HttpServletRequest request, @Nullable final HttpServletResponse response) {
+      @Nullable final HttpServletRequest request,
+      @Nullable final HttpServletResponse response) {
 
     return convertError(throwable);
   }
@@ -76,15 +78,18 @@ public class ErrorHandlingInterceptor {
   /**
    * @param error an error that could be raised during processing
    * @return a HAPI {@link BaseServerResponseException} that will deliver an appropriate response to
-   * a user of the FHIR API
+   *     a user of the FHIR API
    */
   @Nonnull
   public static BaseServerResponseException convertError(@Nonnull final Throwable error) {
     try {
       throw error;
 
-    } catch (final SparkException | UncheckedExecutionException | InternalErrorException |
-                   InvocationTargetException | UndeclaredThrowableException e) {
+    } catch (final SparkException
+        | UncheckedExecutionException
+        | InternalErrorException
+        | InvocationTargetException
+        | UndeclaredThrowableException e) {
       // A number of exceptions are being used to wrap the actual cause. In this case we unwrap
       // its cause and pass it back to this same method to be re-evaluated.
       //
@@ -127,6 +132,18 @@ public class ErrorHandlingInterceptor {
       return new InvalidRequestException(e);
     } catch (final AccessDeniedError e) {
       return buildException(HttpServletResponse.SC_FORBIDDEN, e.getMessage(), IssueType.FORBIDDEN);
+    } catch (final SparkRuntimeException e) {
+      // SparkRuntimeException with USER_RAISED_EXCEPTION indicates an intentionally raised
+      // error (via raise_error() in Spark SQL) that should be surfaced to the client.
+      if ("USER_RAISED_EXCEPTION".equals(e.getCondition())) {
+        return new InvalidRequestException(e.getMessage());
+      }
+      // Other SparkRuntimeExceptions might wrap a cause we can convert.
+      @Nullable final Throwable cause = e.getCause();
+      if (cause != null) {
+        return convertError(cause);
+      }
+      return internalServerError(e);
     } catch (final Throwable e) { // NO-SONAR we really want to catch everything here
       // Anything else is unexpected and triggers a 500.
       return internalServerError(e);
@@ -135,21 +152,19 @@ public class ErrorHandlingInterceptor {
 
   @Nonnull
   @SuppressWarnings("SameParameterValue")
-  private static BaseServerResponseException buildException(final int theStatusCode,
-      @Nonnull final String message,
-      @Nonnull final IssueType issueType) {
+  private static BaseServerResponseException buildException(
+      final int theStatusCode, @Nonnull final String message, @Nonnull final IssueType issueType) {
     final OperationOutcome opOutcome = new OperationOutcome();
     final OperationOutcomeIssueComponent issue = new OperationOutcomeIssueComponent();
     issue.setSeverity(IssueSeverity.ERROR);
     issue.setDiagnostics(message);
     issue.setCode(issueType);
     opOutcome.addIssue(issue);
-    final BaseServerResponseException ex = BaseServerResponseException
-        .newInstance(theStatusCode, message);
+    final BaseServerResponseException ex =
+        BaseServerResponseException.newInstance(theStatusCode, message);
     ex.setOperationOutcome(opOutcome);
     return ex;
   }
-
 
   @Nonnull
   private static BaseServerResponseException convertDataFormatException(
@@ -172,9 +187,8 @@ public class ErrorHandlingInterceptor {
 
   @Nonnull
   private static InternalErrorException internalServerError(final @Nonnull Throwable error) {
-    return error instanceof InternalErrorException internalErrorException
-           ? internalErrorException
-           : new InternalErrorException("Unexpected error occurred", error);
+    return error instanceof final InternalErrorException internalErrorException
+        ? internalErrorException
+        : new InternalErrorException("Unexpected error occurred", error);
   }
-
 }
