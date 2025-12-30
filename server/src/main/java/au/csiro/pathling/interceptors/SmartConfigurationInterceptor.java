@@ -22,12 +22,12 @@ import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
 
 import au.csiro.pathling.security.OidcConfiguration;
-import au.csiro.pathling.shaded.com.google.gson.FieldNamingPolicy;
-import au.csiro.pathling.shaded.com.google.gson.Gson;
-import au.csiro.pathling.shaded.com.google.gson.GsonBuilder;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;

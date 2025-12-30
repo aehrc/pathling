@@ -22,12 +22,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
-import au.csiro.pathling.shaded.com.google.gson.Gson;
-import au.csiro.pathling.shaded.com.google.gson.GsonBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.util.HashMap;

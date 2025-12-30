@@ -22,12 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.security.OidcConfiguration.ConfigItem;
-import au.csiro.pathling.shaded.com.google.gson.FieldNamingPolicy;
-import au.csiro.pathling.shaded.com.google.gson.Gson;
-import au.csiro.pathling.shaded.com.google.gson.GsonBuilder;
-import au.csiro.pathling.shaded.com.google.gson.JsonElement;
-import au.csiro.pathling.shaded.com.google.gson.JsonParser;
 import au.csiro.pathling.test.TestResources;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Collections;

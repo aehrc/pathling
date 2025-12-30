@@ -18,9 +18,9 @@
 package au.csiro.pathling.operations.view;
 
 import au.csiro.pathling.encoders.ViewDefinitionResource;
-import au.csiro.pathling.shaded.com.google.gson.Gson;
-import au.csiro.pathling.shaded.com.google.gson.GsonBuilder;
 import ca.uhn.fhir.context.FhirContext;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.ArrayList;
