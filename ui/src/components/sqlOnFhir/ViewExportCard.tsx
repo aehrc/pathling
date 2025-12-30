@@ -8,6 +8,7 @@
 import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import type { ViewExportJob } from "../../types/job";
+import { getViewExportOutputFiles } from "../../types/viewExport";
 
 interface ViewExportCardProps {
   job: ViewExportJob;
@@ -92,28 +93,33 @@ export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProp
           </Text>
         )}
 
-        {job.status === "completed" && job.manifest?.output && (
-          <Box>
-            <Text size="2" weight="medium" mb="1">
-              Output files ({job.manifest.output.length})
-            </Text>
-            <Flex direction="column" gap="1">
-              {job.manifest.output.map((output) => (
-                <Flex key={output.url} justify="between" align="center">
-                  <Text size="2">{getFilenameFromUrl(output.url)}</Text>
-                  <Button
-                    size="1"
-                    variant="soft"
-                    onClick={() => onDownload(output.url, getFilenameFromUrl(output.url))}
-                  >
-                    <DownloadIcon />
-                    Download
-                  </Button>
+        {job.status === "completed" &&
+          job.manifest &&
+          (() => {
+            const outputs = getViewExportOutputFiles(job.manifest);
+            return outputs.length > 0 ? (
+              <Box>
+                <Text size="2" weight="medium" mb="1">
+                  Output files ({outputs.length})
+                </Text>
+                <Flex direction="column" gap="1">
+                  {outputs.map((output) => (
+                    <Flex key={output.url} justify="between" align="center">
+                      <Text size="2">{getFilenameFromUrl(output.url)}</Text>
+                      <Button
+                        size="1"
+                        variant="soft"
+                        onClick={() => onDownload(output.url, getFilenameFromUrl(output.url))}
+                      >
+                        <DownloadIcon />
+                        Download
+                      </Button>
+                    </Flex>
+                  ))}
                 </Flex>
-              ))}
-            </Flex>
-          </Box>
-        )}
+              </Box>
+            ) : null;
+          })()}
       </Flex>
     </Card>
   );

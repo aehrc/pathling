@@ -10,6 +10,7 @@ import {
   mockCapabilityStatementWithAuth,
   mockEmptyViewDefinitionBundle,
   mockEmptyViewRunNdjson,
+  mockViewDefinition1,
   mockViewDefinitionBundle,
   mockViewRunNdjson,
 } from "./fixtures/fhirData";
@@ -468,6 +469,88 @@ test.describe("SQL on FHIR page", () => {
 
       // Verify error message is displayed.
       await expect(page.getByText(/View run failed/)).toBeVisible();
+    });
+  });
+
+  test.describe("Export", () => {
+    test("shows output files after export completes", async ({ page }) => {
+      // Use setupStandardMocks for base setup.
+      await setupStandardMocks(page);
+
+      // Mock reading ViewDefinition by ID (needed before export starts).
+      await page.route(/\/ViewDefinition\/[^/]+$/, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockViewDefinition1),
+        });
+      });
+
+      // Mock the export kick-off endpoint using regex to match $viewdefinition-export.
+      await page.route(/\/\$viewdefinition-export/, async (route) => {
+        await route.fulfill({
+          status: 202,
+          headers: {
+            "Content-Location":
+              "http://localhost:3000/fhir/$job?id=test-job-123",
+            "Access-Control-Expose-Headers": "Content-Location",
+          },
+          body: "",
+        });
+      });
+
+      // Mock the job status endpoint using regex - return completed with manifest.
+      await page.route(/\/\$job/, async (route) => {
+        if (route.request().method() === "GET") {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/fhir+json",
+            body: JSON.stringify({
+              resourceType: "Parameters",
+              parameter: [
+                {
+                  name: "transactionTime",
+                  valueInstant: "2025-01-01T00:00:00Z",
+                },
+                { name: "requiresAccessToken", valueBoolean: false },
+                {
+                  name: "output",
+                  part: [
+                    { name: "name", valueString: "patient_demographics" },
+                    {
+                      name: "url",
+                      valueUri:
+                        "http://localhost:3000/fhir/$result?job=test-job-123&file=patient_demographics.ndjson",
+                    },
+                  ],
+                },
+              ],
+            }),
+          });
+        } else if (route.request().method() === "DELETE") {
+          await route.fulfill({ status: 204 });
+        }
+      });
+
+      await page.goto("/admin/sql-on-fhir");
+
+      // Select and execute a view definition.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Wait for results to load.
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
+
+      // Click export button.
+      await page.getByRole("button", { name: "Export" }).click();
+
+      // Verify export completed and output file is listed.
+      await expect(page.getByText("Completed")).toBeVisible();
+      await expect(page.getByText("patient_demographics.ndjson")).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Download" }),
+      ).toBeVisible();
     });
   });
 });

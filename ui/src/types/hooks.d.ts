@@ -20,6 +20,7 @@
 import type { Bundle, Parameters, Resource } from "fhir/r4";
 import type { UseQueryResult, UseMutationResult } from "@tanstack/react-query";
 import type { ImportFormat, SaveMode } from "./import";
+import type { ViewExportManifest } from "./viewExport";
 
 // ============================================================================
 // Common Types
@@ -224,15 +225,6 @@ export interface BulkExportRequest {
 export type UseBulkExportOptions = AsyncJobOptions;
 
 /**
- * Manifest entry for a single exported file (extracted from Parameters).
- */
-export interface ExportManifestEntry {
-  type: string;
-  url: string;
-  count?: number;
-}
-
-/**
  * Export manifest is a FHIR Parameters resource containing export results.
  */
 export type ExportManifest = Parameters;
@@ -410,11 +402,6 @@ export interface ViewDefinition {
 }
 
 /**
- * Output format for synchronous view run operations.
- */
-export type ViewRunOutputFormat = "ndjson" | "csv";
-
-/**
  * Output format for asynchronous view export operations.
  */
 export type ViewExportOutputFormat = "ndjson" | "csv" | "parquet";
@@ -492,22 +479,6 @@ export interface ViewExportRequest {
  * Options for useViewExport hook (callbacks only).
  */
 export type UseViewExportOptions = AsyncJobOptions;
-
-/**
- * View export manifest entry.
- */
-export interface ViewExportManifestEntry {
-  name: string;
-  url: string;
-}
-
-/**
- * Complete view export manifest.
- */
-export interface ViewExportManifest {
-  transactionTime: string;
-  output: ViewExportManifestEntry[];
-}
 
 /**
  * Result of useViewExport hook.
