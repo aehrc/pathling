@@ -6,12 +6,13 @@
 
 import {
   DownloadIcon,
+  HamburgerMenuIcon,
   PaperPlaneIcon,
   ReaderIcon,
   TableIcon,
   UploadIcon,
 } from "@radix-ui/react-icons";
-import { Box, Container, Flex, Text } from "@radix-ui/themes";
+import { Box, Container, DropdownMenu, Flex, IconButton, Text } from "@radix-ui/themes";
 import { Link, Outlet, useLocation } from "react-router";
 import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
@@ -39,6 +40,71 @@ function NavLink({ to, icon, label, isActive }: NavLinkProps) {
       {icon}
       {label}
     </Link>
+  );
+}
+
+interface NavItem {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+}
+
+const navItems: NavItem[] = [
+  { to: "/resources", icon: <ReaderIcon />, label: "Resources" },
+  { to: "/export", icon: <DownloadIcon />, label: "Export" },
+  { to: "/import", icon: <UploadIcon />, label: "Import" },
+  { to: "/bulk-submit", icon: <PaperPlaneIcon />, label: "Bulk submit" },
+  { to: "/sql-on-fhir", icon: <TableIcon />, label: "SQL on FHIR" },
+];
+
+interface MobileNavProps {
+  pathname: string;
+  hostname: string;
+  isAuthenticated: boolean;
+  logout: () => void;
+}
+
+function MobileNav({ pathname, hostname, isAuthenticated, logout }: MobileNavProps) {
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger>
+        <IconButton variant="ghost" size="3">
+          <HamburgerMenuIcon width="20" height="20" />
+        </IconButton>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content align="end">
+        {navItems.map((item) => (
+          <DropdownMenu.Item key={item.to} asChild>
+            <Link
+              to={item.to}
+              style={{
+                textDecoration: "none",
+                color: pathname === item.to ? "var(--accent-11)" : "inherit",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              {item.icon}
+              {item.label}
+            </Link>
+          </DropdownMenu.Item>
+        ))}
+        <DropdownMenu.Separator />
+        <DropdownMenu.Item disabled>
+          <Text size="2" color="gray">
+            {hostname}
+          </Text>
+        </DropdownMenu.Item>
+        {isAuthenticated && (
+          <DropdownMenu.Item onSelect={logout}>
+            <Text size="2" color="blue">
+              Logout
+            </Text>
+          </DropdownMenu.Item>
+        )}
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
   );
 }
 
@@ -80,40 +146,29 @@ export function Layout() {
                   />
                 </picture>
               </Link>
-              <Flex gap="5" ml="8" style={{ position: "relative", top: "10px" }}>
-                <NavLink
-                  to="/resources"
-                  icon={<ReaderIcon />}
-                  label="Resources"
-                  isActive={location.pathname === "/resources"}
-                />
-                <NavLink
-                  to="/export"
-                  icon={<DownloadIcon />}
-                  label="Export"
-                  isActive={location.pathname === "/export"}
-                />
-                <NavLink
-                  to="/import"
-                  icon={<UploadIcon />}
-                  label="Import"
-                  isActive={location.pathname === "/import"}
-                />
-                <NavLink
-                  to="/bulk-submit"
-                  icon={<PaperPlaneIcon />}
-                  label="Bulk submit"
-                  isActive={location.pathname === "/bulk-submit"}
-                />
-                <NavLink
-                  to="/sql-on-fhir"
-                  icon={<TableIcon />}
-                  label="SQL on FHIR"
-                  isActive={location.pathname === "/sql-on-fhir"}
-                />
+              <Flex
+                gap="5"
+                ml="8"
+                display={{ initial: "none", md: "flex" }}
+                style={{ position: "relative", top: "10px" }}
+              >
+                {navItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    icon={item.icon}
+                    label={item.label}
+                    isActive={location.pathname === item.to}
+                  />
+                ))}
               </Flex>
             </Flex>
-            <Flex align="center" gap="5" style={{ position: "relative", top: "10px" }}>
+            <Flex
+              align="center"
+              gap="5"
+              display={{ initial: "none", md: "flex" }}
+              style={{ position: "relative", top: "10px" }}
+            >
               <Text size="2" color="gray">
                 {getHostname(config.fhirBaseUrl)}
               </Text>
@@ -123,6 +178,14 @@ export function Layout() {
                 </Text>
               )}
             </Flex>
+            <Box display={{ initial: "block", md: "none" }}>
+              <MobileNav
+                pathname={location.pathname}
+                hostname={getHostname(config.fhirBaseUrl)}
+                isAuthenticated={isAuthenticated}
+                logout={logout}
+              />
+            </Box>
           </Flex>
         </Container>
       </Box>
