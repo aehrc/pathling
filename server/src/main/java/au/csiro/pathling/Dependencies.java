@@ -41,8 +41,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class Dependencies {
 
-  private Dependencies() {
-  }
+  private Dependencies() {}
 
   @Bean
   @ConditionalOnMissingBean
@@ -53,8 +52,8 @@ public class Dependencies {
 
   @Bean
   @ConditionalOnMissingBean
-  static PathlingContext pathlingContext(@Nonnull final SparkSession spark,
-      @Nonnull final ServerConfiguration config) {
+  static PathlingContext pathlingContext(
+      @Nonnull final SparkSession spark, @Nonnull final ServerConfiguration config) {
     return PathlingContext.builder(spark)
         .encodingConfiguration(config.getEncoding())
         .terminologyConfiguration(config.getTerminology())
@@ -82,12 +81,19 @@ public class Dependencies {
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static QueryableDataSource deltaLake(@Nonnull final PathlingContext pathlingContext,
+  static QueryableDataSource deltaLake(
+      @Nonnull final PathlingContext pathlingContext,
       @Nonnull final ServerConfiguration serverConfiguration) {
-    final String databaseLocation = serverConfiguration.getStorage().getWarehouseUrl() + "/"
-        + serverConfiguration.getStorage().getDatabaseName();
+    final String databaseLocation =
+        serverConfiguration.getStorage().getWarehouseUrl()
+            + "/"
+            + serverConfiguration.getStorage().getDatabaseName();
     final QueryableDataSource baseSource = pathlingContext.read().delta(databaseLocation);
-    return new DynamicDeltaSource(baseSource, pathlingContext.getSpark(), databaseLocation);
+    return new DynamicDeltaSource(
+        baseSource,
+        pathlingContext.getSpark(),
+        databaseLocation,
+        pathlingContext.getFhirEncoders());
   }
 
   @Bean
@@ -96,5 +102,4 @@ public class Dependencies {
   static FhirEncoders fhirEncoders(@Nonnull final PathlingContext pathlingContext) {
     return pathlingContext.getFhirEncoders();
   }
-
 }

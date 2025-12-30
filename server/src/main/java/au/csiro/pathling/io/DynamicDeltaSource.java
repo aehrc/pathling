@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.io;
 
+import au.csiro.pathling.QueryHelpers;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.FileSystemPersistence;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
@@ -35,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A QueryableDataSource wrapper that dynamically discovers new resource types created after
@@ -46,17 +49,15 @@ import org.apache.spark.sql.SparkSession;
 @Slf4j
 public class DynamicDeltaSource implements QueryableDataSource {
 
-  @Nonnull
-  private final QueryableDataSource delegate;
+  @Nonnull private final QueryableDataSource delegate;
 
-  @Nonnull
-  private final SparkSession spark;
+  @Nonnull private final SparkSession spark;
 
-  @Nonnull
-  private final String databasePath;
+  @Nonnull private final String databasePath;
 
-  @Nonnull
-  private final Set<String> dynamicallyDiscoveredTypes = ConcurrentHashMap.newKeySet();
+  @Nonnull private final FhirEncoders fhirEncoders;
+
+  @Nonnull private final Set<String> dynamicallyDiscoveredTypes = ConcurrentHashMap.newKeySet();
 
   /**
    * Constructs a new DynamicDeltaSource.
@@ -64,29 +65,33 @@ public class DynamicDeltaSource implements QueryableDataSource {
    * @param delegate the underlying QueryableDataSource to delegate to
    * @param spark the Spark session for Delta table operations
    * @param databasePath the path to the Delta database
+   * @param fhirEncoders the FHIR encoders for creating empty datasets
    */
-  public DynamicDeltaSource(@Nonnull final QueryableDataSource delegate,
+  public DynamicDeltaSource(
+      @Nonnull final QueryableDataSource delegate,
       @Nonnull final SparkSession spark,
-      @Nonnull final String databasePath) {
+      @Nonnull final String databasePath,
+      @Nonnull final FhirEncoders fhirEncoders) {
     this.delegate = delegate;
     this.spark = spark;
     this.databasePath = databasePath;
+    this.fhirEncoders = fhirEncoders;
   }
 
   @Override
   @Nonnull
   public Dataset<Row> read(@Nonnull final String resourceCode) {
-    // If delegate knows about this type, use it
+    // If delegate knows about this type, use it.
     if (delegate.getResourceTypes().contains(resourceCode)) {
       return delegate.read(resourceCode);
     }
 
-    // If we've already discovered this type dynamically, read from Delta
+    // If we've already discovered this type dynamically, read from Delta.
     if (dynamicallyDiscoveredTypes.contains(resourceCode)) {
       return readFromDelta(resourceCode);
     }
 
-    // Try to discover the Delta table
+    // Try to discover the Delta table.
     final String tablePath = getTablePath(resourceCode);
     if (DeltaTable.isDeltaTable(spark, tablePath)) {
       log.debug("Dynamically discovered Delta table for resource type: {}", resourceCode);
@@ -94,7 +99,10 @@ public class DynamicDeltaSource implements QueryableDataSource {
       return readFromDelta(resourceCode);
     }
 
-    throw new IllegalArgumentException("No data found for resource type: " + resourceCode);
+    // No data found - return an empty dataset with the correct schema.
+    log.debug("No data found for resource type: {}, returning empty dataset", resourceCode);
+    return QueryHelpers.createEmptyDataset(
+        spark, fhirEncoders, ResourceType.fromCode(resourceCode));
   }
 
   @Override
@@ -153,5 +161,4 @@ public class DynamicDeltaSource implements QueryableDataSource {
   private String getTablePath(@Nonnull final String resourceCode) {
     return FileSystemPersistence.safelyJoinPaths(databasePath, resourceCode + ".parquet");
   }
-
 }
