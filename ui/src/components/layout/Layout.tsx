@@ -173,7 +173,7 @@ export function Layout() {
                 {getHostname(config.fhirBaseUrl)}
               </Text>
               {isAuthenticated && (
-                <Text size="2" color="blue" style={{ cursor: "pointer" }} onClick={logout}>
+                <Text size="2" color="teal" style={{ cursor: "pointer" }} onClick={logout}>
                   Logout
                 </Text>
               )}

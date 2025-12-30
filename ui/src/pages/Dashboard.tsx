@@ -146,7 +146,7 @@ export function Dashboard() {
                             key={op}
                             size="1"
                             variant="soft"
-                            color={op.startsWith("$") ? "blue" : "gray"}
+                            color={op.startsWith("$") ? "teal" : "gray"}
                           >
                             {op}
                           </Badge>
