@@ -39,7 +39,7 @@ class ErrorHandlingInterceptorTest {
     // SparkRuntimeException with USER_RAISED_EXCEPTION should return 400.
     final String errorMessage = "Expecting a collection with a single element but it has many.";
     final SparkRuntimeException e = mock(SparkRuntimeException.class);
-    when(e.getErrorClass()).thenReturn("USER_RAISED_EXCEPTION");
+    when(e.getCondition()).thenReturn("USER_RAISED_EXCEPTION");
     when(e.getMessage()).thenReturn(errorMessage);
 
     final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e);
@@ -53,7 +53,7 @@ class ErrorHandlingInterceptorTest {
   void convertsOtherSparkRuntimeExceptionTo500() {
     // SparkRuntimeException with other error class should return 500.
     final SparkRuntimeException e = mock(SparkRuntimeException.class);
-    when(e.getErrorClass()).thenReturn("SOME_OTHER_ERROR");
+    when(e.getCondition()).thenReturn("SOME_OTHER_ERROR");
     when(e.getCause()).thenReturn(null);
 
     final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e);
@@ -67,7 +67,7 @@ class ErrorHandlingInterceptorTest {
     // SparkRuntimeException with non-USER_RAISED_EXCEPTION should unwrap cause if present.
     final InvalidUserInputError cause = new InvalidUserInputError("Invalid input");
     final SparkRuntimeException e = mock(SparkRuntimeException.class);
-    when(e.getErrorClass()).thenReturn("SOME_OTHER_ERROR");
+    when(e.getCondition()).thenReturn("SOME_OTHER_ERROR");
     when(e.getCause()).thenReturn(cause);
 
     final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e);

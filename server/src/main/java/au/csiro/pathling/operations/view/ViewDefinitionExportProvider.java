@@ -33,15 +33,14 @@ import au.csiro.pathling.operations.bulkexport.ExportResult;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.security.OperationAccess;
-import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
 import au.csiro.pathling.views.FhirView;
+import au.csiro.pathling.views.ViewDefinitionGson;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -128,10 +127,7 @@ public class ViewDefinitionExportProvider
     this.fhirContext = fhirContext;
     this.deltaLake = deltaLake;
     this.groupMemberService = groupMemberService;
-    this.gson =
-        new GsonBuilder()
-            .registerTypeAdapterFactory(new ConstantDeclarationTypeAdapterFactory())
-            .create();
+    this.gson = ViewDefinitionGson.create();
   }
 
   /**

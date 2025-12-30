@@ -24,14 +24,13 @@ import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.views.Column;
-import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
+import au.csiro.pathling.views.ViewDefinitionGson;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -119,10 +118,7 @@ public class ViewExecutionHelper {
     this.patientCompartmentService = patientCompartmentService;
     this.groupMemberService = groupMemberService;
     this.serverConfiguration = serverConfiguration;
-    this.gson =
-        new GsonBuilder()
-            .registerTypeAdapterFactory(new ConstantDeclarationTypeAdapterFactory())
-            .create();
+    this.gson = ViewDefinitionGson.create();
   }
 
   /**
