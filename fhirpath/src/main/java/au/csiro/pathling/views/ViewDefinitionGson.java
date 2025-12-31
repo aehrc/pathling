@@ -39,6 +39,7 @@ public final class ViewDefinitionGson {
   public static Gson create() {
     return new GsonBuilder()
         .registerTypeAdapterFactory(new ConstantDeclarationTypeAdapterFactory())
+        .disableHtmlEscaping()
         .create();
   }
 }
