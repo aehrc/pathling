@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import { ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon, TrashIcon } from "@radix-ui/react-icons";
+import { ExternalLinkIcon, TrashIcon } from "@radix-ui/react-icons";
 import {
   Badge,
   Box,
@@ -16,8 +16,8 @@ import {
   Text,
   Tooltip,
 } from "@radix-ui/themes";
-import { useState } from "react";
 import type { Resource } from "fhir/r4";
+import { useState } from "react";
 
 interface ResourceCardProps {
   resource: Resource;
@@ -123,40 +123,59 @@ export function ResourceCard({ resource, fhirBaseUrl, onDelete }: ResourceCardPr
     <Card>
       <Flex direction="column" gap="2">
         <Flex justify="between" align="start">
-          <Flex direction="column" gap="1">
-            <Flex align="center" gap="2">
-              <Badge color="teal">{resource.resourceType}</Badge>
-              <Text size="2" weight="medium">
-                {resource.id}
-              </Text>
+          <Flex gap="1" style={{ width: "100%" }}>
+            <Badge
+              color="teal"
+              style={{ cursor: "pointer", userSelect: "none" }}
+              onClick={() => setExpanded(!expanded)}
+            >
+              {resource.resourceType}
+            </Badge>
+            <Text
+              size="2"
+              weight="medium"
+              style={{
+                flexGrow: 1,
+                overflow: "hidden",
+                textWrap: "nowrap",
+                textOverflow: "ellipsis",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+              onClick={() => setExpanded(!expanded)}
+            >
+              {resource.id}
+            </Text>
+            <Flex gap="1" align="center">
+              <Tooltip content="Open in FHIR server">
+                <IconButton size="1" variant="ghost" onClick={handleOpenResource}>
+                  <ExternalLinkIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip content="Delete resource">
+                <IconButton size="1" variant="ghost" color="red" onClick={handleDelete}>
+                  <TrashIcon />
+                </IconButton>
+              </Tooltip>
             </Flex>
-            {summary && (
-              <Text size="2" color="gray">
-                {summary}
-              </Text>
-            )}
-          </Flex>
-          <Flex gap="1">
-            <Tooltip content="Open in FHIR server">
-              <IconButton size="1" variant="ghost" onClick={handleOpenResource}>
-                <ExternalLinkIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip content="Delete resource">
-              <IconButton size="1" variant="ghost" color="red" onClick={handleDelete}>
-                <TrashIcon />
-              </IconButton>
-            </Tooltip>
-            <IconButton size="1" variant="ghost" onClick={() => setExpanded(!expanded)}>
-              {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
-            </IconButton>
           </Flex>
         </Flex>
+
+        {summary && (
+          <Text
+            size="2"
+            color="gray"
+            style={{ cursor: "pointer", userSelect: "none" }}
+            onClick={() => setExpanded(!expanded)}
+          >
+            {summary}
+          </Text>
+        )}
 
         {expanded && (
           <Box mt="2">
             <ScrollArea style={{ maxHeight: 300 }}>
-              <Code size="1" style={{ display: "block", whiteSpace: "pre-wrap" }}>
+              <Code size="1" style={{ display: "block", whiteSpace: "pre-wrap", padding: "6px" }}>
                 {JSON.stringify(resource, null, 2)}
               </Code>
             </ScrollArea>
