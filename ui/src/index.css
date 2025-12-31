@@ -9,6 +9,12 @@ body {
     min-height: 100vh;
 }
 
+/* Ensure pointer cursor on all interactive button elements. */
+.rt-Button,
+.rt-IconButton {
+    cursor: pointer;
+}
+
 /* Spinner animation for loading indicator. */
 @keyframes spin {
     from {
