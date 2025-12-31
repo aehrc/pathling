@@ -150,7 +150,7 @@ export function Export() {
 
                 {outputFiles.length > 0 && (
                   <Box>
-                    <Text size="2" weight="medium" mb="2">
+                    <Text size="2" weight="medium" mb="2" style={{ display: "block" }}>
                       Output files ({outputFiles.length})
                     </Text>
                     <Flex direction="column" gap="1">
