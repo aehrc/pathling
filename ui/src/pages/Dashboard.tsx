@@ -15,7 +15,7 @@ import {
   Separator,
   Spinner,
   Table,
-  Text,
+  Text
 } from "@radix-ui/themes";
 import { config } from "../config";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
@@ -126,7 +126,7 @@ export function Dashboard() {
             <Heading size="4" mb="3">
               Supported resources
             </Heading>
-            <Table.Root>
+            <Table.Root layout="fixed">
               <Table.Header>
                 <Table.Row>
                   <Table.ColumnHeaderCell>Resource</Table.ColumnHeaderCell>
@@ -136,7 +136,14 @@ export function Dashboard() {
               <Table.Body>
                 {capabilities.resources.map((resource) => (
                   <Table.Row key={resource.type}>
-                    <Table.Cell>
+                    <Table.Cell
+                      style={{
+                        maxWidth: "50%",
+                        overflow: "hidden",
+                        textWrap: "nowrap",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
                       <Text weight="medium">{resource.type}</Text>
                     </Table.Cell>
                     <Table.Cell>
