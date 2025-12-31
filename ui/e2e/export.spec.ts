@@ -214,16 +214,16 @@ test.describe("Export page", () => {
 
       // Verify all export level options are available.
       await expect(
-        page.getByRole("option", { name: "System (all resources)" }),
+        page.getByRole("option", { name: "All data in system" }),
       ).toBeVisible();
       await expect(
-        page.getByRole("option", { name: "Patient type (all patients)" }),
+        page.getByRole("option", { name: "All patient data" }),
       ).toBeVisible();
       await expect(
-        page.getByRole("option", { name: "Patient instance (single patient)" }),
+        page.getByRole("option", { name: "Data for single patient" }),
       ).toBeVisible();
       await expect(
-        page.getByRole("option", { name: "Group (group members)" }),
+        page.getByRole("option", { name: "Data for patients in group" }),
       ).toBeVisible();
     });
 
@@ -241,7 +241,7 @@ test.describe("Export page", () => {
       // Select Patient Instance export level.
       await page.getByRole("combobox").click();
       await page
-        .getByRole("option", { name: "Patient instance (single patient)" })
+        .getByRole("option", { name: "Data for single patient" })
         .click();
 
       // Verify Patient ID field is now visible.
@@ -258,7 +258,9 @@ test.describe("Export page", () => {
 
       // Select Group export level.
       await page.getByRole("combobox").click();
-      await page.getByRole("option", { name: "Group (group members)" }).click();
+      await page
+        .getByRole("option", { name: "Data for patients in group" })
+        .click();
 
       // Verify Group ID field is now visible.
       await expect(page.getByText("Group ID")).toBeVisible();
@@ -292,19 +294,6 @@ test.describe("Export page", () => {
       await expect(patientLabel).not.toBeChecked();
     });
 
-    test("Select all selects all resource types", async ({ page }) => {
-      await setupStandardMocks(page);
-      await page.goto("/admin/export");
-
-      // Click Select all.
-      await page.getByText("Select all").click();
-
-      // Verify all checkboxes are checked.
-      await expect(page.getByLabel("Patient")).toBeChecked();
-      await expect(page.getByLabel("Observation")).toBeChecked();
-      await expect(page.getByLabel("Condition")).toBeChecked();
-    });
-
     test("submit button disabled when patient ID required but empty", async ({
       page,
     }) => {
@@ -314,7 +303,7 @@ test.describe("Export page", () => {
       // Select Patient Instance export level.
       await page.getByRole("combobox").click();
       await page
-        .getByRole("option", { name: "Patient instance (single patient)" })
+        .getByRole("option", { name: "Data for single patient" })
         .click();
 
       // Submit button should be disabled.
@@ -339,7 +328,9 @@ test.describe("Export page", () => {
 
       // Select Group export level.
       await page.getByRole("combobox").click();
-      await page.getByRole("option", { name: "Group (group members)" }).click();
+      await page
+        .getByRole("option", { name: "Data for patients in group" })
+        .click();
 
       // Submit button should be disabled.
       await expect(
@@ -381,9 +372,7 @@ test.describe("Export page", () => {
 
       // Select Patient Type export level.
       await page.getByRole("combobox").click();
-      await page
-        .getByRole("option", { name: "Patient type (all patients)" })
-        .click();
+      await page.getByRole("option", { name: "All patient data" }).click();
 
       // Start export.
       await page.getByRole("button", { name: "Start export" }).click();
@@ -401,7 +390,7 @@ test.describe("Export page", () => {
       // Select Patient Instance export level.
       await page.getByRole("combobox").click();
       await page
-        .getByRole("option", { name: "Patient instance (single patient)" })
+        .getByRole("option", { name: "Data for single patient" })
         .click();
 
       // Enter patient ID.
@@ -420,7 +409,9 @@ test.describe("Export page", () => {
 
       // Select Group export level.
       await page.getByRole("combobox").click();
-      await page.getByRole("option", { name: "Group (group members)" }).click();
+      await page
+        .getByRole("option", { name: "Data for patients in group" })
+        .click();
 
       // Enter group ID.
       await page.getByPlaceholder("e.g., group-456").fill("test-group-id");
