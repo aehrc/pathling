@@ -160,6 +160,32 @@ test.describe("SQL on FHIR page", () => {
       await expect(page.getByText('"ViewDefinition"')).toBeVisible();
     });
 
+    test("copies JSON to clipboard when copy button clicked", async ({
+      page,
+      context,
+    }) => {
+      // Grant clipboard permissions.
+      await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+
+      await setupStandardMocks(page);
+      await page.goto("/admin/sql-on-fhir");
+
+      // Select a view definition from the dropdown.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+
+      // Click the copy button.
+      await page.getByRole("button", { name: "Copy to clipboard" }).click();
+
+      // Verify the clipboard contains the expected JSON.
+      const clipboardText = await page.evaluate(() =>
+        navigator.clipboard.readText(),
+      );
+      const parsedClipboard = JSON.parse(clipboardText);
+      expect(parsedClipboard.resourceType).toBe("ViewDefinition");
+      expect(parsedClipboard.name).toBe("Patient Demographics");
+    });
+
     test("executes stored definition and displays results", async ({
       page,
     }) => {

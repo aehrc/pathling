@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import { PlayIcon, UploadIcon } from "@radix-ui/react-icons";
+import { CopyIcon, PlayIcon, UploadIcon } from "@radix-ui/react-icons";
 import {
   Box,
   Button,
@@ -12,13 +12,16 @@ import {
   Card,
   Flex,
   Heading,
+  IconButton,
   Select,
   Spinner,
   Tabs,
   Text,
   TextArea,
+  Tooltip,
 } from "@radix-ui/themes";
 import { useState } from "react";
+import { useClipboard } from "../../hooks";
 import { useViewDefinitions } from "../../hooks/useViewDefinitions";
 import type { ViewRunRequest } from "../../types/hooks";
 import type { CreateViewDefinitionResult } from "../../types/sqlOnFhir";
@@ -58,6 +61,7 @@ export function SqlOnFhirForm({
   const [saveError, setSaveError] = useState<Error | null>(null);
 
   const { data: viewDefinitions, isLoading: isLoadingViewDefinitions } = useViewDefinitions();
+  const copyToClipboard = useClipboard();
 
   const handleExecute = () => {
     if (activeTab === "stored" && selectedViewDefinitionId) {
@@ -144,7 +148,23 @@ export function SqlOnFhirForm({
                 {viewDefinitions &&
                   viewDefinitions.length > 0 &&
                   (selectedViewDefinitionId ? (
-                    <Box mt="2">
+                    <Box mt="2" style={{ position: "relative" }}>
+                      <Tooltip content="Copy to clipboard">
+                        <IconButton
+                          size="1"
+                          variant="ghost"
+                          aria-label="Copy to clipboard"
+                          onClick={() =>
+                            copyToClipboard(
+                              viewDefinitions.find((vd) => vd.id === selectedViewDefinitionId)
+                                ?.json ?? "",
+                            )
+                          }
+                          style={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}
+                        >
+                          <CopyIcon />
+                        </IconButton>
+                      </Tooltip>
                       <TextArea
                         readOnly
                         size="2"
@@ -153,7 +173,7 @@ export function SqlOnFhirForm({
                           viewDefinitions.find((vd) => vd.id === selectedViewDefinitionId)?.json ??
                           ""
                         }
-                        style={{ fontFamily: "monospace" }}
+                        style={{ fontFamily: "monospace", fontSize: "12px" }}
                       />
                     </Box>
                   ) : (
