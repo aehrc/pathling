@@ -129,7 +129,7 @@ export function Layout() {
           backgroundColor: "var(--color-background)",
         }}
       >
-        <Container size="4" px={{ initial: "4", md: "0" }}>
+        <Container size="4" px={{ initial: "4", lg: "0" }}>
           <Flex justify="between" align="center" py="3">
             <Flex align="center" gap="5">
               <Link to="/">
@@ -190,7 +190,7 @@ export function Layout() {
         </Container>
       </Box>
       <Box style={{ flex: 1, overflow: "hidden" }}>
-        <Container size="4" py="6" px={{ initial: "4", md: "0" }}>
+        <Container size="4" py="6" px={{ initial: "4", lg: "0" }}>
           <Outlet />
         </Container>
       </Box>
