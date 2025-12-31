@@ -322,10 +322,8 @@ test.describe("Resources page", () => {
         page.getByText('"resourceType": "Patient"'),
       ).not.toBeVisible();
 
-      // Find the first card by locating its ID text, then find the expand button (3rd button).
-      const firstCard = page.getByText("patient-123").locator("../../..");
-      const expandButton = firstCard.locator("button").nth(2);
-      await expandButton.click();
+      // Click the resource ID to expand the card.
+      await page.getByText("patient-123").click();
 
       // Verify JSON is now visible.
       await expect(
@@ -340,23 +338,52 @@ test.describe("Resources page", () => {
       await page.getByRole("button", { name: "Search" }).click();
       await expect(page.getByText("patient-123")).toBeVisible();
 
-      // Find the first card and its expand button (3rd button).
-      const firstCard = page.getByText("patient-123").locator("../../..");
-      const expandButton = firstCard.locator("button").nth(2);
-
-      // Expand first.
-      await expandButton.click();
+      // Click the resource ID to expand the card.
+      const resourceId = page.getByText("patient-123", { exact: true });
+      await resourceId.click();
       await expect(
         page.getByText('"resourceType": "Patient"').first(),
       ).toBeVisible();
 
-      // Collapse.
-      await expandButton.click();
+      // Collapse by clicking again.
+      await resourceId.click();
 
       // Verify JSON is hidden.
       await expect(
         page.getByText('"resourceType": "Patient"'),
       ).not.toBeVisible();
+    });
+
+    test("copies JSON to clipboard", async ({ page, context }) => {
+      // Grant clipboard permissions.
+      await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+
+      await setupStandardMocks(page);
+      await page.goto("/admin/resources");
+
+      await page.getByRole("button", { name: "Search" }).click();
+      await expect(page.getByText("patient-123")).toBeVisible();
+
+      // Click the resource ID to expand the card.
+      await page.getByText("patient-123").click();
+
+      // Wait for JSON to be visible.
+      await expect(
+        page.getByText('"resourceType": "Patient"').first(),
+      ).toBeVisible();
+
+      // Click the copy button (inside the expanded code box).
+      await page
+        .getByRole("button", { name: "Copy to clipboard" })
+        .first()
+        .click();
+
+      // Verify clipboard content.
+      const clipboardText = await page.evaluate(() =>
+        navigator.clipboard.readText(),
+      );
+      expect(clipboardText).toContain('"resourceType": "Patient"');
+      expect(clipboardText).toContain('"id": "patient-123"');
     });
   });
 

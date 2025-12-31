@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import { ExternalLinkIcon, TrashIcon } from "@radix-ui/react-icons";
+import { CopyIcon, ExternalLinkIcon, TrashIcon } from "@radix-ui/react-icons";
 import {
   Badge,
   Box,
@@ -18,6 +18,7 @@ import {
 } from "@radix-ui/themes";
 import type { Resource } from "fhir/r4";
 import { useState } from "react";
+import { useClipboard } from "../../hooks";
 
 interface ResourceCardProps {
   resource: Resource;
@@ -107,6 +108,7 @@ function getResourceSummary(resource: Resource): string | null {
 export function ResourceCard({ resource, fhirBaseUrl, onDelete }: ResourceCardProps) {
   const [expanded, setExpanded] = useState(false);
   const summary = getResourceSummary(resource);
+  const copyToClipboard = useClipboard();
 
   const handleOpenResource = () => {
     const url = `${fhirBaseUrl}/${resource.resourceType}/${resource.id}`;
@@ -173,7 +175,18 @@ export function ResourceCard({ resource, fhirBaseUrl, onDelete }: ResourceCardPr
         )}
 
         {expanded && (
-          <Box mt="2">
+          <Box mt="2" style={{ position: "relative" }}>
+            <Tooltip content="Copy to clipboard">
+              <IconButton
+                size="1"
+                variant="ghost"
+                aria-label="Copy to clipboard"
+                onClick={() => copyToClipboard(JSON.stringify(resource, null, 2))}
+                style={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}
+              >
+                <CopyIcon />
+              </IconButton>
+            </Tooltip>
             <ScrollArea style={{ maxHeight: 300 }}>
               <Code size="1" style={{ display: "block", whiteSpace: "pre-wrap", padding: "6px" }}>
                 {JSON.stringify(resource, null, 2)}

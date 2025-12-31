@@ -39,6 +39,7 @@ export { useViewDefinitions } from "./useViewDefinitions";
 export { useSaveViewDefinition } from "./useSaveViewDefinition";
 
 // Other operations.
+export { useClipboard } from "./useClipboard";
 export { useDownloadFile } from "./useDownloadFile";
 export { useFhirPathSearch } from "./useFhirPathSearch";
 export { useServerCapabilities } from "./useServerCapabilities";
