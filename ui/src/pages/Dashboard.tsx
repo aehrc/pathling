@@ -15,7 +15,7 @@ import {
   Separator,
   Spinner,
   Table,
-  Text
+  Text,
 } from "@radix-ui/themes";
 import { config } from "../config";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
