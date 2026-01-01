@@ -12,6 +12,10 @@ env:
   # The add-exports and add-opens flags are required for Java 21.
   MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   test-server:
     name: Build and test server
@@ -45,15 +49,37 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      - name: Build and test server module
+      - name: Run security scan
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          scan-type: repo
+          severity: "MEDIUM,HIGH,CRITICAL"
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          skip-files: examples/**/*,**/target/**/*
+          cache: false
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build, test, and push Docker image
         working-directory: server
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          DOCKER_USERNAME: ${{ github.actor }}
+          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mvn --batch-mode clean verify \
+          mvn --batch-mode deploy -Pdocker -Dmaven.deploy.skip \
+          -Djib.to.tags=\${project.version}-develop \
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
-          -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.sarifReportPaths=../trivy-results.sarif
         timeout-minutes: 30
 
       - name: Save test reports
@@ -67,11 +93,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: server-coverage-reports
           path: |
-            **/jacoco.exec
+            server/**/jacoco.exec
             server/**/jacoco.xml
             server/**/target/site/jacoco
+          name: server-coverage-reports
 
       - name: Save built JAR
         if: success()
