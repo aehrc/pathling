@@ -19,6 +19,7 @@ package au.csiro.pathling.library.io;
 
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.library.io.source.FileSource;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
@@ -43,8 +44,7 @@ import org.apache.spark.sql.SparkSession;
 @Slf4j
 public class FileSystemPersistence {
 
-  private FileSystemPersistence() {
-  }
+  private FileSystemPersistence() {}
 
   /**
    * Joins two paths together, taking care that URLs, Unix-style paths and Windows-style paths are
@@ -74,10 +74,11 @@ public class FileSystemPersistence {
    * @throws IllegalArgumentException if the location URL is malformed
    */
   @Nonnull
-  public static FileSystem getFileSystem(@Nonnull final SparkSession spark,
-      @Nonnull final String location) {
-    @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
-        .hadoopConfiguration();
+  public static FileSystem getFileSystem(
+      @Nonnull final SparkSession spark, @Nonnull final String location) {
+    @Nullable
+    final org.apache.hadoop.conf.Configuration hadoopConfiguration =
+        spark.sparkContext().hadoopConfiguration();
     requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouseLocation;
     try {
@@ -92,9 +93,9 @@ public class FileSystemPersistence {
   }
 
   /**
-   * Rename the partitioned file to follow the pathling naming convention in
-   * {@link au.csiro.pathling.library.io.source.FileSource#assumeFilenameIsResourceTypeMapper(String)}.
-   * 
+   * Rename the partitioned file to follow the naming convention in {@link
+   * FileSource#resourceNameWithQualifierMapper(String)}.
+   *
    * @param spark the Spark session
    * @param partitionedLocation the location URL containing the partitioned file
    * @param departitionedLocation the desired URL of the resulting file
@@ -102,19 +103,24 @@ public class FileSystemPersistence {
    * @return the locations of the resulting (renamed) file
    */
   @Nonnull
-  public static Collection<String> renamePartitionedFiles(@Nonnull final SparkSession spark,
+  public static Collection<String> renamePartitionedFiles(
+      @Nonnull final SparkSession spark,
       @Nonnull final String partitionedLocation,
-      @Nonnull final String departitionedLocation, @Nonnull final String extension) {
-    return renamePartitionedFiles(getFileSystem(spark, partitionedLocation), partitionedLocation,
-        departitionedLocation, extension);
+      @Nonnull final String departitionedLocation,
+      @Nonnull final String extension) {
+    return renamePartitionedFiles(
+        getFileSystem(spark, partitionedLocation),
+        partitionedLocation,
+        departitionedLocation,
+        extension);
   }
 
   /**
-   * Rename the partitioned file to follow the pathling naming convention in
-   * {@link au.csiro.pathling.library.io.source.FileSource#assumeFilenameIsResourceTypeMapper(String)}.
+   * Rename the partitioned file to follow the pathling naming convention in {@link
+   * au.csiro.pathling.library.io.source.FileSource#resourceNameWithQualifierMapper(String)}.
    *
    * @param partitionedLocation a Hadoop {@link FileSystem} representing the location that both the
-   * partitioned and departitioned files are located in
+   *     partitioned and departitioned files are located in
    * @param partitionedUrl the URL of the partitioned file
    * @param departitionedUrl the desired URL of the resulting file
    * @param extension the file extension used within the partitioned directory
@@ -122,35 +128,51 @@ public class FileSystemPersistence {
    * @throws PersistenceError if there is a problem copying the partition file
    */
   @Nonnull
-  public static Collection<String> renamePartitionedFiles(@Nonnull final FileSystem partitionedLocation,
-      @Nonnull final String partitionedUrl, @Nonnull final String departitionedUrl,
+  public static Collection<String> renamePartitionedFiles(
+      @Nonnull final FileSystem partitionedLocation,
+      @Nonnull final String partitionedUrl,
+      @Nonnull final String departitionedUrl,
       @Nonnull final String extension) {
     try {
       final Path partitionedPath = new Path(partitionedUrl);
       final FileStatus[] partitionFiles = partitionedLocation.listStatus(partitionedPath);
-      
-      final Collection<String> targetFiles = Arrays.stream(partitionFiles)
-          .map(f -> f.getPath().toString())
-          .filter(f -> f.endsWith("." + extension))
-          .toList();
-      if(targetFiles.isEmpty()) {
+
+      final Collection<String> targetFiles =
+          Arrays.stream(partitionFiles)
+              .map(f -> f.getPath().toString())
+              .filter(f -> f.endsWith("." + extension))
+              .toList();
+      if (targetFiles.isEmpty()) {
         throw new IOException("Partition file not found");
       }
-      String[] departitionFilenameAndExt = new Path(departitionedUrl).getName().split("\\.");
-      if(departitionFilenameAndExt.length != 2) {
-        throw new PersistenceError("Unexpected departitioning filename structure. Expected %s to contain exactly one FHIR resource type and the ndjson extension (separated with a '.', i.e. 'Patient.ndjson'.".formatted(partitionedPath.getName()), null);
+      final String[] departitionFilenameAndExt = new Path(departitionedUrl).getName().split("\\.");
+      if (departitionFilenameAndExt.length != 2) {
+        throw new PersistenceError(
+            ("Unexpected departitioning filename structure. Expected %s to contain exactly one "
+                    + "FHIR resource type and the ndjson extension (separated with a '.', i.e. "
+                    + "'Patient.ndjson'.")
+                .formatted(partitionedPath.getName()),
+            null);
       }
 
-      List<String> renamedFiles = new ArrayList<>();
-      for (String fileName : targetFiles) {
-        Path filenamePath = new Path(fileName);
-        
-        String[] partIdSplit = FilenameUtils.removeExtension(filenamePath.getName()).split("-");
-        if(partIdSplit.length < 2) {
-          throw new PersistenceError("Unexpected spark partitioning structure. Expected %s to have the partitioned id after the first '-'".formatted(fileName), null);
+      final List<String> renamedFiles = new ArrayList<>();
+      for (final String fileName : targetFiles) {
+        final Path filenamePath = new Path(fileName);
+
+        final String[] partIdSplit =
+            FilenameUtils.removeExtension(filenamePath.getName()).split("-");
+        if (partIdSplit.length < 2) {
+          throw new PersistenceError(
+              ("Unexpected spark partitioning structure. Expected %s to have the partitioned id "
+                      + "after the first '-'")
+                  .formatted(fileName),
+              null);
         }
-        String renamedFilename = "%s.%s.%s".formatted(departitionFilenameAndExt[0], partIdSplit[1], departitionFilenameAndExt[1]);
-        Path renamedPath = new Path(new Path(departitionedUrl).getParent(), renamedFilename);
+        final String renamedFilename =
+            "%s.%s.%s"
+                .formatted(
+                    departitionFilenameAndExt[0], partIdSplit[1], departitionFilenameAndExt[1]);
+        final Path renamedPath = new Path(new Path(departitionedUrl).getParent(), renamedFilename);
         log.info("Renaming result to: {}", renamedPath);
         partitionedLocation.rename(new Path(fileName), renamedPath);
         renamedFiles.add(renamedPath.toString());
@@ -162,5 +184,4 @@ public class FileSystemPersistence {
       throw new PersistenceError("Problem copying partition file", e);
     }
   }
-
 }

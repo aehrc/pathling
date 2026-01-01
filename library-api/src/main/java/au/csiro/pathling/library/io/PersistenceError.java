@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.library.io;
 
+import jakarta.annotation.Nullable;
 import java.io.Serial;
 
 /**
@@ -26,8 +27,7 @@ import java.io.Serial;
  */
 public class PersistenceError extends RuntimeException {
 
-  @Serial
-  private static final long serialVersionUID = -757932366975899363L;
+  @Serial private static final long serialVersionUID = -757932366975899363L;
 
   /**
    * Creates a new PersistenceError.
@@ -35,7 +35,7 @@ public class PersistenceError extends RuntimeException {
    * @param message the error message
    * @param cause the underlying cause
    */
-  public PersistenceError(final String message, final Throwable cause) {
+  public PersistenceError(final String message, @Nullable final Throwable cause) {
     super(message, cause);
   }
 }

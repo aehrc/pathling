@@ -56,27 +56,19 @@ public abstract class FileSource extends DatasetSource {
   // Matches a base name that consists of a resource type, optionally followed by a period and a
   // qualifier string. The first group will contain the resource type, and the second group will
   // contain the qualifier string (if present).
-  static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile(
-      "^([A-Za-z]+)(\\.[^.]+)?$");
+  static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile("^([A-Za-z]+)(\\.[^.]+)?$");
 
-  /**
-   * The file extension that this source expects for its source files.
-   */
-  @Nonnull
-  protected final String extension;
+  /** The file extension that this source expects for its source files. */
+  @Nonnull protected final String extension;
 
-  /**
-   * A {@link DataFrameReader} that can be used to read the source files.
-   */
-  @Nonnull
-  protected final DataFrameReader reader;
+  /** A {@link DataFrameReader} that can be used to read the source files. */
+  @Nonnull protected final DataFrameReader reader;
 
   /**
    * A function that transforms a {@link Dataset<Row>} containing raw source data of a specified
    * resource type into a {@link Dataset<Row>} containing the imported data.
    */
-  @Nonnull
-  protected final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer;
+  @Nonnull protected final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer;
 
   /**
    * An additional filter to exclude specific resource types from being processed. This filter is
@@ -84,73 +76,80 @@ public abstract class FileSource extends DatasetSource {
    * exclude resource types that should not be loaded, even if they are present in the source files
    * and would otherwise be valid.
    */
-  @Nonnull
-  protected final Predicate<ResourceType> additionalResourceTypeFilter;
+  @Nonnull protected final Predicate<ResourceType> additionalResourceTypeFilter;
 
   /**
    * Path-based constructor that scans a directory to discover FHIR data files.
-   * <p>
-   * Use this constructor when you have a directory containing FHIR files and want Pathling to
+   *
+   * <p>Use this constructor when you have a directory containing FHIR files and want Pathling to
    * automatically discover and group them by resource type based on file names. This is the typical
    * approach for reading from a file system directory where files follow a naming convention (e.g.,
    * {@code Patient.ndjson}, {@code Observation.parquet}).
-   * <p>
-   * The constructor will scan the specified path and use either the provided {@code fileNameMapper}
-   * or the default naming convention ({@code <resource_type>.<extension>}) to determine which files
-   * contain which resource types. Files may also include a partition identifier (e.g.,
-   * {@code Patient.00000.ndjson}) which will be handled automatically.
+   *
+   * <p>The constructor will scan the specified path and use either the provided {@code
+   * fileNameMapper} or the default naming convention ({@code <resource_type>.<extension>}) to
+   * determine which files contain which resource types. Files may also include a partition
+   * identifier (e.g., {@code Patient.00000.ndjson}) which will be handled automatically.
    *
    * @param context the Pathling context
    * @param path the path to the source files, which may be a directory or a glob pattern
    * @param fileNameMapper a function that maps a file name to a set of resource types, or null to
-   * use the default naming convention
+   *     use the default naming convention
    * @param extension the file extension that this source expects for its source files
    * @param reader a {@link DataFrameReader} that can be used to read the source files
    * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
-   * of a specified resource type into a {@link Dataset<Row>} containing the imported data
+   *     of a specified resource type into a {@link Dataset<Row>} containing the imported data
    * @param additionalResourceTypeFilter filter to filter out specific resource types if desired
    */
-  protected FileSource(@Nonnull final PathlingContext context,
+  protected FileSource(
+      @Nonnull final PathlingContext context,
       @Nonnull final String path,
-      @Nonnull final Function<String, Set<String>> fileNameMapper, @Nonnull final String extension,
+      @Nonnull final Function<String, Set<String>> fileNameMapper,
+      @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
       @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
-    this(context, retrieveFilesFromPath(path, context, fileNameMapper), extension, reader,
-        transformer, additionalResourceTypeFilter);
+    this(
+        context,
+        retrieveFilesFromPath(path, context, fileNameMapper),
+        extension,
+        reader,
+        transformer,
+        additionalResourceTypeFilter);
   }
 
-
   /**
-   * Map-based constructor for programmatically specifying which files contain which resource
-   * types.
-   * <p>
-   * Use this constructor when you already know the mapping between resource types and file paths,
-   * and want to provide this information explicitly rather than relying on file name conventions.
-   * This is particularly useful for:
+   * Map-based constructor for programmatically specifying which files contain which resource types.
+   *
+   * <p>Use this constructor when you already know the mapping between resource types and file
+   * paths, and want to provide this information explicitly rather than relying on file name
+   * conventions. This is particularly useful for:
+   *
    * <ul>
-   *   <li>FHIR Bulk Data operations where file lists are provided via manifests</li>
-   *   <li>Custom file organisation schemes that don't follow standard naming conventions</li>
-   *   <li>Programmatic data source construction where file-to-resource mappings are computed</li>
-   *   <li>Reading from multiple partitioned files (e.g., {@code Patient.00000.ndjson},
-   *       {@code Patient.00001.ndjson}) for a single resource type</li>
+   *   <li>FHIR Bulk Data operations where file lists are provided via manifests
+   *   <li>Custom file organisation schemes that don't follow standard naming conventions
+   *   <li>Programmatic data source construction where file-to-resource mappings are computed
+   *   <li>Reading from multiple partitioned files (e.g., {@code Patient.00000.ndjson}, {@code
+   *       Patient.00001.ndjson}) for a single resource type
    * </ul>
-   * <p>
-   * Unlike the path-based constructor, this does not scan directories or infer resource types from
-   * file names. All file-to-resource-type mappings must be provided explicitly in the
-   * {@code files} parameter.
+   *
+   * <p>Unlike the path-based constructor, this does not scan directories or infer resource types
+   * from file names. All file-to-resource-type mappings must be provided explicitly in the {@code
+   * files} parameter.
    *
    * @param context the Pathling context
    * @param files a map where keys are resource type codes (e.g., "Patient", "Observation") and
-   * values are collections of file paths containing data for that resource type
+   *     values are collections of file paths containing data for that resource type
    * @param extension the file extension that this source expects for its source files
    * @param reader a {@link DataFrameReader} that can be used to read the source files
    * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
-   * of a specified resource type into a {@link Dataset<Row>} containing the imported data
+   *     of a specified resource type into a {@link Dataset<Row>} containing the imported data
    * @param additionalResourceTypeFilter filter to filter out specific resource types if desired
    */
-  protected FileSource(@Nonnull final PathlingContext context,
-      @Nonnull final Map<String, Collection<String>> files, @Nonnull final String extension,
+  protected FileSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Collection<String>> files,
+      @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
       @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
@@ -163,50 +162,56 @@ public abstract class FileSource extends DatasetSource {
   }
 
   @Nonnull
-  private static Map<String, Collection<String>> retrieveFilesFromPath(@Nonnull final String path,
+  private static Map<String, Collection<String>> retrieveFilesFromPath(
+      @Nonnull final String path,
       @Nonnull final PathlingContext context,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
-    final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
-        context.getSpark().sparkContext().hadoopConfiguration());
+    final org.apache.hadoop.conf.Configuration hadoopConfiguration =
+        requireNonNull(context.getSpark().sparkContext().hadoopConfiguration());
     try {
       final Path convertedPath = new Path(path);
       final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
       final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
       // Get all file paths.
-      final Collection<String> filePaths = Arrays.stream(fileStatuses)
-          .map(FileStatus::getPath)
-          .map(Path::toString)
-          .toList();
+      final Collection<String> filePaths =
+          Arrays.stream(fileStatuses).map(FileStatus::getPath).map(Path::toString).toList();
 
       log.debug("Found {} files in path: {}", filePaths.size(), path);
 
       // Apply the file name mapper to map each file to its resource types.
-      final Map<String, Collection<String>> result = filePaths.stream()
-          .collect(Collectors.toMap(
-              filePath -> {
-                final String baseName = retrieveResourceTypeFromFilePath(filePath);
-                final Set<String> resourceTypes = fileNameMapper.apply(baseName);
-                log.debug("File '{}' with baseName '{}' mapped to resource types: {}",
-                    filePath, baseName, resourceTypes);
-                return resourceTypes;
-              },
-              filePath -> new HashSet<>(Collections.singletonList(filePath)),
-              (existing, replacement) -> {
-                existing.addAll(replacement);
-                return existing;
-              }
-          ))
-          .entrySet().stream()
-          .flatMap(entry -> entry.getKey().stream()
-              .map(resourceType -> Map.entry(resourceType, entry.getValue())))
-          .collect(Collectors.toMap(
-              Map.Entry::getKey,
-              entry -> new HashSet<>(entry.getValue()),
-              (existing, replacement) -> {
-                existing.addAll(replacement);
-                return existing;
-              }
-          ));
+      final Map<String, Collection<String>> result =
+          filePaths.stream()
+              .collect(
+                  Collectors.toMap(
+                      filePath -> {
+                        final String baseName = retrieveResourceTypeFromFilePath(filePath);
+                        final Set<String> resourceTypes = fileNameMapper.apply(baseName);
+                        log.debug(
+                            "File '{}' with baseName '{}' mapped to resource types: {}",
+                            filePath,
+                            baseName,
+                            resourceTypes);
+                        return resourceTypes;
+                      },
+                      filePath -> new HashSet<>(Collections.singletonList(filePath)),
+                      (existing, replacement) -> {
+                        existing.addAll(replacement);
+                        return existing;
+                      }))
+              .entrySet()
+              .stream()
+              .flatMap(
+                  entry ->
+                      entry.getKey().stream()
+                          .map(resourceType -> Map.entry(resourceType, entry.getValue())))
+              .collect(
+                  Collectors.toMap(
+                      Map.Entry::getKey,
+                      entry -> new HashSet<>(entry.getValue()),
+                      (existing, replacement) -> {
+                        existing.addAll(replacement);
+                        return existing;
+                      }));
 
       log.debug("Final resource map has {} resource types: {}", result.size(), result.keySet());
       return result;
@@ -245,12 +250,14 @@ public abstract class FileSource extends DatasetSource {
         .filter(entry -> context.isResourceTypeSupported(entry.getKey()))
         // Filter out any resource that should be explicitly ignored
         .filter(entry -> additionalResourceTypeFilter.test(ResourceType.fromCode(entry.getKey())))
-        .collect(Collectors.toMap(Map.Entry::getKey,
-            entry -> {
-              final String[] paths = entry.getValue().toArray(new String[0]);
-              final Dataset<Row> sourceStrings = reader.load(paths);
-              return transformer.apply(sourceStrings, entry.getKey());
-            }));
+        .collect(
+            Collectors.toMap(
+                Map.Entry::getKey,
+                entry -> {
+                  final String[] paths = entry.getValue().toArray(new String[0]);
+                  final Dataset<Row> sourceStrings = reader.load(paths);
+                  return transformer.apply(sourceStrings, entry.getKey());
+                }));
   }
 
   /**
@@ -269,15 +276,15 @@ public abstract class FileSource extends DatasetSource {
    * Extracts the resource type from the provided base name. Allows for an optional qualifier
    * string, which is separated from the resource name by a period. For example, "Procedure.ICU"
    * will return ["Procedure"].
-   * <p>
-   * This method does not validate that the resource type is a valid FHIR resource type.
+   *
+   * <p>This method does not validate that the resource type is a valid FHIR resource type.
    *
    * @param baseName the base name of the file
    * @return a single-element set containing the resource type, or an empty set if the base name
-   * does not match the expected format
+   *     does not match the expected format
    */
   @Nonnull
-  static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {
+  public static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {
     final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
     // If the base name does not match the expected format, return an empty set.
     if (!matcher.matches()) {
@@ -289,9 +296,8 @@ public abstract class FileSource extends DatasetSource {
     }
     // If the base name contains a qualifier, remove it and return the base name without the
     // qualifier.
-    final String qualifierRemoved = new StringBuilder(baseName).replace(matcher.start(2),
-        matcher.end(2), "").toString();
+    final String qualifierRemoved =
+        new StringBuilder(baseName).replace(matcher.start(2), matcher.end(2), "").toString();
     return Collections.singleton(qualifierRemoved);
   }
-
 }
