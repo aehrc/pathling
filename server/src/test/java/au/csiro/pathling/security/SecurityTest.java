@@ -33,18 +33,19 @@ import org.springframework.test.context.ActiveProfiles;
 @Tag("unit-test")
 @ActiveProfiles("unit-test")
 @Import(FhirServerTestConfiguration.class)
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.MOCK)
 abstract class SecurityTest {
 
-  static void assertThrowsAccessDenied(@Nonnull final Executable executable,
-      @Nonnull final String message) {
+  static void assertThrowsAccessDenied(
+      @Nonnull final Executable executable, @Nonnull final String message) {
     assertThrows(AccessDeniedError.class, executable, message);
   }
 
-  static void assertThrowsAccessDenied(@Nonnull final Executable executable,
-      @Nonnull final String message, @Nonnull final String expectedMissingAuthority) {
+  static void assertThrowsAccessDenied(
+      @Nonnull final Executable executable,
+      @Nonnull final String message,
+      @Nonnull final String expectedMissingAuthority) {
     final AccessDeniedError ex = assertThrows(AccessDeniedError.class, executable, message);
     assertEquals(expectedMissingAuthority, ex.getMissingAuthority());
   }
-
 }
