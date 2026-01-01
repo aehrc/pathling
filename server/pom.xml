@@ -40,6 +40,20 @@
     <pathling.awsSdkVersion>2.40.3</pathling.awsSdkVersion>
   </properties>
 
+  <repositories>
+    <!-- Required for resolving SNAPSHOT dependencies from Maven Central. -->
+    <repository>
+      <id>central-snapshots</id>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
   <dependencies>
     <!-- Pathling -->
     <dependency>
