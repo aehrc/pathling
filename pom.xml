@@ -770,6 +770,7 @@
             <detectLinks/>
             <doctitle>Pathling ${project.version} API</doctitle>
             <windowtitle>Pathling ${project.version} API</windowtitle>
+            <excludePackageNames>au.csiro.pathling.fhirpath.parser.generated:au.csiro.pathling.views.ansi.generated</excludePackageNames>
             <bottom>
               <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
             </bottom>
