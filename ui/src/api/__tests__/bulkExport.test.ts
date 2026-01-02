@@ -26,7 +26,7 @@ import {
   bulkExportStatus,
   groupExportKickOff,
   patientExportKickOff,
-  systemExportKickOff
+  systemExportKickOff,
 } from "../bulkExport";
 
 const mockFetch = vi.fn();

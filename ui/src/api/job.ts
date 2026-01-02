@@ -17,7 +17,11 @@
  * Author: John Grimes
  */
 
-import type { JobCancelOptions, JobStatusOptions, JobStatusResult } from "../types/api";
+import type {
+  JobCancelOptions,
+  JobStatusOptions,
+  JobStatusResult,
+} from "../types/api";
 import { buildHeaders, buildUrl, checkResponse } from "./utils";
 
 /**

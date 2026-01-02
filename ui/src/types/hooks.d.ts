@@ -232,8 +232,10 @@ export type ExportManifest = Parameters;
 /**
  * Result of useBulkExport hook.
  */
-export interface UseBulkExportResult
-  extends AsyncJobResult<BulkExportRequest, ExportManifest> {
+export interface UseBulkExportResult extends AsyncJobResult<
+  BulkExportRequest,
+  ExportManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -349,8 +351,10 @@ export interface BulkSubmitManifest {
 /**
  * Result of useBulkSubmit hook.
  */
-export interface UseBulkSubmitResult
-  extends AsyncJobResult<BulkSubmitRequest, BulkSubmitManifest> {
+export interface UseBulkSubmitResult extends AsyncJobResult<
+  BulkSubmitRequest,
+  BulkSubmitManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -373,8 +377,10 @@ export type UseBulkSubmitMonitorOptions = AsyncJobOptions;
 /**
  * Result of useBulkSubmitMonitor hook.
  */
-export interface UseBulkSubmitMonitorResult
-  extends AsyncJobResult<BulkSubmitMonitorRequest, BulkSubmitManifest> {
+export interface UseBulkSubmitMonitorResult extends AsyncJobResult<
+  BulkSubmitMonitorRequest,
+  BulkSubmitManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -483,8 +489,10 @@ export type UseViewExportOptions = AsyncJobOptions;
 /**
  * Result of useViewExport hook.
  */
-export interface UseViewExportResult
-  extends AsyncJobResult<ViewExportRequest, ViewExportManifest> {
+export interface UseViewExportResult extends AsyncJobResult<
+  ViewExportRequest,
+  ViewExportManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }

@@ -19,7 +19,11 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnauthorizedError } from "../../types/errors";
-import { bulkSubmit, bulkSubmitDownload, bulkSubmitStatus } from "../bulkSubmit";
+import {
+  bulkSubmit,
+  bulkSubmitDownload,
+  bulkSubmitStatus,
+} from "../bulkSubmit";
 
 const mockFetch = vi.fn();
 

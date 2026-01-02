@@ -26,7 +26,7 @@ import type {
   ExportManifest,
   GroupExportKickOffOptions,
   PatientExportKickOffOptions,
-  SystemExportKickOffOptions
+  SystemExportKickOffOptions,
 } from "../types/api";
 import { buildHeaders, buildUrl, checkResponse, resolveUrl } from "./utils";
 

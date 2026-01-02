@@ -25,7 +25,7 @@ import {
   checkResponse,
   extractJobIdFromUrl,
   parseProgressHeader,
-  resolveUrl
+  resolveUrl,
 } from "../utils";
 
 describe("buildHeaders", () => {

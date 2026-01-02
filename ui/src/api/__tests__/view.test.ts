@@ -20,7 +20,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ViewDefinition } from "../../types/api";
 import { UnauthorizedError } from "../../types/errors";
-import { viewExportDownload, viewExportKickOff, viewRun, viewRunStored } from "../view";
+import {
+  viewExportDownload,
+  viewExportKickOff,
+  viewRun,
+  viewRunStored,
+} from "../view";
 
 const mockFetch = vi.fn();
 
