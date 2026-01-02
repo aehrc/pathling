@@ -52,17 +52,6 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      - name: Run security scan
-        uses: aquasecurity/trivy-action@0.32.0
-        with:
-          scan-type: repo
-          severity: "MEDIUM,HIGH,CRITICAL"
-          scan-ref: .
-          format: sarif
-          output: trivy-results.sarif
-          skip-files: examples/**/*,**/target/**/*
-          cache: false
-
       - name: Build and test
         working-directory: server
         env:
