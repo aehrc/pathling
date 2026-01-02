@@ -71,6 +71,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get version from POM
+        id: get_version
+        working-directory: server
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build, test, and push Docker image
         working-directory: server
         env:
@@ -79,7 +86,7 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mvn --batch-mode deploy -Pdocker -Dmaven.deploy.skip \
-          -Djib.to.tags=\${project.version}-develop \
+          -Djib.to.tags=${{ steps.get_version.outputs.version }}-develop \
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
