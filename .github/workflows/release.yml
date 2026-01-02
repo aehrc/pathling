@@ -12,15 +12,14 @@ env:
   # The add-exports and add-opens flags are required for Java 21
   MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
 
-permissions:
-  id-token: write
-  contents: write # Required to upload release assets
-
 jobs:
   release-maven:
     name: Release to Maven Central
     environment: maven-central
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for AWS OIDC authentication
+      contents: write # Required to upload release assets
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
