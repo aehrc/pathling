@@ -17,9 +17,3 @@ spring:
 logging:
   level:
     au.csiro.pathling: WARN
-
-fs:
-  http:
-    impl: au.csiro.pathling.io.fs.StreamingHttpFileSystem
-  https:
-    impl: au.csiro.pathling.io.fs.StreamingHttpsFileSystem
