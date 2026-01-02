@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.util.Optional;
 import lombok.Data;
@@ -48,19 +49,20 @@ public class ServerConfiguration {
     return Optional.ofNullable(sentryEnvironment);
   }
 
-  @NotNull private SparkConfiguration spark = SparkConfiguration.builder().build();
+  @Valid @NotNull private SparkConfiguration spark = SparkConfiguration.builder().build();
 
-  @NotNull private StorageConfiguration storage = StorageConfiguration.builder().build();
+  @Valid @NotNull private StorageConfiguration storage = StorageConfiguration.builder().build();
 
-  @NotNull private EncodingConfiguration encoding = EncodingConfiguration.builder().build();
+  @Valid @NotNull private EncodingConfiguration encoding = EncodingConfiguration.builder().build();
 
-  @NotNull
+  @Valid @NotNull
   private TerminologyConfiguration terminology = TerminologyConfiguration.builder().build();
 
-  @NotNull private AuthorizationConfiguration auth;
+  @Valid @NotNull private AuthorizationConfiguration auth;
 
-  @NotNull private HttpServerCachingConfiguration httpCaching;
+  @Valid @NotNull private HttpServerCachingConfiguration httpCaching;
 
+  @Valid
   @NotNull
   @JsonProperty("import")
   private ImportConfiguration import_;
@@ -74,20 +76,21 @@ public class ServerConfiguration {
     this.import_ = newImport;
   }
 
+  @Valid
   @NotNull
   @JsonProperty("export")
   private ExportConfiguration export = new ExportConfiguration();
 
-  @NotNull private AsyncConfiguration async;
+  @Valid @NotNull private AsyncConfiguration async;
 
-  @NotNull private CorsConfiguration cors;
+  @Valid @NotNull private CorsConfiguration cors;
 
-  @Nullable private BulkSubmitConfiguration bulkSubmit;
+  @Valid @Nullable private BulkSubmitConfiguration bulkSubmit;
 
-  @NotNull private QueryConfiguration query = QueryConfiguration.builder().build();
+  @Valid @NotNull private QueryConfiguration query = QueryConfiguration.builder().build();
 
   /** Configuration for enabling/disabling individual server operations. */
-  @NotNull private OperationConfiguration operations = new OperationConfiguration();
+  @Valid @NotNull private OperationConfiguration operations = new OperationConfiguration();
 
   /** Logs the server configuration on startup. */
   @PostConstruct

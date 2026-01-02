@@ -19,7 +19,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <pathling.version>9.2.0-SNAPSHOT</pathling.version>
     <pathling.hapiFhirVersion>8.6.0</pathling.hapiFhirVersion>
-    <pathling.springBootVersion>3.3.5</pathling.springBootVersion>
+    <pathling.springBootVersion>3.5.9</pathling.springBootVersion>
     <pathling.sparkVersion>4.0.1</pathling.sparkVersion>
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
