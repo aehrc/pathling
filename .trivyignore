@@ -7,6 +7,7 @@ CVE-2025-24970
 CVE-2025-55163
 CVE-2025-58057
 CVE-2025-58056
+CVE-2025-67735
 
 # The vulnerable version of protobuf-java is a transitive provided dependency, we do not bundle it into our distribution.
 CVE-2024-7254
@@ -18,3 +19,19 @@ CVE-2022-46751
 CVE-2023-44981
 CVE-2024-23944
 CVE-2025-58457
+
+# Jersey Client is provided via Spark, not bundled in distribution.
+CVE-2025-12383
+
+# LZ4-Java is provided via Spark, not bundled in distribution.
+CVE-2025-12183
+CVE-2025-66566
+
+# Commons Lang3 is provided via Spark, not bundled in distribution.
+CVE-2025-48924
+
+# Log4j is provided via Spark, not bundled in distribution.
+CVE-2025-68161
+
+# Nimbus JOSE JWT is provided via Spring Security OAuth2, not directly controlled.
+CVE-2025-53864
