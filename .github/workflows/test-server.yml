@@ -15,7 +15,6 @@ env:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   test-server:
@@ -64,29 +63,12 @@ jobs:
           skip-files: examples/**/*,**/target/**/*
           cache: false
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get version from POM
-        id: get_version
-        working-directory: server
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Build, test, and push Docker image
+      - name: Build and test
         working-directory: server
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          DOCKER_USERNAME: ${{ github.actor }}
-          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mvn --batch-mode deploy -Pdocker -Dmaven.deploy.skip \
-          -Djib.to.tags=${{ steps.get_version.outputs.version }}-develop \
+          mvn --batch-mode verify \
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
