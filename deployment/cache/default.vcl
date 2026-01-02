@@ -20,6 +20,11 @@ sub vcl_req_authorization {
 }
 
 sub vcl_backend_response {
+  // Respect backend cache-control headers that indicate the response should not be cached.
+  if (beresp.http.Cache-Control ~ "(no-cache|no-store|private)") {
+    set beresp.uncacheable = true;
+    return (deliver);
+  }
   set beresp.grace = 0s;
   set beresp.keep = 365d;
   set beresp.ttl = 1s;
