@@ -350,6 +350,13 @@ public class ConformanceProvider
         resource.addInteraction(readInteraction);
       }
 
+      // Add delete interaction if enabled.
+      if (ops.isDeleteEnabled()) {
+        final ResourceInteractionComponent deleteInteraction = new ResourceInteractionComponent();
+        deleteInteraction.setCode(TypeRestfulInteraction.DELETE);
+        resource.addInteraction(deleteInteraction);
+      }
+
       // Add export operation to Patient and Group resources if enabled.
       if (EXPORT_RESOURCE_TYPES.contains(resourceType)) {
         final boolean patientExport =
@@ -424,6 +431,14 @@ public class ConformanceProvider
           new ResourceInteractionComponent();
       viewDefCreateInteraction.setCode(TypeRestfulInteraction.CREATE);
       viewDefResource.addInteraction(viewDefCreateInteraction);
+    }
+
+    // Add delete interaction for ViewDefinition if enabled.
+    if (ops.isDeleteEnabled()) {
+      final ResourceInteractionComponent viewDefDeleteInteraction =
+          new ResourceInteractionComponent();
+      viewDefDeleteInteraction.setCode(TypeRestfulInteraction.DELETE);
+      viewDefResource.addInteraction(viewDefDeleteInteraction);
     }
 
     // Add $run operation to ViewDefinition resource if enabled.

@@ -159,8 +159,64 @@ class ConformanceProviderTest {
               TypeRestfulInteraction.READ,
               TypeRestfulInteraction.SEARCHTYPE,
               TypeRestfulInteraction.UPDATE,
-              TypeRestfulInteraction.CREATE);
+              TypeRestfulInteraction.CREATE,
+              TypeRestfulInteraction.DELETE);
     }
+  }
+
+  @Test
+  void capabilityStatementIncludesDeleteInteractionForAllResourceTypes() {
+    // When: Getting the capability statement.
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    // Then: All supported resource types (except read-only ones) should have DELETE interaction.
+    final Set<ResourceType> supportedResourceTypes = FhirServer.supportedResourceTypes();
+    final List<CapabilityStatementRestResourceComponent> resources =
+        capabilityStatement.getRest().get(0).getResource();
+
+    for (final ResourceType resourceType : supportedResourceTypes) {
+      // OperationDefinition is intentionally read-only.
+      if (resourceType == ResourceType.OPERATIONDEFINITION) {
+        continue;
+      }
+      final Optional<CapabilityStatementRestResourceComponent> resourceComponent =
+          resources.stream().filter(r -> r.getType().equals(resourceType.toCode())).findFirst();
+
+      assertThat(resourceComponent).isPresent();
+
+      final Set<TypeRestfulInteraction> interactions =
+          resourceComponent.get().getInteraction().stream()
+              .map(ResourceInteractionComponent::getCode)
+              .collect(Collectors.toSet());
+
+      assertThat(interactions)
+          .as("Resource type " + resourceType.toCode() + " should have DELETE interaction")
+          .contains(TypeRestfulInteraction.DELETE);
+    }
+  }
+
+  @Test
+  void capabilityStatementIncludesDeleteInteractionForViewDefinition() {
+    // When: Getting the capability statement.
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    // Then: ViewDefinition should have DELETE interaction.
+    final List<CapabilityStatementRestResourceComponent> resources =
+        capabilityStatement.getRest().get(0).getResource();
+
+    final Optional<CapabilityStatementRestResourceComponent> viewDefResource =
+        resources.stream().filter(r -> r.getType().equals("ViewDefinition")).findFirst();
+
+    assertThat(viewDefResource).isPresent();
+
+    final Set<TypeRestfulInteraction> interactions =
+        viewDefResource.get().getInteraction().stream()
+            .map(ResourceInteractionComponent::getCode)
+            .collect(Collectors.toSet());
+
+    assertThat(interactions).contains(TypeRestfulInteraction.DELETE);
   }
 
   @Test
@@ -292,6 +348,38 @@ class ConformanceProviderTest {
       assertThat(interactions)
           .as("Resource type " + resource.getType() + " should not have SEARCHTYPE interaction")
           .doesNotContain(TypeRestfulInteraction.SEARCHTYPE);
+    }
+  }
+
+  @Test
+  void capabilityStatementExcludesDeleteWhenDisabled() {
+    // Given: A configuration with delete disabled.
+    final ConformanceProvider provider =
+        createProviderWithDisabledOperations(
+            ops -> {
+              ops.setDeleteEnabled(false);
+            });
+
+    // When: Getting the capability statement.
+    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
+
+    // Then: No resource should have DELETE interaction.
+    final List<CapabilityStatementRestResourceComponent> resources =
+        capabilityStatement.getRest().get(0).getResource();
+
+    for (final CapabilityStatementRestResourceComponent resource : resources) {
+      // Skip OperationDefinition which is read-only.
+      if (resource.getType().equals("OperationDefinition")) {
+        continue;
+      }
+      final Set<TypeRestfulInteraction> interactions =
+          resource.getInteraction().stream()
+              .map(ResourceInteractionComponent::getCode)
+              .collect(Collectors.toSet());
+
+      assertThat(interactions)
+          .as("Resource type " + resource.getType() + " should not have DELETE interaction")
+          .doesNotContain(TypeRestfulInteraction.DELETE);
     }
   }
 
