@@ -34,7 +34,7 @@ jobs:
         with:
           java-version: 21
           distribution: "zulu"
-          
+
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
 
@@ -114,7 +114,7 @@ jobs:
           ignore-unfixed: true
           format: sarif
           output: trivy-results.sarif
-          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/sof-js/package-lock.json,licenses/**/*,site/package-lock.json
+          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock
 
       - name: Run deploy goal (pre-release)
         env:
