@@ -213,8 +213,13 @@ public class CacheableDatabase implements Cacheable {
   public void invalidate(@Nonnull final String tablePath) {
     executor.execute(
         () -> {
-          final DeltaTable table = DeltaTable.forPath(spark, tablePath);
-          cacheKey = buildCacheKeyFromTable(table);
+          try {
+            final DeltaTable table = DeltaTable.forPath(spark, tablePath);
+            cacheKey = buildCacheKeyFromTable(table);
+          } catch (final Exception e) {
+            log.debug(
+                "Unable to access table for cache invalidation, clearing cache: {}", tablePath, e);
+          }
           spark.sqlContext().clearCache();
         });
   }
