@@ -39,7 +39,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
@@ -52,9 +52,9 @@ import org.springframework.core.Ordered;
 /**
  * Servlet filter that converts JSON manifest requests (SMART Bulk Data Import format) to FHIR
  * Parameters resources before HAPI processes them.
- * <p>
- * This is necessary because HAPI's {@code @ResourceParam} annotation expects a FHIR resource, and
- * will fail when Content-Type is application/json with a non-FHIR body. By converting the JSON
+ *
+ * <p>This is necessary because HAPI's {@code @ResourceParam} annotation expects a FHIR resource,
+ * and will fail when Content-Type is application/json with a non-FHIR body. By converting the JSON
  * manifest to a Parameters resource and changing the Content-Type to application/fhir+json, we
  * allow the existing provider method to handle both formats transparently.
  *
@@ -78,9 +78,7 @@ public class ImportManifestInterceptor {
     return registrationBean;
   }
 
-  /**
-   * The actual filter implementation.
-   */
+  /** The actual filter implementation. */
   @Slf4j
   private static class ImportManifestFilter implements Filter {
 
@@ -89,8 +87,10 @@ public class ImportManifestInterceptor {
     private final FhirContext fhirContext = FhirContext.forR4();
 
     @Override
-    public void doFilter(final jakarta.servlet.ServletRequest request,
-        final jakarta.servlet.ServletResponse response, final FilterChain chain)
+    public void doFilter(
+        final jakarta.servlet.ServletRequest request,
+        final jakarta.servlet.ServletResponse response,
+        final FilterChain chain)
         throws IOException, ServletException {
       if (!(request instanceof HttpServletRequest httpRequest)
           || !(response instanceof HttpServletResponse)) {
@@ -108,8 +108,13 @@ public class ImportManifestInterceptor {
 
       // Only process POST requests to /$import with application/json content type.
       final boolean isJsonImport = isJsonImportRequest(httpRequest);
-      log.debug("ImportManifestFilter processing request: method={}, uri={}, contentType={}, isJsonImport={}",
-          httpRequest.getMethod(), httpRequest.getRequestURI(), httpRequest.getContentType(), isJsonImport);
+      log.debug(
+          "ImportManifestFilter processing request: method={}, uri={}, contentType={},"
+              + " isJsonImport={}",
+          httpRequest.getMethod(),
+          httpRequest.getRequestURI(),
+          httpRequest.getContentType(),
+          isJsonImport);
       if (!isJsonImport) {
         chain.doFilter(request, response);
         return;
@@ -123,15 +128,15 @@ public class ImportManifestInterceptor {
 
       try {
         // Parse the JSON manifest.
-        final ImportManifest manifest = objectMapper.readValue(originalBodyString,
-            ImportManifest.class);
+        final ImportManifest manifest =
+            objectMapper.readValue(originalBodyString, ImportManifest.class);
 
         // Convert to FHIR Parameters.
         final Parameters parameters = convertManifestToParameters(manifest);
 
         // Serialise the Parameters resource.
-        final String parametersJson = fhirContext.newJsonParser()
-            .encodeResourceToString(parameters);
+        final String parametersJson =
+            fhirContext.newJsonParser().encodeResourceToString(parameters);
         final byte[] newBody = parametersJson.getBytes(StandardCharsets.UTF_8);
 
         // Wrap the request with the new body and content type.
@@ -140,20 +145,21 @@ public class ImportManifestInterceptor {
         httpRequest.setAttribute(PROCESSED_ATTR, wrappedRequest);
         chain.doFilter(wrappedRequest, response);
       } catch (final Exception e) {
-        log.warn("Failed to parse JSON manifest, passing through original request: {}",
-            e.getMessage());
+        log.warn(
+            "Failed to parse JSON manifest, passing through original request: {}", e.getMessage());
         // If parsing fails, pass through the original request - HAPI will handle the error.
-        final WrappedRequest wrappedRequest = new WrappedRequest(httpRequest, originalBody) {
-          @Override
-          public String getContentType() {
-            return httpRequest.getContentType();
-          }
+        final WrappedRequest wrappedRequest =
+            new WrappedRequest(httpRequest, originalBody) {
+              @Override
+              public String getContentType() {
+                return httpRequest.getContentType();
+              }
 
-          @Override
-          public String getHeader(final String name) {
-            return httpRequest.getHeader(name);
-          }
-        };
+              @Override
+              public String getHeader(final String name) {
+                return httpRequest.getHeader(name);
+              }
+            };
         // Store for potential retry.
         httpRequest.setAttribute(PROCESSED_ATTR, wrappedRequest);
         chain.doFilter(wrappedRequest, response);
@@ -194,46 +200,39 @@ public class ImportManifestInterceptor {
 
       // Add inputSource parameter if present (optional for backwards compatibility).
       if (manifest.inputSource() != null && !manifest.inputSource().isBlank()) {
-        parameters.addParameter()
+        parameters
+            .addParameter()
             .setName("inputSource")
             .setValue(new StringType(manifest.inputSource()));
       }
 
       // Add inputFormat parameter if present.
       if (manifest.inputFormat() != null && !manifest.inputFormat().isBlank()) {
-        parameters.addParameter()
+        parameters
+            .addParameter()
             .setName("inputFormat")
-            .setValue(new Coding().setCode(manifest.inputFormat()));
+            .setValue(new CodeType(manifest.inputFormat()));
       }
 
       // Add saveMode parameter if present.
       if (manifest.mode() != null && !manifest.mode().isBlank()) {
-        parameters.addParameter()
-            .setName("saveMode")
-            .setValue(new Coding().setCode(manifest.mode()));
+        parameters.addParameter().setName("saveMode").setValue(new CodeType(manifest.mode()));
       }
 
       // Add input parameters.
       for (final ImportManifestInput input : manifest.input()) {
-        final ParametersParameterComponent inputParam = parameters.addParameter()
-            .setName("input");
+        final ParametersParameterComponent inputParam = parameters.addParameter().setName("input");
 
-        inputParam.addPart()
-            .setName("resourceType")
-            .setValue(new Coding().setCode(input.type()));
+        inputParam.addPart().setName("resourceType").setValue(new CodeType(input.type()));
 
-        inputParam.addPart()
-            .setName("url")
-            .setValue(new UrlType(input.url()));
+        inputParam.addPart().setName("url").setValue(new UrlType(input.url()));
       }
 
       return parameters;
     }
   }
 
-  /**
-   * Wrapper for HttpServletRequest that replaces the body and content type.
-   */
+  /** Wrapper for HttpServletRequest that replaces the body and content type. */
   private static class WrappedRequest extends HttpServletRequestWrapper {
 
     private final byte[] body;
@@ -306,5 +305,4 @@ public class ImportManifestInterceptor {
       return body.length;
     }
   }
-
 }

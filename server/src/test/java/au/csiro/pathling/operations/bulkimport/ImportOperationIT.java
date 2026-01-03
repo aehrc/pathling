@@ -17,30 +17,22 @@
 
 package au.csiro.pathling.operations.bulkimport;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.head;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import au.csiro.pathling.util.TestDataSetup;
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.api.parallel.ResourceAccessMode;
-import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -59,11 +51,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @Slf4j
 @Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
 @ActiveProfiles({"integration-test"})
 class ImportOperationIT {
-
-  private static WireMockServer wireMockServer;
 
   @LocalServerPort int port;
 
@@ -71,40 +60,28 @@ class ImportOperationIT {
 
   @TempDir private static Path warehouseDir;
 
-  @BeforeAll
-  static void setupWireMock() {
-    wireMockServer = new WireMockServer(WireMockConfiguration.options().dynamicPort());
-    wireMockServer.start();
-    log.info("WireMock server started on port: {}", wireMockServer.port());
-  }
+  @TempDir private static Path ndjsonDir;
 
-  @AfterAll
-  static void tearDownWireMock() {
-    if (wireMockServer != null && wireMockServer.isRunning()) {
-      wireMockServer.stop();
-      log.info("WireMock server stopped");
-    }
-  }
+  private String patientFileUrl;
+  private String observationFileUrl;
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
-    // Allow imports from WireMock server.
+    // Allow imports from local file system.
     registry.add(
-        "pathling.import.allowableSources",
-        () -> "http://localhost:" + wireMockServer.port() + "/");
+        "pathling.import.allowableSources", () -> "file://" + ndjsonDir.toAbsolutePath() + "/");
   }
 
   @BeforeEach
-  void setup() {
+  void setup() throws IOException {
     webTestClient =
         webTestClient
             .mutate()
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
             .build();
-    wireMockServer.resetAll();
-    setupNdjsonFileStubs();
+    setupNdjsonFiles();
   }
 
   @AfterEach
@@ -112,59 +89,32 @@ class ImportOperationIT {
     FileUtils.cleanDirectory(warehouseDir.toFile());
   }
 
-  /** Sets up WireMock stubs for NDJSON files. */
-  private void setupNdjsonFileStubs() {
+  /** Creates NDJSON files in the temporary directory for use by the import tests. */
+  private void setupNdjsonFiles() throws IOException {
     final String patientNdjson =
         """
         {"resourceType":"Patient","id":"patient1","name":[{"family":"Smith","given":["John"]}]}
         {"resourceType":"Patient","id":"patient2","name":[{"family":"Jones","given":["Jane"]}]}
         """;
-    // HEAD stub for Spark to check file existence.
-    wireMockServer.stubFor(
-        head(urlEqualTo("/data/Patient.ndjson"))
-            .willReturn(
-                aResponse()
-                    .withStatus(200)
-                    .withHeader("Content-Type", "application/fhir+ndjson")
-                    .withHeader("Content-Length", String.valueOf(patientNdjson.length()))));
-    // GET stub for actual file content.
-    wireMockServer.stubFor(
-        get(urlEqualTo("/data/Patient.ndjson"))
-            .willReturn(
-                aResponse()
-                    .withStatus(200)
-                    .withHeader("Content-Type", "application/fhir+ndjson")
-                    .withBody(patientNdjson)));
+    final Path patientFile = ndjsonDir.resolve("Patient.ndjson");
+    Files.writeString(patientFile, patientNdjson, StandardCharsets.UTF_8);
+    patientFileUrl = patientFile.toUri().toString();
 
     final String observationNdjson =
         """
         {"resourceType":"Observation","id":"obs1","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"8867-4"}]}}
         """;
-    // HEAD stub for Spark to check file existence.
-    wireMockServer.stubFor(
-        head(urlEqualTo("/data/Observation.ndjson"))
-            .willReturn(
-                aResponse()
-                    .withStatus(200)
-                    .withHeader("Content-Type", "application/fhir+ndjson")
-                    .withHeader("Content-Length", String.valueOf(observationNdjson.length()))));
-    // GET stub for actual file content.
-    wireMockServer.stubFor(
-        get(urlEqualTo("/data/Observation.ndjson"))
-            .willReturn(
-                aResponse()
-                    .withStatus(200)
-                    .withHeader("Content-Type", "application/fhir+ndjson")
-                    .withBody(observationNdjson)));
+    final Path observationFile = ndjsonDir.resolve("Observation.ndjson");
+    Files.writeString(observationFile, observationNdjson, StandardCharsets.UTF_8);
+    observationFileUrl = observationFile.toUri().toString();
 
-    log.info("Set up NDJSON file stubs on WireMock server");
+    log.info("Created NDJSON test files in: {}", ndjsonDir);
   }
 
   @Test
   void testImportWithFhirParametersFormat() {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
-    final String baseUrl = "http://localhost:" + wireMockServer.port();
     final String uri = "http://localhost:" + port + "/fhir/$import";
     final String requestBody =
         String.format(
@@ -185,14 +135,14 @@ class ImportOperationIT {
                     },
                     {
                       "name": "url",
-                      "valueUrl": "%s/data/Patient.ndjson"
+                      "valueUrl": "%s"
                     }
                   ]
                 }
               ]
             }
             """,
-            baseUrl);
+            patientFileUrl);
 
     final var result =
         webTestClient
@@ -238,7 +188,6 @@ class ImportOperationIT {
   void testImportWithJsonManifestFormat() {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
-    final String baseUrl = "http://localhost:" + wireMockServer.port();
     final String uri = "http://localhost:" + port + "/fhir/$import";
 
     // JSON manifest format (SMART Bulk Data Import specification).
@@ -251,13 +200,13 @@ class ImportOperationIT {
               "input": [
                 {
                   "type": "Patient",
-                  "url": "%s/data/Patient.ndjson"
+                  "url": "%s"
                 }
               ],
               "mode": "overwrite"
             }
             """,
-            baseUrl);
+            patientFileUrl);
 
     final var result =
         webTestClient
@@ -349,7 +298,6 @@ class ImportOperationIT {
     // inputSource is optional per the SMART Bulk Data Import spec.
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
-    final String baseUrl = "http://localhost:" + wireMockServer.port();
     final String uri = "http://localhost:" + port + "/fhir/$import";
     final String requestBody =
         String.format(
@@ -366,14 +314,14 @@ class ImportOperationIT {
                     },
                     {
                       "name": "url",
-                      "valueUrl": "%s/data/Patient.ndjson"
+                      "valueUrl": "%s"
                     }
                   ]
                 }
               ]
             }
             """,
-            baseUrl);
+            patientFileUrl);
 
     final var result =
         webTestClient
