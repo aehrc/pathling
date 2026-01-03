@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 
@@ -51,38 +50,47 @@ class RequestTagFactoryTest {
     final List<String> varyHeaders = List.of("Accept", "Accept-Encoding", "Authorization");
     final List<String> whiteListedHeaders = List.of("Accept", "Accept-Encoding", "X-UserId");
 
-    assertEquals(Collections.emptySet(), new RequestTagFactory(
-        mockDatabase,
-        createServerConfiguration(Collections.emptyList(),
-            Collections.emptyList())).getSalientHeaderNames());
+    assertEquals(
+        Collections.emptySet(),
+        new RequestTagFactory(
+                mockDatabase,
+                createServerConfiguration(Collections.emptyList(), Collections.emptyList()))
+            .getSalientHeaderNames());
 
-    assertEquals(Collections.emptySet(), new RequestTagFactory(
-        mockDatabase,
-        createServerConfiguration(Collections.emptyList(),
-            whiteListedHeaders)).getSalientHeaderNames());
+    assertEquals(
+        Collections.emptySet(),
+        new RequestTagFactory(
+                mockDatabase,
+                createServerConfiguration(Collections.emptyList(), whiteListedHeaders))
+            .getSalientHeaderNames());
 
     assertEquals(
         varyHeaders.stream().map(String::toLowerCase).collect(Collectors.toUnmodifiableSet()),
         new RequestTagFactory(
-            mockDatabase,
-            createServerConfiguration(varyHeaders,
-                Collections.emptyList())).getSalientHeaderNames());
+                mockDatabase, createServerConfiguration(varyHeaders, Collections.emptyList()))
+            .getSalientHeaderNames());
 
-    assertEquals(Set.of("authorization"), new RequestTagFactory(
-        mockDatabase,
-        createServerConfiguration(varyHeaders,
-            whiteListedHeaders)).getSalientHeaderNames());
+    assertEquals(
+        Set.of("authorization"),
+        new RequestTagFactory(
+                mockDatabase, createServerConfiguration(varyHeaders, whiteListedHeaders))
+            .getSalientHeaderNames());
   }
 
   @Test
   void testComputesCorrectTagForAuthenticatedUserAndExisingCacheKey() {
-    final Set<String> salientHeaderNames = Set.of("X-Single-Value", "X-Multi-Values",
-        "X-Not-Present");
+    final Set<String> salientHeaderNames =
+        Set.of("X-Single-Value", "X-Multi-Values", "X-Not-Present");
     // RequestDetails.gethHeaders() returns a Map<String, List<String>> where the keys are
     // lower-cased.
-    final Map<String, List<String>> requestHeaders = Map.of("x-single-value",
-        List.of("singleValue"),
-        "x-multi-values", List.of("multiValue1", "multiValue2"), "x-other", List.of("otherValue"));
+    final Map<String, List<String>> requestHeaders =
+        Map.of(
+            "x-single-value",
+            List.of("singleValue"),
+            "x-multi-values",
+            List.of("multiValue1", "multiValue2"),
+            "x-other",
+            List.of("otherValue"));
     final Object principal = new Object();
     when(mockAuthentication.getPrincipal()).thenReturn(principal);
 
@@ -90,50 +98,71 @@ class RequestTagFactoryTest {
     when(mockRequestDetails.getCompleteUrl()).thenReturn("uri:requestUri-A");
     when(mockRequestDetails.getHeaders()).thenReturn(requestHeaders);
 
-    final RequestTagFactory requestTagFactory = new RequestTagFactory(mockCacheable,
-        salientHeaderNames);
-    final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails,
-        mockAuthentication);
-    assertEquals(new RequestTag("uri:requestUri-A",
-            Map.of("x-single-value", List.of("singleValue"),
-                "x-multi-values", List.of("multiValue1", "multiValue2")),
+    final RequestTagFactory requestTagFactory =
+        new RequestTagFactory(mockCacheable, salientHeaderNames);
+    final RequestTag requestTag =
+        requestTagFactory.createTag(mockRequestDetails, mockAuthentication);
+    assertEquals(
+        new RequestTag(
+            "uri:requestUri-A",
+            Map.of(
+                "x-single-value",
+                List.of("singleValue"),
+                "x-multi-values",
+                List.of("multiValue1", "multiValue2")),
             Optional.of("cacheKey_A"),
             ""),
         requestTag);
   }
 
-  @Disabled("Copied with an unnoticed bug from v7.2.0")
   @Test
-  void testComputesCorrectTagFoNoPrincipalAndMissingKey() {
-    final Set<String> salientHeaderNames = Set.of("Y-SingleValue", "Y-MultiValues", "Y-NotPresent");
-    final Map<String, List<String>> requestHeaders = Map.of("Y-SingleValue", List.of("singleValue"),
-        "Y-MultiValues", List.of("multiValue1", "multiValue2"), "Y-Other", List.of("otherValue"));
+  void testComputesCorrectTagForNoPrincipalAndMissingKey() {
+    final Set<String> salientHeaderNames =
+        Set.of("Y-Single-Value", "Y-Multi-Values", "Y-Not-Present");
+    // RequestDetails.getHeaders() returns a Map<String, List<String>> where the keys are
+    // lower-cased.
+    final Map<String, List<String>> requestHeaders =
+        Map.of(
+            "y-single-value",
+            List.of("singleValue"),
+            "y-multi-values",
+            List.of("multiValue1", "multiValue2"),
+            "y-other",
+            List.of("otherValue"));
 
-    when(mockCacheable.getCacheKey()).thenReturn(Optional.empty());
+    when(mockDatabase.getCacheKey()).thenReturn(Optional.empty());
     when(mockRequestDetails.getCompleteUrl()).thenReturn("uri:requestUri-B");
     when(mockRequestDetails.getHeaders()).thenReturn(requestHeaders);
 
-    final RequestTagFactory requestTagFactory = new RequestTagFactory(mockDatabase,
-        createServerConfiguration(new ArrayList<>(salientHeaderNames), Collections.emptyList()));
+    final RequestTagFactory requestTagFactory =
+        new RequestTagFactory(
+            mockDatabase,
+            createServerConfiguration(
+                new ArrayList<>(salientHeaderNames), Collections.emptyList()));
 
-    final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails,
-        mockAuthentication);
-    assertEquals(new RequestTag("uri:requestUri-B",
-            Map.of("Y-SingleValue", List.of("singleValue"),
-                "Y-MultiValues", List.of("multiValue1", "multiValue2")),
+    final RequestTag requestTag =
+        requestTagFactory.createTag(mockRequestDetails, mockAuthentication);
+    assertEquals(
+        new RequestTag(
+            "uri:requestUri-B",
+            Map.of(
+                "y-single-value",
+                List.of("singleValue"),
+                "y-multi-values",
+                List.of("multiValue1", "multiValue2")),
             Optional.empty(),
             ""),
         requestTag);
   }
 
-
-  static ServerConfiguration createServerConfiguration(final List<String> varyHeaders,
-      final List<String> excludeVary) {
+  static ServerConfiguration createServerConfiguration(
+      final List<String> varyHeaders, final List<String> excludeVary) {
     final AsyncConfiguration asyncConfiguration = new AsyncConfiguration();
     asyncConfiguration.setEnabled(true);
     asyncConfiguration.setVaryHeadersExcludedFromCacheKey(excludeVary);
 
-    final HttpServerCachingConfiguration httpServerCachingConfiguration = new HttpServerCachingConfiguration();
+    final HttpServerCachingConfiguration httpServerCachingConfiguration =
+        new HttpServerCachingConfiguration();
     httpServerCachingConfiguration.setVary(varyHeaders);
 
     final ServerConfiguration serverConfiguration = new ServerConfiguration();
@@ -141,5 +170,4 @@ class RequestTagFactoryTest {
     serverConfiguration.setHttpCaching(httpServerCachingConfiguration);
     return serverConfiguration;
   }
-
 }
