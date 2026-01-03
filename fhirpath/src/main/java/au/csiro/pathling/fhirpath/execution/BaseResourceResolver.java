@@ -31,37 +31,38 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Base implementation of the {@link ResourceResolver} interface that provides common functionality
  * for resolving FHIR resources during FHIRPath evaluation.
- * <p>
- * This abstract class implements core resource resolution methods and provides a foundation for
+ *
+ * <p>This abstract class implements core resource resolution methods and provides a foundation for
  * more specialized resource resolvers. It handles:
+ *
  * <ul>
- *   <li>Basic resource resolution by type code</li>
- *   <li>Subject resource resolution</li>
- *   <li>Resource creation with appropriate column representations</li>
+ *   <li>Basic resource resolution by type code
+ *   <li>Subject resource resolution
+ *   <li>Resource creation with appropriate column representations
  * </ul>
- * <p>
- * Subclasses must implement:
+ *
+ * <p>Subclasses must implement:
+ *
  * <ul>
- *   <li>{@link #getSubjectResourceCode()} - to define the primary resource type code</li>
- *   <li>{@link #getFhirContext()} - to provide the FHIR context for resource definitions</li>
+ *   <li>{@link #getSubjectResourceCode()} - to define the primary resource type code
+ *   <li>{@link #getFhirContext()} - to provide the FHIR context for resource definitions
  * </ul>
- * <p>
- * By default, this implementation does not support joins or reverse joins, and subclasses
- * must override the relevant methods to provide that functionality.
+ *
+ * <p>By default, this implementation does not support joins or reverse joins, and subclasses must
+ * override the relevant methods to provide that functionality.
  */
 public abstract class BaseResourceResolver implements ResourceResolver {
 
   /**
    * Returns the subject resource type code for this resolver.
-   * <p>
-   * The subject resource is the primary resource type being queried, such as "Patient" in a query
-   * starting with Patient.name.given. This method supports both standard FHIR resource types and
-   * custom resource types (like ViewDefinition) that are registered with HAPI.
+   *
+   * <p>The subject resource is the primary resource type being queried, such as "Patient" in a
+   * query starting with Patient.name.given. This method supports both standard FHIR resource types
+   * and custom resource types (like ViewDefinition) that are registered with HAPI.
    *
    * @return The subject resource type code (e.g., "Patient", "ViewDefinition")
    */
@@ -70,8 +71,8 @@ public abstract class BaseResourceResolver implements ResourceResolver {
 
   /**
    * Returns the FHIR context used by this resolver.
-   * <p>
-   * The FHIR context provides access to resource definitions and other FHIR-specific information
+   *
+   * <p>The FHIR context provides access to resource definitions and other FHIR-specific information
    * needed for resource resolution.
    *
    * @return The FHIR context
@@ -81,23 +82,23 @@ public abstract class BaseResourceResolver implements ResourceResolver {
 
   /**
    * {@inheritDoc}
-   * <p>
-   * This implementation first checks if the requested resource code matches the subject resource.
-   * If it does, it returns the subject resource. We don't support resolving resources other than
-   * the subject resource in this implementation.
+   *
+   * <p>This implementation first checks if the requested resource code matches the subject
+   * resource. If it does, it returns the subject resource. We don't support resolving resources
+   * other than the subject resource in this implementation.
    */
   @Override
-  public @Nonnull Optional<ResourceCollection> resolveResource(
-      @Nonnull final String resourceCode) {
-    checkArgument(resourceCode.equals(getSubjectResourceCode()),
+  public @Nonnull Optional<ResourceCollection> resolveResource(@Nonnull final String resourceCode) {
+    checkArgument(
+        resourceCode.equals(getSubjectResourceCode()),
         "Resource code must match the subject resource code: " + getSubjectResourceCode());
     return Optional.of(resolveSubjectResource());
   }
 
   /**
    * {@inheritDoc}
-   * <p>
-   * This implementation creates a resource collection for the subject resource type.
+   *
+   * <p>This implementation creates a resource collection for the subject resource type.
    */
   @Override
   @Nonnull
@@ -107,8 +108,8 @@ public abstract class BaseResourceResolver implements ResourceResolver {
 
   /**
    * Creates a ResourceCollection for the specified resource type code.
-   * <p>
-   * This method creates a column representation for the resource and builds a ResourceCollection
+   *
+   * <p>This method creates a column representation for the resource and builds a ResourceCollection
    * using the FHIR context and resource type code. The column representation uses the resource type
    * code as the column name.
    *
@@ -118,15 +119,14 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   @Nonnull
   protected ResourceCollection createResource(@Nonnull final String resourceCode) {
     return ResourceCollection.build(
-        new DefaultRepresentation(functions.col(resourceCode)),
-        getFhirContext(), resourceCode);
+        new DefaultRepresentation(functions.col(resourceCode)), getFhirContext(), resourceCode);
   }
 
   /**
    * {@inheritDoc}
-   * <p>
-   * The base implementation throws an UnsupportedOperationException. Subclasses that support view
-   * creation must override this method.
+   *
+   * <p>The base implementation throws an UnsupportedOperationException. Subclasses that support
+   * view creation must override this method.
    */
   @Nonnull
   public Dataset<Row> createView() {
@@ -135,15 +135,16 @@ public abstract class BaseResourceResolver implements ResourceResolver {
 
   /**
    * Creates a dataset for a specific resource type with a standardized structure.
-   * <p>
-   * This method:
+   *
+   * <p>This method:
+   *
    * <ol>
-   *   <li>Reads the resource data from the data source</li>
-   *   <li>Checks if the resource type exists (throws an exception if not)</li>
+   *   <li>Reads the resource data from the data source
+   *   <li>Checks if the resource type exists (throws an exception if not)
    *   <li>Restructures the dataset in a standardized structure.
    * </ol>
-   * <p>
-   * This standardized structure is used throughout the resource resolution process.
+   *
+   * <p>This standardized structure is used throughout the resource resolution process.
    *
    * @param dataSource The data source to read from
    * @param resourceCode The resource type code to read
@@ -151,36 +152,39 @@ public abstract class BaseResourceResolver implements ResourceResolver {
    * @throws IllegalArgumentException if the resource type is not found in the data source
    */
   @Nonnull
-  protected static Dataset<Row> getResourceDataset(@Nonnull final DataSource dataSource,
-      @Nonnull final String resourceCode) {
+  protected static Dataset<Row> getResourceDataset(
+      @Nonnull final DataSource dataSource, @Nonnull final String resourceCode) {
     final Dataset<Row> dataset = dataSource.read(resourceCode);
     return toResourceRepresentation(resourceCode, dataset);
   }
 
   /**
    * Creates a dataset for a specific resource type with a standardized structure.
-   * <p>
-   * This method restructures the dataset to have:
-   *     <ul>
-   *       <li>An "id" column for the resource ID</li>
-   *       <li>A "key" column containing the versioned ID for joining</li>
-   *       <li>A column named after the resource type containing all resource data as a struct</li>
-   *     </ul>
-   * <p>
-   * This standardized structure is used throughout the resource resolution process.
+   *
+   * <p>This method restructures the dataset to have:
+   *
+   * <ul>
+   *   <li>An "id" column for the resource ID
+   *   <li>A "key" column containing the versioned ID for joining
+   *   <li>A column named after the resource type containing all resource data as a struct
+   * </ul>
+   *
+   * <p>This standardized structure is used throughout the resource resolution process.
    *
    * @param resourceCode The resource type to read
    * @param resourceDataset The dataset containing the flat resource data
    * @return A dataset containing the resource data in a standardized structure
    */
-  protected static Dataset<Row> toResourceRepresentation(@Nonnull final String resourceCode,
-      @Nonnull final Dataset<Row> resourceDataset) {
+  protected static Dataset<Row> toResourceRepresentation(
+      @Nonnull final String resourceCode, @Nonnull final Dataset<Row> resourceDataset) {
     return resourceDataset.select(
         resourceDataset.col("id"),
         resourceDataset.col("id_versioned").alias("key"),
-        functions.struct(
-            Stream.of(resourceDataset.columns())
-                .map(resourceDataset::col).toArray(Column[]::new)
-        ).alias(resourceCode));
+        functions
+            .struct(
+                Stream.of(resourceDataset.columns())
+                    .map(resourceDataset::col)
+                    .toArray(Column[]::new))
+            .alias(resourceCode));
   }
 }

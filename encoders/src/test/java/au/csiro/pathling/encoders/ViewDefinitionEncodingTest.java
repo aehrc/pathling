@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -61,7 +60,7 @@ import scala.jdk.javaapi.CollectionConverters;
  *
  * @author John Grimes
  */
-public class ViewDefinitionEncodingTest {
+class ViewDefinitionEncodingTest {
 
   private static SparkSession spark;
   private static FhirContext fhirContext;
@@ -532,8 +531,7 @@ public class ViewDefinitionEncodingTest {
     final Path resourceDir = Path.of("src/test/resources/viewdefinitions");
     final List<Path> viewDefFiles;
     try (var stream = Files.list(resourceDir)) {
-      viewDefFiles =
-          stream.filter(p -> p.toString().endsWith(".json")).sorted().collect(Collectors.toList());
+      viewDefFiles = stream.filter(p -> p.toString().endsWith(".json")).sorted().toList();
     }
 
     // Parse each ViewDefinition and verify round-trip encoding.
