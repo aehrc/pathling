@@ -232,9 +232,9 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.github.tomakehurst</groupId>
-      <artifactId>wiremock-jre8</artifactId>
-      <version>2.35.2</version>
+      <groupId>org.wiremock</groupId>
+      <artifactId>wiremock-jetty12</artifactId>
+      <version>3.13.1</version>
       <scope>test</scope>
     </dependency>
 
@@ -521,6 +521,7 @@
           <groups>IntegrationTest</groups>
           <includes>
             <include>**/*Test.java</include>
+            <include>**/*IT.java</include>
           </includes>
           <!-- Each integration test class runs in its own JVM to prevent URLStreamHandlerFactory
                conflicts between Spark/Hadoop and Tomcat. See SPARK-25694 and Spring Boot #10617. -->
@@ -592,11 +593,41 @@
               <goal>prepare-agent</goal>
             </goals>
           </execution>
+          <!-- Instrument integration tests run by Failsafe. -->
+          <execution>
+            <id>prepare-agent-integration</id>
+            <goals>
+              <goal>prepare-agent-integration</goal>
+            </goals>
+          </execution>
+          <!-- Merge unit and integration test coverage into a single file. -->
+          <execution>
+            <id>merge</id>
+            <phase>post-integration-test</phase>
+            <goals>
+              <goal>merge</goal>
+            </goals>
+            <configuration>
+              <fileSets>
+                <fileSet>
+                  <directory>${project.build.directory}</directory>
+                  <includes>
+                    <include>jacoco.exec</include>
+                    <include>jacoco-it.exec</include>
+                  </includes>
+                </fileSet>
+              </fileSets>
+              <destFile>${project.build.directory}/jacoco-merged.exec</destFile>
+            </configuration>
+          </execution>
           <execution>
             <id>report</id>
             <goals>
               <goal>report</goal>
             </goals>
+            <configuration>
+              <dataFile>${project.build.directory}/jacoco-merged.exec</dataFile>
+            </configuration>
           </execution>
         </executions>
       </plugin>
