@@ -18,24 +18,15 @@
 package au.csiro.pathling.library.io.sink;
 
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
-import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.PersistenceError;
 import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.UnaryOperator;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
@@ -46,43 +37,29 @@ import org.apache.spark.sql.Row;
  */
 final class DeltaSink implements DataSink {
 
-  /**
-   * The Pathling context to use.
-   */
-  @Nonnull
-  private final PathlingContext context;
+  /** The Pathling context to use. */
+  @Nonnull private final PathlingContext context;
 
-  /**
-   * The path to write the Delta database to.
-   */
-  @Nonnull
-  private final String path;
+  /** The path to write the Delta database to. */
+  @Nonnull private final String path;
 
-  /**
-   * The save mode to use when writing data.
-   */
-  @Nonnull
-  private final SaveMode saveMode;
+  /** The save mode to use when writing data. */
+  @Nonnull private final SaveMode saveMode;
 
-  /**
-   * A function that maps resource type to file name.
-   */
-  @Nonnull
-  private final UnaryOperator<String> fileNameMapper;
+  /** A function that maps resource type to file name. */
+  @Nonnull private final UnaryOperator<String> fileNameMapper;
 
   /**
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
    * @param fileNameMapper a function that maps resource type to file name
-   *
    */
   DeltaSink(
       @Nonnull final PathlingContext context,
       @Nonnull final String path,
       @Nonnull final SaveMode saveMode,
-      @Nonnull final UnaryOperator<String> fileNameMapper
-  ) {
+      @Nonnull final UnaryOperator<String> fileNameMapper) {
     this.context = context;
     this.path = path;
     this.saveMode = saveMode;
@@ -94,7 +71,9 @@ final class DeltaSink implements DataSink {
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
    */
-  DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path,
+  DeltaSink(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
       @Nonnull final SaveMode saveMode) {
     // By default, name the files using the resource type alone.
     this(context, path, saveMode, UnaryOperator.identity());
@@ -106,8 +85,7 @@ final class DeltaSink implements DataSink {
     final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
-      final String fileName = String.join(".", fileNameMapper.apply(resourceType),
-          "parquet");
+      final String fileName = String.join(".", fileNameMapper.apply(resourceType), "parquet");
       final String tablePath = safelyJoinPaths(path, fileName);
 
       fileInfos.add(new FileInformation(resourceType, tablePath));
@@ -138,10 +116,11 @@ final class DeltaSink implements DataSink {
    * @param tablePath the path to write the Delta table to
    * @param saveMode the save mode to use for writing
    */
-  private static void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tablePath, @Nonnull final SaveMode saveMode) {
-    final var writer = dataset.write()
-        .format("delta");
+  private static void writeDataset(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String tablePath,
+      @Nonnull final SaveMode saveMode) {
+    final var writer = dataset.write().format("delta");
 
     // Apply save mode if it has a Spark equivalent
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
@@ -162,7 +141,8 @@ final class DeltaSink implements DataSink {
    */
   static void merge(@Nonnull final DeltaTable table, @Nonnull final Dataset<Row> dataset) {
     // Perform a merge operation where we match on the 'id' column.
-    table.as("original")
+    table
+        .as("original")
         .merge(dataset.as("updates"), "original.id = updates.id")
         .whenMatched()
         .updateAll()
@@ -188,46 +168,4 @@ final class DeltaSink implements DataSink {
       return false;
     }
   }
-
-  /**
-   * Deletes the Delta table at the specified URL.
-   *
-   * @param tableUrl the URL of the Delta table to delete
-   */
-  @SuppressWarnings("unused")
-  private void delete(@Nonnull final String tableUrl) {
-    try {
-      final Path tablePath = new Path(tableUrl);
-      final FileSystem fileSystem = getFileSystem(path);
-      if (fileSystem.exists(tablePath)) {
-        fileSystem.delete(tablePath, true);
-      }
-    } catch (final IOException e) {
-      throw new PersistenceError("Failed to delete table: " + tableUrl, e);
-    }
-  }
-
-  /**
-   * Get a Hadoop {@link FileSystem} for the given location.
-   *
-   * @param location the location URL to be accessed
-   * @return the {@link FileSystem} for the given location
-   */
-  @Nonnull
-  private FileSystem getFileSystem(@Nonnull final String location) {
-    @Nullable final Configuration hadoopConfiguration = context.getSpark()
-        .sparkContext().hadoopConfiguration();
-    requireNonNull(hadoopConfiguration);
-    @Nullable final FileSystem warehouseLocation;
-    try {
-      warehouseLocation = FileSystem.get(new URI(location), hadoopConfiguration);
-    } catch (final IOException e) {
-      throw new PersistenceError("Problem accessing location: " + location, e);
-    } catch (final URISyntaxException e) {
-      throw new PersistenceError("Problem parsing URL: " + location, e);
-    }
-    requireNonNull(warehouseLocation);
-    return warehouseLocation;
-  }
-
 }
