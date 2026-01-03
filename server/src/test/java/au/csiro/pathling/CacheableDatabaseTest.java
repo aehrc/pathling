@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import org.apache.spark.sql.SparkSession;
 import org.awaitility.Awaitility;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,25 +79,6 @@ class CacheableDatabaseTest {
             sparkSession, "file://" + tempDir.resolve("delta"), createNoOpExecutor());
     assertThat(cacheableDatabase.getCacheKey()).isEqualTo(other.getCacheKey());
     assertThat(cacheableDatabase.cacheKeyMatches(other.getCacheKey().orElse(""))).isTrue();
-  }
-
-  @Disabled("Is this a bug? https://github.com/delta-io/delta/issues/2570")
-  @Test
-  void cacheKeyIsDifferentWhenDeltaTableIsDeleted() {
-    TestDataSetup.copyTestDataToTempDir(tempDir);
-    cacheableDatabase =
-        new CacheableDatabase(
-            sparkSession, "file://" + tempDir.resolve("delta"), createNoOpExecutor());
-
-    final Path patientParquetPath = tempDir.resolve("delta").resolve("Patient.parquet");
-    // BUG? https://github.com/delta-io/delta/issues/2570
-    DeltaTable.forPath(sparkSession, patientParquetPath.toString()).delete();
-
-    final CacheableDatabase other =
-        new CacheableDatabase(
-            sparkSession, "file://" + tempDir.resolve("delta"), createNoOpExecutor());
-    assertThat(cacheableDatabase.getCacheKey()).isNotEqualTo(other.getCacheKey());
-    assertThat(cacheableDatabase.cacheKeyMatches(other.getCacheKey().orElse(""))).isFalse();
   }
 
   @Test
