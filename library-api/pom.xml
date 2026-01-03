@@ -243,6 +243,7 @@
         <artifactId>jacoco-maven-plugin</artifactId>
         <configuration>
           <excludes>
+            <exclude>au/csiro/pathling/fhirpath/parser/generated/*</exclude>
             <exclude>au/csiro/pathling/views/ansi/generated/*</exclude>
             <exclude>au/csiro/pathling/terminology/mock/*</exclude>
           </excludes>
