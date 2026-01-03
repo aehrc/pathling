@@ -79,7 +79,7 @@ jobs:
       - name: Install TinyTeX and libcurl
         # These are required for building the R package documentation.
         run: |
-          wget -qO- "https://yihui.org/tinytex/install-bin-unix.sh" | sh
+          wget --max-redirect=0 -qO- "https://yihui.org/tinytex/install-bin-unix.sh" | sh
           echo "$HOME/bin" >> $GITHUB_PATH
           sudo apt-get install -y libcurl4-openssl-dev
 
@@ -264,7 +264,7 @@ jobs:
       - name: Install TinyTeX and libcurl
         # These are required for building the R package documentation.
         run: |
-          wget -qO- "https://yihui.org/tinytex/install-bin-unix.sh" | sh
+          wget --max-redirect=0 -qO- "https://yihui.org/tinytex/install-bin-unix.sh" | sh
           echo "$HOME/bin" >> $GITHUB_PATH
           sudo apt-get install -y libcurl4-openssl-dev
 
