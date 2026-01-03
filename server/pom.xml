@@ -515,6 +515,9 @@
           <includes>
             <include>**/*Test.java</include>
           </includes>
+          <!-- Each integration test class runs in its own JVM to prevent URLStreamHandlerFactory
+               conflicts between Spark/Hadoop and Tomcat. See SPARK-25694 and Spring Boot #10617. -->
+          <reuseForks>false</reuseForks>
           <argLine>@{argLine}
             --add-opens java.base/java.lang=ALL-UNNAMED
             --add-opens java.base/java.lang.invoke=ALL-UNNAMED
@@ -530,7 +533,6 @@
             --add-opens java.base/sun.security.action=ALL-UNNAMED
             --add-opens java.base/sun.util.calendar=ALL-UNNAMED
             --add-exports java.base/sun.nio.ch=ALL-UNNAMED
-            -Dorg.apache.catalina.webresources.TomcatURLStreamHandlerFactory.disable=true
           </argLine>
         </configuration>
         <executions>
