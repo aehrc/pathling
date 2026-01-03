@@ -96,7 +96,7 @@ final class DeltaSink implements DataSink {
         case MERGE -> {
           if (deltaTableExists(tablePath)) {
             // If the table already exists, merge the data in.
-            final DeltaTable table = DeltaTable.forPath(tablePath);
+            final DeltaTable table = DeltaTable.forPath(context.getSpark(), tablePath);
             merge(table, dataset);
           } else {
             // If the table does not exist, create it. If an error occurs here, there must be a
@@ -152,20 +152,12 @@ final class DeltaSink implements DataSink {
   }
 
   /**
-   * Checks if a Delta table exists at the specified path by attempting to access it via
-   * DeltaTable.forPath. This method catches any exceptions that occur during table access to
-   * determine existence.
+   * Checks if a Delta table exists at the specified path.
    *
    * @param tablePath the path to the table to check
    * @return true if the Delta table exists, false otherwise
    */
-  private static boolean deltaTableExists(@Nonnull final String tablePath) {
-    try {
-      DeltaTable.forPath(tablePath);
-      return true;
-    } catch (final Exception e) {
-      // Table does not exist or is not a Delta table.
-      return false;
-    }
+  private boolean deltaTableExists(@Nonnull final String tablePath) {
+    return DeltaTable.isDeltaTable(context.getSpark(), tablePath);
   }
 }
