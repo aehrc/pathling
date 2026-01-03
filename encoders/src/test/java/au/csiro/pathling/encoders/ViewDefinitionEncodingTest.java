@@ -21,7 +21,9 @@ import static au.csiro.pathling.encoders.SchemaConverterTest.OPEN_TYPES;
 import static au.csiro.pathling.test.SchemaAsserts.assertFieldNotPresent;
 import static au.csiro.pathling.test.SchemaAsserts.assertFieldPresent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
@@ -47,6 +49,7 @@ import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.IntegerType;
 import org.json.JSONException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -633,5 +636,208 @@ class ViewDefinitionEncodingTest {
     column.getTag().add(tag);
 
     return view;
+  }
+
+  // ========== COPY METHOD TESTS ==========
+
+  @Test
+  void testCopyViewDefinitionResource() {
+    // Create a fully populated ViewDefinition.
+    final ViewDefinitionResource original = createSimpleViewDefinition();
+    original.getFhirVersion().add(new CodeType("4.0.1"));
+    original.getWhere().add(new WhereComponent());
+    original.getWhere().get(0).setPath(new org.hl7.fhir.r4.model.StringType("active = true"));
+
+    final ConstantComponent constant = new ConstantComponent();
+    constant.setName(new org.hl7.fhir.r4.model.StringType("maxAge"));
+    constant.setValue(new IntegerType(65));
+    original.getConstant().add(constant);
+
+    // Copy and verify deep equality.
+    final ViewDefinitionResource copy = (ViewDefinitionResource) original.copy();
+
+    assertTrue(original.equalsDeep(copy));
+    assertEquals(original.getName().getValue(), copy.getName().getValue());
+    assertEquals(original.getResource().getValue(), copy.getResource().getValue());
+    assertEquals(original.getFhirVersion().size(), copy.getFhirVersion().size());
+    assertEquals(original.getSelect().size(), copy.getSelect().size());
+    assertEquals(original.getWhere().size(), copy.getWhere().size());
+    assertEquals(original.getConstant().size(), copy.getConstant().size());
+  }
+
+  @Test
+  void testCopySelectComponent() {
+    // Create a SelectComponent with nested selects and unionAll.
+    final SelectComponent original = new SelectComponent();
+    original.setForEach(new org.hl7.fhir.r4.model.StringType("name"));
+    original.setForEachOrNull(new org.hl7.fhir.r4.model.StringType("address"));
+
+    final ColumnComponent column = new ColumnComponent();
+    column.setName(new org.hl7.fhir.r4.model.StringType("test"));
+    column.setPath(new org.hl7.fhir.r4.model.StringType("id"));
+    original.getColumn().add(column);
+
+    final SelectComponent nestedSelect = new SelectComponent();
+    nestedSelect.setForEach(new org.hl7.fhir.r4.model.StringType("telecom"));
+    original.getSelect().add(nestedSelect);
+
+    final SelectComponent unionSelect = new SelectComponent();
+    unionSelect.setForEach(new org.hl7.fhir.r4.model.StringType("contact"));
+    original.getUnionAll().add(unionSelect);
+
+    // Copy and verify.
+    final SelectComponent copy = original.copy();
+
+    assertTrue(original.equalsDeep(copy));
+    assertEquals(original.getForEach().getValue(), copy.getForEach().getValue());
+    assertEquals(original.getForEachOrNull().getValue(), copy.getForEachOrNull().getValue());
+    assertEquals(original.getColumn().size(), copy.getColumn().size());
+    assertEquals(original.getSelect().size(), copy.getSelect().size());
+    assertEquals(original.getUnionAll().size(), copy.getUnionAll().size());
+  }
+
+  @Test
+  void testCopyColumnComponent() {
+    final ColumnComponent original = new ColumnComponent();
+    original.setName(new org.hl7.fhir.r4.model.StringType("patientId"));
+    original.setPath(new org.hl7.fhir.r4.model.StringType("id"));
+    original.setDescription(new org.hl7.fhir.r4.model.StringType("The patient identifier"));
+    original.setCollection(new BooleanType(false));
+    original.setType(new org.hl7.fhir.r4.model.StringType("string"));
+
+    final TagComponent tag = new TagComponent();
+    tag.setName(new org.hl7.fhir.r4.model.StringType("phi"));
+    tag.setValue(new org.hl7.fhir.r4.model.StringType("true"));
+    original.getTag().add(tag);
+
+    final ColumnComponent copy = original.copy();
+
+    assertTrue(original.equalsDeep(copy));
+    assertEquals(original.getName().getValue(), copy.getName().getValue());
+    assertEquals(original.getPath().getValue(), copy.getPath().getValue());
+    assertEquals(original.getDescription().getValue(), copy.getDescription().getValue());
+    assertEquals(original.getCollection().getValue(), copy.getCollection().getValue());
+    assertEquals(original.getType().getValue(), copy.getType().getValue());
+    assertEquals(original.getTag().size(), copy.getTag().size());
+  }
+
+  @Test
+  void testCopyWhereComponent() {
+    final WhereComponent original = new WhereComponent();
+    original.setPath(new org.hl7.fhir.r4.model.StringType("active = true"));
+    original.setDescription(new org.hl7.fhir.r4.model.StringType("Filter active patients"));
+
+    final WhereComponent copy = original.copy();
+
+    assertTrue(original.equalsDeep(copy));
+    assertEquals(original.getPath().getValue(), copy.getPath().getValue());
+    assertEquals(original.getDescription().getValue(), copy.getDescription().getValue());
+  }
+
+  @Test
+  void testCopyConstantComponent() {
+    final ConstantComponent original = new ConstantComponent();
+    original.setName(new org.hl7.fhir.r4.model.StringType("threshold"));
+    original.setValue(new IntegerType(100));
+
+    final ConstantComponent copy = original.copy();
+
+    assertTrue(original.equalsDeep(copy));
+    assertEquals(original.getName().getValue(), copy.getName().getValue());
+    assertInstanceOf(IntegerType.class, copy.getValue());
+    assertEquals(
+        ((IntegerType) original.getValue()).getValue(), ((IntegerType) copy.getValue()).getValue());
+  }
+
+  @Test
+  void testCopyTagComponent() {
+    final TagComponent original = new TagComponent();
+    original.setName(new org.hl7.fhir.r4.model.StringType("category"));
+    original.setValue(new org.hl7.fhir.r4.model.StringType("vital-signs"));
+
+    final TagComponent copy = original.copy();
+
+    assertTrue(original.equalsDeep(copy));
+    assertEquals(original.getName().getValue(), copy.getName().getValue());
+    assertEquals(original.getValue().getValue(), copy.getValue().getValue());
+  }
+
+  // ========== ISEMPTY METHOD TESTS ==========
+
+  @Test
+  void testIsEmptyViewDefinitionResource() {
+    final ViewDefinitionResource empty = new ViewDefinitionResource();
+    assertTrue(empty.isEmpty());
+
+    final ViewDefinitionResource withName = new ViewDefinitionResource();
+    withName.setName(new org.hl7.fhir.r4.model.StringType("test"));
+    assertFalse(withName.isEmpty());
+  }
+
+  @Test
+  void testIsEmptySelectComponent() {
+    final SelectComponent empty = new SelectComponent();
+    assertTrue(empty.isEmpty());
+
+    final SelectComponent withColumn = new SelectComponent();
+    final ColumnComponent column = new ColumnComponent();
+    column.setName(new org.hl7.fhir.r4.model.StringType("test"));
+    withColumn.getColumn().add(column);
+    assertFalse(withColumn.isEmpty());
+  }
+
+  @Test
+  void testIsEmptyColumnComponent() {
+    final ColumnComponent empty = new ColumnComponent();
+    assertTrue(empty.isEmpty());
+
+    final ColumnComponent withName = new ColumnComponent();
+    withName.setName(new org.hl7.fhir.r4.model.StringType("test"));
+    assertFalse(withName.isEmpty());
+  }
+
+  @Test
+  void testIsEmptyWhereComponent() {
+    final WhereComponent empty = new WhereComponent();
+    assertTrue(empty.isEmpty());
+
+    final WhereComponent withPath = new WhereComponent();
+    withPath.setPath(new org.hl7.fhir.r4.model.StringType("active = true"));
+    assertFalse(withPath.isEmpty());
+  }
+
+  @Test
+  void testIsEmptyConstantComponent() {
+    final ConstantComponent empty = new ConstantComponent();
+    assertTrue(empty.isEmpty());
+
+    final ConstantComponent withName = new ConstantComponent();
+    withName.setName(new org.hl7.fhir.r4.model.StringType("test"));
+    assertFalse(withName.isEmpty());
+  }
+
+  @Test
+  void testIsEmptyTagComponent() {
+    final TagComponent empty = new TagComponent();
+    assertTrue(empty.isEmpty());
+
+    final TagComponent withName = new TagComponent();
+    withName.setName(new org.hl7.fhir.r4.model.StringType("test"));
+    assertFalse(withName.isEmpty());
+  }
+
+  // ========== RESOURCE TYPE TESTS ==========
+
+  @Test
+  void testGetResourceType() {
+    final ViewDefinitionResource view = new ViewDefinitionResource();
+    // Custom resource types return null.
+    assertNull(view.getResourceType());
+  }
+
+  @Test
+  void testFhirType() {
+    final ViewDefinitionResource view = new ViewDefinitionResource();
+    assertEquals("ViewDefinition", view.fhirType());
   }
 }
