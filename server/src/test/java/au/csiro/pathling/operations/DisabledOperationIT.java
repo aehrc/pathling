@@ -18,15 +18,11 @@
 package au.csiro.pathling.operations;
 
 import au.csiro.pathling.util.TestDataSetup;
-import java.io.IOException;
 import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -50,12 +46,11 @@ class DisabledOperationIT {
 
   @Autowired WebTestClient webTestClient;
 
-  @TempDir private static Path warehouseDir;
+  private static final Path warehouseDir = TestDataSetup.getReadOnlyTestDataPath();
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-    registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
+    registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir);
 
     // Disable specific operations for testing.
     registry.add("pathling.operations.createEnabled", () -> "false");
@@ -74,14 +69,8 @@ class DisabledOperationIT {
             .build();
   }
 
-  @AfterEach
-  void cleanup() throws IOException {
-    FileUtils.cleanDirectory(warehouseDir.toFile());
-  }
-
   @Test
   void createReturnsClientErrorWhenDisabled() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir/Patient";
     final String requestBody =
@@ -112,8 +101,6 @@ class DisabledOperationIT {
 
   @Test
   void deleteReturnsClientErrorWhenDisabled() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-
     final String uri = "http://localhost:" + port + "/fhir/Patient/some-id";
 
     // When delete is disabled, HAPI returns a client error (operation not supported).
@@ -130,8 +117,6 @@ class DisabledOperationIT {
 
   @Test
   void importReturnsClientErrorWhenDisabled() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-
     final String uri = "http://localhost:" + port + "/fhir/$import";
     final String requestBody =
         """
@@ -162,8 +147,6 @@ class DisabledOperationIT {
 
   @Test
   void viewDefinitionRunReturnsClientErrorWhenDisabled() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-
     final String uri = "http://localhost:" + port + "/fhir/$viewdefinition-run";
     final String requestBody =
         """
@@ -205,8 +188,6 @@ class DisabledOperationIT {
 
   @Test
   void enabledOperationsStillWork() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-
     // Read operation should still work when create/delete are disabled.
     final String uri = "http://localhost:" + port + "/fhir/Patient";
 
@@ -223,8 +204,6 @@ class DisabledOperationIT {
 
   @Test
   void capabilityStatementExcludesDisabledOperations() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-
     final String uri = "http://localhost:" + port + "/fhir/metadata";
 
     webTestClient

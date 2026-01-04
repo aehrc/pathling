@@ -6,7 +6,6 @@ import static org.awaitility.Awaitility.await;
 
 import au.csiro.pathling.util.TestDataSetup;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
@@ -51,19 +50,10 @@ class ExportOperationCacheIT {
 
   @AfterEach
   void cleanup() throws IOException {
-    try (final var files = Files.list(warehouseDir)) {
-      files.forEach(
-          path -> {
-            try {
-              if (Files.isDirectory(path)) {
-                FileUtils.deleteDirectory(path.toFile());
-              } else {
-                Files.delete(path);
-              }
-            } catch (final IOException e) {
-              log.warn("Failed to delete: {}", path, e);
-            }
-          });
+    // Only clean up the jobs directory, preserving the delta tables for reuse.
+    final Path jobsDir = warehouseDir.resolve("delta").resolve("jobs");
+    if (jobsDir.toFile().exists()) {
+      FileUtils.cleanDirectory(jobsDir.toFile());
     }
   }
 

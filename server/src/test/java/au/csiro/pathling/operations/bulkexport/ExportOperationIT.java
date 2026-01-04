@@ -110,12 +110,15 @@ class ExportOperationIT {
 
   @AfterEach
   void cleanup() throws IOException {
-    FileUtils.cleanDirectory(warehouseDir.toFile());
+    // Only clean up the jobs directory, preserving the delta tables for reuse.
+    final Path jobsDir = warehouseDir.resolve("delta").resolve("jobs");
+    if (jobsDir.toFile().exists()) {
+      FileUtils.cleanDirectory(jobsDir.toFile());
+    }
   }
 
   @Test
   void testMissingRespondAsyncHeaderLenientRuns() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
     final String uri =
         "http://localhost:"
             + port
@@ -132,8 +135,6 @@ class ExportOperationIT {
 
   @Test
   void testMissingRespondAsyncHeaderStrictReturnsError() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-
     final String uri =
         "http://localhost:"
             + port
@@ -150,8 +151,6 @@ class ExportOperationIT {
 
   @Test
   void testCancellingRequestReturns202() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-
     final String uri =
         "http://localhost:"
             + port
@@ -166,8 +165,6 @@ class ExportOperationIT {
 
   @Test
   void testPollingCancelledRequestReturns404() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-
     final String uri =
         "http://localhost:"
             + port
@@ -189,8 +186,6 @@ class ExportOperationIT {
 
   @Test
   void testInvalidKickoffRequest() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-
     final String uri =
         "http://localhost:"
             + port
@@ -207,8 +202,6 @@ class ExportOperationIT {
 
   @Test
   void testExportValid() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-
     final String uri =
         "http://localhost:"
             + port
