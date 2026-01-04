@@ -35,49 +35,48 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @ActiveProfiles({"integration-test"})
 class ExportOperationCacheIT {
 
-  @LocalServerPort
-  int port;
+  @LocalServerPort int port;
 
-  @Autowired
-  WebTestClient webTestClient;
+  @Autowired WebTestClient webTestClient;
 
-  @TempDir
-  private static Path warehouseDir;
+  @TempDir private static Path warehouseDir;
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
-    registry.add("pathling.storage.warehouseUrl",
+    registry.add(
+        "pathling.storage.warehouseUrl",
         () -> "file://" + warehouseDir.resolve("delta").toAbsolutePath());
   }
 
   @AfterEach
   void cleanup() throws IOException {
     try (final var files = Files.list(warehouseDir)) {
-      files.forEach(path -> {
-        try {
-          if (Files.isDirectory(path)) {
-            FileUtils.deleteDirectory(path.toFile());
-          } else {
-            Files.delete(path);
-          }
-        } catch (final IOException e) {
-          log.warn("Failed to delete: {}", path, e);
-        }
-      });
+      files.forEach(
+          path -> {
+            try {
+              if (Files.isDirectory(path)) {
+                FileUtils.deleteDirectory(path.toFile());
+              } else {
+                Files.delete(path);
+              }
+            } catch (final IOException e) {
+              log.warn("Failed to delete: {}", path, e);
+            }
+          });
     }
   }
 
   @Test
   void test() {
-    final String uri = "http://localhost:" + port
-        + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z&_type=Patient,Encounter&_elements=identifier,Patient.name,Encounter.subject";
+    final String uri =
+        "http://localhost:"
+            + port
+            + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z&_type=Patient,Encounter&_elements=identifier,Patient.name,Encounter.subject";
     final String pollUrl = kickOffRequest(webTestClient, uri);
     await()
         .atMost(30, TimeUnit.SECONDS)
-        .pollInterval(3, TimeUnit.SECONDS)
-        .until(() -> doPolling(webTestClient, pollUrl, result -> {
-
-        }));
+        .pollInterval(1, TimeUnit.SECONDS)
+        .until(() -> doPolling(webTestClient, pollUrl, result -> {}));
   }
 }

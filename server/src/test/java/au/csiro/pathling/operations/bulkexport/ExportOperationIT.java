@@ -158,8 +158,8 @@ class ExportOperationIT {
             + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z";
     final String pollUrl = kickOffRequest(webTestClient, uri);
 
-    // send a DELETE request after 3 seconds
-    await().pollDelay(3, TimeUnit.SECONDS).atMost(4, TimeUnit.SECONDS).until(() -> true);
+    // Send a DELETE request after a brief delay to allow the operation to start.
+    await().pollDelay(500, TimeUnit.MILLISECONDS).atMost(2, TimeUnit.SECONDS).until(() -> true);
 
     webTestClient.delete().uri(pollUrl).exchange().expectStatus().isEqualTo(202);
   }
@@ -174,11 +174,8 @@ class ExportOperationIT {
             + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-02T00:00:00Z";
     final String pollUrl = kickOffRequest(webTestClient, uri);
 
-    // Send DELETE after 2 seconds
-    await()
-        .pollDelay(2, TimeUnit.SECONDS)
-        .atMost(3, TimeUnit.SECONDS)
-        .until(() -> true); // Just wait
+    // Send DELETE after a brief delay to allow the operation to start.
+    await().pollDelay(500, TimeUnit.MILLISECONDS).atMost(2, TimeUnit.SECONDS).until(() -> true);
 
     webTestClient.delete().uri(pollUrl).exchange().expectStatus().isAccepted();
 
@@ -219,7 +216,7 @@ class ExportOperationIT {
     final String pollUrl = kickOffRequest(webTestClient, uri);
     await()
         .atMost(30, TimeUnit.SECONDS)
-        .pollInterval(3, TimeUnit.SECONDS)
+        .pollInterval(1, TimeUnit.SECONDS)
         .until(
             () ->
                 doPolling(
