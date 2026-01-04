@@ -16,7 +16,7 @@ This is implemented as a [named query](https://hl7.org/fhir/R4/search.html#advan
 called `fhirPath`. Multiple instances of the `filter` parameter are combined
 using Boolean AND logic, and multiple expressions can be provided within a
 single parameter and delimited by commas to achieve OR logic. In addition to
-this, [FHIRPath boolean operators](/docs/fhirpath/operators#boolean-logic) can
+this, [FHIRPath boolean operators](https://hl7.org/fhirpath/#boolean-logic) can
 be used within expressions.
 
 ```
