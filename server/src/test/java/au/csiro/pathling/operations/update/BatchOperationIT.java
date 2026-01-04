@@ -48,14 +48,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @ActiveProfiles({"integration-test"})
 class BatchOperationIT {
 
-  @LocalServerPort
-  int port;
+  @LocalServerPort int port;
 
-  @Autowired
-  WebTestClient webTestClient;
+  @Autowired WebTestClient webTestClient;
 
-  @TempDir
-  private static Path warehouseDir;
+  @TempDir private static Path warehouseDir;
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
@@ -65,10 +62,12 @@ class BatchOperationIT {
 
   @BeforeEach
   void setup() {
-    webTestClient = webTestClient.mutate()
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
-        .responseTimeout(java.time.Duration.ofSeconds(60))
-        .build();
+    webTestClient =
+        webTestClient
+            .mutate()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .responseTimeout(java.time.Duration.ofSeconds(60))
+            .build();
   }
 
   @AfterEach
@@ -81,7 +80,8 @@ class BatchOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Bundle",
           "type": "batch",
@@ -107,19 +107,26 @@ class BatchOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Bundle")
-        .jsonPath("$.type").isEqualTo("batch-response")
-        .jsonPath("$.entry[0].response.status").isEqualTo("200")
-        .jsonPath("$.entry[0].resource.resourceType").isEqualTo("Patient")
-        .jsonPath("$.entry[0].resource.id").isEqualTo("batch-patient-1");
+        .jsonPath("$.resourceType")
+        .isEqualTo("Bundle")
+        .jsonPath("$.type")
+        .isEqualTo("batch-response")
+        .jsonPath("$.entry[0].response.status")
+        .isEqualTo("200")
+        .jsonPath("$.entry[0].resource.resourceType")
+        .isEqualTo("Patient")
+        .jsonPath("$.entry[0].resource.id")
+        .isEqualTo("batch-patient-1");
 
     log.info("Batch update single patient completed successfully");
   }
@@ -129,7 +136,8 @@ class BatchOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Bundle",
           "type": "batch",
@@ -160,19 +168,26 @@ class BatchOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Bundle")
-        .jsonPath("$.type").isEqualTo("batch-response")
-        .jsonPath("$.entry.length()").isEqualTo(2)
-        .jsonPath("$.entry[0].response.status").isEqualTo("200")
-        .jsonPath("$.entry[1].response.status").isEqualTo("200");
+        .jsonPath("$.resourceType")
+        .isEqualTo("Bundle")
+        .jsonPath("$.type")
+        .isEqualTo("batch-response")
+        .jsonPath("$.entry.length()")
+        .isEqualTo(2)
+        .jsonPath("$.entry[0].response.status")
+        .isEqualTo("200")
+        .jsonPath("$.entry[1].response.status")
+        .isEqualTo("200");
 
     log.info("Batch update multiple patients completed successfully");
   }
@@ -182,7 +197,8 @@ class BatchOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Bundle",
           "type": "batch",
@@ -216,19 +232,26 @@ class BatchOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Bundle")
-        .jsonPath("$.type").isEqualTo("batch-response")
-        .jsonPath("$.entry.length()").isEqualTo(2)
-        .jsonPath("$.entry[0].response.status").isEqualTo("200")
-        .jsonPath("$.entry[1].response.status").isEqualTo("200");
+        .jsonPath("$.resourceType")
+        .isEqualTo("Bundle")
+        .jsonPath("$.type")
+        .isEqualTo("batch-response")
+        .jsonPath("$.entry.length()")
+        .isEqualTo(2)
+        .jsonPath("$.entry[0].response.status")
+        .isEqualTo("200")
+        .jsonPath("$.entry[1].response.status")
+        .isEqualTo("200");
 
     log.info("Batch update mixed resource types completed successfully");
   }
@@ -238,7 +261,8 @@ class BatchOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Bundle",
           "type": "batch",
@@ -257,19 +281,26 @@ class BatchOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Bundle")
-        .jsonPath("$.type").isEqualTo("batch-response")
-        .jsonPath("$.entry[0].response.status").isEqualTo("201")
-        .jsonPath("$.entry[0].resource.resourceType").isEqualTo("Patient")
-        .jsonPath("$.entry[0].resource.id").isNotEmpty();
+        .jsonPath("$.resourceType")
+        .isEqualTo("Bundle")
+        .jsonPath("$.type")
+        .isEqualTo("batch-response")
+        .jsonPath("$.entry[0].response.status")
+        .isEqualTo("201")
+        .jsonPath("$.entry[0].resource.resourceType")
+        .isEqualTo("Patient")
+        .jsonPath("$.entry[0].resource.id")
+        .isNotEmpty();
 
     log.info("Batch create with POST correctly generated UUID");
   }
@@ -279,7 +310,8 @@ class BatchOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Bundle",
           "type": "batch",
@@ -291,7 +323,7 @@ class BatchOperationIT {
                 "name": [{"family": "Test"}]
               },
               "request": {
-                "method": "DELETE",
+                "method": "GET",
                 "url": "Patient/test-patient"
               }
             }
@@ -299,16 +331,18 @@ class BatchOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().is4xxClientError()
+        .expectStatus()
+        .is4xxClientError()
         .expectBody()
-        .jsonPath("$.issue[0].diagnostics").value(diagnostics ->
-            assertThat(diagnostics.toString()).containsIgnoringCase("create"));
+        .jsonPath("$.issue[0].diagnostics")
+        .value(diagnostics -> assertThat(diagnostics.toString()).containsIgnoringCase("create"));
 
     log.info("Batch with unsupported method correctly returned error");
   }
@@ -318,7 +352,8 @@ class BatchOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Bundle",
           "type": "batch",
@@ -338,16 +373,18 @@ class BatchOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().is4xxClientError()
+        .expectStatus()
+        .is4xxClientError()
         .expectBody()
-        .jsonPath("$.issue[0].diagnostics").value(diagnostics ->
-            assertThat(diagnostics.toString()).containsIgnoringCase("URL"));
+        .jsonPath("$.issue[0].diagnostics")
+        .value(diagnostics -> assertThat(diagnostics.toString()).containsIgnoringCase("URL"));
 
     log.info("Batch with invalid URL format correctly returned error");
   }
@@ -357,7 +394,8 @@ class BatchOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Bundle",
           "type": "batch",
@@ -377,16 +415,18 @@ class BatchOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().is4xxClientError()
+        .expectStatus()
+        .is4xxClientError()
         .expectBody()
-        .jsonPath("$.issue[0].diagnostics").value(diagnostics ->
-            assertThat(diagnostics.toString()).containsIgnoringCase("resource"));
+        .jsonPath("$.issue[0].diagnostics")
+        .value(diagnostics -> assertThat(diagnostics.toString()).containsIgnoringCase("resource"));
 
     log.info("Batch with mismatched resource type correctly returned error");
   }
@@ -396,7 +436,8 @@ class BatchOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Bundle",
           "type": "batch",
@@ -404,20 +445,24 @@ class BatchOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Bundle")
-        .jsonPath("$.type").isEqualTo("batch-response")
+        .jsonPath("$.resourceType")
+        .isEqualTo("Bundle")
+        .jsonPath("$.type")
+        .isEqualTo("batch-response")
         // Empty bundles may omit the entry array entirely in FHIR JSON.
-        .jsonPath("$.entry").doesNotExist();
+        .jsonPath("$.entry")
+        .doesNotExist();
 
     log.info("Batch with empty bundle returned empty response");
   }
-
 }
