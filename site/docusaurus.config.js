@@ -75,6 +75,22 @@ const config = {
     ],
   ],
 
+  plugins: [
+    [
+      "docusaurus-plugin-llms",
+      {
+        generateLLMsTxt: true,
+        generateLLMsFullTxt: false,
+        generateMarkdownFiles: true,
+        title: "Pathling",
+        description:
+          "Tools for FHIR analytics, built on Apache Spark. " +
+          "Includes Python, R, Scala and Java libraries, plus a FHIR server.",
+        excludeImports: true,
+      },
+    ],
+  ],
+
   themeConfig:
     /** @type {import("@docusaurus/preset-classic").ThemeConfig} */
     ({
