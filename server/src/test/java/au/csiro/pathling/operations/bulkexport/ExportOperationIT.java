@@ -19,6 +19,7 @@ import au.csiro.pathling.util.ExportOperationUtil;
 import au.csiro.pathling.util.TestDataSetup;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -246,22 +247,42 @@ class ExportOperationIT {
     headers.forEach((name, values) -> log.trace("  {}: {}", name, String.join(", ", values)));
 
     assertThat(headers).containsKey("Expires");
-    assertThat(headers.getFirst("Content-Type")).isNotNull().isEqualTo("application/json");
+    assertThat(headers.getFirst("Content-Type")).isNotNull().startsWith("application/fhir+json");
 
-    assertThat(node.has("transactionTime")).isTrue();
-    assertThat(node.get("request").asText()).isEqualTo(originalRequestUri);
-    assertThat(node.get("requiresAccessToken").asBoolean()).isFalse();
-    assertThat(node.has("deleted")).isTrue();
-    assertThat(node.has("error")).isTrue();
-    final JsonNode output = node.get("output");
-    assertThat(output).isNotNull().isNotEmpty();
+    // Response is a FHIR Parameters resource.
+    assertThat(node.get("resourceType").asText()).isEqualTo("Parameters");
+    final JsonNode parameters = node.get("parameter");
+    assertThat(parameters).isNotNull();
 
+    // Verify required parameters are present.
+    assertThat(findParameter(parameters, "transactionTime")).isNotNull();
+    assertThat(getParameterStringValue(parameters, "request")).isEqualTo(originalRequestUri);
+    assertThat(getParameterBooleanValue(parameters, "requiresAccessToken")).isFalse();
+
+    // Extract output file information from the output parameters.
     final List<FileInformation> actualFileInfos =
-        StreamSupport.stream(output.spliterator(), false)
+        StreamSupport.stream(parameters.spliterator(), false)
+            .filter(param -> "output".equals(param.get("name").asText()))
             .map(
-                jsonNode ->
-                    new FileInformation(
-                        jsonNode.get("type").asText(), jsonNode.get("url").asText()))
+                outputParam -> {
+                  final JsonNode parts = outputParam.get("part");
+                  String type = null;
+                  String url = null;
+                  for (final JsonNode part : parts) {
+                    final String partName = part.get("name").asText();
+                    if ("type".equals(partName)) {
+                      type =
+                          part.has("valueCode")
+                              ? part.get("valueCode").asText()
+                              : part.get("valueString").asText();
+                    } else if ("url".equals(partName)) {
+                      url = part.get("valueUri").asText();
+                    }
+                  }
+                  assertNotNull(type);
+                  assertNotNull(url);
+                  return new FileInformation(type, url);
+                })
             .toList();
 
     assertThat(actualFileInfos).isNotEmpty();
@@ -290,7 +311,7 @@ class ExportOperationIT {
           final String fileContent =
               new String(responseBytes, java.nio.charset.StandardCharsets.UTF_8);
           final List<Resource> resources =
-              ExportOperationUtil.parseNDJSON(parser, fileContent, fileInfo.fhirResourceType());
+              ExportOperationUtil.parseNdjson(parser, fileContent, fileInfo.fhirResourceType());
           downloadedResources.put(fileInfo.fhirResourceType(), resources);
         });
     assertThat(downloadedResources).isNotEmpty();
@@ -357,5 +378,47 @@ class ExportOperationIT {
                           .read(fileInfo.fhirResourceType()))
               .doesNotThrowAnyException();
         });
+  }
+
+  /** Finds a parameter by name in a FHIR Parameters resource's parameter array. */
+  @Nullable
+  private JsonNode findParameter(final JsonNode parameters, final String name) {
+    for (final JsonNode param : parameters) {
+      if (name.equals(param.get("name").asText())) {
+        return param;
+      }
+    }
+    return null;
+  }
+
+  /** Gets a string value from a named parameter (checks valueUri, valueString, valueCode). */
+  @Nullable
+  private String getParameterStringValue(final JsonNode parameters, final String name) {
+    final JsonNode param = findParameter(parameters, name);
+    if (param == null) {
+      return null;
+    }
+    if (param.has("valueUri")) {
+      return param.get("valueUri").asText();
+    }
+    if (param.has("valueString")) {
+      return param.get("valueString").asText();
+    }
+    if (param.has("valueCode")) {
+      return param.get("valueCode").asText();
+    }
+    return null;
+  }
+
+  /** Gets a boolean value from a named parameter. */
+  private boolean getParameterBooleanValue(final JsonNode parameters, final String name) {
+    final JsonNode param = findParameter(parameters, name);
+    if (param == null) {
+      return false;
+    }
+    if (param.has("valueBoolean")) {
+      return param.get("valueBoolean").asBoolean();
+    }
+    return false;
   }
 }

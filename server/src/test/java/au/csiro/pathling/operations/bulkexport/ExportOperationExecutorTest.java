@@ -1,14 +1,12 @@
 package au.csiro.pathling.operations.bulkexport;
 
 import static au.csiro.pathling.util.ExportOperationUtil.date;
-import static au.csiro.pathling.util.ExportOperationUtil.fi;
-import static au.csiro.pathling.util.ExportOperationUtil.read_ndjson;
+import static au.csiro.pathling.util.ExportOperationUtil.fileInfo;
+import static au.csiro.pathling.util.ExportOperationUtil.readNdjson;
 import static au.csiro.pathling.util.ExportOperationUtil.req;
 import static au.csiro.pathling.util.ExportOperationUtil.res;
 import static au.csiro.pathling.util.ExportOperationUtil.resolveTempDirIn;
-import static au.csiro.pathling.util.ExportOperationUtil.write_details;
-import static au.csiro.pathling.util.TestConstants.ENCOUNTER_COUNT;
-import static au.csiro.pathling.util.TestConstants.PATIENT_COUNT;
+import static au.csiro.pathling.util.ExportOperationUtil.writeDetails;
 import static au.csiro.pathling.util.TestConstants.RESOLVE_ENCOUNTER;
 import static au.csiro.pathling.util.TestConstants.RESOLVE_PATIENT;
 import static au.csiro.pathling.util.TestConstants.WAREHOUSE_PLACEHOLDER;
@@ -67,11 +65,11 @@ import org.springframework.context.annotation.Import;
  */
 @Slf4j
 @Import({
-    ExportOperationValidator.class,
-    ExportExecutor.class,
-    TestDataSetup.class,
-    FhirServerTestConfiguration.class,
-    PatientCompartmentService.class
+  ExportOperationValidator.class,
+  ExportExecutor.class,
+  TestDataSetup.class,
+  FhirServerTestConfiguration.class,
+  PatientCompartmentService.class
 })
 @SpringBootUnitTest
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
@@ -82,36 +80,27 @@ class ExportOperationExecutorTest {
 
   private ExportExecutor exportExecutor;
 
-  @Autowired
-  private TestDataSetup testDataSetup;
+  @Autowired private TestDataSetup testDataSetup;
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @TempDir
-  private Path tempDir;
+  @TempDir private Path tempDir;
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
-  @Autowired
-  private QueryableDataSource deltaLake;
+  @Autowired private QueryableDataSource deltaLake;
 
   private Path uniqueTempDir;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
   private IParser parser;
 
-  @Autowired
-  private ServerConfiguration serverConfiguration;
+  @Autowired private ServerConfiguration serverConfiguration;
 
-  @Autowired
-  private PatientCompartmentService patientCompartmentService;
+  @Autowired private PatientCompartmentService patientCompartmentService;
 
   @SuppressWarnings("unused")
   @Autowired
@@ -121,15 +110,15 @@ class ExportOperationExecutorTest {
   void setup() {
     SharedMocks.resetAll();
     uniqueTempDir = tempDir.resolve(UUID.randomUUID().toString());
-    exportExecutor = new ExportExecutor(
-        pathlingContext,
-        deltaLake,
-        fhirContext,
-        sparkSession,
-        "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration,
-        patientCompartmentService
-    );
+    exportExecutor =
+        new ExportExecutor(
+            pathlingContext,
+            deltaLake,
+            fhirContext,
+            sparkSession,
+            "file://" + uniqueTempDir.toAbsolutePath(),
+            serverConfiguration,
+            patientCompartmentService);
 
     try {
       Files.createDirectories(uniqueTempDir);
@@ -154,7 +143,6 @@ class ExportOperationExecutorTest {
 
     assertThat(actualResponse).isNotNull();
     assertThat(actualResponse.exportResponse().getWriteDetails().fileInfos()).hasSize(1);
-
   }
 
   private static Stream<Arguments> provideUntilParameter() {
@@ -162,8 +150,7 @@ class ExportOperationExecutorTest {
         arguments("2025-01-08", true),
         arguments("2025-01-04", false),
         arguments("2025-01-06", true), // same time is also fine here :)
-        arguments(null, true)
-    );
+        arguments(null, true));
   }
 
   @Test
@@ -177,17 +164,22 @@ class ExportOperationExecutorTest {
     observation.setStatus(Observation.ObservationStatus.CANCELLED);
 
     exportExecutor = createExecutor(patient);
-    final ExportRequest req = req(BASE, List.of("Patient"),
-        List.of("identifier", "Observation.status"));
+    final ExportRequest req =
+        req(BASE, List.of("Patient"), List.of("identifier", "Observation.status"));
     final TestExportResponse actualResponse = execute(req);
-    final Patient actualPatient = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
+    final Patient actualPatient =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
 
     assertThat(actualPatient.hasIdentifier()).isTrue();
     assertThat(actualPatient.getIdentifierFirstRep().getValue()).isEqualTo("test");
 
-    final String wrongObservationFilepath = actualResponse.getWriteDetails().fileInfos().getFirst()
-        .absoluteUrl().replace("Patient", "Observation");
+    final String wrongObservationFilepath =
+        actualResponse
+            .getWriteDetails()
+            .fileInfos()
+            .getFirst()
+            .absoluteUrl()
+            .replace("Patient", "Observation");
     final File observationFile = new File(URI.create(wrongObservationFilepath));
     assertThat(observationFile).doesNotExist();
   }
@@ -200,8 +192,8 @@ class ExportOperationExecutorTest {
     exportExecutor = createExecutor(patient);
     final ExportRequest req = req(BASE, List.of("Patient.identifier"));
     final TestExportResponse actualResponse = execute(req);
-    final Patient actualPatient = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
+    final Patient actualPatient =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
 
     assertThat(actualPatient.hasIdentifier()).isTrue();
     assertThat(actualPatient.getIdentifierFirstRep().getValue()).isEqualTo("test");
@@ -217,11 +209,10 @@ class ExportOperationExecutorTest {
     exportExecutor = create_exec(patient, observation);
     final ExportRequest req = req(BASE, List.of("identifier"));
     final TestExportResponse actualResponse = execute(req);
-    final Patient actualPatient = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().get(1),
-        Patient.class);
-    final Observation actualObservation = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().get(0), Observation.class);
+    final Patient actualPatient =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().get(1), Patient.class);
+    final Observation actualObservation =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().get(0), Observation.class);
 
     assertThat(actualPatient.hasIdentifier()).isTrue();
     assertThat(actualPatient.getIdentifierFirstRep().getValue()).isEqualTo("test");
@@ -240,10 +231,10 @@ class ExportOperationExecutorTest {
     exportExecutor = create_exec(patient, observation);
     final ExportRequest req = req(BASE, List.of("Patient.identifier", "active"));
     final TestExportResponse actualResponse = execute(req);
-    final Patient actualPatient = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().get(1), Patient.class);
-    final Observation actualObservation = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().get(0), Observation.class);
+    final Patient actualPatient =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().get(1), Patient.class);
+    final Observation actualObservation =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().get(0), Observation.class);
 
     assertThat(actualPatient.hasIdentifier()).isTrue();
     assertThat(actualPatient.getIdentifierFirstRep().getValue()).isEqualTo("test");
@@ -261,8 +252,8 @@ class ExportOperationExecutorTest {
     exportExecutor = createExecutor(patient);
     final ExportRequest req = req(BASE, List.of("Patient.identifier"));
     final TestExportResponse actualResponse = execute(req);
-    final Patient actualPatient = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
+    final Patient actualPatient =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
 
     assertThat(actualPatient.hasActive()).isFalse();
   }
@@ -277,8 +268,8 @@ class ExportOperationExecutorTest {
     exportExecutor = createExecutor(patient);
     final ExportRequest req = req(BASE, List.of("Patient.identifier"));
     final TestExportResponse actualResponse = execute(req);
-    final Patient actualPatient = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
+    final Patient actualPatient =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
 
     assertThat(actualPatient.hasId()).isTrue();
     assertThat(actualPatient.hasMeta()).isTrue();
@@ -293,8 +284,8 @@ class ExportOperationExecutorTest {
     exportExecutor = createExecutor(patient);
     final ExportRequest req = req(BASE, List.of("Patient.identifier"));
     final TestExportResponse actualResponse = execute(req);
-    final Patient actualPatient = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
+    final Patient actualPatient =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
 
     assertThat(actualPatient.hasMeta()).isTrue();
     assertThat(actualPatient.getMeta().hasTag()).isTrue();
@@ -303,8 +294,7 @@ class ExportOperationExecutorTest {
   }
 
   @Test
-  void testReturnedFhirResourceDoesNotHaveSubsettedTagIfNoElementsParameter()
-      throws IOException {
+  void testReturnedFhirResourceDoesNotHaveSubsettedTagIfNoElementsParameter() throws IOException {
     final Patient patient = new Patient();
     patient.addIdentifier().setValue("test");
     final Meta meta = new Meta();
@@ -313,13 +303,13 @@ class ExportOperationExecutorTest {
     exportExecutor = createExecutor(patient);
     final ExportRequest req = req(BASE, List.of());
     final TestExportResponse actualResponse = execute(req);
-    final Patient actualPatient = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
+    final Patient actualPatient =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
 
     assertThat(actualPatient.hasMeta()).isTrue();
     assertThat(actualPatient.getMeta().hasTag()).isTrue();
-    final Set<String> tags = actualPatient.getMeta().getTag().stream().map(Coding::getCode)
-        .collect(Collectors.toSet());
+    final Set<String> tags =
+        actualPatient.getMeta().getTag().stream().map(Coding::getCode).collect(Collectors.toSet());
     assertThat(tags).isNotEmpty().doesNotContain("SUBSETTED");
   }
 
@@ -333,13 +323,13 @@ class ExportOperationExecutorTest {
     exportExecutor = createExecutor(patient);
     final ExportRequest req = req(BASE, List.of("Patient.identifier"));
     final TestExportResponse actualResponse = execute(req);
-    final Patient actualPatient = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
+    final Patient actualPatient =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
 
     assertThat(actualPatient.hasMeta()).isTrue();
     assertThat(actualPatient.getMeta().hasTag()).isTrue();
-    final Set<String> tags = actualPatient.getMeta().getTag().stream().map(Coding::getCode)
-        .collect(Collectors.toSet());
+    final Set<String> tags =
+        actualPatient.getMeta().getTag().stream().map(Coding::getCode).collect(Collectors.toSet());
     assertThat(tags).isNotEmpty().contains("other_code");
   }
 
@@ -351,8 +341,8 @@ class ExportOperationExecutorTest {
     exportExecutor = createExecutor(patient);
     final ExportRequest req = req(BASE, List.of("Patient.identifier"));
     final TestExportResponse actualResponse = execute(req);
-    final Patient actualPatient = read_ndjson(parser,
-        actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
+    final Patient actualPatient =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
 
     assertThat(actualPatient.hasMeta()).isTrue();
     assertThat(actualPatient.getMeta().hasSource()).isTrue();
@@ -368,35 +358,43 @@ class ExportOperationExecutorTest {
   }
 
   private ExportExecutor create_exec(final List<IBaseResource> resources) {
-    final CustomObjectDataSource objectDataSource = new CustomObjectDataSource(sparkSession,
-        pathlingContext, fhirEncoders, resources);
-    exportExecutor = new ExportExecutor(pathlingContext, objectDataSource, fhirContext,
-        sparkSession, "file://" + uniqueTempDir.toAbsolutePath(), serverConfiguration,
-        patientCompartmentService);
+    final CustomObjectDataSource objectDataSource =
+        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
+    exportExecutor =
+        new ExportExecutor(
+            pathlingContext,
+            objectDataSource,
+            fhirContext,
+            sparkSession,
+            "file://" + uniqueTempDir.toAbsolutePath(),
+            serverConfiguration,
+            patientCompartmentService);
     return exportExecutor;
   }
 
   @ParameterizedTest
   @MethodSource("provideSinceParameters")
-  void testSinceParameter(final InstantType patientLastUpdated, final ExportRequest exportRequest,
+  void testSinceParameter(
+      final InstantType patientLastUpdated,
+      final ExportRequest exportRequest,
       ExportResponse expectedExportResponse) {
     final Patient patient = new Patient();
     patient.setMeta(new Meta().setLastUpdatedElement(patientLastUpdated));
-    final CustomObjectDataSource objectDataSource = new CustomObjectDataSource(sparkSession,
-        pathlingContext, fhirEncoders, List.of(patient));
-    exportExecutor = new ExportExecutor(
-        pathlingContext,
-        objectDataSource,
-        fhirContext,
-        sparkSession,
-        "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration,
-        patientCompartmentService
-    );
+    final CustomObjectDataSource objectDataSource =
+        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(patient));
+    exportExecutor =
+        new ExportExecutor(
+            pathlingContext,
+            objectDataSource,
+            fhirContext,
+            sparkSession,
+            "file://" + uniqueTempDir.toAbsolutePath(),
+            serverConfiguration,
+            patientCompartmentService);
 
     final TestExportResponse actualExportResponse = execute(exportRequest);
-    expectedExportResponse = resolveTempDirIn(expectedExportResponse, uniqueTempDir,
-        actualExportResponse.fakeJobId());
+    expectedExportResponse =
+        resolveTempDirIn(expectedExportResponse, uniqueTempDir, actualExportResponse.fakeJobId());
     assertResponse(actualExportResponse.exportResponse(), expectedExportResponse);
   }
 
@@ -404,32 +402,35 @@ class ExportOperationExecutorTest {
     final InstantType patientLastUpdated = date("2024-01-06");
 
     final String base = "http://localhost:8080/fhir/$export?";
-    final ExportRequest req1 = req(base, ExportOutputFormat.NDJSON, date("2024-01-05"),
-        List.of("Patient"));
-    final ExportResponse res1 = res(req1,
-        write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
+    final ExportRequest req1 =
+        req(base, ExportOutputFormat.NDJSON, date("2024-01-05"), List.of("Patient"));
+    final ExportResponse res1 =
+        res(req1, writeDetails(fileInfo("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
 
-    final ExportRequest req2 = req(base, ExportOutputFormat.NDJSON, date("2024-01-07"),
-        List.of("Patient"));
-    final ExportResponse res2 = res(req2,
-        write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
+    final ExportRequest req2 =
+        req(base, ExportOutputFormat.NDJSON, date("2024-01-07"), List.of("Patient"));
+    final ExportResponse res2 =
+        res(req2, writeDetails(fileInfo("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
 
     return Stream.of(
         arguments(patientLastUpdated, req1, res1),
         arguments(patientLastUpdated, req2, res2),
         arguments(null, req1, res1),
-        arguments(null, req2, res(req2,
-            write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER)))))
-    );
+        arguments(
+            null,
+            req2,
+            res(
+                req2,
+                writeDetails(fileInfo("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))))));
   }
 
   @ParameterizedTest
   @MethodSource("provideExportExecutorValues")
-  void testExportExecutor(final ExportRequest exportRequest,
-      final ExportResponse expectedExportResponse) {
+  void testExportExecutor(
+      final ExportRequest exportRequest, final ExportResponse expectedExportResponse) {
     final TestExportResponse actualExportResponse = execute(exportRequest);
-    final ExportResponse resolvedExportResponse = resolveTempDirIn(expectedExportResponse,
-        uniqueTempDir, actualExportResponse.fakeJobId());
+    final ExportResponse resolvedExportResponse =
+        resolveTempDirIn(expectedExportResponse, uniqueTempDir, actualExportResponse.fakeJobId());
     assertResponse(actualExportResponse.exportResponse(), resolvedExportResponse);
   }
 
@@ -438,44 +439,46 @@ class ExportOperationExecutorTest {
     final String base = "http://localhost:8080/fhir/$export?";
     final InstantType now = InstantType.now();
 
-    final ExportRequest req1 = req(base, ExportOutputFormat.NDJSON, now,
-        List.of("Patient"));
-    final ExportResponse res1 = res(req1,
-        write_details(fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl))));
+    final ExportRequest req1 = req(base, ExportOutputFormat.NDJSON, now, List.of("Patient"));
+    final ExportResponse res1 =
+        res(req1, writeDetails(fileInfo("Patient", RESOLVE_PATIENT.apply(warehouseUrl))));
 
-    final ExportRequest req2 = req(base, ExportOutputFormat.NDJSON, now,
-        List.of("Encounter"));
-    final ExportResponse res2 = res(req2,
-        write_details(fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl))));
+    final ExportRequest req2 = req(base, ExportOutputFormat.NDJSON, now, List.of("Encounter"));
+    final ExportResponse res2 =
+        res(req2, writeDetails(fileInfo("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl))));
 
-    final ExportRequest req3 = req(base, ExportOutputFormat.NDJSON, now,
-        List.of("Encounter", "Patient"));
-    final ExportResponse res3 = res(req3, write_details(
-        fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl)),
-        fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl))));
+    final ExportRequest req3 =
+        req(base, ExportOutputFormat.NDJSON, now, List.of("Encounter", "Patient"));
+    final ExportResponse res3 =
+        res(
+            req3,
+            writeDetails(
+                fileInfo("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl)),
+                fileInfo("Patient", RESOLVE_PATIENT.apply(warehouseUrl))));
 
     final ExportRequest req4 = req(base, ExportOutputFormat.NDJSON, now, List.of());
-    final ExportResponse res4 = res(req4, write_details(
-        fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl)),
-        fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl))));
+    final ExportResponse res4 =
+        res(
+            req4,
+            writeDetails(
+                fileInfo("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl)),
+                fileInfo("Patient", RESOLVE_PATIENT.apply(warehouseUrl))));
 
     return Stream.of(
-        arguments(req1, res1),
-        arguments(req2, res2),
-        arguments(req3, res3),
-        arguments(req4, res4)
-    );
+        arguments(req1, res1), arguments(req2, res2), arguments(req3, res3), arguments(req4, res4));
   }
 
   private static void assertResponse(final ExportResponse actual, final ExportResponse expected) {
     final SoftAssertions softly = new SoftAssertions();
     softly.assertThat(actual.getKickOffRequestUrl()).isEqualTo(expected.getKickOffRequestUrl());
     softly.assertThat(actual.getWriteDetails()).isNotNull();
-    softly.assertThat(actual.getWriteDetails().fileInfos())
+    softly
+        .assertThat(actual.getWriteDetails().fileInfos())
         .extracting(FileInformation::fhirResourceType, FileInformation::absoluteUrl)
-        .containsAnyElementsOf(expected.getWriteDetails().fileInfos().stream()
-            .map(fi -> tuple(fi.fhirResourceType(), fi.absoluteUrl()))
-            .toList());
+        .containsAnyElementsOf(
+            expected.getWriteDetails().fileInfos().stream()
+                .map(fi -> tuple(fi.fhirResourceType(), fi.absoluteUrl()))
+                .toList());
     softly.assertAll();
   }
 
@@ -489,5 +492,4 @@ class ExportOperationExecutorTest {
     final UUID uuid = UUID.randomUUID();
     return new TestExportResponse(uuid, exportExecutor.execute(exportRequest, uuid.toString()));
   }
-
 }
