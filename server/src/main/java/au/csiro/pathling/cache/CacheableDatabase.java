@@ -132,6 +132,7 @@ public class CacheableDatabase implements Cacheable {
             // Filter out any file names that don't match the pattern.
             .filter(path -> path.matches("^[^.]+\\.parquet$"))
             // Filter out anything that is not a Delta table.
+            .filter(path -> DeltaTable.isDeltaTable(spark, path))
             .map(path -> DeltaTable.forPath(spark, path))
             // Get the latest history entry for each Delta table.
             .map(CacheableDatabase::latestUpdateToTable)
