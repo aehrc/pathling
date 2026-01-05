@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.CapabilityStatement;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceOperationComponent;
@@ -38,6 +39,9 @@ import org.hl7.fhir.r4.model.CapabilityStatement.TypeRestfulInteraction;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
 /**
@@ -81,7 +85,7 @@ class ConformanceProviderTest {
     // Then: All supported resource types (except read-only ones) should have CREATE interaction.
     final Set<ResourceType> supportedResourceTypes = FhirServer.supportedResourceTypes();
     final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
+        capabilityStatement.getRest().getFirst().getResource();
 
     for (final ResourceType resourceType : supportedResourceTypes) {
       // OperationDefinition is intentionally read-only.
@@ -104,15 +108,17 @@ class ConformanceProviderTest {
     }
   }
 
-  @Test
-  void capabilityStatementIncludesCreateInteractionForViewDefinition() {
+  @ParameterizedTest
+  @MethodSource("viewDefinitionInteractions")
+  void capabilityStatementIncludesInteractionForViewDefinition(
+      final TypeRestfulInteraction interaction) {
     // When: Getting the capability statement.
     final CapabilityStatement capabilityStatement =
         conformanceProvider.getServerConformance(null, null);
 
-    // Then: ViewDefinition should have CREATE interaction.
+    // Then: ViewDefinition should have the specified interaction.
     final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
+        capabilityStatement.getRest().getFirst().getResource();
 
     final Optional<CapabilityStatementRestResourceComponent> viewDefResource =
         resources.stream().filter(r -> r.getType().equals("ViewDefinition")).findFirst();
@@ -124,7 +130,14 @@ class ConformanceProviderTest {
             .map(ResourceInteractionComponent::getCode)
             .collect(Collectors.toSet());
 
-    assertThat(interactions).contains(TypeRestfulInteraction.CREATE);
+    assertThat(interactions)
+        .as("ViewDefinition should have " + interaction + " interaction")
+        .contains(interaction);
+  }
+
+  static Stream<Arguments> viewDefinitionInteractions() {
+    return Stream.of(
+        Arguments.of(TypeRestfulInteraction.CREATE), Arguments.of(TypeRestfulInteraction.DELETE));
   }
 
   @Test
@@ -136,7 +149,7 @@ class ConformanceProviderTest {
     // Then: All supported resource types (except read-only ones) should have CRUD interactions.
     final Set<ResourceType> supportedResourceTypes = FhirServer.supportedResourceTypes();
     final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
+        capabilityStatement.getRest().getFirst().getResource();
 
     for (final ResourceType resourceType : supportedResourceTypes) {
       // OperationDefinition is intentionally read-only.
@@ -173,7 +186,7 @@ class ConformanceProviderTest {
     // Then: All supported resource types (except read-only ones) should have DELETE interaction.
     final Set<ResourceType> supportedResourceTypes = FhirServer.supportedResourceTypes();
     final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
+        capabilityStatement.getRest().getFirst().getResource();
 
     for (final ResourceType resourceType : supportedResourceTypes) {
       // OperationDefinition is intentionally read-only.
@@ -197,29 +210,6 @@ class ConformanceProviderTest {
   }
 
   @Test
-  void capabilityStatementIncludesDeleteInteractionForViewDefinition() {
-    // When: Getting the capability statement.
-    final CapabilityStatement capabilityStatement =
-        conformanceProvider.getServerConformance(null, null);
-
-    // Then: ViewDefinition should have DELETE interaction.
-    final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
-
-    final Optional<CapabilityStatementRestResourceComponent> viewDefResource =
-        resources.stream().filter(r -> r.getType().equals("ViewDefinition")).findFirst();
-
-    assertThat(viewDefResource).isPresent();
-
-    final Set<TypeRestfulInteraction> interactions =
-        viewDefResource.get().getInteraction().stream()
-            .map(ResourceInteractionComponent::getCode)
-            .collect(Collectors.toSet());
-
-    assertThat(interactions).contains(TypeRestfulInteraction.DELETE);
-  }
-
-  @Test
   void capabilityStatementIncludesViewDefinitionExportOperation() {
     // When: Getting the capability statement.
     final CapabilityStatement capabilityStatement =
@@ -227,7 +217,7 @@ class ConformanceProviderTest {
 
     // Then: The system-level operations should include viewdefinition-export.
     final List<CapabilityStatementRestResourceOperationComponent> operations =
-        capabilityStatement.getRest().get(0).getOperation();
+        capabilityStatement.getRest().getFirst().getOperation();
 
     final Set<String> operationNames =
         operations.stream()
@@ -247,7 +237,7 @@ class ConformanceProviderTest {
 
     // Then: There should be no duplicate resource types in the capability statement.
     final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
+        capabilityStatement.getRest().getFirst().getResource();
 
     final List<String> resourceTypes =
         resources.stream().map(CapabilityStatementRestResourceComponent::getType).toList();
@@ -259,25 +249,25 @@ class ConformanceProviderTest {
         .hasSameSizeAs(uniqueResourceTypes);
   }
 
-  @Test
-  void capabilityStatementExcludesCreateWhenDisabled() {
-    // Given: A configuration with create disabled.
-    final ConformanceProvider provider =
-        createProviderWithDisabledOperations(
-            ops -> {
-              ops.setCreateEnabled(false);
-            });
+  @ParameterizedTest
+  @MethodSource("disabledCrudInteractions")
+  void capabilityStatementExcludesInteractionWhenDisabled(
+      final java.util.function.Consumer<OperationConfiguration> configurer,
+      final TypeRestfulInteraction interaction,
+      final boolean skipOperationDefinition) {
+    // Given: A configuration with the specified operation disabled.
+    final ConformanceProvider provider = createProviderWithDisabledOperations(configurer);
 
     // When: Getting the capability statement.
     final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
 
-    // Then: No resource should have CREATE interaction.
+    // Then: No resource should have the specified interaction.
     final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
+        capabilityStatement.getRest().getFirst().getResource();
 
     for (final CapabilityStatementRestResourceComponent resource : resources) {
-      // Skip OperationDefinition which is read-only.
-      if (resource.getType().equals("OperationDefinition")) {
+      // OperationDefinition is read-only and has special behaviour.
+      if (skipOperationDefinition && resource.getType().equals("OperationDefinition")) {
         continue;
       }
       final Set<TypeRestfulInteraction> interactions =
@@ -286,118 +276,46 @@ class ConformanceProviderTest {
               .collect(Collectors.toSet());
 
       assertThat(interactions)
-          .as("Resource type " + resource.getType() + " should not have CREATE interaction")
-          .doesNotContain(TypeRestfulInteraction.CREATE);
+          .as("Resource type " + resource.getType() + " should not have " + interaction)
+          .doesNotContain(interaction);
     }
   }
 
-  @Test
-  void capabilityStatementExcludesReadWhenDisabled() {
-    // Given: A configuration with read disabled.
-    final ConformanceProvider provider =
-        createProviderWithDisabledOperations(
-            ops -> {
-              ops.setReadEnabled(false);
-            });
-
-    // When: Getting the capability statement.
-    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
-
-    // Then: No resource (except OperationDefinition) should have READ interaction.
-    final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
-
-    for (final CapabilityStatementRestResourceComponent resource : resources) {
-      // Skip OperationDefinition which always has READ.
-      if (resource.getType().equals("OperationDefinition")) {
-        continue;
-      }
-      final Set<TypeRestfulInteraction> interactions =
-          resource.getInteraction().stream()
-              .map(ResourceInteractionComponent::getCode)
-              .collect(Collectors.toSet());
-
-      assertThat(interactions)
-          .as("Resource type " + resource.getType() + " should not have READ interaction")
-          .doesNotContain(TypeRestfulInteraction.READ);
-    }
-  }
-
-  @Test
-  void capabilityStatementExcludesSearchWhenDisabled() {
-    // Given: A configuration with search disabled.
-    final ConformanceProvider provider =
-        createProviderWithDisabledOperations(
-            ops -> {
-              ops.setSearchEnabled(false);
-            });
-
-    // When: Getting the capability statement.
-    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
-
-    // Then: No resource should have SEARCHTYPE interaction.
-    final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
-
-    for (final CapabilityStatementRestResourceComponent resource : resources) {
-      final Set<TypeRestfulInteraction> interactions =
-          resource.getInteraction().stream()
-              .map(ResourceInteractionComponent::getCode)
-              .collect(Collectors.toSet());
-
-      assertThat(interactions)
-          .as("Resource type " + resource.getType() + " should not have SEARCHTYPE interaction")
-          .doesNotContain(TypeRestfulInteraction.SEARCHTYPE);
-    }
-  }
-
-  @Test
-  void capabilityStatementExcludesDeleteWhenDisabled() {
-    // Given: A configuration with delete disabled.
-    final ConformanceProvider provider =
-        createProviderWithDisabledOperations(
-            ops -> {
-              ops.setDeleteEnabled(false);
-            });
-
-    // When: Getting the capability statement.
-    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
-
-    // Then: No resource should have DELETE interaction.
-    final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
-
-    for (final CapabilityStatementRestResourceComponent resource : resources) {
-      // Skip OperationDefinition which is read-only.
-      if (resource.getType().equals("OperationDefinition")) {
-        continue;
-      }
-      final Set<TypeRestfulInteraction> interactions =
-          resource.getInteraction().stream()
-              .map(ResourceInteractionComponent::getCode)
-              .collect(Collectors.toSet());
-
-      assertThat(interactions)
-          .as("Resource type " + resource.getType() + " should not have DELETE interaction")
-          .doesNotContain(TypeRestfulInteraction.DELETE);
-    }
+  static Stream<Arguments> disabledCrudInteractions() {
+    return Stream.of(
+        Arguments.of(
+            (java.util.function.Consumer<OperationConfiguration>)
+                ops -> ops.setCreateEnabled(false),
+            TypeRestfulInteraction.CREATE,
+            true),
+        Arguments.of(
+            (java.util.function.Consumer<OperationConfiguration>) ops -> ops.setReadEnabled(false),
+            TypeRestfulInteraction.READ,
+            true),
+        Arguments.of(
+            (java.util.function.Consumer<OperationConfiguration>)
+                ops -> ops.setSearchEnabled(false),
+            TypeRestfulInteraction.SEARCHTYPE,
+            false),
+        Arguments.of(
+            (java.util.function.Consumer<OperationConfiguration>)
+                ops -> ops.setDeleteEnabled(false),
+            TypeRestfulInteraction.DELETE,
+            true));
   }
 
   @Test
   void capabilityStatementExcludesBatchWhenDisabled() {
     // Given: A configuration with batch disabled.
     final ConformanceProvider provider =
-        createProviderWithDisabledOperations(
-            ops -> {
-              ops.setBatchEnabled(false);
-            });
+        createProviderWithDisabledOperations(ops -> ops.setBatchEnabled(false));
 
     // When: Getting the capability statement.
     final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
 
     // Then: System interactions should not include BATCH.
     final List<CapabilityStatement.SystemInteractionComponent> interactions =
-        capabilityStatement.getRest().get(0).getInteraction();
+        capabilityStatement.getRest().getFirst().getInteraction();
 
     final Set<CapabilityStatement.SystemRestfulInteraction> systemInteractions =
         interactions.stream()
@@ -417,7 +335,7 @@ class ConformanceProviderTest {
 
     // Then: System interactions should include BATCH.
     final List<CapabilityStatement.SystemInteractionComponent> interactions =
-        capabilityStatement.getRest().get(0).getInteraction();
+        capabilityStatement.getRest().getFirst().getInteraction();
 
     final Set<CapabilityStatement.SystemRestfulInteraction> systemInteractions =
         interactions.stream()
@@ -429,166 +347,92 @@ class ConformanceProviderTest {
         .contains(CapabilityStatement.SystemRestfulInteraction.BATCH);
   }
 
-  @Test
-  void capabilityStatementExcludesExportWhenDisabled() {
-    // Given: A configuration with system export disabled.
-    final ConformanceProvider provider =
-        createProviderWithDisabledOperations(
-            ops -> {
-              ops.setExportEnabled(false);
-            });
+  @ParameterizedTest
+  @MethodSource("disabledSystemOperations")
+  void capabilityStatementExcludesSystemOperationWhenDisabled(
+      final java.util.function.Consumer<OperationConfiguration> configurer,
+      final String operationName) {
+    // Given: A configuration with the specified operation disabled.
+    final ConformanceProvider provider = createProviderWithDisabledOperations(configurer);
 
     // When: Getting the capability statement.
     final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
 
-    // Then: System-level operations should not include export.
+    // Then: System-level operations should not include the specified operation.
     final Set<String> operationNames =
-        capabilityStatement.getRest().get(0).getOperation().stream()
+        capabilityStatement.getRest().getFirst().getOperation().stream()
             .map(CapabilityStatementRestResourceOperationComponent::getName)
             .collect(Collectors.toSet());
 
     assertThat(operationNames)
-        .as("System-level operations should not include export when disabled")
-        .doesNotContain("export");
+        .as("System-level operations should not include " + operationName + " when disabled")
+        .doesNotContain(operationName);
   }
 
-  @Test
-  void capabilityStatementExcludesImportWhenDisabled() {
-    // Given: A configuration with import disabled.
-    final ConformanceProvider provider =
-        createProviderWithDisabledOperations(
-            ops -> {
-              ops.setImportEnabled(false);
-            });
+  static Stream<Arguments> disabledSystemOperations() {
+    return Stream.of(
+        Arguments.of(
+            (java.util.function.Consumer<OperationConfiguration>)
+                ops -> ops.setExportEnabled(false),
+            "export"),
+        Arguments.of(
+            (java.util.function.Consumer<OperationConfiguration>)
+                ops -> ops.setImportEnabled(false),
+            "import"),
+        Arguments.of(
+            (java.util.function.Consumer<OperationConfiguration>)
+                ops -> ops.setViewDefinitionRunEnabled(false),
+            "viewdefinition-run"));
+  }
+
+  @ParameterizedTest
+  @MethodSource("disabledResourceOperations")
+  void capabilityStatementExcludesResourceOperationWhenDisabled(
+      final java.util.function.Consumer<OperationConfiguration> configurer,
+      final String resourceType,
+      final String operationName) {
+    // Given: A configuration with the specified operation disabled.
+    final ConformanceProvider provider = createProviderWithDisabledOperations(configurer);
 
     // When: Getting the capability statement.
     final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
 
-    // Then: System-level operations should not include import.
-    final Set<String> operationNames =
-        capabilityStatement.getRest().get(0).getOperation().stream()
-            .map(CapabilityStatementRestResourceOperationComponent::getName)
-            .collect(Collectors.toSet());
-
-    assertThat(operationNames)
-        .as("System-level operations should not include import when disabled")
-        .doesNotContain("import");
-  }
-
-  @Test
-  void capabilityStatementExcludesViewDefinitionRunWhenDisabled() {
-    // Given: A configuration with viewdefinition-run disabled.
-    final ConformanceProvider provider =
-        createProviderWithDisabledOperations(
-            ops -> {
-              ops.setViewDefinitionRunEnabled(false);
-            });
-
-    // When: Getting the capability statement.
-    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
-
-    // Then: System-level operations should not include viewdefinition-run.
-    final Set<String> operationNames =
-        capabilityStatement.getRest().get(0).getOperation().stream()
-            .map(CapabilityStatementRestResourceOperationComponent::getName)
-            .collect(Collectors.toSet());
-
-    assertThat(operationNames)
-        .as("System-level operations should not include viewdefinition-run when disabled")
-        .doesNotContain("viewdefinition-run");
-  }
-
-  @Test
-  void capabilityStatementExcludesViewDefinitionInstanceRunWhenDisabled() {
-    // Given: A configuration with instance-level run disabled.
-    final ConformanceProvider provider =
-        createProviderWithDisabledOperations(
-            ops -> {
-              ops.setViewDefinitionInstanceRunEnabled(false);
-            });
-
-    // When: Getting the capability statement.
-    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
-
-    // Then: ViewDefinition resource should not have the $run operation.
+    // Then: The specified resource should not have the specified operation.
     final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
+        capabilityStatement.getRest().getFirst().getResource();
 
-    final Optional<CapabilityStatementRestResourceComponent> viewDefResource =
-        resources.stream().filter(r -> r.getType().equals("ViewDefinition")).findFirst();
+    final Optional<CapabilityStatementRestResourceComponent> resource =
+        resources.stream().filter(r -> r.getType().equals(resourceType)).findFirst();
 
-    assertThat(viewDefResource).isPresent();
+    assertThat(resource).isPresent();
 
     final Set<String> operations =
-        viewDefResource.get().getOperation().stream()
+        resource.get().getOperation().stream()
             .map(CapabilityStatementRestResourceOperationComponent::getName)
             .collect(Collectors.toSet());
 
     assertThat(operations)
-        .as("ViewDefinition should not have $run operation when disabled")
-        .doesNotContain("run");
+        .as(resourceType + " should not have " + operationName + " operation when disabled")
+        .doesNotContain(operationName);
   }
 
-  @Test
-  void capabilityStatementExcludesPatientExportWhenDisabled() {
-    // Given: A configuration with patient export disabled.
-    final ConformanceProvider provider =
-        createProviderWithDisabledOperations(
-            ops -> {
-              ops.setPatientExportEnabled(false);
-            });
-
-    // When: Getting the capability statement.
-    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
-
-    // Then: Patient resource should not have export operation.
-    final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
-
-    final Optional<CapabilityStatementRestResourceComponent> patientResource =
-        resources.stream().filter(r -> r.getType().equals("Patient")).findFirst();
-
-    assertThat(patientResource).isPresent();
-
-    final Set<String> operations =
-        patientResource.get().getOperation().stream()
-            .map(CapabilityStatementRestResourceOperationComponent::getName)
-            .collect(Collectors.toSet());
-
-    assertThat(operations)
-        .as("Patient resource should not have export operation when patient export disabled")
-        .doesNotContain("export");
-  }
-
-  @Test
-  void capabilityStatementExcludesGroupExportWhenDisabled() {
-    // Given: A configuration with group export disabled.
-    final ConformanceProvider provider =
-        createProviderWithDisabledOperations(
-            ops -> {
-              ops.setGroupExportEnabled(false);
-            });
-
-    // When: Getting the capability statement.
-    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
-
-    // Then: Group resource should not have export operation.
-    final List<CapabilityStatementRestResourceComponent> resources =
-        capabilityStatement.getRest().get(0).getResource();
-
-    final Optional<CapabilityStatementRestResourceComponent> groupResource =
-        resources.stream().filter(r -> r.getType().equals("Group")).findFirst();
-
-    assertThat(groupResource).isPresent();
-
-    final Set<String> operations =
-        groupResource.get().getOperation().stream()
-            .map(CapabilityStatementRestResourceOperationComponent::getName)
-            .collect(Collectors.toSet());
-
-    assertThat(operations)
-        .as("Group resource should not have export operation when group export disabled")
-        .doesNotContain("export");
+  static Stream<Arguments> disabledResourceOperations() {
+    return Stream.of(
+        Arguments.of(
+            (java.util.function.Consumer<OperationConfiguration>)
+                ops -> ops.setViewDefinitionInstanceRunEnabled(false),
+            "ViewDefinition",
+            "run"),
+        Arguments.of(
+            (java.util.function.Consumer<OperationConfiguration>)
+                ops -> ops.setPatientExportEnabled(false),
+            "Patient",
+            "export"),
+        Arguments.of(
+            (java.util.function.Consumer<OperationConfiguration>)
+                ops -> ops.setGroupExportEnabled(false),
+            "Group",
+            "export"));
   }
 
   /**
