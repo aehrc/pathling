@@ -4,8 +4,7 @@
 - [ ] Update the version to a SNAPSHOT version for pre-release activities
 - [ ] Update SQL on FHIR repository pointer
 - [ ] Update all dependencies
-- [ ] Get all tests and checks passing on CI ("Build, test and pre-release"
-  workflow)
+- [ ] Get all tests and checks passing on CI ("Pre-release" workflow)
 - [ ] Check the status of the Quality Gate
   on [SonarCloud](https://sonarcloud.io/project/branches_list?id=aehrc_pathling)
 - [ ] Create a Python pre-release ("Python pre-release" workflow, manually
@@ -53,6 +52,6 @@ every execution of the "Deploy site" workflow.
 
 ## After release
 
-Update the version to one patch version higher than the release, with a 
-`-SNAPSHOT` suffix. For example, following the `9.0.0` release, the version is 
+Update the version to one patch version higher than the release, with a
+`-SNAPSHOT` suffix. For example, following the `9.0.0` release, the version is
 updated to `9.0.1-SNAPSHOT` for subsequent branching.
