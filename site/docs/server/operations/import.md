@@ -15,7 +15,7 @@ allowing for large data sets to be imported efficiently.
 The following source formats are supported:
 
 | Format  | MIME type                              | Description                                                                                                  |
-|---------|----------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| ------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | NDJSON  | `application/fhir+ndjson`              | [FHIR Newline Delimited JSON](https://hl7.org/fhir/R4/nd-json.html) format                                   |
 | Parquet | `application/x-pathling-parquet`       | [Apache Parquet](https://parquet.apache.org/) conforming to the [Pathling schema](../../libraries/io/schema) |
 | Delta   | `application/x-pathling-delta+parquet` | [Delta Lake](https://delta.io/) conforming to the [Pathling schema](../../libraries/io/schema)               |
@@ -24,7 +24,6 @@ The following source formats are supported:
 
 Pathling supports retrieval of files from the following URL schemes:
 
-- HTTP/HTTPS (`http://`, `https://`)
 - [Amazon S3](https://aws.amazon.com/s3/) (`s3a://`)
 - [HDFS](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html) (`hdfs://`)
 - Local filesystem (`file://`)
@@ -94,9 +93,9 @@ Send a request with `Content-Type: application/json` containing a JSON manifest:
 #### Manifest fields
 
 | Field         | Cardinality | Description                                                                     |
-|---------------|-------------|---------------------------------------------------------------------------------|
+| ------------- | ----------- | ------------------------------------------------------------------------------- |
 | `inputFormat` | 1..1        | The MIME type of the source files. See [Supported formats](#supported-formats). |
-| `input`       | 1..*        | An array of input file specifications.                                          |
+| `input`       | 1..\*       | An array of input file specifications.                                          |
 | `input.type`  | 1..1        | The FHIR resource type contained in the file.                                   |
 | `input.url`   | 1..1        | The URL where the source file can be retrieved.                                 |
 | `mode`        | 0..1        | The import mode. See [Import modes](#import-modes). Defaults to `overwrite`.    |
@@ -158,23 +157,23 @@ Parameters resource:
 
 #### Parameters
 
-| Name                 | Cardinality | Type   | Description                                                            |
-|----------------------|-------------|--------|------------------------------------------------------------------------|
-| `inputFormat`        | 0..1        | Coding | The format of the source files. Defaults to `application/fhir+ndjson`. |
+| Name                 | Cardinality | Type   | Description                                                                  |
+| -------------------- | ----------- | ------ | ---------------------------------------------------------------------------- |
+| `inputFormat`        | 0..1        | Coding | The format of the source files. Defaults to `application/fhir+ndjson`.       |
 | `saveMode`           | 0..1        | Coding | The import mode. See [Import modes](#import-modes). Defaults to `overwrite`. |
-| `input`              | 1..*        | -      | Contains parts describing each input file.                             |
-| `input.resourceType` | 1..1        | Coding | The FHIR resource type contained in the file.                          |
-| `input.url`          | 1..1        | url    | The URL where the source file can be retrieved.                        |
+| `input`              | 1..\*       | -      | Contains parts describing each input file.                                   |
+| `input.resourceType` | 1..1        | Coding | The FHIR resource type contained in the file.                                |
+| `input.url`          | 1..1        | url    | The URL where the source file can be retrieved.                              |
 
 ## Import modes
 
 | Mode        | Description                                                                                                                                                    |
-|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `overwrite` | All existing resources of the specified type are deleted and replaced with the contents of the source file. This is the default.                               |
 | `merge`     | Existing resources are matched with resources in the source file based on their ID. Existing resources are updated and new resources are added as appropriate. |
-| `append`    | Resources in the source file are added without modifying any existing resources.                                                                                |
+| `append`    | Resources in the source file are added without modifying any existing resources.                                                                               |
 | `ignore`    | If the resource type already exists, the source file is ignored. Otherwise, the resources are added.                                                           |
-| `error`     | If the resource type already exists, an error is raised. Otherwise, the resources are added.                                                                    |
+| `error`     | If the resource type already exists, an error is raised. Otherwise, the resources are added.                                                                   |
 
 ## Response
 
