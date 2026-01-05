@@ -244,7 +244,28 @@ data_sinks <- function(ds) {
   j_invoke(ds, "write")
 }
 
- #'@importFrom sparklyr invoke
+#' Convert a Java WriteDetails object to an R list.
+#'
+#' @param java_result The Java WriteDetails object from the library API.
+#' @return A list with element `file_infos`, containing a list of files created.
+#'   Each file has `fhir_resource_type` and `absolute_url`.
+#' @importFrom sparklyr invoke
+#' @noRd
+convert_write_details <- function(java_result) {
+  java_file_infos <- java_result %>% invoke("fileInfos")
+  size <- java_file_infos %>% invoke("size")
+
+  file_infos <- lapply(seq_len(size), function(i) {
+    fi <- java_file_infos %>% invoke("get", as.integer(i - 1))
+    list(
+      fhir_resource_type = fi %>% invoke("fhirResourceType"),
+      absolute_url = fi %>% invoke("absoluteUrl")
+    )
+  })
+  list(file_infos = file_infos)
+}
+
+#' @importFrom sparklyr invoke
 invoke_datasink <- function(ds, name, save_mode = NULL, ...) {
   sink_builder <- ds %>% data_sinks()
 
@@ -252,8 +273,8 @@ invoke_datasink <- function(ds, name, save_mode = NULL, ...) {
     sink_builder <- sink_builder %>% invoke("saveMode", save_mode)
   }
 
-  sink_builder %>% invoke(name, ...)
-  return(invisible(NULL))
+  result <- sink_builder %>% invoke(name, ...)
+  convert_write_details(result)
 }
 
 
@@ -265,10 +286,11 @@ invoke_datasink <- function(ds, name, save_mode = NULL, ...) {
 #' @param ds The DataSource object.
 #' @param path The URI of the directory to write the files to.
 #' @param save_mode The save mode to use when writing the data.
-#' @param file_name_mapper An optional function that can be used to customise the mapping 
+#' @param file_name_mapper An optional function that can be used to customise the mapping
 #'  of the resource type to the file name. Currently not implemented.
 #'
-#' @return No return value, called for side effects only.
+#' @return A list with element \code{file_infos}, containing a list of files created.
+#'   Each file has \code{fhir_resource_type} and \code{absolute_url}.
 #' 
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#ndjson-1}{Pathling documentation - Writing NDJSON}
 #' 
@@ -296,8 +318,9 @@ ds_write_ndjson <- function(ds, path, save_mode = SaveMode$ERROR, file_name_mapp
 #' @param path The URI of the directory to write the files to.
 #' @param save_mode The save mode to use when writing the data.
 #'
-#' @return No return value, called for side effects only.
-#' 
+#' @return A list with element \code{file_infos}, containing a list of files created.
+#'   Each file has \code{fhir_resource_type} and \code{absolute_url}.
+#'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#parquet-1}{Pathling documentation - Writing Parquet}
 #' 
 #' @examplesIf pathling_is_spark_installed()
@@ -322,11 +345,12 @@ ds_write_parquet <- function(ds, path, save_mode = SaveMode$ERROR) {
 #'
 #' @param ds The DataSource object.
 #' @param path The URI of the directory to write the files to.
-#' @param save_mode The save mode to use when writing the data - "overwrite" will overwrite any 
+#' @param save_mode The save mode to use when writing the data - "overwrite" will overwrite any
 #'      existing data, "merge" will merge the new data with the existing data based on resource ID.
 #'
-#' @return No return value, called for side effects only.
-#' 
+#' @return A list with element \code{file_infos}, containing a list of files created.
+#'   Each file has \code{fhir_resource_type} and \code{absolute_url}.
+#'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#delta-lake-1}{Pathling documentation - Writing Delta}
 #' 
 #' @seealso \code{\link{SaveMode}}
@@ -353,11 +377,12 @@ ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE) {
 #'
 #' @param ds The DataSource object.
 #' @param schema The name of the schema to write the tables to.
-#' @param save_mode The save mode to use when writing the data - "overwrite" will overwrite any 
+#' @param save_mode The save mode to use when writing the data - "overwrite" will overwrite any
 #'      existing data, "merge" will merge the new data with the existing data based on resource ID.
-#' 
-#' @return No return value, called for side effects only.
-#' 
+#'
+#' @return A list with element \code{file_infos}, containing a list of files created.
+#'   Each file has \code{fhir_resource_type} and \code{absolute_url}.
+#'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#managed-tables-1}{Pathling documentation - Writing managed tables}
 #' 
 #' @seealso \code{\link{SaveMode}}

@@ -188,3 +188,93 @@ test_that("datasource tables with schema", {
   expect_equal(colnames(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
+
+# Tests for write_details return value from write operations.
+
+test_that("ndjson write returns details", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+
+  result <- pc %>%
+      pathling_read_ndjson(ndjson_test_data_dir()) %>%
+      ds_write_ndjson(file.path(tempdir(), "ndjson_details_test"))
+
+  # Verify result is a list with file_infos element.
+  expect_true(is.list(result))
+  expect_true("file_infos" %in% names(result))
+  expect_true(length(result$file_infos) > 0)
+
+  # Verify each file_info has the expected elements.
+  for (file_info in result$file_infos) {
+    expect_true("fhir_resource_type" %in% names(file_info))
+    expect_true("absolute_url" %in% names(file_info))
+    expect_false(is.null(file_info$fhir_resource_type))
+    expect_false(is.null(file_info$absolute_url))
+  }
+
+  # Verify that expected resource types are present.
+  resource_types <- sapply(result$file_infos, function(fi) fi$fhir_resource_type)
+  expect_true("Patient" %in% resource_types)
+  expect_true("Condition" %in% resource_types)
+})
+
+test_that("parquet write returns details", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+
+  result <- pc %>%
+      pathling_read_parquet(parquet_test_data_dir()) %>%
+      ds_write_parquet(file.path(tempdir(), "parquet_details_test"))
+
+  # Verify result is a list with file_infos element.
+  expect_true(is.list(result))
+  expect_true("file_infos" %in% names(result))
+  expect_true(length(result$file_infos) > 0)
+
+  # Verify each file_info has the expected elements.
+  for (file_info in result$file_infos) {
+    expect_true("fhir_resource_type" %in% names(file_info))
+    expect_true("absolute_url" %in% names(file_info))
+  }
+})
+
+test_that("delta write returns details", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+
+  result <- pc %>%
+      pathling_read_delta(delta_test_data_dir()) %>%
+      ds_write_delta(file.path(tempdir(), "delta_details_test"))
+
+  # Verify result is a list with file_infos element.
+  expect_true(is.list(result))
+  expect_true("file_infos" %in% names(result))
+  expect_true(length(result$file_infos) > 0)
+
+  # Verify each file_info has the expected elements.
+  for (file_info in result$file_infos) {
+    expect_true("fhir_resource_type" %in% names(file_info))
+    expect_true("absolute_url" %in% names(file_info))
+  }
+})
+
+test_that("tables write returns details", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+
+  # Re-use the existing "test" schema to avoid conflicts.
+  result <- pc %>%
+      pathling_read_ndjson(ndjson_test_data_dir()) %>%
+      ds_write_tables(schema = "test")
+
+  # Verify result is a list with file_infos element.
+  expect_true(is.list(result))
+  expect_true("file_infos" %in% names(result))
+  expect_true(length(result$file_infos) > 0)
+
+  # Verify each file_info has the expected elements.
+  for (file_info in result$file_infos) {
+    expect_true("fhir_resource_type" %in% names(file_info))
+    expect_true("absolute_url" %in% names(file_info))
+  }
+})
