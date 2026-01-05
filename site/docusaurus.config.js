@@ -72,6 +72,13 @@ const config = {
         theme: {
           customCss: require.resolve("./src/css/custom.css"),
         },
+        blog: {
+          showReadingTime: true,
+          blogTitle: "Blog",
+          blogDescription: "News and updates from the Pathling project",
+          routeBasePath: "blog",
+          editUrl: "https://github.com/aehrc/pathling/tree/main/site/",
+        },
         sitemap: {},
         pages: {
           // Exclude index files so static/index.html can be served at root.
@@ -120,6 +127,11 @@ const config = {
           {
             label: "Roadmap",
             to: "/roadmap",
+          },
+          {
+            to: "/blog",
+            label: "Blog",
+            position: "left",
           },
           {
             type: "docsVersionDropdown",
