@@ -38,19 +38,13 @@ import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
-/**
- * Helper functions for dealing with FHIR {@link Parameters} resource.
- */
+/** Helper functions for dealing with FHIR {@link Parameters} resource. */
 public final class ParametersUtils {
 
-  /**
-   * The parameter name for property parts.
-   */
+  /** The parameter name for property parts. */
   public static final String PROPERTY_PART_NAME = "property";
 
-  /**
-   * The parameter name for designation parts.
-   */
+  /** The parameter name for designation parts. */
   public static final String DESIGNATION_PART_NAME = "designation";
 
   private ParametersUtils() {
@@ -58,11 +52,10 @@ public final class ParametersUtils {
   }
 
   @SuppressWarnings("unchecked")
-  private static void setProperty(@Nonnull final Object bean, @Nonnull final String name,
-      @Nullable final Object value) {
+  private static void setProperty(
+      @Nonnull final Object bean, @Nonnull final String name, @Nullable final Object value) {
     try {
-      final PropertyDescriptor descriptor = PropertyUtils.getPropertyDescriptor(bean,
-          name);
+      final PropertyDescriptor descriptor = PropertyUtils.getPropertyDescriptor(bean, name);
       if (descriptor != null) {
         final Object currentValue = descriptor.getReadMethod().invoke(bean);
         if (currentValue == null) {
@@ -78,7 +71,6 @@ public final class ParametersUtils {
         } else {
           throw new IllegalStateException("Overwriting value of singular property: " + name);
         }
-
       }
     } catch (final IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
       throw new RuntimeException(e);
@@ -95,8 +87,8 @@ public final class ParametersUtils {
    * @return the new java bean of type T initialize from the ParametersParameterComponent element.
    */
   @Nonnull
-  public static <T> T partsToBean(@Nonnull final ParametersParameterComponent component,
-      @Nonnull final Supplier<T> supplier) {
+  public static <T> T partsToBean(
+      @Nonnull final ParametersParameterComponent component, @Nonnull final Supplier<T> supplier) {
     final T result = supplier.get();
     for (final ParametersParameterComponent p : component.getPart()) {
       if (p.hasValue()) {
@@ -131,18 +123,14 @@ public final class ParametersUtils {
         parameters.getParameter("outcome").getValue().toString());
   }
 
-  /**
-   * Object representation of a 'match' part from 'translate()' result.
-   */
+  /** Object representation of a 'match' part from 'translate()' result. */
   @Data
   @NoArgsConstructor
   public static class MatchPart {
 
-    @Nonnull
-    private Coding concept;
+    @Nonnull private Coding concept;
 
-    @Nonnull
-    private CodeType equivalence;
+    @Nonnull private CodeType equivalence;
   }
 
   @Nonnull
@@ -160,28 +148,26 @@ public final class ParametersUtils {
   @Nonnull
   public static Stream<MatchPart> toMatchParts(final @Nonnull Parameters parameters) {
     return toBooleanResult(parameters)
-           ? parameters.getParameter().stream()
-               .filter(pc -> "match".equals(pc.getName()))
-               .map(ParametersUtils::componentToMatchPart)
-           : Stream.empty();
+        ? parameters.getParameter().stream()
+            .filter(pc -> "match".equals(pc.getName()))
+            .map(ParametersUtils::componentToMatchPart)
+        : Stream.empty();
   }
 
   /**
    * Object representation of the 'property' part from $lookup results.
-   * <p>
-   * The fields of this class must match the names of the properties in the response to the lookup
-   * operation.
+   *
+   * <p>The fields of this class must match the names of the properties in the response to the
+   * lookup operation.
    */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
   public static class PropertyPart {
 
-    @Nonnull
-    CodeType code;
+    @Nonnull CodeType code;
 
-    @Nullable
-    Type value;
+    @Nullable Type value;
 
     @SuppressWarnings("SpellCheckingInspection")
     @Nullable
@@ -206,30 +192,24 @@ public final class ParametersUtils {
    * @return the stream of 'property' parts.
    */
   @Nonnull
-  public static Stream<PropertyPart> toProperties(
-      @Nonnull final Parameters parameters) {
+  public static Stream<PropertyPart> toProperties(@Nonnull final Parameters parameters) {
 
     return parameters.getParameter().stream()
         .map(ParametersUtils::toProperty)
         .filter(Objects::nonNull);
   }
 
-  /**
-   * Object representation of the 'designation' part from $lookup results.
-   */
+  /** Object representation of the 'designation' part from $lookup results. */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
   public static class DesignationPart {
 
-    @Nullable
-    CodeType language;
+    @Nullable CodeType language;
 
-    @Nullable
-    Coding use;
+    @Nullable Coding use;
 
-    @Nonnull
-    StringType value;
+    @Nonnull StringType value;
   }
 
   /**
@@ -239,8 +219,7 @@ public final class ParametersUtils {
    * @return the stream of 'designation' parts.
    */
   @Nonnull
-  public static Stream<DesignationPart> toDesignations(
-      @Nonnull final Parameters parameters) {
+  public static Stream<DesignationPart> toDesignations(@Nonnull final Parameters parameters) {
     return parameters.getParameter().stream()
         .filter(c -> c.hasPart() && DESIGNATION_PART_NAME.equals(c.getName()))
         .map(c -> partsToBean(c, DesignationPart::new));

@@ -48,31 +48,23 @@ import org.apache.http.impl.client.HttpClients;
 @Slf4j
 public class ClientAuthInterceptor implements Closeable {
 
-  /**
-   * Connection timeout for authentication requests in milliseconds.
-   */
+  /** Connection timeout for authentication requests in milliseconds. */
   public static final int AUTH_CONNECT_TIMEOUT = 5_000;
-  /**
-   * Connection request timeout for authentication requests in milliseconds.
-   */
+
+  /** Connection request timeout for authentication requests in milliseconds. */
   public static final int AUTH_CONNECTION_REQUEST_TIMEOUT = 5_000;
-  /**
-   * Socket timeout for authentication requests in milliseconds.
-   */
+
+  /** Socket timeout for authentication requests in milliseconds. */
   public static final int AUTH_SOCKET_TIMEOUT = 5_000;
-  /**
-   * Number of retry attempts for authentication requests.
-   */
+
+  /** Number of retry attempts for authentication requests. */
   public static final int AUTH_RETRY_COUNT = 3;
 
-  @Nonnull
-  private final CloseableHttpClient httpClient;
+  @Nonnull private final CloseableHttpClient httpClient;
 
-  @Nonnull
-  private final AuthTokenProvider tokenProvider;
+  @Nonnull private final AuthTokenProvider tokenProvider;
 
-  @Nonnull
-  private final ClientAuthMethod authMethod;
+  @Nonnull private final ClientAuthMethod authMethod;
 
   /**
    * Creates a new ClientAuthInterceptor with the specified configuration.
@@ -89,14 +81,14 @@ public class ClientAuthInterceptor implements Closeable {
    * @param httpClient the HTTP client to use for token requests
    * @param configuration the authentication configuration
    */
-  ClientAuthInterceptor(@Nonnull final CloseableHttpClient httpClient,
+  ClientAuthInterceptor(
+      @Nonnull final CloseableHttpClient httpClient,
       @Nonnull final TerminologyAuthConfiguration configuration) {
     this.httpClient = httpClient;
     final AuthConfig authConfig = configuration.toAuthConfig();
     this.tokenProvider = new AuthTokenProvider(httpClient, authConfig.getTokenExpiryTolerance());
-    this.authMethod = ClientAuthMethod.create(
-        requireNonNull(configuration.getTokenEndpoint()),
-        authConfig);
+    this.authMethod =
+        ClientAuthMethod.create(requireNonNull(configuration.getTokenEndpoint()), authConfig);
   }
 
   /**
@@ -131,15 +123,15 @@ public class ClientAuthInterceptor implements Closeable {
 
   @Nonnull
   private static CloseableHttpClient getHttpClient() {
-    final RequestConfig requestConfig = RequestConfig.custom()
-        .setConnectTimeout(AUTH_CONNECT_TIMEOUT)
-        .setConnectionRequestTimeout(AUTH_CONNECTION_REQUEST_TIMEOUT)
-        .setSocketTimeout(AUTH_SOCKET_TIMEOUT)
-        .build();
+    final RequestConfig requestConfig =
+        RequestConfig.custom()
+            .setConnectTimeout(AUTH_CONNECT_TIMEOUT)
+            .setConnectionRequestTimeout(AUTH_CONNECTION_REQUEST_TIMEOUT)
+            .setSocketTimeout(AUTH_SOCKET_TIMEOUT)
+            .build();
     return HttpClients.custom()
         .setRetryHandler(new DefaultHttpRequestRetryHandler(AUTH_RETRY_COUNT, true))
         .setDefaultRequestConfig(requestConfig)
         .build();
   }
-
 }

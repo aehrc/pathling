@@ -29,9 +29,7 @@ import org.hl7.fhir.r4.model.Coding;
 import scala.collection.Iterable;
 import scala.jdk.javaapi.CollectionConverters;
 
-/**
- * Helper functions for terminology UDFs.
- */
+/** Helper functions for terminology UDFs. */
 public final class TerminologyUdfHelpers {
 
   private TerminologyUdfHelpers() {
@@ -40,14 +38,11 @@ public final class TerminologyUdfHelpers {
 
   @Nullable
   static Row[] encodeMany(@Nullable final Stream<Coding> codings) {
-    return codings != null
-           ? codings.map(CodingSchema::encode).toArray(Row[]::new)
-           : null;
+    return codings != null ? codings.map(CodingSchema::encode).toArray(Row[]::new) : null;
   }
 
   /**
-   * Decodes one or many codings from a row or array object with argument index for error
-   * reporting.
+   * Decodes one or many codings from a row or array object with argument index for error reporting.
    *
    * @param codingRowOrArray the row or array object to decode
    * @param argumentIndex the argument index for error reporting
@@ -56,15 +51,16 @@ public final class TerminologyUdfHelpers {
    */
   @SuppressWarnings("unchecked")
   @Nullable
-  public static Stream<Coding> decodeOneOrMany(final @Nullable Object codingRowOrArray,
-      final int argumentIndex) {
+  public static Stream<Coding> decodeOneOrMany(
+      final @Nullable Object codingRowOrArray, final int argumentIndex) {
     if (codingRowOrArray instanceof Iterable<?>) {
       return decodeMany((Iterable<Row>) codingRowOrArray);
     } else if (codingRowOrArray instanceof Row || codingRowOrArray == null) {
       return decodeOne((Row) codingRowOrArray);
     } else {
       throw new IllegalArgumentException(
-          String.format("Row or WrappedArray<Row> column expected in argument %s, but given: %s,",
+          String.format(
+              "Row or WrappedArray<Row> column expected in argument %s, but given: %s,",
               argumentIndex, codingRowOrArray.getClass()));
     }
   }
@@ -88,9 +84,7 @@ public final class TerminologyUdfHelpers {
    */
   @Nullable
   public static Stream<Coding> decodeOne(final @Nullable Row codingRow) {
-    return codingRow != null
-           ? Stream.of(CodingSchema.decode(codingRow))
-           : null;
+    return codingRow != null ? Stream.of(CodingSchema.decode(codingRow)) : null;
   }
 
   /**
@@ -102,9 +96,10 @@ public final class TerminologyUdfHelpers {
   @Nullable
   public static Stream<Coding> decodeMany(final @Nullable Iterable<Row> codingsRow) {
     return codingsRow != null
-           ? CollectionConverters.asJavaCollection(codingsRow).stream().filter(Objects::nonNull)
-               .map(CodingSchema::decode)
-           : null;
+        ? CollectionConverters.asJavaCollection(codingsRow).stream()
+            .filter(Objects::nonNull)
+            .map(CodingSchema::decode)
+        : null;
   }
 
   /**

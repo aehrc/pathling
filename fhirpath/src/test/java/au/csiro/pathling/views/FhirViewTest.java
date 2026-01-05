@@ -39,9 +39,6 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.utilities.Streams;
 import ca.uhn.fhir.context.FhirContext;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
@@ -95,6 +92,9 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -113,8 +113,8 @@ abstract class FhirViewTest {
   static class CustomEncoderConfiguration {
 
     /**
-     * Provides FhirEncoders configured with maxNestingLevel=3 to handle nested structures
-     * created by the repeat directive.
+     * Provides FhirEncoders configured with maxNestingLevel=3 to handle nested structures created
+     * by the repeat directive.
      *
      * @return configured FhirEncoders instance
      */
@@ -129,48 +129,37 @@ abstract class FhirViewTest {
     }
   }
 
-  private static final DateTimeFormatter FHIR_DATE_PARSER = new DateTimeFormatterBuilder()
-      .appendPattern("yyyy[-MM[-dd]]")
-      .parseDefaulting(ChronoField.MONTH_OF_YEAR, 1)
-      .parseDefaulting(ChronoField.DAY_OF_MONTH, 1)
-      .toFormatter();
+  private static final DateTimeFormatter FHIR_DATE_PARSER =
+      new DateTimeFormatterBuilder()
+          .appendPattern("yyyy[-MM[-dd]]")
+          .parseDefaulting(ChronoField.MONTH_OF_YEAR, 1)
+          .parseDefaulting(ChronoField.DAY_OF_MONTH, 1)
+          .toFormatter();
 
-  private static final DateTimeFormatter FHIR_TIME_FORMATTER = new DateTimeFormatterBuilder()
-      .appendPattern("HH:mm:ss")
-      .toFormatter();
+  private static final DateTimeFormatter FHIR_TIME_FORMATTER =
+      new DateTimeFormatterBuilder().appendPattern("HH:mm:ss").toFormatter();
 
-  private static final UserDefinedFunction LOW_BOUNDARY_FOR_DATE_TIME_UDF = functions.udf(
-      (UDF1<String, String>) FhirViewTest::lowBoundaryForDate,
-      DataTypes.StringType
-  );
+  private static final UserDefinedFunction LOW_BOUNDARY_FOR_DATE_TIME_UDF =
+      functions.udf((UDF1<String, String>) FhirViewTest::lowBoundaryForDate, DataTypes.StringType);
 
-  private static final UserDefinedFunction LOW_BOUNDARY_FOR_TIME_UDF = functions.udf(
-      (UDF1<String, String>) FhirViewTest::lowBoundaryForTime,
-      DataTypes.StringType
-  );
+  private static final UserDefinedFunction LOW_BOUNDARY_FOR_TIME_UDF =
+      functions.udf((UDF1<String, String>) FhirViewTest::lowBoundaryForTime, DataTypes.StringType);
 
   static Path tempDir;
 
-  @Autowired
-  SparkSession spark;
+  @Autowired SparkSession spark;
 
-  @Autowired
-  FhirContext fhirContext;
+  @Autowired FhirContext fhirContext;
 
-  @Autowired
-  FhirEncoders fhirEncoders;
+  @Autowired FhirEncoders fhirEncoders;
 
-  @Autowired
-  Gson gson;
+  @Autowired Gson gson;
 
-  @Nonnull
-  private final String testLocationGlob;
+  @Nonnull private final String testLocationGlob;
 
-  @Nonnull
-  private final Set<String> includeTags;
+  @Nonnull private final Set<String> includeTags;
 
-  @Nonnull
-  private final Set<String> excludedTests;
+  @Nonnull private final Set<String> excludedTests;
 
   @FunctionalInterface
   interface Expectation {
@@ -184,7 +173,6 @@ abstract class FhirViewTest {
     public void expect(@Nonnull final Supplier<Dataset<Row>> result) {
       expectations.forEach(expectation -> expectation.expect(result));
     }
-
   }
 
   interface ResultExpectation extends Expectation {
@@ -195,7 +183,6 @@ abstract class FhirViewTest {
     }
 
     void expectResult(@Nonnull final Dataset<Row> rowDataset);
-
   }
 
   static class ExpectError implements Expectation {
@@ -204,67 +191,74 @@ abstract class FhirViewTest {
     public void expect(@Nonnull final Supplier<Dataset<Row>> result) {
       assertThrows(Exception.class, () -> result.get().collectAsList());
     }
-
   }
 
   @Value
   class Expect implements ResultExpectation {
 
-    public static final String FHIR_DATE_TIME_PATTERN = "^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|"
-        + "[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:"
-        + "([0-5][0-9]|60)(\\.[0-9]{1,9})?)?)?(Z|(\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)?)?)?$";
-    public static final String FHIR_TIME_PATTERN = "^([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)"
-        + "(\\.[0-9]+)?$";
+    public static final String FHIR_DATE_TIME_PATTERN =
+        "^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|"
+            + "[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:"
+            + "([0-5][0-9]|60)(\\.[0-9]{1,9})?)?)?(Z|(\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)?)?)?$";
+    public static final String FHIR_TIME_PATTERN =
+        "^([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)" + "(\\.[0-9]+)?$";
     Path expectedJson;
     List<String> expectedColumns;
 
     @Override
     public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
       // Read the expected JSON with prefersDecimal option set to true.
-      final Dataset<Row> expectedResult = spark.read()
-          .schema(rowDataset.schema())
-          .option("prefersDecimal", "true")
-          .json(expectedJson.toString());
+      final Dataset<Row> expectedResult =
+          spark
+              .read()
+              .schema(rowDataset.schema())
+              .option("prefersDecimal", "true")
+              .json(expectedJson.toString());
 
       // Dynamically create column expressions based on the schema.
-      final List<Column> selectColumns = Arrays.stream(expectedResult.schema().fields())
-          .map(field -> {
-            // All numeric types are cast to decimal to enable consistent comparison.
-            if (field.dataType() instanceof DecimalType
-                || DataTypes.IntegerType.equals(field.dataType())
-                || DataTypes.LongType.equals(field.dataType())
-                || DataTypes.DoubleType.equals(field.dataType())) {
-              // Use DecimalCustomCoder.decimalType() for the cast type.
-              return col(field.name()).cast(DecimalCustomCoder.decimalType()).alias(field.name());
-            } else if (field.dataType() instanceof StringType) {
-              // Normalize anything that looks like a datetime or time, otherwise pass it through 
-              // unaltered.
+      final List<Column> selectColumns =
+          Arrays.stream(expectedResult.schema().fields())
+              .map(
+                  field -> {
+                    // All numeric types are cast to decimal to enable consistent comparison.
+                    if (field.dataType() instanceof DecimalType
+                        || DataTypes.IntegerType.equals(field.dataType())
+                        || DataTypes.LongType.equals(field.dataType())
+                        || DataTypes.DoubleType.equals(field.dataType())) {
+                      // Use DecimalCustomCoder.decimalType() for the cast type.
+                      return col(field.name())
+                          .cast(DecimalCustomCoder.decimalType())
+                          .alias(field.name());
+                    } else if (field.dataType() instanceof StringType) {
+                      // Normalize anything that looks like a datetime or time, otherwise pass it
+                      // through
+                      // unaltered.
 
-              return when(
-                  col(field.name()).rlike(FHIR_DATE_TIME_PATTERN),
-                  LOW_BOUNDARY_FOR_DATE_TIME_UDF.apply(col(field.name()))
-              ).when(
-                  col(field.name()).rlike(FHIR_TIME_PATTERN),
-                  LOW_BOUNDARY_FOR_TIME_UDF.apply(col(field.name()))
-              ).otherwise(col(field.name())).alias(field.name());
-            } else {
-              // Add the field to the selection without alteration.
-              return col(field.name());
-            }
-          }).toList();
+                      return when(
+                              col(field.name()).rlike(FHIR_DATE_TIME_PATTERN),
+                              LOW_BOUNDARY_FOR_DATE_TIME_UDF.apply(col(field.name())))
+                          .when(
+                              col(field.name()).rlike(FHIR_TIME_PATTERN),
+                              LOW_BOUNDARY_FOR_TIME_UDF.apply(col(field.name())))
+                          .otherwise(col(field.name()))
+                          .alias(field.name());
+                    } else {
+                      // Add the field to the selection without alteration.
+                      return col(field.name());
+                    }
+                  })
+              .toList();
 
       // Select the data with the dynamically created column expressions.
-      final Dataset<Row> selectedExpectedResult = expectedResult.select(
-          asScala(selectColumns).toSeq());
-      final Dataset<Row> selectedActualResult = rowDataset.select(
-          asScala(selectColumns).toSeq());
+      final Dataset<Row> selectedExpectedResult =
+          expectedResult.select(asScala(selectColumns).toSeq());
+      final Dataset<Row> selectedActualResult = rowDataset.select(asScala(selectColumns).toSeq());
 
       log.debug("Actual schema:\n {}", selectedActualResult.schema().treeString());
-      
+
       // Assert that the rowDataset has rows unordered as in selectedExpectedResult.
       assertThat(selectedActualResult).hasRowsAndColumnsUnordered(selectedExpectedResult);
     }
-
   }
 
   record ExpectCount(long count) implements ResultExpectation {
@@ -281,12 +275,12 @@ abstract class FhirViewTest {
     public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
       assertArrayEquals(rowDataset.columns(), columns.toArray());
     }
-
   }
 
-
-  protected FhirViewTest(@Nonnull final String testLocationGlob,
-      @Nonnull final Set<String> includeTags, @Nonnull final Set<String> excludeTests) {
+  protected FhirViewTest(
+      @Nonnull final String testLocationGlob,
+      @Nonnull final Set<String> includeTags,
+      @Nonnull final Set<String> excludeTests) {
     this.testLocationGlob = testLocationGlob;
     this.includeTags = includeTags;
     this.excludedTests = excludeTests;
@@ -297,15 +291,14 @@ abstract class FhirViewTest {
    *
    * @param includeTags the set of tags to include. Empty set means all tags are included.
    */
-  protected FhirViewTest(@Nonnull final String testLocationGlob,
-      @Nonnull final Set<String> includeTags) {
+  protected FhirViewTest(
+      @Nonnull final String testLocationGlob, @Nonnull final Set<String> includeTags) {
     this(testLocationGlob, includeTags, Collections.emptySet());
   }
 
   protected FhirViewTest(@Nonnull final String testLocationGlob) {
     this(testLocationGlob, Collections.emptySet());
   }
-
 
   @BeforeAll
   static void beforeAll() throws IOException {
@@ -320,29 +313,32 @@ abstract class FhirViewTest {
     final Resource[] resources = resolver.getResources(testLocationGlob);
     return Stream.of(resources)
         // Get each test file.
-        .map(resource -> {
-          try {
-            return resource.getFile();
-          } catch (final IOException e) {
-            throw new RuntimeException(e);
-          }
-        })
+        .map(
+            resource -> {
+              try {
+                return resource.getFile();
+              } catch (final IOException e) {
+                throw new RuntimeException(e);
+              }
+            })
         // Map it to a path.
         .map(File::toPath)
         // Parse the JSON.
-        .map(path -> {
-          try {
-            return mapper.readTree(new FileReader(path.toFile()));
-          } catch (final IOException e) {
-            throw new RuntimeException(e);
-          }
-        })
+        .map(
+            path -> {
+              try {
+                return mapper.readTree(new FileReader(path.toFile()));
+              } catch (final IOException e) {
+                throw new RuntimeException(e);
+              }
+            })
         // Create a TestParameters object for each test within the file.
-        .flatMap(testDefinition -> {
-          final DataSource sourceData = getDataSource(testDefinition);
-          return toTestParameters(testDefinition, sourceData)
-              .stream();
-        }).filter(this::includeTest);
+        .flatMap(
+            testDefinition -> {
+              final DataSource sourceData = getDataSource(testDefinition);
+              return toTestParameters(testDefinition, sourceData).stream();
+            })
+        .filter(this::includeTest);
   }
 
   boolean includeTest(@Nonnull final TestParameters testParameters) {
@@ -354,7 +350,6 @@ abstract class FhirViewTest {
     }
   }
 
-
   DataSource getDataSource(@Nonnull final JsonNode testDefinition) {
     // Create a parent directory based upon the test name.
     final JsonNode resources = testDefinition.get("resources");
@@ -363,23 +358,29 @@ abstract class FhirViewTest {
     // For each resource type, create a dataset and add it to the result.
     Streams.streamOf(resources.elements())
         // groupBy resource type and convert the value using toString()
-        .collect(Collectors.groupingBy(
-            resource -> resource.get("resourceType").asText(),
-            mapping(Object::toString, toList()
-            ))
-        ).forEach((resourceType, jsonStrings) -> {
-          final Dataset<String> dataset = spark.createDataset(jsonStrings, Encoders.STRING());
-          final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType);
-          final Dataset<Row> resourceDataset = dataset.map(
-              (MapFunction<String, IBaseResource>) json -> jsonParser(fhirContext())
-                  .parseResource(json), encoder).toDF().cache();
-          result.put(resourceType, resourceDataset);
-        });
+        .collect(
+            Collectors.groupingBy(
+                resource -> resource.get("resourceType").asText(),
+                mapping(Object::toString, toList())))
+        .forEach(
+            (resourceType, jsonStrings) -> {
+              final Dataset<String> dataset = spark.createDataset(jsonStrings, Encoders.STRING());
+              final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType);
+              final Dataset<Row> resourceDataset =
+                  dataset
+                      .map(
+                          (MapFunction<String, IBaseResource>)
+                              json -> jsonParser(fhirContext()).parseResource(json),
+                          encoder)
+                      .toDF()
+                      .cache();
+              result.put(resourceType, resourceDataset);
+            });
     return result;
   }
 
-  List<TestParameters> toTestParameters(@Nonnull final JsonNode testDefinition,
-      @Nonnull final DataSource sourceData) {
+  List<TestParameters> toTestParameters(
+      @Nonnull final JsonNode testDefinition, @Nonnull final DataSource sourceData) {
     try {
       final JsonNode views = testDefinition.get("tests");
       final List<TestParameters> result = new ArrayList<>();
@@ -388,12 +389,13 @@ abstract class FhirViewTest {
       for (final Iterator<JsonNode> it = views.elements(); it.hasNext(); ) {
         final JsonNode view = it.next();
 
-        final List<String> tags = Optional.ofNullable(view.get("tags"))
-            .map(JsonNode::elements)
-            .map(Streams::streamOf)
-            .orElse(Stream.empty())
-            .map(JsonNode::asText)
-            .toList();
+        final List<String> tags =
+            Optional.ofNullable(view.get("tags"))
+                .map(JsonNode::elements)
+                .map(Streams::streamOf)
+                .orElse(Stream.empty())
+                .map(JsonNode::asText)
+                .toList();
 
         if (includeTags.isEmpty() || !Collections.disjoint(tags, includeTags)) {
           // Get the view JSON.
@@ -402,14 +404,18 @@ abstract class FhirViewTest {
           // Write the expected JSON to a file, named after the view.
           final Path directory = getTempDir(testDefinition);
           final String expectedFileName =
-              String.format("%02d_%s.json", testNumber,
-                  view.get("title").asText().replaceAll("\\W+", "_"));
+              String.format(
+                  "%02d_%s.json", testNumber, view.get("title").asText().replaceAll("\\W+", "_"));
           final Path expectedPath = directory.resolve(expectedFileName);
-          final boolean disabled = Optional.ofNullable(view.get("disabled"))
-              .map(JsonNode::asBoolean).orElse(false);
+          final boolean disabled =
+              Optional.ofNullable(view.get("disabled")).map(JsonNode::asBoolean).orElse(false);
           result.add(
-              new TestParameters(testDefinition.get("title").asText(), view.get("title").asText(),
-                  sourceData, viewJson, getExpectation(view, expectedPath),
+              new TestParameters(
+                  testDefinition.get("title").asText(),
+                  view.get("title").asText(),
+                  sourceData,
+                  viewJson,
+                  getExpectation(view, expectedPath),
                   disabled));
           testNumber++;
         }
@@ -420,11 +426,9 @@ abstract class FhirViewTest {
     }
   }
 
-
   @Nonnull
-  Expectation getExpectation(@Nonnull final JsonNode testDefinition,
-      @Nonnull final Path expectedPath)
-      throws IOException {
+  Expectation getExpectation(
+      @Nonnull final JsonNode testDefinition, @Nonnull final Path expectedPath) throws IOException {
     @Nullable final JsonNode expectation;
     if (nonNull(testDefinition.get("expectError"))) {
       return new ExpectError();
@@ -451,9 +455,8 @@ abstract class FhirViewTest {
   }
 
   @Nonnull
-  private Expect buildResultExpectation(final @Nonnull Path expectedPath,
-      final @Nonnull JsonNode expectation)
-      throws IOException {
+  private Expect buildResultExpectation(
+      final @Nonnull Path expectedPath, final @Nonnull JsonNode expectation) throws IOException {
     List<String> expectedColumns = null;
     Files.createFile(expectedPath);
     for (final Iterator<JsonNode> rowIt = expectation.elements(); rowIt.hasNext(); ) {
@@ -465,12 +468,10 @@ abstract class FhirViewTest {
         expectedColumns = columns;
       }
       // Append the row to the file.
-      Files.writeString(expectedPath, row + "\n",
-          StandardOpenOption.APPEND);
+      Files.writeString(expectedPath, row + "\n", StandardOpenOption.APPEND);
     }
-    return new Expect(expectedPath, expectedColumns != null
-                                    ? expectedColumns
-                                    : Collections.emptyList());
+    return new Expect(
+        expectedPath, expectedColumns != null ? expectedColumns : Collections.emptyList());
   }
 
   @Nonnull
@@ -490,24 +491,27 @@ abstract class FhirViewTest {
     assumeFalse(parameters.disabled(), "Test is disabled");
     log.info("Running test: {}", parameters.getTitle());
 
-    parameters.expectation().expect(() -> {
-      final FhirView view;
-      try {
-        // Serialize a FhirView object from the view definition in the test.
-        view = gson.fromJson(parameters.viewJson(), FhirView.class);
-        ensureValid(view, "View is not valid");
-      } catch (final Exception e) {
-        // If parsing the view definition fails, log the JSON and rethrow the exception.
-        log.info("Exception occurred while parsing test definition - {}", e.getMessage());
-        log.info(parameters.viewJson());
-        throw e;
-      }
+    parameters
+        .expectation()
+        .expect(
+            () -> {
+              final FhirView view;
+              try {
+                // Serialize a FhirView object from the view definition in the test.
+                view = gson.fromJson(parameters.viewJson(), FhirView.class);
+                ensureValid(view, "View is not valid");
+              } catch (final Exception e) {
+                // If parsing the view definition fails, log the JSON and rethrow the exception.
+                log.info("Exception occurred while parsing test definition - {}", e.getMessage());
+                log.info(parameters.viewJson());
+                throw e;
+              }
 
-      // Create a new executor and build the query.
-      final FhirViewExecutor executor = new FhirViewExecutor(fhirContext, spark,
-          parameters.sourceData());
-      return executor.buildQuery(view);
-    });
+              // Create a new executor and build the query.
+              final FhirViewExecutor executor =
+                  new FhirViewExecutor(fhirContext, spark, parameters.sourceData());
+              return executor.buildQuery(view);
+            });
   }
 
   record TestParameters(
@@ -516,8 +520,7 @@ abstract class FhirViewTest {
       @Nonnull DataSource sourceData,
       @Nonnull String viewJson,
       @Nonnull Expectation expectation,
-      boolean disabled
-  ) {
+      boolean disabled) {
 
     @Nonnull
     public String getTitle() {
@@ -555,7 +558,6 @@ abstract class FhirViewTest {
     public @Nonnull Set<String> getResourceTypes() {
       return resourceTypeToDataset.keySet();
     }
-
   }
 
   @Nullable
@@ -585,5 +587,4 @@ abstract class FhirViewTest {
       return null;
     }
   }
-
 }

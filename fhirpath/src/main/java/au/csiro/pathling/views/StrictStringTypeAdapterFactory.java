@@ -39,5 +39,4 @@ public class StrictStringTypeAdapterFactory implements TypeAdapterFactory {
     }
     return (TypeAdapter<T>) new StrictStringTypeAdapter();
   }
-
 }

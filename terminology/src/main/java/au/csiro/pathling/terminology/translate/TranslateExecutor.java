@@ -43,15 +43,13 @@ import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
  *
  * @author John Grimes
  * @see <a
- * href="https://www.hl7.org/fhir/R4/conceptmap-operation-translate.html">ConceptMap/$translate</a>
+ *     href="https://www.hl7.org/fhir/R4/conceptmap-operation-translate.html">ConceptMap/$translate</a>
  */
 public class TranslateExecutor implements TerminologyOperation<Parameters, TranslationList> {
 
-  @Nonnull
-  private final TerminologyClient terminologyClient;
+  @Nonnull private final TerminologyClient terminologyClient;
 
-  @Nonnull
-  private final TranslateParameters parameters;
+  @Nonnull private final TranslateParameters parameters;
 
   /**
    * Creates a new TranslateExecutor with the specified terminology client and parameters.
@@ -59,7 +57,8 @@ public class TranslateExecutor implements TerminologyOperation<Parameters, Trans
    * @param terminologyClient the terminology client to use for translation
    * @param parameters the parameters for the translation
    */
-  public TranslateExecutor(@Nonnull final TerminologyClient terminologyClient,
+  public TranslateExecutor(
+      @Nonnull final TerminologyClient terminologyClient,
       @Nonnull final TranslateParameters parameters) {
     this.terminologyClient = terminologyClient;
     this.parameters = parameters;
@@ -92,8 +91,7 @@ public class TranslateExecutor implements TerminologyOperation<Parameters, Trans
         optional(StringType::new, coding.getVersion()),
         required(CodeType::new, coding.getCode()),
         new BooleanType(reverse),
-        optional(UriType::new, target)
-    );
+        optional(UriType::new, target));
   }
 
   @Override
@@ -111,9 +109,10 @@ public class TranslateExecutor implements TerminologyOperation<Parameters, Trans
   @Nonnull
   private static TranslationList toTranslations(final @Nonnull Parameters parameters) {
     return toMatchParts(parameters)
-        .map(tp -> Translation.of(ConceptMapEquivalence.fromCode(tp.getEquivalence().getCode()),
-            tp.getConcept()))
+        .map(
+            tp ->
+                Translation.of(
+                    ConceptMapEquivalence.fromCode(tp.getEquivalence().getCode()), tp.getConcept()))
         .collect(new TranslationListCollector());
   }
-
 }

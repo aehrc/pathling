@@ -8,6 +8,4 @@ import java.util.List;
  * @param fileInfos A list of files that have been created/modified on the filesystem.
  * @author Felix Naumann
  */
-public record WriteDetails(List<FileInformation> fileInfos) {
-
-}
+public record WriteDetails(List<FileInformation> fileInfos) {}

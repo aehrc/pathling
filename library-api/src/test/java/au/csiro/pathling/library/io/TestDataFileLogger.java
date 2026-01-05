@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -16,13 +15,11 @@ public class TestDataFileLogger {
   public static void logDirectoryContents(org.apache.hadoop.fs.Path directory) {
     logDirectoryContents(Path.of(directory.toUri()));
   }
-  
+
   public static void logDirectoryContents(Path directory) {
     try {
       log.info("Directory tree for: {}", directory);
-      List<Path> paths = Files.walk(directory)
-          .sorted()
-          .toList();
+      List<Path> paths = Files.walk(directory).sorted().toList();
 
       printTree(paths, directory);
     } catch (IOException e) {
@@ -89,12 +86,10 @@ public class TestDataFileLogger {
         return false; // Found a sibling
       }
       // If we've moved to a different parent level, stop checking
-      if (sibling.getNameCount() <= path.getNameCount() &&
-          !sibling.startsWith(parent)) {
+      if (sibling.getNameCount() <= path.getNameCount() && !sibling.startsWith(parent)) {
         break;
       }
     }
     return true;
   }
-  
 }

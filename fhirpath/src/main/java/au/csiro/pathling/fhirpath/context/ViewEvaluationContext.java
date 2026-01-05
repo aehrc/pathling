@@ -27,35 +27,32 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
 /**
- * <p>
  * An implementation of {@link EvaluationContext} used for evaluating FHIRPath expressions within
  * FHIR views.
- * </p>
- * <p>
- * This class combines three key components needed for FHIRPath evaluation:
- * </p>
+ *
+ * <p>This class combines three key components needed for FHIRPath evaluation:
+ *
  * <ul>
- *   <li>A {@link FhirPathContext} that provides access to variables and the input context</li>
- *   <li>A {@link FunctionRegistry} that provides access to FHIRPath functions</li>
- *   <li>A {@link ResourceResolver} that provides access to FHIR resources</li>
+ *   <li>A {@link FhirPathContext} that provides access to variables and the input context
+ *   <li>A {@link FunctionRegistry} that provides access to FHIRPath functions
+ *   <li>A {@link ResourceResolver} that provides access to FHIR resources
  * </ul>
  *
  * @param fhirPathContext The FHIRPath context that provides access to variables and the input
- * context.
+ *     context.
  * @param functionRegistry The function registry that provides access to FHIRPath functions.
  * @param resourceResolver The resource resolver that provides access to FHIR resources.
  */
 public record ViewEvaluationContext(
     @Nonnull FhirPathContext fhirPathContext,
     @Nonnull FunctionRegistry functionRegistry,
-    @Nonnull ResourceResolver resourceResolver
-) implements
-    EvaluationContext {
+    @Nonnull ResourceResolver resourceResolver)
+    implements EvaluationContext {
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Delegates to the underlying {@link ResourceResolver}.
+   *
+   * <p>Delegates to the underlying {@link ResourceResolver}.
    */
   @Nonnull
   @Override
@@ -65,20 +62,19 @@ public record ViewEvaluationContext(
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Delegates to the underlying {@link FunctionRegistry}.
+   *
+   * <p>Delegates to the underlying {@link FunctionRegistry}.
    */
   @Nonnull
   @Override
-  public NamedFunction resolveFunction(@Nonnull final String name)
-      throws NoSuchFunctionError {
+  public NamedFunction resolveFunction(@Nonnull final String name) throws NoSuchFunctionError {
     return functionRegistry.getInstance(name);
   }
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Delegates to the underlying {@link FhirPathContext}.
+   *
+   * <p>Delegates to the underlying {@link FhirPathContext}.
    */
   @Nonnull
   @Override
@@ -88,13 +84,12 @@ public record ViewEvaluationContext(
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Delegates to the underlying {@link FhirPathContext}.
+   *
+   * <p>Delegates to the underlying {@link FhirPathContext}.
    */
   @Override
   @Nonnull
   public Collection getInputContext() {
     return fhirPathContext.getInputContext();
   }
-
 }

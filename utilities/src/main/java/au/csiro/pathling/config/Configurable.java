@@ -21,9 +21,9 @@ import jakarta.annotation.Nonnull;
 
 /**
  * Interface for objects that can provide access to their configuration.
- * <p>
- * This interface establishes a consistent pattern for accessing configuration objects from service
- * instances. Implementations may either store the configuration internally or construct it
+ *
+ * <p>This interface establishes a consistent pattern for accessing configuration objects from
+ * service instances. Implementations may either store the configuration internally or construct it
  * on-demand from their current state.
  *
  * @param <T> the type of configuration object provided by this instance
@@ -32,9 +32,9 @@ public interface Configurable<T> {
 
   /**
    * Returns the configuration object associated with this instance.
-   * <p>
-   * Implementations may either return a stored configuration object or construct one on-demand from
-   * the current state of the instance.
+   *
+   * <p>Implementations may either return a stored configuration object or construct one on-demand
+   * from the current state of the instance.
    *
    * @return the configuration object, never null
    */

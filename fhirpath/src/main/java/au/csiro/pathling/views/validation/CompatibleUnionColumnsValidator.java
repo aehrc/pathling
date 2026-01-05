@@ -27,33 +27,35 @@ import java.util.stream.Stream;
 
 /**
  * Validator implementation for the {@link CompatibleUnionColumns} constraint.
- * <p>
- * This validator ensures that all elements in a {@code unionAll} list have compatible columns.
+ *
+ * <p>This validator ensures that all elements in a {@code unionAll} list have compatible columns.
  * Columns are considered compatible when they have the same number of columns, and each
  * corresponding column pair is compatible according to {@link Column#isCompatibleWith(Column)}.
- * <p>
- * The validator compares the first element's columns with all other elements in the list. If any
+ *
+ * <p>The validator compares the first element's columns with all other elements in the list. If any
  * incompatibility is found, a detailed constraint violation message is created indicating which
  * element is incompatible.
  */
-public class CompatibleUnionColumnsValidator implements
-    ConstraintValidator<CompatibleUnionColumns, List<SelectClause>> {
+public class CompatibleUnionColumnsValidator
+    implements ConstraintValidator<CompatibleUnionColumns, List<SelectClause>> {
 
   /**
    * Checks if two lists of columns are compatible with each other.
-   * <p>
-   * Two lists of columns are considered compatible when:
+   *
+   * <p>Two lists of columns are considered compatible when:
+   *
    * <ol>
-   *   <li>They have the same number of columns</li>
-   *   <li>Each corresponding column pair is compatible according to {@link Column#isCompatibleWith(Column)}</li>
+   *   <li>They have the same number of columns
+   *   <li>Each corresponding column pair is compatible according to {@link
+   *       Column#isCompatibleWith(Column)}
    * </ol>
    *
    * @param left the first list of columns to compare
    * @param right the second list of columns to compare
    * @return {@code true} if the lists are compatible, {@code false} otherwise
    */
-  static boolean areCompatible(@Nonnull final List<Column> left,
-      @Nonnull final List<Column> right) {
+  static boolean areCompatible(
+      @Nonnull final List<Column> left, @Nonnull final List<Column> right) {
     if (left.size() != right.size()) {
       return false; // Different number of columns
     }
@@ -69,17 +71,18 @@ public class CompatibleUnionColumnsValidator implements
 
   /**
    * Validates that all elements in a list of {@link SelectClause} have compatible columns.
-   * <p>
-   * The validation process:
+   *
+   * <p>The validation process:
+   *
    * <ol>
-   *   <li>Extracts the column schema from each {@code SelectClause} in the list</li>
-   *   <li>Uses the first element's schema as the reference</li>
-   *   <li>Compares each subsequent element's schema with the reference</li>
-   *   <li>If any incompatibility is found, creates a detailed constraint violation message</li>
+   *   <li>Extracts the column schema from each {@code SelectClause} in the list
+   *   <li>Uses the first element's schema as the reference
+   *   <li>Compares each subsequent element's schema with the reference
+   *   <li>If any incompatibility is found, creates a detailed constraint violation message
    * </ol>
-   * <p>
-   * Empty or null lists are considered valid (other constraints like {@code @NotNull}
-   * should handle those cases).
+   *
+   * <p>Empty or null lists are considered valid (other constraints like {@code @NotNull} should
+   * handle those cases).
    *
    * @param value the list of {@link SelectClause} to validate
    * @param context the constraint validator context
@@ -92,10 +95,8 @@ public class CompatibleUnionColumnsValidator implements
     }
 
     // create a list of columns for each unionAll element
-    final List<List<Column>> unionSchemas = value.stream()
-        .map(SelectClause::getAllColumns)
-        .map(Stream::toList)
-        .toList();
+    final List<List<Column>> unionSchemas =
+        value.stream().map(SelectClause::getAllColumns).map(Stream::toList).toList();
 
     // we already checked value is not empty, so we can safely get the first element
     final List<Column> firstSchema = unionSchemas.get(0);
@@ -108,15 +109,20 @@ public class CompatibleUnionColumnsValidator implements
         isValid = false;
         // Create a custom message with the incompatible union
         final String message =
-            "Incompatible columns found in unionAll element at index " + i + ": expected "
-                + firstSchema + " but found " + unionSchemas.get(i).toString();
-        context.buildConstraintViolationWithTemplate(message)
+            "Incompatible columns found in unionAll element at index "
+                + i
+                + ": expected "
+                + firstSchema
+                + " but found "
+                + unionSchemas.get(i).toString();
+        context
+            .buildConstraintViolationWithTemplate(message)
             .addBeanNode()
-            .inIterable().atIndex(i)
+            .inIterable()
+            .atIndex(i)
             .addConstraintViolation();
       }
     }
     return isValid;
   }
-
 }

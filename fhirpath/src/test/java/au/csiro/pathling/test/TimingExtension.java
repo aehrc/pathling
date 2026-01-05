@@ -51,5 +51,4 @@ public class TimingExtension implements BeforeTestExecutionCallback, AfterTestEx
   private Store getStore(@Nonnull final ExtensionContext context) {
     return context.getStore(Namespace.create(getClass(), context.getRequiredTestMethod()));
   }
-
 }

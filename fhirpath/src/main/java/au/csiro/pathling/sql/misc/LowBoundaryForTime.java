@@ -28,20 +28,17 @@ import org.apache.spark.sql.types.DataTypes;
 
 /**
  * UDF that calculates the low boundary for a FHIR time string.
- * <p>
- * This function handles partial times and returns the earliest possible timestamp for the given
+ *
+ * <p>This function handles partial times and returns the earliest possible timestamp for the given
  * precision level.
  *
  * @author Piotr Szul
  */
 public class LowBoundaryForTime implements SqlFunction1<String, Timestamp> {
 
-  @Serial
-  private static final long serialVersionUID = -2161361690351000201L;
+  @Serial private static final long serialVersionUID = -2161361690351000201L;
 
-  /**
-   * The name of this UDF as registered in Spark.
-   */
+  /** The name of this UDF as registered in Spark. */
   public static final String FUNCTION_NAME = "low_boundary_for_time";
 
   /**

@@ -34,5 +34,4 @@ public interface NodeDefinition {
    */
   @Nonnull
   Optional<ChildDefinition> getChildElement(@Nonnull String name);
-
 }

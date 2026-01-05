@@ -30,9 +30,7 @@ import org.apache.spark.sql.SparkSession;
  */
 public class PathlingUdfConfigurer implements SparkConfigurer {
 
-  private final List<SparkConfigurer> children = List.of(
-      new PathlingUdfRegistrar()
-  );
+  private final List<SparkConfigurer> children = List.of(new PathlingUdfRegistrar());
 
   @Override
   public void configure(@Nonnull final SparkSession spark) {

@@ -31,9 +31,8 @@ import org.apache.spark.sql.Column;
  * @author Piotr Szul
  */
 public class CodingEquality implements ElementWiseEquality {
-  
-  @Nonnull
-  private static final CodingEquality INSTANCE = new CodingEquality();
+
+  @Nonnull private static final CodingEquality INSTANCE = new CodingEquality();
 
   /**
    * Gets the singleton instance of the comparator.
@@ -45,8 +44,8 @@ public class CodingEquality implements ElementWiseEquality {
     return INSTANCE;
   }
 
-  private static final List<String> EQUALITY_COLUMNS = Arrays
-      .asList("system", "code", "version", "display", "userSelected");
+  private static final List<String> EQUALITY_COLUMNS =
+      Arrays.asList("system", "code", "version", "display", "userSelected");
 
   @Nonnull
   @Override
@@ -55,7 +54,7 @@ public class CodingEquality implements ElementWiseEquality {
         .otherwise(
             EQUALITY_COLUMNS.stream()
                 .map(f -> left.getField(f).eqNullSafe(right.getField(f)))
-                .reduce(Column::and).orElseThrow(() -> new AssertionError("No fields to compare"))
-        );
+                .reduce(Column::and)
+                .orElseThrow(() -> new AssertionError("No fields to compare")));
   }
 }

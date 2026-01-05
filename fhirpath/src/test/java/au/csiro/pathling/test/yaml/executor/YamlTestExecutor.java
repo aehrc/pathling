@@ -21,9 +21,7 @@ import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
 import jakarta.annotation.Nonnull;
 import org.slf4j.Logger;
 
-/**
- * Interface defining the contract for test case execution.
- */
+/** Interface defining the contract for test case execution. */
 public interface YamlTestExecutor {
 
   /**

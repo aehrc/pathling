@@ -30,10 +30,10 @@ import java.util.function.Function;
 public abstract class YamlCachedTestBase extends YamlTestBase {
 
   @Nonnull
-  private static final Map<Class<? extends YamlCachedTestBase>,
-      Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver>> CACHE =
-      Collections.synchronizedMap(new HashMap<>());
-
+  private static final Map<
+          Class<? extends YamlCachedTestBase>,
+          Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver>>
+      CACHE = Collections.synchronizedMap(new HashMap<>());
 
   private Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> getResolverCache() {
     return CACHE.computeIfAbsent(getClass(), key -> new HashMap<>());

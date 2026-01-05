@@ -28,8 +28,7 @@ import java.util.Optional;
  */
 public abstract class Lists {
 
-  private Lists() {
-  }
+  private Lists() {}
 
   /**
    * Returns an optional of given list for non-empty list, or empty optional otherwise.
@@ -40,8 +39,6 @@ public abstract class Lists {
    */
   @Nonnull
   public static <T> Optional<List<T>> optionalOf(@Nonnull final List<T> list) {
-    return list.isEmpty()
-           ? Optional.empty()
-           : Optional.of(list);
+    return list.isEmpty() ? Optional.empty() : Optional.of(list);
   }
 }

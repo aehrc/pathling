@@ -39,7 +39,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  * @see <a
- * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
+ *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
  */
 @Data
 @AllArgsConstructor
@@ -132,11 +132,9 @@ public class FhirView {
    * @return a new SelectClause instance
    */
   @Nonnull
-  public static SelectClause forEach(@Nonnull final String forEach,
-      @Nonnull final Column... columns) {
-    return SelectClause.builder()
-        .forEach(forEach)
-        .column(columns).build();
+  public static SelectClause forEach(
+      @Nonnull final String forEach, @Nonnull final Column... columns) {
+    return SelectClause.builder().forEach(forEach).column(columns).build();
   }
 
   /**
@@ -147,11 +145,9 @@ public class FhirView {
    * @return a new SelectClause instance
    */
   @Nonnull
-  public static SelectClause forEach(@Nonnull final String forEach,
-      @Nonnull final SelectClause... selects) {
-    return SelectClause.builder()
-        .forEach(forEach)
-        .select(selects).build();
+  public static SelectClause forEach(
+      @Nonnull final String forEach, @Nonnull final SelectClause... selects) {
+    return SelectClause.builder().forEach(forEach).select(selects).build();
   }
 
   /**
@@ -162,11 +158,9 @@ public class FhirView {
    * @return a new {@link SelectClause} instance
    */
   @Nonnull
-  public static SelectClause forEachOrNull(@Nonnull final String path,
-      @Nonnull final Column... columns) {
-    return SelectClause.builder()
-        .forEachOrNull(path)
-        .column(columns).build();
+  public static SelectClause forEachOrNull(
+      @Nonnull final String path, @Nonnull final Column... columns) {
+    return SelectClause.builder().forEachOrNull(path).column(columns).build();
   }
 
   /**
@@ -177,11 +171,9 @@ public class FhirView {
    * @return a new SelectClause instance
    */
   @Nonnull
-  public static SelectClause forEachOrNull(@Nonnull final String path,
-      @Nonnull final SelectClause... selects) {
-    return SelectClause.builder()
-        .forEachOrNull(path)
-        .select(selects).build();
+  public static SelectClause forEachOrNull(
+      @Nonnull final String path, @Nonnull final SelectClause... selects) {
+    return SelectClause.builder().forEachOrNull(path).select(selects).build();
   }
 
   /**
@@ -192,11 +184,9 @@ public class FhirView {
    * @return a new SelectClause instance
    */
   @Nonnull
-  public static SelectClause repeat(@Nonnull final List<String> paths,
-      @Nonnull final Column... columns) {
-    return SelectClause.builder()
-        .repeat(paths.toArray(new String[0]))
-        .column(columns).build();
+  public static SelectClause repeat(
+      @Nonnull final List<String> paths, @Nonnull final Column... columns) {
+    return SelectClause.builder().repeat(paths.toArray(new String[0])).column(columns).build();
   }
 
   /**
@@ -207,11 +197,9 @@ public class FhirView {
    * @return a new SelectClause instance
    */
   @Nonnull
-  public static SelectClause repeat(@Nonnull final List<String> paths,
-      @Nonnull final SelectClause... selects) {
-    return SelectClause.builder()
-        .repeat(paths.toArray(new String[0]))
-        .select(selects).build();
+  public static SelectClause repeat(
+      @Nonnull final List<String> paths, @Nonnull final SelectClause... selects) {
+    return SelectClause.builder().repeat(paths.toArray(new String[0])).select(selects).build();
   }
 
   /**
@@ -229,61 +217,49 @@ public class FhirView {
    * A computer-friendly name for the view.
    *
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.name">ViewDefinition.name</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.name">ViewDefinition.name</a>
    */
-  @Nullable
-  String name;
+  @Nullable String name;
 
   /**
    * The FHIR resource that the view is based upon, e.g. 'Patient' or 'Observation'.
    *
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.resource">ViewDefinition.resource</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.resource">ViewDefinition.resource</a>
    */
-  @Nonnull
-  @NotNull
-  String resource;
+  @Nonnull @NotNull String resource;
 
   /**
    * Constant that can be used in FHIRPath expressions.
-   * <p>
-   * A constant is a string that is injected into a FHIRPath expression through the use of a
+   *
+   * <p>A constant is a string that is injected into a FHIRPath expression through the use of a
    * FHIRPath external constant with the same name.
    *
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
    */
-  @Nonnull
-  @NotNull
-  @Valid
-  List<@Valid ConstantDeclaration> constant = Collections.emptyList();
+  @Nonnull @NotNull @Valid List<@Valid ConstantDeclaration> constant = Collections.emptyList();
 
   /**
    * Defines the content of a column within the view.
    *
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select">ViewDefinition.select</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select">ViewDefinition.select</a>
    */
-  @Nonnull
-  @NotNull
-  @NotEmpty
-  @Valid
-  List<@Valid SelectClause> select = Collections.emptyList();
+  @Nonnull @NotNull @NotEmpty @Valid List<@Valid SelectClause> select = Collections.emptyList();
 
   /**
    * FHIRPath expression defining a filter condition.
-   * <p>
-   * A FHIRPath expression that defines a filter that must evaluate to true for a resource to be
+   *
+   * <p>A FHIRPath expression that defines a filter that must evaluate to true for a resource to be
    * included in the output. The input context is the collection of resources of the type specified
-   * in the resource element. Constants defined in {@link #constant} can be referenced as
-   * {@code %[name]}. The result of the expression must be of type Boolean.
+   * in the resource element. Constants defined in {@link #constant} can be referenced as {@code
+   * %[name]}. The result of the expression must be of type Boolean.
    *
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.where">ViewDefinition.where</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.where">ViewDefinition.where</a>
    */
-  @Nullable
-  @Valid
-  List<@Valid WhereClause> where = null;
+  @Nullable @Valid List<@Valid WhereClause> where = null;
 
   /**
    * Gets the names of all columns in the view including those in nested selects.
@@ -292,8 +268,6 @@ public class FhirView {
    */
   @Nonnull
   public Stream<Column> getAllColumns() {
-    return select.stream()
-        .flatMap(SelectClause::getAllColumns);
+    return select.stream().flatMap(SelectClause::getAllColumns);
   }
-
 }

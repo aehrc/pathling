@@ -76,7 +76,6 @@ class StringLiteralPathTest {
     assertEquals("Some string and it's problems", result);
   }
 
-
   @Test
   void unescapeBackSlash() {
     final String result = unescapeFhirPathString("C:\\\\Temp");
@@ -94,5 +93,4 @@ class StringLiteralPathTest {
     final String result = unescapeFhirPathString("P\\u0065ter");
     assertEquals("Peter", result);
   }
-  
 }

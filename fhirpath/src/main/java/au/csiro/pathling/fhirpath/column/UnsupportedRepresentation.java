@@ -36,11 +36,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @AllArgsConstructor
 public class UnsupportedRepresentation extends ColumnRepresentation {
 
-  /**
-   * A description of the unsupported representation, used for error messages.
-   */
-  @Nonnull
-  private final String description;
+  /** A description of the unsupported representation, used for error messages. */
+  @Nonnull private final String description;
 
   @Override
   @Nonnull
@@ -80,9 +77,8 @@ public class UnsupportedRepresentation extends ColumnRepresentation {
   }
 
   @Override
-  public @Nonnull ColumnRepresentation traverse(@Nonnull final String fieldName,
-      @Nonnull final Optional<FHIRDefinedType> fhirType) {
+  public @Nonnull ColumnRepresentation traverse(
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
     return traverse(fieldName);
   }
-
 }

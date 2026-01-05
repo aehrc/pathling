@@ -26,6 +26,4 @@ import org.junit.jupiter.api.TestFactory;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @TestFactory
-public @interface FhirPathTest {
-
-}
+public @interface FhirPathTest {}

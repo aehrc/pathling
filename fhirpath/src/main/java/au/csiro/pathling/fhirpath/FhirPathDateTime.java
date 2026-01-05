@@ -30,27 +30,26 @@ import lombok.Value;
 
 /**
  * Utility class for handling FHIRPath date/dateTime values with partial precision.
- * <p>
- * This class can parse FHIRPath date/dateTime strings, determine their precision, and compute lower
- * and upper boundary Instants based on that precision.
+ *
+ * <p>This class can parse FHIRPath date/dateTime strings, determine their precision, and compute
+ * lower and upper boundary Instants based on that precision.
  */
 @Value
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class FhirPathDateTime {
 
   // Define regex patterns for date/time components
-  private static final String OFFSET_FORMAT =
-      "(?<offset>Z|([+\\-])(\\d\\d):(\\d\\d))";
+  private static final String OFFSET_FORMAT = "(?<offset>Z|([+\\-])(\\d\\d):(\\d\\d))";
   private static final String DATETIME_FORMAT =
-      "(?<year>\\d{4})(-(?<month>\\d\\d)(-(?<day>\\d\\d)(T(?<time>" + TIME_FORMAT + "))?)?)?" +
-          OFFSET_FORMAT + "?";
-  private static final Pattern DATETIME_REGEX =
-      Pattern.compile("^" + DATETIME_FORMAT + "$");
+      "(?<year>\\d{4})(-(?<month>\\d\\d)(-(?<day>\\d\\d)(T(?<time>"
+          + TIME_FORMAT
+          + "))?)?)?"
+          + OFFSET_FORMAT
+          + "?";
+  private static final Pattern DATETIME_REGEX = Pattern.compile("^" + DATETIME_FORMAT + "$");
 
-  @Nonnull
-  OffsetDateTime value;
-  @Nonnull
-  TemporalPrecision precision;
+  @Nonnull OffsetDateTime value;
+  @Nonnull TemporalPrecision precision;
 
   /**
    * Parse a FHIR date/dateTime string into a PartialDateTime object.
@@ -75,8 +74,9 @@ public class FhirPathDateTime {
     final String fracGroup = matcher.group("frac");
     final String offsetGroup = matcher.group("offset");
 
-    // special case for the value of hours being 24 which is valid in java 
-    // (represents midnight of the following day) but not in FHIR where hours must be in range [0, 23]
+    // special case for the value of hours being 24 which is valid in java
+    // (represents midnight of the following day) but not in FHIR where hours must be in range [0,
+    // 23]
     if (hoursGroup != null && (Integer.parseInt(hoursGroup) > 23)) {
       throw new DateTimeParseException("Hours must be in range [0, 23]", dateTimeString, 0);
     }
@@ -100,41 +100,28 @@ public class FhirPathDateTime {
     }
 
     // Build a parseable datetime string with defaults for missing components
-    final String parseableDateTime = yearGroup +
-        (monthGroup != null
-         ? "-" + monthGroup
-         : "-01") +
-        (dayGroup != null
-         ? "-" + dayGroup
-         : "-01") +
-        (hoursGroup != null
-         ? "T" + hoursGroup
-         : "T00") +
-        (minutesGroup != null
-         ? ":" + minutesGroup
-         : ":00") +
-        (secondsGroup != null
-         ? ":" + secondsGroup
-         : ":00") +
-        (fracGroup != null
-         ? "." + fracGroup
-         : "") +
-        (offsetGroup != null
-         ? offsetGroup
-         : "Z");
+    final String parseableDateTime =
+        yearGroup
+            + (monthGroup != null ? "-" + monthGroup : "-01")
+            + (dayGroup != null ? "-" + dayGroup : "-01")
+            + (hoursGroup != null ? "T" + hoursGroup : "T00")
+            + (minutesGroup != null ? ":" + minutesGroup : ":00")
+            + (secondsGroup != null ? ":" + secondsGroup : ":00")
+            + (fracGroup != null ? "." + fracGroup : "")
+            + (offsetGroup != null ? offsetGroup : "Z");
     final OffsetDateTime dateTime = OffsetDateTime.parse(parseableDateTime);
     return new FhirPathDateTime(dateTime, precision);
   }
 
   /**
    * Gets the lower boundary for this date/time value based on its precision.
-   * <p>
-   * For example:
-   * </p>
+   *
+   * <p>For example:
+   *
    * <ul>
-   *   <li>2023 (YEAR precision) -> 2023-01-01T00:00:00Z</li>
-   *   <li>2023-06 (MONTH precision) -> 2023-06-01T00:00:00Z</li>
-   *   <li>2023-06-15 (DAY precision) -> 2023-06-15T00:00:00Z</li>
+   *   <li>2023 (YEAR precision) -> 2023-01-01T00:00:00Z
+   *   <li>2023-06 (MONTH precision) -> 2023-06-01T00:00:00Z
+   *   <li>2023-06-15 (DAY precision) -> 2023-06-15T00:00:00Z
    * </ul>
    *
    * @return the lower boundary as an Instant
@@ -147,18 +134,17 @@ public class FhirPathDateTime {
 
   /**
    * Gets the upper boundary for this date/time value based on its precision.
-   * <p>
-   * For example:
-   * </p>
+   *
+   * <p>For example:
+   *
    * <ul>
-   *   <li>2023 (YEAR precision) -> 2023-12-31T23:59:59.999999999Z</li>
-   *   <li>2023-06 (MONTH precision) -> 2023-06-30T23:59:59.999999999Z</li>
-   *   <li>2023-06-15 (DAY precision) -> 2023-06-15T23:59:59.999999999Z</li>
+   *   <li>2023 (YEAR precision) -> 2023-12-31T23:59:59.999999999Z
+   *   <li>2023-06 (MONTH precision) -> 2023-06-30T23:59:59.999999999Z
+   *   <li>2023-06-15 (DAY precision) -> 2023-06-15T23:59:59.999999999Z
    * </ul>
-   * <p>
-   * The maximum precision for upper bound is SECONDS, i.e.:
-   * SECOND for second and FRACS precision upper bound is the same as the lower bound.
-   * </p>
+   *
+   * <p>The maximum precision for upper bound is SECONDS, i.e.: SECOND for second and FRACS
+   * precision upper bound is the same as the lower bound.
    *
    * @return the upper boundary as an Instant
    */
@@ -168,11 +154,11 @@ public class FhirPathDateTime {
     return switch (precision) {
       // seconds and fracs are already represented with the same precisions
       // (i.e: 12:30:45 corresponds to 12:30:45.000000000)
-      // so the upper boundary is the same as the lower boundary 
+      // so the upper boundary is the same as the lower boundary
       case SECOND, FRACS -> value.toInstant();
-      // for everything else we compute the next dateTime at given precision 
+      // for everything else we compute the next dateTime at given precision
       // (e.g. for 2010-10-10T10 + 1 hour  = 2010-10-10T11)
-      // and then decrease it by 1 nanosecond to get the upper bound of the previous period 
+      // and then decrease it by 1 nanosecond to get the upper bound of the previous period
       // (e.g. 2010-10-10T11 - 1 ns = 2010-10-10T10:59:59.999999999)
       // This works because OffsetDateTime does not have the notion of daylight saving time
       // and thus there are no anomalies when adding or subtracting time periods.
@@ -188,8 +174,8 @@ public class FhirPathDateTime {
    * @return a new PartialDateTime with the specified precision
    */
   @Nonnull
-  static FhirPathDateTime fromDateTime(@Nonnull final OffsetDateTime dateTime,
-      @Nonnull final TemporalPrecision precision) {
+  static FhirPathDateTime fromDateTime(
+      @Nonnull final OffsetDateTime dateTime, @Nonnull final TemporalPrecision precision) {
     return new FhirPathDateTime(dateTime, precision);
   }
 

@@ -39,8 +39,8 @@ class R4FhirConversionSupportTest {
   @Test
   void testRewritesResolvedURNReference() {
     final IBaseResource referenceResource = new Patient().setId(new IdType("Patient", "1234"));
-    final Reference urnReference = (Reference) new Reference().setReference("urn:uuid:1234")
-        .setResource(referenceResource);
+    final Reference urnReference =
+        (Reference) new Reference().setReference("urn:uuid:1234").setResource(referenceResource);
     R4FhirConversionSupport.resolveURNReference(urnReference);
     assertEquals("Patient/1234", urnReference.getReference());
   }
@@ -48,8 +48,8 @@ class R4FhirConversionSupportTest {
   @Test
   void testKeepsResolvedURNReferenceWithNoId() {
     final IBaseResource referenceResource = new Patient();
-    final Reference urnReference = (Reference) new Reference().setReference("urn:uuid:1234")
-        .setResource(referenceResource);
+    final Reference urnReference =
+        (Reference) new Reference().setReference("urn:uuid:1234").setResource(referenceResource);
     R4FhirConversionSupport.resolveURNReference(urnReference);
     assertEquals("urn:uuid:1234", urnReference.getReference());
   }
@@ -75,5 +75,4 @@ class R4FhirConversionSupportTest {
     R4FhirConversionSupport.resolveURNReference(nonReference);
     assertTrue(nonReferenceCopy.equalsDeep(nonReference), "Non-reference should not be modified");
   }
-
 }

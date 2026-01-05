@@ -63,46 +63,34 @@ public class Collection implements Equatable {
 
   // Additional mappings for collection classes that don't directly map to FhirPathType
   @Nonnull
-  private static final Map<FHIRDefinedType, Class<? extends Collection>> ADDITIONAL_COLLECTION_MAPPINGS =
-      new ImmutableMap.Builder<FHIRDefinedType, Class<? extends Collection>>()
-          .put(FHIRDefinedType.REFERENCE, ReferenceCollection.class)
-          .put(FHIRDefinedType.NULL, EmptyCollection.class)
-          .build();
+  private static final Map<FHIRDefinedType, Class<? extends Collection>>
+      ADDITIONAL_COLLECTION_MAPPINGS =
+          new ImmutableMap.Builder<FHIRDefinedType, Class<? extends Collection>>()
+              .put(FHIRDefinedType.REFERENCE, ReferenceCollection.class)
+              .put(FHIRDefinedType.NULL, EmptyCollection.class)
+              .build();
 
   // See https://hl7.org/fhir/fhirpath.html#types.
 
-  /**
-   * A {@link Column} representing the result of evaluating this expression.
-   */
-  @Nonnull
-  private final ColumnRepresentation column;
+  /** A {@link Column} representing the result of evaluating this expression. */
+  @Nonnull private final ColumnRepresentation column;
+
+  /** The type of the result of evaluating this expression, if known. */
+  @Nonnull private final Optional<FhirPathType> type;
+
+  /** The FHIR type of the result of evaluating this expression, if there is one. */
+  @Nonnull private final Optional<FHIRDefinedType> fhirType;
+
+  /** The FHIR definition that describes this path, if there is one. */
+  @Nonnull private final Optional<? extends NodeDefinition> definition;
+
+  @Nonnull private final Optional<Column> extensionMapColumn;
 
   /**
-   * The type of the result of evaluating this expression, if known.
-   */
-  @Nonnull
-  private final Optional<FhirPathType> type;
-
-  /**
-   * The FHIR type of the result of evaluating this expression, if there is one.
-   */
-  @Nonnull
-  private final Optional<FHIRDefinedType> fhirType;
-
-  /**
-   * The FHIR definition that describes this path, if there is one.
-   */
-  @Nonnull
-  private final Optional<? extends NodeDefinition> definition;
-
-  @Nonnull
-  private final Optional<Column> extensionMapColumn;
-
-  /**
-   * Builds the appropriate subtype of {@link Collection} based upon the supplied
-   * {@link ElementDefinition}.
-   * <p>
-   * Use this builder when the path may need to be traversable.
+   * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
+   * ElementDefinition}.
+   *
+   * <p>Use this builder when the path may need to be traversable.
    *
    * @param columnRepresentation a {@link Column} containing the result of the expression
    * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
@@ -111,18 +99,19 @@ public class Collection implements Equatable {
    * @throws CollectionConstructionError if there is a problem constructing the collection
    */
   @Nonnull
-  public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static Collection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FHIRDefinedType fhirType,
       @Nonnull final Optional<ElementDefinition> definition) {
-    return getInstance(columnRepresentation, Optional.of(fhirType), definition,
-        Optional.empty());
+    return getInstance(columnRepresentation, Optional.of(fhirType), definition, Optional.empty());
   }
 
   /**
-   * Builds the appropriate subtype of {@link Collection} based upon the supplied
-   * {@link ElementDefinition}.
-   * <p>
-   * Use this builder when the path is the child of another path, and will need to be traversable.
+   * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
+   * ElementDefinition}.
+   *
+   * <p>Use this builder when the path is the child of another path, and will need to be
+   * traversable.
    *
    * @param columnRepresentation a {@link Column} containing the result of the expression
    * @param extensionMapColumn an optional extension map column
@@ -131,13 +120,14 @@ public class Collection implements Equatable {
    * @throws CollectionConstructionError if there is a problem constructing the collection
    */
   @Nonnull
-  public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static Collection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<Column> extensionMapColumn,
       @Nonnull final ElementDefinition definition) {
     final Optional<FHIRDefinedType> optionalFhirType = definition.getFhirType();
     if (optionalFhirType.isPresent()) {
-      return getInstance(columnRepresentation, optionalFhirType, Optional.of(definition),
-          extensionMapColumn);
+      return getInstance(
+          columnRepresentation, optionalFhirType, Optional.of(definition), extensionMapColumn);
     } else {
       throw new IllegalArgumentException(
           "Attempted to build a Collection with an ElementDefinition with no fhirType");
@@ -145,69 +135,77 @@ public class Collection implements Equatable {
   }
 
   /**
-   * Builds the appropriate subtype of {@link Collection} based upon the supplied
-   * {@link FHIRDefinedType}.
-   * <p>
-   * Use this builder when the path is derived, e.g. the result of a function.
+   * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
+   * FHIRDefinedType}.
+   *
+   * <p>Use this builder when the path is derived, e.g. the result of a function.
    *
    * @param columnRepresentation a {@link ColumnRepresentation} containing the result of the
-   * expression
+   *     expression
    * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
    * @return a new {@link Collection}
    * @throws CollectionConstructionError if there is a problem constructing the collection
    */
   @Nonnull
-  public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static Collection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FHIRDefinedType fhirType) {
-    return getInstance(columnRepresentation, Optional.of(fhirType), Optional.empty(),
-        Optional.empty());
+    return getInstance(
+        columnRepresentation, Optional.of(fhirType), Optional.empty(), Optional.empty());
   }
 
   /**
-   * Builds the appropriate subtype of {@link Collection} based upon the supplied
-   * {@link ColumnRepresentation}, {@link FHIRDefinedType} and {@link ElementDefinition}.
+   * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
+   * ColumnRepresentation}, {@link FHIRDefinedType} and {@link ElementDefinition}.
    *
    * @param columnRepresentation a {@link ColumnRepresentation} containing the result of the
-   * expression
+   *     expression
    * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @param extensionMapColumn an optional {@link Column} representing the extension map, if this
-   * path is an extension
+   *     path is an extension
    * @return a new {@link Collection} representing the specified path
    * @throws CollectionConstructionError if there is a problem constructing the collection
    */
   @Nonnull
-  private static Collection getInstance(@Nonnull final ColumnRepresentation columnRepresentation,
+  private static Collection getInstance(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<ElementDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     // Look up the class that represents an element with the specified FHIR type.
-    final FHIRDefinedType resolvedType = fhirType
-        .or(() -> definition.flatMap(ElementDefinition::getFhirType))
-        .orElseThrow(() -> {
-          // Check if this is a choice element selection scenario.
-          if (definition.isPresent() && definition.get().isChoiceElement()) {
-            final String elementName = definition.get().getElementName();
-            return new IllegalArgumentException(
-                "Selection of mixed collection not supported: " + elementName);
-          }
-          return new IllegalArgumentException("Must have a fhirType or a definition");
-        });
-    final Class<? extends Collection> elementPathClass = classForType(
-        resolvedType)
-        .orElse(Collection.class);
+    final FHIRDefinedType resolvedType =
+        fhirType
+            .or(() -> definition.flatMap(ElementDefinition::getFhirType))
+            .orElseThrow(
+                () -> {
+                  // Check if this is a choice element selection scenario.
+                  if (definition.isPresent() && definition.get().isChoiceElement()) {
+                    final String elementName = definition.get().getElementName();
+                    return new IllegalArgumentException(
+                        "Selection of mixed collection not supported: " + elementName);
+                  }
+                  return new IllegalArgumentException("Must have a fhirType or a definition");
+                });
+    final Class<? extends Collection> elementPathClass =
+        classForType(resolvedType).orElse(Collection.class);
     final Optional<FhirPathType> fhirPathType = FhirPathType.forFhirType(resolvedType);
 
     try {
       // Call its constructor and return.
-      final Constructor<? extends Collection> constructor = elementPathClass
-          .getDeclaredConstructor(ColumnRepresentation.class, Optional.class, Optional.class,
-              Optional.class, Optional.class);
-      return constructor
-          .newInstance(columnRepresentation, fhirPathType, fhirType, definition,
-              extensionMapColumn);
-    } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
-                   InvocationTargetException e) {
+      final Constructor<? extends Collection> constructor =
+          elementPathClass.getDeclaredConstructor(
+              ColumnRepresentation.class,
+              Optional.class,
+              Optional.class,
+              Optional.class,
+              Optional.class);
+      return constructor.newInstance(
+          columnRepresentation, fhirPathType, fhirType, definition, extensionMapColumn);
+    } catch (final NoSuchMethodException
+        | InstantiationException
+        | IllegalAccessException
+        | InvocationTargetException e) {
       throw new CollectionConstructionError("Problem building a Collection object", e);
     }
   }
@@ -248,8 +246,8 @@ public class Collection implements Equatable {
   @Nonnull
   public Optional<Collection> traverse(@Nonnull final String elementName) {
     // We use the implementation of getChildElement in the definition to get the child definition.
-    final Optional<ChildDefinition> maybeChildDef = definition.flatMap(
-        def -> def.getChildElement(elementName));
+    final Optional<ChildDefinition> maybeChildDef =
+        definition.flatMap(def -> def.getChildElement(elementName));
 
     // There are two paths here:
     // 1. If the child is an extension, we have special behaviour for traversing to the extension.
@@ -257,7 +255,8 @@ public class Collection implements Equatable {
     return maybeChildDef.flatMap(
         childDef -> {
           if (ExtensionSupport.EXTENSION_ELEMENT_NAME().equals(elementName)) {
-            check(maybeChildDef.get() instanceof ElementDefinition,
+            check(
+                maybeChildDef.get() instanceof ElementDefinition,
                 "Expected an ElementDefinition for an extension");
             return traverseExtension((ElementDefinition) childDef);
           }
@@ -266,8 +265,7 @@ public class Collection implements Equatable {
   }
 
   /**
-   * Return the child {@link Collection} that results from traversing to the given child
-   * definition.
+   * Return the child {@link Collection} that results from traversing to the given child definition.
    *
    * @param childDefinition the child definition
    * @return a new {@link Collection} representing the child element
@@ -275,7 +273,7 @@ public class Collection implements Equatable {
   @Nonnull
   protected Collection traverseChild(@Nonnull final ChildDefinition childDefinition) {
     // There are two paths here:
-    // 1. If the child is a choice, we have special behaviour for traversing to the choice that 
+    // 1. If the child is a choice, we have special behaviour for traversing to the choice that
     //    results in a mixed collection.
     // 2. If the child is a regular element, we use the standard traversal method.
     switch (childDefinition) {
@@ -285,15 +283,16 @@ public class Collection implements Equatable {
       case final ElementDefinition elementChildDefinition -> {
         if (elementChildDefinition.isChoiceElement()) {
           log.warn(
-              "Traversing a choice element `{}` without using ofType() is not portable and may not work in some FHIRPath implementations. "
-                  + "Consider using ofType() to specify the type of element you want to traverse.",
+              "Traversing a choice element `{}` without using ofType() is not portable and may not"
+                  + " work in some FHIRPath implementations. Consider using ofType() to specify the"
+                  + " type of element you want to traverse.",
               elementChildDefinition.getElementName());
         }
         return traverseElement(elementChildDefinition);
       }
       default ->
-          throw new IllegalArgumentException("Unsupported child definition type: " + childDefinition
-              .getClass().getSimpleName());
+          throw new IllegalArgumentException(
+              "Unsupported child definition type: " + childDefinition.getClass().getSimpleName());
     }
   }
 
@@ -307,12 +306,10 @@ public class Collection implements Equatable {
   @Nonnull
   public Collection traverseElement(@Nonnull final ElementDefinition childDef) {
     // Invoke the traversal method on the column context to get the new column.
-    final ColumnRepresentation columnRepresentation = getColumn().traverse(
-        childDef.getElementName(), childDef.getFhirType());
+    final ColumnRepresentation columnRepresentation =
+        getColumn().traverse(childDef.getElementName(), childDef.getFhirType());
     // Return a new Collection with the new column and the child definition.
-    return Collection.build(columnRepresentation,
-        extensionMapColumn,
-        childDef);
+    return Collection.build(columnRepresentation, extensionMapColumn, childDef);
   }
 
   /**
@@ -325,11 +322,15 @@ public class Collection implements Equatable {
   protected Optional<Collection> traverseExtension(
       @Nonnull final ElementDefinition extensionDefinition) {
     return getExtensionMapColumn()
-        .map(em -> Collection.build(
-            new DefaultRepresentation(em).transform(
-                c -> getFid().applyTo(c).removeNulls().getValue()).removeNulls().flatten(),
-            extensionMapColumn,
-            extensionDefinition));
+        .map(
+            em ->
+                Collection.build(
+                    new DefaultRepresentation(em)
+                        .transform(c -> getFid().applyTo(c).removeNulls().getValue())
+                        .removeNulls()
+                        .flatten(),
+                    extensionMapColumn,
+                    extensionDefinition));
   }
 
   /**
@@ -353,11 +354,12 @@ public class Collection implements Equatable {
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
     if (definition.isPresent()) {
       final NodeDefinition definitionValue = definition.get();
-      check(definitionValue instanceof ElementDefinition,
+      check(
+          definitionValue instanceof ElementDefinition,
           "Cannot copy a Collection with a non-ElementDefinition definition");
       final ElementDefinition elementDefinition = (ElementDefinition) definitionValue;
-      return getInstance(newValue, getFhirType(), Optional.of(elementDefinition),
-          extensionMapColumn);
+      return getInstance(
+          newValue, getFhirType(), Optional.of(elementDefinition), extensionMapColumn);
     }
     return getInstance(newValue, getFhirType(), Optional.empty(), extensionMapColumn);
   }
@@ -365,16 +367,15 @@ public class Collection implements Equatable {
   /**
    * Returns a new {@link Collection} with the specified {@link Column}, preserving type and
    * extension information.
-   * <p>
-   * This is a convenience method that wraps the provided column in a {@link DefaultRepresentation}
-   * and creates a new collection while maintaining the FHIR type and extension mapping from the
-   * original collection. This is particularly useful when transforming column data while preserving
-   * the collection's semantic context.
-   * </p>
+   *
+   * <p>This is a convenience method that wraps the provided column in a {@link
+   * DefaultRepresentation} and creates a new collection while maintaining the FHIR type and
+   * extension mapping from the original collection. This is particularly useful when transforming
+   * column data while preserving the collection's semantic context.
    *
    * @param newColumn The new {@link Column} to use as the collection's data
-   * @return A new {@link Collection} with the specified {@link Column} but preserving FHIR type
-   *     and extension information
+   * @return A new {@link Collection} with the specified {@link Column} but preserving FHIR type and
+   *     extension information
    * @throws CollectionConstructionError if there was a problem constructing the collection
    */
   @Nonnull
@@ -389,20 +390,16 @@ public class Collection implements Equatable {
    * @return A new collection representing the filtered elements
    */
   @Nonnull
-  public Collection filter(
-      @Nonnull final ColumnTransform lambda) {
-    return map(
-        ctx -> ctx.filter(col -> lambda.apply(new DefaultRepresentation(col)).getValue()));
+  public Collection filter(@Nonnull final ColumnTransform lambda) {
+    return map(ctx -> ctx.filter(col -> lambda.apply(new DefaultRepresentation(col)).getValue()));
   }
 
   /**
    * Checks if this collection is statically known to be empty.
-   * <p>
-   * This method performs a static type check to determine if the collection is an
-   * {@link EmptyCollection}. It does not evaluate the actual data or count elements
-   * at runtime. A collection that is not statically empty may still contain zero
-   * elements when evaluated.
-   * </p>
+   *
+   * <p>This method performs a static type check to determine if the collection is an {@link
+   * EmptyCollection}. It does not evaluate the actual data or count elements at runtime. A
+   * collection that is not statically empty may still contain zero elements when evaluated.
    *
    * @return {@code true} if this collection is an {@link EmptyCollection}, {@code false} otherwise
    */
@@ -412,12 +409,10 @@ public class Collection implements Equatable {
 
   /**
    * Checks if this collection is statically known to be non-empty.
-   * <p>
-   * This method performs a static type check to determine if the collection is not an
-   * {@link EmptyCollection}. It does not evaluate the actual data or count elements
-   * at runtime. A collection that is statically non-empty may still contain zero
-   * elements when evaluated.
-   * </p>
+   *
+   * <p>This method performs a static type check to determine if the collection is not an {@link
+   * EmptyCollection}. It does not evaluate the actual data or count elements at runtime. A
+   * collection that is statically non-empty may still contain zero elements when evaluated.
    *
    * @return {@code true} if this collection is not an {@link EmptyCollection}, {@code false}
    *     otherwise
@@ -437,7 +432,6 @@ public class Collection implements Equatable {
     return map(cr -> cr.singular(errorMessage));
   }
 
-
   /**
    * Returns a new collection representing the elements of this collection as a singular value.
    *
@@ -448,18 +442,15 @@ public class Collection implements Equatable {
     return map(ColumnRepresentation::singular);
   }
 
-
   /**
    * Returns a new collection representing the elements of this collection as a plural value.
    *
    * @return A new collection representing the elements of this collection as a plural value
    */
-
   @Nonnull
   public Collection asPlural() {
     return map(ColumnRepresentation::plural);
   }
-
 
   /**
    * Returns a new collection with new values determined by the specified lambda.
@@ -468,8 +459,7 @@ public class Collection implements Equatable {
    * @return A new collection with new values determined by the specified lambda
    */
   @Nonnull
-  public Collection map(
-      @Nonnull final ColumnTransform mapper) {
+  public Collection map(@Nonnull final ColumnTransform mapper) {
     return copyWith(mapper.apply(getColumn()));
   }
 
@@ -480,10 +470,8 @@ public class Collection implements Equatable {
    * @param columnMapper The lambda to use for mapping
    * @return A new collection with new values determined by the specified lambda
    */
-
   @Nonnull
-  public Collection mapColumn(
-      @Nonnull final UnaryOperator<Column> columnMapper) {
+  public Collection mapColumn(@Nonnull final UnaryOperator<Column> columnMapper) {
     return map(cr -> cr.map(columnMapper));
   }
 
@@ -518,18 +506,18 @@ public class Collection implements Equatable {
    *
    * @param type The type of element to return
    * @return A new collection representing just the elements of this collection with the specified
-   * type
+   *     type
    */
   @Nonnull
   public Collection filterByType(@Nonnull final TypeSpecifier type) {
-    final Optional<Collection> maybeCollection = switch (type.getNamespace()) {
-      case SYSTEM_NAMESPACE -> getType().filter(type.toSystemType()::equals).map(t -> this);
-      case FHIR_NAMESPACE -> getFhirType().filter(type.toFhirType()::equals).map(t -> this);
-      default -> Optional.empty();
-    };
+    final Optional<Collection> maybeCollection =
+        switch (type.getNamespace()) {
+          case SYSTEM_NAMESPACE -> getType().filter(type.toSystemType()::equals).map(t -> this);
+          case FHIR_NAMESPACE -> getFhirType().filter(type.toFhirType()::equals).map(t -> this);
+          default -> Optional.empty();
+        };
     return maybeCollection.orElse(EmptyCollection.getInstance());
   }
-
 
   /**
    * Gets a user-friendly representation of the current collection that can be used to refer to it
@@ -552,8 +540,11 @@ public class Collection implements Equatable {
   public Optional<TerminologyConcepts> toConcepts() {
     return getFhirType()
         .filter(FHIRDefinedType.CODEABLECONCEPT::equals)
-        .map(t -> TerminologyConcepts.union(getColumn().getField("coding"),
-            (CodingCollection) traverse("coding").orElseThrow()));
+        .map(
+            t ->
+                TerminologyConcepts.union(
+                    getColumn().getField("coding"),
+                    (CodingCollection) traverse("coding").orElseThrow()));
   }
 
   /**
@@ -590,24 +581,24 @@ public class Collection implements Equatable {
 
   /**
    * Casts this collection to the type of another collection.
-   * <p>
-   * This method attempts to cast the current collection to match the type of the provided
+   *
+   * <p>This method attempts to cast the current collection to match the type of the provided
    * collection. The cast will only succeed if the current collection is convertible to the target
    * collection type as determined by the {@link #convertibleTo(Collection)} method.
    *
    * @param other The collection whose type to cast to
    * @return A new collection with the same values but cast to the type of the other collection
    * @throws IllegalArgumentException If this collection cannot be cast to the type of the other
-   * collection
+   *     collection
    */
   @Nonnull
   public Collection castAs(@Nonnull final Collection other) {
     if (typeEquivalentWith(other)) {
       return this;
     } else if (convertibleTo(other)) {
-      return other.getType()
-          .map(castType ->
-              other.map(t -> this.getColumn().elementCast(castType.getSqlDataType())))
+      return other
+          .getType()
+          .map(castType -> other.map(t -> this.getColumn().elementCast(castType.getSqlDataType())))
           .orElse(this);
     } else {
       throw new IllegalArgumentException("Cannot cast " + this + " to " + other);
@@ -633,7 +624,6 @@ public class Collection implements Equatable {
     return asSingular().map(ColumnRepresentation::toBoolean, BooleanCollection::build);
   }
 
-
   /**
    * Creates a new collection from the given FHIR resource value.
    *
@@ -646,13 +636,14 @@ public class Collection implements Equatable {
     final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(value.fhirType());
 
     // Get the collection class for the FHIR type.
-    final Class<? extends Collection> collectionClass = Collection.classForType(fhirType)
-        .orElseThrow(() ->
-            new InvalidUserInputError("Unsupported constant type: " + fhirType.toCode()));
+    final Class<? extends Collection> collectionClass =
+        Collection.classForType(fhirType)
+            .orElseThrow(
+                () -> new InvalidUserInputError("Unsupported constant type: " + fhirType.toCode()));
     try {
       // Invoke the fromValue method on the collection class to get the return value.
-      final Object returnValue = collectionClass.getMethod("fromValue", value.getClass())
-          .invoke(null, value);
+      final Object returnValue =
+          collectionClass.getMethod("fromValue", value.getClass()).invoke(null, value);
       check(returnValue instanceof Collection);
       return (Collection) returnValue;
     } catch (final IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {

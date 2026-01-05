@@ -45,14 +45,14 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
  *
  * @author John Grimes
  */
-public class IntegerCollection extends Collection implements Comparable, Numeric, StringCoercible,
-    Materializable {
+public class IntegerCollection extends Collection
+    implements Comparable, Numeric, StringCoercible, Materializable {
 
-  private static final Set<FHIRDefinedType> INTEGER_TYPES = Set.of(FHIRDefinedType.INTEGER,
-      FHIRDefinedType.UNSIGNEDINT, FHIRDefinedType.POSITIVEINT);
+  private static final Set<FHIRDefinedType> INTEGER_TYPES =
+      Set.of(FHIRDefinedType.INTEGER, FHIRDefinedType.UNSIGNEDINT, FHIRDefinedType.POSITIVEINT);
 
-  private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
-      .of(IntegerCollection.class, DecimalCollection.class);
+  private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES =
+      ImmutableSet.of(IntegerCollection.class, DecimalCollection.class);
 
   /**
    * Creates a new IntegerCollection.
@@ -63,17 +63,19 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
    * @param definition the node definition
    * @param extensionMapColumn the extension map column
    */
-  protected IntegerCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  protected IntegerCollection(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
-    fhirType.ifPresent(t -> {
-      if (!INTEGER_TYPES.contains(t)) {
-        throw new IllegalArgumentException("FHIR type must be an integer type");
-      }
-    });
+    fhirType.ifPresent(
+        t -> {
+          if (!INTEGER_TYPES.contains(t)) {
+            throw new IllegalArgumentException("FHIR type must be an integer type");
+          }
+        });
   }
 
   /**
@@ -84,10 +86,15 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
    * @return A new instance of {@link IntegerCollection}
    */
   @Nonnull
-  public static IntegerCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static IntegerCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new IntegerCollection(columnRepresentation, Optional.of(FhirPathType.INTEGER),
-        Optional.of(FHIRDefinedType.INTEGER), definition, Optional.empty());
+    return new IntegerCollection(
+        columnRepresentation,
+        Optional.of(FhirPathType.INTEGER),
+        Optional.of(FHIRDefinedType.INTEGER),
+        definition,
+        Optional.empty());
   }
 
   /**
@@ -103,9 +110,9 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
 
   /**
    * Returns a new instance based upon a literal represented by an {@link IntegerType}.
-   * <p>
-   * This is required for the reflection-based instantiation of collections used in
-   * {@link au.csiro.pathling.projection.ProjectionContext#of}.
+   *
+   * <p>This is required for the reflection-based instantiation of collections used in {@link
+   * au.csiro.pathling.projection.ProjectionContext#of}.
    *
    * @param value The value to use
    * @return A new instance of {@link IntegerCollection}
@@ -196,12 +203,12 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
    *
    * @param source The left operand for the operation
    * @param operation The type of {@link au.csiro.pathling.fhirpath.Numeric.MathOperation}
-   * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a
-   * {@link Collection}
+   * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a {@link
+   *     Collection}
    */
   @Nonnull
-  public static Function<Numeric, Collection> buildMathOperation(@Nonnull final Numeric source,
-      @Nonnull final MathOperation operation) {
+  public static Function<Numeric, Collection> buildMathOperation(
+      @Nonnull final Numeric source, @Nonnull final MathOperation operation) {
     return target -> {
       final Column sourceNumeric = checkPresent(source.getNumericValue());
       final Column targetNumeric = checkPresent(target.getNumericValue());
@@ -214,9 +221,8 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
           }
           return IntegerCollection.build(new DefaultRepresentation(valueColumn));
         case DIVISION:
-          final Column numerator = source.getColumn()
-              .elementCast(DecimalCollection.getDecimalType())
-              .getValue();
+          final Column numerator =
+              source.getColumn().elementCast(DecimalCollection.getDecimalType()).getValue();
           valueColumn = operation.getSparkFunction().apply(numerator, targetNumeric);
           return DecimalCollection.build(new DefaultRepresentation(valueColumn));
         default:
@@ -239,7 +245,8 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
 
   @Override
   public boolean convertibleTo(@Nonnull final Collection other) {
-    return other.getFhirType()
+    return other
+        .getFhirType()
         .filter(t -> t == FHIRDefinedType.DECIMAL || t == FHIRDefinedType.QUANTITY)
         .map(t -> true)
         .orElseGet(() -> super.convertibleTo(other));
@@ -247,7 +254,8 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
 
   @Override
   public @Nonnull Collection castAs(@Nonnull final Collection other) {
-    return other.getType()
+    return other
+        .getType()
         .filter(FhirPathType.QUANTITY::equals)
         .map(t -> (Collection) QuantityCollection.fromNumeric(this.getColumn()))
         .orElseGet(() -> super.castAs(other));

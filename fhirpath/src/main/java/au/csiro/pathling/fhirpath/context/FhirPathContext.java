@@ -30,38 +30,23 @@ import lombok.Value;
 @Value(staticConstructor = "of")
 public class FhirPathContext {
 
-  /**
-   * The name of the variable representing the resource being processed.
-   */
+  /** The name of the variable representing the resource being processed. */
   public static final String RESOURCE_VARIABLE_NAME = "resource";
 
-  /**
-   * The name of the variable representing the root resource in the context.
-   */
+  /** The name of the variable representing the root resource in the context. */
   public static final String ROOT_RESOURCE_VARIABLE_NAME = "rootResource";
 
-  /**
-   * The name of the variable representing the input context.
-   */
+  /** The name of the variable representing the input context. */
   public static final String CONTEXT_VARIABLE_NAME = "context";
 
-  /**
-   * The collection of resources being processed.
-   */
-  @Nonnull
-  ResourceCollection resource;
+  /** The collection of resources being processed. */
+  @Nonnull ResourceCollection resource;
 
-  /**
-   * The input context for the evaluation.
-   */
-  @Nonnull
-  Collection inputContext;
+  /** The input context for the evaluation. */
+  @Nonnull Collection inputContext;
 
-  /**
-   * A resolver for environment variables.
-   */
-  @Nonnull
-  EnvironmentVariableResolver variables;
+  /** A resolver for environment variables. */
+  @Nonnull EnvironmentVariableResolver variables;
 
   /**
    * Resolves a variable by its name.
@@ -76,7 +61,8 @@ public class FhirPathContext {
     } else if (name.equals(RESOURCE_VARIABLE_NAME) || name.equals(ROOT_RESOURCE_VARIABLE_NAME)) {
       return resource;
     } else {
-      return variables.get(name)
+      return variables
+          .get(name)
           .orElseThrow(() -> new IllegalArgumentException("Unknown variable: " + name));
     }
   }

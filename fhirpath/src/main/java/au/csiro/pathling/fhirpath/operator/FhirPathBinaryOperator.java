@@ -37,7 +37,6 @@ public interface FhirPathBinaryOperator {
   @Nonnull
   Collection invoke(@Nonnull BinaryOperatorInput input);
 
-
   /**
    * Gets the name of this operator, typically the simple class name.
    *
@@ -56,8 +55,8 @@ public interface FhirPathBinaryOperator {
    * @return A pair of collections that can be reconciled to a common type
    */
   @Nonnull
-  static Pair<Collection, Collection> reconcileTypes(@Nonnull final Collection left,
-      @Nonnull final Collection right) {
+  static Pair<Collection, Collection> reconcileTypes(
+      @Nonnull final Collection left, @Nonnull final Collection right) {
     // finds if left and right elements can be reconciled to a common type
     if (right.convertibleTo(left)) {
       return Pair.of(left, right.castAs(left));

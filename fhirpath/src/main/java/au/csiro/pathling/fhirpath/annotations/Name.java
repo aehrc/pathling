@@ -32,5 +32,4 @@ public @interface Name {
    * @return The name of the function
    */
   String value();
-
 }

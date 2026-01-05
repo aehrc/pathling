@@ -30,12 +30,11 @@ import java.util.Optional;
  * @author John Grimes
  * @see <a href="https://hl7.org/fhirpath/#environment-variables">FHIRPath environment variables</a>
  * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#variables">FHIR-specific environment
- * variables</a>
+ *     variables</a>
  */
 public record ContextVariableResolver(
-    @Nonnull ResourceCollection resource,
-    @Nonnull Collection inputContext
-) implements EnvironmentVariableResolver {
+    @Nonnull ResourceCollection resource, @Nonnull Collection inputContext)
+    implements EnvironmentVariableResolver {
 
   @Override
   public Optional<Collection> get(@Nonnull final String name) {
@@ -47,5 +46,4 @@ public record ContextVariableResolver(
       return Optional.empty();
     }
   }
-
 }

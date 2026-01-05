@@ -26,11 +26,10 @@ import org.apache.spark.sql.Column;
 /**
  * An interface for collections that can be converted to an external value suitable for Spark SQL
  * operations.
- * <p>
- * This interface is intended for collections that can be represented as a column in a Spark
+ *
+ * <p>This interface is intended for collections that can be represented as a column in a Spark
  * DataFrame. Implementations should provide a way to convert the collection into a Spark SQL
  * column.
- * </p>
  *
  * @see Collection
  */
@@ -38,9 +37,9 @@ public interface Materializable {
 
   /**
    * Converts this collection to an external value that can be used in Spark SQL operations.
-   * <p>
-   * The default implementation returns the raw column value, but implementations can override this
-   * to provide custom conversion logic.
+   *
+   * <p>The default implementation returns the raw column value, but implementations can override
+   * this to provide custom conversion logic.
    *
    * @return A Spark SQL column representing the external value of this collection
    */
@@ -59,14 +58,14 @@ public interface Materializable {
 
   /**
    * Gets the external value of a collection.
-   * <p>
-   * If the collection implements {@link Materializable}, its {@link #toExternalValue()} method is
-   * called. Otherwise, an exception is thrown.
+   *
+   * <p>If the collection implements {@link Materializable}, its {@link #toExternalValue()} method
+   * is called. Otherwise, an exception is thrown.
    *
    * @param collection The collection to get the external value from
    * @return A Spark SQL column representing the external value of the collection
-   * @throws UnsupportedOperationException If the collection does not implement
-   * {@link Materializable}
+   * @throws UnsupportedOperationException If the collection does not implement {@link
+   *     Materializable}
    */
   @Nonnull
   static Column getExternalValue(@Nonnull final Collection collection) {

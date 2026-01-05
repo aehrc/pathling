@@ -25,24 +25,23 @@ import java.util.stream.Stream;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
-class EncodeBundleMapPartitions<T extends IBaseResource> extends
-    EncodeMapPartitions<T> {
+class EncodeBundleMapPartitions<T extends IBaseResource> extends EncodeMapPartitions<T> {
 
-  @Serial
-  private static final long serialVersionUID = -4264073360143318480L;
+  @Serial private static final long serialVersionUID = -4264073360143318480L;
 
-  EncodeBundleMapPartitions(final FhirVersionEnum fhirVersion, final String inputMimeType,
-      final Class<T> resourceClass) {
+  EncodeBundleMapPartitions(
+      final FhirVersionEnum fhirVersion, final String inputMimeType, final Class<T> resourceClass) {
     super(fhirVersion, inputMimeType, resourceClass);
   }
 
   @Nonnull
   @Override
-  protected Stream<IBaseResource> processResources(
-      @Nonnull final Stream<IBaseResource> resources) {
+  protected Stream<IBaseResource> processResources(@Nonnull final Stream<IBaseResource> resources) {
     final FhirConversionSupport conversionSupport = FhirConversionSupport.supportFor(fhirVersion);
     return resources.flatMap(
-        maybeBundle -> conversionSupport.extractEntryFromBundle((IBaseBundle) maybeBundle,
-            resourceClass).stream());
+        maybeBundle ->
+            conversionSupport
+                .extractEntryFromBundle((IBaseBundle) maybeBundle, resourceClass)
+                .stream());
   }
 }

@@ -32,20 +32,15 @@ class FhirViewExecutorTest {
   @Test
   void failsWhenInvalidView() {
     // Create an invalid view with an empty select list
-    final FhirView view = FhirView.ofResource("Patient")
-        .build();
+    final FhirView view = FhirView.ofResource("Patient").build();
 
-    final FhirViewExecutor executor = new FhirViewExecutor(
-        mock(FhirContext.class),
-        mock(SparkSession.class),
-        mock(DataSource.class));
+    final FhirViewExecutor executor =
+        new FhirViewExecutor(
+            mock(FhirContext.class), mock(SparkSession.class), mock(DataSource.class));
 
-    final ConstraintViolationException ex = assertThrows(
-        ConstraintViolationException.class,
-        () -> executor.buildQuery(view));
+    final ConstraintViolationException ex =
+        assertThrows(ConstraintViolationException.class, () -> executor.buildQuery(view));
 
-    assertEquals(
-        "Valid SQL on FHIR view: select: must not be empty",
-        ex.getMessage());
+    assertEquals("Valid SQL on FHIR view: select: must not be empty", ex.getMessage());
   }
 }

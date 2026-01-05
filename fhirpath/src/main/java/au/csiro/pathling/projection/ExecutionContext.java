@@ -25,11 +25,7 @@ import org.apache.spark.sql.SparkSession;
  *
  * @param spark The {@link SparkSession} for building and executing Spark queries.
  * @param fhirpathEvaluatorFactory The {@link FhirPathEvaluator.Factory} for producing FHIRPath
- * evaluators.
+ *     evaluators.
  */
 public record ExecutionContext(
-    SparkSession spark,
-    FhirPathEvaluator.Factory fhirpathEvaluatorFactory
-) {
-
-}
+    SparkSession spark, FhirPathEvaluator.Factory fhirpathEvaluatorFactory) {}

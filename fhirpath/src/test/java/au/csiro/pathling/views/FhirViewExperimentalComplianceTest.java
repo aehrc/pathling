@@ -22,13 +22,12 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-
 @Disabled
 public class FhirViewExperimentalComplianceTest extends FhirViewTest {
 
   @RegisterExtension
-  static final Extension JSON_REPORTING_EXTENSION = new JsonReportingExtension(
-      "target/fhir-view-compliance-test_experimental.json");
+  static final Extension JSON_REPORTING_EXTENSION =
+      new JsonReportingExtension("target/fhir-view-compliance-test_experimental.json");
 
   public FhirViewExperimentalComplianceTest() {
     super("classpath:tests/sql-on-fhir/*.json", Set.of("experimental"));

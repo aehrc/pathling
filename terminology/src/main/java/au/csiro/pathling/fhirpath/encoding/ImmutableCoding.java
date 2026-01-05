@@ -33,44 +33,27 @@ import org.hl7.fhir.r4.model.Coding;
  *
  * @author Piotr Szul
  */
-
 @AllArgsConstructor(staticName = "of")
 @ToString
 @Getter
 public class ImmutableCoding implements Serializable {
 
-  @Serial
-  private static final long serialVersionUID = -2461921559175440312L;
+  @Serial private static final long serialVersionUID = -2461921559175440312L;
 
-  /**
-   * The coding system URI.
-   */
-  @Nullable
-  private final String system;
+  /** The coding system URI. */
+  @Nullable private final String system;
 
-  /**
-   * The version of the coding system.
-   */
-  @Nullable
-  private final String version;
+  /** The version of the coding system. */
+  @Nullable private final String version;
 
-  /**
-   * The code value.
-   */
-  @Nullable
-  private final String code;
+  /** The code value. */
+  @Nullable private final String code;
 
-  /**
-   * The display text for the code.
-   */
-  @Nullable
-  private final String display;
+  /** The display text for the code. */
+  @Nullable private final String display;
 
-  /**
-   * Whether the code was user selected.
-   */
-  @Nullable
-  protected final Boolean userSelected;
+  /** Whether the code was user selected. */
+  @Nullable protected final Boolean userSelected;
 
   /**
    * Conversion to fhir Coding.
@@ -79,10 +62,9 @@ public class ImmutableCoding implements Serializable {
    */
   @Nonnull
   public Coding toCoding() {
-    return new Coding(system, code, display).setVersion(version).setUserSelectedElement(
-        userSelected != null
-        ? new BooleanType(userSelected)
-        : null);
+    return new Coding(system, code, display)
+        .setVersion(version)
+        .setUserSelectedElement(userSelected != null ? new BooleanType(userSelected) : null);
   }
 
   /**
@@ -93,10 +75,12 @@ public class ImmutableCoding implements Serializable {
    */
   @Nonnull
   public static ImmutableCoding of(@Nonnull final Coding coding) {
-    return ImmutableCoding.of(coding.getSystem(), coding.getVersion(), coding.getCode(),
-        coding.getDisplay(), coding.hasUserSelected()
-                             ? coding.getUserSelected()
-                             : null);
+    return ImmutableCoding.of(
+        coding.getSystem(),
+        coding.getVersion(),
+        coding.getCode(),
+        coding.getDisplay(),
+        coding.hasUserSelected() ? coding.getUserSelected() : null);
   }
 
   /**
@@ -108,8 +92,8 @@ public class ImmutableCoding implements Serializable {
    * @return the immutable coding with desired properties.
    */
   @Nonnull
-  public static ImmutableCoding of(@Nonnull final String system, @Nonnull final String code,
-      @Nonnull final String display) {
+  public static ImmutableCoding of(
+      @Nonnull final String system, @Nonnull final String code, @Nonnull final String display) {
     return ImmutableCoding.of(system, null, code, display, null);
   }
 
@@ -132,13 +116,13 @@ public class ImmutableCoding implements Serializable {
       return false;
     }
     final ImmutableCoding that = (ImmutableCoding) o;
-    return Objects.equals(system, that.system) && Objects.equals(version,
-        that.version) && Objects.equals(code, that.code);
+    return Objects.equals(system, that.system)
+        && Objects.equals(version, that.version)
+        && Objects.equals(code, that.code);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(system, version, code);
   }
-
 }

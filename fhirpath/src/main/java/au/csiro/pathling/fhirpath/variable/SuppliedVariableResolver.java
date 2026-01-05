@@ -28,13 +28,12 @@ import java.util.Optional;
  * @param variables a map of variable names to collections of values
  * @author John Grimes
  */
-public record SuppliedVariableResolver(@Nonnull Map<String, Collection> variables) implements
-    EnvironmentVariableResolver {
+public record SuppliedVariableResolver(@Nonnull Map<String, Collection> variables)
+    implements EnvironmentVariableResolver {
 
   @Nonnull
   @Override
   public Optional<Collection> get(@Nonnull final String name) {
     return Optional.ofNullable(variables.get(name));
   }
-
 }

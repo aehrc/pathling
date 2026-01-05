@@ -28,17 +28,14 @@ import java.util.List;
  *
  * @param context Context and dependencies for use in evaluating the function.
  * @param input The collection that is the input to the function, i.e. the result of the evaluation
- * of the expression on the left-hand side of the dot preceding the function invocation, or the
- * left-hand operand in the case of an operator.
+ *     of the expression on the left-hand side of the dot preceding the function invocation, or the
+ *     left-hand operand in the case of an operator.
  * @param arguments A list of expressions representing the arguments to the function, i.e. the
- * expressions inside the parentheses following the function invocation, separated by commas, or the
- * right-hand operand in the case of an operator.
+ *     expressions inside the parentheses following the function invocation, separated by commas, or
+ *     the right-hand operand in the case of an operator.
  * @author John Grimes
  */
 public record FunctionInput(
     @Nonnull EvaluationContext context,
     @Nonnull Collection input,
-    @Nonnull List<FhirPath> arguments
-) {
-
-}
+    @Nonnull List<FhirPath> arguments) {}

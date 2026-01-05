@@ -27,12 +27,14 @@ import org.apache.spark.sql.types.DataType;
 
 /**
  * Spark UDF to parse a FHIRPath quantity literal string to a Quantity struct.
- * <p>
- * Parses strings matching the FHIRPath quantity literal format:
+ *
+ * <p>Parses strings matching the FHIRPath quantity literal format:
+ *
  * <ul>
  *   <li>UCUM units: {@code "value 'unit'"} (e.g., {@code "10 'mg'"}, {@code "1.5 'kg'"})
  *   <li>Calendar duration units: {@code "value unit"} (e.g., {@code "4 days"}, {@code "1 year"})
  * </ul>
+ *
  * Returns null if the string cannot be parsed as a valid quantity.
  *
  * @see FhirPathQuantity#parse(String)
@@ -40,13 +42,10 @@ import org.apache.spark.sql.types.DataType;
  */
 public class StringToQuantity implements SqlFunction1<String, Row> {
 
-  /**
-   * The name of this function when used within SQL.
-   */
+  /** The name of this function when used within SQL. */
   public static final String FUNCTION_NAME = "string_to_quantity";
 
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   @Override
   public String getName() {

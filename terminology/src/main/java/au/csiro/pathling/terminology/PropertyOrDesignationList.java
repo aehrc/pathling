@@ -30,6 +30,5 @@ import java.util.ArrayList;
  */
 public class PropertyOrDesignationList extends ArrayList<PropertyOrDesignation> {
 
-  @Serial
-  private static final long serialVersionUID = 5991920759756980001L;
+  @Serial private static final long serialVersionUID = 5991920759756980001L;
 }

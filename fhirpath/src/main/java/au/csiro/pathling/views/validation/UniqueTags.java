@@ -46,7 +46,8 @@ public @interface UniqueTags {
    *
    * @return the error message
    */
-  String message() default "List must not contain more than one tag with the same name from the restricted list";
+  String message() default
+      "List must not contain more than one tag with the same name from the restricted list";
 
   /**
    * The validation groups.

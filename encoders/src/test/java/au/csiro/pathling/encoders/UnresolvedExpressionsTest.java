@@ -59,14 +59,13 @@ class UnresolvedExpressionsTest {
 
   @Test
   void testUnresolvedNullIfMissingField() {
-    final UnresolvedNullIfMissingField unresolvedNullIfMissingField = new UnresolvedNullIfMissingField(
-        stringLiteral("data1")
-    );
+    final UnresolvedNullIfMissingField unresolvedNullIfMissingField =
+        new UnresolvedNullIfMissingField(stringLiteral("data1"));
     assertUnresolvedExpression(unresolvedNullIfMissingField);
     assertEquals("data1", unresolvedNullIfMissingField.toString());
-    assertEquals(new UnresolvedNullIfMissingField(stringLiteral("data2")),
-        unresolvedNullIfMissingField.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2")))
-    );
+    assertEquals(
+        new UnresolvedNullIfMissingField(stringLiteral("data2")),
+        unresolvedNullIfMissingField.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2"))));
   }
 
   @Test
@@ -75,16 +74,13 @@ class UnresolvedExpressionsTest {
     final Function1<Expression, Expression> extractor = x -> x;
     final Function1<Expression, Expression> traversor = x -> x;
 
-    final UnresolvedTransformTree unresolvedTransformTree = new UnresolvedTransformTree(
-        stringLiteral("data1"), extractor, toIndexedSeq(traversor), 2
-    );
+    final UnresolvedTransformTree unresolvedTransformTree =
+        new UnresolvedTransformTree(stringLiteral("data1"), extractor, toIndexedSeq(traversor), 2);
     assertUnresolvedExpression(unresolvedTransformTree);
     assertEquals("data1", unresolvedTransformTree.toString());
 
     assertEquals(
-        new UnresolvedTransformTree(
-            stringLiteral("data2"), extractor, toIndexedSeq(traversor), 2),
-        unresolvedTransformTree.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2")))
-    );
+        new UnresolvedTransformTree(stringLiteral("data2"), extractor, toIndexedSeq(traversor), 2),
+        unresolvedTransformTree.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2"))));
   }
 }

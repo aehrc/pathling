@@ -24,9 +24,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 
-/**
- * Represents a component of an abstract query for projecting FHIR data.
- */
+/** Represents a component of an abstract query for projecting FHIR data. */
 public interface ProjectionClause {
 
   /**
@@ -41,11 +39,10 @@ public interface ProjectionClause {
   /**
    * Converts this projection clause into a column operator that can be applied to individual
    * elements in a collection.
-   * <p>
-   * This is useful for per-element evaluation in transformations like unnesting and recursive
+   *
+   * <p>This is useful for per-element evaluation in transformations like unnesting and recursive
    * traversal. The returned operator evaluates this projection clause using the provided column as
    * input context.
-   * </p>
    *
    * @param context The projection context containing execution environment
    * @return A unary operator that takes a column and returns the projection result column
@@ -54,7 +51,6 @@ public interface ProjectionClause {
   default UnaryOperator<Column> asColumnOperator(@Nonnull final ProjectionContext context) {
     return column -> evaluate(context.withInputColumn(column)).getResultColumn();
   }
-
 
   /**
    * Evaluates this projection clause element-wise on the input column in the provided context.
@@ -72,10 +68,9 @@ public interface ProjectionClause {
 
   /**
    * Returns a stream of child projection clauses.
-   * <p>
-   * The default implementation returns an empty stream for leaf nodes. Implementations with
+   *
+   * <p>The default implementation returns an empty stream for leaf nodes. Implementations with
    * children should override this method.
-   * </p>
    *
    * @return a stream of child projection clauses
    */
@@ -86,15 +81,13 @@ public interface ProjectionClause {
 
   /**
    * Returns an expression string representation of this clause.
-   * <p>
-   * Used by {@link #toExpressionTree(int)} to display this node in the tree.
-   * </p>
+   *
+   * <p>Used by {@link #toExpressionTree(int)} to display this node in the tree.
    *
    * @return a string representation of this clause's expression
    */
   @Nonnull
   String toExpression();
-
 
   /**
    * Returns a tree-like string representation of this clause for debugging purposes.
@@ -108,10 +101,9 @@ public interface ProjectionClause {
 
   /**
    * Returns a tree-like string representation of this clause for debugging purposes.
-   * <p>
-   * The default implementation uses {@link #toExpression()} for this node and recursively calls
+   *
+   * <p>The default implementation uses {@link #toExpression()} for this node and recursively calls
    * itself on children from {@link #getChildren()}.
-   * </p>
    *
    * @param level the indentation level for the tree structure
    * @return a formatted tree string representation
@@ -119,14 +111,14 @@ public interface ProjectionClause {
   @Nonnull
   default String toExpressionTree(final int level) {
     final String indent = "  ".repeat(level);
-    final String childrenStr = getChildren()
-        .map(child -> child.toExpressionTree(level + 1))
-        .collect(Collectors.joining("\n"));
+    final String childrenStr =
+        getChildren()
+            .map(child -> child.toExpressionTree(level + 1))
+            .collect(Collectors.joining("\n"));
 
     if (childrenStr.isEmpty()) {
       return indent + toExpression();
     }
     return indent + toExpression() + "\n" + childrenStr;
   }
-
 }

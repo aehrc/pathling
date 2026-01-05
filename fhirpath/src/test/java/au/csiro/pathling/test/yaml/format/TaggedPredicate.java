@@ -29,11 +29,9 @@ import lombok.Value;
 @Value(staticConstructor = "of")
 class TaggedPredicate implements Predicate<TestCase> {
 
-  @Nonnull
-  Predicate<TestCase> predicate;
+  @Nonnull Predicate<TestCase> predicate;
 
-  @Nonnull
-  String tag;
+  @Nonnull String tag;
 
   @Override
   public boolean test(final TestCase testCase) {
@@ -47,8 +45,10 @@ class TaggedPredicate implements Predicate<TestCase> {
   }
 
   @Nonnull
-  static TaggedPredicate of(@Nonnull final Predicate<TestCase> predicate,
-      @Nonnull final String title, @Nonnull final String category) {
+  static TaggedPredicate of(
+      @Nonnull final Predicate<TestCase> predicate,
+      @Nonnull final String title,
+      @Nonnull final String category) {
     try {
       // Create a MessageDigest instance for MD5
       final MessageDigest digest = MessageDigest.getInstance("MD5");
@@ -56,8 +56,8 @@ class TaggedPredicate implements Predicate<TestCase> {
       final String data = category + title;
       final byte[] hashBytes = digest.digest(data.getBytes(StandardCharsets.UTF_8));
       // Convert the hash bytes to a hexadecimal string
-      return TaggedPredicate.of(predicate,
-          DatatypeConverter.printHexBinary(hashBytes).toLowerCase());
+      return TaggedPredicate.of(
+          predicate, DatatypeConverter.printHexBinary(hashBytes).toLowerCase());
     } catch (final NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
     }

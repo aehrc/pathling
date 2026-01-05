@@ -26,15 +26,15 @@ import jakarta.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
-
 /**
  * Represents a FHIR view query that can be configured and executed to extract structured data from
  * FHIR resources.
- * <p>
- * The query can be configured in two ways:
+ *
+ * <p>The query can be configured in two ways:
+ *
  * <ul>
- *   <li>Using a JSON string representation of the view via {@link #json(String)}</li>
- *   <li>Using a {@link FhirView} object directly via {@link #view(FhirView)}</li>
+ *   <li>Using a JSON string representation of the view via {@link #json(String)}
+ *   <li>Using a {@link FhirView} object directly via {@link #view(FhirView)}
  * </ul>
  *
  * @author John Grimes
@@ -44,11 +44,9 @@ import org.apache.spark.sql.Row;
  */
 public class FhirViewQuery extends QueryBuilder {
 
-  @Nonnull
-  private final Gson gson;
+  @Nonnull private final Gson gson;
 
-  @Nullable
-  private FhirView fhirView;
+  @Nullable private FhirView fhirView;
 
   /**
    * Creates a new FhirViewQuery instance.
@@ -57,20 +55,22 @@ public class FhirViewQuery extends QueryBuilder {
    * @param subjectResource the primary FHIR resource type being queried
    * @param gson the Gson instance used for JSON serialization/deserialization
    */
-  public FhirViewQuery(@Nonnull final QueryDispatcher dispatcher,
-      @Nonnull final String subjectResource, @Nonnull final Gson gson) {
+  public FhirViewQuery(
+      @Nonnull final QueryDispatcher dispatcher,
+      @Nonnull final String subjectResource,
+      @Nonnull final Gson gson) {
     super(dispatcher, subjectResource);
     this.gson = gson;
   }
 
   /**
    * Configures the query using a JSON string representation of the FHIR view.
-   * <p>
-   * This method deserializes the JSON string into a {@link FhirView} object and validates its
+   *
+   * <p>This method deserializes the JSON string into a {@link FhirView} object and validates its
    * structure. The JSON should conform to the FhirView schema, defining the resource type, select
    * clauses, where conditions, and other view configuration.
-   * <p>
-   * If the JSON is null, the view configuration remains unchanged.
+   *
+   * <p>If the JSON is null, the view configuration remains unchanged.
    *
    * @param json the JSON string representation of the FHIR view, or null
    * @return this query instance for method chaining
@@ -87,8 +87,8 @@ public class FhirViewQuery extends QueryBuilder {
 
   /**
    * Configures the query using a {@link FhirView} object directly.
-   * <p>
-   * This method sets the FHIR view configuration directly using a FhirView object. The view is
+   *
+   * <p>This method sets the FHIR view configuration directly using a FhirView object. The view is
    * validated to ensure it has a valid structure and configuration. This is the preferred method
    * when the view is constructed programmatically rather than from JSON.
    *
@@ -105,14 +105,14 @@ public class FhirViewQuery extends QueryBuilder {
 
   /**
    * Executes the configured FHIR view query and returns the results.
-   * <p>
-   * This method dispatches the configured view to the query dispatcher for execution against the
+   *
+   * <p>This method dispatches the configured view to the query dispatcher for execution against the
    * FHIR data source. The result is a Spark Dataset containing rows of extracted data according to
    * the view's select clauses and filtering conditions.
    *
    * @return a Spark Dataset containing the query results
    * @throws IllegalStateException if no view has been configured using {@link #json(String)} or
-   * {@link #view(FhirView)}
+   *     {@link #view(FhirView)}
    */
   @Nonnull
   @Override

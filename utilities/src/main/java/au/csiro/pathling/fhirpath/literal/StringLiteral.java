@@ -33,8 +33,7 @@ import org.apache.commons.text.translate.UnicodeUnescaper;
  */
 public abstract class StringLiteral {
 
-  private StringLiteral() {
-  }
+  private StringLiteral() {}
 
   /**
    * On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
@@ -47,14 +46,8 @@ public abstract class StringLiteral {
     return value.replace("'", "\\'");
   }
 
-
   private static final Map<CharSequence, CharSequence> FHIR_CTRL_UNESCAPE_MAP =
-      Map.ofEntries(
-          entry("\\n", "\n"),
-          entry("\\t", "\t"),
-          entry("\\f", "\f"),
-          entry("\\r", "\r")
-      );
+      Map.ofEntries(entry("\\n", "\n"), entry("\\t", "\t"), entry("\\f", "\f"), entry("\\r", "\r"));
 
   private static final Map<CharSequence, CharSequence> FHIR_CHAR_UNESCAPE_MAP =
       Map.ofEntries(
@@ -62,14 +55,13 @@ public abstract class StringLiteral {
           entry("\\'", "'"),
           entry("\\\"", "\""),
           entry("\\/", "/"),
-          entry("\\\\", "\\")
-      );
+          entry("\\\\", "\\"));
 
-  private static final CharSequenceTranslator UNESCAPE_FHIR = new AggregateTranslator(
-      new UnicodeUnescaper(),
-      new LookupTranslator(FHIR_CTRL_UNESCAPE_MAP),
-      new LookupTranslator(FHIR_CHAR_UNESCAPE_MAP)
-  );
+  private static final CharSequenceTranslator UNESCAPE_FHIR =
+      new AggregateTranslator(
+          new UnicodeUnescaper(),
+          new LookupTranslator(FHIR_CTRL_UNESCAPE_MAP),
+          new LookupTranslator(FHIR_CHAR_UNESCAPE_MAP));
 
   /**
    * This method implements the rules for dealing with strings in the FHIRPath specification.
@@ -82,5 +74,4 @@ public abstract class StringLiteral {
   public static String unescapeFhirPathString(@Nonnull final String value) {
     return UNESCAPE_FHIR.translate(value);
   }
-
 }

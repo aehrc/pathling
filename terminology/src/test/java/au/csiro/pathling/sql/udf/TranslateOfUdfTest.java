@@ -51,7 +51,7 @@ class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   private static final String CONCEPT_MAP_A = "uuid:caA";
   private static final String CONCEPT_MAP_B = "uuid:caB";
 
-  private static final Row[] NO_TRANSLATIONS = new Row[]{};
+  private static final Row[] NO_TRANSLATIONS = new Row[] {};
 
   private TranslateUdf translateUdf;
   private TerminologyService terminologyService;
@@ -59,59 +59,82 @@ class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   private static <T> ArraySeq<T> newWrappedArray(@Nonnull final List<T> args) {
     return ArraySeq.from(asScala(args), ClassTag.apply(Object.class));
   }
-  
+
   @BeforeEach
   void setUp() {
     terminologyService = mock(TerminologyService.class);
-    final TerminologyServiceFactory terminologyServiceFactory = mock(
-        TerminologyServiceFactory.class);
+    final TerminologyServiceFactory terminologyServiceFactory =
+        mock(TerminologyServiceFactory.class);
     when(terminologyServiceFactory.build()).thenReturn(terminologyService);
     translateUdf = new TranslateUdf(terminologyServiceFactory);
-
   }
 
   @Test
   void testNullCodings() {
-    assertNull(translateUdf.call(null, CONCEPT_MAP_A,
-        true, null, null));
+    assertNull(translateUdf.call(null, CONCEPT_MAP_A, true, null, null));
   }
 
   @Test
   void testTranslatesCodingWithDefaults() {
 
     TerminologyServiceHelpers.setupTranslate(terminologyService)
-        .withTranslations(CODING_AA, CONCEPT_MAP_A,
+        .withTranslations(
+            CODING_AA,
+            CONCEPT_MAP_A,
             Translation.of(EQUIVALENT, CODING_BB),
             Translation.of(RELATEDTO, CODING_AB));
 
-    assertArrayEquals(asArray(CODING_BB),
-        translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false, null, null));
+    assertArrayEquals(
+        asArray(CODING_BB), translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false, null, null));
   }
 
   @Test
   void testTranslatesCodingsUniqueResults() {
 
     TerminologyServiceHelpers.setupTranslate(terminologyService)
-        .withTranslations(CODING_AA_VERSION1, CONCEPT_MAP_B, true, SYSTEM_B,
+        .withTranslations(
+            CODING_AA_VERSION1,
+            CONCEPT_MAP_B,
+            true,
+            SYSTEM_B,
             Translation.of(EQUIVALENT, CODING_AA),
             Translation.of(NARROWER, CODING_BB),
             Translation.of(RELATEDTO, CODING_AB))
-        .withTranslations(CODING_AB_VERSION1, CONCEPT_MAP_B, true, SYSTEM_B,
+        .withTranslations(
+            CODING_AB_VERSION1,
+            CONCEPT_MAP_B,
+            true,
+            SYSTEM_B,
             Translation.of(EQUIVALENT, CODING_AB),
             Translation.of(NARROWER, CODING_BB),
             Translation.of(RELATEDTO, CODING_BA));
 
-    assertArrayEquals(asArray(CODING_BB, CODING_AB, CODING_BA),
-        translateUdf.call(encodeMany(null, INVALID_CODING_1, INVALID_CODING_0, INVALID_CODING_2,
-                CODING_AA_VERSION1, CODING_AB_VERSION1), CONCEPT_MAP_B, true,
-            newWrappedArray(List.of("narrower", "relatedto")), SYSTEM_B));
+    assertArrayEquals(
+        asArray(CODING_BB, CODING_AB, CODING_BA),
+        translateUdf.call(
+            encodeMany(
+                null,
+                INVALID_CODING_1,
+                INVALID_CODING_0,
+                INVALID_CODING_2,
+                CODING_AA_VERSION1,
+                CODING_AB_VERSION1),
+            CONCEPT_MAP_B,
+            true,
+            newWrappedArray(List.of("narrower", "relatedto")),
+            SYSTEM_B));
   }
 
   @Test
   void testInvalidAndNullCodings() {
-    assertArrayEquals(NO_TRANSLATIONS,
-        translateUdf.call(encodeMany(INVALID_CODING_0, INVALID_CODING_1, INVALID_CODING_2, null),
-            "uuid:url", true, null, null));
+    assertArrayEquals(
+        NO_TRANSLATIONS,
+        translateUdf.call(
+            encodeMany(INVALID_CODING_0, INVALID_CODING_1, INVALID_CODING_2, null),
+            "uuid:url",
+            true,
+            null,
+            null));
     verifyNoMoreInteractions(terminologyService);
   }
 
@@ -119,8 +142,10 @@ class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   void testThrowsInputErrorWhenInvalidEquivalence() {
     final Row coding = encode(CODING_AA);
     final ArraySeq<String> invalid = newWrappedArray(List.of("invalid"));
-    final InvalidUserInputError ex = assertThrows(InvalidUserInputError.class,
-        () -> translateUdf.call(coding, CONCEPT_MAP_B, true, invalid, null));
+    final InvalidUserInputError ex =
+        assertThrows(
+            InvalidUserInputError.class,
+            () -> translateUdf.call(coding, CONCEPT_MAP_B, true, invalid, null));
     assertEquals("Unknown ConceptMapEquivalence code 'invalid'", ex.getMessage());
     verifyNoMoreInteractions(terminologyService);
   }
@@ -129,23 +154,27 @@ class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   void testToleratesNullAndBlankEquivalencesAndEmptyEquivalencesList() {
 
     TerminologyServiceHelpers.setupTranslate(terminologyService)
-        .withTranslations(CODING_AA, CONCEPT_MAP_A,
+        .withTranslations(
+            CODING_AA,
+            CONCEPT_MAP_A,
             Translation.of(EQUIVALENT, CODING_BB),
             Translation.of(RELATEDTO, CODING_AB));
 
     final List<String> args = new ArrayList<>();
     args.add("");
     args.add(null);
-    assertArrayEquals(NO_TRANSLATIONS,
-        translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false,
-            newWrappedArray(args),
-            null));
+    assertArrayEquals(
+        NO_TRANSLATIONS,
+        translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false, newWrappedArray(args), null));
 
-    assertArrayEquals(NO_TRANSLATIONS,
-        translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false,
+    assertArrayEquals(
+        NO_TRANSLATIONS,
+        translateUdf.call(
+            encode(CODING_AA),
+            CONCEPT_MAP_A,
+            false,
             newWrappedArray(Collections.emptyList()),
             null));
     verifyNoMoreInteractions(terminologyService);
   }
-
 }

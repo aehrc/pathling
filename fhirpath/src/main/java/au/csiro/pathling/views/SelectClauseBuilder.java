@@ -26,16 +26,17 @@ import java.util.List;
 
 /**
  * Builder class for creating {@link SelectClause} instances.
- * <p>
- * This builder provides a fluent interface for constructing select clauses with various components
- * such as columns, nested selects, forEach operations, and union operations. The builder follows
- * the builder pattern, allowing method chaining for convenient configuration.
- * <p>
- * Select clauses define what data should be extracted from FHIR resources and how it should be
+ *
+ * <p>This builder provides a fluent interface for constructing select clauses with various
+ * components such as columns, nested selects, forEach operations, and union operations. The builder
+ * follows the builder pattern, allowing method chaining for convenient configuration.
+ *
+ * <p>Select clauses define what data should be extracted from FHIR resources and how it should be
  * structured. They can include simple column extractions, nested selections, and operations that
  * iterate over collections within FHIR resources.
- * <p>
- * Usage example:
+ *
+ * <p>Usage example:
+ *
  * <pre>{@code
  * SelectClause clause = new SelectClauseBuilder()
  *     .column(Column.of("id", "id"))
@@ -52,29 +53,23 @@ import java.util.List;
  */
 public class SelectClauseBuilder {
 
-  @Nonnull
-  private final List<Column> column = new ArrayList<>();
+  @Nonnull private final List<Column> column = new ArrayList<>();
 
-  @Nonnull
-  private final List<SelectClause> select = new ArrayList<>();
+  @Nonnull private final List<SelectClause> select = new ArrayList<>();
 
-  @Nullable
-  private String forEach;
+  @Nullable private String forEach;
 
-  @Nullable
-  private String forEachOrNull;
+  @Nullable private String forEachOrNull;
 
-  @Nullable
-  private List<String> repeat;
+  @Nullable private List<String> repeat;
 
-  @Nonnull
-  private final List<SelectClause> unionAll = new ArrayList<>();
+  @Nonnull private final List<SelectClause> unionAll = new ArrayList<>();
 
   /**
    * Adds one or more columns to the select clause.
-   * <p>
-   * Columns define individual data extractions from FHIR resources. Each column typically consists
-   * of a name and a FHIRPath expression that specifies how to extract the data.
+   *
+   * <p>Columns define individual data extractions from FHIR resources. Each column typically
+   * consists of a name and a FHIRPath expression that specifies how to extract the data.
    *
    * @param column one or more columns to add to the select clause
    * @return this builder instance for method chaining
@@ -86,10 +81,10 @@ public class SelectClauseBuilder {
 
   /**
    * Adds one or more nested select clauses.
-   * <p>
-   * Nested select clauses allow for hierarchical data extraction, enabling the creation of complex
-   * data structures from FHIR resources. These are typically used in conjunction with forEach
-   * operations to process collections.
+   *
+   * <p>Nested select clauses allow for hierarchical data extraction, enabling the creation of
+   * complex data structures from FHIR resources. These are typically used in conjunction with
+   * forEach operations to process collections.
    *
    * @param select one or more nested select clauses to add
    * @return this builder instance for method chaining
@@ -101,8 +96,8 @@ public class SelectClauseBuilder {
 
   /**
    * Sets the forEach expression for iterating over collections.
-   * <p>
-   * The forEach operation allows the select clause to iterate over collections within FHIR
+   *
+   * <p>The forEach operation allows the select clause to iterate over collections within FHIR
    * resources. For each item in the collection, the nested select clauses and columns will be
    * evaluated. This is useful for extracting data from arrays like addresses, contact points, or
    * identifiers.
@@ -117,8 +112,8 @@ public class SelectClauseBuilder {
 
   /**
    * Sets the forEachOrNull expression for iterating over collections with null handling.
-   * <p>
-   * Similar to forEach, but handles cases where the collection might be null or empty. If the
+   *
+   * <p>Similar to forEach, but handles cases where the collection might be null or empty. If the
    * collection is null or empty, this will produce a single row with null values rather than no
    * rows at all. This is useful for maintaining consistent output structure even when optional
    * collections are absent.
@@ -133,11 +128,11 @@ public class SelectClauseBuilder {
 
   /**
    * Sets the repeat expressions for recursive traversal of nested structures.
-   * <p>
-   * The repeat operation enables recursive traversal of nested structures, automatically flattening
-   * hierarchical data to any depth. For each path expression, the view runner will recursively
-   * apply the same patterns until no more matches are found. All results from all levels and all
-   * paths are unioned together.
+   *
+   * <p>The repeat operation enables recursive traversal of nested structures, automatically
+   * flattening hierarchical data to any depth. For each path expression, the view runner will
+   * recursively apply the same patterns until no more matches are found. All results from all
+   * levels and all paths are unioned together.
    *
    * @param repeat one or more FHIRPath expressions defining paths to recursively traverse
    * @return this builder instance for method chaining
@@ -149,8 +144,8 @@ public class SelectClauseBuilder {
 
   /**
    * Adds select clauses to be combined using a union operation.
-   * <p>
-   * The {@code unionAll} operation combines the results of multiple select clauses into a single
+   *
+   * <p>The {@code unionAll} operation combines the results of multiple select clauses into a single
    * result set. This is useful for combining data from different parts of a FHIR resource.
    *
    * @param selects one or more select clauses to union with the main select
@@ -163,8 +158,8 @@ public class SelectClauseBuilder {
 
   /**
    * Builds and returns a new {@link SelectClause} instance with the configured settings.
-   * <p>
-   * This method creates the final select clause object using all the components that have been
+   *
+   * <p>This method creates the final select clause object using all the components that have been
    * configured through the builder methods. The resulting select clause can be used in FHIR views
    * to define data extraction logic.
    *
@@ -174,5 +169,4 @@ public class SelectClauseBuilder {
   public SelectClause build() {
     return new SelectClause(column, select, forEach, forEachOrNull, repeat, unionAll);
   }
-
 }

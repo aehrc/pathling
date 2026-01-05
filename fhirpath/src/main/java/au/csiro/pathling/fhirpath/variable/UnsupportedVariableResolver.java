@@ -40,5 +40,4 @@ public class UnsupportedVariableResolver implements EnvironmentVariableResolver 
       default -> Optional.empty();
     };
   }
-
 }

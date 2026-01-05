@@ -45,20 +45,15 @@ import org.apache.spark.sql.types.StructType;
 @Slf4j
 public class DatasetBuilder {
 
-  @Nonnull
-  private final SparkSession spark;
+  @Nonnull private final SparkSession spark;
 
-  @Nonnull
-  private final Metadata metadata;
+  @Nonnull private final Metadata metadata;
 
-  @Nonnull
-  private final List<StructField> datasetColumns = new ArrayList<>();
+  @Nonnull private final List<StructField> datasetColumns = new ArrayList<>();
 
-  @Nonnull
-  private final List<Row> datasetRows = new ArrayList<>();
+  @Nonnull private final List<Row> datasetRows = new ArrayList<>();
 
-  @Nonnull
-  private final List<StructField> structColumns = new ArrayList<>();
+  @Nonnull private final List<StructField> structColumns = new ArrayList<>();
 
   public DatasetBuilder(@Nonnull final SparkSession spark) {
     this.spark = spark;
@@ -73,8 +68,8 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public DatasetBuilder withColumn(@Nonnull final String columnName,
-      @Nonnull final DataType dataType) {
+  public DatasetBuilder withColumn(
+      @Nonnull final String columnName, @Nonnull final DataType dataType) {
     final StructField column = new StructField(columnName, dataType, true, metadata);
     datasetColumns.add(column);
     return this;
@@ -115,15 +110,15 @@ public class DatasetBuilder {
 
   @SuppressWarnings("unused")
   @Nonnull
-  public DatasetBuilder changeValues(@Nonnull final Object value,
-      @Nonnull final Iterable<String> ids) {
+  public DatasetBuilder changeValues(
+      @Nonnull final Object value, @Nonnull final Iterable<String> ids) {
     ids.forEach(id -> changeValue(id, value));
     return this;
   }
 
   @Nonnull
-  public DatasetBuilder withStructColumn(@Nonnull final String name,
-      @Nonnull final DataType dataType) {
+  public DatasetBuilder withStructColumn(
+      @Nonnull final String name, @Nonnull final DataType dataType) {
     final StructField column = new StructField(name, dataType, true, metadata);
     structColumns.add(column);
     return this;
@@ -153,24 +148,22 @@ public class DatasetBuilder {
   @Nonnull
   public Dataset<Row> buildWithStructValue() {
     final List<StructField> columns = new ArrayList<>(datasetColumns);
-    columns.add(new StructField(
-        randomAlias(),
-        DataTypes.createStructType(structColumns),
-        true,
-        metadata));
+    columns.add(
+        new StructField(randomAlias(), DataTypes.createStructType(structColumns), true, metadata));
     return getDataset(columns);
   }
 
   @Nonnull
   private Dataset<Row> getDataset(@Nonnull final List<StructField> columns) {
     final StructType schema;
-    schema = new StructType(columns.toArray(new StructField[]{}));
+    schema = new StructType(columns.toArray(new StructField[] {}));
 
     Dataset<Row> dataFrame = spark.createDataFrame(datasetRows, schema);
     requireNonNull(dataFrame);
     dataFrame = dataFrame.repartition(1);
     // needs to allow for empty datasets with 0 partitions
-    checkState(dataFrame.rdd().getNumPartitions() <= 1,
+    checkState(
+        dataFrame.rdd().getNumPartitions() <= 1,
         "at most one partition expected in test datasets constructed from rows, but got: "
             + dataFrame.rdd().getNumPartitions());
     return dataFrame;
@@ -180,5 +173,4 @@ public class DatasetBuilder {
   public static DatasetBuilder of(@Nonnull final SparkSession spark) {
     return new DatasetBuilder(spark);
   }
-
 }

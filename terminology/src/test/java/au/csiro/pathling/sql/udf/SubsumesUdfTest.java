@@ -41,8 +41,8 @@ class SubsumesUdfTest extends AbstractTerminologyTestBase {
   @BeforeEach
   void setUp() {
     terminologyService = mock(TerminologyService.class);
-    final TerminologyServiceFactory terminologyServiceFactory = mock(
-        TerminologyServiceFactory.class);
+    final TerminologyServiceFactory terminologyServiceFactory =
+        mock(TerminologyServiceFactory.class);
     when(terminologyServiceFactory.build()).thenReturn(terminologyService);
 
     TerminologyServiceHelpers.setupSubsumes(terminologyService)
@@ -69,13 +69,18 @@ class SubsumesUdfTest extends AbstractTerminologyTestBase {
 
   @Test
   void testNullAndInvalidCodings() {
-    assertFalse(subsumesUdf.call(encodeMany(null, INVALID_CODING_0),
-        encodeMany(null, INVALID_CODING_1, INVALID_CODING_2), false));
-    assertFalse(subsumesUdf.call(encodeMany(null, INVALID_CODING_1, INVALID_CODING_2),
-        encodeMany(null, INVALID_CODING_0), true));
+    assertFalse(
+        subsumesUdf.call(
+            encodeMany(null, INVALID_CODING_0),
+            encodeMany(null, INVALID_CODING_1, INVALID_CODING_2),
+            false));
+    assertFalse(
+        subsumesUdf.call(
+            encodeMany(null, INVALID_CODING_1, INVALID_CODING_2),
+            encodeMany(null, INVALID_CODING_0),
+            true));
     verifyNoMoreInteractions(terminologyService);
   }
-
 
   @Test
   void testSubsumesCoding() {
@@ -84,7 +89,7 @@ class SubsumesUdfTest extends AbstractTerminologyTestBase {
     assertTrue(subsumesUdf.call(encode(CODING_B), encode(CODING_B), false));
     assertTrue(subsumesUdf.call(encode(CODING_C), encode(CODING_C), true));
 
-    // positive cases 
+    // positive cases
     assertTrue(subsumesUdf.call(encode(CODING_AA), encode(CODING_AB), null));
     assertTrue(subsumesUdf.call(encode(CODING_BA), encode(CODING_BB), false));
     assertTrue(subsumesUdf.call(encode(CODING_BB), encode(CODING_BA), true));
@@ -99,18 +104,18 @@ class SubsumesUdfTest extends AbstractTerminologyTestBase {
 
   @Test
   void testSubsumesCodings() {
-    // positive cases 
+    // positive cases
     assertTrue(
-        subsumesUdf.call(encodeMany(null, INVALID_CODING_0, CODING_AA, CODING_D), encode(CODING_AB),
-            null));
+        subsumesUdf.call(
+            encodeMany(null, INVALID_CODING_0, CODING_AA, CODING_D), encode(CODING_AB), null));
     assertTrue(
-        subsumesUdf.call(encodeMany(CODING_AB, CODING_BA), encodeMany(CODING_AA, CODING_BB),
-            false));
+        subsumesUdf.call(
+            encodeMany(CODING_AB, CODING_BA), encodeMany(CODING_AA, CODING_BB), false));
     assertTrue(
         subsumesUdf.call(encodeMany(CODING_AB, CODING_BA), encodeMany(CODING_AA, CODING_BB), true));
     assertTrue(
-        subsumesUdf.call(encodeMany(null, INVALID_CODING_1, CODING_C, CODING_BA), encode(CODING_BB),
-            false));
+        subsumesUdf.call(
+            encodeMany(null, INVALID_CODING_1, CODING_C, CODING_BA), encode(CODING_BB), false));
 
     // NegativeCases
     assertFalse(subsumesUdf.call(encodeMany(), encode(CODING_B), null));
@@ -124,5 +129,4 @@ class SubsumesUdfTest extends AbstractTerminologyTestBase {
     assertFalse(
         subsumesUdf.call(encodeMany(CODING_AA, CODING_BA), encodeMany(CODING_AB, CODING_BB), true));
   }
-
 }

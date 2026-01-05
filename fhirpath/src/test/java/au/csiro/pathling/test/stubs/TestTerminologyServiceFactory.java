@@ -25,13 +25,11 @@ import java.io.Serial;
 
 public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
 
-  @Serial
-  private static final long serialVersionUID = -8229464411116137820L;
+  @Serial private static final long serialVersionUID = -8229464411116137820L;
 
   @Nonnull
   @Override
   public TerminologyService build() {
     return SharedMocks.getOrCreate(TerminologyService.class);
   }
-
 }

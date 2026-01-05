@@ -34,5 +34,4 @@ public interface StringCoercible {
    */
   @Nonnull
   StringCollection asStringPath();
-
 }

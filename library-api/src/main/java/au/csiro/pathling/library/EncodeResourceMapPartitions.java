@@ -23,21 +23,18 @@ import java.io.Serial;
 import java.util.stream.Stream;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
-class EncodeResourceMapPartitions<T extends IBaseResource> extends
-    EncodeMapPartitions<T> {
+class EncodeResourceMapPartitions<T extends IBaseResource> extends EncodeMapPartitions<T> {
 
-  @Serial
-  private static final long serialVersionUID = 6405663463302424287L;
+  @Serial private static final long serialVersionUID = 6405663463302424287L;
 
-  EncodeResourceMapPartitions(final FhirVersionEnum fhirVersion, final String inputMimeType,
-      final Class<T> resourceClass) {
+  EncodeResourceMapPartitions(
+      final FhirVersionEnum fhirVersion, final String inputMimeType, final Class<T> resourceClass) {
     super(fhirVersion, inputMimeType, resourceClass);
   }
 
   @Nonnull
   @Override
-  protected Stream<IBaseResource> processResources(
-      @Nonnull final Stream<IBaseResource> resources) {
+  protected Stream<IBaseResource> processResources(@Nonnull final Stream<IBaseResource> resources) {
     return resources.filter(resourceClass::isInstance);
   }
 }

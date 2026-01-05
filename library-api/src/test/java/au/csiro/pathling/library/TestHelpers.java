@@ -29,8 +29,7 @@ public class TestHelpers {
 
   @Nonnull
   public static SparkSession spark() {
-    return sparkBuilder()
-        .getOrCreate();
+    return sparkBuilder().getOrCreate();
   }
 
   @Nonnull
@@ -42,8 +41,7 @@ public class TestHelpers {
         .config("spark.driver.bindAddress", "localhost")
         .config("spark.driver.host", "localhost")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config("spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog");
+        .config(
+            "spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog");
   }
-
 }

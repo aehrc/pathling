@@ -33,8 +33,7 @@ import org.jetbrains.annotations.Unmodifiable;
  */
 public abstract class Strings {
 
-  private Strings() {
-  }
+  private Strings() {}
 
   /**
    * @param value a String surrounded by single quotes
@@ -64,12 +63,12 @@ public abstract class Strings {
    * @return the list of converted values of type T.
    */
   @Nonnull
-  public static <T> @Unmodifiable List<T> parseCsvList(@Nonnull final String csvList,
-      final @Nonnull Function<String, T> converter) {
+  public static <T> @Unmodifiable List<T> parseCsvList(
+      @Nonnull final String csvList, final @Nonnull Function<String, T> converter) {
     return Stream.of(csvList.split(","))
-        .map(String::trim).filter(not(String::isEmpty))
+        .map(String::trim)
+        .filter(not(String::isEmpty))
         .map(converter)
         .toList();
   }
-
 }

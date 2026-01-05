@@ -24,15 +24,13 @@ import org.apache.spark.sql.UDFRegistration;
 
 /**
  * A base Spark configurer that registers user-defined functions (UDFs) in Spark sessions.
- * <p>
- * This abstract class provides a standardised way to register SQL functions with Spark sessions.
+ *
+ * <p>This abstract class provides a standardised way to register SQL functions with Spark sessions.
  * Subclasses should implement the {@link #registerUDFs(UDFRegistrar)} method to define which
  * functions to register.
- * </p>
- * <p>
- * The class implements the {@link SparkConfigurer} interface, allowing it to be used as part of
+ *
+ * <p>The class implements the {@link SparkConfigurer} interface, allowing it to be used as part of
  * the Spark session configuration process.
- * </p>
  *
  * @author Piotr Szul
  * @author John Grimes
@@ -44,10 +42,9 @@ public abstract class AbstractUDFRegistrar implements SparkConfigurer {
 
   /**
    * A helper class for registering user-defined functions with a Spark session.
-   * <p>
-   * This class provides convenient methods for registering different types of SQL functions
-   * and maintains a fluent interface for chaining multiple registrations.
-   * </p>
+   *
+   * <p>This class provides convenient methods for registering different types of SQL functions and
+   * maintains a fluent interface for chaining multiple registrations.
    */
   protected static class UDFRegistrar {
 
@@ -83,16 +80,14 @@ public abstract class AbstractUDFRegistrar implements SparkConfigurer {
       udfRegistration.register(udf2.getName(), udf2, udf2.getReturnType());
       return this;
     }
-
   }
 
   /**
    * Configures the Spark session by registering user-defined functions.
-   * <p>
-   * This method is called as part of the Spark session configuration process and delegates
-   * to the abstract {@link #registerUDFs(UDFRegistrar)} method to perform the actual
-   * function registration.
-   * </p>
+   *
+   * <p>This method is called as part of the Spark session configuration process and delegates to
+   * the abstract {@link #registerUDFs(UDFRegistrar)} method to perform the actual function
+   * registration.
    *
    * @param spark the Spark session to configure
    */

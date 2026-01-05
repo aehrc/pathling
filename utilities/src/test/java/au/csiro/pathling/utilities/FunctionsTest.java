@@ -34,7 +34,7 @@ class FunctionsTest {
 
   @Test
   void backCurried() {
-    assertEquals("false_13",
-        Functions.backCurried(FunctionsTest::biFunction).apply(13).apply(false));
+    assertEquals(
+        "false_13", Functions.backCurried(FunctionsTest::biFunction).apply(13).apply(false));
   }
 }

@@ -33,31 +33,17 @@ import lombok.Value;
 @Value
 public class TerminologyResult<T extends Serializable> implements Serializable {
 
-  @Serial
-  private static final long serialVersionUID = -8569345179387329139L;
+  @Serial private static final long serialVersionUID = -8569345179387329139L;
 
-  /**
-   * The value of the cache entry.
-   */
-  @Nullable
-  T data;
+  /** The value of the cache entry. */
+  @Nullable T data;
 
-  /**
-   * The ETag returned in the response that generated this value.
-   */
-  @Nullable
-  String eTag;
+  /** The ETag returned in the response that generated this value. */
+  @Nullable String eTag;
 
-  /**
-   * The expiry time in milliseconds since the epoch.
-   */
-  @Nullable
-  Long expires;
+  /** The expiry time in milliseconds since the epoch. */
+  @Nullable Long expires;
 
-  /**
-   * Set to true if the response was a 304 Not Modified.
-   */
-  @Nonnull
-  Boolean notModified;
-
+  /** Set to true if the response was a 304 Not Modified. */
+  @Nonnull Boolean notModified;
 }

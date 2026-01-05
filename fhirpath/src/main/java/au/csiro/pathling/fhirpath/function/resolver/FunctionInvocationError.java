@@ -26,8 +26,7 @@ import java.io.Serial;
  */
 public class FunctionInvocationError extends RuntimeException {
 
-  @Serial
-  private static final long serialVersionUID = -3228718152389969726L;
+  @Serial private static final long serialVersionUID = -3228718152389969726L;
 
   /**
    * Creates a new FunctionInvocationError.
@@ -38,5 +37,4 @@ public class FunctionInvocationError extends RuntimeException {
   public FunctionInvocationError(final String message, final Throwable cause) {
     super(message, cause);
   }
- 
 }

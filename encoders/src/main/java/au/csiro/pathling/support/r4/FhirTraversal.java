@@ -29,16 +29,13 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import org.hl7.fhir.r4.model.Base;
 
-/**
- * A utility class for traversing FHIR resources.
- */
+/** A utility class for traversing FHIR resources. */
 public class FhirTraversal {
 
-  private FhirTraversal() {
-  }
+  private FhirTraversal() {}
 
-  private static void processChildrenRecursive(@Nonnull final Base object,
-      @Nonnull final Consumer<Base> processor) {
+  private static void processChildrenRecursive(
+      @Nonnull final Base object, @Nonnull final Consumer<Base> processor) {
     object.children().stream()
         .flatMap(p -> p.getValues().stream())
         .filter(Objects::nonNull)
@@ -51,8 +48,8 @@ public class FhirTraversal {
    * @param object a FHIR object
    * @param processor the consumer to apply to all non-empty FHIR elements
    */
-  public static void processRecursive(@Nonnull final Base object,
-      @Nonnull final Consumer<Base> processor) {
+  public static void processRecursive(
+      @Nonnull final Base object, @Nonnull final Consumer<Base> processor) {
     processor.accept(object);
     processChildrenRecursive(object, processor);
   }

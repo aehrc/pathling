@@ -30,9 +30,4 @@ import jakarta.annotation.Nonnull;
  * @author John Grimes
  */
 public record BinaryOperatorInput(
-    @Nonnull EvaluationContext context,
-    @Nonnull Collection left,
-    @Nonnull Collection right
-) {
-
-}
+    @Nonnull EvaluationContext context, @Nonnull Collection left, @Nonnull Collection right) {}

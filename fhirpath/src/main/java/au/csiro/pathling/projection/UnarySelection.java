@@ -22,16 +22,16 @@ import java.util.stream.Stream;
 
 /**
  * Represents a selection that wraps a single child component.
- * <p>
- * This interface provides default implementations for tree traversal methods,
- * allowing concrete implementations to focus on their specific behavior.
+ *
+ * <p>This interface provides default implementations for tree traversal methods, allowing concrete
+ * implementations to focus on their specific behavior.
  */
 public interface UnarySelection extends ProjectionClause {
 
   /**
    * Returns the single child component of this selection.
-   * <p>
-   * This method is automatically implemented by record classes with a {@code component} field.
+   *
+   * <p>This method is automatically implemented by record classes with a {@code component} field.
    *
    * @return the child projection clause
    */

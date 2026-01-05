@@ -32,8 +32,7 @@ class SpELPredicate implements Predicate<TestCase> {
 
   private static final ExpressionParser PARSER = new SpelExpressionParser();
 
-  @Nonnull
-  String spELExpression;
+  @Nonnull String spELExpression;
 
   @Override
   public boolean test(final TestCase testCase) {

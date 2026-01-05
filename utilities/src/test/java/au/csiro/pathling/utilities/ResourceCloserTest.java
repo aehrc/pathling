@@ -43,7 +43,7 @@ class ResourceCloserTest {
     final Closeable resource3 = mock(Closeable.class);
 
     doThrow(new IOException("Test exception")).when(resource2).close();
-    
+
     final ResourceCloser resourceCloser = new ResourceCloser(resource1, resource2);
     assertEquals(resource3, resourceCloser.registerResource(resource3));
     resourceCloser.close();

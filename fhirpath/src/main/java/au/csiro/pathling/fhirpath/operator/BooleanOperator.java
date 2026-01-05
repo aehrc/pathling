@@ -30,7 +30,7 @@ import jakarta.annotation.Nonnull;
  *
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#boolean-logic">Boolean
- * logic</a>
+ *     logic</a>
  */
 public class BooleanOperator implements FhirPathBinaryOperator {
 
@@ -49,56 +49,44 @@ public class BooleanOperator implements FhirPathBinaryOperator {
     final BooleanCollection left = input.left().asBooleanSingleton();
     final BooleanCollection right = input.right().asBooleanSingleton();
 
-    final ColumnRepresentation resultCtx = ColumnRepresentation.binaryOperator(left.getColumn(),
-        right.getColumn(),
-        (leftValue, rightValue) ->
-            // Based on the type of operator, create the correct column expression.
-            switch (type) {
-              case AND -> leftValue.and(rightValue);
-              case OR -> leftValue.or(rightValue);
-              case XOR -> when(
-                  leftValue.isNull().or(rightValue.isNull()), null
-              ).when(
-                  leftValue.equalTo(true).and(rightValue.equalTo(false)).or(
-                      leftValue.equalTo(false).and(rightValue.equalTo(true))
-                  ), true
-              ).otherwise(false);
-              case IMPLIES -> when(
-                  leftValue.equalTo(true), rightValue
-              ).when(
-                  leftValue.equalTo(false), true
-              ).otherwise(
-                  when(rightValue.equalTo(true), true)
-                      .otherwise(null)
-              );
-            }
-    );
+    final ColumnRepresentation resultCtx =
+        ColumnRepresentation.binaryOperator(
+            left.getColumn(),
+            right.getColumn(),
+            (leftValue, rightValue) ->
+                // Based on the type of operator, create the correct column expression.
+                switch (type) {
+                  case AND -> leftValue.and(rightValue);
+                  case OR -> leftValue.or(rightValue);
+                  case XOR ->
+                      when(leftValue.isNull().or(rightValue.isNull()), null)
+                          .when(
+                              leftValue
+                                  .equalTo(true)
+                                  .and(rightValue.equalTo(false))
+                                  .or(leftValue.equalTo(false).and(rightValue.equalTo(true))),
+                              true)
+                          .otherwise(false);
+                  case IMPLIES ->
+                      when(leftValue.equalTo(true), rightValue)
+                          .when(leftValue.equalTo(false), true)
+                          .otherwise(when(rightValue.equalTo(true), true).otherwise(null));
+                });
     return BooleanCollection.build(resultCtx);
   }
 
-  /**
-   * Represents a type of Boolean operator.
-   */
+  /** Represents a type of Boolean operator. */
   public enum BooleanOperatorType {
-    /**
-     * AND operation.
-     */
+    /** AND operation. */
     AND("and"),
-    /**
-     * OR operation.
-     */
+    /** OR operation. */
     OR("or"),
-    /**
-     * Exclusive OR operation.
-     */
+    /** Exclusive OR operation. */
     XOR("xor"),
-    /**
-     * Material implication.
-     */
+    /** Material implication. */
     IMPLIES("implies");
 
-    @Nonnull
-    private final String fhirPath;
+    @Nonnull private final String fhirPath;
 
     BooleanOperatorType(@Nonnull final String fhirPath) {
       this.fhirPath = fhirPath;
@@ -108,7 +96,6 @@ public class BooleanOperator implements FhirPathBinaryOperator {
     public String toString() {
       return fhirPath;
     }
-
   }
 
   @Override

@@ -69,29 +69,32 @@ public interface QueryableDataSource extends DataSource {
 
   /**
    * Applies a transformation to each dataset within this data source.
+   *
    * @param operator the transformation to apply
    * @return a new DataSource containing the transformed datasets
    */
   QueryableDataSource map(@Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator);
 
   /**
-   * Filter the dataset by resource type to remove entire datasets.
-   * This does not filter IN the dataset, but the datasets as a whole. If filtering of specific columns
-   * across all datasets is desired, use
+   * Filter the dataset by resource type to remove entire datasets. This does not filter IN the
+   * dataset, but the datasets as a whole. If filtering of specific columns across all datasets is
+   * desired, use
+   *
    * <pre>{@code
-   *   dataSource.map(dataset -> dataset.filter(...));
+   * dataSource.map(dataset -> dataset.filter(...));
    * }</pre>
+   *
    * @param resourceTypePredicate The predicate to keep datasets
-   * @return a new DataSource containing only the datasets where the associated resource type matched the predicate
+   * @return a new DataSource containing only the datasets where the associated resource type
+   *     matched the predicate
    */
   @Nonnull
   QueryableDataSource filterByResourceType(@Nonnull final Predicate<String> resourceTypePredicate);
-  
+
   /**
    * Caches the datasets in this data source to improve performance for subsequent queries.
    *
    * @return a new DataSource with cached datasets
    */
   DataSource cache();
-
 }

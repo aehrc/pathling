@@ -25,25 +25,22 @@ import org.apache.spark.sql.Column;
 /**
  * Represents a selection that unnests a nested data structure, with either inner or outer join
  * semantics.
- * <p>
- * This selection evaluates a FHIRPath expression to get a collection, then applies a projection
+ *
+ * <p>This selection evaluates a FHIRPath expression to get a collection, then applies a projection
  * clause to each element of that collection. The results are flattened into a single array. When
  * multiple projections are needed, wrap them in a {@link GroupingSelection} first.
- * </p>
  *
  * @param path the FHIRPath expression that identifies the collection to unnest
  * @param component the projection clause to apply to each element (use GroupingSelection for
- * multiple)
+ *     multiple)
  * @param joinOuter whether to use outer join semantics (i.e., return a row even if the unnesting
- * collection is empty)
+ *     collection is empty)
  * @author John Grimes
  * @author Piotr Szul
  */
 public record UnnestingSelection(
-    @Nonnull FhirPath path,
-    @Nonnull ProjectionClause component,
-    boolean joinOuter
-) implements UnarySelection {
+    @Nonnull FhirPath path, @Nonnull ProjectionClause component, boolean joinOuter)
+    implements UnarySelection {
 
   @Nonnull
   @Override
@@ -66,10 +63,6 @@ public record UnnestingSelection(
   @Nonnull
   @Override
   public String toExpression() {
-    return (joinOuter
-            ? "forEachOrNull"
-            : "forEach")
-        + ": " + path.toExpression();
+    return (joinOuter ? "forEachOrNull" : "forEach") + ": " + path.toExpression();
   }
-
 }

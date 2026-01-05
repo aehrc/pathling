@@ -43,7 +43,8 @@ public class InMemoryCachingTerminologyService extends CachingTerminologyService
    * @param configuration the caching configuration
    * @param resourcesToClose additional resources to close when this service is closed
    */
-  public InMemoryCachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
+  public InMemoryCachingTerminologyService(
+      @Nonnull final TerminologyClient terminologyClient,
       @Nonnull final HttpClientCachingConfiguration configuration,
       @Nonnull final Closeable... resourcesToClose) {
     super(terminologyClient, configuration, resourcesToClose);
@@ -52,24 +53,23 @@ public class InMemoryCachingTerminologyService extends CachingTerminologyService
   @Override
   protected EmbeddedCacheManager buildCacheManager() {
     final GlobalConfigurationBuilder globalConfigBuilder = new GlobalConfigurationBuilder();
-    globalConfigBuilder.metrics()
-        .gauges(false)
-        .histograms(false);
+    globalConfigBuilder.metrics().gauges(false).histograms(false);
     return new DefaultCacheManager(globalConfigBuilder.build());
   }
 
   @Override
   protected <T extends Serializable> Cache<Integer, TerminologyResult<T>> buildCache(
-      @Nonnull final EmbeddedCacheManager cacheManager, @Nonnull final String cacheName,
+      @Nonnull final EmbeddedCacheManager cacheManager,
+      @Nonnull final String cacheName,
       @Nonnull final Class<T> valueType) {
-    final Configuration cacheConfig = new ConfigurationBuilder()
-        .memory()
-        .maxCount(configuration.getMaxEntries())
-        .whenFull(EvictionStrategy.REMOVE)
-        .build();
+    final Configuration cacheConfig =
+        new ConfigurationBuilder()
+            .memory()
+            .maxCount(configuration.getMaxEntries())
+            .whenFull(EvictionStrategy.REMOVE)
+            .build();
 
     cacheManager.defineConfiguration(cacheName, cacheConfig);
     return cacheManager.getCache(cacheName);
   }
-
 }

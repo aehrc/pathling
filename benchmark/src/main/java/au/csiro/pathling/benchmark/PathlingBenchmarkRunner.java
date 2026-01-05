@@ -32,5 +32,4 @@ public class PathlingBenchmarkRunner {
     final CommandLineOptions options = new CommandLineOptions(args);
     new Runner(options).run();
   }
-
 }

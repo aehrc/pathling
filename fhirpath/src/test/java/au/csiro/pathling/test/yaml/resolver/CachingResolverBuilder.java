@@ -26,10 +26,8 @@ import lombok.Value;
 @Value(staticConstructor = "of")
 public class CachingResolverBuilder implements ResolverBuilder {
 
-  @Nonnull
-  ResolverBuilder delegate;
-  @Nonnull
-  Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> cache;
+  @Nonnull ResolverBuilder delegate;
+  @Nonnull Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> cache;
 
   @Override
   @Nonnull

@@ -26,16 +26,14 @@ import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * Represents the definition of an element that can be represented by multiple different data
- * types.
+ * Represents the definition of an element that can be represented by multiple different data types.
  *
  * @author John Grimes
  * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#polymorphism">Polymorphism in FHIR</a>
  */
 class FhirChoiceDefinition implements ChoiceDefinition {
 
-  @Nonnull
-  private final RuntimeChildChoiceDefinition childDefinition;
+  @Nonnull private final RuntimeChildChoiceDefinition childDefinition;
 
   protected FhirChoiceDefinition(@Nonnull final RuntimeChildChoiceDefinition childDefinition) {
     this.childDefinition = childDefinition;
@@ -49,8 +47,8 @@ class FhirChoiceDefinition implements ChoiceDefinition {
    * @return the column name
    */
   @Nonnull
-  public static String getColumnName(@Nonnull final String elementName,
-      @Nonnull final String type) {
+  public static String getColumnName(
+      @Nonnull final String elementName, @Nonnull final String type) {
     return elementName + StringUtils.capitalize(type);
   }
 
@@ -65,7 +63,6 @@ class FhirChoiceDefinition implements ChoiceDefinition {
   public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
     return getChildByElementName(name).map(e -> e);
   }
-
 
   /**
    * Returns the child element definition for the given type, if it exists.
@@ -89,5 +86,4 @@ class FhirChoiceDefinition implements ChoiceDefinition {
   private Optional<ElementDefinition> getChildByElementName(final String name) {
     return FhirDefinitionContext.buildElement(childDefinition, name);
   }
-
 }

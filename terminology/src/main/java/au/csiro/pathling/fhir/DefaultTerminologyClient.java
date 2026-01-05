@@ -35,31 +35,33 @@ import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 
-/**
- * An implementation of {@link TerminologyClient} that uses cacheable GET requests.
- */
+/** An implementation of {@link TerminologyClient} that uses cacheable GET requests. */
 class DefaultTerminologyClient extends ResourceCloser implements TerminologyClient {
 
-  @Nonnull
-  final IGenericClient fhirClient;
+  @Nonnull final IGenericClient fhirClient;
 
-  DefaultTerminologyClient(@Nonnull final IGenericClient fhirClient, @Nonnull final Closeable...
-      resourcesToAdopt) {
+  DefaultTerminologyClient(
+      @Nonnull final IGenericClient fhirClient, @Nonnull final Closeable... resourcesToAdopt) {
     super(resourcesToAdopt);
     this.fhirClient = fhirClient;
   }
 
   @Nonnull
   @Override
-  public Parameters validateCode(@Nonnull final UriType url, @Nonnull final UriType system,
-      @Nullable final StringType version, @Nonnull final CodeType code) {
+  public Parameters validateCode(
+      @Nonnull final UriType url,
+      @Nonnull final UriType system,
+      @Nullable final StringType version,
+      @Nonnull final CodeType code) {
     return buildValidateCode(url, system, version, code).execute();
   }
 
   @Nonnull
   @Override
-  public IOperationUntypedWithInput<Parameters> buildValidateCode(@Nonnull final UriType url,
-      @Nonnull final UriType system, @Nullable final StringType version,
+  public IOperationUntypedWithInput<Parameters> buildValidateCode(
+      @Nonnull final UriType url,
+      @Nonnull final UriType system,
+      @Nullable final StringType version,
       @Nonnull final CodeType code) {
     final Parameters params = new Parameters();
     params.addParameter().setName("url").setValue(url);
@@ -69,7 +71,8 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
       params.addParameter().setName("systemVersion").setValue(version);
     }
 
-    return fhirClient.operation()
+    return fhirClient
+        .operation()
         .onType(ValueSet.class)
         .named("$validate-code")
         .withParameters(params)
@@ -78,17 +81,24 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
 
   @Nonnull
   @Override
-  public Parameters translate(@Nonnull final UriType url, @Nonnull final UriType system,
-      @Nullable final StringType version, @Nonnull final CodeType code,
-      @Nullable final BooleanType reverse, @Nullable final UriType target) {
+  public Parameters translate(
+      @Nonnull final UriType url,
+      @Nonnull final UriType system,
+      @Nullable final StringType version,
+      @Nonnull final CodeType code,
+      @Nullable final BooleanType reverse,
+      @Nullable final UriType target) {
     return buildTranslate(url, system, version, code, reverse, target).execute();
   }
 
   @Nonnull
   @Override
-  public IOperationUntypedWithInput<Parameters> buildTranslate(@Nonnull final UriType url,
-      @Nonnull final UriType system, @Nullable final StringType version,
-      @Nonnull final CodeType code, @Nullable final BooleanType reverse,
+  public IOperationUntypedWithInput<Parameters> buildTranslate(
+      @Nonnull final UriType url,
+      @Nonnull final UriType system,
+      @Nullable final StringType version,
+      @Nonnull final CodeType code,
+      @Nullable final BooleanType reverse,
       @Nullable final UriType target) {
     final Parameters params = new Parameters();
     params.addParameter().setName("url").setValue(url);
@@ -103,7 +113,8 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
     if (target != null) {
       params.addParameter().setName("target").setValue(target);
     }
-    return fhirClient.operation()
+    return fhirClient
+        .operation()
         .onType(ConceptMap.class)
         .named("$translate")
         .withParameters(params)
@@ -112,15 +123,20 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
 
   @Nonnull
   @Override
-  public Parameters subsumes(@Nonnull final CodeType codeA, @Nonnull final CodeType codeB,
-      @Nonnull final UriType system, @Nullable final StringType version) {
+  public Parameters subsumes(
+      @Nonnull final CodeType codeA,
+      @Nonnull final CodeType codeB,
+      @Nonnull final UriType system,
+      @Nullable final StringType version) {
     return buildSubsumes(codeA, codeB, system, version).execute();
   }
 
   @Nonnull
   @Override
-  public IOperationUntypedWithInput<Parameters> buildSubsumes(@Nonnull final CodeType codeA,
-      @Nonnull final CodeType codeB, @Nonnull final UriType system,
+  public IOperationUntypedWithInput<Parameters> buildSubsumes(
+      @Nonnull final CodeType codeA,
+      @Nonnull final CodeType codeB,
+      @Nonnull final UriType system,
       @Nullable final StringType version) {
     final Parameters params = new Parameters();
     params.addParameter().setName("codeA").setValue(codeA);
@@ -129,7 +145,8 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
     if (version != null) {
       params.addParameter().setName("version").setValue(version);
     }
-    return fhirClient.operation()
+    return fhirClient
+        .operation()
         .onType(CodeSystem.class)
         .named("$subsumes")
         .withParameters(params)
@@ -138,8 +155,10 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
 
   @Nonnull
   @Override
-  public Parameters lookup(@Nonnull final UriType system,
-      @Nullable final StringType version, @Nonnull final CodeType code,
+  public Parameters lookup(
+      @Nonnull final UriType system,
+      @Nullable final StringType version,
+      @Nonnull final CodeType code,
       @Nullable final CodeType property,
       @Nullable final StringType acceptLanguage) {
     return buildLookup(system, version, code, property, acceptLanguage).execute();
@@ -147,9 +166,11 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
 
   @Nonnull
   @Override
-  public IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull final UriType system,
+  public IOperationUntypedWithInput<Parameters> buildLookup(
+      @Nonnull final UriType system,
       @Nullable final StringType version,
-      @Nonnull final CodeType code, @Nullable final CodeType property,
+      @Nonnull final CodeType code,
+      @Nullable final CodeType property,
       @Nullable final StringType preferredLanguage) {
     final Parameters params = new Parameters();
     params.addParameter().setName("system").setValue(system);
@@ -160,16 +181,16 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
     if (property != null) {
       params.addParameter().setName("property").setValue(property);
     }
-    final IOperationUntypedWithInput<Parameters> operation = fhirClient.operation()
-        .onType(CodeSystem.class)
-        .named("$lookup")
-        .withParameters(params)
-        .useHttpGet();
+    final IOperationUntypedWithInput<Parameters> operation =
+        fhirClient
+            .operation()
+            .onType(CodeSystem.class)
+            .named("$lookup")
+            .withParameters(params)
+            .useHttpGet();
 
     return nonNull(preferredLanguage)
-           ? operation.withAdditionalHeader(HttpHeaders.ACCEPT_LANGUAGE,
-        preferredLanguage.getValue())
-           : operation;
+        ? operation.withAdditionalHeader(HttpHeaders.ACCEPT_LANGUAGE, preferredLanguage.getValue())
+        : operation;
   }
-
 }

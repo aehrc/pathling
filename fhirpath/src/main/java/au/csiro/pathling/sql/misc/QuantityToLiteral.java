@@ -29,21 +29,18 @@ import org.apache.spark.sql.types.DataTypes;
 
 /**
  * Spark UDF to convert a Quantity represented as a Row to a valid Quantity literal string.
- * <p>
- * UCUM units are quoted with single quotes, while time duration units are not quoted. For other
+ *
+ * <p>UCUM units are quoted with single quotes, while time duration units are not quoted. For other
  * systems, the function returns null.
- * <p>
- * If the quantity is null, the function returns null.
+ *
+ * <p>If the quantity is null, the function returns null.
  */
 public class QuantityToLiteral implements SqlFunction1<Row, String> {
 
-  /**
-   * The name of this function when used within SQL.
-   */
+  /** The name of this function when used within SQL. */
   public static final String FUNCTION_NAME = "quantity_to_literal";
 
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   @Override
   public String getName() {

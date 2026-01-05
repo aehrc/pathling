@@ -37,12 +37,13 @@ class ResourceParserTest {
   private static final String CONDITION_REF = "Condition/2383c155-6345-e842-b7d7-3f6748ca634b";
   private static final String CLAIM_REF = "Claim/47a08521-15ad-de17-f731-9b79065ddd72";
 
-
   private static final String ENCOUNTER_URN = "urn:uuid:16dceeb0-620b-f259-8b1a-87dc65e5f78a";
 
   private static final String REFERENCE_RELATIVE = "Patient/2383c155-6345-e842-b7d7-000000000001";
-  private static final String REFERENCE_ABSOLUTE = "http://foo.bar.com/Encounter/2383c155-6345-e842-b7d7-000000000002";
-  private static final String REFERENCE_CONDITIONAL = "Organization?identifier=https://github.com/synthetichealth/synthea|fa51267f-96dd-340c-ad1c-76080f4525f6";
+  private static final String REFERENCE_ABSOLUTE =
+      "http://foo.bar.com/Encounter/2383c155-6345-e842-b7d7-000000000002";
+  private static final String REFERENCE_CONDITIONAL =
+      "Organization?identifier=https://github.com/synthetichealth/synthea|fa51267f-96dd-340c-ad1c-76080f4525f6";
 
   private Patient patient;
   private Condition condition;
@@ -51,17 +52,19 @@ class ResourceParserTest {
 
   @BeforeEach
   void setUp() throws IOException {
-    final String testBundleJson = Resources.toString(
-        Resources.getResource("test-data/references/test-bundle.json"), Charsets.UTF_8);
+    final String testBundleJson =
+        Resources.toString(
+            Resources.getResource("test-data/references/test-bundle.json"), Charsets.UTF_8);
 
-    final Bundle bundle = (Bundle) ResourceParser.build(
-        FhirVersionEnum.R4, PathlingContext.FHIR_JSON).parse(testBundleJson);
+    final Bundle bundle =
+        (Bundle)
+            ResourceParser.build(FhirVersionEnum.R4, PathlingContext.FHIR_JSON)
+                .parse(testBundleJson);
 
     patient = (Patient) bundle.getEntry().get(0).getResource();
     condition = (Condition) bundle.getEntry().get(1).getResource();
     claim = (Claim) bundle.getEntry().get(2).getResource();
     condition1 = (Condition) bundle.getEntry().get(3).getResource();
-
   }
 
   @Test
@@ -80,7 +83,8 @@ class ResourceParserTest {
     // reference in an extension
     assertEquals(PATIENT_REF, ((Reference) claim.getExtension().get(0).getValue()).getReference());
     // reference in the extension of a primitive value
-    assertEquals(CONDITION_REF,
+    assertEquals(
+        CONDITION_REF,
         ((Reference) claim.getStatusElement().getExtension().get(0).getValue()).getReference());
   }
 

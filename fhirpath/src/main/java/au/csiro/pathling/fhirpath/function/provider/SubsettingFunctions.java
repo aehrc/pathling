@@ -29,12 +29,11 @@ import jakarta.annotation.Nonnull;
  * @author Piotr Szul
  * @author John Grimes
  * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#subsetting">FHIRPath Specification -
- * Subsetting</a>
+ *     Subsetting</a>
  */
 public class SubsettingFunctions {
 
-  private SubsettingFunctions() {
-  }
+  private SubsettingFunctions() {}
 
   /**
    * Returns a collection containing only the first item in the input collection. This function is
@@ -44,7 +43,7 @@ public class SubsettingFunctions {
    * @param input The input collection
    * @return A collection containing only the first item in the input collection
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#first--collection">FHIRPath Specification
-   * - first</a>
+   *     - first</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -52,5 +51,4 @@ public class SubsettingFunctions {
   public static Collection first(@Nonnull final Collection input) {
     return input.copyWith(input.getColumn().first());
   }
-
 }

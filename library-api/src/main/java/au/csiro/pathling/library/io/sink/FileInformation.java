@@ -7,12 +7,7 @@ import jakarta.validation.constraints.NotNull;
  *
  * @param fhirResourceType The FHIR resource type code (as a string) this file belongs to.
  * @param absoluteUrl The download url. It may be required to have a controller in between to
- * resolve it to an actual file.
+ *     resolve it to an actual file.
  * @author Felix Naumann
  */
-public record FileInformation(
-    @NotNull String fhirResourceType,
-    @NotNull String absoluteUrl
-) {
-
-}
+public record FileInformation(@NotNull String fhirResourceType, @NotNull String absoluteUrl) {}

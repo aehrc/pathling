@@ -43,14 +43,11 @@ public class FhirPathTestBuilder {
   private final YamlTestBase testBase;
   private final Collection<FhirPathTestCaseBuilder> testCases = new ArrayList<>();
 
-  @Nullable
-  private Map<String, Object> subject = null;
+  @Nullable private Map<String, Object> subject = null;
 
-  @Nullable
-  IBaseResource resource = null;
+  @Nullable IBaseResource resource = null;
 
-  @Nullable
-  private String group = null;
+  @Nullable private String group = null;
 
   @Nonnull
   public FhirPathTestBuilder withResource(@Nonnull final IBaseResource resource) {
@@ -76,7 +73,8 @@ public class FhirPathTestBuilder {
     return this;
   }
 
-  public FhirPathTestBuilder test(final String description,
+  public FhirPathTestBuilder test(
+      final String description,
       @Nonnull final Function<FhirPathTestCaseBuilder, FhirPathTestCaseBuilder> builderFunction) {
     final String fullDescription = createTestDescription(description);
     final FhirPathTestCaseBuilder builder = new FhirPathTestCaseBuilder(this, fullDescription);
@@ -96,8 +94,8 @@ public class FhirPathTestBuilder {
    * @param description The test description
    * @return This builder for method chaining
    */
-  public FhirPathTestBuilder testEquals(final Object expected, final String expression,
-      final String description) {
+  public FhirPathTestBuilder testEquals(
+      final Object expected, final String expression, final String description) {
     return test(description, tc -> tc.expression(expression).expectResult(expected));
   }
 
@@ -153,11 +151,10 @@ public class FhirPathTestBuilder {
    * @param description The test description
    * @return This builder for method chaining
    */
-  public FhirPathTestBuilder testError(@Nonnull final String errorMessage, final String expression,
-      final String description) {
+  public FhirPathTestBuilder testError(
+      @Nonnull final String errorMessage, final String expression, final String description) {
     return test(description, tc -> tc.expression(expression).expectError(errorMessage));
   }
-
 
   @Nonnull
   public Map<Object, Object> buildSubject() {
@@ -185,13 +182,12 @@ public class FhirPathTestBuilder {
     }
 
     return testCases.stream()
-        .map(tc -> {
-          final YamlTestExecutor executor = tc.build(resolverFactory);
-          return DynamicTest.dynamicTest(
-              executor.getDescription(),
-              () -> testBase.run(executor)
-          );
-        });
+        .map(
+            tc -> {
+              final YamlTestExecutor executor = tc.build(resolverFactory);
+              return DynamicTest.dynamicTest(
+                  executor.getDescription(), () -> testBase.run(executor));
+            });
   }
 
   /**
@@ -202,9 +198,6 @@ public class FhirPathTestBuilder {
    * @return The formatted test description
    */
   private String createTestDescription(final String description) {
-    return group != null
-           ? group + " - " + description
-           : description;
+    return group != null ? group + " - " + description : description;
   }
-
 }

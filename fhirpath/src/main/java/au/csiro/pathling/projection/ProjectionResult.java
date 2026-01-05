@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.projection;
 
-
 import static org.apache.spark.sql.functions.concat;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
@@ -33,9 +32,9 @@ import org.apache.spark.sql.Column;
  * The result of evaluating a projection, which consists of a list of {@link ProjectedColumn}
  * objects and an intermediate {@link Column} representation that is used to produce the final
  * result.
- * <p>
- * These objects can also be combined to produce higher-level projections, such as the combination
- * of sub-selections and unions.
+ *
+ * <p>These objects can also be combined to produce higher-level projections, such as the
+ * combination of sub-selections and unions.
  */
 @Value(staticConstructor = "of")
 public class ProjectionResult {
@@ -43,19 +42,14 @@ public class ProjectionResult {
   /**
    * A list of results, each of which contains a {@link Collection} and a {@link RequestedColumn}.
    */
-  @Nonnull
-  List<ProjectedColumn> results;
+  @Nonnull List<ProjectedColumn> results;
+
+  /** An array of structs. The struct has a field for each column name in the projection. */
+  @Nonnull Column resultColumn;
 
   /**
-   * An array of structs. The struct has a field for each column name in the projection.
-   */
-  @Nonnull
-  Column resultColumn;
-
-
-  /**
-   * Creates a new ProjectionResult with the specified result column, retaining the existing
-   * results list.
+   * Creates a new ProjectionResult with the specified result column, retaining the existing results
+   * list.
    *
    * @param newResultColumn The new result column
    * @return A new ProjectionResult with the updated result column
@@ -67,10 +61,9 @@ public class ProjectionResult {
 
   /**
    * Creates a product (Cartesian product) of multiple projection results.
-   * <p>
-   * This combines results using struct product semantics, where each result is expanded to include
-   * all combinations from the inputs.
-   * </p>
+   *
+   * <p>This combines results using struct product semantics, where each result is expanded to
+   * include all combinations from the inputs.
    *
    * @param results The results to combine via product
    * @return The product of all results
@@ -86,17 +79,15 @@ public class ProjectionResult {
       return of(
           results.stream().flatMap(r -> r.getResults().stream()).toList(),
           ColumnFunctions.structProduct(
-              results.stream().map(ProjectionResult::getResultColumn).toArray(Column[]::new))
-      );
+              results.stream().map(ProjectionResult::getResultColumn).toArray(Column[]::new)));
     }
   }
 
   /**
    * Creates a concatenation (union) of multiple projection results.
-   * <p>
-   * This combines results by concatenating their arrays, ensuring each result is converted to an
+   *
+   * <p>This combines results by concatenating their arrays, ensuring each result is converted to an
    * array format before concatenation.
-   * </p>
    *
    * @param results The results to concatenate
    * @return The concatenated result
@@ -107,18 +98,18 @@ public class ProjectionResult {
       throw new IllegalArgumentException("Cannot concatenate empty list of results");
     }
     // Process each result to ensure they are all arrays
-    final Column[] converted = results.stream()
-        .map(ProjectionResult::getResultColumn)
-        .map(DefaultRepresentation::new)
-        .map(ColumnRepresentation::plural)
-        .map(ColumnRepresentation::getValue)
-        .toArray(Column[]::new);
+    final Column[] converted =
+        results.stream()
+            .map(ProjectionResult::getResultColumn)
+            .map(DefaultRepresentation::new)
+            .map(ColumnRepresentation::plural)
+            .map(ColumnRepresentation::getValue)
+            .toArray(Column[]::new);
     // Concatenate the converted columns
     final Column combinedResult = concat(converted);
     // Use the schema from the first result
     return results.getFirst().withResultColumn(combinedResult);
   }
-
 
   /**
    * Creates a new ProjectionResult where the null value is added if the result is empty for outer
@@ -129,9 +120,6 @@ public class ProjectionResult {
    */
   @Nonnull
   public ProjectionResult orNull(final boolean outerJoin) {
-    return outerJoin
-           ? withResultColumn(ColumnFunctions.structProductOuter(resultColumn))
-           : this;
-
+    return outerJoin ? withResultColumn(ColumnFunctions.structProductOuter(resultColumn)) : this;
   }
 }

@@ -33,10 +33,8 @@ public interface DataSink {
    * Write the data from the source to the sink.
    *
    * @param source the data source to write
-   * 
    * @return Information about the write operation or null if no details are captured.
    */
   @Nullable
   WriteDetails write(@Nonnull final DataSource source);
-  
 }

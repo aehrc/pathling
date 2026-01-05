@@ -21,9 +21,7 @@ import jakarta.annotation.Nonnull;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-/**
- * Annotation used to mark method-defined FHIRPath operator implementations.
- */
+/** Annotation used to mark method-defined FHIRPath operator implementations. */
 @Retention(RetentionPolicy.RUNTIME)
 @Nonnull
 public @interface FhirPathOperator {
@@ -34,5 +32,4 @@ public @interface FhirPathOperator {
    * @return the operator name as it appears in FHIRPath expressions
    */
   String name();
-
 }

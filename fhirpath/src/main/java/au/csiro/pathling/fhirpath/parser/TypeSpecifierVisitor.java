@@ -87,17 +87,17 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   public FhirPath visitIdentifier(final IdentifierContext ctx) {
     return isNamespace
-           ? new TypeNamespacePath(ctx.getText())
-           : new TypeSpecifierPath(new TypeSpecifier(ctx.getText()));
+        ? new TypeNamespacePath(ctx.getText())
+        : new TypeSpecifierPath(new TypeSpecifier(ctx.getText()));
   }
 
   @Override
   public FhirPath visitInvocationExpression(final InvocationExpressionContext ctx) {
-    // If we are not already in a namespace and there is an invocation, we need to parse the 
+    // If we are not already in a namespace and there is an invocation, we need to parse the
     // right-hand side of the invocation within the namespace.
     if (!isNamespace) {
-      final TypeNamespacePath typeNamespacePath = (TypeNamespacePath) ctx.expression()
-          .accept(new TypeSpecifierVisitor(true));
+      final TypeNamespacePath typeNamespacePath =
+          (TypeNamespacePath) ctx.expression().accept(new TypeSpecifierVisitor(true));
       final String namespace = typeNamespacePath.getValue();
       final String typeName = ctx.invocation().getText();
       return new TypeSpecifierPath(new TypeSpecifier(namespace, typeName));
@@ -107,26 +107,22 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitIndexerExpression(
-      final IndexerExpressionContext ctx) {
+  public FhirPath visitIndexerExpression(final IndexerExpressionContext ctx) {
     throw newUnexpectedExpressionException("IndexerExpression");
   }
 
   @Override
-  public FhirPath visitPolarityExpression(
-      final PolarityExpressionContext ctx) {
+  public FhirPath visitPolarityExpression(final PolarityExpressionContext ctx) {
     throw newUnexpectedExpressionException("PolarityExpression");
   }
 
   @Override
-  public FhirPath visitAdditiveExpression(
-      final AdditiveExpressionContext ctx) {
+  public FhirPath visitAdditiveExpression(final AdditiveExpressionContext ctx) {
     throw newUnexpectedExpressionException("AdditiveExpression");
   }
 
   @Override
-  public FhirPath visitMultiplicativeExpression(
-      final MultiplicativeExpressionContext ctx) {
+  public FhirPath visitMultiplicativeExpression(final MultiplicativeExpressionContext ctx) {
     throw newUnexpectedExpressionException("MultiplicativeExpression");
   }
 
@@ -146,26 +142,22 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitMembershipExpression(
-      final MembershipExpressionContext ctx) {
+  public FhirPath visitMembershipExpression(final MembershipExpressionContext ctx) {
     throw newUnexpectedExpressionException("MembershipExpression");
   }
 
   @Override
-  public FhirPath visitInequalityExpression(
-      final InequalityExpressionContext ctx) {
+  public FhirPath visitInequalityExpression(final InequalityExpressionContext ctx) {
     throw newUnexpectedExpressionException("InequalityExpression");
   }
 
   @Override
-  public FhirPath visitEqualityExpression(
-      final EqualityExpressionContext ctx) {
+  public FhirPath visitEqualityExpression(final EqualityExpressionContext ctx) {
     throw newUnexpectedExpressionException("EqualityExpression");
   }
 
   @Override
-  public FhirPath visitImpliesExpression(
-      final ImpliesExpressionContext ctx) {
+  public FhirPath visitImpliesExpression(final ImpliesExpressionContext ctx) {
     throw newUnexpectedExpressionException("ImpliesExpression");
   }
 
@@ -190,14 +182,12 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitExternalConstantTerm(
-      final ExternalConstantTermContext ctx) {
+  public FhirPath visitExternalConstantTerm(final ExternalConstantTermContext ctx) {
     throw newUnexpectedExpressionException("ExternalConstantTerm");
   }
 
   @Override
-  public FhirPath visitParenthesizedTerm(
-      final ParenthesizedTermContext ctx) {
+  public FhirPath visitParenthesizedTerm(final ParenthesizedTermContext ctx) {
     throw newUnexpectedExpressionException("ParenthesizedTerm");
   }
 
@@ -257,8 +247,7 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitFunctionInvocation(
-      final FunctionInvocationContext ctx) {
+  public FhirPath visitFunctionInvocation(final FunctionInvocationContext ctx) {
     throw newUnexpectedExpressionException("FunctionInvocation");
   }
 
@@ -298,14 +287,12 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitDateTimePrecision(
-      final DateTimePrecisionContext ctx) {
+  public FhirPath visitDateTimePrecision(final DateTimePrecisionContext ctx) {
     throw newUnexpectedExpressionException("DateTimePrecision");
   }
 
   @Override
-  public FhirPath visitPluralDateTimePrecision(
-      final PluralDateTimePrecisionContext ctx) {
+  public FhirPath visitPluralDateTimePrecision(final PluralDateTimePrecisionContext ctx) {
     throw newUnexpectedExpressionException("PluralDateTimePrecision");
   }
 
@@ -315,8 +302,7 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitQualifiedIdentifier(
-      final QualifiedIdentifierContext ctx) {
+  public FhirPath visitQualifiedIdentifier(final QualifiedIdentifierContext ctx) {
     throw newUnexpectedExpressionException("QualifiedIdentifier");
   }
 
@@ -325,5 +311,4 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
     return new InvalidUserInputError(
         "Unexpected expression type: " + expressionType + " in type specifier");
   }
-
 }

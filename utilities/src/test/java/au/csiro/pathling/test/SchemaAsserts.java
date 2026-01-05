@@ -25,18 +25,17 @@ import org.apache.spark.sql.types.StructType;
 
 public interface SchemaAsserts {
 
-  static void assertFieldNotPresent(final String fieldName,
-      final DataType maybeStructType) {
+  static void assertFieldNotPresent(final String fieldName, final DataType maybeStructType) {
     assertInstanceOf(StructType.class, maybeStructType, "Must be struct type.");
-    assertTrue(((StructType) maybeStructType).getFieldIndex(fieldName).isEmpty(),
+    assertTrue(
+        ((StructType) maybeStructType).getFieldIndex(fieldName).isEmpty(),
         "Field: '" + fieldName + "' not present in struct type.");
   }
 
-  static void assertFieldPresent(final String fieldName,
-      final DataType maybeStructType) {
+  static void assertFieldPresent(final String fieldName, final DataType maybeStructType) {
     assertInstanceOf(StructType.class, maybeStructType, "Must be struct type.");
-    assertTrue(((StructType) maybeStructType).getFieldIndex(fieldName).isDefined(),
+    assertTrue(
+        ((StructType) maybeStructType).getFieldIndex(fieldName).isDefined(),
         "Field: '" + fieldName + "' not present in struct type.");
   }
-
 }

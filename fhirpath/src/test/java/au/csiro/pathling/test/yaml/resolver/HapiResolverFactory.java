@@ -38,19 +38,19 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value(staticConstructor = "of")
 public class HapiResolverFactory implements Function<RuntimeContext, ResourceResolver> {
 
-  @Nonnull
-  IBaseResource resource;
+  @Nonnull IBaseResource resource;
 
   @Override
   @Nonnull
   public ResourceResolver apply(final RuntimeContext rt) {
-    final Dataset<Row> resourceDS = rt.getSpark().createDataset(List.of(resource),
-        rt.getFhirEncoders().of(resource.fhirType())).toDF();
+    final Dataset<Row> resourceDS =
+        rt.getSpark()
+            .createDataset(List.of(resource), rt.getFhirEncoders().of(resource.fhirType()))
+            .toDF();
 
     return DefaultResourceResolver.of(
         FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
         FhirDefinitionContext.of(rt.getFhirEncoders().getContext()),
-        resourceDS
-    );
+        resourceDS);
   }
 }

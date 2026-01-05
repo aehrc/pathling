@@ -29,15 +29,12 @@ import java.util.Objects;
  *
  * @author John Grimes
  */
-class FhirElementDefinition extends
-    BaseFhirNodeDefinition<BaseRuntimeElementDefinition<?>> implements
-    ElementDefinition {
+class FhirElementDefinition extends BaseFhirNodeDefinition<BaseRuntimeElementDefinition<?>>
+    implements ElementDefinition {
 
-  @Nonnull
-  protected final BaseRuntimeChildDefinition childDefinition;
+  @Nonnull protected final BaseRuntimeChildDefinition childDefinition;
 
-  @Nonnull
-  protected final String elementName;
+  @Nonnull protected final String elementName;
 
   protected FhirElementDefinition(
       @Nonnull final BaseRuntimeElementDefinition<?> elementDefinition,
@@ -48,14 +45,16 @@ class FhirElementDefinition extends
     this.elementName = elementName;
   }
 
-  protected FhirElementDefinition(@Nonnull final BaseRuntimeChildDefinition childDefinition,
+  protected FhirElementDefinition(
+      @Nonnull final BaseRuntimeChildDefinition childDefinition,
       @Nonnull final String elementName) {
-    this(Objects.requireNonNull(childDefinition.getChildByName(elementName)), childDefinition,
+    this(
+        Objects.requireNonNull(childDefinition.getChildByName(elementName)),
+        childDefinition,
         elementName);
   }
 
-  protected FhirElementDefinition(
-      @Nonnull final BaseRuntimeChildDefinition childDefinition) {
+  protected FhirElementDefinition(@Nonnull final BaseRuntimeChildDefinition childDefinition) {
     this(childDefinition, childDefinition.getElementName());
   }
 

@@ -25,25 +25,26 @@ import org.apache.spark.sql.Row;
 
 /**
  * Interface for resolving FHIR resources during FHIRPath evaluation.
- * <p>
- * The ResourceResolver is responsible for:
+ *
+ * <p>The ResourceResolver is responsible for:
+ *
  * <ul>
- *   <li>Providing access to the subject resource (the primary resource being queried)</li>
- *   <li>Resolving references to other resources</li>
- *   <li>Handling forward and reverse resource joins</li>
- *   <li>Creating the underlying dataset view for query execution</li>
+ *   <li>Providing access to the subject resource (the primary resource being queried)
+ *   <li>Resolving references to other resources
+ *   <li>Handling forward and reverse resource joins
+ *   <li>Creating the underlying dataset view for query execution
  * </ul>
- * <p>
- * Implementations of this interface manage the association of requested resource collection
- * with the underlying representation in the Spark dataset which is essential
- * for evaluating FHIRPath expressions that traverse resource boundaries.
+ *
+ * <p>Implementations of this interface manage the association of requested resource collection with
+ * the underlying representation in the Spark dataset which is essential for evaluating FHIRPath
+ * expressions that traverse resource boundaries.
  */
 public interface ResourceResolver {
 
   /**
    * Resolves the subject resource for this context.
-   * <p>
-   * The subject resource is the primary resource type being queried, such as Patient in a query
+   *
+   * <p>The subject resource is the primary resource type being queried, such as Patient in a query
    * starting with Patient.name.given.
    *
    * @return A ResourceCollection representing the subject resource
@@ -53,22 +54,22 @@ public interface ResourceResolver {
 
   /**
    * Resolves a resource by its type code.
-   * <p>
-   * This method is used to access resources by their type name, such as "Patient" or
+   *
+   * <p>This method is used to access resources by their type name, such as "Patient" or
    * "Observation".
    *
    * @param resourceCode The FHIR resource type code (e.g., "Patient", "Observation")
    * @return An Optional containing the ResourceCollection if the resource type exists, or empty if
-   * it doesn't
+   *     it doesn't
    */
   @Nonnull
   Optional<ResourceCollection> resolveResource(@Nonnull final String resourceCode);
 
   /**
    * Creates the underlying dataset view for query execution.
-   * <p>
-   * This method returns the Spark Dataset that contains the data for the subject resource and any
-   * joined resources. It's used as the starting point for evaluating FHIRPath expressions.
+   *
+   * <p>This method returns the Spark Dataset that contains the data for the subject resource and
+   * any joined resources. It's used as the starting point for evaluating FHIRPath expressions.
    *
    * @return A Spark Dataset containing the view data
    */

@@ -48,37 +48,26 @@ import lombok.Data;
 @ValidHttpCacheConfiguration
 public class HttpClientCachingConfiguration implements Serializable {
 
-  @Serial
-  private static final long serialVersionUID = -3030386957343963899L;
+  @Serial private static final long serialVersionUID = -3030386957343963899L;
 
-  /**
-   * Set this to false to disable caching of terminology requests (not recommended).
-   */
-  @NotNull
-  @Builder.Default
-  private boolean enabled = true;
+  /** Set this to false to disable caching of terminology requests (not recommended). */
+  @NotNull @Builder.Default private boolean enabled = true;
 
-  /**
-   * Sets the maximum number of entries that will be held in memory.
-   */
+  /** Sets the maximum number of entries that will be held in memory. */
   @NotNull
   @Min(0)
   @Builder.Default
   private int maxEntries = 200_000;
 
-  /**
-   * The {@link HttpClientCachingStorageType} to use for the cache.
-   */
-  @NotNull
-  @Builder.Default
+  /** The {@link HttpClientCachingStorageType} to use for the cache. */
+  @NotNull @Builder.Default
   private HttpClientCachingStorageType storageType = HttpClientCachingStorageType.MEMORY;
 
   /**
    * The path on disk to use for the cache, required when {@link HttpClientCachingStorageType#DISK}
    * is specified.
    */
-  @Nullable
-  private String storagePath;
+  @Nullable private String storagePath;
 
   /**
    * The default expiry time for cache entries (in seconds), used when the server does not provide
@@ -88,16 +77,12 @@ public class HttpClientCachingConfiguration implements Serializable {
   @Builder.Default
   private int defaultExpiry = 600;
 
-  /**
-   * If provided, this value overrides the expiry time provided by the terminology server.
-   */
+  /** If provided, this value overrides the expiry time provided by the terminology server. */
   @Nullable
   @Min(0)
   private Integer overrideExpiry;
 
-  /**
-   * Validation annotation for HTTP cache configuration.
-   */
+  /** Validation annotation for HTTP cache configuration. */
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
   @Constraint(validatedBy = HttpCacheConfigurationValidator.class)
@@ -124,14 +109,11 @@ public class HttpClientCachingConfiguration implements Serializable {
      * @return the validation payload
      */
     Class<? extends Payload>[] payload() default {};
-
   }
 
-  /**
-   * Validator for HTTP cache configuration.
-   */
-  public static class HttpCacheConfigurationValidator implements
-      ConstraintValidator<ValidHttpCacheConfiguration, HttpClientCachingConfiguration> {
+  /** Validator for HTTP cache configuration. */
+  public static class HttpCacheConfigurationValidator
+      implements ConstraintValidator<ValidHttpCacheConfiguration, HttpClientCachingConfiguration> {
 
     @Override
     public void initialize(final ValidHttpCacheConfiguration constraintAnnotation) {
@@ -139,8 +121,8 @@ public class HttpClientCachingConfiguration implements Serializable {
     }
 
     @Override
-    public boolean isValid(final HttpClientCachingConfiguration value,
-        final ConstraintValidatorContext context) {
+    public boolean isValid(
+        final HttpClientCachingConfiguration value, final ConstraintValidatorContext context) {
       if (HttpClientCachingStorageType.DISK.equals(value.getStorageType())) {
         return nonNull(value.getStoragePath());
       } else {
@@ -148,5 +130,4 @@ public class HttpClientCachingConfiguration implements Serializable {
       }
     }
   }
-
 }

@@ -53,44 +53,37 @@ import org.apache.spark.sql.types.StructType;
 @SuppressWarnings("unused")
 public final class FlexiDecimal {
 
-  private FlexiDecimal() {
-  }
+  private FlexiDecimal() {}
 
-  /**
-   * The maximum precision (the number of significant digits).
-   */
+  /** The maximum precision (the number of significant digits). */
   public static final int MAX_PRECISION = 38;
-  /**
-   * The SQL type for the unscaled value.
-   */
+
+  /** The SQL type for the unscaled value. */
   public static final DataType DECIMAL_TYPE = DataTypes.createDecimalType(MAX_PRECISION, 0);
 
   @Nonnull
   private static StructType createFlexibleDecimalType() {
     final Metadata metadata = new MetadataBuilder().build();
-    final StructField value = new StructField("value", DECIMAL_TYPE, true,
-        metadata);
+    final StructField value = new StructField("value", DECIMAL_TYPE, true, metadata);
     final StructField scale = new StructField("scale", DataTypes.IntegerType, true, metadata);
-    return new StructType(new StructField[]{value, scale});
+    return new StructType(new StructField[] {value, scale});
   }
 
-  /**
-   * The SQL (struct) type for flexible decimal.
-   */
-  @Nonnull
-  public static final DataType DATA_TYPE = createFlexibleDecimalType();
+  /** The SQL (struct) type for flexible decimal. */
+  @Nonnull public static final DataType DATA_TYPE = createFlexibleDecimalType();
 
   @Nonnull
   private static UserDefinedFunction toBooleanUdf(
       @Nonnull final UDF2<BigDecimal, BigDecimal, Boolean> method) {
-    final UDF2<Row, Row, Boolean> f = (left, right) -> {
-      final BigDecimal leftValue = fromValue(left);
-      final BigDecimal rightValue = fromValue(right);
-      //noinspection ReturnOfNull
-      return (leftValue == null || rightValue == null)
-             ? null
-             : method.call(leftValue, rightValue);
-    };
+    final UDF2<Row, Row, Boolean> f =
+        (left, right) -> {
+          final BigDecimal leftValue = fromValue(left);
+          final BigDecimal rightValue = fromValue(right);
+          //noinspection ReturnOfNull
+          return (leftValue == null || rightValue == null)
+              ? null
+              : method.call(leftValue, rightValue);
+        };
     return functions.udf(f, DataTypes.BooleanType);
   }
 
@@ -100,8 +93,8 @@ public final class FlexiDecimal {
     //noinspection ReturnOfNull
     return (left, right) ->
         (left == null || right == null)
-        ? null
-        : toValue(method.call(fromValue(left), fromValue(right)));
+            ? null
+            : toValue(method.call(fromValue(left), fromValue(right)));
   }
 
   @Nonnull
@@ -118,9 +111,7 @@ public final class FlexiDecimal {
    */
   @Nullable
   public static BigDecimal fromValue(@Nullable final Row row) {
-    return row != null && !row.isNullAt(0)
-           ? row.getDecimal(0).movePointLeft(row.getInt(1))
-           : null;
+    return row != null && !row.isNullAt(0) ? row.getDecimal(0).movePointLeft(row.getInt(1)) : null;
   }
 
   /**
@@ -132,26 +123,21 @@ public final class FlexiDecimal {
   @Nullable
   public static Row toValue(@Nullable final BigDecimal decimal) {
     final Object[] fieldValues = toArrayValue(decimal);
-    return fieldValues != null
-           ? RowFactory.create(fieldValues)
-           : null;
+    return fieldValues != null ? RowFactory.create(fieldValues) : null;
   }
 
   @Nullable
   private static Object[] toArrayValue(@Nullable final BigDecimal decimal) {
     final BigDecimal normalizedValue = normalize(decimal);
     return normalizedValue != null
-           ? new Object[]{Decimal.apply(normalizedValue.unscaledValue()), normalizedValue.scale()}
-           : null;
+        ? new Object[] {Decimal.apply(normalizedValue.unscaledValue()), normalizedValue.scale()}
+        : null;
   }
-
 
   @Nullable
   private static Row negate(@Nullable final Row row) {
     final BigDecimal value = fromValue(row);
-    return value == null
-           ? null
-           : toValue(value.negate());
+    return value == null ? null : toValue(value.negate());
   }
 
   /**
@@ -165,9 +151,8 @@ public final class FlexiDecimal {
     if (decimal == null) {
       return null;
     } else {
-      final BigDecimal adjustedValue = decimal.scale() < 0
-                                       ? decimal.setScale(0, RoundingMode.UNNECESSARY)
-                                       : decimal;
+      final BigDecimal adjustedValue =
+          decimal.scale() < 0 ? decimal.setScale(0, RoundingMode.UNNECESSARY) : decimal;
       // This may be may have too many digits
       if (adjustedValue.precision() > MAX_PRECISION) {
         // we need to adjust the scale to fit into the desired precision
@@ -195,14 +180,12 @@ public final class FlexiDecimal {
   private static final UserDefinedFunction MINUS_UDF = toBigDecimalUdf(BigDecimal::subtract);
   private static final UserDefinedFunction DIVIDE_UDF = toBigDecimalUdf(BigDecimal::divide);
 
-  private static final UserDefinedFunction TO_DECIMAL = functions.udf(
-      (UDF1<Row, BigDecimal>) FlexiDecimal::fromValue,
-      DecimalCustomCoder.decimalType());
+  private static final UserDefinedFunction TO_DECIMAL =
+      functions.udf(
+          (UDF1<Row, BigDecimal>) FlexiDecimal::fromValue, DecimalCustomCoder.decimalType());
 
-  private static final UserDefinedFunction NEGATE_UDF = functions.udf(
-      (UDF1<Row, Row>) FlexiDecimal::negate,
-      DATA_TYPE);
-
+  private static final UserDefinedFunction NEGATE_UDF =
+      functions.udf((UDF1<Row, Row>) FlexiDecimal::negate, DATA_TYPE);
 
   /**
    * Compares two flexible decimal columns for equality.
@@ -333,5 +316,4 @@ public final class FlexiDecimal {
   public static Column negate(@Nonnull final Column flexiDecimal) {
     return NEGATE_UDF.apply(flexiDecimal);
   }
-
 }

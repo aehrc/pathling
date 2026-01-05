@@ -36,32 +36,23 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
-/**
- * The implementation of the 'subsumes' UDF.
- */
+/** The implementation of the 'subsumes' UDF. */
 @Slf4j
-public class SubsumesUdf implements SqlFunction,
-    SqlFunction3<Object, Object, Boolean, Boolean> {
+public class SubsumesUdf implements SqlFunction, SqlFunction3<Object, Object, Boolean, Boolean> {
 
-  @Serial
-  private static final long serialVersionUID = 7605853352299165569L;
+  @Serial private static final long serialVersionUID = 7605853352299165569L;
 
-  /**
-   * The name of the subsumes UDF function.
-   */
+  /** The name of the subsumes UDF function. */
   public static final String FUNCTION_NAME = "subsumes";
 
-  /**
-   * The return type of the subsumes UDF function.
-   */
+  /** The return type of the subsumes UDF function. */
   public static final DataType RETURN_TYPE = DataTypes.BooleanType;
 
   /** The default value for the inverted parameter. */
   public static final boolean PARAM_INVERTED_DEFAULT = false;
 
   /** The terminology service factory used to create terminology services. */
-  @Nonnull
-  private final TerminologyServiceFactory terminologyServiceFactory;
+  @Nonnull private final TerminologyServiceFactory terminologyServiceFactory;
 
   /**
    * Creates a new SubsumesUdf with the specified terminology service factory.
@@ -91,15 +82,14 @@ public class SubsumesUdf implements SqlFunction,
    * @return true if the subsumption relationship holds, false otherwise, null if indeterminate
    */
   @Nullable
-  protected Boolean doCall(@Nullable final Stream<Coding> codingsA,
+  protected Boolean doCall(
+      @Nullable final Stream<Coding> codingsA,
       @Nullable final Stream<Coding> codingsB,
       @Nullable final Boolean inverted) {
     if (codingsA == null || codingsB == null) {
       return null;
     }
-    final boolean resolvedInverted = inverted != null
-                                     ? inverted
-                                     : PARAM_INVERTED_DEFAULT;
+    final boolean resolvedInverted = inverted != null ? inverted : PARAM_INVERTED_DEFAULT;
 
     final TerminologyService terminologyService = terminologyServiceFactory.build();
 
@@ -107,29 +97,28 @@ public class SubsumesUdf implements SqlFunction,
     final List<Coding> validCodingsB = validCodings(codingsB).toList();
 
     return validCodings(codingsA)
-        .anyMatch(codingA ->
-            validCodingsB.stream()
-                .filter(codingB -> codingA.getSystem().equals(codingB.getSystem()))
-                .anyMatch(codingB -> isSubsumes(terminologyService.subsumes(codingA, codingB),
-                    resolvedInverted))
-        );
+        .anyMatch(
+            codingA ->
+                validCodingsB.stream()
+                    .filter(codingB -> codingA.getSystem().equals(codingB.getSystem()))
+                    .anyMatch(
+                        codingB ->
+                            isSubsumes(
+                                terminologyService.subsumes(codingA, codingB), resolvedInverted)));
   }
 
   @Nullable
   @Override
-  public Boolean call(@Nullable final Object codingRowOrArrayA,
+  public Boolean call(
+      @Nullable final Object codingRowOrArrayA,
       @Nullable final Object codingRowOrArrayB,
       @Nullable final Boolean inverted) {
     return doCall(
-        decodeOneOrMany(codingRowOrArrayA),
-        decodeOneOrMany(codingRowOrArrayB, 1),
-        inverted);
+        decodeOneOrMany(codingRowOrArrayA), decodeOneOrMany(codingRowOrArrayB, 1), inverted);
   }
 
-  private static boolean isSubsumes(@Nonnull final ConceptSubsumptionOutcome outcome,
-      final boolean inverted) {
-    return EQUIVALENT.equals(outcome) || (inverted
-                                          ? SUBSUMEDBY
-                                          : SUBSUMES).equals(outcome);
+  private static boolean isSubsumes(
+      @Nonnull final ConceptSubsumptionOutcome outcome, final boolean inverted) {
+    return EQUIVALENT.equals(outcome) || (inverted ? SUBSUMEDBY : SUBSUMES).equals(outcome);
   }
 }

@@ -45,9 +45,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = false)
 public class Column implements SelectionElement {
 
-  /**
-   * Builder class for creating Column instances.
-   */
+  /** Builder class for creating Column instances. */
   @SuppressWarnings("unused")
   public static class ColumnBuilder {
     // for javadocs
@@ -61,13 +59,10 @@ public class Column implements SelectionElement {
    * @param path the FHIRPath expression that evaluates to the value for the column
    * @return a new {@link ColumnBuilder} instance
    */
-
   @Nonnull
-  public static ColumnBuilder singleBuilder(@Nonnull final String name,
-      @Nonnull final String path) {
-    return builder()
-        .name(name)
-        .path(path);
+  public static ColumnBuilder singleBuilder(
+      @Nonnull final String name, @Nonnull final String path) {
+    return builder().name(name).path(path);
   }
 
   /**
@@ -79,14 +74,10 @@ public class Column implements SelectionElement {
    * @return a new {@link ColumnBuilder} instance
    */
   @Nonnull
-  public static ColumnBuilder collectionBuilder(@Nonnull final String name,
-      @Nonnull final String path) {
-    return builder()
-        .name(name)
-        .path(path)
-        .collection(true);
+  public static ColumnBuilder collectionBuilder(
+      @Nonnull final String name, @Nonnull final String path) {
+    return builder().name(name).path(path).collection(true);
   }
-
 
   /**
    * Static factory method to create a new non collection {@link Column} instance with required
@@ -97,11 +88,8 @@ public class Column implements SelectionElement {
    * @return a new {@link Column} instance
    */
   @Nonnull
-  public static Column single(@Nonnull final String name,
-      @Nonnull final String path) {
-    return singleBuilder(name, path)
-        .collection(false)
-        .build();
+  public static Column single(@Nonnull final String name, @Nonnull final String path) {
+    return singleBuilder(name, path).collection(false).build();
   }
 
   /**
@@ -112,17 +100,15 @@ public class Column implements SelectionElement {
    * @return a new {@link Column} instance
    */
   @Nonnull
-  public static Column collection(@Nonnull final String name,
-      @Nonnull final String path) {
-    return collectionBuilder(name, path)
-        .build();
+  public static Column collection(@Nonnull final String name, @Nonnull final String path) {
+    return collectionBuilder(name, path).build();
   }
 
   /**
    * Name of the column produced in the output, must be in a database-friendly format.
    *
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.name">ViewDefinition.select.name</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.name">ViewDefinition.select.name</a>
    */
   @NotNull
   @Size(max = 255)
@@ -132,60 +118,56 @@ public class Column implements SelectionElement {
   /**
    * A FHIRPath expression that evaluates to the value that will be output in the column for each
    * resource. The input context is the collection of resources of the type specified in the
-   * resource element. Constants defined in {@link FhirView#constant} can be referenced as
-   * {@code %[name]}.
+   * resource element. Constants defined in {@link FhirView#constant} can be referenced as {@code
+   * %[name]}.
    *
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.path">ViewDefinition.select.path</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.path">ViewDefinition.select.path</a>
    */
-  @NotNull
-  String path;
+  @NotNull String path;
 
   /**
    * A human-readable description of the column.
    *
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.description">ViewDefinition.select.description</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.description">ViewDefinition.select.description</a>
    */
-  @Nullable
-  String description;
+  @Nullable String description;
 
   /**
    * Indicates whether the column may have multiple values. Defaults to false if unset.
    *
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.collection">ViewDefinition.select.collection</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.collection">ViewDefinition.select.collection</a>
    */
   boolean collection;
 
   /**
    * A FHIR {@code StructureDefinition} URI for the column's type. Relative URIs are implicitly
    * given the 'http://hl7.org/fhir/StructureDefinition/' prefix. The URI may also use FHIR element
-   * ID notation to indicate a backbone element within a structure. For instance,
-   * {@code Observation.referenceRange} may be specified to indicate the returned type is that
-   * backbone element.
-   * <p>
-   * This field must be provided if a ViewDefinition returns a non-primitive type. Implementations
-   * should report an error if the returned type does not match the type set here, or if a
-   * non-primitive type is returned, but this field is unset.
+   * ID notation to indicate a backbone element within a structure. For instance, {@code
+   * Observation.referenceRange} may be specified to indicate the returned type is that backbone
+   * element.
+   *
+   * <p>This field must be provided if a ViewDefinition returns a non-primitive type.
+   * Implementations should report an error if the returned type does not match the type set here,
+   * or if a non-primitive type is returned, but this field is unset.
    */
-  @Nullable
-  String type;
+  @Nullable String type;
 
   /**
    * Additional metadata describing the column. Tags can be used to provide database-specific type
    * information or other metadata about the column.
    *
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#type-hinting-with-tags">Type
-   * Hinting with Tags</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#type-hinting-with-tags">Type
+   *     Hinting with Tags</a>
    */
   @NotNull
   @Valid
   @UniqueTags(ColumnTag.ANSI_TYPE_TAG)
   @Builder.Default
   List<@Valid ColumnTag> tag = Collections.emptyList();
-
 
   /**
    * Checks if this column is compatible with another column for union operations. Columns are
@@ -230,14 +212,11 @@ public class Column implements SelectionElement {
    *
    * @param name the name of the tags to find
    * @return a list of values for tags with the specified name, may be empty if no matching tags
-   * exist
+   *     exist
    */
   @Nonnull
   public List<String> getTagValues(@Nonnull final String name) {
-    return tag.stream()
-        .filter(t -> name.equals(t.getName()))
-        .map(ColumnTag::getValue)
-        .toList();
+    return tag.stream().filter(t -> name.equals(t.getName())).map(ColumnTag::getValue).toList();
   }
 
   /**
@@ -258,5 +237,4 @@ public class Column implements SelectionElement {
       throw new IllegalStateException("Multiple values found for tag '" + name + "': " + values);
     }
   }
-
 }

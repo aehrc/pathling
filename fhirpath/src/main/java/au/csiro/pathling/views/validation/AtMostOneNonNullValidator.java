@@ -25,12 +25,11 @@ import java.util.List;
 
 /**
  * Validator implementation for the {@link AtMostOneNonNull} constraint.
- * <p>
- * This validator ensures that at most one of the specified fields has a non-null value. It uses
+ *
+ * <p>This validator ensures that at most one of the specified fields has a non-null value. It uses
  * reflection to access the field values and count how many are non-null.
  */
-public class AtMostOneNonNullValidator implements
-    ConstraintValidator<AtMostOneNonNull, Object> {
+public class AtMostOneNonNullValidator implements ConstraintValidator<AtMostOneNonNull, Object> {
 
   private List<String> fieldNames;
 

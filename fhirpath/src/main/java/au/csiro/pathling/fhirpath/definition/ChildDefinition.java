@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.definition;
 
 import jakarta.annotation.Nonnull;
 
-
 /**
  * Represents of a named child in a FHIR-like schema.
  *
@@ -32,5 +31,4 @@ public interface ChildDefinition extends NodeDefinition {
    */
   @Nonnull
   String getName();
-
 }

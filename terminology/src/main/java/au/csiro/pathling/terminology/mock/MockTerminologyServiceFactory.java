@@ -23,17 +23,14 @@ import au.csiro.pathling.utilities.ObjectHolder;
 import jakarta.annotation.Nonnull;
 import java.io.Serial;
 
-/**
- * This factory is used from the Python tests.
- */
+/** This factory is used from the Python tests. */
 @SuppressWarnings("unused")
 public class MockTerminologyServiceFactory implements TerminologyServiceFactory {
 
-  @Serial
-  private static final long serialVersionUID = 7662506865030951736L;
+  @Serial private static final long serialVersionUID = 7662506865030951736L;
 
-  private static final ObjectHolder<String, TerminologyService> service = ObjectHolder.singleton(
-      c -> new MockTerminologyService());
+  private static final ObjectHolder<String, TerminologyService> service =
+      ObjectHolder.singleton(c -> new MockTerminologyService());
 
   @Nonnull
   @Override

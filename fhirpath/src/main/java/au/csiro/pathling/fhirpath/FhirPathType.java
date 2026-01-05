@@ -48,71 +48,48 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @Getter
 public enum FhirPathType {
 
-  /**
-   * Boolean FHIRPath type.
-   */
+  /** Boolean FHIRPath type. */
   BOOLEAN("Boolean", DataTypes.BooleanType, BooleanCollection.class, FHIRDefinedType.BOOLEAN),
 
-  /**
-   * String FHIRPath type.
-   */
+  /** String FHIRPath type. */
   STRING("String", DataTypes.StringType, StringCollection.class, FHIRDefinedType.STRING),
 
-  /**
-   * Integer FHIRPath type.
-   */
+  /** Integer FHIRPath type. */
   INTEGER("Integer", DataTypes.IntegerType, IntegerCollection.class, FHIRDefinedType.INTEGER),
 
-  /**
-   * Decimal FHIRPath type.
-   */
-  DECIMAL("Decimal", DecimalCollection.getDecimalType(), DecimalCollection.class,
+  /** Decimal FHIRPath type. */
+  DECIMAL(
+      "Decimal",
+      DecimalCollection.getDecimalType(),
+      DecimalCollection.class,
       FHIRDefinedType.DECIMAL),
 
-  /**
-   * Date FHIRPath type.
-   */
+  /** Date FHIRPath type. */
   DATE("Date", DataTypes.StringType, DateCollection.class, FHIRDefinedType.DATE),
 
-  /**
-   * DateTime FHIRPath type.
-   */
+  /** DateTime FHIRPath type. */
   DATETIME("DateTime", DataTypes.StringType, DateTimeCollection.class, FHIRDefinedType.DATETIME),
 
-  /**
-   * Time FHIRPath type.
-   */
+  /** Time FHIRPath type. */
   TIME("Time", DataTypes.StringType, TimeCollection.class, FHIRDefinedType.TIME),
 
-  /**
-   * Coding FHIRPath type.
-   */
-  CODING("Coding", CodingSchema.codingStructType(), CodingCollection.class,
-      FHIRDefinedType.CODING),
+  /** Coding FHIRPath type. */
+  CODING("Coding", CodingSchema.codingStructType(), CodingCollection.class, FHIRDefinedType.CODING),
 
-  /**
-   * Quantity FHIRPath type.
-   */
-  QUANTITY("Quantity", QuantityEncoding.dataType(), QuantityCollection.class,
-      FHIRDefinedType.QUANTITY),
+  /** Quantity FHIRPath type. */
+  QUANTITY(
+      "Quantity", QuantityEncoding.dataType(), QuantityCollection.class, FHIRDefinedType.QUANTITY),
 
-  /**
-   * Nothing FHIRPath type (empty collection).
-   */
+  /** Nothing FHIRPath type (empty collection). */
   NOTHING("Nothing", DataTypes.NullType, EmptyCollection.class, FHIRDefinedType.NULL);
 
+  @Nonnull private final String typeSpecifier;
 
-  @Nonnull
-  private final String typeSpecifier;
+  @Nonnull private final DataType sqlDataType;
 
-  @Nonnull
-  private final DataType sqlDataType;
+  @Nonnull private final Class<? extends Collection> collectionClass;
 
-  @Nonnull
-  private final Class<? extends Collection> collectionClass;
-
-  @Nonnull
-  private final FHIRDefinedType defaultFhirType;
+  @Nonnull private final FHIRDefinedType defaultFhirType;
 
   // Maps FHIR types to FhirPathType
   @Nonnull
@@ -141,7 +118,9 @@ public enum FhirPathType {
           .put(FHIRDefinedType.QUANTITY, QUANTITY)
           .build();
 
-  FhirPathType(@Nonnull final String typeSpecifier, @Nonnull final DataType sqlDataType,
+  FhirPathType(
+      @Nonnull final String typeSpecifier,
+      @Nonnull final DataType sqlDataType,
       @Nonnull final Class<? extends Collection> collectionClass,
       @Nonnull final FHIRDefinedType defaultFhirType) {
     this.typeSpecifier = typeSpecifier;
@@ -166,7 +145,7 @@ public enum FhirPathType {
   /**
    * @param fhirType a {@link FHIRDefinedType}
    * @return the corresponding {@link FhirPathType} according to the rules of automatic conversion
-   * within the FHIR spec
+   *     within the FHIR spec
    */
   @Nonnull
   public static Optional<FhirPathType> forFhirType(@Nonnull final FHIRDefinedType fhirType) {

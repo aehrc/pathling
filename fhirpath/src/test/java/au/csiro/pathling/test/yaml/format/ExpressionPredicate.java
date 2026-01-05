@@ -26,8 +26,7 @@ import lombok.Value;
 @Value(staticConstructor = "of")
 class ExpressionPredicate implements Predicate<TestCase> {
 
-  @Nonnull
-  Pattern regex;
+  @Nonnull Pattern regex;
 
   @Override
   public boolean test(final TestCase testCase) {

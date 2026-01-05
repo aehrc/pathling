@@ -42,8 +42,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  */
 public abstract class FhirConversionSupport implements Serializable {
 
-  @Serial
-  private static final long serialVersionUID = -108611742759595166L;
+  @Serial private static final long serialVersionUID = -108611742759595166L;
 
   /**
    * Returns the type of a given FHIR object, such as "Condition" or "Observation".
@@ -63,9 +62,7 @@ public abstract class FhirConversionSupport implements Serializable {
    */
   @Nonnull
   public abstract <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(
-      @Nonnull final IBaseBundle bundle,
-      @Nonnull final Class<T> resourceClass);
-
+      @Nonnull final IBaseBundle bundle, @Nonnull final Class<T> resourceClass);
 
   /**
    * Resolves URN references in the given bundle to relative references for resources defined in the
@@ -80,9 +77,7 @@ public abstract class FhirConversionSupport implements Serializable {
   @Nonnull
   public abstract IBaseBundle resolveReferences(@Nonnull final IBaseBundle bundle);
 
-  /**
-   * Cache of FHIR contexts.
-   */
+  /** Cache of FHIR contexts. */
   @Nonnull
   private static final Map<FhirVersionEnum, FhirConversionSupport> FHIR_SUPPORT =
       new EnumMap<>(FhirVersionEnum.class);

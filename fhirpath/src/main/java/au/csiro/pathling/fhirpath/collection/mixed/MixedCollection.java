@@ -38,13 +38,15 @@ public abstract class MixedCollection extends Collection {
    * @param unsupportedDescription the description for unsupported operations
    */
   protected MixedCollection(@Nonnull final String unsupportedDescription) {
-    super(new UnsupportedRepresentation(unsupportedDescription),
-        Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+    super(
+        new UnsupportedRepresentation(unsupportedDescription),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty());
   }
 
-  /**
-   * Creates a new MixedCollection with a default unsupported description.
-   */
+  /** Creates a new MixedCollection with a default unsupported description. */
   @SuppressWarnings("unused")
   protected MixedCollection() {
     this("mixed collection (do you need to use ofType?)");
@@ -58,11 +60,10 @@ public abstract class MixedCollection extends Collection {
    * @return A new instance of MixedCollection
    */
   @Nonnull
-  public static MixedCollection buildElement(@Nonnull final Collection parent,
-      @Nonnull final ChoiceDefinition definition) {
+  public static MixedCollection buildElement(
+      @Nonnull final Collection parent, @Nonnull final ChoiceDefinition definition) {
     return new ChoiceElementCollection(definition, parent);
   }
-
 
   @Nonnull
   @Override
@@ -74,5 +75,4 @@ public abstract class MixedCollection extends Collection {
         "Direct traversal of polymorphic collections is not supported."
             + " Please use 'ofType()' to specify the type of element to traverse.");
   }
-
 }

@@ -31,16 +31,12 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.spark.sql.types.DataType;
 
-/**
- * Visitor that converts parsed ANSI SQL type syntax into Spark SQL DataTypes.
- */
+/** Visitor that converts parsed ANSI SQL type syntax into Spark SQL DataTypes. */
 public class AnsiSqlToSparkDataTypeVisitor extends AnsiSqlDataTypeBaseVisitor<DataType> {
 
   private final AnsiSqlDataTypeFactory factory;
 
-  /**
-   * Constructor.
-   */
+  /** Constructor. */
   public AnsiSqlToSparkDataTypeVisitor() {
     this.factory = new AnsiSqlDataTypeFactory();
   }
@@ -68,13 +64,13 @@ public class AnsiSqlToSparkDataTypeVisitor extends AnsiSqlDataTypeBaseVisitor<Da
     requireNonNull(ctx);
     if (anyOf(ctx.K_VARCHAR(), ctx.K_VARYING())) {
       return nonNull(ctx.length)
-             ? factory.createVarchar(Integer.parseInt(ctx.length.getText()))
-             : factory.createVarchar();
+          ? factory.createVarchar(Integer.parseInt(ctx.length.getText()))
+          : factory.createVarchar();
     } else {
       check(anyOf(ctx.K_CHARACTER(), ctx.K_CHAR()) && !anyOf(ctx.K_VARYING()));
       return nonNull(ctx.length)
-             ? factory.createCharacter(Integer.parseInt(ctx.length.getText()))
-             : factory.createCharacter();
+          ? factory.createCharacter(Integer.parseInt(ctx.length.getText()))
+          : factory.createCharacter();
     }
   }
 
@@ -94,8 +90,8 @@ public class AnsiSqlToSparkDataTypeVisitor extends AnsiSqlDataTypeBaseVisitor<Da
       return factory.createDouble();
     } else if (anyOf(ctx.K_FLOAT())) {
       return nonNull(ctx.precision)
-             ? factory.createFloat(Integer.parseInt(ctx.precision.getText()))
-             : factory.createFloat();
+          ? factory.createFloat(Integer.parseInt(ctx.precision.getText()))
+          : factory.createFloat();
     } else {
       check(anyOf(ctx.K_NUMERIC(), ctx.K_DECIMAL(), ctx.K_DEC()));
       if (ctx.precision != null) {
@@ -122,13 +118,13 @@ public class AnsiSqlToSparkDataTypeVisitor extends AnsiSqlDataTypeBaseVisitor<Da
     requireNonNull(ctx);
     if (anyOf(ctx.K_VARBINARY(), ctx.K_VARYING())) {
       return nonNull(ctx.length)
-             ? factory.createVarbinary(Integer.parseInt(ctx.length.getText()))
-             : factory.createVarbinary();
+          ? factory.createVarbinary(Integer.parseInt(ctx.length.getText()))
+          : factory.createVarbinary();
     } else {
       check(anyOf(ctx.K_BINARY()) && !anyOf(ctx.K_VARYING()));
       return nonNull(ctx.length)
-             ? factory.createBinary(Integer.parseInt(ctx.length.getText()))
-             : factory.createBinary();
+          ? factory.createBinary(Integer.parseInt(ctx.length.getText()))
+          : factory.createBinary();
     }
   }
 
@@ -146,12 +142,10 @@ public class AnsiSqlToSparkDataTypeVisitor extends AnsiSqlDataTypeBaseVisitor<Da
       if (ctx.precision != null) {
         final int precision = Integer.parseInt(ctx.precision.getText());
         return withTimeZone
-               ? factory.createTimestampWithTimeZone(precision)
-               : factory.createTimestamp(precision);
+            ? factory.createTimestampWithTimeZone(precision)
+            : factory.createTimestamp(precision);
       }
-      return withTimeZone
-             ? factory.createTimestampWithTimeZone()
-             : factory.createTimestamp();
+      return withTimeZone ? factory.createTimestampWithTimeZone() : factory.createTimestamp();
     }
   }
 
@@ -167,11 +161,12 @@ public class AnsiSqlToSparkDataTypeVisitor extends AnsiSqlDataTypeBaseVisitor<Da
     requireNonNull(ctx);
     return factory.createRow(
         requireNonNull(ctx.fieldDefinition()).stream()
-            .map(fieldCtx -> Pair.of(
-                requireNonNull(fieldCtx.fieldName).getText(),
-                visit(requireNonNull(fieldCtx.sqlType()))))
-            .toList()
-    );
+            .map(
+                fieldCtx ->
+                    Pair.of(
+                        requireNonNull(fieldCtx.fieldName).getText(),
+                        visit(requireNonNull(fieldCtx.sqlType()))))
+            .toList());
   }
 
   @Override

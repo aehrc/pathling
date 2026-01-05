@@ -29,7 +29,5 @@ import org.apache.spark.sql.api.java.UDF5;
  * @param <T5> the type of the fifth argument.
  * @param <R> the type of the result.
  */
-public interface SqlFunction5<T1, T2, T3, T4, T5, R> extends SqlFunction,
-    UDF5<T1, T2, T3, T4, T5, R> {
-
-}
+public interface SqlFunction5<T1, T2, T3, T4, T5, R>
+    extends SqlFunction, UDF5<T1, T2, T3, T4, T5, R> {}

@@ -29,13 +29,12 @@ import org.apache.spark.sql.SparkSession;
 import org.opentest4j.TestAbortedException;
 import org.springframework.beans.factory.annotation.Autowired;
 
-
 /**
  * Base class for YAML-based FHIRPath specification tests. This class provides the infrastructure
  * for running FHIRPath tests defined in YAML files, with support for test exclusions, resource
  * resolution, and result validation.
- * <p>
- * The class uses a combination of Spring Boot test infrastructure and custom test utilities to
+ *
+ * <p>The class uses a combination of Spring Boot test infrastructure and custom test utilities to
  * execute FHIRPath expressions against test data and validate the results against expected
  * outcomes.
  */
@@ -43,15 +42,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Slf4j
 public abstract class YamlTestBase {
 
-  public static final String PROPERTY_DISABLED_EXCLUSIONS = "au.csiro.pathling.test.yaml.disabledExclusions";
-  public static final String PROPERTY_EXCLUSIONS_ONLY = "au.csiro.pathling.test.yaml.exclusionsOnly";
+  public static final String PROPERTY_DISABLED_EXCLUSIONS =
+      "au.csiro.pathling.test.yaml.disabledExclusions";
+  public static final String PROPERTY_EXCLUSIONS_ONLY =
+      "au.csiro.pathling.test.yaml.exclusionsOnly";
 
-  @Autowired
-  protected SparkSession spark;
+  @Autowired protected SparkSession spark;
 
-  @Autowired
-  protected FhirEncoders fhirEncoders;
-
+  @Autowired protected FhirEncoders fhirEncoders;
 
   /**
    * Creates a new resolver builder instance for test execution.
@@ -82,7 +80,7 @@ public abstract class YamlTestBase {
 
     executor.check(createResolverBuilder());
 
-    // If the test case is excluded, throw an exception to mark the test as skipped after any checks 
+    // If the test case is excluded, throw an exception to mark the test as skipped after any checks
     // have completed.
     if (executor instanceof final DefaultYamlTestExecutor defaultExecutor
         && defaultExecutor.getExclusion().isPresent()) {

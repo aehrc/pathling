@@ -31,10 +31,8 @@ import org.apache.spark.sql.SparkSession;
 @Value(staticConstructor = "of")
 public class RuntimeContext implements ResolverBuilder {
 
-  @Nonnull
-  SparkSession spark;
-  @Nonnull
-  FhirEncoders fhirEncoders;
+  @Nonnull SparkSession spark;
+  @Nonnull FhirEncoders fhirEncoders;
 
   @Override
   @Nonnull

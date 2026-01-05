@@ -40,5 +40,4 @@ public interface QueryDispatcher {
    */
   @Nonnull
   Dataset<Row> dispatch(@Nonnull FhirView view);
- 
 }

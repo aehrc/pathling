@@ -26,13 +26,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 public class FhirViewShareableComplianceTest extends FhirViewTest {
 
   @RegisterExtension
-  static final Extension JSON_REPORTING_EXTENSION = new JsonReportingExtension(
-      "target/fhir-view-compliance-test.json");
+  static final Extension JSON_REPORTING_EXTENSION =
+      new JsonReportingExtension("target/fhir-view-compliance-test.json");
 
   public FhirViewShareableComplianceTest() {
-    super("classpath:tests/sql-on-fhir/*.json",
-        Set.of("shareable"),
-        emptySet()
-    );
+    super("classpath:tests/sql-on-fhir/*.json", Set.of("shareable"), emptySet());
   }
 }

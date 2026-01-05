@@ -24,8 +24,8 @@ import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
 
 /**
- * Provides the functionality of the family of comparison operators within FHIRPath, i.e.
- * {@code <=}, {@code <}, {@code >}, {@code >=}.
+ * Provides the functionality of the family of comparison operators within FHIRPath, i.e. {@code
+ * <=}, {@code <}, {@code >}, {@code >=}.
  *
  * @author John Grimes
  * @author Piotr Szul
@@ -33,8 +33,7 @@ import jakarta.annotation.Nonnull;
  */
 public class ComparisonOperator extends SameTypeBinaryOperator {
 
-  @Nonnull
-  private final ComparisonOperation type;
+  @Nonnull private final ComparisonOperation type;
 
   /**
    * @param type The type of operator
@@ -45,16 +44,16 @@ public class ComparisonOperator extends SameTypeBinaryOperator {
 
   @Override
   @Nonnull
-  protected Collection handleEquivalentTypes(@Nonnull final Collection left,
-      @Nonnull final Collection right, @Nonnull final BinaryOperatorInput input) {
+  protected Collection handleEquivalentTypes(
+      @Nonnull final Collection left,
+      @Nonnull final Collection right,
+      @Nonnull final BinaryOperatorInput input) {
     if (!(left instanceof Comparable && right instanceof Comparable)) {
       return fail(input);
     }
-    final Collection leftSingular = left.asSingular(
-        "Comparison operator requires singular values");
+    final Collection leftSingular = left.asSingular("Comparison operator requires singular values");
     return BooleanCollection.build(
-        ((Comparable) leftSingular).getComparison(type)
-            .apply((Comparable) right));
+        ((Comparable) leftSingular).getComparison(type).apply((Comparable) right));
   }
 
   @Override

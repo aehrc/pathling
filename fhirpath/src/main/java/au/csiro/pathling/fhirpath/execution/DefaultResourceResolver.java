@@ -33,57 +33,57 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 /**
  * A specialized implementation of {@link ResourceResolver} that works with definition-based
  * resources rather than FHIR resources from a data source.
- * <p>
- * This resolver is designed for scenarios where:
+ *
+ * <p>This resolver is designed for scenarios where:
+ *
  * <ul>
- *   <li>Resources are defined through a {@link DefinitionContext} rather than loaded from a data source</li>
- *   <li>The subject resource is identified by a {@link ResourceTag} rather than a {@link ResourceType}</li>
- *   <li>The dataset structure is provided directly rather than being created from a data source</li>
+ *   <li>Resources are defined through a {@link DefinitionContext} rather than loaded from a data
+ *       source
+ *   <li>The subject resource is identified by a {@link ResourceTag} rather than a {@link
+ *       ResourceType}
+ *   <li>The dataset structure is provided directly rather than being created from a data source
  * </ul>
- * <p>
- * This implementation is particularly useful for testing, validation, and working with
- * custom resource definitions that may not directly correspond to standard FHIR resources.
+ *
+ * <p>This implementation is particularly useful for testing, validation, and working with custom
+ * resource definitions that may not directly correspond to standard FHIR resources.
  */
 @Value(staticConstructor = "of")
 public class DefaultResourceResolver implements ResourceResolver {
 
   /**
    * The resource tag identifying the subject resource.
-   * <p>
-   * Unlike other resolvers that use {@link ResourceType}, this resolver uses a {@link ResourceTag}
-   * which provides more flexibility in identifying resources in definition-based contexts.
+   *
+   * <p>Unlike other resolvers that use {@link ResourceType}, this resolver uses a {@link
+   * ResourceTag} which provides more flexibility in identifying resources in definition-based
+   * contexts.
    */
-  @Nonnull
-  ResourceTag subjectResource;
+  @Nonnull ResourceTag subjectResource;
 
   /**
    * The definition context providing resource definitions.
-   * <p>
-   * This context contains the definitions for resources that can be resolved, including their
+   *
+   * <p>This context contains the definitions for resources that can be resolved, including their
    * structure, elements, and relationships.
    */
-  @Nonnull
-  DefinitionContext definitionContext;
+  @Nonnull DefinitionContext definitionContext;
 
   /**
    * The dataset containing the subject resource data.
-   * <p>
-   * This dataset is provided directly rather than being created from a data source, allowing for
+   *
+   * <p>This dataset is provided directly rather than being created from a data source, allowing for
    * more flexibility in how the data is structured and sourced.
    */
-  @Nonnull
-  Dataset<Row> subjectDataset;
+  @Nonnull Dataset<Row> subjectDataset;
 
   /**
    * {@inheritDoc}
-   * <p>
-   * This implementation only supports resolving the subject resource. If the requested resource
+   *
+   * <p>This implementation only supports resolving the subject resource. If the requested resource
    * code matches the subject resource code, it returns the subject resource. Otherwise, it returns
    * an empty Optional.
    */
   @Override
-  public @Nonnull Optional<ResourceCollection> resolveResource(
-      @Nonnull final String resourceCode) {
+  public @Nonnull Optional<ResourceCollection> resolveResource(@Nonnull final String resourceCode) {
     if (subjectResource.toCode().equals(resourceCode)) {
       return Optional.of(resolveSubjectResource());
     } else {
@@ -93,9 +93,9 @@ public class DefaultResourceResolver implements ResourceResolver {
 
   /**
    * {@inheritDoc}
-   * <p>
-   * This implementation creates a resource collection for the subject resource using the
-   * {@link #createResource} method.
+   *
+   * <p>This implementation creates a resource collection for the subject resource using the {@link
+   * #createResource} method.
    */
   @Override
   @Nonnull
@@ -105,8 +105,8 @@ public class DefaultResourceResolver implements ResourceResolver {
 
   /**
    * Creates a ResourceCollection for the specified resource tag.
-   * <p>
-   * This method creates a column representation for the resource and builds a ResourceCollection
+   *
+   * <p>This method creates a column representation for the resource and builds a ResourceCollection
    * using the resource definition from the definition context. The column representation uses the
    * resource tag code as the column name.
    *
@@ -122,12 +122,11 @@ public class DefaultResourceResolver implements ResourceResolver {
 
   /**
    * {@inheritDoc}
-   * <p>
-   * This implementation creates a view from the subject dataset in the standardized structure.
+   *
+   * <p>This implementation creates a view from the subject dataset in the standardized structure.
    */
   @Nonnull
   public Dataset<Row> createView() {
     return BaseResourceResolver.toResourceRepresentation(subjectResource.toCode(), subjectDataset);
   }
-
 }

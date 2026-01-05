@@ -50,13 +50,12 @@ public class ColumnFunctions {
   @Nonnull
   public static Column structProduct(@Nonnull final Column... columns) {
     // Convert columns to expressions using Java streams
-    final List<Expression> expressionList = Arrays.stream(columns)
-        .map(ExpressionUtils::expression)
-        .toList();
+    final List<Expression> expressionList =
+        Arrays.stream(columns).map(ExpressionUtils::expression).toList();
 
     // Convert Java List to Scala Seq
-    final Seq<Expression> expressions = scala.jdk.javaapi.CollectionConverters.asScala(
-        expressionList).toSeq();
+    final Seq<Expression> expressions =
+        scala.jdk.javaapi.CollectionConverters.asScala(expressionList).toSeq();
 
     // Create StructProduct expression
     final Expression structProductExpr = new StructProduct(expressions, false);
@@ -77,13 +76,12 @@ public class ColumnFunctions {
   @Nonnull
   public static Column structProductOuter(@Nonnull final Column... columns) {
     // Convert columns to expressions using Java streams
-    final List<Expression> expressionList = Arrays.stream(columns)
-        .map(ExpressionUtils::expression)
-        .toList();
+    final List<Expression> expressionList =
+        Arrays.stream(columns).map(ExpressionUtils::expression).toList();
 
     // Convert Java List to Scala Seq
-    final Seq<Expression> expressions = scala.jdk.javaapi.CollectionConverters.asScala(
-        expressionList).toSeq();
+    final Seq<Expression> expressions =
+        scala.jdk.javaapi.CollectionConverters.asScala(expressionList).toSeq();
 
     // Create StructProduct expression with outer=true
     final Expression structProductExpr = new StructProduct(expressions, true);

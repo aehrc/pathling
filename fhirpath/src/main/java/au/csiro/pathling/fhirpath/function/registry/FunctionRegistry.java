@@ -36,5 +36,4 @@ public interface FunctionRegistry {
    */
   @Nonnull
   NamedFunction getInstance(@Nonnull final String name) throws NoSuchFunctionError;
-
 }

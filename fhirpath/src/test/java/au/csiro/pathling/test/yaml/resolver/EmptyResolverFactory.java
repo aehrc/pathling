@@ -34,7 +34,6 @@ import lombok.Value;
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class EmptyResolverFactory implements Function<RuntimeContext, ResourceResolver> {
 
-
   // singleton
   private static final EmptyResolverFactory INSTANCE = new EmptyResolverFactory();
 
@@ -49,7 +48,6 @@ public class EmptyResolverFactory implements Function<RuntimeContext, ResourceRe
     return DefaultResourceResolver.of(
         subjectResourceTag,
         DefaultDefinitionContext.of(DefaultResourceDefinition.of(subjectResourceTag)),
-        runtimeContext.getSpark().emptyDataFrame()
-    );
+        runtimeContext.getSpark().emptyDataFrame());
   }
 }
