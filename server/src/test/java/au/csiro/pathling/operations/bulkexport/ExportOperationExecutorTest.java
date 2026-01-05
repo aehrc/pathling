@@ -97,8 +97,6 @@ class ExportOperationExecutorTest {
 
   private ExportExecutor exportExecutor;
 
-  @Autowired private TestDataSetup testDataSetup;
-
   @Autowired private SparkSession sparkSession;
 
   @Autowired private PathlingContext pathlingContext;
@@ -127,6 +125,20 @@ class ExportOperationExecutorTest {
   void setup() {
     SharedMocks.resetAll();
     uniqueTempDir = tempDir.resolve(UUID.randomUUID().toString());
+    try {
+      Files.createDirectories(uniqueTempDir);
+    } catch (final IOException e) {
+      throw new RuntimeException("Failed to create unique temp dir", e);
+    }
+    parser = fhirContext.newJsonParser();
+  }
+
+  /**
+   * Sets up the export executor with the delta lake data source. This copies test data to the temp
+   * directory and should only be called by tests that actually need the delta lake data.
+   */
+  private void setupDeltaLakeExecutor() {
+    TestDataSetup.copyTestDataToTempDir(uniqueTempDir);
     exportExecutor =
         new ExportExecutor(
             pathlingContext,
@@ -136,16 +148,6 @@ class ExportOperationExecutorTest {
             "file://" + uniqueTempDir.toAbsolutePath(),
             serverConfiguration,
             patientCompartmentService);
-
-    try {
-      Files.createDirectories(uniqueTempDir);
-    } catch (final IOException e) {
-      throw new RuntimeException("Failed to create unique temp dir", e);
-    }
-
-    TestDataSetup.copyTestDataToTempDir(uniqueTempDir);
-
-    parser = fhirContext.newJsonParser();
   }
 
   @ParameterizedTest
@@ -445,6 +447,7 @@ class ExportOperationExecutorTest {
   @MethodSource("provideExportExecutorValues")
   void testExportExecutor(
       final ExportRequest exportRequest, final ExportResponse expectedExportResponse) {
+    setupDeltaLakeExecutor();
     final TestExportResponse actualExportResponse = execute(exportRequest);
     final ExportResponse resolvedExportResponse =
         resolveTempDirIn(expectedExportResponse, uniqueTempDir, actualExportResponse.fakeJobId());
