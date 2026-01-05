@@ -71,7 +71,6 @@ class DeleteProviderTest {
 
   private Path tempDatabasePath;
   private DeleteProvider deleteProvider;
-  private DeleteExecutor deleteExecutor;
   private UpdateExecutor updateExecutor;
 
   @BeforeEach
@@ -88,7 +87,7 @@ class DeleteProviderTest {
             cacheableDatabase);
 
     // Create DeleteExecutor with the temp database path.
-    deleteExecutor =
+    final DeleteExecutor deleteExecutor =
         new DeleteExecutor(
             pathlingContext, tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
 
@@ -100,10 +99,9 @@ class DeleteProviderTest {
   void tearDown() throws IOException {
     // Clean up the temporary directory.
     if (tempDatabasePath != null && Files.exists(tempDatabasePath)) {
-      Files.walk(tempDatabasePath)
-          .sorted(Comparator.reverseOrder())
-          .map(Path::toFile)
-          .forEach(File::delete);
+      try (final var paths = Files.walk(tempDatabasePath)) {
+        paths.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
+      }
     }
   }
 
@@ -142,7 +140,7 @@ class DeleteProviderTest {
 
     // Then: the resource should no longer exist in Delta Lake.
     dataset = sparkSession.read().format("delta").load(tablePath);
-    assertThat(dataset.count()).isEqualTo(0);
+    assertThat(dataset.count()).isZero();
   }
 
   // -------------------------------------------------------------------------
@@ -156,7 +154,8 @@ class DeleteProviderTest {
     updateExecutor.merge("Patient", patient);
 
     // When/Then: deleting a non-existent resource should throw ResourceNotFoundError.
-    assertThatThrownBy(() -> deleteProvider.delete(new IdType("Patient", "non-existent-id")))
+    final IdType nonExistentId = new IdType("Patient", "non-existent-id");
+    assertThatThrownBy(() -> deleteProvider.delete(nonExistentId))
         .isInstanceOf(ResourceNotFoundError.class);
   }
 
@@ -164,7 +163,8 @@ class DeleteProviderTest {
   void deleteFromNonExistentTableThrowsError() {
     // Given: no Patient table exists (empty database).
     // When/Then: deleting should throw ResourceNotFoundError.
-    assertThatThrownBy(() -> deleteProvider.delete(new IdType("Patient", "patient-1")))
+    final IdType patientId = new IdType("Patient", "patient-1");
+    assertThatThrownBy(() -> deleteProvider.delete(patientId))
         .isInstanceOf(ResourceNotFoundError.class);
   }
 
@@ -179,7 +179,8 @@ class DeleteProviderTest {
   @Test
   void deleteWithEmptyIdThrowsError() {
     // When/Then: deleting with empty ID should throw InvalidUserInputError.
-    assertThatThrownBy(() -> deleteProvider.delete(new IdType()))
+    final IdType emptyId = new IdType();
+    assertThatThrownBy(() -> deleteProvider.delete(emptyId))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("ID");
   }
