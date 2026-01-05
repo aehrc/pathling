@@ -34,7 +34,7 @@ operations. Authorities must be provided within the `authorities` claim within
 the JWT bearer token provided with each request.
 
 ```mermaid
-%%{init: {'themeVariables': { 'edgeLabelBackground':'#ffffff'}, 'flowchart': {'nodeSpacing': 30, 'rankSpacing': 40}}}%%
+%%{init: {'themeVariables': {'fontSize': '14px'}, 'flowchart': {'nodeSpacing': 30, 'rankSpacing': 40}}}%%
 graph TB
     operation["pathling:[operation]"]
     pathling[pathling]
@@ -47,22 +47,17 @@ graph TB
         write-resource["pathling:write:[resource type]"]
     end
 
-    pathling -->|includes| operation
-    pathling -->|includes| read
-    pathling -->|includes| write
-    read -->|includes| read-resource
-    write -->|includes| write-resource
-
-    style pathling fill:#f9d5e5,stroke:#333
-    style operation fill:#d5e5f9,stroke:#333
-    style read fill:#f9e5d5,stroke:#333
-    style write fill:#f9e5d5,stroke:#333
-    style read-resource fill:#e5f9d5,stroke:#333
-    style write-resource fill:#e5f9d5,stroke:#333
+    pathling --> operation
+    pathling --> read
+    pathling --> write
+    read --> read-resource
+    write --> write-resource
 ```
 
+→ includes
+
 | Authority                        | Description                                                                     |
-| -------------------------------- | ------------------------------------------------------------------------------- |
+|----------------------------------|---------------------------------------------------------------------------------|
 | `pathling`                       | Provides access to all operations and resources, implies all other authorities. |
 | `pathling:read`                  | Provides read access to all resource types.                                     |
 | `pathling:read:[resource type]`  | Provides read access to only a specified resource type.                         |
