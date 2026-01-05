@@ -588,6 +588,18 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>compile</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
     <pluginManagement>
       <plugins>
@@ -878,6 +890,21 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-resources-plugin</artifactId>
           <version>3.3.1</version>
+        </plugin>
+        <plugin>
+          <groupId>com.diffplug.spotless</groupId>
+          <artifactId>spotless-maven-plugin</artifactId>
+          <version>2.44.5</version>
+          <configuration>
+            <java>
+              <googleJavaFormat>
+                <version>1.27.0</version>
+                <style>GOOGLE</style>
+                <reflowLongStrings>true</reflowLongStrings>
+                <formatJavadoc>true</formatJavadoc>
+              </googleJavaFormat>
+            </java>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
