@@ -21,13 +21,13 @@
 #'   \item{\code{FHIR_JSON}: FHIR resources encoded as JSON}
 #'   \item{\code{FHIR_XML}: FHIR resources encoded as XML}
 #' }
-#' 
+#'
 #' @seealso \href{https://hl7.org/fhir/R4/formats.html}{FHIR R4 - Resource Formats}
 #'
 #' @export
 MimeType <- list(
-    FHIR_JSON = "application/fhir+json",
-    FHIR_XML = "application/fhir+xml"
+  FHIR_JSON = "application/fhir+json",
+  FHIR_XML = "application/fhir+xml"
 )
 
 #' FHIR versions
@@ -39,5 +39,5 @@ MimeType <- list(
 #'
 #' @export
 Version <- list(
-    R4 = "R4"
+  R4 = "R4"
 )

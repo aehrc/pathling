@@ -2,19 +2,19 @@ test_that("display", {
   spark <- def_spark()
   pc <- def_pathling_context(spark)
 
-  df <-   spark %>% to_sdf(
-      id = c("id-1", "id-2", "id-3"),
-      code = c(
-          snomed_coding_row("439319006"),
-          loinc_coding_row("55915-3"),
-          NA
-      )
+  df <- spark %>% to_sdf(
+    id = c("id-1", "id-2", "id-3"),
+    code = c(
+      snomed_coding_row("439319006"),
+      loinc_coding_row("55915-3"),
+      NA
+    )
   )
 
   expected_result <-
     tibble::tibble(
       id = c("id-1", "id-2", "id-3"),
-      result = c(NA,"Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis", NA),
+      result = c(NA, "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis", NA),
     )
 
 
@@ -70,6 +70,3 @@ test_that("display", {
     )
   )
 })
-
-
-

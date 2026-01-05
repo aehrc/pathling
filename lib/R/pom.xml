@@ -243,6 +243,51 @@
             </configuration>
           </execution>
           <execution>
+            <id>styler-check</id>
+            <phase>test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <skip>${skipRapiTests}</skip>
+              <executable>Rscript</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>-e</argument>
+                <argument>
+result &lt;- rbind(styler::style_dir("R", dry = "on"), styler::style_dir("tests/testthat", dry = "on"))
+if (any(result$changed)) {
+  cat("The following files need formatting:\n")
+  print(result[result$changed, "file"])
+  stop("Code style check failed. Run 'mvn validate -Pformat -pl lib/R' to fix.")
+}
+                </argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>lintr-check</id>
+            <phase>test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <skip>${skipRapiTests}</skip>
+              <executable>Rscript</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>-e</argument>
+                <argument>
+lints &lt;- c(lintr::lint_dir("R"), lintr::lint_dir("tests/testthat"))
+if (length(lints) > 0) {
+  print(lints)
+  stop("Linting failed with ", length(lints), " issue(s).")
+}
+                </argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>test</id>
             <phase>test</phase>
             <goals>
@@ -387,6 +432,34 @@
                     <argument>--output=${project.basedir}/target</argument>
                     <argument>--as-cran</argument>
                     <argument>target/${pathling.Rapi.packageName}_${pathling.Rapi.version}.tar.gz</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>format</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>styler-format</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>Rscript</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>-e</argument>
+                    <argument>styler::style_dir("R"); styler::style_dir("tests/testthat")</argument>
                   </arguments>
                 </configuration>
               </execution>

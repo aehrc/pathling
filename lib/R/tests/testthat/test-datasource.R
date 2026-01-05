@@ -30,38 +30,38 @@ temp_delta_dir <- function() {
 
 ndjson_query <- function(data_source) {
   data_source %>%
-      ds_view(
-          "Condition",
-          select = list(
-              list(
-                  column = list(
-                      list(
-                          path = "id",
-                          name = "id"
-                      )
-                  )
-              )
+    ds_view(
+      "Condition",
+      select = list(
+        list(
+          column = list(
+            list(
+              path = "id",
+              name = "id"
+            )
           )
-      ) %>%
-      count(name = "count")
+        )
+      )
+    ) %>%
+    count(name = "count")
 }
 
 bundles_query <- function(data_source) {
   data_source %>%
-      ds_view(
-          "Patient",
-          select = list(
-              list(
-                  column = list(
-                      list(
-                          path = "id",
-                          name = "id"
-                      )
-                  )
-              )
+    ds_view(
+      "Patient",
+      select = list(
+        list(
+          column = list(
+            list(
+              path = "id",
+              name = "id"
+            )
           )
-      ) %>%
-      count(name = "count")
+        )
+      )
+    ) %>%
+    count(name = "count")
 }
 
 parquet_query <- ndjson_query
@@ -80,8 +80,8 @@ test_that("datasource ndjson", {
   pc <- def_pathling_context(spark)
 
   pc %>%
-      pathling_read_ndjson(ndjson_test_data_dir()) %>%
-      ds_write_ndjson(temp_ndjson_dir())
+    pathling_read_ndjson(ndjson_test_data_dir()) %>%
+    ds_write_ndjson(temp_ndjson_dir())
 
   data_source <- pc %>% pathling_read_ndjson(temp_ndjson_dir())
 
@@ -106,8 +106,8 @@ test_that("datasource datasets", {
   pc <- def_pathling_context(spark)
 
   data_source <- pathling_read_datasets(pc, list(
-      "Patient" = pathling_encode(pc, spark_read_text(spark, file.path(ndjson_test_data_dir(), "Patient.ndjson")), "Patient"),
-      "Condition" = pathling_encode(pc, spark_read_text(spark, file.path(ndjson_test_data_dir(), "Condition.ndjson")), "Condition")
+    "Patient" = pathling_encode(pc, spark_read_text(spark, file.path(ndjson_test_data_dir(), "Patient.ndjson")), "Patient"),
+    "Condition" = pathling_encode(pc, spark_read_text(spark, file.path(ndjson_test_data_dir(), "Condition.ndjson")), "Condition")
   ))
 
   result <- ndjson_query(data_source)
@@ -120,8 +120,8 @@ test_that("datasource parquet", {
   pc <- def_pathling_context(spark)
 
   pc %>%
-      pathling_read_parquet(parquet_test_data_dir()) %>%
-      ds_write_parquet(temp_parquet_dir())
+    pathling_read_parquet(parquet_test_data_dir()) %>%
+    ds_write_parquet(temp_parquet_dir())
 
   data_source <- pc %>% pathling_read_parquet(temp_parquet_dir())
 
@@ -135,8 +135,8 @@ test_that("datasource delta", {
   pc <- def_pathling_context(spark)
 
   pc %>%
-      pathling_read_delta(delta_test_data_dir()) %>%
-      ds_write_delta(temp_delta_dir())
+    pathling_read_delta(delta_test_data_dir()) %>%
+    ds_write_delta(temp_delta_dir())
 
   data_source <- pc %>% pathling_read_delta(delta_test_data_dir())
 
@@ -166,8 +166,8 @@ test_that("datasource tables", {
   pc <- def_pathling_context(spark)
 
   pc %>%
-      pathling_read_ndjson(ndjson_test_data_dir()) %>%
-      ds_write_tables()
+    pathling_read_ndjson(ndjson_test_data_dir()) %>%
+    ds_write_tables()
   data_source <- pc %>% pathling_read_tables()
 
   result <- ndjson_query(data_source)
@@ -180,8 +180,8 @@ test_that("datasource tables with schema", {
   pc <- def_pathling_context(spark)
 
   pc %>%
-      pathling_read_ndjson(ndjson_test_data_dir()) %>%
-      ds_write_tables(schema = "test")
+    pathling_read_ndjson(ndjson_test_data_dir()) %>%
+    ds_write_tables(schema = "test")
   data_source <- pc %>% pathling_read_tables(schema = "test")
 
   result <- ndjson_query(data_source)
@@ -196,8 +196,8 @@ test_that("ndjson write returns details", {
   pc <- def_pathling_context(spark)
 
   result <- pc %>%
-      pathling_read_ndjson(ndjson_test_data_dir()) %>%
-      ds_write_ndjson(file.path(tempdir(), "ndjson_details_test"))
+    pathling_read_ndjson(ndjson_test_data_dir()) %>%
+    ds_write_ndjson(file.path(tempdir(), "ndjson_details_test"))
 
   # Verify result is a list with file_infos element.
   expect_true(is.list(result))
@@ -223,8 +223,8 @@ test_that("parquet write returns details", {
   pc <- def_pathling_context(spark)
 
   result <- pc %>%
-      pathling_read_parquet(parquet_test_data_dir()) %>%
-      ds_write_parquet(file.path(tempdir(), "parquet_details_test"))
+    pathling_read_parquet(parquet_test_data_dir()) %>%
+    ds_write_parquet(file.path(tempdir(), "parquet_details_test"))
 
   # Verify result is a list with file_infos element.
   expect_true(is.list(result))
@@ -243,8 +243,8 @@ test_that("delta write returns details", {
   pc <- def_pathling_context(spark)
 
   result <- pc %>%
-      pathling_read_delta(delta_test_data_dir()) %>%
-      ds_write_delta(file.path(tempdir(), "delta_details_test"))
+    pathling_read_delta(delta_test_data_dir()) %>%
+    ds_write_delta(file.path(tempdir(), "delta_details_test"))
 
   # Verify result is a list with file_infos element.
   expect_true(is.list(result))
@@ -264,8 +264,8 @@ test_that("tables write returns details", {
 
   # Re-use the existing "test" schema to avoid conflicts.
   result <- pc %>%
-      pathling_read_ndjson(ndjson_test_data_dir()) %>%
-      ds_write_tables(schema = "test")
+    pathling_read_ndjson(ndjson_test_data_dir()) %>%
+    ds_write_tables(schema = "test")
 
   # Verify result is a list with file_infos element.
   expect_true(is.list(result))
