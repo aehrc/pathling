@@ -25,34 +25,22 @@ package au.csiro.pathling.operations.bulksubmit;
  */
 public enum ManifestJobState {
 
-  /**
-   * The manifest job has been created but processing has not yet started.
-   */
+  /** The manifest job has been created but processing has not yet started. */
   PENDING,
 
-  /**
-   * The manifest is being processed (files are being downloaded).
-   */
+  /** The manifest is being processed (files are being downloaded). */
   PROCESSING,
 
-  /**
-   * The files have been downloaded successfully and are awaiting import.
-   */
+  /** The files have been downloaded successfully and are awaiting import. */
   DOWNLOADED,
 
-  /**
-   * The manifest was imported successfully.
-   */
+  /** The manifest was imported successfully. */
   COMPLETED,
 
-  /**
-   * The manifest processing failed with an error.
-   */
+  /** The manifest processing failed with an error. */
   FAILED,
 
-  /**
-   * The manifest job was explicitly aborted.
-   */
+  /** The manifest job was explicitly aborted. */
   ABORTED;
 
   /**
@@ -63,5 +51,4 @@ public enum ManifestJobState {
   public boolean isTerminal() {
     return this == COMPLETED || this == FAILED || this == ABORTED;
   }
-
 }

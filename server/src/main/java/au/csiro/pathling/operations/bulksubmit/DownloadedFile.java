@@ -32,7 +32,4 @@ public record DownloadedFile(
     @Nonnull String resourceType,
     @Nonnull String fileName,
     @Nonnull String localPath,
-    @Nonnull String manifestUrl
-) {
-
-}
+    @Nonnull String manifestUrl) {}

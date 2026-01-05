@@ -2,8 +2,6 @@ package au.csiro.pathling.operations.bulkimport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import au.csiro.pathling.operations.bulkimport.ImportManifest;
-import au.csiro.pathling.operations.bulkimport.ImportManifestInput;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,15 +28,14 @@ class ImportManifestTest {
   @Test
   void test_importManifest_serialisation() throws Exception {
     // Given
-    final ImportManifest manifest = new ImportManifest(
-        "application/fhir+ndjson",
-        "https://example.org/source",
-        List.of(
-            new ImportManifestInput("Patient", "s3://bucket/patients.ndjson"),
-            new ImportManifestInput("Observation", "s3://bucket/observations.ndjson")
-        ),
-        "merge"
-    );
+    final ImportManifest manifest =
+        new ImportManifest(
+            "application/fhir+ndjson",
+            "https://example.org/source",
+            List.of(
+                new ImportManifestInput("Patient", "s3://bucket/patients.ndjson"),
+                new ImportManifestInput("Observation", "s3://bucket/observations.ndjson")),
+            "merge");
 
     // When
     final String json = objectMapper.writeValueAsString(manifest);
@@ -54,12 +51,12 @@ class ImportManifestTest {
   @Test
   void test_importManifest_serialisation_without_mode() throws Exception {
     // Given
-    final ImportManifest manifest = new ImportManifest(
-        "application/fhir+ndjson",
-        "https://example.org/source",
-        List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
-        null
-    );
+    final ImportManifest manifest =
+        new ImportManifest(
+            "application/fhir+ndjson",
+            "https://example.org/source",
+            List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
+            null);
 
     // When
     final String json = objectMapper.writeValueAsString(manifest);
@@ -75,12 +72,12 @@ class ImportManifestTest {
   void importManifestSerialisationWithoutInputSource() throws Exception {
     // inputSource is optional per the SMART Bulk Data Import spec.
     // Given
-    final ImportManifest manifest = new ImportManifest(
-        "application/fhir+ndjson",
-        null,
-        List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
-        "overwrite"
-    );
+    final ImportManifest manifest =
+        new ImportManifest(
+            "application/fhir+ndjson",
+            null,
+            List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
+            "overwrite");
 
     // When
     final String json = objectMapper.writeValueAsString(manifest);
@@ -91,10 +88,10 @@ class ImportManifestTest {
     assertThat(json).contains("\"input\":");
     assertThat(json).contains("\"mode\":\"overwrite\"");
     // inputSource should either be absent or null.
-    assertThat(json).satisfiesAnyOf(
-        j -> assertThat(j).doesNotContain("\"inputSource\""),
-        j -> assertThat(j).contains("\"inputSource\":null")
-    );
+    assertThat(json)
+        .satisfiesAnyOf(
+            j -> assertThat(j).doesNotContain("\"inputSource\""),
+            j -> assertThat(j).contains("\"inputSource\":null"));
   }
 
   // ========================================
@@ -104,7 +101,8 @@ class ImportManifestTest {
   @Test
   void test_importManifest_deserialisation() throws Exception {
     // Given
-    final String json = """
+    final String json =
+        """
         {
           "inputFormat": "application/fhir+ndjson",
           "inputSource": "https://example.org/source",
@@ -140,7 +138,8 @@ class ImportManifestTest {
   @Test
   void test_importManifest_deserialisation_without_mode() throws Exception {
     // Given
-    final String json = """
+    final String json =
+        """
         {
           "inputFormat": "application/fhir+ndjson",
           "inputSource": "https://example.org/source",
@@ -168,7 +167,8 @@ class ImportManifestTest {
   void importManifestDeserialisationWithoutInputSource() throws Exception {
     // inputSource is optional per the SMART Bulk Data Import spec.
     // Given
-    final String json = """
+    final String json =
+        """
         {
           "inputFormat": "application/fhir+ndjson",
           "input": [
@@ -193,7 +193,8 @@ class ImportManifestTest {
   @Test
   void test_importManifest_deserialisation_with_parquet_format() throws Exception {
     // Given
-    final String json = """
+    final String json =
+        """
         {
           "inputFormat": "application/parquet",
           "inputSource": "https://example.org/source",
@@ -216,7 +217,8 @@ class ImportManifestTest {
   @Test
   void test_importManifest_deserialisation_with_delta_format() throws Exception {
     // Given
-    final String json = """
+    final String json =
+        """
         {
           "inputFormat": "application/delta",
           "inputSource": "https://example.org/source",
@@ -243,10 +245,8 @@ class ImportManifestTest {
   @Test
   void test_importManifestInput_serialisation() throws Exception {
     // Given
-    final ImportManifestInput input = new ImportManifestInput(
-        "Patient",
-        "s3://bucket/patients.ndjson"
-    );
+    final ImportManifestInput input =
+        new ImportManifestInput("Patient", "s3://bucket/patients.ndjson");
 
     // When
     final String json = objectMapper.writeValueAsString(input);
@@ -264,7 +264,8 @@ class ImportManifestTest {
   @Test
   void test_importManifestInput_deserialisation() throws Exception {
     // Given
-    final String json = """
+    final String json =
+        """
         {
           "type": "Patient",
           "url": "s3://bucket/patients.ndjson"
@@ -287,15 +288,14 @@ class ImportManifestTest {
   @Test
   void test_importManifest_roundtrip() throws Exception {
     // Given
-    final ImportManifest original = new ImportManifest(
-        "application/fhir+ndjson",
-        "https://example.org/source",
-        List.of(
-            new ImportManifestInput("Patient", "s3://bucket/patients.ndjson"),
-            new ImportManifestInput("Observation", "s3://bucket/observations.ndjson")
-        ),
-        "append"
-    );
+    final ImportManifest original =
+        new ImportManifest(
+            "application/fhir+ndjson",
+            "https://example.org/source",
+            List.of(
+                new ImportManifestInput("Patient", "s3://bucket/patients.ndjson"),
+                new ImportManifestInput("Observation", "s3://bucket/observations.ndjson")),
+            "append");
 
     // When - serialise and deserialise
     final String json = objectMapper.writeValueAsString(original);
@@ -313,10 +313,8 @@ class ImportManifestTest {
   @Test
   void test_importManifestInput_roundtrip() throws Exception {
     // Given
-    final ImportManifestInput original = new ImportManifestInput(
-        "Observation",
-        "s3://bucket/observations.ndjson"
-    );
+    final ImportManifestInput original =
+        new ImportManifestInput("Observation", "s3://bucket/observations.ndjson");
 
     // When - serialise and deserialise
     final String json = objectMapper.writeValueAsString(original);

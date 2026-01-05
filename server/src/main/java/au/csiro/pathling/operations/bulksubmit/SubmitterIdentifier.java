@@ -27,10 +27,7 @@ import jakarta.annotation.Nonnull;
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
-public record SubmitterIdentifier(
-    @Nonnull String system,
-    @Nonnull String value
-) {
+public record SubmitterIdentifier(@Nonnull String system, @Nonnull String value) {
 
   /**
    * Returns a string key suitable for use in maps and registries.
@@ -41,5 +38,4 @@ public record SubmitterIdentifier(
   public String toKey() {
     return system + "|" + value;
   }
-
 }

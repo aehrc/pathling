@@ -18,7 +18,4 @@ public record ImportRequest(
     @Nonnull String originalRequest,
     @Nonnull Map<String, Collection<String>> input,
     @Nonnull SaveMode saveMode,
-    @Nonnull ImportFormat importFormat
-) {
-
-}
+    @Nonnull ImportFormat importFormat) {}

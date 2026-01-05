@@ -48,14 +48,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @ActiveProfiles({"integration-test"})
 class UpdateOperationIT {
 
-  @LocalServerPort
-  int port;
+  @LocalServerPort int port;
 
-  @Autowired
-  WebTestClient webTestClient;
+  @Autowired WebTestClient webTestClient;
 
-  @TempDir
-  private static Path warehouseDir;
+  @TempDir private static Path warehouseDir;
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
@@ -65,10 +62,12 @@ class UpdateOperationIT {
 
   @BeforeEach
   void setup() {
-    webTestClient = webTestClient.mutate()
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
-        .responseTimeout(java.time.Duration.ofSeconds(60))
-        .build();
+    webTestClient =
+        webTestClient
+            .mutate()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .responseTimeout(java.time.Duration.ofSeconds(60))
+            .build();
   }
 
   @AfterEach
@@ -82,7 +81,8 @@ class UpdateOperationIT {
 
     final String uri =
         "http://localhost:" + port + "/fhir/Patient/121503c8-9564-4b48-9086-a22df717948e";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Patient",
           "id": "121503c8-9564-4b48-9086-a22df717948e",
@@ -95,17 +95,22 @@ class UpdateOperationIT {
         }
         """;
 
-    webTestClient.put()
+    webTestClient
+        .put()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Patient")
-        .jsonPath("$.id").isEqualTo("121503c8-9564-4b48-9086-a22df717948e")
-        .jsonPath("$.name[0].family").isEqualTo("UpdatedFamily");
+        .jsonPath("$.resourceType")
+        .isEqualTo("Patient")
+        .jsonPath("$.id")
+        .isEqualTo("121503c8-9564-4b48-9086-a22df717948e")
+        .jsonPath("$.name[0].family")
+        .isEqualTo("UpdatedFamily");
 
     log.info("Update operation completed successfully");
   }
@@ -116,29 +121,36 @@ class UpdateOperationIT {
 
     final String newPatientId = "new-patient-123";
     final String uri = "http://localhost:" + port + "/fhir/Patient/" + newPatientId;
-    final String requestBody = String.format("""
-        {
-          "resourceType": "Patient",
-          "id": "%s",
-          "name": [
+    final String requestBody =
+        String.format(
+            """
             {
-              "family": "NewFamily",
-              "given": ["NewGiven"]
+              "resourceType": "Patient",
+              "id": "%s",
+              "name": [
+                {
+                  "family": "NewFamily",
+                  "given": ["NewGiven"]
+                }
+              ]
             }
-          ]
-        }
-        """, newPatientId);
+            """,
+            newPatientId);
 
-    webTestClient.put()
+    webTestClient
+        .put()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Patient")
-        .jsonPath("$.id").isEqualTo(newPatientId);
+        .jsonPath("$.resourceType")
+        .isEqualTo("Patient")
+        .jsonPath("$.id")
+        .isEqualTo(newPatientId);
 
     log.info("Update (create) operation completed successfully");
   }
@@ -148,7 +160,8 @@ class UpdateOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir/Patient/correct-id";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Patient",
           "id": "wrong-id",
@@ -160,16 +173,18 @@ class UpdateOperationIT {
         }
         """;
 
-    webTestClient.put()
+    webTestClient
+        .put()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().is4xxClientError()
+        .expectStatus()
+        .is4xxClientError()
         .expectBody()
-        .jsonPath("$.issue[0].diagnostics").value(diagnostics ->
-            assertThat(diagnostics.toString()).contains("ID"));
+        .jsonPath("$.issue[0].diagnostics")
+        .value(diagnostics -> assertThat(diagnostics.toString()).contains("ID"));
 
     log.info("Update with mismatched ID correctly returned error");
   }
@@ -180,14 +195,15 @@ class UpdateOperationIT {
 
     final String uri = "http://localhost:" + port + "/fhir/Patient/test-id";
 
-    webTestClient.put()
+    webTestClient
+        .put()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().is4xxClientError();
+        .expectStatus()
+        .is4xxClientError();
 
     log.info("Update with missing resource correctly returned error");
   }
-
 }

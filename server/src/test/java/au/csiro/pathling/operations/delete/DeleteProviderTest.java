@@ -63,20 +63,15 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class DeleteProviderTest {
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
-  @Autowired
-  private CacheableDatabase cacheableDatabase;
+  @Autowired private CacheableDatabase cacheableDatabase;
 
   private Path tempDatabasePath;
   private DeleteProvider deleteProvider;
@@ -89,12 +84,17 @@ class DeleteProviderTest {
     tempDatabasePath = Files.createTempDirectory("delete-provider-test-");
 
     // Create UpdateExecutor to set up test data.
-    updateExecutor = new UpdateExecutor(pathlingContext, fhirEncoders,
-        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
+    updateExecutor =
+        new UpdateExecutor(
+            pathlingContext,
+            fhirEncoders,
+            tempDatabasePath.toAbsolutePath().toString(),
+            cacheableDatabase);
 
     // Create DeleteExecutor with the temp database path.
-    deleteExecutor = new DeleteExecutor(pathlingContext,
-        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
+    deleteExecutor =
+        new DeleteExecutor(
+            pathlingContext, tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
 
     // Create the DeleteProvider.
     deleteProvider = new DeleteProvider(deleteExecutor, fhirContext, Patient.class);
@@ -153,7 +153,8 @@ class DeleteProviderTest {
   void deleteMultipleResourcesSequentially() {
     // Given: multiple Patient resources exist.
     final Patient patient1 = createPatient("patient-1", "Smith", "John", AdministrativeGender.MALE);
-    final Patient patient2 = createPatient("patient-2", "Jones", "Jane", AdministrativeGender.FEMALE);
+    final Patient patient2 =
+        createPatient("patient-2", "Jones", "Jane", AdministrativeGender.FEMALE);
     final Patient patient3 = createPatient("patient-3", "Brown", "Bob", AdministrativeGender.MALE);
     updateExecutor.merge("Patient", patient1);
     updateExecutor.merge("Patient", patient2);
@@ -178,7 +179,8 @@ class DeleteProviderTest {
   void deleteOnlyRemovesTargetResource() {
     // Given: multiple Patient resources exist.
     final Patient patient1 = createPatient("patient-1", "Smith", "John", AdministrativeGender.MALE);
-    final Patient patient2 = createPatient("patient-2", "Jones", "Jane", AdministrativeGender.FEMALE);
+    final Patient patient2 =
+        createPatient("patient-2", "Jones", "Jane", AdministrativeGender.FEMALE);
     updateExecutor.merge("Patient", patient1);
     updateExecutor.merge("Patient", patient2);
 
@@ -270,13 +272,15 @@ class DeleteProviderTest {
   // -------------------------------------------------------------------------
 
   @Nonnull
-  private Patient createPatient(@Nonnull final String id, @Nonnull final String family,
-      @Nonnull final String given, @Nonnull final AdministrativeGender gender) {
+  private Patient createPatient(
+      @Nonnull final String id,
+      @Nonnull final String family,
+      @Nonnull final String given,
+      @Nonnull final AdministrativeGender gender) {
     final Patient patient = new Patient();
     patient.setId(id);
     patient.addName(new HumanName().setFamily(family).addGiven(given));
     patient.setGender(gender);
     return patient;
   }
-
 }

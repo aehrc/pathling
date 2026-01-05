@@ -27,9 +27,4 @@ import jakarta.annotation.Nonnull;
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
-public record FileRequestHeader(
-    @Nonnull String name,
-    @Nonnull String value
-) {
-
-}
+public record FileRequestHeader(@Nonnull String name, @Nonnull String value) {}

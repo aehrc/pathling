@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.bulkimport;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
@@ -29,7 +30,6 @@ import au.csiro.pathling.library.io.source.ParquetSource;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
-import au.csiro.pathling.errors.AccessDeniedError;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Collection;
@@ -55,15 +55,13 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ImportExecutor {
 
-  @Nonnull
-  private final Optional<AccessRules> accessRules;
+  @Nonnull private final Optional<AccessRules> accessRules;
   private final PathlingContext pathlingContext;
 
   private final String databasePath;
   private final ServerConfiguration serverConfiguration;
 
-  @Nonnull
-  private final CacheableDatabase cacheableDatabase;
+  @Nonnull private final CacheableDatabase cacheableDatabase;
 
   /**
    * @param accessRules a {@link AccessRules} for validating access to URLs
@@ -72,10 +70,12 @@ public class ImportExecutor {
    * @param serverConfiguration the server configuration including authentication settings
    * @param cacheableDatabase the cacheable database for cache invalidation
    */
-  public ImportExecutor(@Nonnull final Optional<AccessRules> accessRules,
+  public ImportExecutor(
+      @Nonnull final Optional<AccessRules> accessRules,
       final PathlingContext pathlingContext,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      final String databasePath, final ServerConfiguration serverConfiguration,
+          final String databasePath,
+      final ServerConfiguration serverConfiguration,
       @Nonnull final CacheableDatabase cacheableDatabase) {
     this.accessRules = accessRules;
     this.pathlingContext = pathlingContext;
@@ -92,26 +92,27 @@ public class ImportExecutor {
    * @return the import response containing details of the imported data
    */
   @Nonnull
-  public ImportResponse execute(@Nonnull final ImportRequest importRequest,
-      @SuppressWarnings("unused") final String jobId) {
+  public ImportResponse execute(
+      @Nonnull final ImportRequest importRequest, @SuppressWarnings("unused") final String jobId) {
     return execute(importRequest, jobId, null);
   }
 
   /**
    * Executes the import operation with custom allowable sources for URL validation.
    *
-   * <p>When custom allowable sources are provided, they are used instead of the configured
-   * {@link AccessRules}. This allows callers (such as the bulk submit operation) to use their own
+   * <p>When custom allowable sources are provided, they are used instead of the configured {@link
+   * AccessRules}. This allows callers (such as the bulk submit operation) to use their own
    * allowable sources configuration.
    *
    * @param importRequest the import request containing the source files and configuration
    * @param jobId the job identifier for tracking this import operation
    * @param customAllowableSources optional list of URL prefixes to use for validation; if null, the
-   * configured {@link AccessRules} will be used
+   *     configured {@link AccessRules} will be used
    * @return the import response containing details of the imported data
    */
   @Nonnull
-  public ImportResponse execute(@Nonnull final ImportRequest importRequest,
+  public ImportResponse execute(
+      @Nonnull final ImportRequest importRequest,
       @SuppressWarnings("unused") final String jobId,
       @Nullable final List<String> customAllowableSources) {
     log.info("Received $import request");
@@ -120,24 +121,28 @@ public class ImportExecutor {
     return new ImportResponse(importRequest.originalRequest(), importRequest, writeDetails);
   }
 
-
-  private WriteDetails readAndWriteFilesFrom(final ImportRequest request,
-      @Nullable final List<String> customAllowableSources) {
-    final Map<String, Collection<String>> resourcesWithAuthority = checkAuthority(request,
-        customAllowableSources);
+  private WriteDetails readAndWriteFilesFrom(
+      final ImportRequest request, @Nullable final List<String> customAllowableSources) {
+    final Map<String, Collection<String>> resourcesWithAuthority =
+        checkAuthority(request, customAllowableSources);
 
     // Create the appropriate data source based on the import format.
-    final DataSource dataSource = switch (request.importFormat()) {
-      case NDJSON -> new NdjsonSource(pathlingContext, resourcesWithAuthority, "ndjson");
-      case DELTA -> new DeltaSource(pathlingContext, resourcesWithAuthority);
-      case PARQUET -> new ParquetSource(pathlingContext, resourcesWithAuthority,
-          (Predicate<ResourceType>) ignored -> true);
-    };
+    final DataSource dataSource =
+        switch (request.importFormat()) {
+          case NDJSON -> new NdjsonSource(pathlingContext, resourcesWithAuthority, "ndjson");
+          case DELTA -> new DeltaSource(pathlingContext, resourcesWithAuthority);
+          case PARQUET ->
+              new ParquetSource(
+                  pathlingContext,
+                  resourcesWithAuthority,
+                  (Predicate<ResourceType>) ignored -> true);
+        };
 
     // Always write to Delta format regardless of source format.
-    final WriteDetails writeDetails = new DataSinkBuilder(pathlingContext, dataSource)
-        .saveMode(request.saveMode().getCode())
-        .delta(databasePath);
+    final WriteDetails writeDetails =
+        new DataSinkBuilder(pathlingContext, dataSource)
+            .saveMode(request.saveMode().getCode())
+            .delta(databasePath);
 
     // Invalidate the cache to ensure subsequent requests see the updated data.
     cacheableDatabase.invalidate();
@@ -145,8 +150,8 @@ public class ImportExecutor {
     return writeDetails;
   }
 
-  private @NotNull Map<String, Collection<String>> checkAuthority(final ImportRequest request,
-      @Nullable final List<String> customAllowableSources) {
+  private @NotNull Map<String, Collection<String>> checkAuthority(
+      final ImportRequest request, @Nullable final List<String> customAllowableSources) {
     if (serverConfiguration.getAuth().isEnabled()) {
       // Check global write authority.
       SecurityAspect.checkHasAuthority(PathlingAuthority.fromAuthority("pathling:write"));
@@ -154,8 +159,8 @@ public class ImportExecutor {
       // Check per-resource-type write authority.
       for (final Entry<String, Collection<String>> entry : request.input().entrySet()) {
         SecurityAspect.checkHasAuthority(
-            PathlingAuthority.resourceAccess(AccessType.WRITE,
-                ResourceType.fromCode(entry.getKey())));
+            PathlingAuthority.resourceAccess(
+                AccessType.WRITE, ResourceType.fromCode(entry.getKey())));
       }
     }
 
@@ -178,8 +183,8 @@ public class ImportExecutor {
 
   // TODO: Re-enable along with allowed sources check after connectathon.
   @SuppressWarnings("unused")
-  private void checkCustomAllowableSources(@Nonnull final String url,
-      @Nonnull final List<String> allowableSources) {
+  private void checkCustomAllowableSources(
+      @Nonnull final String url, @Nonnull final List<String> allowableSources) {
     if (allowableSources.isEmpty()) {
       return;
     }

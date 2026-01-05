@@ -27,8 +27,4 @@ import java.util.Map;
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
-public record SubmissionMetadata(
-    @Nullable Map<String, String> values
-) {
-
-}
+public record SubmissionMetadata(@Nullable Map<String, String> values) {}

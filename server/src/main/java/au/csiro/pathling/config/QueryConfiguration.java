@@ -35,16 +35,11 @@ public class QueryConfiguration {
    * Setting this option to {@code true} will enable additional logging relating to the query plan
    * used to execute queries.
    */
-  @NotNull
-  @Builder.Default
-  private Boolean explainQueries = false;
+  @NotNull @Builder.Default private Boolean explainQueries = false;
 
   /**
    * This controls whether the built-in caching within Spark is used for search results. It may be
    * useful to turn this off for large datasets in memory-constrained environments.
    */
-  @NotNull
-  @Builder.Default
-  private Boolean cacheResults = true;
-
+  @NotNull @Builder.Default private Boolean cacheResults = true;
 }

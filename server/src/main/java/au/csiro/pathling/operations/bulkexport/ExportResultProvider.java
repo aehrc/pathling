@@ -38,11 +38,9 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ExportResultProvider {
 
-  @Nonnull
-  private final ExportResultRegistry exportResultRegistry;
+  @Nonnull private final ExportResultRegistry exportResultRegistry;
 
-  @Nonnull
-  private final String databasePath;
+  @Nonnull private final String databasePath;
 
   /**
    * Creates a new instance of the export result provider.
@@ -54,7 +52,7 @@ public class ExportResultProvider {
   public ExportResultProvider(
       @Nonnull final ExportResultRegistry exportResultRegistry,
       @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      final String databasePath) {
+          final String databasePath) {
     this.exportResultRegistry = exportResultRegistry;
     this.databasePath = databasePath;
   }
@@ -90,13 +88,19 @@ public class ExportResultProvider {
     if (currentUserId.isPresent() && !ownerId.equals(currentUserId)) {
       response.setStatus(HttpServletResponse.SC_NOT_FOUND);
       throw new AccessDeniedError(
-          "The requested result is not owned by the current user '%s'.".formatted(
-              currentUserId.orElse("null")));
+          "The requested result is not owned by the current user '%s'."
+              .formatted(currentUserId.orElse("null")));
     }
 
-    final Path requestedFilepath = new Path(
-        URI.create(databasePath).getPath() + Path.SEPARATOR + "jobs" + Path.SEPARATOR + jobId
-            + Path.SEPARATOR + file);
+    final Path requestedFilepath =
+        new Path(
+            URI.create(databasePath).getPath()
+                + Path.SEPARATOR
+                + "jobs"
+                + Path.SEPARATOR
+                + jobId
+                + Path.SEPARATOR
+                + file);
     final Resource resource = new FileSystemResource(requestedFilepath.toString());
 
     if (!resource.exists() || !resource.isFile()) {

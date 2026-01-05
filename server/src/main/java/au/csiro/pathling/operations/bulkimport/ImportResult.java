@@ -5,6 +5,4 @@ import java.util.Optional;
 /**
  * @author Felix Naumann
  */
-public record ImportResult(Optional<String> ownerId) {
-
-}
+public record ImportResult(Optional<String> ownerId) {}

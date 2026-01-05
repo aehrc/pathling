@@ -26,9 +26,9 @@ import jakarta.annotation.Nonnull;
  *
  * @param originalRequest The original request URL.
  * @param exportUrl The URL to the bulk data export endpoint (dynamic mode) or manifest file (static
- * mode).
+ *     mode).
  * @param exportType The type of export: "dynamic" to initiate a new export, or "static" to fetch a
- * pre-generated manifest.
+ *     pre-generated manifest.
  * @param saveMode The save mode to use throughout the entire import operation.
  * @param importFormat The expected input format (NDJSON, Parquet, or Delta).
  * @author John Grimes
@@ -38,7 +38,4 @@ public record ImportPnpRequest(
     @Nonnull String exportUrl,
     @Nonnull String exportType,
     @Nonnull SaveMode saveMode,
-    @Nonnull ImportFormat importFormat
-) {
-
-}
+    @Nonnull ImportFormat importFormat) {}

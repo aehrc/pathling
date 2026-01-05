@@ -45,20 +45,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExportOperationValidator {
 
-  /**
-   * Query parameters that are not supported by the export operation.
-   */
-  public static final Set<String> UNSUPPORTED_QUERY_PARAMS = Set.of(
-      "includeAssociatedData", "_typeFilter", "organizeOutputBy");
+  /** Query parameters that are not supported by the export operation. */
+  public static final Set<String> UNSUPPORTED_QUERY_PARAMS =
+      Set.of("includeAssociatedData", "_typeFilter", "organizeOutputBy");
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull
-  private final ServerConfiguration serverConfiguration;
+  @Nonnull private final ServerConfiguration serverConfiguration;
 
-  @Nonnull
-  private final PatientCompartmentService patientCompartmentService;
+  @Nonnull private final PatientCompartmentService patientCompartmentService;
 
   /**
    * Constructs a new ExportOperationValidator.
@@ -67,7 +62,8 @@ public class ExportOperationValidator {
    * @param serverConfiguration the server configuration
    * @param patientCompartmentService the patient compartment service
    */
-  public ExportOperationValidator(@Nonnull final FhirContext fhirContext,
+  public ExportOperationValidator(
+      @Nonnull final FhirContext fhirContext,
       @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final PatientCompartmentService patientCompartmentService) {
     this.fhirContext = fhirContext;
@@ -92,11 +88,10 @@ public class ExportOperationValidator {
       @Nullable final InstantType since,
       @Nullable final InstantType until,
       @Nullable List<String> type,
-      @Nullable List<String> elements
-  ) {
-    final boolean lenient = requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName())
-        .stream()
-        .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
+      @Nullable List<String> elements) {
+    final boolean lenient =
+        requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName()).stream()
+            .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
 
     if (type == null) {
       type = new ArrayList<>();
@@ -105,14 +100,23 @@ public class ExportOperationValidator {
       elements = new ArrayList<>();
     }
 
-    final ExportRequest exportRequest = createExportRequest(requestDetails.getCompleteUrl(),
-        requestDetails.getFhirServerBase(), lenient, outputFormat, since, until, type, elements);
-    final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidation.validateAcceptHeader(requestDetails, lenient),
-            OperationValidation.validatePreferHeader(requestDetails, lenient),
-            validateUnsupportedQueryParams(requestDetails, lenient))
-        .flatMap(Collection::stream)
-        .toList();
+    final ExportRequest exportRequest =
+        createExportRequest(
+            requestDetails.getCompleteUrl(),
+            requestDetails.getFhirServerBase(),
+            lenient,
+            outputFormat,
+            since,
+            until,
+            type,
+            elements);
+    final List<OperationOutcome.OperationOutcomeIssueComponent> issues =
+        Stream.of(
+                OperationValidation.validateAcceptHeader(requestDetails, lenient),
+                OperationValidation.validatePreferHeader(requestDetails, lenient),
+                validateUnsupportedQueryParams(requestDetails, lenient))
+            .flatMap(Collection::stream)
+            .toList();
     return new PreAsyncValidation.PreAsyncValidationResult<>(exportRequest, issues);
   }
 
@@ -137,11 +141,10 @@ public class ExportOperationValidator {
       @Nullable final InstantType since,
       @Nullable final InstantType until,
       @Nullable List<String> type,
-      @Nullable List<String> elements
-  ) {
-    final boolean lenient = requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName())
-        .stream()
-        .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
+      @Nullable List<String> elements) {
+    final boolean lenient =
+        requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName()).stream()
+            .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
 
     if (type == null) {
       type = new ArrayList<>();
@@ -150,25 +153,34 @@ public class ExportOperationValidator {
       elements = new ArrayList<>();
     }
 
-    final ExportRequest exportRequest = createPatientExportRequest(
-        requestDetails.getCompleteUrl(), requestDetails.getFhirServerBase(), lenient, outputFormat,
-        since, until, type, elements, exportLevel, patientIds);
+    final ExportRequest exportRequest =
+        createPatientExportRequest(
+            requestDetails.getCompleteUrl(),
+            requestDetails.getFhirServerBase(),
+            lenient,
+            outputFormat,
+            since,
+            until,
+            type,
+            elements,
+            exportLevel,
+            patientIds);
 
-    final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidation.validateAcceptHeader(requestDetails, lenient),
-            OperationValidation.validatePreferHeader(requestDetails, lenient),
-            validateUnsupportedQueryParams(requestDetails, lenient))
-        .flatMap(Collection::stream)
-        .toList();
+    final List<OperationOutcome.OperationOutcomeIssueComponent> issues =
+        Stream.of(
+                OperationValidation.validateAcceptHeader(requestDetails, lenient),
+                OperationValidation.validatePreferHeader(requestDetails, lenient),
+                validateUnsupportedQueryParams(requestDetails, lenient))
+            .flatMap(Collection::stream)
+            .toList();
     return new PreAsyncValidation.PreAsyncValidationResult<>(exportRequest, issues);
   }
 
   private List<OperationOutcome.OperationOutcomeIssueComponent> validateUnsupportedQueryParams(
       final RequestDetails requestDetails, final boolean lenient) {
     final Set<String> queryParams = requestDetails.getParameters().keySet();
-    final Set<String> unsupportedParams = queryParams.stream()
-        .filter(UNSUPPORTED_QUERY_PARAMS::contains)
-        .collect(Collectors.toSet());
+    final Set<String> unsupportedParams =
+        queryParams.stream().filter(UNSUPPORTED_QUERY_PARAMS::contains).collect(Collectors.toSet());
 
     if (unsupportedParams.isEmpty()) {
       return List.of();
@@ -178,16 +190,22 @@ public class ExportOperationValidator {
       final String firstUnsupported = unsupportedParams.iterator().next();
       throw new InvalidRequestException(
           "The query parameter '%s' is not supported. Either remove the query parameter or add %s: %s header."
-              .formatted(firstUnsupported, FhirServer.PREFER_LENIENT_HEADER.headerName(),
+              .formatted(
+                  firstUnsupported,
+                  FhirServer.PREFER_LENIENT_HEADER.headerName(),
                   FhirServer.PREFER_LENIENT_HEADER.preferred()));
     } else {
       return unsupportedParams.stream()
-          .map(param -> new OperationOutcome.OperationOutcomeIssueComponent()
-              .setCode(OperationOutcome.IssueType.INFORMATIONAL)
-              .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
-              .setDetails(new CodeableConcept().setText(
-                  "The query parameter '%s' is not supported. Ignoring because lenient handling is enabled."
-                      .formatted(param))))
+          .map(
+              param ->
+                  new OperationOutcome.OperationOutcomeIssueComponent()
+                      .setCode(OperationOutcome.IssueType.INFORMATIONAL)
+                      .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
+                      .setDetails(
+                          new CodeableConcept()
+                              .setText(
+                                  "The query parameter '%s' is not supported. Ignoring because lenient handling is enabled."
+                                      .formatted(param))))
           .toList();
     }
   }
@@ -213,32 +231,36 @@ public class ExportOperationValidator {
       @Nullable final InstantType since,
       @Nullable final InstantType until,
       @Nonnull final List<String> type,
-      @Nonnull final List<String> elements
-  ) {
+      @Nonnull final List<String> elements) {
     if (outputFormat == null) {
       log.debug("No _outputFormat specified, defaulting to ndjson.");
     }
     if (outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
-      throw new InvalidRequestException("Unknown '%s' value '%s'. Only %s are allowed.".formatted(
-          SystemExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat,
-          FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
+      throw new InvalidRequestException(
+          "Unknown '%s' value '%s'. Only %s are allowed."
+              .formatted(
+                  SystemExportProvider.OUTPUT_FORMAT_PARAM_NAME,
+                  outputFormat,
+                  FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
     }
-    final List<String> resourceFilter = type.stream()
-        .map(String::strip)
-        .filter(Predicate.not(String::isEmpty))
-        .flatMap(string -> Arrays.stream(string.split(",")))
-        .map(code -> mapTypeQueryParam(code, lenient))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .filter(this::filterUnauthorizedResources)
-        .toList();
+    final List<String> resourceFilter =
+        type.stream()
+            .map(String::strip)
+            .filter(Predicate.not(String::isEmpty))
+            .flatMap(string -> Arrays.stream(string.split(",")))
+            .map(code -> mapTypeQueryParam(code, lenient))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .filter(this::filterUnauthorizedResources)
+            .toList();
 
     checkForDuplicateResourceTypes(resourceFilter);
 
-    final List<ExportRequest.FhirElement> fhirElements = elements.stream()
-        .flatMap(string -> Arrays.stream(string.split(",")))
-        .map(this::mapFhirElement)
-        .toList();
+    final List<ExportRequest.FhirElement> fhirElements =
+        elements.stream()
+            .flatMap(string -> Arrays.stream(string.split(",")))
+            .map(this::mapFhirElement)
+            .toList();
     return new ExportRequest(
         originalRequest,
         serverBaseUrl,
@@ -249,8 +271,7 @@ public class ExportOperationValidator {
         fhirElements,
         lenient,
         ExportLevel.SYSTEM,
-        Set.of()
-    );
+        Set.of());
   }
 
   /**
@@ -278,35 +299,39 @@ public class ExportOperationValidator {
       @Nonnull final List<String> type,
       @Nonnull final List<String> elements,
       @Nonnull final ExportLevel exportLevel,
-      @Nonnull final Set<String> patientIds
-  ) {
+      @Nonnull final Set<String> patientIds) {
     if (outputFormat == null) {
       log.debug("No _outputFormat specified for patient export, defaulting to ndjson.");
     }
     if (outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
-      throw new InvalidRequestException("Unknown '%s' value '%s'. Only %s are allowed.".formatted(
-          SystemExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat,
-          FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
+      throw new InvalidRequestException(
+          "Unknown '%s' value '%s'. Only %s are allowed."
+              .formatted(
+                  SystemExportProvider.OUTPUT_FORMAT_PARAM_NAME,
+                  outputFormat,
+                  FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
     }
 
     // For patient-level exports, filter out non-compartment resource types (silently).
-    final List<String> resourceFilter = type.stream()
-        .map(String::strip)
-        .filter(Predicate.not(String::isEmpty))
-        .flatMap(string -> Arrays.stream(string.split(",")))
-        .map(code -> mapTypeQueryParam(code, lenient))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .filter(this::filterUnauthorizedResources)
-        .filter(this::filterNonCompartmentResources)
-        .toList();
+    final List<String> resourceFilter =
+        type.stream()
+            .map(String::strip)
+            .filter(Predicate.not(String::isEmpty))
+            .flatMap(string -> Arrays.stream(string.split(",")))
+            .map(code -> mapTypeQueryParam(code, lenient))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .filter(this::filterUnauthorizedResources)
+            .filter(this::filterNonCompartmentResources)
+            .toList();
 
     checkForDuplicateResourceTypes(resourceFilter);
 
-    final List<ExportRequest.FhirElement> fhirElements = elements.stream()
-        .flatMap(string -> Arrays.stream(string.split(",")))
-        .map(this::mapFhirElement)
-        .toList();
+    final List<ExportRequest.FhirElement> fhirElements =
+        elements.stream()
+            .flatMap(string -> Arrays.stream(string.split(",")))
+            .map(this::mapFhirElement)
+            .toList();
 
     return new ExportRequest(
         originalRequest,
@@ -318,8 +343,7 @@ public class ExportOperationValidator {
         fhirElements,
         lenient,
         exportLevel,
-        patientIds
-    );
+        patientIds);
   }
 
   /**
@@ -330,7 +354,8 @@ public class ExportOperationValidator {
    * @return true if the resource type should be included
    */
   private boolean filterNonCompartmentResources(@Nonnull final String resourceTypeCode) {
-    final boolean inCompartment = patientCompartmentService.isInPatientCompartment(resourceTypeCode);
+    final boolean inCompartment =
+        patientCompartmentService.isInPatientCompartment(resourceTypeCode);
     if (!inCompartment) {
       log.info("Resource type '{}' is not in the Patient compartment. Ignoring.", resourceTypeCode);
     }
@@ -359,20 +384,18 @@ public class ExportOperationValidator {
       final Set<ResourceType> unsupported = FhirServer.unsupportedResourceTypes();
       if (!lenient && unsupported.contains(resourceType)) {
         throw new InvalidRequestException(
-            "'_type' includes unsupported resource type '%s'. Note that '%s' are all unsupported.".formatted(
-                resourceType.toCode(), unsupported));
+            "'_type' includes unsupported resource type '%s'. Note that '%s' are all unsupported."
+                .formatted(resourceType.toCode(), unsupported));
       } else if (lenient && unsupported.contains(resourceType)) {
         return Optional.empty();
       }
       return Optional.of(resourceType.toCode());
     } catch (final FHIRException e) {
       if (lenient) {
-        log.info("Failed to map '_type' value '{}' to actual FHIR resource type. Skipping.",
-            code);
+        log.info("Failed to map '_type' value '{}' to actual FHIR resource type. Skipping.", code);
       } else {
         throw new InvalidRequestException(
-            "Failed to map '_type' value '%s' to actual FHIR resource types.".formatted(
-                code));
+            "Failed to map '_type' value '%s' to actual FHIR resource types.".formatted(code));
       }
       return Optional.empty();
     }
@@ -393,14 +416,15 @@ public class ExportOperationValidator {
     }
   }
 
-  private void validateTopLevelElement(@Nonnull final String resourceType,
-      @Nonnull final String element) throws InvalidRequestException {
+  private void validateTopLevelElement(
+      @Nonnull final String resourceType, @Nonnull final String element)
+      throws InvalidRequestException {
     try {
       final RuntimeResourceDefinition resourceDef = fhirContext.getResourceDefinition(resourceType);
       if (resourceDef.getChildByName(element) == null) {
         throw new InvalidRequestException(
-            "Failed to parse element '%s' for resource type '%s' in _elements.".formatted(element,
-                resourceType));
+            "Failed to parse element '%s' for resource type '%s' in _elements."
+                .formatted(element, resourceType));
       }
     } catch (final DataFormatException e) {
       throw new InvalidRequestException(

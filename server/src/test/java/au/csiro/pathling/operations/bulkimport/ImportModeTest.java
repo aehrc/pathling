@@ -70,9 +70,7 @@ class ImportModeTest {
     final ImportMode[] modes = ImportMode.values();
 
     // Then
-    assertThat(modes)
-        .hasSize(2)
-        .contains(ImportMode.OVERWRITE, ImportMode.MERGE);
+    assertThat(modes).hasSize(2).contains(ImportMode.OVERWRITE, ImportMode.MERGE);
   }
 
   @Test

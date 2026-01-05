@@ -46,14 +46,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @ActiveProfiles({"integration-test"})
 class DeleteOperationIT {
 
-  @LocalServerPort
-  int port;
+  @LocalServerPort int port;
 
-  @Autowired
-  WebTestClient webTestClient;
+  @Autowired WebTestClient webTestClient;
 
-  @TempDir
-  private static Path warehouseDir;
+  @TempDir private static Path warehouseDir;
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
@@ -63,10 +60,12 @@ class DeleteOperationIT {
 
   @BeforeEach
   void setup() {
-    webTestClient = webTestClient.mutate()
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
-        .responseTimeout(java.time.Duration.ofSeconds(60))
-        .build();
+    webTestClient =
+        webTestClient
+            .mutate()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .responseTimeout(java.time.Duration.ofSeconds(60))
+            .build();
   }
 
   @AfterEach
@@ -84,7 +83,8 @@ class DeleteOperationIT {
 
     // First, create a patient to delete.
     final String createUri = "http://localhost:" + port + "/fhir/Patient";
-    final String createBody = """
+    final String createBody =
+        """
         {
           "resourceType": "Patient",
           "name": [{"family": "ToDelete"}]
@@ -92,17 +92,20 @@ class DeleteOperationIT {
         """;
 
     // Create the patient and get the ID.
-    final String location = webTestClient.post()
-        .uri(createUri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .bodyValue(createBody)
-        .exchange()
-        .expectStatus().isCreated()
-        .returnResult(String.class)
-        .getResponseHeaders()
-        .getLocation()
-        .toString();
+    final String location =
+        webTestClient
+            .post()
+            .uri(createUri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .bodyValue(createBody)
+            .exchange()
+            .expectStatus()
+            .isCreated()
+            .returnResult(String.class)
+            .getResponseHeaders()
+            .getLocation()
+            .toString();
 
     // Extract the patient ID from the location header.
     final String patientId = location.substring(location.lastIndexOf("/") + 1).split("\\?")[0];
@@ -110,12 +113,15 @@ class DeleteOperationIT {
 
     // When: HTTP DELETE [base]/Patient/[id].
     // Then: Response is 204 No Content.
-    webTestClient.delete()
+    webTestClient
+        .delete()
         .uri(deleteUri)
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().isNoContent()
-        .expectBody().isEmpty();
+        .expectStatus()
+        .isNoContent()
+        .expectBody()
+        .isEmpty();
 
     log.info("Delete returned 204 No Content successfully");
   }
@@ -128,11 +134,13 @@ class DeleteOperationIT {
 
     // When: HTTP DELETE [base]/Patient/nonexistent-id.
     // Then: Response is 404 Not Found.
-    webTestClient.delete()
+    webTestClient
+        .delete()
         .uri(uri)
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().isNotFound();
+        .expectStatus()
+        .isNotFound();
 
     log.info("Delete non-existent resource returned 404 correctly");
   }
@@ -143,7 +151,8 @@ class DeleteOperationIT {
 
     // First, create a patient to delete.
     final String createUri = "http://localhost:" + port + "/fhir/Patient";
-    final String createBody = """
+    final String createBody =
+        """
         {
           "resourceType": "Patient",
           "name": [{"family": "ToDelete"}]
@@ -151,36 +160,43 @@ class DeleteOperationIT {
         """;
 
     // Create the patient and get the ID.
-    final String location = webTestClient.post()
-        .uri(createUri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .bodyValue(createBody)
-        .exchange()
-        .expectStatus().isCreated()
-        .returnResult(String.class)
-        .getResponseHeaders()
-        .getLocation()
-        .toString();
+    final String location =
+        webTestClient
+            .post()
+            .uri(createUri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .bodyValue(createBody)
+            .exchange()
+            .expectStatus()
+            .isCreated()
+            .returnResult(String.class)
+            .getResponseHeaders()
+            .getLocation()
+            .toString();
 
     // Extract the patient ID from the location header.
     final String patientId = location.substring(location.lastIndexOf("/") + 1).split("\\?")[0];
     final String patientUri = "http://localhost:" + port + "/fhir/Patient/" + patientId;
 
     // Delete the patient.
-    webTestClient.delete()
+    webTestClient
+        .delete()
         .uri(patientUri)
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().isNoContent();
+        .expectStatus()
+        .isNoContent();
 
     // When: HTTP GET [base]/Patient/[id] after deletion.
     // Then: Response is 404 Not Found.
-    webTestClient.get()
+    webTestClient
+        .get()
         .uri(patientUri)
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().isNotFound();
+        .expectStatus()
+        .isNotFound();
 
     log.info("Read after delete returned 404 correctly");
   }
@@ -195,7 +211,8 @@ class DeleteOperationIT {
 
     // First, create a patient to delete via batch.
     final String createUri = "http://localhost:" + port + "/fhir/Patient";
-    final String createBody = """
+    final String createBody =
+        """
         {
           "resourceType": "Patient",
           "id": "batch-delete-patient",
@@ -203,17 +220,20 @@ class DeleteOperationIT {
         }
         """;
 
-    webTestClient.put()
+    webTestClient
+        .put()
         .uri(createUri + "/batch-delete-patient")
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(createBody)
         .exchange()
-        .expectStatus().isOk();
+        .expectStatus()
+        .isOk();
 
     // Now delete via batch.
     final String batchUri = "http://localhost:" + port + "/fhir";
-    final String batchBody = """
+    final String batchBody =
+        """
         {
           "resourceType": "Bundle",
           "type": "batch",
@@ -230,17 +250,22 @@ class DeleteOperationIT {
 
     // When: POST bundle with DELETE entry.
     // Then: Bundle response contains 204 for that entry.
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(batchUri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(batchBody)
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Bundle")
-        .jsonPath("$.type").isEqualTo("batch-response")
-        .jsonPath("$.entry[0].response.status").isEqualTo("204");
+        .jsonPath("$.resourceType")
+        .isEqualTo("Bundle")
+        .jsonPath("$.type")
+        .isEqualTo("batch-response")
+        .jsonPath("$.entry[0].response.status")
+        .isEqualTo("204");
 
     log.info("Batch with DELETE entry completed successfully");
   }
@@ -253,25 +278,31 @@ class DeleteOperationIT {
     final String baseUri = "http://localhost:" + port + "/fhir";
 
     for (int i = 1; i <= 3; i++) {
-      final String createBody = String.format("""
-          {
-            "resourceType": "Patient",
-            "id": "batch-delete-%d",
-            "name": [{"family": "ToDelete%d"}]
-          }
-          """, i, i);
+      final String createBody =
+          String.format(
+              """
+              {
+                "resourceType": "Patient",
+                "id": "batch-delete-%d",
+                "name": [{"family": "ToDelete%d"}]
+              }
+              """,
+              i, i);
 
-      webTestClient.put()
+      webTestClient
+          .put()
           .uri(baseUri + "/Patient/batch-delete-" + i)
           .header("Content-Type", "application/fhir+json")
           .header("Accept", "application/fhir+json")
           .bodyValue(createBody)
           .exchange()
-          .expectStatus().isOk();
+          .expectStatus()
+          .isOk();
     }
 
     // Now delete all via batch.
-    final String batchBody = """
+    final String batchBody =
+        """
         {
           "resourceType": "Bundle",
           "type": "batch",
@@ -300,20 +331,28 @@ class DeleteOperationIT {
 
     // When: POST bundle with multiple DELETE entries.
     // Then: All are deleted successfully.
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(baseUri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(batchBody)
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Bundle")
-        .jsonPath("$.type").isEqualTo("batch-response")
-        .jsonPath("$.entry.length()").isEqualTo(3)
-        .jsonPath("$.entry[0].response.status").isEqualTo("204")
-        .jsonPath("$.entry[1].response.status").isEqualTo("204")
-        .jsonPath("$.entry[2].response.status").isEqualTo("204");
+        .jsonPath("$.resourceType")
+        .isEqualTo("Bundle")
+        .jsonPath("$.type")
+        .isEqualTo("batch-response")
+        .jsonPath("$.entry.length()")
+        .isEqualTo(3)
+        .jsonPath("$.entry[0].response.status")
+        .isEqualTo("204")
+        .jsonPath("$.entry[1].response.status")
+        .isEqualTo("204")
+        .jsonPath("$.entry[2].response.status")
+        .isEqualTo("204");
 
     log.info("Batch with multiple DELETE entries completed successfully");
   }
@@ -324,7 +363,8 @@ class DeleteOperationIT {
 
     // First, create a patient to delete.
     final String baseUri = "http://localhost:" + port + "/fhir";
-    final String createBody = """
+    final String createBody =
+        """
         {
           "resourceType": "Patient",
           "id": "mixed-delete-patient",
@@ -332,16 +372,19 @@ class DeleteOperationIT {
         }
         """;
 
-    webTestClient.put()
+    webTestClient
+        .put()
         .uri(baseUri + "/Patient/mixed-delete-patient")
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(createBody)
         .exchange()
-        .expectStatus().isOk();
+        .expectStatus()
+        .isOk();
 
     // Now perform batch with mixed CREATE, UPDATE, and DELETE.
-    final String batchBody = """
+    final String batchBody =
+        """
         {
           "resourceType": "Bundle",
           "type": "batch",
@@ -366,21 +409,27 @@ class DeleteOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(baseUri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(batchBody)
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Bundle")
-        .jsonPath("$.type").isEqualTo("batch-response")
-        .jsonPath("$.entry.length()").isEqualTo(2)
-        .jsonPath("$.entry[0].response.status").isEqualTo("201")
-        .jsonPath("$.entry[1].response.status").isEqualTo("204");
+        .jsonPath("$.resourceType")
+        .isEqualTo("Bundle")
+        .jsonPath("$.type")
+        .isEqualTo("batch-response")
+        .jsonPath("$.entry.length()")
+        .isEqualTo(2)
+        .jsonPath("$.entry[0].response.status")
+        .isEqualTo("201")
+        .jsonPath("$.entry[1].response.status")
+        .isEqualTo("204");
 
     log.info("Batch with mixed operations including DELETE completed successfully");
   }
-
 }

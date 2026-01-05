@@ -38,9 +38,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class PathlingAuthenticationConverter extends JwtAuthenticationConverter {
 
-  /**
-   * Creates a new instance.
-   */
+  /** Creates a new instance. */
   public PathlingAuthenticationConverter() {
     log.debug("Instantiating authentication converter");
     setJwtGrantedAuthoritiesConverter(authoritiesConverter());
@@ -53,5 +51,4 @@ public class PathlingAuthenticationConverter extends JwtAuthenticationConverter 
     converter.setAuthorityPrefix("");
     return converter;
   }
-
 }

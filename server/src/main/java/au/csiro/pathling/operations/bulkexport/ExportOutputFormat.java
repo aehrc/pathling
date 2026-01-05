@@ -10,9 +10,7 @@ import org.jetbrains.annotations.Contract;
  * @author John Grimes
  */
 public enum ExportOutputFormat {
-  /**
-   * Newline-delimited JSON format.
-   */
+  /** Newline-delimited JSON format. */
   NDJSON;
 
   /**

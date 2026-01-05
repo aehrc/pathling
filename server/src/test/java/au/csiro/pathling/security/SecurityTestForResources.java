@@ -17,35 +17,28 @@
 
 package au.csiro.pathling.security;
 
-import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.source.DataSourceBuilder;
-import au.csiro.pathling.util.TestDataSetup;
 import java.nio.file.Path;
-import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-
 
 /**
  * @see <a
- * href="https://docs.spring.io/spring-security/site/docs/5.2.x/reference/html/test.html">Spring
- * Security - Testing</a>
+ *     href="https://docs.spring.io/spring-security/site/docs/5.2.x/reference/html/test.html">Spring
+ *     Security - Testing</a>
  * @see <a
- * href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
- * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
+ *     href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
+ *     Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
 @Slf4j
 @ActiveProfiles({"unit-test"})
 // @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
 abstract class SecurityTestForResources extends SecurityTest {
 
-  @Autowired
-  SparkSession spark;
+  @Autowired SparkSession spark;
 
   @TempDir
   @SuppressWarnings({"unused", "WeakerAccess"})

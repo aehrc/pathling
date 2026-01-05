@@ -41,11 +41,9 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ReadExecutor {
 
-  @Nonnull
-  private final DataSource dataSource;
+  @Nonnull private final DataSource dataSource;
 
-  @Nonnull
-  private final FhirEncoders fhirEncoders;
+  @Nonnull private final FhirEncoders fhirEncoders;
 
   /**
    * Constructs a new ReadExecutor.
@@ -53,8 +51,8 @@ public class ReadExecutor {
    * @param dataSource the data source containing the resources to read
    * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
    */
-  public ReadExecutor(@Nonnull final DataSource dataSource,
-      @Nonnull final FhirEncoders fhirEncoders) {
+  public ReadExecutor(
+      @Nonnull final DataSource dataSource, @Nonnull final FhirEncoders fhirEncoders) {
     this.dataSource = dataSource;
     this.fhirEncoders = fhirEncoders;
   }
@@ -69,8 +67,8 @@ public class ReadExecutor {
    * @throws IllegalArgumentException if the resource ID is null, empty, or blank
    */
   @Nonnull
-  public IBaseResource read(@Nonnull final String resourceTypeCode,
-      @Nonnull final String resourceId) {
+  public IBaseResource read(
+      @Nonnull final String resourceTypeCode, @Nonnull final String resourceId) {
     // Validate input.
     if (resourceId == null || resourceId.isBlank()) {
       throw new IllegalArgumentException("Resource ID must not be null, empty, or blank");
@@ -97,5 +95,4 @@ public class ReadExecutor {
 
     return resources.get(0);
   }
-
 }

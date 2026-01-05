@@ -56,8 +56,8 @@ public class JobRegistry {
    */
   @Nonnull
   @SuppressWarnings("unchecked")
-  public synchronized <T> Job<T> getOrCreate(@Nonnull final JobTag tag,
-      @Nonnull final Function<String, Job<T>> jobFactory) {
+  public synchronized <T> Job<T> getOrCreate(
+      @Nonnull final JobTag tag, @Nonnull final Function<String, Job<T>> jobFactory) {
 
     final Job<T> existingJob = (Job<T>) jobsByTags.get(tag);
     if (existingJob != null) {
@@ -117,8 +117,8 @@ public class JobRegistry {
     boolean removedFromTags = jobsByTags.values().removeIf(otherJob -> otherJob.equals(job));
     if (!removedFromTags) {
       throw new InternalErrorException(
-          "Removed job %s from id map but failed to remove it from tag map.".formatted(
-              job.getId()));
+          "Removed job %s from id map but failed to remove it from tag map."
+              .formatted(job.getId()));
     }
     removedFromRegistryButStillWithSparkJob.add(job.getId());
     return true;

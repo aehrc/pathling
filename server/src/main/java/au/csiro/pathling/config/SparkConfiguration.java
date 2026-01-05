@@ -21,17 +21,11 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Data;
 
-/**
- * Represents configuration that controls the behaviour of Apache Spark.
- */
+/** Represents configuration that controls the behaviour of Apache Spark. */
 @Data
 @Builder
 public class SparkConfiguration {
 
-  /**
-   * The name that Pathling will be identified as within the Spark cluster.
-   */
-  @NotBlank
-  @Builder.Default
-  private String appName = "Pathling";
+  /** The name that Pathling will be identified as within the Spark cluster. */
+  @NotBlank @Builder.Default private String appName = "Pathling";
 }

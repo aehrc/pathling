@@ -43,25 +43,22 @@ import org.springframework.web.filter.CorsFilter;
  * Web security configuration for Pathling.
  *
  * @see <a
- * href="https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization">Spring
- * Security 5 Java API: Authorization</a>
+ *     href="https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization">Spring
+ *     Security 5 Java API: Authorization</a>
  * @see <a
- * href="https://stackoverflow.com/questions/51079564/spring-security-antmatchers-not-being-applied-on-post-requests-and-only-works-wi/51088555">Spring
- * security antMatchers not being applied on POST requests and only works with GET</a>
+ *     href="https://stackoverflow.com/questions/51079564/spring-security-antmatchers-not-being-applied-on-post-requests-and-only-works-wi/51088555">Spring
+ *     security antMatchers not being applied on POST requests and only works with GET</a>
  */
 @Configuration
 @EnableWebSecurity
 @Slf4j
 public class SecurityConfiguration {
 
-  @Nonnull
-  private final ServerConfiguration configuration;
+  @Nonnull private final ServerConfiguration configuration;
 
-  @Nullable
-  private final JwtAuthenticationConverter authenticationConverter;
+  @Nullable private final JwtAuthenticationConverter authenticationConverter;
 
-  @Nullable
-  private final JwtDecoder jwtDecoder;
+  @Nullable private final JwtDecoder jwtDecoder;
 
   @Value("${pathling.auth.enabled}")
   private boolean authEnabled;
@@ -71,7 +68,8 @@ public class SecurityConfiguration {
    *
    * @param configuration a {@link ServerConfiguration} object
    */
-  public SecurityConfiguration(@Nonnull final ServerConfiguration configuration,
+  public SecurityConfiguration(
+      @Nonnull final ServerConfiguration configuration,
       @Nullable final JwtAuthenticationConverter authenticationConverter,
       @Nullable final JwtDecoder jwtDecoder) {
     this.configuration = configuration;
@@ -90,27 +88,38 @@ public class SecurityConfiguration {
   public SecurityFilterChain securityFilterChain(@Nonnull final HttpSecurity http)
       throws Exception {
     if (authEnabled) {
-      check(authenticationConverter != null,
+      check(
+          authenticationConverter != null,
           "Authentication converter must be provided when authentication is enabled");
       check(jwtDecoder != null, "JWT decoder must be provided when authentication is enabled");
-      http.authorizeHttpRequests(authz -> authz
-              // The following requests do not require authentication.
-              .requestMatchers("/actuator/**").permitAll()
-              .requestMatchers("/").permitAll()
-              .requestMatchers("/admin/**").permitAll()
-              .requestMatchers(HttpMethod.GET, "/fhir/metadata").permitAll()
-              .requestMatchers(HttpMethod.GET, "/fhir/OperationDefinition/**").permitAll()
-              .requestMatchers(HttpMethod.GET, "/fhir/.well-known/**").permitAll()
-              // Anything else needs to be authenticated.
-              .anyRequest().authenticated())
+      http.authorizeHttpRequests(
+              authz ->
+                  authz
+                      // The following requests do not require authentication.
+                      .requestMatchers("/actuator/**")
+                      .permitAll()
+                      .requestMatchers("/")
+                      .permitAll()
+                      .requestMatchers("/admin/**")
+                      .permitAll()
+                      .requestMatchers(HttpMethod.GET, "/fhir/metadata")
+                      .permitAll()
+                      .requestMatchers(HttpMethod.GET, "/fhir/OperationDefinition/**")
+                      .permitAll()
+                      .requestMatchers(HttpMethod.GET, "/fhir/.well-known/**")
+                      .permitAll()
+                      // Anything else needs to be authenticated.
+                      .anyRequest()
+                      .authenticated())
           // Enable CORS as per the configuration.
           .cors(cors -> cors.configurationSource(corsConfigurationSource()))
           // Use the provided JWT decoder and authentication converter.
-          .oauth2ResourceServer(oauth2 -> oauth2
-              .jwt(jwt -> jwt
-                  .jwtAuthenticationConverter(authenticationConverter)
-                  .decoder(jwtDecoder)
-              ));
+          .oauth2ResourceServer(
+              oauth2 ->
+                  oauth2.jwt(
+                      jwt ->
+                          jwt.jwtAuthenticationConverter(authenticationConverter)
+                              .decoder(jwtDecoder)));
 
     } else {
       http.authorizeHttpRequests(authz -> authz.anyRequest().permitAll())
@@ -152,11 +161,10 @@ public class SecurityConfiguration {
    */
   @Bean
   public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
-    final FilterRegistrationBean<CorsFilter> registration = new FilterRegistrationBean<>(
-        new CorsFilter(corsConfigurationSource()));
+    final FilterRegistrationBean<CorsFilter> registration =
+        new FilterRegistrationBean<>(new CorsFilter(corsConfigurationSource()));
     registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
     registration.addUrlPatterns("/fhir/*");
     return registration;
   }
-
 }

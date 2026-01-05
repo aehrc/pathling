@@ -22,25 +22,24 @@ public interface PreAsyncValidation<R> {
    * @throws InvalidRequestException When the request is invalid.
    */
   @Nonnull
-  PreAsyncValidationResult<R> preAsyncValidate(@Nonnull ServletRequestDetails servletRequestDetails,
-      @Nonnull Object[] params) throws InvalidRequestException;
+  PreAsyncValidationResult<R> preAsyncValidate(
+      @Nonnull ServletRequestDetails servletRequestDetails, @Nonnull Object[] params)
+      throws InvalidRequestException;
 
   record PreAsyncValidationResult<R>(
       @Nullable R result,
-      @Nonnull List<OperationOutcome.OperationOutcomeIssueComponent> warnings
-  ) {
-
-  }
+      @Nonnull List<OperationOutcome.OperationOutcomeIssueComponent> warnings) {}
 
   /**
    * Computes a cache key component from the parsed request. Override this method to include request
    * body parameters in job deduplication for POST operations.
    *
    * <p>The returned string should be deterministic and include all parameters that make this
-   * request unique. It should NOT include:</p>
+   * request unique. It should NOT include:
+   *
    * <ul>
-   *   <li>The original request URL (already in RequestTag.requestUrl)</li>
-   *   <li>Server base URL (infrastructure detail, not request-specific)</li>
+   *   <li>The original request URL (already in RequestTag.requestUrl)
+   *   <li>Server base URL (infrastructure detail, not request-specific)
    * </ul>
    *
    * @param request the parsed request object from preAsyncValidate
@@ -50,5 +49,4 @@ public interface PreAsyncValidation<R> {
   default String computeCacheKeyComponent(@Nonnull R request) {
     return "";
   }
-
 }

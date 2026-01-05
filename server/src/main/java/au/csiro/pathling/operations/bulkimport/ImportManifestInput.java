@@ -26,8 +26,4 @@ import jakarta.annotation.Nonnull;
  * @author John Grimes
  */
 public record ImportManifestInput(
-    @Nonnull @JsonProperty("type") String type,
-    @Nonnull @JsonProperty("url") String url
-) {
-
-}
+    @Nonnull @JsonProperty("type") String type, @Nonnull @JsonProperty("url") String url) {}

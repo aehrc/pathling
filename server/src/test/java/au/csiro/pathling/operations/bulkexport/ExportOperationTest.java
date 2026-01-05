@@ -356,7 +356,9 @@ class ExportOperationTest {
   @ParameterizedTest
   @MethodSource("provideOutputMappings")
   void testOutputModelMapping(
-      final ExportResponse exportResponse, final String expectedRequest, final int expectedOutputs) {
+      final ExportResponse exportResponse,
+      final String expectedRequest,
+      final int expectedOutputs) {
     final Parameters actualParameters =
         resolveTempDirIn(exportResponse, Paths.get("test"), UUID.randomUUID()).toOutput();
 

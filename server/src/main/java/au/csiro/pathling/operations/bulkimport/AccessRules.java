@@ -37,12 +37,11 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class AccessRules {
 
-  @Nonnull
-  private final List<String> allowableSources;
+  @Nonnull private final List<String> allowableSources;
 
   /**
    * @param configuration a {@link ServerConfiguration} object which controls the behaviour of the
-   * AccessRules
+   *     AccessRules
    */
   public AccessRules(@Nonnull final ServerConfiguration configuration) {
 
@@ -51,10 +50,11 @@ public class AccessRules {
       this.allowableSources = List.of();
     } else {
       final List<String> sources = importConfiguration.getAllowableSources();
-      this.allowableSources = sources.stream()
-          .filter(StringUtils::isNotBlank)
-          .map(CacheableDatabase::convertS3ToS3aUrl)
-          .toList();
+      this.allowableSources =
+          sources.stream()
+              .filter(StringUtils::isNotBlank)
+              .map(CacheableDatabase::convertS3ToS3aUrl)
+              .toList();
       if (allowableSources.size() < sources.size()) {
         log.warn(
             "Some empty or blank allowable sources have been ignored in import configuration.");
@@ -85,5 +85,4 @@ public class AccessRules {
   private boolean canImportFrom(@Nonnull final String url) {
     return allowableSources.stream().anyMatch(url::startsWith);
   }
-
 }

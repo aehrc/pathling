@@ -11,13 +11,10 @@ import java.util.Objects;
  *
  * @param headerName The header name this instance belongs to.
  * @param acceptedHeaderValues A collection of header values that are deemed valid here (usually
- * synonyms).
+ *     synonyms).
  * @author Felix Naumann
  */
-public record Header(
-    String headerName,
-    List<String> acceptedHeaderValues
-) {
+public record Header(String headerName, List<String> acceptedHeaderValues) {
 
   /**
    * With synonyms there may be one preferred value.
@@ -38,9 +35,7 @@ public record Header(
     if (headerValue == null) {
       return false;
     }
-    List<String> values = Arrays.stream(headerValue.split(","))
-        .map(String::trim)
-        .toList();
+    List<String> values = Arrays.stream(headerValue.split(",")).map(String::trim).toList();
     // Accept wildcard */* which means the client accepts any content type.
     if (values.contains("*/*")) {
       return true;
@@ -64,7 +59,7 @@ public record Header(
    * value is valid.
    *
    * @param request An entire request object. The associated header key will be used to retrieve the
-   * header values.
+   *     header values.
    * @return True if at least one header value valid, false otherwise.
    */
   public boolean validValue(ServletRequestDetails request) {

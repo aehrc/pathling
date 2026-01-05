@@ -30,17 +30,21 @@ import au.csiro.pathling.operations.bulkimport.ImportFormat;
 import au.csiro.pathling.operations.bulkimport.ImportRequest;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
+import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -51,10 +55,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-import ca.uhn.fhir.context.FhirContext;
-import java.io.BufferedWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.StandardOpenOption;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -77,41 +77,29 @@ public class BulkSubmitExecutor {
 
   private static final Duration HTTP_TIMEOUT = Duration.ofMinutes(5);
 
-  @Nonnull
-  private final ImportExecutor importExecutor;
+  @Nonnull private final ImportExecutor importExecutor;
 
-  @Nonnull
-  private final SubmissionRegistry submissionRegistry;
+  @Nonnull private final SubmissionRegistry submissionRegistry;
 
-  @Nonnull
-  private final ExportResultRegistry exportResultRegistry;
+  @Nonnull private final ExportResultRegistry exportResultRegistry;
 
-  @Nonnull
-  private final ServerConfiguration serverConfiguration;
+  @Nonnull private final ServerConfiguration serverConfiguration;
 
-  @Nonnull
-  private final BulkSubmitResultBuilder resultBuilder;
+  @Nonnull private final BulkSubmitResultBuilder resultBuilder;
 
-  @Nullable
-  private final JobRegistry jobRegistry;
+  @Nullable private final JobRegistry jobRegistry;
 
-  @Nullable
-  private final SparkSession sparkSession;
+  @Nullable private final SparkSession sparkSession;
 
-  @Nonnull
-  private final String databasePath;
+  @Nonnull private final String databasePath;
 
-  @Nonnull
-  private final ObjectMapper objectMapper;
+  @Nonnull private final ObjectMapper objectMapper;
 
-  @Nonnull
-  private final HttpClient httpClient;
+  @Nonnull private final HttpClient httpClient;
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull
-  private final BulkSubmitAuthProvider authProvider;
+  @Nonnull private final BulkSubmitAuthProvider authProvider;
 
   /**
    * Creates a new BulkSubmitExecutor.
@@ -121,10 +109,9 @@ public class BulkSubmitExecutor {
    * @param exportResultRegistry The registry for tracking downloadable results.
    * @param serverConfiguration The server configuration.
    * @param resultBuilder The builder for creating status manifests.
-   * @param jobRegistry The job registry for tracking async jobs (may be null if async is
-   * disabled).
+   * @param jobRegistry The job registry for tracking async jobs (may be null if async is disabled).
    * @param sparkSession The Spark session for setting job groups (may be null if async is
-   * disabled).
+   *     disabled).
    * @param databasePath The path to the database storage location.
    * @param fhirContext The FHIR context for serialising resources.
    * @param authProvider The authentication provider for OAuth2 token acquisition.
@@ -138,10 +125,9 @@ public class BulkSubmitExecutor {
       @Nullable final JobRegistry jobRegistry,
       @Nullable final SparkSession sparkSession,
       @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      final String databasePath,
+          final String databasePath,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final BulkSubmitAuthProvider authProvider
-  ) {
+      @Nonnull final BulkSubmitAuthProvider authProvider) {
     this.importExecutor = importExecutor;
     this.submissionRegistry = submissionRegistry;
     this.exportResultRegistry = exportResultRegistry;
@@ -151,9 +137,7 @@ public class BulkSubmitExecutor {
     this.sparkSession = sparkSession;
     this.databasePath = databasePath;
     this.objectMapper = new ObjectMapper();
-    this.httpClient = HttpClient.newBuilder()
-        .connectTimeout(HTTP_TIMEOUT)
-        .build();
+    this.httpClient = HttpClient.newBuilder().connectTimeout(HTTP_TIMEOUT).build();
     this.fhirContext = fhirContext;
     this.authProvider = authProvider;
   }
@@ -172,8 +156,7 @@ public class BulkSubmitExecutor {
       @Nonnull final Submission submission,
       @Nonnull final ManifestJob manifestJob,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
-      @Nonnull final String fhirServerBase
-  ) {
+      @Nonnull final String fhirServerBase) {
     // Create a Job for progress tracking if async is enabled.
     final String jobId;
     final CompletableFuture<IBaseResource> resultFuture;
@@ -192,10 +175,12 @@ public class BulkSubmitExecutor {
           submission.submitter(),
           submission.submissionId(),
           manifestJob.manifestJobId(),
-          mj -> mj.withJobId(jobId)
-      );
-      log.info("Created job {} for manifest job {} in submission {}",
-          jobId, manifestJob.manifestJobId(), submission.submissionId());
+          mj -> mj.withJobId(jobId));
+      log.info(
+          "Created job {} for manifest job {} in submission {}",
+          jobId,
+          manifestJob.manifestJobId(),
+          submission.submissionId());
     } else {
       jobId = null;
       resultFuture = null;
@@ -203,10 +188,9 @@ public class BulkSubmitExecutor {
 
     // Execute asynchronously to not block the request thread.
     CompletableFuture.runAsync(
-        () -> downloadManifestJobInternal(
-            submission, manifestJob, fileRequestHeaders, fhirServerBase, jobId, resultFuture
-        )
-    );
+        () ->
+            downloadManifestJobInternal(
+                submission, manifestJob, fileRequestHeaders, fhirServerBase, jobId, resultFuture));
   }
 
   private void downloadManifestJobInternal(
@@ -215,18 +199,18 @@ public class BulkSubmitExecutor {
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
       @Nonnull final String fhirServerBase,
       @Nullable final String jobId,
-      @Nullable final CompletableFuture<IBaseResource> resultFuture
-  ) {
-    log.info("Starting download for manifest job: {} in submission: {}",
-        manifestJob.manifestJobId(), submission.submissionId());
+      @Nullable final CompletableFuture<IBaseResource> resultFuture) {
+    log.info(
+        "Starting download for manifest job: {} in submission: {}",
+        manifestJob.manifestJobId(),
+        submission.submissionId());
 
     // Update manifest job to PROCESSING state.
     submissionRegistry.updateManifestJob(
         submission.submitter(),
         submission.submissionId(),
         manifestJob.manifestJobId(),
-        mj -> mj.withState(ManifestJobState.PROCESSING)
-    );
+        mj -> mj.withState(ManifestJobState.PROCESSING));
 
     // Set Spark job group for progress tracking if a job ID was provided.
     if (jobId != null && sparkSession != null) {
@@ -236,27 +220,29 @@ public class BulkSubmitExecutor {
 
     try {
       // Acquire OAuth2 access token if credentials are configured for this submitter.
-      final String accessToken = acquireAccessToken(
-          submission.submitter(),
-          manifestJob.fhirBaseUrl(),
-          manifestJob.oauthMetadataUrl()
-      );
+      final String accessToken =
+          acquireAccessToken(
+              submission.submitter(), manifestJob.fhirBaseUrl(), manifestJob.oauthMetadataUrl());
 
       // Fetch and parse the manifest.
       final JsonNode manifest = fetchManifest(manifestJob, fileRequestHeaders, accessToken);
 
       // Check if files require authentication based on the manifest's requiresAccessToken field.
-      final boolean requiresAccessToken = manifest.has("requiresAccessToken")
-                                          && manifest.get("requiresAccessToken").asBoolean(false);
+      final boolean requiresAccessToken =
+          manifest.has("requiresAccessToken")
+              && manifest.get("requiresAccessToken").asBoolean(false);
       final String fileAccessToken = requiresAccessToken ? accessToken : null;
 
       // Log authentication status for debugging.
       if (requiresAccessToken) {
         if (fileAccessToken != null) {
-          log.info("Manifest requires authentication - using OAuth2 access token for file downloads");
+          log.info(
+              "Manifest requires authentication - using OAuth2 access token for file downloads");
         } else {
-          log.warn("Manifest requires authentication but no OAuth credentials configured for "
-              + "submitter {} - file downloads may fail", submission.submitter().toKey());
+          log.warn(
+              "Manifest requires authentication but no OAuth credentials configured for "
+                  + "submitter {} - file downloads may fail",
+              submission.submitter().toKey());
         }
       }
 
@@ -271,10 +257,14 @@ public class BulkSubmitExecutor {
       final Path downloadDir = createDownloadDirectory(submission.submissionId());
 
       // Download files to persistent storage.
-      final List<DownloadedFile> downloadedFiles = downloadFilesToPersistentStorage(
-          fileUrls, downloadDir, manifestJob.manifestJobId(), manifestJob.manifestUrl(),
-          fileRequestHeaders, fileAccessToken
-      );
+      final List<DownloadedFile> downloadedFiles =
+          downloadFilesToPersistentStorage(
+              fileUrls,
+              downloadDir,
+              manifestJob.manifestJobId(),
+              manifestJob.manifestUrl(),
+              fileRequestHeaders,
+              fileAccessToken);
 
       // Register submission in ExportResultRegistry so files can be served via $result.
       final Optional<String> ownerId = Optional.ofNullable(submission.ownerId());
@@ -286,27 +276,28 @@ public class BulkSubmitExecutor {
           submission.submitter(),
           submission.submissionId(),
           manifestJob.manifestJobId(),
-          mj -> mj.withDownloadedFiles(downloadedFiles).withState(ManifestJobState.DOWNLOADED)
-      );
+          mj -> mj.withDownloadedFiles(downloadedFiles).withState(ManifestJobState.DOWNLOADED));
 
-      log.info("Manifest job {} download completed successfully with {} files",
-          manifestJob.manifestJobId(), downloadedFiles.size());
+      log.info(
+          "Manifest job {} download completed successfully with {} files",
+          manifestJob.manifestJobId(),
+          downloadedFiles.size());
 
       // Complete the async job if enabled.
       if (resultFuture != null) {
-        final Submission updatedSubmission = submissionRegistry.get(
-            submission.submitter(), submission.submissionId()
-        ).orElse(submission);
+        final Submission updatedSubmission =
+            submissionRegistry
+                .get(submission.submitter(), submission.submissionId())
+                .orElse(submission);
         final String requestUrl = buildStatusRequestUrl(fhirServerBase, submission);
-        final IBaseResource statusManifest = resultBuilder.buildStatusManifest(
-            updatedSubmission, requestUrl, fhirServerBase
-        );
+        final IBaseResource statusManifest =
+            resultBuilder.buildStatusManifest(updatedSubmission, requestUrl, fhirServerBase);
         resultFuture.complete(statusManifest);
       }
 
     } catch (final Exception e) {
-      log.error("Failed to download manifest job {}: {}",
-          manifestJob.manifestJobId(), e.getMessage(), e);
+      log.error(
+          "Failed to download manifest job {}: {}", manifestJob.manifestJobId(), e.getMessage(), e);
 
       // Write error to NDJSON file and update manifest job.
       String errorFileName = null;
@@ -315,14 +306,14 @@ public class BulkSubmitExecutor {
         final Optional<String> ownerId = Optional.ofNullable(submission.ownerId());
         exportResultRegistry.put(submission.submissionId(), new ExportResult(ownerId));
 
-        errorFileName = writeErrorFile(
-            submission.submissionId(),
-            manifestJob.manifestJobId(),
-            e.getMessage()
-        );
+        errorFileName =
+            writeErrorFile(submission.submissionId(), manifestJob.manifestJobId(), e.getMessage());
       } catch (final IOException ioEx) {
-        log.error("Failed to write error file for manifest job {}: {}",
-            manifestJob.manifestJobId(), ioEx.getMessage(), ioEx);
+        log.error(
+            "Failed to write error file for manifest job {}: {}",
+            manifestJob.manifestJobId(),
+            ioEx.getMessage(),
+            ioEx);
       }
 
       final String finalErrorFileName = errorFileName;
@@ -330,20 +321,19 @@ public class BulkSubmitExecutor {
           submission.submitter(),
           submission.submissionId(),
           manifestJob.manifestJobId(),
-          mj -> mj.withError(e.getMessage(), finalErrorFileName)
-      );
+          mj -> mj.withError(e.getMessage(), finalErrorFileName));
 
       // Complete the job normally with a status manifest containing errors.
       // Per the bulk submit spec, errors should be reported in the manifest error section,
       // not as HTTP exceptions.
       if (resultFuture != null) {
-        final Submission updatedSubmission = submissionRegistry.get(
-            submission.submitter(), submission.submissionId()
-        ).orElse(submission);
+        final Submission updatedSubmission =
+            submissionRegistry
+                .get(submission.submitter(), submission.submissionId())
+                .orElse(submission);
         final String requestUrl = buildStatusRequestUrl(fhirServerBase, submission);
-        final IBaseResource statusManifest = resultBuilder.buildStatusManifest(
-            updatedSubmission, requestUrl, fhirServerBase
-        );
+        final IBaseResource statusManifest =
+            resultBuilder.buildStatusManifest(updatedSubmission, requestUrl, fhirServerBase);
         resultFuture.complete(statusManifest);
       }
     } finally {
@@ -370,8 +360,7 @@ public class BulkSubmitExecutor {
         final Job<?> asyncJob = jobRegistry.get(job.jobId());
         if (asyncJob != null && !asyncJob.getResult().isDone()) {
           asyncJob.getResult().cancel(true);
-          log.debug("Cancelled async job {} for manifest job {}", job.jobId(),
-              job.manifestJobId());
+          log.debug("Cancelled async job {} for manifest job {}", job.jobId(), job.manifestJobId());
         }
       }
     }
@@ -387,8 +376,7 @@ public class BulkSubmitExecutor {
             submission.submitter(),
             submission.submissionId(),
             job.manifestJobId(),
-            mj -> mj.withState(ManifestJobState.ABORTED)
-        );
+            mj -> mj.withState(ManifestJobState.ABORTED));
         log.debug("Marked manifest job {} as ABORTED", job.manifestJobId());
       }
     }
@@ -404,10 +392,10 @@ public class BulkSubmitExecutor {
    * @param manifestJob The manifest job to abort.
    */
   public void abortManifestJob(
-      @Nonnull final Submission submission,
-      @Nonnull final ManifestJob manifestJob
-  ) {
-    log.info("Aborting manifest job {} in submission {}", manifestJob.manifestJobId(),
+      @Nonnull final Submission submission, @Nonnull final ManifestJob manifestJob) {
+    log.info(
+        "Aborting manifest job {} in submission {}",
+        manifestJob.manifestJobId(),
         submission.submissionId());
 
     // Cancel the async job if running.
@@ -415,7 +403,9 @@ public class BulkSubmitExecutor {
       final Job<?> asyncJob = jobRegistry.get(manifestJob.jobId());
       if (asyncJob != null && !asyncJob.getResult().isDone()) {
         asyncJob.getResult().cancel(true);
-        log.debug("Cancelled async job {} for manifest job {}", manifestJob.jobId(),
+        log.debug(
+            "Cancelled async job {} for manifest job {}",
+            manifestJob.jobId(),
             manifestJob.manifestJobId());
       }
     }
@@ -425,8 +415,7 @@ public class BulkSubmitExecutor {
         submission.submitter(),
         submission.submissionId(),
         manifestJob.manifestJobId(),
-        mj -> mj.withState(ManifestJobState.ABORTED)
-    );
+        mj -> mj.withState(ManifestJobState.ABORTED));
 
     log.info("Manifest job {} aborted successfully", manifestJob.manifestJobId());
   }
@@ -452,7 +441,8 @@ public class BulkSubmitExecutor {
       for (final ManifestJob job : submission.manifestJobs()) {
         if (job.downloadedFiles() != null) {
           for (final DownloadedFile file : job.downloadedFiles()) {
-            allFilePaths.computeIfAbsent(file.resourceType(), k -> new ArrayList<>())
+            allFilePaths
+                .computeIfAbsent(file.resourceType(), k -> new ArrayList<>())
                 .add(file.localPath());
           }
         }
@@ -464,18 +454,14 @@ public class BulkSubmitExecutor {
       }
 
       // Create ImportRequest with aggregated file paths.
-      final ImportRequest importRequest = new ImportRequest(
-          submission.submissionId(),
-          allFilePaths,
-          SaveMode.MERGE,
-          ImportFormat.NDJSON
-      );
+      final ImportRequest importRequest =
+          new ImportRequest(
+              submission.submissionId(), allFilePaths, SaveMode.MERGE, ImportFormat.NDJSON);
 
       // Execute the import with the bulk submit allowable sources.
       final BulkSubmitConfiguration bulkSubmitConfig = serverConfiguration.getBulkSubmit();
-      final List<String> allowableSources = bulkSubmitConfig != null
-                                            ? bulkSubmitConfig.getAllowableSources()
-                                            : List.of();
+      final List<String> allowableSources =
+          bulkSubmitConfig != null ? bulkSubmitConfig.getAllowableSources() : List.of();
       importExecutor.execute(importRequest, submission.submissionId(), allowableSources);
 
       // Update all manifest jobs to COMPLETED state.
@@ -485,8 +471,7 @@ public class BulkSubmitExecutor {
               submission.submitter(),
               submission.submissionId(),
               job.manifestJobId(),
-              mj -> mj.withState(ManifestJobState.COMPLETED)
-          );
+              mj -> mj.withState(ManifestJobState.COMPLETED));
         }
       }
 
@@ -500,14 +485,17 @@ public class BulkSubmitExecutor {
         if (job.state() == ManifestJobState.DOWNLOADED) {
           String errorFileName = null;
           try {
-            errorFileName = writeErrorFile(
-                submission.submissionId(),
-                job.manifestJobId(),
-                "Import failed: " + e.getMessage()
-            );
+            errorFileName =
+                writeErrorFile(
+                    submission.submissionId(),
+                    job.manifestJobId(),
+                    "Import failed: " + e.getMessage());
           } catch (final IOException ioEx) {
-            log.error("Failed to write error file for manifest job {}: {}",
-                job.manifestJobId(), ioEx.getMessage(), ioEx);
+            log.error(
+                "Failed to write error file for manifest job {}: {}",
+                job.manifestJobId(),
+                ioEx.getMessage(),
+                ioEx);
           }
 
           final String finalErrorFileName = errorFileName;
@@ -515,8 +503,7 @@ public class BulkSubmitExecutor {
               submission.submitter(),
               submission.submissionId(),
               job.manifestJobId(),
-              mj -> mj.withError("Import failed: " + e.getMessage(), finalErrorFileName)
-          );
+              mj -> mj.withError("Import failed: " + e.getMessage(), finalErrorFileName));
         }
       }
     }
@@ -526,16 +513,14 @@ public class BulkSubmitExecutor {
   private JsonNode fetchManifest(
       @Nonnull final ManifestJob manifestJob,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
-      @Nullable final String accessToken
-  ) throws IOException {
+      @Nullable final String accessToken)
+      throws IOException {
     final String manifestUrl = manifestJob.manifestUrl();
 
     log.info("Fetching manifest from: {}", manifestUrl);
 
-    final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-        .uri(URI.create(manifestUrl))
-        .timeout(HTTP_TIMEOUT)
-        .GET();
+    final HttpRequest.Builder requestBuilder =
+        HttpRequest.newBuilder().uri(URI.create(manifestUrl)).timeout(HTTP_TIMEOUT).GET();
 
     // Apply custom headers.
     for (final FileRequestHeader header : fileRequestHeaders) {
@@ -551,15 +536,11 @@ public class BulkSubmitExecutor {
     final HttpRequest request = requestBuilder.build();
 
     try {
-      final HttpResponse<InputStream> response = httpClient.send(
-          request,
-          HttpResponse.BodyHandlers.ofInputStream()
-      );
+      final HttpResponse<InputStream> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
       if (response.statusCode() != 200) {
-        throw new InvalidUserInputError(
-            "Failed to fetch manifest: HTTP " + response.statusCode()
-        );
+        throw new InvalidUserInputError("Failed to fetch manifest: HTTP " + response.statusCode());
       }
 
       try (final InputStream body = response.body()) {
@@ -593,12 +574,8 @@ public class BulkSubmitExecutor {
     int entryIndex = 0;
 
     for (final JsonNode fileNode : outputNode) {
-      final String type = fileNode.has("type")
-                          ? fileNode.get("type").asText()
-                          : null;
-      final String url = fileNode.has("url")
-                         ? fileNode.get("url").asText()
-                         : null;
+      final String type = fileNode.has("type") ? fileNode.get("type").asText() : null;
+      final String url = fileNode.has("url") ? fileNode.get("url").asText() : null;
 
       if (type == null && url == null) {
         errors.add("Output entry " + entryIndex + " is missing both 'type' and 'url' fields");
@@ -659,8 +636,8 @@ public class BulkSubmitExecutor {
       @Nonnull final String manifestJobId,
       @Nonnull final String manifestUrl,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
-      @Nullable final String accessToken
-  ) throws IOException {
+      @Nullable final String accessToken)
+      throws IOException {
     final List<DownloadedFile> downloadedFiles = new ArrayList<>();
     final AtomicInteger fileCounter = new AtomicInteger(0);
 
@@ -676,12 +653,8 @@ public class BulkSubmitExecutor {
 
         downloadFile(url, localPath, fileRequestHeaders, accessToken);
 
-        downloadedFiles.add(new DownloadedFile(
-            resourceType,
-            fileName,
-            localPath.toUri().toString(),
-            manifestUrl
-        ));
+        downloadedFiles.add(
+            new DownloadedFile(resourceType, fileName, localPath.toUri().toString(), manifestUrl));
       }
     }
 
@@ -692,14 +665,12 @@ public class BulkSubmitExecutor {
       @Nonnull final String url,
       @Nonnull final Path destPath,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
-      @Nullable final String accessToken
-  ) throws IOException {
+      @Nullable final String accessToken)
+      throws IOException {
     log.debug("Downloading file from {} to {}", url, destPath);
 
-    final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-        .uri(URI.create(url))
-        .timeout(HTTP_TIMEOUT)
-        .GET();
+    final HttpRequest.Builder requestBuilder =
+        HttpRequest.newBuilder().uri(URI.create(url)).timeout(HTTP_TIMEOUT).GET();
 
     // Apply custom headers.
     for (final FileRequestHeader header : fileRequestHeaders) {
@@ -714,14 +685,12 @@ public class BulkSubmitExecutor {
     final HttpRequest request = requestBuilder.build();
 
     try {
-      final HttpResponse<InputStream> response = httpClient.send(
-          request,
-          HttpResponse.BodyHandlers.ofInputStream()
-      );
+      final HttpResponse<InputStream> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
       if (response.statusCode() != 200) {
-        throw new IOException("Failed to download file from " + url + ": HTTP "
-            + response.statusCode());
+        throw new IOException(
+            "Failed to download file from " + url + ": HTTP " + response.statusCode());
       }
 
       try (final InputStream body = response.body()) {
@@ -748,14 +717,15 @@ public class BulkSubmitExecutor {
   private String writeErrorFile(
       @Nonnull final String submissionId,
       @Nonnull final String manifestJobId,
-      @Nonnull final String errorMessage
-  ) throws IOException {
+      @Nonnull final String errorMessage)
+      throws IOException {
     // Create the download directory if it doesn't exist.
     final Path downloadDir = createDownloadDirectory(submissionId);
 
     // Build the OperationOutcome resource.
     final OperationOutcome outcome = new OperationOutcome();
-    outcome.addIssue()
+    outcome
+        .addIssue()
         .setCode(IssueType.EXCEPTION)
         .setSeverity(IssueSeverity.ERROR)
         .setDiagnostics(errorMessage);
@@ -766,8 +736,12 @@ public class BulkSubmitExecutor {
     // Write to NDJSON file (single line per resource).
     final String fileName = "OperationOutcome." + manifestJobId + "-error.ndjson";
     final Path filePath = downloadDir.resolve(fileName);
-    try (final BufferedWriter writer = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8,
-        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+    try (final BufferedWriter writer =
+        Files.newBufferedWriter(
+            filePath,
+            StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING)) {
       writer.write(json);
       writer.newLine();
     }
@@ -788,19 +762,15 @@ public class BulkSubmitExecutor {
   private String acquireAccessToken(
       @Nonnull final SubmitterIdentifier submitter,
       @Nullable final String fhirBaseUrl,
-      @Nullable final String oauthMetadataUrl
-  ) {
+      @Nullable final String oauthMetadataUrl) {
     if (fhirBaseUrl == null) {
       log.debug("No fhirBaseUrl provided - skipping OAuth token acquisition");
       return null;
     }
 
     try {
-      final Optional<String> token = authProvider.acquireToken(
-          submitter,
-          fhirBaseUrl,
-          oauthMetadataUrl
-      );
+      final Optional<String> token =
+          authProvider.acquireToken(submitter, fhirBaseUrl, oauthMetadataUrl);
       if (token.isPresent()) {
         log.debug("Successfully acquired OAuth2 access token for submitter: {}", submitter.toKey());
       } else {
@@ -808,8 +778,10 @@ public class BulkSubmitExecutor {
       }
       return token.orElse(null);
     } catch (final IOException e) {
-      log.warn("Failed to acquire OAuth2 access token for submitter {}: {}",
-          submitter.toKey(), e.getMessage());
+      log.warn(
+          "Failed to acquire OAuth2 access token for submitter {}: {}",
+          submitter.toKey(),
+          e.getMessage());
       // Return null to allow the download to proceed without authentication.
       // This supports scenarios where the manifest and files are publicly accessible.
       return null;
@@ -825,13 +797,13 @@ public class BulkSubmitExecutor {
    */
   @Nonnull
   private static String buildStatusRequestUrl(
-      @Nonnull final String fhirServerBase,
-      @Nonnull final Submission submission
-  ) {
-    return fhirServerBase + "/$bulk-submit-status?submissionId="
+      @Nonnull final String fhirServerBase, @Nonnull final Submission submission) {
+    return fhirServerBase
+        + "/$bulk-submit-status?submissionId="
         + submission.submissionId()
-        + "&submitter=" + submission.submitter().system()
-        + "|" + submission.submitter().value();
+        + "&submitter="
+        + submission.submitter().system()
+        + "|"
+        + submission.submitter().value();
   }
-
 }

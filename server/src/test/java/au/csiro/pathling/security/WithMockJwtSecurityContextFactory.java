@@ -18,12 +18,14 @@ public class WithMockJwtSecurityContextFactory implements WithSecurityContextFac
   public SecurityContext createSecurityContext(WithMockJwt annotation) {
     SecurityContext context = SecurityContextHolder.createEmptyContext();
 
-    Jwt jwt = Jwt.withTokenValue("mock-token")
-        .header("alg", "none")
-        .claim("sub", annotation.username())
-        .build();
+    Jwt jwt =
+        Jwt.withTokenValue("mock-token")
+            .header("alg", "none")
+            .claim("sub", annotation.username())
+            .build();
 
-    List<GrantedAuthority> authorities = AuthorityUtils.createAuthorityList(annotation.authorities());
+    List<GrantedAuthority> authorities =
+        AuthorityUtils.createAuthorityList(annotation.authorities());
 
     JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt, authorities);
     context.setAuthentication(authentication);

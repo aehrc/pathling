@@ -37,20 +37,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class SearchProviderFactory {
 
-  @Nonnull
-  private final ApplicationContext applicationContext;
+  @Nonnull private final ApplicationContext applicationContext;
 
-  @Nonnull
-  private final ServerConfiguration configuration;
+  @Nonnull private final ServerConfiguration configuration;
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull
-  private final QueryableDataSource dataSource;
+  @Nonnull private final QueryableDataSource dataSource;
 
-  @Nonnull
-  private final FhirEncoders fhirEncoders;
+  @Nonnull private final FhirEncoders fhirEncoders;
 
   /**
    * Constructs a new SearchProviderFactory.
@@ -61,7 +56,8 @@ public class SearchProviderFactory {
    * @param dataSource the data source containing the resources to query
    * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
    */
-  public SearchProviderFactory(@Nonnull final ApplicationContext applicationContext,
+  public SearchProviderFactory(
+      @Nonnull final ApplicationContext applicationContext,
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final QueryableDataSource dataSource,
@@ -81,11 +77,16 @@ public class SearchProviderFactory {
    */
   @Nonnull
   public SearchProvider createSearchProvider(@Nonnull final ResourceType resourceType) {
-    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
-        .getResourceDefinition(resourceType.name()).getImplementingClass();
+    final Class<? extends IBaseResource> resourceTypeClass =
+        fhirContext.getResourceDefinition(resourceType.name()).getImplementingClass();
 
-    return applicationContext.getBean(SearchProvider.class, configuration, fhirContext,
-        dataSource, fhirEncoders, resourceTypeClass);
+    return applicationContext.getBean(
+        SearchProvider.class,
+        configuration,
+        fhirContext,
+        dataSource,
+        fhirEncoders,
+        resourceTypeClass);
   }
 
   /**
@@ -97,11 +98,15 @@ public class SearchProviderFactory {
    */
   @Nonnull
   public SearchProvider createSearchProvider(@Nonnull final String resourceTypeCode) {
-    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
-        .getResourceDefinition(resourceTypeCode).getImplementingClass();
+    final Class<? extends IBaseResource> resourceTypeClass =
+        fhirContext.getResourceDefinition(resourceTypeCode).getImplementingClass();
 
-    return applicationContext.getBean(SearchProvider.class, configuration, fhirContext,
-        dataSource, fhirEncoders, resourceTypeClass);
+    return applicationContext.getBean(
+        SearchProvider.class,
+        configuration,
+        fhirContext,
+        dataSource,
+        fhirEncoders,
+        resourceTypeClass);
   }
-
 }

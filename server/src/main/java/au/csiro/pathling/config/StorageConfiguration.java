@@ -27,9 +27,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Configuration relating to the storage of data.
- */
+/** Configuration relating to the storage of data. */
 @Data
 @Builder(toBuilder = true)
 @AllArgsConstructor
@@ -40,13 +38,9 @@ public class StorageConfiguration {
    * The base URL at which Pathling will look for data files, and where it will save data received
    * within import requests.
    */
-  @NotBlank
-  @Builder.Default
-  private String warehouseUrl = "file:///usr/share/warehouse";
+  @NotBlank @Builder.Default private String warehouseUrl = "file:///usr/share/warehouse";
 
-  /**
-   * The subdirectory within the warehouse path used to read and write data.
-   */
+  /** The subdirectory within the warehouse path used to read and write data. */
   @NotBlank
   @Pattern(regexp = "[A-Za-z0-9-_]+")
   @Size(min = 1, max = 50)
@@ -57,9 +51,7 @@ public class StorageConfiguration {
    * This controls whether the built-in caching within Spark is used for resource datasets. It may
    * be useful to turn this off for large datasets in memory-constrained environments.
    */
-  @NotNull
-  @Builder.Default
-  private Boolean cacheDatasets = true;
+  @NotNull @Builder.Default private Boolean cacheDatasets = true;
 
   /**
    * When a table is updated, the number of partitions is checked. If the number exceeds this
@@ -70,5 +62,4 @@ public class StorageConfiguration {
   @Min(1)
   @Builder.Default
   private int compactionThreshold = 10;
-
 }

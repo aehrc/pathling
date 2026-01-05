@@ -48,26 +48,21 @@ import org.springframework.stereotype.Component;
  *
  * @author John Grimes
  * @see <a href="https://github.com/smart-on-fhir/bulk-import/blob/master/import-pnp.md">Bulk Data
- * Import - Ping and Pull Approach</a>
+ *     Import - Ping and Pull Approach</a>
  */
 @Component
 @Slf4j
 public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
 
-  @Nonnull
-  private final ImportPnpExecutor executor;
+  @Nonnull private final ImportPnpExecutor executor;
 
-  @Nonnull
-  private final ImportPnpOperationValidator validator;
+  @Nonnull private final ImportPnpOperationValidator validator;
 
-  @Nonnull
-  private final RequestTagFactory requestTagFactory;
+  @Nonnull private final RequestTagFactory requestTagFactory;
 
-  @Nonnull
-  private final JobRegistry jobRegistry;
+  @Nonnull private final JobRegistry jobRegistry;
 
-  @Nonnull
-  private final ImportResultRegistry importResultRegistry;
+  @Nonnull private final ImportResultRegistry importResultRegistry;
 
   /**
    * Constructor for ImportPnpProvider.
@@ -78,7 +73,8 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
    * @param jobRegistry registry for async jobs
    * @param importResultRegistry registry for import results
    */
-  public ImportPnpProvider(@Nonnull final ImportPnpExecutor executor,
+  public ImportPnpProvider(
+      @Nonnull final ImportPnpExecutor executor,
       @Nonnull final ImportPnpOperationValidator validator,
       @Nonnull final RequestTagFactory requestTagFactory,
       @Nonnull final JobRegistry jobRegistry,
@@ -103,7 +99,8 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
   @OperationAccess("import-pnp")
   @AsyncSupported
   @Nullable
-  public Parameters importPnpOperation(@ResourceParam final Parameters parameters,
+  public Parameters importPnpOperation(
+      @ResourceParam final Parameters parameters,
       @Nonnull final ServletRequestDetails requestDetails) {
 
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -112,19 +109,24 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
     // operation runs asynchronously, avoiding the need to access the servlet request which may
     // have been recycled by Tomcat.
     @SuppressWarnings("unchecked")
-    final Job<ImportPnpRequest> ownJob = AsyncJobContext.getCurrentJob()
-        .map(job -> (Job<ImportPnpRequest>) job)
-        .orElseGet(() -> {
-          // Fallback for cases where async context is not available.
-          final PreAsyncValidationResult<ImportPnpRequest> validationResult = preAsyncValidate(
-              requestDetails, new Object[]{parameters});
-          final String operationCacheKey = computeCacheKeyComponent(
-              Objects.requireNonNull(validationResult.result(),
-                  "Validation result should not be null for a valid request"));
-          final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication,
-              operationCacheKey);
-          return jobRegistry.get(ownTag);
-        });
+    final Job<ImportPnpRequest> ownJob =
+        AsyncJobContext.getCurrentJob()
+            .map(job -> (Job<ImportPnpRequest>) job)
+            .orElseGet(
+                () -> {
+                  // Fallback for cases where async context is not available.
+                  final PreAsyncValidationResult<ImportPnpRequest> validationResult =
+                      preAsyncValidate(requestDetails, new Object[] {parameters});
+                  final String operationCacheKey =
+                      computeCacheKeyComponent(
+                          Objects.requireNonNull(
+                              validationResult.result(),
+                              "Validation result should not be null for a valid request"));
+                  final RequestTag ownTag =
+                      requestTagFactory.createTag(
+                          requestDetails, authentication, operationCacheKey);
+                  return jobRegistry.get(ownTag);
+                });
 
     if (ownJob == null) {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
@@ -134,8 +136,8 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
     final Optional<String> currentUserId = getCurrentUserId(authentication);
     if (currentUserId.isPresent() && !ownJob.getOwnerId().equals(currentUserId)) {
       throw new AccessDeniedError(
-          "The requested result is not owned by the current user '%s'.".formatted(
-              currentUserId.orElse("null")));
+          "The requested result is not owned by the current user '%s'."
+              .formatted(currentUserId.orElse("null")));
     }
 
     final ImportPnpRequest importPnpRequest = ownJob.getPreAsyncValidationResult();
@@ -163,10 +165,13 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
   public String computeCacheKeyComponent(@Nonnull final ImportPnpRequest request) {
     // Build a deterministic cache key from request parameters.
     // Exclude originalRequest as it's already captured in the request URL.
-    return "exportUrl=" + request.exportUrl()
-        + "|exportType=" + request.exportType()
-        + "|saveMode=" + request.saveMode()
-        + "|format=" + request.importFormat();
+    return "exportUrl="
+        + request.exportUrl()
+        + "|exportType="
+        + request.exportType()
+        + "|saveMode="
+        + request.saveMode()
+        + "|format="
+        + request.importFormat();
   }
-
 }

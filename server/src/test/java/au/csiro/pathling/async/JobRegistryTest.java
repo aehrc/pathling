@@ -31,28 +31,28 @@ import org.junit.jupiter.api.Test;
 class JobRegistryTest {
 
   private static final Future<IBaseResource> MOCK_FUTURE = mock(FutureResource.class);
-  private static final JobTag JOB_TAG_1 = new JobTag() {
-  };
-  private static final JobTag JOB_TAG_2 = new JobTag() {
-  };
+  private static final JobTag JOB_TAG_1 = new JobTag() {};
+  private static final JobTag JOB_TAG_2 = new JobTag() {};
 
-  @Nonnull
-  private final JobRegistry registry = new JobRegistry();
+  @Nonnull private final JobRegistry registry = new JobRegistry();
 
   @Test
   void testNewJobCanBeRetrievedById() {
-    final Job<?> newJob = registry.getOrCreate(JOB_TAG_1,
-        id -> new Job<>(id, "operation", MOCK_FUTURE, Optional.empty()));
+    final Job<?> newJob =
+        registry.getOrCreate(
+            JOB_TAG_1, id -> new Job<>(id, "operation", MOCK_FUTURE, Optional.empty()));
 
     assertEquals(newJob, registry.get(newJob.getId()));
   }
 
   @Test
   void testReusesJobWhenTagsAreIdentical() {
-    final Job<?> firstJob = registry.getOrCreate(JOB_TAG_1,
-        id -> new Job<>(id, "operation", MOCK_FUTURE, Optional.empty()));
-    final Job<?> otherJob = registry.getOrCreate(JOB_TAG_1,
-        id -> new Job<>(id, "operation", MOCK_FUTURE, Optional.empty()));
+    final Job<?> firstJob =
+        registry.getOrCreate(
+            JOB_TAG_1, id -> new Job<>(id, "operation", MOCK_FUTURE, Optional.empty()));
+    final Job<?> otherJob =
+        registry.getOrCreate(
+            JOB_TAG_1, id -> new Job<>(id, "operation", MOCK_FUTURE, Optional.empty()));
 
     assertEquals(firstJob, otherJob);
     assertEquals(firstJob, registry.get(firstJob.getId()));
@@ -63,17 +63,17 @@ class JobRegistryTest {
 
     assertNotEquals(JOB_TAG_1, JOB_TAG_2);
 
-    final Job<?> firstJob = registry.getOrCreate(JOB_TAG_1,
-        id -> new Job<>(id, "operation", MOCK_FUTURE, Optional.empty()));
+    final Job<?> firstJob =
+        registry.getOrCreate(
+            JOB_TAG_1, id -> new Job<>(id, "operation", MOCK_FUTURE, Optional.empty()));
 
-    final Job<?> otherJob = registry.getOrCreate(JOB_TAG_2,
-        id -> new Job<>(id, "operation", MOCK_FUTURE, Optional.empty()));
+    final Job<?> otherJob =
+        registry.getOrCreate(
+            JOB_TAG_2, id -> new Job<>(id, "operation", MOCK_FUTURE, Optional.empty()));
 
     assertNotEquals(firstJob, otherJob);
     assertNotEquals(firstJob.getId(), otherJob.getId());
   }
 
-  interface FutureResource extends Future<IBaseResource> {
-  }
-  
+  interface FutureResource extends Future<IBaseResource> {}
 }

@@ -36,19 +36,22 @@ public final class OperationValidation {
     if (!lenient && !hasAcceptValue) {
       throw new InvalidRequestException(
           "Unknown 'Accept' header value '%s'. Only %s are allowed."
-              .formatted(acceptHeader, FhirServer.ACCEPT_HEADER.acceptedHeaderValues())
-      );
+              .formatted(acceptHeader, FhirServer.ACCEPT_HEADER.acceptedHeaderValues()));
     }
     if (!hasAcceptValue) {
-      requestDetails.addHeader(FhirServer.ACCEPT_HEADER.headerName(),
-          FhirServer.ACCEPT_HEADER.preferred());
-      return List.of(new OperationOutcomeIssueComponent()
-          .setCode(OperationOutcome.IssueType.INFORMATIONAL)
-          .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
-          .setDetails(new CodeableConcept().setText(
-              "Added missing header: %s %s".formatted(FhirServer.ACCEPT_HEADER.headerName(),
-                  FhirServer.ACCEPT_HEADER.preferred())))
-      );
+      requestDetails.addHeader(
+          FhirServer.ACCEPT_HEADER.headerName(), FhirServer.ACCEPT_HEADER.preferred());
+      return List.of(
+          new OperationOutcomeIssueComponent()
+              .setCode(OperationOutcome.IssueType.INFORMATIONAL)
+              .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
+              .setDetails(
+                  new CodeableConcept()
+                      .setText(
+                          "Added missing header: %s %s"
+                              .formatted(
+                                  FhirServer.ACCEPT_HEADER.headerName(),
+                                  FhirServer.ACCEPT_HEADER.preferred()))));
     }
     return List.of();
   }
@@ -64,27 +67,31 @@ public final class OperationValidation {
   @Nonnull
   public static List<OperationOutcomeIssueComponent> validatePreferHeader(
       @Nonnull final RequestDetails requestDetails, final boolean lenient) {
-    final List<String> preferHeaders = requestDetails.getHeaders(
-        FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName());
-    final boolean hasRespondTypeHeaderValue = preferHeaders.stream()
-        .anyMatch(FhirServer.PREFER_RESPOND_TYPE_HEADER::validValue);
+    final List<String> preferHeaders =
+        requestDetails.getHeaders(FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName());
+    final boolean hasRespondTypeHeaderValue =
+        preferHeaders.stream().anyMatch(FhirServer.PREFER_RESPOND_TYPE_HEADER::validValue);
     if (!lenient && !hasRespondTypeHeaderValue) {
       throw new InvalidRequestException(
           "Unknown 'Prefer' header value '%s'. Only %s is allowed."
-              .formatted(preferHeaders,
-                  FhirServer.PREFER_RESPOND_TYPE_HEADER.acceptedHeaderValues())
-      );
+              .formatted(
+                  preferHeaders, FhirServer.PREFER_RESPOND_TYPE_HEADER.acceptedHeaderValues()));
     }
     if (!hasRespondTypeHeaderValue) {
-      requestDetails.addHeader(FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName(),
+      requestDetails.addHeader(
+          FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName(),
           FhirServer.PREFER_RESPOND_TYPE_HEADER.preferred());
-      return List.of(new OperationOutcomeIssueComponent()
-          .setCode(OperationOutcome.IssueType.INFORMATIONAL)
-          .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
-          .setDetails(new CodeableConcept().setText("Added missing header: %s %s".formatted(
-              FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName(),
-              FhirServer.PREFER_RESPOND_TYPE_HEADER.preferred())))
-      );
+      return List.of(
+          new OperationOutcomeIssueComponent()
+              .setCode(OperationOutcome.IssueType.INFORMATIONAL)
+              .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
+              .setDetails(
+                  new CodeableConcept()
+                      .setText(
+                          "Added missing header: %s %s"
+                              .formatted(
+                                  FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName(),
+                                  FhirServer.PREFER_RESPOND_TYPE_HEADER.preferred()))));
     }
     return List.of();
   }

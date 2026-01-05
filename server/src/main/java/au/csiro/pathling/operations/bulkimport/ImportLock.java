@@ -37,8 +37,8 @@ public class ImportLock {
   private synchronized Object enforce(@Nonnull final ProceedingJoinPoint joinPoint)
       throws Throwable {
     if (locked) {
-      throw new UnclassifiedServerFailureException(503,
-          "Another import operation is currently in progress");
+      throw new UnclassifiedServerFailureException(
+          503, "Another import operation is currently in progress");
     }
     try {
       locked = true;
@@ -47,5 +47,4 @@ public class ImportLock {
       locked = false;
     }
   }
-
 }

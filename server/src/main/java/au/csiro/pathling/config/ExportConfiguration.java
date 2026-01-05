@@ -36,5 +36,4 @@ public class ExportConfiguration {
   @NotNull
   @Min(1)
   private Long resultExpiry = 86400L;
-
 }

@@ -16,13 +16,11 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @TestConfiguration
 public class TestSecurityConfig {
 
-
   @Bean
   @Primary
   public TaskExecutor syncExecutor() {
     return new SyncTaskExecutor();
   }
-
 
   @Bean
   @Primary

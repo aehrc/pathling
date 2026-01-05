@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.async;
 
-
 import au.csiro.pathling.async.Job.JobTag;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -33,30 +32,32 @@ import lombok.Value;
 @Value
 public class RequestTag implements JobTag {
 
-  @Nonnull
-  String requestUrl;
+  @Nonnull String requestUrl;
 
-  @Nonnull
-  Map<String, List<String>> varyHeaders;
+  @Nonnull Map<String, List<String>> varyHeaders;
 
-  @Nonnull
-  Optional<String> cacheKey;
+  @Nonnull Optional<String> cacheKey;
 
   /**
    * Operation-specific cache key component, computed from request body parameters. Empty for
    * operations that don't override {@link PreAsyncValidation#computeCacheKeyComponent}.
    */
-  @Nonnull
-  String operationCacheKey;
+  @Nonnull String operationCacheKey;
 
   // toString() is overridden to exclude the varyHeaders field, which can contain sensitive data.
   @Override
   public String toString() {
-    return "RequestTag(" +
-        "requestUrl='" + requestUrl + "'" +
-        ", varyHeaders=List@" + Integer.toHexString(varyHeaders.hashCode()) +
-        ", cacheKey=" + cacheKey +
-        ", operationCacheKey='" + operationCacheKey + "'" +
-        ')';
+    return "RequestTag("
+        + "requestUrl='"
+        + requestUrl
+        + "'"
+        + ", varyHeaders=List@"
+        + Integer.toHexString(varyHeaders.hashCode())
+        + ", cacheKey="
+        + cacheKey
+        + ", operationCacheKey='"
+        + operationCacheKey
+        + "'"
+        + ')';
   }
 }

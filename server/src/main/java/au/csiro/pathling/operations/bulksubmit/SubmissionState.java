@@ -28,29 +28,19 @@ import lombok.Getter;
 @Getter
 public enum SubmissionState {
 
-  /**
-   * Submission received with "in-progress" status, awaiting completion notification.
-   */
+  /** Submission received with "in-progress" status, awaiting completion notification. */
   PENDING("pending"),
 
-  /**
-   * Submission marked as complete, files are being processed.
-   */
+  /** Submission marked as complete, files are being processed. */
   PROCESSING("processing"),
 
-  /**
-   * All files have been processed successfully.
-   */
+  /** All files have been processed successfully. */
   COMPLETED("completed"),
 
-  /**
-   * Files have been processed but some errors occurred.
-   */
+  /** Files have been processed but some errors occurred. */
   COMPLETED_WITH_ERRORS("completed-with-errors"),
 
-  /**
-   * Submission was explicitly aborted by the submitter.
-   */
+  /** Submission was explicitly aborted by the submitter. */
   ABORTED("aborted");
 
   private final String code;
@@ -74,5 +64,4 @@ public enum SubmissionState {
     }
     throw new IllegalArgumentException("Unknown submission state: " + code);
   }
-
 }

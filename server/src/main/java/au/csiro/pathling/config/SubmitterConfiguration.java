@@ -37,12 +37,9 @@ public record SubmitterConfiguration(
     @Nullable String privateKeyJwk,
     @Nullable String scope,
     @Nullable Long tokenExpiryTolerance,
-    @Nullable Boolean useFormForBasicAuth
-) {
+    @Nullable Boolean useFormForBasicAuth) {
 
-  /**
-   * Default token expiry tolerance in seconds.
-   */
+  /** Default token expiry tolerance in seconds. */
   public static final long DEFAULT_TOKEN_EXPIRY_TOLERANCE = 120;
 
   /**
@@ -80,12 +77,10 @@ public record SubmitterConfiguration(
         .clientSecret(clientSecret)
         .privateKeyJWK(privateKeyJwk)
         .scope(scope)
-        .tokenExpiryTolerance(tokenExpiryTolerance != null
-            ? tokenExpiryTolerance
-            : DEFAULT_TOKEN_EXPIRY_TOLERANCE)
+        .tokenExpiryTolerance(
+            tokenExpiryTolerance != null ? tokenExpiryTolerance : DEFAULT_TOKEN_EXPIRY_TOLERANCE)
         // SMART Backend Services spec expects credentials in form body for symmetric auth.
         .useFormForBasicAuth(useFormForBasicAuth != null ? useFormForBasicAuth : true)
         .build();
   }
-
 }

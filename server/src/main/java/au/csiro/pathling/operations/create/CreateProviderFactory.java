@@ -35,14 +35,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class CreateProviderFactory {
 
-  @Nonnull
-  private final ApplicationContext applicationContext;
+  @Nonnull private final ApplicationContext applicationContext;
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull
-  private final UpdateExecutor updateExecutor;
+  @Nonnull private final UpdateExecutor updateExecutor;
 
   /**
    * Constructs a new CreateProviderFactory.
@@ -51,7 +48,8 @@ public class CreateProviderFactory {
    * @param fhirContext the FHIR context for resource definitions
    * @param updateExecutor the executor for performing update operations
    */
-  public CreateProviderFactory(@Nonnull final ApplicationContext applicationContext,
+  public CreateProviderFactory(
+      @Nonnull final ApplicationContext applicationContext,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final UpdateExecutor updateExecutor) {
     this.applicationContext = applicationContext;
@@ -67,11 +65,11 @@ public class CreateProviderFactory {
    */
   @Nonnull
   public CreateProvider createCreateProvider(@Nonnull final ResourceType resourceType) {
-    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
-        .getResourceDefinition(resourceType.name()).getImplementingClass();
+    final Class<? extends IBaseResource> resourceTypeClass =
+        fhirContext.getResourceDefinition(resourceType.name()).getImplementingClass();
 
-    return applicationContext.getBean(CreateProvider.class, updateExecutor, fhirContext,
-        resourceTypeClass);
+    return applicationContext.getBean(
+        CreateProvider.class, updateExecutor, fhirContext, resourceTypeClass);
   }
 
   /**
@@ -83,11 +81,10 @@ public class CreateProviderFactory {
    */
   @Nonnull
   public CreateProvider createCreateProvider(@Nonnull final String resourceTypeCode) {
-    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
-        .getResourceDefinition(resourceTypeCode).getImplementingClass();
+    final Class<? extends IBaseResource> resourceTypeClass =
+        fhirContext.getResourceDefinition(resourceTypeCode).getImplementingClass();
 
-    return applicationContext.getBean(CreateProvider.class, updateExecutor, fhirContext,
-        resourceTypeClass);
+    return applicationContext.getBean(
+        CreateProvider.class, updateExecutor, fhirContext, resourceTypeClass);
   }
-
 }

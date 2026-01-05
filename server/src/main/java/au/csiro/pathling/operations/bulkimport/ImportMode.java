@@ -22,9 +22,7 @@ public enum ImportMode {
    */
   MERGE("merge");
 
-  @Nonnull
-  @Getter
-  private final String code;
+  @Nonnull @Getter private final String code;
 
   ImportMode(@Nonnull final String code) {
     this.code = code;

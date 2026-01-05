@@ -66,17 +66,14 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class JobProvider {
 
-
   // regex for UUID
-  private static final Pattern ID_PATTERN = Pattern.compile(
-      "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
+  private static final Pattern ID_PATTERN =
+      Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
   private static final String PROGRESS_HEADER = "X-Progress";
 
-  @Nonnull
-  private final ServerConfiguration configuration;
+  @Nonnull private final ServerConfiguration configuration;
 
-  @Nonnull
-  private final JobRegistry jobRegistry;
+  @Nonnull private final JobRegistry jobRegistry;
   private final SparkSession sparkSession;
   private final String databasePath;
 
@@ -84,22 +81,22 @@ public class JobProvider {
    * @param configuration a {@link ServerConfiguration} for determining if authorization is enabled
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    */
-  public JobProvider(@Nonnull final ServerConfiguration configuration,
-      @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession,
+  public JobProvider(
+      @Nonnull final ServerConfiguration configuration,
+      @Nonnull final JobRegistry jobRegistry,
+      SparkSession sparkSession,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      String databasePath) {
+          String databasePath) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
     this.sparkSession = sparkSession;
     this.databasePath = new Path(databasePath, "jobs").toString();
   }
 
-
   public void deleteJob(String jobId) {
     final Job<?> job = getJob(jobId);
     handleJobDeleteRequest(job);
   }
-
 
   /**
    * Queries a running job for its progress, completion status and final result.
@@ -111,7 +108,8 @@ public class JobProvider {
    */
   @SuppressWarnings({"unused", "TypeMayBeWeakened"})
   @Operation(name = "$job", idempotent = true)
-  public IBaseResource job(@Nullable @OperationParam(name = "id") final String id,
+  public IBaseResource job(
+      @Nullable @OperationParam(name = "id") final String id,
       @jakarta.validation.constraints.NotNull final HttpServletRequest request,
       @Nullable final HttpServletResponse response) {
     log.debug("Received $job request with id: {}", id);
@@ -150,10 +148,10 @@ public class JobProvider {
     /*
     Two possible situations:
       - The initial kick-off request is still ongoing -> cancel it and delete the partial files
-      - The initial kick-off request is complete (and the client may have already downloaded the files) 
+      - The initial kick-off request is complete (and the client may have already downloaded the files)
         -> interpret delete request from client as "do no longer need them". Depending on the caching setup,
         these files may or may not be deleted. Either way return a success status code
-        
+
       handle if a delete request was initiated and another delete request is being called before the old one finishes
       -> just return success as well but don't schedule a new deletion internally OR return a 404
      */
@@ -175,12 +173,13 @@ public class JobProvider {
       if (removed) {
         log.debug("Removed job {} from registry.", job.getId());
       } else {
-        log.warn("Failed to remove job {} from registry. This might in wrong caching results.",
+        log.warn(
+            "Failed to remove job {} from registry. This might in wrong caching results.",
             job.getId());
       }
     }
-    throw new ProcessingNotCompletedException("The job and its resources will be deleted.",
-        buildDeletionOutcome());
+    throw new ProcessingNotCompletedException(
+        "The job and its resources will be deleted.", buildDeletionOutcome());
   }
 
   public void deleteJobFiles(String jobId) throws IOException {
@@ -195,12 +194,15 @@ public class JobProvider {
     log.debug("Deleted dir {}", jobDirToDel);
   }
 
-  private IBaseResource handleJobGetRequest(@NotNull HttpServletRequest request,
-      @Nullable HttpServletResponse response, @NotNull Job<?> job) {
+  private IBaseResource handleJobGetRequest(
+      @NotNull HttpServletRequest request,
+      @Nullable HttpServletResponse response,
+      @NotNull Job<?> job) {
     if (job.getResult().isCancelled()) {
       // a DELETE request was initiated before the job completed
-      // Depending on the async task is running, the task may periodically check the isCancelled state and abort.
-      // Otherwise, the job actually finishes but the user will never see the result (unless they 
+      // Depending on the async task is running, the task may periodically check the isCancelled
+      // state and abort.
+      // Otherwise, the job actually finishes but the user will never see the result (unless they
       // initiate a new request and the cache-layer determined that is can reuse the result)
       throw new ResourceNotFoundException(
           "A DELETE request cancelled this job or deleted all files associated with this job.");
@@ -220,9 +222,7 @@ public class JobProvider {
         if (cause != null && cause.getCause() != null) {
           cause = cause.getCause();
         }
-        throw ErrorHandlingInterceptor.convertError(cause != null
-                                                    ? cause
-                                                    : e);
+        throw ErrorHandlingInterceptor.convertError(cause != null ? cause : e);
       }
     } else {
       // If the job is not done, we return a 202 along with an OperationOutcome and progress header.
@@ -250,7 +250,8 @@ public class JobProvider {
 
   private static IBaseOperationOutcome buildDeletionOutcome() {
     OperationOutcome operationOutcome = new OperationOutcome();
-    operationOutcome.addIssue()
+    operationOutcome
+        .addIssue()
         .setCode(IssueType.INFORMATIONAL)
         .setSeverity(IssueSeverity.INFORMATION)
         .setDiagnostics("The job and its resources will be deleted.");
@@ -267,5 +268,4 @@ public class JobProvider {
     opOutcome.addIssue(issue);
     return opOutcome;
   }
-
 }

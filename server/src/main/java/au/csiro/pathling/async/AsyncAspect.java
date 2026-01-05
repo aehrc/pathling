@@ -49,7 +49,6 @@ import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.core.Authentication;
@@ -69,23 +68,17 @@ import org.springframework.stereotype.Component;
 @Order(200)
 public class AsyncAspect {
 
-  @Nonnull
-  private final ThreadPoolTaskExecutor executor;
+  @Nonnull private final ThreadPoolTaskExecutor executor;
 
-  @Nonnull
-  private final JobRegistry jobRegistry;
+  @Nonnull private final JobRegistry jobRegistry;
 
-  @Nonnull
-  private final RequestTagFactory requestTagFactory;
+  @Nonnull private final RequestTagFactory requestTagFactory;
 
-  @Nonnull
-  private final Map<RequestTag, Job<?>> requestTagToJob = new ConcurrentHashMap<>();
+  @Nonnull private final Map<RequestTag, Job<?>> requestTagToJob = new ConcurrentHashMap<>();
 
-  @Nonnull
-  private final StageMap stageMap;
+  @Nonnull private final StageMap stageMap;
 
-  @Nonnull
-  private final SparkSession spark;
+  @Nonnull private final SparkSession spark;
   private final JobProvider jobProvider;
 
   /**
@@ -95,10 +88,13 @@ public class AsyncAspect {
    * @param stageMap the {@link StageMap} used to map stages to job IDs
    * @param spark used for updating the Spark Context with job identity
    */
-  public AsyncAspect(@Nonnull final ThreadPoolTaskExecutor executor,
+  public AsyncAspect(
+      @Nonnull final ThreadPoolTaskExecutor executor,
       @Nonnull final RequestTagFactory requestTagFactory,
-      @Nonnull final JobRegistry jobRegistry, @Nonnull final StageMap stageMap,
-      @Nonnull final SparkSession spark, JobProvider jobProvider) {
+      @Nonnull final JobRegistry jobRegistry,
+      @Nonnull final StageMap stageMap,
+      @Nonnull final SparkSession spark,
+      JobProvider jobProvider) {
     this.executor = executor;
     this.requestTagFactory = requestTagFactory;
     this.jobRegistry = jobRegistry;
@@ -108,8 +104,9 @@ public class AsyncAspect {
   }
 
   @Around("@annotation(asyncSupported)")
-  protected IBaseResource maybeExecuteAsynchronously(@Nonnull final ProceedingJoinPoint joinPoint,
-      @Nonnull final AsyncSupported asyncSupported) throws Throwable {
+  protected IBaseResource maybeExecuteAsynchronously(
+      @Nonnull final ProceedingJoinPoint joinPoint, @Nonnull final AsyncSupported asyncSupported)
+      throws Throwable {
     final Object[] args = joinPoint.getArgs();
     final ServletRequestDetails requestDetails = getServletRequestDetails(args);
 
@@ -118,8 +115,9 @@ public class AsyncAspect {
     PreAsyncValidationResult<?> result = null;
     if (target instanceof PreAsyncValidation<?> preAsyncValidation) {
       try {
-        result = preAsyncValidation.preAsyncValidate(requestDetails,
-            Arrays.copyOf(args, args.length - 1));
+        result =
+            preAsyncValidation.preAsyncValidate(
+                requestDetails, Arrays.copyOf(args, args.length - 1));
       } catch (InvalidRequestException preValidationException) {
         throw ErrorHandlingInterceptor.convertError(preValidationException);
       }
@@ -128,7 +126,8 @@ public class AsyncAspect {
       log.info("Asynchronous processing requested");
 
       if (result == null) {
-        // the class containing the async annotation on a method does not implement PreAsyncValidation
+        // the class containing the async annotation on a method does not implement
+        // PreAsyncValidation
         // set some values to prevent NPEs
         result = new PreAsyncValidationResult<>(new Object(), List.of());
       }
@@ -139,11 +138,11 @@ public class AsyncAspect {
     }
   }
 
-  private void processRequestAsynchronously(@Nonnull final ProceedingJoinPoint joinPoint,
+  private void processRequestAsynchronously(
+      @Nonnull final ProceedingJoinPoint joinPoint,
       @Nonnull final ServletRequestDetails requestDetails,
       @Nonnull PreAsyncValidationResult<?> preAsyncValidationResult,
-      @Nonnull final SparkSession spark
-  ) {
+      @Nonnull final SparkSession spark) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
     // Compute operation-specific cache key if the operation provides it.
@@ -152,87 +151,109 @@ public class AsyncAspect {
     if (target instanceof PreAsyncValidation<?> && preAsyncValidationResult.result() != null) {
       @SuppressWarnings("unchecked")
       final PreAsyncValidation<Object> preAsyncValidation = (PreAsyncValidation<Object>) target;
-      operationCacheKey = preAsyncValidation.computeCacheKeyComponent(
-          preAsyncValidationResult.result());
+      operationCacheKey =
+          preAsyncValidation.computeCacheKeyComponent(preAsyncValidationResult.result());
     }
 
-    final RequestTag requestTag = requestTagFactory.createTag(requestDetails, authentication,
-        operationCacheKey);
-    final Job<?> job = jobRegistry.getOrCreate(requestTag, jobId -> {
-      final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
-      final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
-      final Future<IBaseResource> result = executor.submit(() -> {
-        try {
-          diagnosticContext.configureScope(true);
-          SecurityContextHolder.getContext().setAuthentication(authentication);
-          spark.sparkContext().setJobGroup(jobId, jobId, true);
+    final RequestTag requestTag =
+        requestTagFactory.createTag(requestDetails, authentication, operationCacheKey);
+    final Job<?> job =
+        jobRegistry.getOrCreate(
+            requestTag,
+            jobId -> {
+              final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
+              final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
+              final Future<IBaseResource> result =
+                  executor.submit(
+                      () -> {
+                        try {
+                          diagnosticContext.configureScope(true);
+                          SecurityContextHolder.getContext().setAuthentication(authentication);
+                          spark.sparkContext().setJobGroup(jobId, jobId, true);
 
-          // Set the current job in the async context so that the operation can access it without
-          // needing to look it up from the servlet request (which may have been recycled).
-          final Job<?> currentJob = jobRegistry.get(jobId);
-          if (currentJob != null) {
-            AsyncJobContext.setCurrentJob(currentJob);
-          }
+                          // Set the current job in the async context so that the operation can
+                          // access it without
+                          // needing to look it up from the servlet request (which may have been
+                          // recycled).
+                          final Job<?> currentJob = jobRegistry.get(jobId);
+                          if (currentJob != null) {
+                            AsyncJobContext.setCurrentJob(currentJob);
+                          }
 
-          return (IBaseResource) joinPoint.proceed();
-        } catch (final Throwable e) {
-          // Unwrap the actual exception from the aspect proxy wrapper, if needed.
-          final Throwable actualEx = unwrapFromProxy(e);
+                          return (IBaseResource) joinPoint.proceed();
+                        } catch (final Throwable e) {
+                          // Unwrap the actual exception from the aspect proxy wrapper, if needed.
+                          final Throwable actualEx = unwrapFromProxy(e);
 
-          // Apply the same processing and filtering as we do for synchronous requests.
-          final BaseServerResponseException convertedError = ErrorHandlingInterceptor.convertError(
-              actualEx);
-          ErrorReportingInterceptor.reportExceptionToSentry(convertedError);
-          if (ErrorReportingInterceptor.isReportableException(convertedError)) {
-            log.error("Unexpected exception in asynchronous execution.",
-                ErrorReportingInterceptor.getReportableError(convertedError));
-          } else {
-            log.warn("Asynchronous execution failed: {}.",
-                ErrorReportingInterceptor.getReportableError(convertedError).getMessage());
-          }
-          // Any (partial) files may be deleted if an unexpected error was thrown during the processing
-          jobProvider.deleteJobFiles(jobId);
-          throw new IllegalStateException("Problem processing request asynchronously", actualEx);
-        } finally {
-          AsyncJobContext.clear();
-          cleanUpAfterJob(spark, jobId);
-        }
-      });
-      Optional<String> ownerId = getCurrentUserId(authentication);
-      final Job<IBaseResource> newJob = new Job<>(jobId, operation, result, ownerId);
-      newJob.setPreAsyncValidationResult(preAsyncValidationResult.result());
-      return newJob;
-    });
+                          // Apply the same processing and filtering as we do for synchronous
+                          // requests.
+                          final BaseServerResponseException convertedError =
+                              ErrorHandlingInterceptor.convertError(actualEx);
+                          ErrorReportingInterceptor.reportExceptionToSentry(convertedError);
+                          if (ErrorReportingInterceptor.isReportableException(convertedError)) {
+                            log.error(
+                                "Unexpected exception in asynchronous execution.",
+                                ErrorReportingInterceptor.getReportableError(convertedError));
+                          } else {
+                            log.warn(
+                                "Asynchronous execution failed: {}.",
+                                ErrorReportingInterceptor.getReportableError(convertedError)
+                                    .getMessage());
+                          }
+                          // Any (partial) files may be deleted if an unexpected error was thrown
+                          // during the processing
+                          jobProvider.deleteJobFiles(jobId);
+                          throw new IllegalStateException(
+                              "Problem processing request asynchronously", actualEx);
+                        } finally {
+                          AsyncJobContext.clear();
+                          cleanUpAfterJob(spark, jobId);
+                        }
+                      });
+              Optional<String> ownerId = getCurrentUserId(authentication);
+              final Job<IBaseResource> newJob = new Job<>(jobId, operation, result, ownerId);
+              newJob.setPreAsyncValidationResult(preAsyncValidationResult.result());
+              return newJob;
+            });
     final HttpServletResponse response = requestDetails.getServletResponse();
-    response.setHeader("Content-Location",
-        requestDetails.getFhirServerBase() + "/$job?id=" + job.getId());
+    response.setHeader(
+        "Content-Location", requestDetails.getFhirServerBase() + "/$job?id=" + job.getId());
   }
 
   @Nonnull
   private HttpServletRequest getRequest(@Nonnull final Object[] args) {
-    return (HttpServletRequest) Arrays.stream(args)
-        .filter(ServletRequestDetails.class::isInstance)
-        .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException(
-            "Method annotated with @AsyncSupported must include a HttpServletRequest parameter"));
+    return (HttpServletRequest)
+        Arrays.stream(args)
+            .filter(ServletRequestDetails.class::isInstance)
+            .findFirst()
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "Method annotated with @AsyncSupported must include a HttpServletRequest"
+                            + " parameter"));
   }
 
   @Nonnull
   private ServletRequestDetails getServletRequestDetails(@Nonnull final Object[] args) {
-    return (ServletRequestDetails) Arrays.stream(args)
-        .filter(ServletRequestDetails.class::isInstance)
-        .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException(
-            "Method annotated with @AsyncSupported must include a ServletRequestDetails parameter"));
+    return (ServletRequestDetails)
+        Arrays.stream(args)
+            .filter(ServletRequestDetails.class::isInstance)
+            .findFirst()
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "Method annotated with @AsyncSupported must include a ServletRequestDetails"
+                            + " parameter"));
   }
 
   private void cleanUpAfterJob(@Nonnull final SparkSession spark, @Nonnull final String requestId) {
     spark.sparkContext().clearJobGroup();
     // Clean up the stage mappings.
-    final List<Integer> keys = stageMap.entrySet().stream()
-        .filter(e -> requestId.equals(e.getValue()))
-        .map(Entry::getKey)
-        .toList();
+    final List<Integer> keys =
+        stageMap.entrySet().stream()
+            .filter(e -> requestId.equals(e.getValue()))
+            .map(Entry::getKey)
+            .toList();
     stageMap.keySet().removeAll(keys);
     // We can't clean up the entry in the job registry, it needs to stay there so that clients can
     // retrieve the result of completed jobs.
@@ -241,8 +262,8 @@ public class AsyncAspect {
   @Nonnull
   private static Throwable unwrapFromProxy(@Nonnull final Throwable ex) {
     return ex instanceof UndeclaredThrowableException undeclaredThrowableException
-           ? undeclaredThrowableException.getUndeclaredThrowable()
-           : ex;
+        ? undeclaredThrowableException.getUndeclaredThrowable()
+        : ex;
   }
 
   @Nonnull
@@ -251,8 +272,9 @@ public class AsyncAspect {
     final OperationOutcomeIssueComponent issue = new OperationOutcomeIssueComponent();
     issue.setCode(IssueType.INFORMATIONAL);
     issue.setSeverity(IssueSeverity.INFORMATION);
-    issue.setDiagnostics("Job accepted for processing, see the Content-Location header for the "
-        + "URL at which status can be queried");
+    issue.setDiagnostics(
+        "Job accepted for processing, see the Content-Location header for the "
+            + "URL at which status can be queried");
     opOutcome.addIssue(issue);
 
     result.warnings().forEach(opOutcome::addIssue);

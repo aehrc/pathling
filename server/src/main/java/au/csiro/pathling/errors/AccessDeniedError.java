@@ -32,8 +32,7 @@ public class AccessDeniedError extends RuntimeException {
 
   private static final long serialVersionUID = -4574080049289748708L;
 
-  @Nullable
-  private final String missingAuthority;
+  @Nullable private final String missingAuthority;
 
   /**
    * @param message the detail message for the error
@@ -51,5 +50,4 @@ public class AccessDeniedError extends RuntimeException {
     super(message);
     this.missingAuthority = missingAuthority;
   }
-
 }

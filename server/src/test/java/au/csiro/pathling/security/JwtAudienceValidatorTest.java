@@ -51,5 +51,4 @@ class JwtAudienceValidatorTest {
     final OAuth2TokenValidatorResult result = audienceValidator.validate(jwt);
     Assertions.assertTrue(result.hasErrors());
   }
-
 }

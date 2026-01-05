@@ -35,14 +35,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.JwtClaimAccessor;
 import org.springframework.stereotype.Component;
 
-
 /**
  * The aspect that inserts checks relating to security.
  *
  * @author Piotr Szul
  * @see <a
- * href="https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#aop-ataspectj-advice-params">Advice
- * Parameters</a>
+ *     href="https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#aop-ataspectj-advice-params">Advice
+ *     Parameters</a>
  */
 @Aspect
 @Component
@@ -59,8 +58,8 @@ public class SecurityAspect {
    * @throws AccessDeniedError if unauthorised.
    */
   @Before("@annotation(resourceAccess) && args(resourceType,..)")
-  public void checkResourceRead(@Nonnull final ResourceAccess resourceAccess,
-      final ResourceType resourceType) {
+  public void checkResourceRead(
+      @Nonnull final ResourceAccess resourceAccess, final ResourceType resourceType) {
     log.debug("Checking access to resource: {}, type: {}", resourceType, resourceAccess.value());
     checkHasAuthority(PathlingAuthority.resourceAccess(resourceAccess.value(), resourceType));
   }
@@ -99,21 +98,21 @@ public class SecurityAspect {
   }
 
   public static boolean hasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
-    final Authentication authentication = SecurityContextHolder
-        .getContext().getAuthentication();
-    final AbstractAuthenticationToken authToken = (authentication instanceof AbstractAuthenticationToken abstractAuthenticationToken)
-                                                  ? abstractAuthenticationToken
-                                                  : null;
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    final AbstractAuthenticationToken authToken =
+        (authentication instanceof AbstractAuthenticationToken abstractAuthenticationToken)
+            ? abstractAuthenticationToken
+            : null;
     if (authToken == null) {
       return false;
     }
-    final Collection<PathlingAuthority> authorities = authToken.getAuthorities().stream()
-        .map(GrantedAuthority::getAuthority)
-        .filter(authority -> authority.startsWith("pathling"))
-        .map(PathlingAuthority::fromAuthority)
-        .toList();
-    return authToken.getAuthorities() != null && requiredAuthority
-        .subsumedByAny(authorities);
+    final Collection<PathlingAuthority> authorities =
+        authToken.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .filter(authority -> authority.startsWith("pathling"))
+            .map(PathlingAuthority::fromAuthority)
+            .toList();
+    return authToken.getAuthorities() != null && requiredAuthority.subsumedByAny(authorities);
   }
 
   /**
@@ -122,21 +121,21 @@ public class SecurityAspect {
    * @param requiredAuthority the authority required for the operation
    */
   public static void checkHasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
-    final Authentication authentication = SecurityContextHolder
-        .getContext().getAuthentication();
-    final AbstractAuthenticationToken authToken = (authentication instanceof AbstractAuthenticationToken abstractAuthenticationToken)
-                                                  ? abstractAuthenticationToken
-                                                  : null;
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    final AbstractAuthenticationToken authToken =
+        (authentication instanceof AbstractAuthenticationToken abstractAuthenticationToken)
+            ? abstractAuthenticationToken
+            : null;
     if (authToken == null) {
       throw new AccessDeniedError("Token not present");
     }
-    final Collection<PathlingAuthority> authorities = authToken.getAuthorities().stream()
-        .map(GrantedAuthority::getAuthority)
-        .filter(authority -> authority.startsWith("pathling"))
-        .map(PathlingAuthority::fromAuthority)
-        .toList();
-    if (authToken.getAuthorities() == null || !requiredAuthority
-        .subsumedByAny(authorities)) {
+    final Collection<PathlingAuthority> authorities =
+        authToken.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .filter(authority -> authority.startsWith("pathling"))
+            .map(PathlingAuthority::fromAuthority)
+            .toList();
+    if (authToken.getAuthorities() == null || !requiredAuthority.subsumedByAny(authorities)) {
       throw new AccessDeniedError(
           String.format("Missing authority: '%s'", requiredAuthority),
           requiredAuthority.getAuthority());
@@ -154,5 +153,4 @@ public class SecurityAspect {
     }
     return Optional.ofNullable(subject);
   }
-
 }

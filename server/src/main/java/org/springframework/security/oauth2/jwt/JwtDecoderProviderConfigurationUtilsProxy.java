@@ -21,15 +21,14 @@ import jakarta.annotation.Nonnull;
 import java.util.Map;
 
 /**
- * Provides access to functionality within the package-private
- * {@link JwtDecoderProviderConfigurationUtils} class.
+ * Provides access to functionality within the package-private {@link
+ * JwtDecoderProviderConfigurationUtils} class.
  *
  * @author John Grimes
  */
 public class JwtDecoderProviderConfigurationUtilsProxy {
 
-  private JwtDecoderProviderConfigurationUtilsProxy() {
-  }
+  private JwtDecoderProviderConfigurationUtilsProxy() {}
 
   /**
    * @param issuer the issuer required to be asserted within the token
@@ -39,5 +38,4 @@ public class JwtDecoderProviderConfigurationUtilsProxy {
       @Nonnull final String issuer) {
     return JwtDecoderProviderConfigurationUtils.getConfigurationForIssuerLocation(issuer);
   }
-
 }

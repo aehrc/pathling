@@ -2,10 +2,6 @@ package au.csiro.pathling.operations.bulkimport;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.OperationOutcome;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -13,6 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.springframework.stereotype.Component;
 
 /**
  * Registry for storing import job results and associated operation outcomes.
@@ -24,7 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ImportResultRegistry {
 
   private final ConcurrentHashMap<String, ImportResult> results = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, List<OperationOutcome>> outcomes = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, List<OperationOutcome>> outcomes =
+      new ConcurrentHashMap<>();
 
   /**
    * Associates an import result with the specified job ID.
@@ -40,15 +40,16 @@ public class ImportResultRegistry {
   }
 
   /**
-   * Associates an import result with the specified job ID.
-   * Functional-style variant that returns the result for use in streams.
+   * Associates an import result with the specified job ID. Functional-style variant that returns
+   * the result for use in streams.
    *
    * @param jobId the job identifier
    * @param result the import result
    * @return the import result that was stored
    */
   @Nonnull
-  public ImportResult putAndReturn(@Nonnull final String jobId, @Nonnull final ImportResult result) {
+  public ImportResult putAndReturn(
+      @Nonnull final String jobId, @Nonnull final ImportResult result) {
     results.put(jobId, result);
     return result;
   }
@@ -72,23 +73,23 @@ public class ImportResultRegistry {
    * @return this registry for method chaining
    */
   @Nonnull
-  public ImportResultRegistry addOutcome(@Nonnull final String jobId,
-      @Nonnull final OperationOutcome outcome) {
+  public ImportResultRegistry addOutcome(
+      @Nonnull final String jobId, @Nonnull final OperationOutcome outcome) {
     outcomes.computeIfAbsent(jobId, k -> new ArrayList<>()).add(outcome);
     return this;
   }
 
   /**
-   * Adds an operation outcome to the list associated with the specified job ID.
-   * Functional-style variant that returns the outcome for use in streams.
+   * Adds an operation outcome to the list associated with the specified job ID. Functional-style
+   * variant that returns the outcome for use in streams.
    *
    * @param jobId the job identifier
    * @param outcome the operation outcome to add
    * @return the operation outcome that was added
    */
   @Nonnull
-  public OperationOutcome addOutcomeAndReturn(@Nonnull final String jobId,
-      @Nonnull final OperationOutcome outcome) {
+  public OperationOutcome addOutcomeAndReturn(
+      @Nonnull final String jobId, @Nonnull final OperationOutcome outcome) {
     outcomes.computeIfAbsent(jobId, k -> new ArrayList<>()).add(outcome);
     return outcome;
   }
@@ -101,8 +102,8 @@ public class ImportResultRegistry {
    * @return this registry for method chaining
    */
   @Nonnull
-  public ImportResultRegistry addOutcomes(@Nonnull final String jobId,
-      @Nonnull final Collection<OperationOutcome> outcomesToAdd) {
+  public ImportResultRegistry addOutcomes(
+      @Nonnull final String jobId, @Nonnull final Collection<OperationOutcome> outcomesToAdd) {
     outcomes.computeIfAbsent(jobId, k -> new ArrayList<>()).addAll(outcomesToAdd);
     return this;
   }
@@ -137,8 +138,8 @@ public class ImportResultRegistry {
   @Nonnull
   public Map<String, List<OperationOutcome>> getAllOutcomes() {
     final Map<String, List<OperationOutcome>> copy = new ConcurrentHashMap<>();
-    outcomes.forEach((key, value) ->
-        copy.put(key, Collections.unmodifiableList(new ArrayList<>(value))));
+    outcomes.forEach(
+        (key, value) -> copy.put(key, Collections.unmodifiableList(new ArrayList<>(value))));
     return Collections.unmodifiableMap(copy);
   }
 
@@ -164,9 +165,7 @@ public class ImportResultRegistry {
     return results.containsKey(jobId);
   }
 
-  /**
-   * Removes all entries from the registry.
-   */
+  /** Removes all entries from the registry. */
   public void clear() {
     results.clear();
     outcomes.clear();

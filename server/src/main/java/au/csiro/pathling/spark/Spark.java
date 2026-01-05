@@ -46,36 +46,41 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class Spark {
 
-
   private Spark() {}
 
   /**
    * @param configuration a {@link ServerConfiguration} object containing the parameters to use in
-   * the creation
+   *     the creation
    * @param environment Spring {@link Environment} from which to harvest Spark configuration
    * @param sparkListener a {@link SparkJobListener} that is used to monitor progress of jobs
    * @param sparkConfigurers a list of {@link SparkConfigurer} that should use to configure spark
-   * session
+   *     session
    * @return A shiny new {@link SparkSession}
    */
   @Bean(destroyMethod = "stop")
   @ConditionalOnMissingBean
   @Nonnull
-  public static SparkSession build(@Nonnull final ServerConfiguration configuration,
+  public static SparkSession build(
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final Environment environment,
       @Nonnull final Optional<SparkJobListener> sparkListener,
       @Nonnull final List<SparkConfigurer> sparkConfigurers) {
     log.debug("Creating Spark session");
 
     // Pass through Spark configuration.
-    resolveThirdPartyConfiguration(environment, List.of("spark."),
-        property -> System.setProperty(property,
-            requireNonNull(environment.getProperty(property))));
+    resolveThirdPartyConfiguration(
+        environment,
+        List.of("spark."),
+        property ->
+            System.setProperty(property, requireNonNull(environment.getProperty(property))));
 
-    final SparkSession spark = SparkSession.builder()
+    final SparkSession spark =
+        SparkSession.builder()
             .appName(configuration.getSpark().getAppName())
             .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-            .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+            .config(
+                "spark.sql.catalog.spark_catalog",
+                "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .getOrCreate();
     sparkListener.ifPresent(l -> spark.sparkContext().addSparkListener(l));
 
@@ -85,7 +90,9 @@ public class Spark {
     }
 
     // Pass through Hadoop filesystem configuration (S3, HTTP, HTTPS).
-    resolveThirdPartyConfiguration(environment, List.of("fs.s3a.", "fs.http.", "fs.https."),
+    resolveThirdPartyConfiguration(
+        environment,
+        List.of("fs.s3a.", "fs.http.", "fs.https."),
         property -> {
           final String value = requireNonNull(environment.getProperty(property));
           log.debug("Setting Hadoop configuration: {} = {}", property, value);
@@ -95,18 +102,20 @@ public class Spark {
     return spark;
   }
 
-  private static void resolveThirdPartyConfiguration(@Nonnull final PropertyResolver resolver,
-      @Nonnull final List<String> prefixes, @Nonnull final Consumer<String> setter) {
-    // This goes through the properties within the Spring configuration and invokes the provided 
+  private static void resolveThirdPartyConfiguration(
+      @Nonnull final PropertyResolver resolver,
+      @Nonnull final List<String> prefixes,
+      @Nonnull final Consumer<String> setter) {
+    // This goes through the properties within the Spring configuration and invokes the provided
     // setter function for each property that matches one of the supplied prefixes.
-    final MutablePropertySources propertySources = ((AbstractEnvironment) resolver)
-        .getPropertySources();
+    final MutablePropertySources propertySources =
+        ((AbstractEnvironment) resolver).getPropertySources();
     propertySources.stream()
         .filter(EnumerablePropertySource.class::isInstance)
-        .flatMap(propertySource -> Arrays
-            .stream(((EnumerablePropertySource<?>) propertySource).getPropertyNames()))
+        .flatMap(
+            propertySource ->
+                Arrays.stream(((EnumerablePropertySource<?>) propertySource).getPropertyNames()))
         .filter(property -> prefixes.stream().anyMatch(property::startsWith))
         .forEach(setter);
   }
-
 }

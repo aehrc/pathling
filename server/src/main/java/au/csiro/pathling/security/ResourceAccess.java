@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.security;
 
-
 import jakarta.annotation.Nonnull;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -45,26 +44,18 @@ public @interface ResourceAccess {
    */
   AccessType value();
 
-  /**
-   * Types of access.
-   */
+  /** Types of access. */
   @Getter
   enum AccessType {
-    /**
-     * Read access.
-     */
+    /** Read access. */
     READ("read"),
-    /**
-     * Write access (does not subsume read access).
-     */
+    /** Write access (does not subsume read access). */
     WRITE("write");
 
-    @Nonnull
-    private final String code;
+    @Nonnull private final String code;
 
     AccessType(@Nonnull final String code) {
       this.code = code;
     }
-
   }
 }

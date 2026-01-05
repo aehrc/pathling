@@ -45,40 +45,29 @@ import org.springframework.stereotype.Component;
  *
  * @author John Grimes
  * @see <a href="https://hl7.org/fhir/smart-app-launch/backend-services.html">SMART Backend
- * Services</a>
+ *     Services</a>
  */
 @Component
 @Slf4j
 public class BulkSubmitAuthProvider implements Closeable {
 
-  /**
-   * Connection timeout for authentication requests in milliseconds.
-   */
+  /** Connection timeout for authentication requests in milliseconds. */
   public static final int AUTH_CONNECT_TIMEOUT = 5_000;
 
-  /**
-   * Connection request timeout for authentication requests in milliseconds.
-   */
+  /** Connection request timeout for authentication requests in milliseconds. */
   public static final int AUTH_CONNECTION_REQUEST_TIMEOUT = 5_000;
 
-  /**
-   * Socket timeout for authentication requests in milliseconds.
-   */
+  /** Socket timeout for authentication requests in milliseconds. */
   public static final int AUTH_SOCKET_TIMEOUT = 30_000;
 
-  /**
-   * Number of retry attempts for authentication requests.
-   */
+  /** Number of retry attempts for authentication requests. */
   public static final int AUTH_RETRY_COUNT = 3;
 
-  @Nonnull
-  private final ServerConfiguration serverConfiguration;
+  @Nonnull private final ServerConfiguration serverConfiguration;
 
-  @Nonnull
-  private final CloseableHttpClient httpClient;
+  @Nonnull private final CloseableHttpClient httpClient;
 
-  @Nonnull
-  private final AuthTokenProvider tokenProvider;
+  @Nonnull private final AuthTokenProvider tokenProvider;
 
   /**
    * Creates a new BulkSubmitAuthProvider.
@@ -88,8 +77,8 @@ public class BulkSubmitAuthProvider implements Closeable {
   public BulkSubmitAuthProvider(@Nonnull final ServerConfiguration serverConfiguration) {
     this.serverConfiguration = serverConfiguration;
     this.httpClient = createHttpClient();
-    this.tokenProvider = new AuthTokenProvider(httpClient,
-        SubmitterConfiguration.DEFAULT_TOKEN_EXPIRY_TOLERANCE);
+    this.tokenProvider =
+        new AuthTokenProvider(httpClient, SubmitterConfiguration.DEFAULT_TOKEN_EXPIRY_TOLERANCE);
   }
 
   /**
@@ -105,8 +94,8 @@ public class BulkSubmitAuthProvider implements Closeable {
   public Optional<String> acquireToken(
       @Nonnull final SubmitterIdentifier submitter,
       @Nonnull final String fhirBaseUrl,
-      @Nullable final String oauthMetadataUrl
-  ) throws IOException {
+      @Nullable final String oauthMetadataUrl)
+      throws IOException {
     // Look up submitter credentials.
     final Optional<SubmitterConfiguration> submitterConfig = findSubmitterConfig(submitter);
 
@@ -140,9 +129,7 @@ public class BulkSubmitAuthProvider implements Closeable {
     return Optional.of(accessToken);
   }
 
-  /**
-   * Clears all cached tokens, forcing re-authentication on next request.
-   */
+  /** Clears all cached tokens, forcing re-authentication on next request. */
   public void clearTokenCache() {
     tokenProvider.clearAccessContexts();
     log.debug("Cleared token cache");
@@ -165,35 +152,34 @@ public class BulkSubmitAuthProvider implements Closeable {
 
   @Nonnull
   private String discoverTokenEndpoint(
-      @Nonnull final String fhirBaseUrl,
-      @Nullable final String oauthMetadataUrl
-  ) throws IOException {
+      @Nonnull final String fhirBaseUrl, @Nullable final String oauthMetadataUrl)
+      throws IOException {
     if (oauthMetadataUrl != null) {
       // Fetch OAuth metadata from explicit URL (no well-known path appended).
       log.debug("Using explicit OAuth metadata URL: {}", oauthMetadataUrl);
-      final SMARTDiscoveryResponse discovery = SMARTDiscoveryResponse.getFromUrl(
-          URI.create(oauthMetadataUrl), httpClient);
+      final SMARTDiscoveryResponse discovery =
+          SMARTDiscoveryResponse.getFromUrl(URI.create(oauthMetadataUrl), httpClient);
       return discovery.getTokenEndpoint();
     } else {
       // Use SMART discovery from fhirBaseUrl (appends well-known path).
       log.debug("Discovering OAuth metadata from FHIR base URL: {}", fhirBaseUrl);
-      final SMARTDiscoveryResponse discovery = SMARTDiscoveryResponse.get(
-          URI.create(fhirBaseUrl), httpClient);
+      final SMARTDiscoveryResponse discovery =
+          SMARTDiscoveryResponse.get(URI.create(fhirBaseUrl), httpClient);
       return discovery.getTokenEndpoint();
     }
   }
 
   @Nonnull
   private static CloseableHttpClient createHttpClient() {
-    final RequestConfig requestConfig = RequestConfig.custom()
-        .setConnectTimeout(AUTH_CONNECT_TIMEOUT)
-        .setConnectionRequestTimeout(AUTH_CONNECTION_REQUEST_TIMEOUT)
-        .setSocketTimeout(AUTH_SOCKET_TIMEOUT)
-        .build();
+    final RequestConfig requestConfig =
+        RequestConfig.custom()
+            .setConnectTimeout(AUTH_CONNECT_TIMEOUT)
+            .setConnectionRequestTimeout(AUTH_CONNECTION_REQUEST_TIMEOUT)
+            .setSocketTimeout(AUTH_SOCKET_TIMEOUT)
+            .build();
     return HttpClients.custom()
         .setRetryHandler(new DefaultHttpRequestRetryHandler(AUTH_RETRY_COUNT, true))
         .setDefaultRequestConfig(requestConfig)
         .build();
   }
-
 }

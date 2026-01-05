@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.security;
 
-
 import static java.util.Objects.requireNonNull;
 
 import jakarta.annotation.Nonnull;
@@ -38,51 +37,48 @@ class SecurityAspectTest extends SecurityTest {
   }
 
   @Nonnull
-  final Method testOperationMethods = requireNonNull(ReflectionUtils
-      .findMethod(this.getClass(), "myOperation"));
+  final Method testOperationMethods =
+      requireNonNull(ReflectionUtils.findMethod(this.getClass(), "myOperation"));
 
   @Nonnull
-  final OperationAccess operationAccess = requireNonNull(AnnotationUtils
-      .getAnnotation(testOperationMethods, OperationAccess.class));
+  final OperationAccess operationAccess =
+      requireNonNull(AnnotationUtils.getAnnotation(testOperationMethods, OperationAccess.class));
 
   @Nonnull
-  final ResourceAccess resourceAccess = requireNonNull(AnnotationUtils
-      .getAnnotation(testOperationMethods, ResourceAccess.class));
-
+  final ResourceAccess resourceAccess =
+      requireNonNull(AnnotationUtils.getAnnotation(testOperationMethods, ResourceAccess.class));
 
   final SecurityAspect securityAspect = new SecurityAspect();
 
   @Test
   void testOperationAccessDeniedWhenNoAuthentication() {
-    assertThrowsAccessDenied(() -> securityAspect.checkRequiredAuthority(operationAccess),
-        "Token not present"
-    );
-
+    assertThrowsAccessDenied(
+        () -> securityAspect.checkRequiredAuthority(operationAccess), "Token not present");
   }
 
   @Test
   @WithMockUser(username = "admin")
   void testOperationAccessDeniedWhenNotAuthorized() {
-    assertThrowsAccessDenied(() -> securityAspect.checkRequiredAuthority(operationAccess),
-        "Missing authority: 'pathling:test'", "pathling:test"
-    );
-
+    assertThrowsAccessDenied(
+        () -> securityAspect.checkRequiredAuthority(operationAccess),
+        "Missing authority: 'pathling:test'",
+        "pathling:test");
   }
 
   @Test
-  @WithMockUser(username = "admin", authorities = {"pathling:test"})
+  @WithMockUser(
+      username = "admin",
+      authorities = {"pathling:test"})
   void testOperationAccessGranted() {
     // PASS
     securityAspect.checkRequiredAuthority(operationAccess);
   }
 
-
   @Test
   void testResourceAccessDeniedWhenNoAuthentication() {
     assertThrowsAccessDenied(
         () -> securityAspect.checkResourceRead(resourceAccess, ResourceType.PATIENT),
-        "Token not present"
-    );
+        "Token not present");
   }
 
   @Test
@@ -90,15 +86,16 @@ class SecurityAspectTest extends SecurityTest {
   void testResourceAccessDeniedWhenNotAuthorized() {
     assertThrowsAccessDenied(
         () -> securityAspect.checkResourceRead(resourceAccess, ResourceType.PATIENT),
-        "Missing authority: 'pathling:read:Patient'", "pathling:read:Patient"
-    );
+        "Missing authority: 'pathling:read:Patient'",
+        "pathling:read:Patient");
   }
 
   @Test
-  @WithMockUser(username = "admin", authorities = {"pathling:read:Patient"})
+  @WithMockUser(
+      username = "admin",
+      authorities = {"pathling:read:Patient"})
   void testResourceAccessGranted() {
     // PASS
     securityAspect.checkResourceRead(resourceAccess, ResourceType.PATIENT);
   }
-
 }

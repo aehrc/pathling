@@ -24,32 +24,25 @@ import java.util.Optional;
 import lombok.Data;
 import lombok.ToString;
 
-/**
- * Represents configuration specific to authorization.
- */
+/** Represents configuration specific to authorization. */
 @Data
 @ToString(doNotUseGetters = true)
 public class AuthorizationConfiguration {
 
-  /**
-   * Enables authorization.
-   */
-  @NotNull
-  private boolean enabled;
+  /** Enables authorization. */
+  @NotNull private boolean enabled;
 
   /**
    * Configures the issuing domain for bearer tokens, which will be checked against the claims
    * within incoming bearer tokens.
    */
-  @Nullable
-  private String issuer;
+  @Nullable private String issuer;
 
   /**
    * Configures the audience for bearer tokens, which is the FHIR endpoint that tokens are intended
    * to be authorized for.
    */
-  @Nullable
-  private String audience;
+  @Nullable private String audience;
 
   @Nonnull
   public Optional<String> getIssuer() {
@@ -60,5 +53,4 @@ public class AuthorizationConfiguration {
   public Optional<String> getAudience() {
     return Optional.ofNullable(audience);
   }
-
 }

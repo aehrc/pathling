@@ -34,19 +34,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class ErrorReportingInitialization implements ApplicationListener<ApplicationReadyEvent> {
 
-  @Nonnull
-  private final ServerConfiguration configuration;
+  @Nonnull private final ServerConfiguration configuration;
 
-  @Nonnull
-  private final PathlingServerVersion version;
+  @Nonnull private final PathlingServerVersion version;
 
   /**
    * @param configuration A {@link ServerConfiguration} object to control the behaviour of the
-   * listener
+   *     listener
    * @param version A {@link PathlingServerVersion} object containing version information about the
-   * server
+   *     server
    */
-  public ErrorReportingInitialization(@Nonnull final ServerConfiguration configuration,
+  public ErrorReportingInitialization(
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final PathlingServerVersion version) {
     this.configuration = configuration;
     this.version = version;
@@ -56,11 +55,15 @@ public class ErrorReportingInitialization implements ApplicationListener<Applica
   @EventListener(ApplicationReadyEvent.class)
   public void onApplicationEvent(@Nonnull final ApplicationReadyEvent event) {
     // Configure Sentry.
-    configuration.getSentryDsn().ifPresent(dsn -> Sentry.init(options -> {
-      options.setDsn(dsn);
-      version.getDescriptiveVersion().ifPresent(options::setRelease);
-      configuration.getSentryEnvironment().ifPresent(options::setEnvironment);
-    }));
+    configuration
+        .getSentryDsn()
+        .ifPresent(
+            dsn ->
+                Sentry.init(
+                    options -> {
+                      options.setDsn(dsn);
+                      version.getDescriptiveVersion().ifPresent(options::setRelease);
+                      configuration.getSentryEnvironment().ifPresent(options::setEnvironment);
+                    }));
   }
-
 }

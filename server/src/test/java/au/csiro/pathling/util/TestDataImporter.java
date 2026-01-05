@@ -27,18 +27,14 @@ import org.springframework.context.annotation.Profile;
 @SpringBootApplication
 @ComponentScan(
     basePackages = "au.csiro.pathling",
-    excludeFilters = @Filter(
-        type = FilterType.ASSIGNABLE_TYPE,
-        classes = FhirServerTestConfiguration.class
-    )
-)
+    excludeFilters =
+        @Filter(type = FilterType.ASSIGNABLE_TYPE, classes = FhirServerTestConfiguration.class))
 @Import(TestDataSetup.class)
 @Profile("cli")
 @Slf4j
 public class TestDataImporter implements CommandLineRunner {
 
-  @Nonnull
-  protected final SparkSession spark;
+  @Nonnull protected final SparkSession spark;
   private final TestDataSetup testDataSetup;
 
   @Autowired
@@ -48,10 +44,11 @@ public class TestDataImporter implements CommandLineRunner {
   }
 
   public static void main(final String[] args) {
-    ConfigurableApplicationContext ctx = new SpringApplicationBuilder(TestDataImporter.class)
-        .web(WebApplicationType.NONE)
-        .properties("spring.main.allow-bean-definition-overriding=true")
-        .run(args);
+    ConfigurableApplicationContext ctx =
+        new SpringApplicationBuilder(TestDataImporter.class)
+            .web(WebApplicationType.NONE)
+            .properties("spring.main.allow-bean-definition-overriding=true")
+            .run(args);
     ctx.close();
     System.exit(0);
   }
@@ -82,6 +79,4 @@ public class TestDataImporter implements CommandLineRunner {
       return false;
     }
   }
-
 }
-

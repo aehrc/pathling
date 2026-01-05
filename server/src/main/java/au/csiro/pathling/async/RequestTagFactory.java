@@ -38,10 +38,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
-
-/**
- * Factory for creating {@link RequestTag} objects using the key of provided cacheable object.
- */
+/** Factory for creating {@link RequestTag} objects using the key of provided cacheable object. */
 @Component
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 @Getter
@@ -52,8 +49,8 @@ public final class RequestTagFactory {
 
   private static Set<String> getSalientHeaderNames(
       @Nonnull final ServerConfiguration configuration) {
-    final Set<String> excludedVaryHeaders = new HashSet<>(
-        configuration.getAsync().getVaryHeadersExcludedFromCacheKey());
+    final Set<String> excludedVaryHeaders =
+        new HashSet<>(configuration.getAsync().getVaryHeadersExcludedFromCacheKey());
     return configuration.getHttpCaching().getVary().stream()
         .filter(not(excludedVaryHeaders::contains))
         .collect(Collectors.toUnmodifiableSet());
@@ -61,16 +58,16 @@ public final class RequestTagFactory {
 
   RequestTagFactory(@Nonnull final Cacheable state, @Nonnull final Set<String> salientHeaderNames) {
     this.state = state;
-    this.salientHeaderNames = salientHeaderNames.stream().map(String::toLowerCase)
-        .collect(Collectors.toUnmodifiableSet());
+    this.salientHeaderNames =
+        salientHeaderNames.stream()
+            .map(String::toLowerCase)
+            .collect(Collectors.toUnmodifiableSet());
   }
 
-  /**
-   * Public constructor to use for Spring component bean creation.
-   */
+  /** Public constructor to use for Spring component bean creation. */
   @Autowired
-  public RequestTagFactory(@Nonnull final CacheableDatabase database,
-      @Nonnull final ServerConfiguration configuration) {
+  public RequestTagFactory(
+      @Nonnull final CacheableDatabase database, @Nonnull final ServerConfiguration configuration) {
     this(database, getSalientHeaderNames(configuration));
   }
 
@@ -83,16 +80,18 @@ public final class RequestTagFactory {
    * @return the request tag
    */
   @Nonnull
-  public RequestTag createTag(@Nonnull final ServletRequestDetails requestDetails,
+  public RequestTag createTag(
+      @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final Authentication authentication,
       @Nonnull final String operationCacheKey) {
     // TODO - implement auth correctly in E-Tag
     final Optional<String> currentCacheKey = state.getCacheKey();
-    final Map<String, List<String>> salientHeaders = requestDetails.getHeaders().entrySet().stream()
-        .filter(entry -> salientHeaderNames.contains(entry.getKey().toLowerCase()))
-        .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
-    return new RequestTag(requestDetails.getCompleteUrl(), salientHeaders, currentCacheKey,
-        operationCacheKey);
+    final Map<String, List<String>> salientHeaders =
+        requestDetails.getHeaders().entrySet().stream()
+            .filter(entry -> salientHeaderNames.contains(entry.getKey().toLowerCase()))
+            .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+    return new RequestTag(
+        requestDetails.getCompleteUrl(), salientHeaders, currentCacheKey, operationCacheKey);
   }
 
   /**
@@ -104,7 +103,8 @@ public final class RequestTagFactory {
    * @return the request tag
    */
   @Nonnull
-  public RequestTag createTag(@Nonnull final ServletRequestDetails requestDetails,
+  public RequestTag createTag(
+      @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final Authentication authentication) {
     return createTag(requestDetails, authentication, "");
   }

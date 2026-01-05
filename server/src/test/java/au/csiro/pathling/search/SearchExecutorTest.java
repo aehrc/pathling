@@ -54,17 +54,13 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class SearchExecutorTest {
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
   private CustomObjectDataSource dataSource;
 
@@ -76,9 +72,7 @@ class SearchExecutorTest {
     for (int i = 0; i < 50; i++) {
       final Patient patient = new Patient();
       patient.setId("patient-" + i);
-      patient.setGender(i % 2 == 0
-                        ? AdministrativeGender.MALE
-                        : AdministrativeGender.FEMALE);
+      patient.setGender(i % 2 == 0 ? AdministrativeGender.MALE : AdministrativeGender.FEMALE);
       patient.setActive(i % 3 != 0);
       patient.addName().setFamily("Family" + i).addGiven("Given" + i);
       patients.add(patient);
@@ -90,14 +84,9 @@ class SearchExecutorTest {
   @Test
   void searchWithoutFilters() {
     // When: search without any filters.
-    final IBundleProvider result = new SearchExecutor(
-        fhirContext,
-        dataSource,
-        fhirEncoders,
-        "Patient",
-        Optional.empty(),
-        false
-    );
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext, dataSource, fhirEncoders, "Patient", Optional.empty(), false);
 
     // Then: returns all Patient resources.
     assertThat(result.size()).isEqualTo(50);
@@ -113,23 +102,20 @@ class SearchExecutorTest {
     filters.addAnd(new StringParam("gender = 'male'"));
 
     // When: search with filter.
-    final IBundleProvider result = new SearchExecutor(
-        fhirContext,
-        dataSource,
-        fhirEncoders,
-        "Patient",
-        Optional.of(filters),
-        false
-    );
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false);
 
     // Then: returns only male patients (25 of 50).
     assertThat(result.size()).isEqualTo(25);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources).hasSize(25);
-    assertThat(resources).allSatisfy(r -> {
-      assertThat(r).isInstanceOf(Patient.class);
-      assertThat(((Patient) r).getGender().toCode()).isEqualTo("male");
-    });
+    assertThat(resources)
+        .allSatisfy(
+            r -> {
+              assertThat(r).isInstanceOf(Patient.class);
+              assertThat(((Patient) r).getGender().toCode()).isEqualTo("male");
+            });
   }
 
   @Test
@@ -140,25 +126,22 @@ class SearchExecutorTest {
     filters.addAnd(new StringParam("active = true"));
 
     // When: search with AND filters.
-    final IBundleProvider result = new SearchExecutor(
-        fhirContext,
-        dataSource,
-        fhirEncoders,
-        "Patient",
-        Optional.of(filters),
-        false
-    );
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false);
 
     // Then: returns patients matching both conditions (17 female AND active).
     assertThat(result.size()).isEqualTo(17);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources).hasSize(17);
-    assertThat(resources).allSatisfy(r -> {
-      assertThat(r).isInstanceOf(Patient.class);
-      final Patient patient = (Patient) r;
-      assertThat(patient.getGender().toCode()).isEqualTo("female");
-      assertThat(patient.getActive()).isTrue();
-    });
+    assertThat(resources)
+        .allSatisfy(
+            r -> {
+              assertThat(r).isInstanceOf(Patient.class);
+              final Patient patient = (Patient) r;
+              assertThat(patient.getGender().toCode()).isEqualTo("female");
+              assertThat(patient.getActive()).isTrue();
+            });
   }
 
   @Test
@@ -171,37 +154,29 @@ class SearchExecutorTest {
     filters.addAnd(orList);
 
     // When: search with OR filters.
-    final IBundleProvider result = new SearchExecutor(
-        fhirContext,
-        dataSource,
-        fhirEncoders,
-        "Patient",
-        Optional.of(filters),
-        false
-    );
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false);
 
     // Then: returns patients matching either condition (all 50).
     assertThat(result.size()).isEqualTo(50);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources).hasSize(50);
-    assertThat(resources).allSatisfy(r -> {
-      assertThat(r).isInstanceOf(Patient.class);
-      final Patient patient = (Patient) r;
-      assertThat(patient.getGender().toCode()).isIn("male", "female");
-    });
+    assertThat(resources)
+        .allSatisfy(
+            r -> {
+              assertThat(r).isInstanceOf(Patient.class);
+              final Patient patient = (Patient) r;
+              assertThat(patient.getGender().toCode()).isIn("male", "female");
+            });
   }
 
   @Test
   void searchWithPagination() {
     // Given: a search that returns 50 patients.
-    final IBundleProvider result = new SearchExecutor(
-        fhirContext,
-        dataSource,
-        fhirEncoders,
-        "Patient",
-        Optional.empty(),
-        false
-    );
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext, dataSource, fhirEncoders, "Patient", Optional.empty(), false);
 
     // When: retrieving pages of 10.
     final int pageSize = 10;
@@ -213,12 +188,10 @@ class SearchExecutorTest {
     assertThat(secondPage).hasSize(pageSize);
 
     // Extract IDs to verify different resources.
-    final List<String> firstPageIds = firstPage.stream()
-        .map(r -> ((Patient) r).getIdElement().getIdPart())
-        .toList();
-    final List<String> secondPageIds = secondPage.stream()
-        .map(r -> ((Patient) r).getIdElement().getIdPart())
-        .toList();
+    final List<String> firstPageIds =
+        firstPage.stream().map(r -> ((Patient) r).getIdElement().getIdPart()).toList();
+    final List<String> secondPageIds =
+        secondPage.stream().map(r -> ((Patient) r).getIdElement().getIdPart()).toList();
 
     assertThat(firstPageIds).doesNotContainAnyElementsOf(secondPageIds);
   }
@@ -230,14 +203,10 @@ class SearchExecutorTest {
     filters.addAnd(new StringParam("name.given"));
 
     // When/Then: construction throws InvalidUserInputError.
-    assertThatThrownBy(() -> new SearchExecutor(
-        fhirContext,
-        dataSource,
-        fhirEncoders,
-        "Patient",
-        Optional.of(filters),
-        false
-    ))
+    assertThatThrownBy(
+            () ->
+                new SearchExecutor(
+                    fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("Filter expression must be of Boolean type");
   }
@@ -249,14 +218,10 @@ class SearchExecutorTest {
     filters.addAnd(new StringParam(""));
 
     // When/Then: construction throws InvalidUserInputError.
-    assertThatThrownBy(() -> new SearchExecutor(
-        fhirContext,
-        dataSource,
-        fhirEncoders,
-        "Patient",
-        Optional.of(filters),
-        false
-    ))
+    assertThatThrownBy(
+            () ->
+                new SearchExecutor(
+                    fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("Filter expression cannot be blank");
   }
@@ -268,19 +233,19 @@ class SearchExecutorTest {
     filters.addAnd(new StringParam("gender = 'male'"));
 
     // When: search with caching.
-    final IBundleProvider result = new SearchExecutor(
-        fhirContext,
-        dataSource,
-        fhirEncoders,
-        "Patient",
-        Optional.of(filters),
-        true // cacheResults enabled
-    );
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext,
+            dataSource,
+            fhirEncoders,
+            "Patient",
+            Optional.of(filters),
+            true // cacheResults enabled
+            );
 
     // Then: results are still correctly returned (25 male patients).
     assertThat(result.size()).isEqualTo(25);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources).hasSize(25);
   }
-
 }

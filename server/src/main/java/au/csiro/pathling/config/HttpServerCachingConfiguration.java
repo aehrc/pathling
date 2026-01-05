@@ -24,22 +24,12 @@ import lombok.Data;
 @Data
 public class HttpServerCachingConfiguration {
 
-  /**
-   * A list of values to return within the Vary header.
-   */
-  @NotNull
-  private List<String> vary;
+  /** A list of values to return within the Vary header. */
+  @NotNull private List<String> vary;
 
-  /**
-   * A list of values to return within the Cache-Control header, for cacheable responses.
-   */
-  @NotNull
-  private List<String> cacheableControl;
+  /** A list of values to return within the Cache-Control header, for cacheable responses. */
+  @NotNull private List<String> cacheableControl;
 
-  /**
-   * A list of values to return within the Cache-Control header, for uncacheable responses.
-   */
-  @NotNull
-  private List<String> uncacheableControl;
-
+  /** A list of values to return within the Cache-Control header, for uncacheable responses. */
+  @NotNull private List<String> uncacheableControl;
 }

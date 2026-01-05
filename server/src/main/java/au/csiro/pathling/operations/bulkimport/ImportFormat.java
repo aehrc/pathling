@@ -19,9 +19,7 @@ package au.csiro.pathling.operations.bulkimport;
 
 import lombok.Getter;
 
-/**
- * Represents the supported formats for resource import using MIME type codes.
- */
+/** Represents the supported formats for resource import using MIME type codes. */
 @Getter
 public enum ImportFormat {
   /**
@@ -34,14 +32,14 @@ public enum ImportFormat {
    * Parquet format.
    *
    * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
-   * Specification</a>
+   *     Specification</a>
    */
   PARQUET("application/x-pathling-parquet"),
   /**
    * Delta Lake format.
    *
    * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
-   * Specification</a>
+   *     Specification</a>
    */
   DELTA("application/x-pathling-delta+parquet");
 
@@ -66,5 +64,4 @@ public enum ImportFormat {
     }
     throw new IllegalArgumentException("Unsupported format: " + code);
   }
-
 }

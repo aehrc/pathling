@@ -421,7 +421,8 @@ class ImportResultRegistryTest {
 
   private OperationOutcome createOutcome(final String message, final IssueSeverity severity) {
     final OperationOutcome outcome = new OperationOutcome();
-    outcome.addIssue()
+    outcome
+        .addIssue()
         .setSeverity(severity)
         .setCode(IssueType.INFORMATIONAL)
         .setDiagnostics(message);

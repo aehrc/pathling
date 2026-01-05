@@ -32,5 +32,4 @@ import org.springframework.stereotype.Component;
 public class StageMap extends ConcurrentHashMap<Integer, String> {
 
   private static final long serialVersionUID = -8385386725080021575L;
-
 }

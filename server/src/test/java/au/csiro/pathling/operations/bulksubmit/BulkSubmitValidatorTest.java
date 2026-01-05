@@ -53,8 +53,9 @@ class BulkSubmitValidatorTest {
   void setUp() {
     final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
     bulkSubmitConfig.setAllowedSubmitters(
-        List.of(new SubmitterConfiguration(SUBMITTER_SYSTEM, SUBMITTER_VALUE,
-            null, null, null, null, null, null)));
+        List.of(
+            new SubmitterConfiguration(
+                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null)));
     bulkSubmitConfig.setAllowableSources(List.of("https://"));
 
     serverConfiguration = new ServerConfiguration();
@@ -66,45 +67,51 @@ class BulkSubmitValidatorTest {
   @Test
   void validInProgressRequest() {
     final Parameters params = minimalInProgressParams();
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
-    assertThatNoException().isThrownBy(() -> {
-      final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
-      assertThat(result).isNotNull();
-      assertThat(result.submissionId()).isEqualTo("test-submission-id");
-      assertThat(result.submitter().system()).isEqualTo(SUBMITTER_SYSTEM);
-      assertThat(result.submitter().value()).isEqualTo(SUBMITTER_VALUE);
-      assertThat(result.isInProgress()).isTrue();
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+              assertThat(result).isNotNull();
+              assertThat(result.submissionId()).isEqualTo("test-submission-id");
+              assertThat(result.submitter().system()).isEqualTo(SUBMITTER_SYSTEM);
+              assertThat(result.submitter().value()).isEqualTo(SUBMITTER_VALUE);
+              assertThat(result.isInProgress()).isTrue();
+            });
   }
 
   @Test
   void validCompleteRequest() {
     final Parameters params = completeParams();
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
-    assertThatNoException().isThrownBy(() -> {
-      final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
-      assertThat(result).isNotNull();
-      assertThat(result.isComplete()).isTrue();
-      assertThat(result.manifestUrl()).isEqualTo("https://example.org/manifest.json");
-      assertThat(result.fhirBaseUrl()).isEqualTo("https://example.org/fhir");
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+              assertThat(result).isNotNull();
+              assertThat(result.isComplete()).isTrue();
+              assertThat(result.manifestUrl()).isEqualTo("https://example.org/manifest.json");
+              assertThat(result.fhirBaseUrl()).isEqualTo("https://example.org/fhir");
+            });
   }
 
   @Test
   void validAbortedRequest() {
     final Parameters params = abortedParams();
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
-    assertThatNoException().isThrownBy(() -> {
-      final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
-      assertThat(result).isNotNull();
-      assertThat(result.isAborted()).isTrue();
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+              assertThat(result).isNotNull();
+              assertThat(result.isAborted()).isTrue();
+            });
   }
 
   @Test
@@ -113,8 +120,8 @@ class BulkSubmitValidatorTest {
     addSubmitter(params, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
     addSubmissionStatus(params, BulkSubmitRequest.STATUS_IN_PROGRESS);
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
@@ -127,8 +134,8 @@ class BulkSubmitValidatorTest {
     params.addParameter().setName("submissionId").setValue(new StringType("test-id"));
     addSubmissionStatus(params, BulkSubmitRequest.STATUS_IN_PROGRESS);
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
@@ -141,8 +148,8 @@ class BulkSubmitValidatorTest {
     params.addParameter().setName("submissionId").setValue(new StringType("test-id"));
     addSubmitter(params, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
@@ -156,8 +163,8 @@ class BulkSubmitValidatorTest {
     addSubmitter(params, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
     addSubmissionStatus(params, "invalid-status");
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
@@ -173,16 +180,18 @@ class BulkSubmitValidatorTest {
     addSubmitter(params, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
     addSubmissionStatus(params, BulkSubmitRequest.STATUS_COMPLETE);
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     // Validation should succeed - the check for manifest details happens in BulkSubmitProvider.
-    assertThatNoException().isThrownBy(() -> {
-      final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
-      assertThat(result).isNotNull();
-      assertThat(result.isComplete()).isTrue();
-      assertThat(result.manifestUrl()).isNull();
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+              assertThat(result).isNotNull();
+              assertThat(result.isComplete()).isTrue();
+              assertThat(result.manifestUrl()).isNull();
+            });
   }
 
   @Test
@@ -191,11 +200,13 @@ class BulkSubmitValidatorTest {
     params.addParameter().setName("submissionId").setValue(new StringType("test-id"));
     addSubmitter(params, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
     addSubmissionStatus(params, BulkSubmitRequest.STATUS_COMPLETE);
-    params.addParameter().setName("manifestUrl")
+    params
+        .addParameter()
+        .setName("manifestUrl")
         .setValue(new StringType("https://example.org/manifest.json"));
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
@@ -210,8 +221,8 @@ class BulkSubmitValidatorTest {
     addSubmitter(params, "https://example.org/submitters", "unauthorised-submitter");
     addSubmissionStatus(params, BulkSubmitRequest.STATUS_IN_PROGRESS);
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
@@ -223,14 +234,15 @@ class BulkSubmitValidatorTest {
   void invalidManifestUrlPrefix() {
     final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
     config.setAllowedSubmitters(
-        List.of(new SubmitterConfiguration(SUBMITTER_SYSTEM, SUBMITTER_VALUE,
-            null, null, null, null, null, null)));
+        List.of(
+            new SubmitterConfiguration(
+                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null)));
     config.setAllowableSources(List.of("https://allowed.org/"));
     serverConfiguration.setBulkSubmit(config);
 
     final Parameters params = completeParams();
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
@@ -241,15 +253,21 @@ class BulkSubmitValidatorTest {
   void extractsReplacesManifestUrl() {
     // Validate that replacesManifestUrl is extracted correctly.
     final Parameters params = minimalInProgressParams();
-    params.addParameter().setName("manifestUrl")
+    params
+        .addParameter()
+        .setName("manifestUrl")
         .setValue(new StringType("https://example.org/manifest.json"));
-    params.addParameter().setName("fhirBaseUrl")
+    params
+        .addParameter()
+        .setName("fhirBaseUrl")
         .setValue(new StringType("https://example.org/fhir"));
-    params.addParameter().setName("replacesManifestUrl")
+    params
+        .addParameter()
+        .setName("replacesManifestUrl")
         .setValue(new StringType("https://example.org/old-manifest.json"));
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.replacesManifestUrl()).isEqualTo("https://example.org/old-manifest.json");
@@ -259,15 +277,17 @@ class BulkSubmitValidatorTest {
   void extractsOauthMetadataUrl() {
     // Validate that oauthMetadataUrl is extracted correctly.
     final Parameters params = minimalInProgressParams();
-    params.addParameter().setName("oauthMetadataUrl")
+    params
+        .addParameter()
+        .setName("oauthMetadataUrl")
         .setValue(new StringType("https://auth.example.org/.well-known/smart-configuration"));
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
-    assertThat(result.oauthMetadataUrl()).isEqualTo(
-        "https://auth.example.org/.well-known/smart-configuration");
+    assertThat(result.oauthMetadataUrl())
+        .isEqualTo("https://auth.example.org/.well-known/smart-configuration");
   }
 
   @Test
@@ -275,8 +295,8 @@ class BulkSubmitValidatorTest {
     // Validate that oauthMetadataUrl is optional and null when not provided.
     final Parameters params = minimalInProgressParams();
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.oauthMetadataUrl()).isNull();
@@ -286,13 +306,15 @@ class BulkSubmitValidatorTest {
   void acceptsApplicationJsonHeader() {
     final Parameters params = minimalInProgressParams();
     // Client sends application/json instead of application/fhir+json.
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/json", "respond-async", false);
 
-    assertThatNoException().isThrownBy(() -> {
-      final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
-      assertThat(result).isNotNull();
-    });
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+              assertThat(result).isNotNull();
+            });
   }
 
   @Test
@@ -300,8 +322,8 @@ class BulkSubmitValidatorTest {
     final Parameters params = minimalInProgressParams();
     addFileRequestHeader(params, "Authorization", "Bearer test-token");
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.fileRequestHeaders()).hasSize(1);
@@ -315,14 +337,16 @@ class BulkSubmitValidatorTest {
     addFileRequestHeader(params, "Authorization", "Bearer test-token");
     addFileRequestHeader(params, "X-Custom-Header", "custom-value");
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.fileRequestHeaders()).hasSize(2);
-    assertThat(result.fileRequestHeaders()).extracting(FileRequestHeader::name)
+    assertThat(result.fileRequestHeaders())
+        .extracting(FileRequestHeader::name)
         .containsExactly("Authorization", "X-Custom-Header");
-    assertThat(result.fileRequestHeaders()).extracting(FileRequestHeader::value)
+    assertThat(result.fileRequestHeaders())
+        .extracting(FileRequestHeader::value)
         .containsExactly("Bearer test-token", "custom-value");
   }
 
@@ -334,8 +358,8 @@ class BulkSubmitValidatorTest {
         params.addParameter().setName("fileRequestHeader");
     headerParam.addPart().setName("headerValue").setValue(new StringType("some-value"));
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.fileRequestHeaders()).isEmpty();
@@ -349,8 +373,8 @@ class BulkSubmitValidatorTest {
         params.addParameter().setName("fileRequestHeader");
     headerParam.addPart().setName("headerName").setValue(new StringType("Authorization"));
 
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.fileRequestHeaders()).isEmpty();
@@ -359,8 +383,8 @@ class BulkSubmitValidatorTest {
   @Test
   void returnsEmptyListWhenNoFileRequestHeaders() {
     final Parameters params = minimalInProgressParams();
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.fileRequestHeaders()).isEmpty();
@@ -383,9 +407,13 @@ class BulkSubmitValidatorTest {
     params.addParameter().setName("submissionId").setValue(new StringType("test-submission-id"));
     addSubmitter(params, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
     addSubmissionStatus(params, BulkSubmitRequest.STATUS_COMPLETE);
-    params.addParameter().setName("manifestUrl")
+    params
+        .addParameter()
+        .setName("manifestUrl")
         .setValue(new StringType("https://example.org/manifest.json"));
-    params.addParameter().setName("fhirBaseUrl")
+    params
+        .addParameter()
+        .setName("fhirBaseUrl")
         .setValue(new StringType("https://example.org/fhir"));
     return params;
   }
@@ -417,5 +445,4 @@ class BulkSubmitValidatorTest {
     headerParam.addPart().setName("headerName").setValue(new StringType(name));
     headerParam.addPart().setName("headerValue").setValue(new StringType(value));
   }
-
 }

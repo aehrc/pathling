@@ -45,13 +45,15 @@ public class OidcConfiguration {
 
   /**
    * @param configuration A {@link ServerConfiguration} instance which controls the behaviour of the
-   * server
+   *     server
    */
   @Autowired
   public OidcConfiguration(@Nonnull final ServerConfiguration configuration) {
     final AuthorizationConfiguration authConfig = configuration.getAuth();
-    final Supplier<RuntimeException> authConfigError = () -> new RuntimeException(
-        "Configuration for issuer must be present if authorization is enabled");
+    final Supplier<RuntimeException> authConfigError =
+        () ->
+            new RuntimeException(
+                "Configuration for issuer must be present if authorization is enabled");
     final String issuer = authConfig.getIssuer().orElseThrow(authConfigError);
 
     oidcConfigurationMap = getConfigurationForIssuerLocation(issuer);
@@ -89,38 +91,25 @@ public class OidcConfiguration {
     return Optional.ofNullable((String) value);
   }
 
-  /**
-   * OIDC configuration items.
-   */
+  /** OIDC configuration items. */
   @Getter
   public enum ConfigItem {
-    /**
-     * Key used for the authorization URL.
-     */
+    /** Key used for the authorization URL. */
     AUTH_URL("authorization_endpoint"),
 
-    /**
-     * Key used for the token URL.
-     */
+    /** Key used for the token URL. */
     TOKEN_URL("token_endpoint"),
 
-    /**
-     * Key used for the token revocation URL.
-     */
+    /** Key used for the token revocation URL. */
     REVOKE_URL("revocation_endpoint"),
 
-    /**
-     * A JSON Web Key Set (JWKS) URL that contains the public keys used to verify the signature.
-     */
+    /** A JSON Web Key Set (JWKS) URL that contains the public keys used to verify the signature. */
     JWKS_URI("jwks_uri");
 
-    @Nonnull
-    private final String key;
+    @Nonnull private final String key;
 
     ConfigItem(@Nonnull final String key) {
       this.key = key;
     }
-
   }
-
 }

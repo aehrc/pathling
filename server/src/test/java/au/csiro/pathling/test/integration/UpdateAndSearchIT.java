@@ -47,14 +47,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @ActiveProfiles({"integration-test"})
 class UpdateAndSearchIT {
 
-  @LocalServerPort
-  int port;
+  @LocalServerPort int port;
 
-  @Autowired
-  WebTestClient webTestClient;
+  @Autowired WebTestClient webTestClient;
 
-  @TempDir
-  private static Path warehouseDir;
+  @TempDir private static Path warehouseDir;
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
@@ -64,10 +61,12 @@ class UpdateAndSearchIT {
 
   @BeforeEach
   void setup() {
-    webTestClient = webTestClient.mutate()
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
-        .responseTimeout(java.time.Duration.ofSeconds(60))
-        .build();
+    webTestClient =
+        webTestClient
+            .mutate()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .responseTimeout(java.time.Duration.ofSeconds(60))
+            .build();
   }
 
   @AfterEach
@@ -84,7 +83,8 @@ class UpdateAndSearchIT {
     // Step 1: Create a new RelatedPerson via PUT (update/upsert)
     // RelatedPerson is not present in the test dataset, so this creates a new Delta table
     final String updateUri = "http://localhost:" + port + "/fhir/RelatedPerson/" + resourceId;
-    final String relatedPersonJson = """
+    final String relatedPersonJson =
+        """
         {
           "resourceType": "RelatedPerson",
           "id": "%s",
@@ -109,37 +109,48 @@ class UpdateAndSearchIT {
             }
           ]
         }
-        """.formatted(resourceId);
+        """
+            .formatted(resourceId);
 
-    webTestClient.put()
+    webTestClient
+        .put()
         .uri(updateUri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(relatedPersonJson)
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("RelatedPerson")
-        .jsonPath("$.id").isEqualTo(resourceId);
+        .jsonPath("$.resourceType")
+        .isEqualTo("RelatedPerson")
+        .jsonPath("$.id")
+        .isEqualTo(resourceId);
 
     log.info("Created RelatedPerson via update operation");
 
     // Step 2: Search for RelatedPerson resources
     final String searchUri = "http://localhost:" + port + "/fhir/RelatedPerson";
 
-    webTestClient.get()
+    webTestClient
+        .get()
         .uri(searchUri)
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Bundle")
-        .jsonPath("$.total").isEqualTo(1)
-        .jsonPath("$.entry[0].resource.resourceType").isEqualTo("RelatedPerson")
-        .jsonPath("$.entry[0].resource.id").isEqualTo(resourceId)
-        .jsonPath("$.entry[0].resource.name[0].family").isEqualTo("TestFamily");
+        .jsonPath("$.resourceType")
+        .isEqualTo("Bundle")
+        .jsonPath("$.total")
+        .isEqualTo(1)
+        .jsonPath("$.entry[0].resource.resourceType")
+        .isEqualTo("RelatedPerson")
+        .jsonPath("$.entry[0].resource.id")
+        .isEqualTo(resourceId)
+        .jsonPath("$.entry[0].resource.name[0].family")
+        .isEqualTo("TestFamily");
 
     log.info("Search found the created RelatedPerson");
   }
-
 }

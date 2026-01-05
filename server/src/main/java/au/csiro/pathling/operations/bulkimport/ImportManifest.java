@@ -31,7 +31,4 @@ public record ImportManifest(
     @Nonnull @JsonProperty("inputFormat") String inputFormat,
     @Nullable @JsonProperty("inputSource") String inputSource,
     @Nonnull @JsonProperty("input") List<ImportManifestInput> input,
-    @Nullable @JsonProperty("mode") String mode
-) {
-
-}
+    @Nullable @JsonProperty("mode") String mode) {}

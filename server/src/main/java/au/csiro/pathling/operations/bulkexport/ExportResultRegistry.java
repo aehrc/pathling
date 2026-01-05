@@ -12,6 +12,5 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExportResultRegistry extends ConcurrentHashMap<String, ExportResult> {
 
-  @Serial
-  private static final long serialVersionUID = -3960163244304628646L;
+  @Serial private static final long serialVersionUID = -3960163244304628646L;
 }

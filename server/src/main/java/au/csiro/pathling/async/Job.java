@@ -41,60 +41,34 @@ public class Job<T> {
    * A marker interface for job tags. These are used to identify input parameters that for which an
    * existing job can be used to provide the result.
    */
-  public interface JobTag {
+  public interface JobTag {}
 
-  }
+  /** The unique identifier for this job. */
+  @Nonnull final String id;
 
-  /**
-   * The unique identifier for this job.
-   */
-  @Nonnull
-  final String id;
+  /** The name of the operation that initiated this job, used for enforcing authorisation. */
+  @Nonnull private final String operation;
 
-  /**
-   * The name of the operation that initiated this job, used for enforcing authorisation.
-   */
-  @Nonnull
-  private final String operation;
+  /** The future representing the asynchronous computation of the job result. */
+  @Nonnull private final Future<IBaseResource> result;
 
-  /**
-   * The future representing the asynchronous computation of the job result.
-   */
-  @Nonnull
-  private final Future<IBaseResource> result;
+  /** The identifier of the user who owns this job, if authenticated. */
+  @Nonnull private final Optional<String> ownerId;
 
-  /**
-   * The identifier of the user who owns this job, if authenticated.
-   */
-  @Nonnull
-  private final Optional<String> ownerId;
-
-  /**
-   * The total number of stages in this job, used to calculate progress percentage.
-   */
+  /** The total number of stages in this job, used to calculate progress percentage. */
   private int totalStages;
 
-  /**
-   * The number of completed stages in this job, used to calculate progress percentage.
-   */
+  /** The number of completed stages in this job, used to calculate progress percentage. */
   private int completedStages;
 
-  /**
-   * The result of pre-async validation, stored to be used when the job executes.
-   */
+  /** The result of pre-async validation, stored to be used when the job executes. */
   private T preAsyncValidationResult;
 
-  /**
-   * A consumer that modifies the HTTP response for this job, such as adding headers.
-   */
-  @Setter
-  private Consumer<HttpServletResponse> responseModification;
+  /** A consumer that modifies the HTTP response for this job, such as adding headers. */
+  @Setter private Consumer<HttpServletResponse> responseModification;
 
-  /**
-   * Indicates whether this job has been marked for deletion.
-   */
-  @Setter
-  private boolean markedAsDeleted;
+  /** Indicates whether this job has been marked for deletion. */
+  @Setter private boolean markedAsDeleted;
 
   /**
    * The last calculated progress percentage. When a job is at 100% that does not always indicate
@@ -102,8 +76,7 @@ public class Job<T> {
    * been submitted while the current stage is already completed. In that case just show the last
    * calculated percentage again.
    */
-  @Setter
-  private int lastProgress;
+  @Setter private int lastProgress;
 
   /**
    * @param id the unique identifier for the job
@@ -111,27 +84,24 @@ public class Job<T> {
    * @param result the {@link Future} result
    * @param ownerId the identifier of the owner of the job, if authenticated
    */
-  public Job(@Nonnull final String id, @Nonnull final String operation,
+  public Job(
+      @Nonnull final String id,
+      @Nonnull final String operation,
       @Nonnull final Future<IBaseResource> result,
       @Nonnull final Optional<String> ownerId) {
     this.id = id;
     this.operation = operation;
     this.result = result;
     this.ownerId = ownerId;
-    this.responseModification = httpServletResponse -> {
-    };
+    this.responseModification = httpServletResponse -> {};
   }
 
-  /**
-   * Increment the number of total stages within the job, used to calculate progress.
-   */
+  /** Increment the number of total stages within the job, used to calculate progress. */
   public void incrementTotalStages() {
     totalStages++;
   }
 
-  /**
-   * Increment the number of completed stages within the job, used to calculate progress.
-   */
+  /** Increment the number of completed stages within the job, used to calculate progress. */
   public void incrementCompletedStages() {
     completedStages++;
   }
@@ -152,5 +122,4 @@ public class Job<T> {
   public boolean isCancelled() {
     return result.isCancelled();
   }
-
 }

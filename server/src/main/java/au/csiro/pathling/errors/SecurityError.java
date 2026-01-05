@@ -33,5 +33,4 @@ public class SecurityError extends RuntimeException {
   public SecurityError(final String message, final Throwable cause) {
     super(message, cause);
   }
-
 }

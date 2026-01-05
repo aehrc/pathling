@@ -57,8 +57,8 @@ public class ExportRequestBuilder {
     ExportRequest build();
   }
 
-  private static class BuilderImpl implements OriginalRequestStep, OutputFormatStep, SinceStep,
-      OptionalStep {
+  private static class BuilderImpl
+      implements OriginalRequestStep, OutputFormatStep, SinceStep, OptionalStep {
 
     private String originalRequest;
     private ExportOutputFormat outputFormat;
@@ -160,8 +160,7 @@ public class ExportRequestBuilder {
           List.copyOf(elements),
           false,
           ExportLevel.SYSTEM,
-          Set.of()
-      );
+          Set.of());
     }
   }
 }

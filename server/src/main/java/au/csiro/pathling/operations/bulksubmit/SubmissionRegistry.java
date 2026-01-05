@@ -28,8 +28,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Registry for tracking bulk submissions throughout their lifecycle.
- * <p>
- * Provides in-memory storage for submissions. Submissions are not persisted across server
+ *
+ * <p>Provides in-memory storage for submissions. Submissions are not persisted across server
  * restarts.
  *
  * @author John Grimes
@@ -39,8 +39,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class SubmissionRegistry {
 
-  @Nonnull
-  private final ConcurrentMap<String, Submission> submissions = new ConcurrentHashMap<>();
+  @Nonnull private final ConcurrentMap<String, Submission> submissions = new ConcurrentHashMap<>();
 
   /**
    * Creates or updates a submission in the registry.
@@ -62,9 +61,7 @@ public class SubmissionRegistry {
    */
   @Nonnull
   public Optional<Submission> get(
-      @Nonnull final SubmitterIdentifier submitter,
-      @Nonnull final String submissionId
-  ) {
+      @Nonnull final SubmitterIdentifier submitter, @Nonnull final String submissionId) {
     final String key = submitter.toKey() + "/" + submissionId;
     return Optional.ofNullable(submissions.get(key));
   }
@@ -92,13 +89,14 @@ public class SubmissionRegistry {
   public Optional<Submission> updateState(
       @Nonnull final SubmitterIdentifier submitter,
       @Nonnull final String submissionId,
-      @Nonnull final SubmissionState newState
-  ) {
-    return get(submitter, submissionId).map(submission -> {
-      final Submission updated = submission.withState(newState);
-      put(updated);
-      return updated;
-    });
+      @Nonnull final SubmissionState newState) {
+    return get(submitter, submissionId)
+        .map(
+            submission -> {
+              final Submission updated = submission.withState(newState);
+              put(updated);
+              return updated;
+            });
   }
 
   /**
@@ -113,15 +111,18 @@ public class SubmissionRegistry {
   public Optional<Submission> addManifestJob(
       @Nonnull final SubmitterIdentifier submitter,
       @Nonnull final String submissionId,
-      @Nonnull final ManifestJob manifestJob
-  ) {
-    return get(submitter, submissionId).map(submission -> {
-      final Submission updated = submission.withManifestJob(manifestJob);
-      put(updated);
-      log.debug("Added manifest job {} to submission {}", manifestJob.manifestJobId(),
-          submissionId);
-      return updated;
-    });
+      @Nonnull final ManifestJob manifestJob) {
+    return get(submitter, submissionId)
+        .map(
+            submission -> {
+              final Submission updated = submission.withManifestJob(manifestJob);
+              put(updated);
+              log.debug(
+                  "Added manifest job {} to submission {}",
+                  manifestJob.manifestJobId(),
+                  submissionId);
+              return updated;
+            });
   }
 
   /**
@@ -138,20 +139,22 @@ public class SubmissionRegistry {
       @Nonnull final SubmitterIdentifier submitter,
       @Nonnull final String submissionId,
       @Nonnull final String manifestJobId,
-      @Nonnull final Function<ManifestJob, ManifestJob> updater
-  ) {
-    return get(submitter, submissionId).flatMap(submission -> {
-      final Optional<ManifestJob> existingJob = submission.findManifestJob(manifestJobId);
-      if (existingJob.isEmpty()) {
-        log.warn("Manifest job {} not found in submission {}", manifestJobId, submissionId);
-        return Optional.empty();
-      }
-      final ManifestJob updatedJob = updater.apply(existingJob.get());
-      final Submission updated = submission.withUpdatedManifestJob(manifestJobId, updatedJob);
-      put(updated);
-      log.debug("Updated manifest job {} in submission {}", manifestJobId, submissionId);
-      return Optional.of(updated);
-    });
+      @Nonnull final Function<ManifestJob, ManifestJob> updater) {
+    return get(submitter, submissionId)
+        .flatMap(
+            submission -> {
+              final Optional<ManifestJob> existingJob = submission.findManifestJob(manifestJobId);
+              if (existingJob.isEmpty()) {
+                log.warn("Manifest job {} not found in submission {}", manifestJobId, submissionId);
+                return Optional.empty();
+              }
+              final ManifestJob updatedJob = updater.apply(existingJob.get());
+              final Submission updated =
+                  submission.withUpdatedManifestJob(manifestJobId, updatedJob);
+              put(updated);
+              log.debug("Updated manifest job {} in submission {}", manifestJobId, submissionId);
+              return Optional.of(updated);
+            });
   }
 
   /**
@@ -177,9 +180,7 @@ public class SubmissionRegistry {
    * @return true if the submission was removed, false if it was not found.
    */
   public boolean remove(
-      @Nonnull final SubmitterIdentifier submitter,
-      @Nonnull final String submissionId
-  ) {
+      @Nonnull final SubmitterIdentifier submitter, @Nonnull final String submissionId) {
     final String key = submitter.toKey() + "/" + submissionId;
     final Submission removed = submissions.remove(key);
     if (removed != null) {
@@ -198,9 +199,9 @@ public class SubmissionRegistry {
   @Nonnull
   public Optional<Submission> getByJobId(@Nonnull final String jobId) {
     return submissions.values().stream()
-        .filter(submission -> submission.manifestJobs().stream()
-            .anyMatch(job -> jobId.equals(job.jobId())))
+        .filter(
+            submission ->
+                submission.manifestJobs().stream().anyMatch(job -> jobId.equals(job.jobId())))
         .findFirst();
   }
-
 }

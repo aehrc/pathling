@@ -51,7 +51,6 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IPrimitiveType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.InstantType;
 
 /**
@@ -63,17 +62,13 @@ import org.hl7.fhir.r4.model.InstantType;
 @Slf4j
 public class SearchExecutor implements IBundleProvider {
 
-  @Nonnull
-  private final FhirEncoders fhirEncoders;
+  @Nonnull private final FhirEncoders fhirEncoders;
 
-  @Nonnull
-  private final String subjectResourceCode;
+  @Nonnull private final String subjectResourceCode;
 
-  @Nonnull
-  private final Dataset<Row> result;
+  @Nonnull private final Dataset<Row> result;
 
-  @Nonnull
-  private Optional<Integer> count;
+  @Nonnull private Optional<Integer> count;
 
   private final boolean cacheResults;
 
@@ -84,11 +79,12 @@ public class SearchExecutor implements IBundleProvider {
    * @param dataSource the data source containing the resources to query
    * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
    * @param subjectResourceCode the type code of the resource to search (e.g., "Patient",
-   * "ViewDefinition")
+   *     "ViewDefinition")
    * @param filters the optional filter expressions to apply
    * @param cacheResults whether to cache the result dataset
    */
-  public SearchExecutor(@Nonnull final FhirContext fhirContext,
+  public SearchExecutor(
+      @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final String subjectResourceCode,
@@ -99,17 +95,16 @@ public class SearchExecutor implements IBundleProvider {
     this.cacheResults = cacheResults;
     this.count = Optional.empty();
 
-    final String filterStrings = filters
-        .map(SearchExecutor::filtersToString)
-        .orElse("none");
-    log.info("Received search request: resource={}, filters=[{}]", subjectResourceCode,
-        filterStrings);
+    final String filterStrings = filters.map(SearchExecutor::filtersToString).orElse("none");
+    log.info(
+        "Received search request: resource={}, filters=[{}]", subjectResourceCode, filterStrings);
 
     this.result = initializeDataset(fhirContext, dataSource, filters);
   }
 
   @Nonnull
-  private Dataset<Row> initializeDataset(@Nonnull final FhirContext fhirContext,
+  private Dataset<Row> initializeDataset(
+      @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
       @Nonnull final Optional<StringAndListParam> filters) {
 
@@ -130,13 +125,13 @@ public class SearchExecutor implements IBundleProvider {
     }
 
     // Create a FHIRPath evaluator for the subject resource type.
-    final FhirPathEvaluator evaluator = FhirPathEvaluators.createSingle(
-        subjectResourceCode,
-        fhirContext,
-        StaticFunctionRegistry.getInstance(),
-        Map.of(),
-        dataSource
-    );
+    final FhirPathEvaluator evaluator =
+        FhirPathEvaluators.createSingle(
+            subjectResourceCode,
+            fhirContext,
+            StaticFunctionRegistry.getInstance(),
+            Map.of(),
+            dataSource);
 
     // Get the input context for FHIRPath evaluation.
     final ResourceCollection inputContext = evaluator.createDefaultInputContext();
@@ -161,22 +156,19 @@ public class SearchExecutor implements IBundleProvider {
         final Collection filterResult = evaluator.evaluate(fhirPath, inputContext);
 
         // Validate that the expression evaluates to a Boolean.
-        checkUserInput(filterResult instanceof BooleanCollection,
+        checkUserInput(
+            filterResult instanceof BooleanCollection,
             "Filter expression must be of Boolean type: " + expression);
 
         // Get the filter column value.
         final Column filterValue = filterResult.getColumn().getValue();
 
         // Combine OR conditions within this parameter group.
-        orColumn = orColumn == null
-                   ? filterValue
-                   : orColumn.or(filterValue);
+        orColumn = orColumn == null ? filterValue : orColumn.or(filterValue);
       }
 
       // Combine AND conditions between parameter groups.
-      filterColumn = filterColumn == null
-                     ? orColumn
-                     : filterColumn.and(orColumn);
+      filterColumn = filterColumn == null ? orColumn : filterColumn.and(orColumn);
     }
 
     requireNonNull(filterColumn);
@@ -186,14 +178,16 @@ public class SearchExecutor implements IBundleProvider {
     // with the filter column.
     final String filterIdAlias = randomAlias();
     final Dataset<Row> evaluatorDataset = evaluator.createInitialDataset();
-    final Dataset<Row> filteredIds = evaluatorDataset
-        .select(evaluatorDataset.col("id").alias(filterIdAlias))
-        .filter(filterColumn);
+    final Dataset<Row> filteredIds =
+        evaluatorDataset
+            .select(evaluatorDataset.col("id").alias(filterIdAlias))
+            .filter(filterColumn);
 
     // Join the flat dataset with the filtered IDs using left_semi to keep only matching rows
     // while preserving the flat schema for encoding.
-    final Dataset<Row> filteredDataset = flatDataset
-        .join(filteredIds, flatDataset.col("id").equalTo(col(filterIdAlias)), "left_semi");
+    final Dataset<Row> filteredDataset =
+        flatDataset.join(
+            filteredIds, flatDataset.col("id").equalTo(col(filterIdAlias)), "left_semi");
 
     return cacheIfEnabled(filteredDataset);
   }
@@ -239,10 +233,10 @@ public class SearchExecutor implements IBundleProvider {
     // subtract them from the dataset using a left anti-join.
     if (theFromIndex != 0) {
       final String excludeAlias = randomAlias();
-      final Dataset<Row> exclude = resources.limit(theFromIndex)
-          .select(resources.col("id").alias(excludeAlias));
-      resources = resources
-          .join(exclude, resources.col("id").equalTo(col(excludeAlias)), "left_anti");
+      final Dataset<Row> exclude =
+          resources.limit(theFromIndex).select(resources.col("id").alias(excludeAlias));
+      resources =
+          resources.join(exclude, resources.col("id").equalTo(col(excludeAlias)), "left_anti");
     }
 
     // Trim the dataset to the requested size.
@@ -251,8 +245,7 @@ public class SearchExecutor implements IBundleProvider {
     }
 
     // Encode the resources into HAPI FHIR objects and collect.
-    @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders
-        .of(subjectResourceCode);
+    @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(subjectResourceCode);
     requireNonNull(encoder);
 
     return resources.as(encoder).collectAsList();
@@ -280,16 +273,14 @@ public class SearchExecutor implements IBundleProvider {
   }
 
   @Nonnull
-  private static String filtersToString(
-      @Nonnull final StringAndListParam stringAndListParam) {
-    return stringAndListParam
-        .getValuesAsQueryTokens().stream()
-        .map(andParam -> String.join(",",
-            andParam.getValuesAsQueryTokens().stream()
-                .map(StringParam::getValue)
-                .toList()))
+  private static String filtersToString(@Nonnull final StringAndListParam stringAndListParam) {
+    return stringAndListParam.getValuesAsQueryTokens().stream()
+        .map(
+            andParam ->
+                String.join(
+                    ",",
+                    andParam.getValuesAsQueryTokens().stream().map(StringParam::getValue).toList()))
         .reduce((a, b) -> a + " & " + b)
         .orElse("");
   }
-
 }

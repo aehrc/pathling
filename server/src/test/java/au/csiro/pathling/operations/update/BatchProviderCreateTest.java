@@ -60,20 +60,15 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class BatchProviderCreateTest {
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
-  @Autowired
-  private ServerConfiguration configuration;
+  @Autowired private ServerConfiguration configuration;
 
-  @Autowired
-  private CacheableDatabase cacheableDatabase;
+  @Autowired private CacheableDatabase cacheableDatabase;
 
   private Path tempDatabasePath;
   private BatchProvider batchProvider;
@@ -86,12 +81,17 @@ class BatchProviderCreateTest {
     tempDatabasePath = Files.createTempDirectory("batch-create-test-");
 
     // Create UpdateExecutor with the temp database path.
-    updateExecutor = new UpdateExecutor(pathlingContext, fhirEncoders,
-        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
+    updateExecutor =
+        new UpdateExecutor(
+            pathlingContext,
+            fhirEncoders,
+            tempDatabasePath.toAbsolutePath().toString(),
+            cacheableDatabase);
 
     // Create DeleteExecutor with the temp database path.
-    deleteExecutor = new DeleteExecutor(pathlingContext,
-        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
+    deleteExecutor =
+        new DeleteExecutor(
+            pathlingContext, tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
 
     // Create the BatchProvider.
     batchProvider = new BatchProvider(updateExecutor, deleteExecutor, configuration);
@@ -187,8 +187,8 @@ class BatchProviderCreateTest {
     final Dataset<Row> dataset = sparkSession.read().format("delta").load(tablePath);
     assertThat(dataset.count()).isEqualTo(1);
 
-    final String generatedId = ((Patient) response.getEntry().get(0).getResource())
-        .getIdElement().getIdPart();
+    final String generatedId =
+        ((Patient) response.getEntry().get(0).getResource()).getIdElement().getIdPart();
     final Row row = dataset.first();
     assertThat(row.getAs("id").toString()).isEqualTo(generatedId);
   }
@@ -221,10 +221,10 @@ class BatchProviderCreateTest {
     // Then: each resource should have a unique UUID.
     assertThat(response.getEntry()).hasSize(2);
 
-    final String id1 = ((Patient) response.getEntry().get(0).getResource())
-        .getIdElement().getIdPart();
-    final String id2 = ((Patient) response.getEntry().get(1).getResource())
-        .getIdElement().getIdPart();
+    final String id1 =
+        ((Patient) response.getEntry().get(0).getResource()).getIdElement().getIdPart();
+    final String id2 =
+        ((Patient) response.getEntry().get(1).getResource()).getIdElement().getIdPart();
 
     assertThat(id1).isNotEqualTo(id2);
     assertThat(isValidUuid(id1)).isTrue();
@@ -247,8 +247,8 @@ class BatchProviderCreateTest {
     createEntry.setRequest(createRequest);
 
     // PUT entry (update).
-    final Patient existingPatient = createPatient("existing-id", "Existing", "Patient",
-        AdministrativeGender.FEMALE);
+    final Patient existingPatient =
+        createPatient("existing-id", "Existing", "Patient", AdministrativeGender.FEMALE);
     final BundleEntryComponent updateEntry = requestBundle.addEntry();
     updateEntry.setResource(existingPatient);
     final BundleEntryRequestComponent updateRequest = new BundleEntryRequestComponent();
@@ -264,14 +264,14 @@ class BatchProviderCreateTest {
 
     // Create should return 201 with generated UUID.
     assertThat(response.getEntry().get(0).getResponse().getStatus()).isEqualTo("201");
-    final String createdId = ((Patient) response.getEntry().get(0).getResource())
-        .getIdElement().getIdPart();
+    final String createdId =
+        ((Patient) response.getEntry().get(0).getResource()).getIdElement().getIdPart();
     assertThat(isValidUuid(createdId)).isTrue();
 
     // Update should return 200 with provided ID.
     assertThat(response.getEntry().get(1).getResponse().getStatus()).isEqualTo("200");
-    final String updatedId = ((Patient) response.getEntry().get(1).getResource())
-        .getIdElement().getIdPart();
+    final String updatedId =
+        ((Patient) response.getEntry().get(1).getResource()).getIdElement().getIdPart();
     assertThat(updatedId).isEqualTo("existing-id");
   }
 
@@ -280,8 +280,11 @@ class BatchProviderCreateTest {
   // -------------------------------------------------------------------------
 
   @Nonnull
-  private Patient createPatient(final String id, @Nonnull final String family,
-      @Nonnull final String given, @Nonnull final AdministrativeGender gender) {
+  private Patient createPatient(
+      final String id,
+      @Nonnull final String family,
+      @Nonnull final String given,
+      @Nonnull final AdministrativeGender gender) {
     final Patient patient = new Patient();
     if (id != null) {
       patient.setId(id);
@@ -299,5 +302,4 @@ class BatchProviderCreateTest {
       return false;
     }
   }
-
 }

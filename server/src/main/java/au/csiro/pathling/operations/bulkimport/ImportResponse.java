@@ -22,7 +22,9 @@ public class ImportResponse implements OperationResponse<Parameters> {
   private final WriteDetails originalInternalWriteDetails;
   private final List<String> inputUrls;
 
-  public ImportResponse(final String kickOffRequestUrl, final ImportRequest importRequest,
+  public ImportResponse(
+      final String kickOffRequestUrl,
+      final ImportRequest importRequest,
       final WriteDetails writeDetails) {
     this.kickOffRequestUrl = kickOffRequestUrl;
     this.originalInternalWriteDetails = writeDetails;
@@ -37,14 +39,13 @@ public class ImportResponse implements OperationResponse<Parameters> {
 
     // Add output entries with inputUrl field for each input file.
     inputUrls.stream()
-        .map(inputUrl -> {
-          final ParametersParameterComponent outputParam = new ParametersParameterComponent()
-              .setName("output");
-          outputParam.addPart()
-              .setName("inputUrl")
-              .setValue(new UrlType(inputUrl));
-          return outputParam;
-        })
+        .map(
+            inputUrl -> {
+              final ParametersParameterComponent outputParam =
+                  new ParametersParameterComponent().setName("output");
+              outputParam.addPart().setName("inputUrl").setValue(new UrlType(inputUrl));
+              return outputParam;
+            })
         .forEach(parameters::addParameter);
 
     return parameters;
@@ -57,8 +58,6 @@ public class ImportResponse implements OperationResponse<Parameters> {
    * @return a flat list of all input URLs
    */
   private List<String> extractInputUrls(final ImportRequest importRequest) {
-    return importRequest.input().values().stream()
-        .flatMap(java.util.Collection::stream)
-        .toList();
+    return importRequest.input().values().stream().flatMap(java.util.Collection::stream).toList();
   }
 }

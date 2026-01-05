@@ -35,15 +35,14 @@ public class ProcessingNotCompletedException extends BaseServerResponseException
   public ProcessingNotCompletedException(@Nonnull final String theMessage) {
     super(STATUS_CODE, theMessage);
   }
-  
+
   /**
    * @param theMessage a descriptive message
    * @param theOperationOutcome an {@link org.hl7.fhir.r4.model.OperationOutcome} describing the
-   * response
+   *     response
    */
-  public ProcessingNotCompletedException(@Nonnull final String theMessage,
-      @Nonnull final IBaseOperationOutcome theOperationOutcome) {
+  public ProcessingNotCompletedException(
+      @Nonnull final String theMessage, @Nonnull final IBaseOperationOutcome theOperationOutcome) {
     super(STATUS_CODE, theMessage, theOperationOutcome);
   }
-
 }

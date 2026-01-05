@@ -61,5 +61,4 @@ public final class AsyncJobContext {
   public static void clear() {
     CURRENT_JOB.remove();
   }
-
 }

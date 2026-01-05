@@ -25,9 +25,9 @@ import org.springframework.context.annotation.Import;
 
 /**
  * Unit tests for ImportExecutor that verify lock behavior.
- * <p>
- * Note: The ImportLock aspect is tested indirectly through ImportExecutor tests. Direct testing of
- * the aspect's concurrent behavior is complex due to AOP and Spring profile requirements.
+ *
+ * <p>Note: The ImportLock aspect is tested indirectly through ImportExecutor tests. Direct testing
+ * of the aspect's concurrent behavior is complex due to AOP and Spring profile requirements.
  *
  * @author John Grimes
  */
@@ -40,17 +40,13 @@ class ImportLockTest {
   private static final String JOB_ID_2 = "test-job-2";
   private static final Path TEST_DATA_PATH = Path.of("src/test/resources/import-data/ndjson");
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private ServerConfiguration serverConfiguration;
+  @Autowired private ServerConfiguration serverConfiguration;
 
-  @Autowired
-  private CacheableDatabase cacheableDatabase;
+  @Autowired private CacheableDatabase cacheableDatabase;
 
-  @TempDir
-  private Path tempDir;
+  @TempDir private Path tempDir;
 
   private Path uniqueTempDir;
   private ImportExecutor importExecutor;
@@ -61,25 +57,25 @@ class ImportLockTest {
     Files.createDirectories(uniqueTempDir);
 
     final String databasePath = "file://" + uniqueTempDir.toAbsolutePath();
-    importExecutor = new ImportExecutor(
-        Optional.empty(), // No access rules for tests
-        pathlingContext,
-        databasePath,
-        serverConfiguration,
-        cacheableDatabase
-    );
+    importExecutor =
+        new ImportExecutor(
+            Optional.empty(), // No access rules for tests
+            pathlingContext,
+            databasePath,
+            serverConfiguration,
+            cacheableDatabase);
   }
 
   @Test
   void singleImportSucceeds() {
     // Given
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    final ImportRequest request = new ImportRequest(
-        "http://example.com/fhir/$import",
-        Map.of("Patient", List.of(patientUrl)),
-        SaveMode.OVERWRITE,
-        ImportFormat.NDJSON
-    );
+    final ImportRequest request =
+        new ImportRequest(
+            "http://example.com/fhir/$import",
+            Map.of("Patient", List.of(patientUrl)),
+            SaveMode.OVERWRITE,
+            ImportFormat.NDJSON);
 
     // When
     final ImportResponse response = importExecutor.execute(request, JOB_ID_1);
@@ -93,18 +89,18 @@ class ImportLockTest {
   void sequentialImportsSucceed() {
     // Given
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    final ImportRequest request1 = new ImportRequest(
-        "http://example.com/fhir/$import",
-        Map.of("Patient", List.of(patientUrl)),
-        SaveMode.OVERWRITE,
-        ImportFormat.NDJSON
-    );
-    final ImportRequest request2 = new ImportRequest(
-        "http://example.com/fhir/$import",
-        Map.of("Patient", List.of(patientUrl)),
-        SaveMode.OVERWRITE,
-        ImportFormat.NDJSON
-    );
+    final ImportRequest request1 =
+        new ImportRequest(
+            "http://example.com/fhir/$import",
+            Map.of("Patient", List.of(patientUrl)),
+            SaveMode.OVERWRITE,
+            ImportFormat.NDJSON);
+    final ImportRequest request2 =
+        new ImportRequest(
+            "http://example.com/fhir/$import",
+            Map.of("Patient", List.of(patientUrl)),
+            SaveMode.OVERWRITE,
+            ImportFormat.NDJSON);
 
     // When - execute imports sequentially
     final ImportResponse response1 = importExecutor.execute(request1, JOB_ID_1);
@@ -121,12 +117,12 @@ class ImportLockTest {
   void lockReleasedAfterSuccessfulImport() {
     // Given
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    final ImportRequest request = new ImportRequest(
-        "http://example.com/fhir/$import",
-        Map.of("Patient", List.of(patientUrl)),
-        SaveMode.OVERWRITE,
-        ImportFormat.NDJSON
-    );
+    final ImportRequest request =
+        new ImportRequest(
+            "http://example.com/fhir/$import",
+            Map.of("Patient", List.of(patientUrl)),
+            SaveMode.OVERWRITE,
+            ImportFormat.NDJSON);
 
     // When - execute first import
     final ImportResponse response1 = importExecutor.execute(request, JOB_ID_1);
@@ -145,12 +141,12 @@ class ImportLockTest {
   void lockReleasedAfterFailedImport() {
     // Given - create request with invalid URL to force failure
     final String invalidUrl = "file:///nonexistent/Patient.ndjson";
-    final ImportRequest request = new ImportRequest(
-        "http://example.com/fhir/$import",
-        Map.of("Patient", List.of(invalidUrl)),
-        SaveMode.OVERWRITE,
-        ImportFormat.NDJSON
-    );
+    final ImportRequest request =
+        new ImportRequest(
+            "http://example.com/fhir/$import",
+            Map.of("Patient", List.of(invalidUrl)),
+            SaveMode.OVERWRITE,
+            ImportFormat.NDJSON);
 
     // When/Then - first import fails
     assertThatThrownBy(() -> importExecutor.execute(request, JOB_ID_1))
@@ -158,12 +154,12 @@ class ImportLockTest {
 
     // When - execute second import after first fails
     final String validUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    final ImportRequest validRequest = new ImportRequest(
-        "http://example.com/fhir/$import",
-        Map.of("Patient", List.of(validUrl)),
-        SaveMode.OVERWRITE,
-        ImportFormat.NDJSON
-    );
+    final ImportRequest validRequest =
+        new ImportRequest(
+            "http://example.com/fhir/$import",
+            Map.of("Patient", List.of(validUrl)),
+            SaveMode.OVERWRITE,
+            ImportFormat.NDJSON);
 
     final ImportResponse response = importExecutor.execute(validRequest, JOB_ID_2);
 

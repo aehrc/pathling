@@ -18,7 +18,6 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 public class BulkExportDeleteInterceptor {
 
-
   private final JobProvider jobProvider;
 
   public BulkExportDeleteInterceptor(JobProvider jobProvider) {

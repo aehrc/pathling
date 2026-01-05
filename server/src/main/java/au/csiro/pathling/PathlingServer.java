@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Import;
 @EnableAspectJAutoProxy
 public class PathlingServer {
 
-    public static void main(String[] args) {
-        new SpringApplicationBuilder(PathlingServer.class).run(args);
-    }
+  public static void main(String[] args) {
+    new SpringApplicationBuilder(PathlingServer.class).run(args);
+  }
 }

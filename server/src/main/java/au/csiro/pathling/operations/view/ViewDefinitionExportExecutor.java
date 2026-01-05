@@ -60,23 +60,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class ViewDefinitionExportExecutor {
 
-  @Nonnull
-  private final QueryableDataSource deltaLake;
+  @Nonnull private final QueryableDataSource deltaLake;
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull
-  private final SparkSession sparkSession;
+  @Nonnull private final SparkSession sparkSession;
 
-  @Nonnull
-  private final String databasePath;
+  @Nonnull private final String databasePath;
 
-  @Nonnull
-  private final ServerConfiguration serverConfiguration;
+  @Nonnull private final ServerConfiguration serverConfiguration;
 
-  @Nonnull
-  private final PatientCompartmentService patientCompartmentService;
+  @Nonnull private final PatientCompartmentService patientCompartmentService;
 
   /**
    * Constructs a new ViewDefinitionExportExecutor.
@@ -94,7 +88,7 @@ public class ViewDefinitionExportExecutor {
       @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession,
       @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      final String databasePath,
+          final String databasePath,
       @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final PatientCompartmentService patientCompartmentService) {
     this.deltaLake = deltaLake;
@@ -114,8 +108,7 @@ public class ViewDefinitionExportExecutor {
    */
   @Nonnull
   public List<ViewExportOutput> execute(
-      @Nonnull final ViewDefinitionExportRequest request,
-      @Nonnull final String jobId) {
+      @Nonnull final ViewDefinitionExportRequest request, @Nonnull final String jobId) {
 
     final Path jobDirPath = createJobDirectory(jobId);
     final List<ViewExportOutput> outputs = new ArrayList<>();
@@ -126,21 +119,14 @@ public class ViewDefinitionExportExecutor {
       final String viewName = getUniqueViewName(viewInput.getEffectiveName(i), usedNames);
       usedNames.add(viewName);
 
-      final ViewExportOutput output = executeView(
-          viewInput.view(),
-          viewName,
-          request,
-          jobDirPath
-      );
+      final ViewExportOutput output = executeView(viewInput.view(), viewName, request, jobDirPath);
       outputs.add(output);
     }
 
     return outputs;
   }
 
-  /**
-   * Creates the job directory for storing output files.
-   */
+  /** Creates the job directory for storing output files. */
   @Nonnull
   private Path createJobDirectory(@Nonnull final String jobId) {
     final URI warehouseUri = URI.create(databasePath);
@@ -166,12 +152,10 @@ public class ViewDefinitionExportExecutor {
     return jobDirPath;
   }
 
-  /**
-   * Generates a unique name for a view, avoiding collisions with already-used names.
-   */
+  /** Generates a unique name for a view, avoiding collisions with already-used names. */
   @Nonnull
-  private String getUniqueViewName(@Nonnull final String baseName,
-      @Nonnull final Set<String> usedNames) {
+  private String getUniqueViewName(
+      @Nonnull final String baseName, @Nonnull final Set<String> usedNames) {
     if (!usedNames.contains(baseName)) {
       return baseName;
     }
@@ -182,9 +166,7 @@ public class ViewDefinitionExportExecutor {
     return baseName + "_" + suffix;
   }
 
-  /**
-   * Executes a single view and writes the results to files.
-   */
+  /** Executes a single view and writes the results to files. */
   @Nonnull
   private ViewExportOutput executeView(
       @Nonnull final FhirView view,
@@ -196,41 +178,38 @@ public class ViewDefinitionExportExecutor {
     final QueryableDataSource dataSource = buildDataSource(request);
 
     // Execute the view query.
-    final FhirViewExecutor executor = new FhirViewExecutor(
-        fhirContext, sparkSession, dataSource, serverConfiguration.getQuery());
+    final FhirViewExecutor executor =
+        new FhirViewExecutor(fhirContext, sparkSession, dataSource, serverConfiguration.getQuery());
 
     final Dataset<Row> result;
     try {
       result = executor.buildQuery(view);
     } catch (final ConstraintViolationException e) {
-      throw new InvalidRequestException("Invalid ViewDefinition '%s': %s"
-          .formatted(viewName, e.getMessage()));
+      throw new InvalidRequestException(
+          "Invalid ViewDefinition '%s': %s".formatted(viewName, e.getMessage()));
     }
 
     // Write output based on format.
-    final List<String> fileUrls = writeOutput(
-        result,
-        viewName,
-        request.format(),
-        request.includeHeader(),
-        jobDirPath
-    );
+    final List<String> fileUrls =
+        writeOutput(result, viewName, request.format(), request.includeHeader(), jobDirPath);
 
     return new ViewExportOutput(viewName, fileUrls);
   }
 
-  /**
-   * Builds the data source with filters applied.
-   */
+  /** Builds the data source with filters applied. */
   @Nonnull
   private QueryableDataSource buildDataSource(@Nonnull final ViewDefinitionExportRequest request) {
     QueryableDataSource dataSource = deltaLake;
 
     // Apply _since filter.
     if (request.since() != null) {
-      dataSource = dataSource.map(rowDataset -> rowDataset.filter(
-          "meta.lastUpdated IS NULL OR meta.lastUpdated >= '" + request.since().getValueAsString()
-              + "'"));
+      dataSource =
+          dataSource.map(
+              rowDataset ->
+                  rowDataset.filter(
+                      "meta.lastUpdated IS NULL OR meta.lastUpdated >= '"
+                          + request.since().getValueAsString()
+                          + "'"));
     }
 
     // Apply patient compartment filter if patient IDs were specified.
@@ -241,31 +220,29 @@ public class ViewDefinitionExportExecutor {
     return dataSource;
   }
 
-  /**
-   * Applies patient compartment filter to the data source.
-   */
+  /** Applies patient compartment filter to the data source. */
   @Nonnull
   private QueryableDataSource applyPatientCompartmentFilter(
-      @Nonnull final QueryableDataSource dataSource,
-      @Nonnull final Set<String> patientIds) {
+      @Nonnull final QueryableDataSource dataSource, @Nonnull final Set<String> patientIds) {
 
     // Filter out resource types that are not in the Patient compartment.
-    final QueryableDataSource filtered = dataSource.filterByResourceType(
-        patientCompartmentService::isInPatientCompartment);
+    final QueryableDataSource filtered =
+        dataSource.filterByResourceType(patientCompartmentService::isInPatientCompartment);
 
     // Apply row-level filtering based on patient compartment membership.
-    return filtered.map((resourceType, rowDataset) -> {
-      final Column patientFilter =
-          patientCompartmentService.buildPatientFilter(resourceType, patientIds);
-      log.debug("Applying patient compartment filter for resource type {}: {}",
-          resourceType, patientFilter);
-      return rowDataset.filter(patientFilter);
-    });
+    return filtered.map(
+        (resourceType, rowDataset) -> {
+          final Column patientFilter =
+              patientCompartmentService.buildPatientFilter(resourceType, patientIds);
+          log.debug(
+              "Applying patient compartment filter for resource type {}: {}",
+              resourceType,
+              patientFilter);
+          return rowDataset.filter(patientFilter);
+        });
   }
 
-  /**
-   * Writes the query result to files in the specified format.
-   */
+  /** Writes the query result to files in the specified format. */
   @Nonnull
   private List<String> writeOutput(
       @Nonnull final Dataset<Row> result,
@@ -274,8 +251,8 @@ public class ViewDefinitionExportExecutor {
       final boolean includeHeader,
       @Nonnull final Path jobDirPath) {
 
-    final String outputPath = safelyJoinPaths(jobDirPath.toString(),
-        viewName + format.getFileExtension());
+    final String outputPath =
+        safelyJoinPaths(jobDirPath.toString(), viewName + format.getFileExtension());
 
     switch (format) {
       case NDJSON -> {
@@ -291,9 +268,7 @@ public class ViewDefinitionExportExecutor {
     }
   }
 
-  /**
-   * Writes the result as NDJSON files.
-   */
+  /** Writes the result as NDJSON files. */
   @Nonnull
   private List<String> writeNdjson(
       @Nonnull final Dataset<Row> result,
@@ -301,26 +276,18 @@ public class ViewDefinitionExportExecutor {
       @Nonnull final String viewName,
       @Nonnull final Path jobDirPath) {
 
-    result.write()
-        .mode(SaveMode.Overwrite)
-        .json(outputPath);
+    result.write().mode(SaveMode.Overwrite).json(outputPath);
 
     // Rename partitioned files to follow naming convention.
-    final List<String> renamedFiles = new ArrayList<>(
-        FileSystemPersistence.renamePartitionedFiles(
-            sparkSession,
-            outputPath,
-            outputPath,
-            "json"
-        )
-    );
+    final List<String> renamedFiles =
+        new ArrayList<>(
+            FileSystemPersistence.renamePartitionedFiles(
+                sparkSession, outputPath, outputPath, "json"));
 
     return renamedFiles;
   }
 
-  /**
-   * Writes the result as CSV files.
-   */
+  /** Writes the result as CSV files. */
   @Nonnull
   private List<String> writeCsv(
       @Nonnull final Dataset<Row> result,
@@ -329,27 +296,18 @@ public class ViewDefinitionExportExecutor {
       final boolean includeHeader,
       @Nonnull final Path jobDirPath) {
 
-    result.write()
-        .mode(SaveMode.Overwrite)
-        .option("header", includeHeader)
-        .csv(outputPath);
+    result.write().mode(SaveMode.Overwrite).option("header", includeHeader).csv(outputPath);
 
     // Rename partitioned files to follow naming convention.
-    final List<String> renamedFiles = new ArrayList<>(
-        FileSystemPersistence.renamePartitionedFiles(
-            sparkSession,
-            outputPath,
-            outputPath,
-            "csv"
-        )
-    );
+    final List<String> renamedFiles =
+        new ArrayList<>(
+            FileSystemPersistence.renamePartitionedFiles(
+                sparkSession, outputPath, outputPath, "csv"));
 
     return renamedFiles;
   }
 
-  /**
-   * Writes the result as Parquet files.
-   */
+  /** Writes the result as Parquet files. */
   @Nonnull
   private List<String> writeParquet(
       @Nonnull final Dataset<Row> result,
@@ -357,17 +315,13 @@ public class ViewDefinitionExportExecutor {
       @Nonnull final String viewName,
       @Nonnull final Path jobDirPath) {
 
-    result.write()
-        .mode(SaveMode.Overwrite)
-        .parquet(outputPath);
+    result.write().mode(SaveMode.Overwrite).parquet(outputPath);
 
     // List all parquet files in the output directory.
     return listParquetFiles(outputPath);
   }
 
-  /**
-   * Lists all Parquet files in a directory.
-   */
+  /** Lists all Parquet files in a directory. */
   @Nonnull
   private List<String> listParquetFiles(@Nonnull final String directoryPath) {
     try {
@@ -384,5 +338,4 @@ public class ViewDefinitionExportExecutor {
       throw new InternalErrorException("Failed to list parquet files at " + directoryPath, e);
     }
   }
-
 }

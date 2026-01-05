@@ -45,14 +45,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class BulkSubmitValidator {
 
-  private static final Set<String> VALID_STATUSES = Set.of(
-      BulkSubmitRequest.STATUS_IN_PROGRESS,
-      BulkSubmitRequest.STATUS_COMPLETE,
-      BulkSubmitRequest.STATUS_ABORTED
-  );
+  private static final Set<String> VALID_STATUSES =
+      Set.of(
+          BulkSubmitRequest.STATUS_IN_PROGRESS,
+          BulkSubmitRequest.STATUS_COMPLETE,
+          BulkSubmitRequest.STATUS_ABORTED);
 
-  @Nonnull
-  private final ServerConfiguration serverConfiguration;
+  @Nonnull private final ServerConfiguration serverConfiguration;
 
   /**
    * Creates a new BulkSubmitValidator.
@@ -72,9 +71,7 @@ public class BulkSubmitValidator {
    */
   @Nonnull
   public BulkSubmitRequest validateAndExtract(
-      @Nonnull final RequestDetails requestDetails,
-      @Nonnull final Parameters parameters
-  ) {
+      @Nonnull final RequestDetails requestDetails, @Nonnull final Parameters parameters) {
     final BulkSubmitConfiguration config = getBulkSubmitConfig();
 
     // Extract submissionId (required).
@@ -111,8 +108,7 @@ public class BulkSubmitValidator {
     // manifestUrl is provided, fhirBaseUrl must also be provided.
     if (manifestUrl != null) {
       if (fhirBaseUrl == null) {
-        throw new InvalidUserInputError(
-            "fhirBaseUrl is required when manifestUrl is present.");
+        throw new InvalidUserInputError("fhirBaseUrl is required when manifestUrl is present.");
       }
       validateUrl(manifestUrl, "manifestUrl", config);
       validateUrl(fhirBaseUrl, "fhirBaseUrl", config);
@@ -140,8 +136,7 @@ public class BulkSubmitValidator {
         replacesManifestUrl,
         oauthMetadataUrl,
         metadata,
-        fileRequestHeaders
-    );
+        fileRequestHeaders);
   }
 
   @Nonnull
@@ -155,19 +150,17 @@ public class BulkSubmitValidator {
 
   @Nonnull
   private String extractRequiredString(
-      @Nonnull final Parameters parameters,
-      @Nonnull final String paramName
-  ) {
-    final String value = ParamUtil.extractFromPart(
-        parameters.getParameter(),
-        paramName,
-        StringType.class,
-        StringType::getValue,
-        false,
-        null,
-        false,
-        new InvalidUserInputError("Missing required parameter: " + paramName)
-    );
+      @Nonnull final Parameters parameters, @Nonnull final String paramName) {
+    final String value =
+        ParamUtil.extractFromPart(
+            parameters.getParameter(),
+            paramName,
+            StringType.class,
+            StringType::getValue,
+            false,
+            null,
+            false,
+            new InvalidUserInputError("Missing required parameter: " + paramName));
     if (value == null || value.isBlank()) {
       throw new InvalidUserInputError("Missing required parameter: " + paramName);
     }
@@ -176,16 +169,16 @@ public class BulkSubmitValidator {
 
   @Nonnull
   private SubmitterIdentifier extractSubmitter(@Nonnull final Parameters parameters) {
-    final Identifier identifier = ParamUtil.extractFromPart(
-        parameters.getParameter(),
-        "submitter",
-        Identifier.class,
-        i -> i,
-        false,
-        null,
-        false,
-        new InvalidUserInputError("Missing required parameter: submitter")
-    );
+    final Identifier identifier =
+        ParamUtil.extractFromPart(
+            parameters.getParameter(),
+            "submitter",
+            Identifier.class,
+            i -> i,
+            false,
+            null,
+            false,
+            new InvalidUserInputError("Missing required parameter: submitter"));
     if (identifier == null) {
       throw new InvalidUserInputError("Missing required parameter: submitter");
     }
@@ -200,32 +193,29 @@ public class BulkSubmitValidator {
 
   @Nonnull
   private String extractSubmissionStatus(@Nonnull final Parameters parameters) {
-    final String status = ParamUtil.extractFromPart(
-        parameters.getParameter(),
-        "submissionStatus",
-        Coding.class,
-        Coding::getCode,
-        false,
-        null,
-        false,
-        new InvalidUserInputError("Missing required parameter: submissionStatus")
-    );
+    final String status =
+        ParamUtil.extractFromPart(
+            parameters.getParameter(),
+            "submissionStatus",
+            Coding.class,
+            Coding::getCode,
+            false,
+            null,
+            false,
+            new InvalidUserInputError("Missing required parameter: submissionStatus"));
     if (status == null || status.isBlank()) {
       throw new InvalidUserInputError("Missing required parameter: submissionStatus");
     }
     if (!VALID_STATUSES.contains(status)) {
       throw new InvalidUserInputError(
-          "Invalid submissionStatus: %s. Must be one of: %s.".formatted(status, VALID_STATUSES)
-      );
+          "Invalid submissionStatus: %s. Must be one of: %s.".formatted(status, VALID_STATUSES));
     }
     return status;
   }
 
   @Nullable
   private String extractOptionalUrl(
-      @Nonnull final Parameters parameters,
-      @Nonnull final String paramName
-  ) {
+      @Nonnull final Parameters parameters, @Nonnull final String paramName) {
     // Per Argonaut spec, URL parameters are string (url), not FHIR url type.
     return ParamUtil.extractFromPart(
         parameters.getParameter(),
@@ -235,15 +225,13 @@ public class BulkSubmitValidator {
         true,
         null,
         false,
-        null
-    );
+        null);
   }
 
   private void validateUrl(
       @Nonnull final String url,
       @Nonnull final String paramName,
-      @Nonnull final BulkSubmitConfiguration config
-  ) {
+      @Nonnull final BulkSubmitConfiguration config) {
     // TODO: Re-enable allowed sources check after connectathon.
     if (true) {
       return;
@@ -255,8 +243,7 @@ public class BulkSubmitValidator {
     final boolean allowed = allowableSources.stream().anyMatch(url::startsWith);
     if (!allowed) {
       throw new InvalidUserInputError(
-          "%s '%s' does not match any allowed source prefixes.".formatted(paramName, url)
-      );
+          "%s '%s' does not match any allowed source prefixes.".formatted(paramName, url));
     }
   }
 
@@ -267,8 +254,7 @@ public class BulkSubmitValidator {
   }
 
   @Nonnull
-  private List<FileRequestHeader> extractFileRequestHeaders(
-      @Nonnull final Parameters parameters) {
+  private List<FileRequestHeader> extractFileRequestHeaders(@Nonnull final Parameters parameters) {
     return parameters.getParameter().stream()
         .filter(param -> "fileRequestHeader".equals(param.getName()))
         .map(this::extractSingleFileRequestHeader)
@@ -281,27 +267,13 @@ public class BulkSubmitValidator {
       @Nonnull final ParametersParameterComponent param) {
     final List<ParametersParameterComponent> parts = param.getPart();
 
-    final String headerName = ParamUtil.extractFromPart(
-        parts,
-        "headerName",
-        StringType.class,
-        StringType::getValue,
-        true,
-        null,
-        false,
-        null
-    );
+    final String headerName =
+        ParamUtil.extractFromPart(
+            parts, "headerName", StringType.class, StringType::getValue, true, null, false, null);
 
-    final String headerValue = ParamUtil.extractFromPart(
-        parts,
-        "headerValue",
-        StringType.class,
-        StringType::getValue,
-        true,
-        null,
-        false,
-        null
-    );
+    final String headerValue =
+        ParamUtil.extractFromPart(
+            parts, "headerValue", StringType.class, StringType::getValue, true, null, false, null);
 
     if (headerName == null || headerName.isBlank() || headerValue == null) {
       return null;
@@ -333,5 +305,4 @@ public class BulkSubmitValidator {
       throw new InvalidUserInputError("Prefer header must include respond-async");
     }
   }
-
 }

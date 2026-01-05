@@ -37,20 +37,17 @@ public class PathlingServerVersion {
   private static final String BUILD_VERSION_PROPERTY = "git.build.version";
   private static final String GIT_SHA_PROPERTY = "git.commit.id.abbrev";
 
-  @Nonnull
-  private final Properties gitProperties = new Properties();
+  @Nonnull private final Properties gitProperties = new Properties();
 
-  /**
-   * Default constructor for creating a new PathlingServerVersion instance.
-   */
+  /** Default constructor for creating a new PathlingServerVersion instance. */
   public PathlingServerVersion() {
     initialiseGitProperties();
     log.info("Pathling server build version: {}", getDescriptiveVersion().orElse("UNKNOWN"));
   }
 
   private void initialiseGitProperties() {
-    final InputStream gitPropertiesStream = getClass().getClassLoader()
-        .getResourceAsStream(GIT_PROPERTIES_FILE_NAME);
+    final InputStream gitPropertiesStream =
+        getClass().getClassLoader().getResourceAsStream(GIT_PROPERTIES_FILE_NAME);
     if (gitPropertiesStream != null) {
       try {
         gitProperties.load(gitPropertiesStream);
@@ -72,14 +69,14 @@ public class PathlingServerVersion {
 
   /**
    * @return a descriptive version that includes the POM version and the Git commit SHA at the time
-   * of the build
+   *     of the build
    */
   public Optional<String> getDescriptiveVersion() {
     if (getBuildVersion().isEmpty()) {
       return Optional.empty();
     }
-    final Optional<String> gitShaProperty = Optional.ofNullable(
-        gitProperties.getProperty(GIT_SHA_PROPERTY));
+    final Optional<String> gitShaProperty =
+        Optional.ofNullable(gitProperties.getProperty(GIT_SHA_PROPERTY));
     return gitShaProperty.map(sha -> String.format("%s+%s", getBuildVersion().get(), sha));
   }
 
@@ -91,5 +88,4 @@ public class PathlingServerVersion {
   public Optional<String> getMajorVersion() {
     return getBuildVersion().map(version -> version.split("\\.")[0]);
   }
-
 }

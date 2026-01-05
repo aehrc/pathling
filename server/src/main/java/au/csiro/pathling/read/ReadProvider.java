@@ -43,14 +43,11 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ReadProvider implements IResourceProvider {
 
-  @Nonnull
-  private final ReadExecutor readExecutor;
+  @Nonnull private final ReadExecutor readExecutor;
 
-  @Nonnull
-  private final Class<? extends IBaseResource> resourceClass;
+  @Nonnull private final Class<? extends IBaseResource> resourceClass;
 
-  @Nonnull
-  private final String resourceTypeCode;
+  @Nonnull private final String resourceTypeCode;
 
   /**
    * Constructs a new ReadProvider for a specific resource type.
@@ -59,7 +56,8 @@ public class ReadProvider implements IResourceProvider {
    * @param fhirContext the FHIR context for resource definitions
    * @param resourceClass the class of the resource type this provider handles
    */
-  public ReadProvider(@Nonnull final ReadExecutor readExecutor,
+  public ReadProvider(
+      @Nonnull final ReadExecutor readExecutor,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
     this.readExecutor = readExecutor;
@@ -90,5 +88,4 @@ public class ReadProvider implements IResourceProvider {
 
     return readExecutor.read(resourceTypeCode, resourceId);
   }
-
 }

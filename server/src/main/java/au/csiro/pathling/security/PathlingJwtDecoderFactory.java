@@ -37,8 +37,7 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 public class PathlingJwtDecoderFactory implements JwtDecoderFactory<ServerConfiguration> {
 
-  @Nonnull
-  private final PathlingJwtDecoderBuilder builder;
+  @Nonnull private final PathlingJwtDecoderBuilder builder;
 
   /**
    * @param builder a builder that can create a {@link JwtDecoder}
@@ -59,9 +58,9 @@ public class PathlingJwtDecoderFactory implements JwtDecoderFactory<ServerConfig
    * @return a shiny new {@link JwtDecoder}
    */
   @Bean
-  public static JwtDecoder pathlingJwtDecoder(@Nullable final ServerConfiguration configuration,
+  public static JwtDecoder pathlingJwtDecoder(
+      @Nullable final ServerConfiguration configuration,
       @Nonnull final PathlingJwtDecoderFactory factory) {
     return factory.createDecoder(configuration);
   }
-
 }
