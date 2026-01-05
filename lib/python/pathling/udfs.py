@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -13,12 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Any, Optional, Union, Collection
+from typing import Any, Collection, Optional, Union
 
 from py4j.java_gateway import JavaObject
 from pyspark import SparkContext
-from pyspark.sql.column import Column
 from pyspark.sql.classic.column import _to_java_column
+from pyspark.sql.column import Column
 from pyspark.sql.functions import lit
 
 from pathling.coding import Coding
@@ -37,7 +37,7 @@ def _coding_to_java_column(coding: Optional[CodingArg]) -> JavaObject:
 
 
 def _ensure_collection(
-    collection_or_value: Optional[Union[Any, Collection[Any]]]
+    collection_or_value: Optional[Union[Any, Collection[Any]]],
 ) -> Optional[Collection[Any]]:
     return (
         collection_or_value

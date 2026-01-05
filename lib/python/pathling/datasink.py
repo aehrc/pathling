@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, List, Optional
 
 from pathling.core import SparkConversionsMixin, StringMapper
 
@@ -124,7 +124,9 @@ class DataSinks(SparkConversionsMixin):
             result = self._datasinks.saveMode(save_mode).ndjson(path)
         return _convert_write_details(result)
 
-    def parquet(self, path: str, save_mode: Optional[str] = SaveMode.ERROR) -> WriteDetails:
+    def parquet(
+        self, path: str, save_mode: Optional[str] = SaveMode.ERROR
+    ) -> WriteDetails:
         """
         Writes the data to a directory of Parquet files.
 

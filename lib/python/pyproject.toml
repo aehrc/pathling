@@ -54,6 +54,7 @@ dev = [
     "build==1.2.1",
     "pytest-cov==5.0.0",
     "http-server-mock==1.7",
+    "ruff>=0.8.0",
 ]
 
 [tool.hatch.version]
@@ -76,3 +77,22 @@ include = [
     "/README.md",
     "/LICENSE",
 ]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort (import sorting)
+]
+ignore = [
+    "E501",  # line too long - handled by formatter where possible
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
