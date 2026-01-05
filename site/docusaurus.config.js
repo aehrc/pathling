@@ -30,6 +30,7 @@ const config = {
     mermaid: true,
   },
   themes: ["@docusaurus/theme-mermaid"],
+  plugins: [require.resolve("./src/plugins/staticHomePage.js")],
   url: "https://pathling.csiro.au",
   baseUrl: "/",
   onBrokenLinks: "warn",
@@ -72,6 +73,10 @@ const config = {
           customCss: require.resolve("./src/css/custom.css"),
         },
         sitemap: {},
+        pages: {
+          // Exclude index files so static/index.html can be served at root.
+          exclude: ["**/index.{js,jsx,ts,tsx,md,mdx}"],
+        },
       }),
     ],
   ],
