@@ -53,11 +53,12 @@ const config = {
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
           editUrl: "https://github.com/aehrc/pathling/tree/main/site/",
+          routeBasePath: "docs",
           lastVersion: "current",
           versions: {
             current: {
               label: "9.1.0",
-              path: "/",
+              path: "",
             },
             "7.2.0": {
               label: "7.2.0",
