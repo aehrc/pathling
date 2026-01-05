@@ -150,7 +150,19 @@ public class CacheableDatabase implements Cacheable {
             .filter(path -> path.matches("^[^.]+\\.parquet$"))
             // Filter out anything that is not a Delta table.
             .filter(path -> DeltaTable.isDeltaTable(spark, path))
-            .map(path -> DeltaTable.forPath(spark, path))
+            // Safely attempt to open the table, handling race conditions where the table may
+            // become inaccessible between the isDeltaTable check and forPath call.
+            .map(
+                path -> {
+                  try {
+                    return Optional.of(DeltaTable.forPath(spark, path));
+                  } catch (final Exception e) {
+                    log.debug("Table became inaccessible during scan: {}", path);
+                    return Optional.<DeltaTable>empty();
+                  }
+                })
+            .filter(Optional::isPresent)
+            .map(Optional::get)
             // Get the latest history entry for each Delta table.
             .map(CacheableDatabase::latestUpdateToTable)
             // Filter out any tables which don't have history rows.
