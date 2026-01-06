@@ -24,7 +24,6 @@ import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
@@ -155,13 +154,8 @@ public class SearchExecutor implements IBundleProvider {
         // Evaluate the expression against the input context.
         final Collection filterResult = evaluator.evaluate(fhirPath, inputContext);
 
-        // Validate that the expression evaluates to a Boolean.
-        checkUserInput(
-            filterResult instanceof BooleanCollection,
-            "Filter expression must be of Boolean type: " + expression);
-
-        // Get the filter column value.
-        final Column filterValue = filterResult.getColumn().getValue();
+        // Convert to boolean using FHIRPath boolean context semantics.
+        final Column filterValue = filterResult.asBooleanSingleton().getColumn().getValue();
 
         // Combine OR conditions within this parameter group.
         orColumn = orColumn == null ? filterValue : orColumn.or(filterValue);
@@ -173,6 +167,11 @@ public class SearchExecutor implements IBundleProvider {
 
     requireNonNull(filterColumn);
 
+    // Coalesce the filter to handle null values (treat null as false).
+    final Column safeFilterColumn =
+        org.apache.spark.sql.functions.coalesce(
+            filterColumn, org.apache.spark.sql.functions.lit(false));
+
     // Get the filtered IDs by selecting the ID column from the evaluator's dataset and applying
     // the filter. The evaluator's dataset has the standardized structure with columns compatible
     // with the filter column.
@@ -181,7 +180,7 @@ public class SearchExecutor implements IBundleProvider {
     final Dataset<Row> filteredIds =
         evaluatorDataset
             .select(evaluatorDataset.col("id").alias(filterIdAlias))
-            .filter(filterColumn);
+            .filter(safeFilterColumn);
 
     // Join the flat dataset with the filtered IDs using left_semi to keep only matching rows
     // while preserving the flat schema for encoding.

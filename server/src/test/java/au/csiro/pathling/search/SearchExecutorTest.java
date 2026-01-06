@@ -197,18 +197,33 @@ class SearchExecutorTest {
   }
 
   @Test
-  void throwsInvalidInputOnNonBooleanFilter() {
-    // Given: a filter that doesn't evaluate to Boolean.
+  void filterOnNonExistentElementReturnsEmptyResult() {
+    // Given: a filter referencing an element that doesn't exist on Patient.
+    final StringAndListParam filters = new StringAndListParam();
+    filters.addAnd(new StringParam("nonExistentElement = 'value'"));
+
+    // When: search with filter.
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false);
+
+    // Then: returns empty result (not an error).
+    assertThat(result.size()).isEqualTo(0);
+  }
+
+  @Test
+  void nonBooleanFilterUsesTruthySemantics() {
+    // Given: a filter that doesn't evaluate to Boolean (string collection).
     final StringAndListParam filters = new StringAndListParam();
     filters.addAnd(new StringParam("name.given"));
 
-    // When/Then: construction throws InvalidUserInputError.
-    assertThatThrownBy(
-            () ->
-                new SearchExecutor(
-                    fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false))
-        .isInstanceOf(InvalidUserInputError.class)
-        .hasMessageContaining("Filter expression must be of Boolean type");
+    // When: search with filter.
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false);
+
+    // Then: returns patients with given names (truthy semantics: non-empty = true).
+    assertThat(result.size()).isEqualTo(50);
   }
 
   @Test
