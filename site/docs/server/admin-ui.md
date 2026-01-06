@@ -82,7 +82,7 @@ with your authorization server.
 | Client type    | Public (no client secret)            |
 | PKCE           | Required (S256)                      |
 | Redirect URI   | `https://your-server/admin/callback` |
-| Allowed scopes | `openid profile user/*.read`         |
+| Allowed scopes | `openid profile user/*.*`            |
 
 ### Auth0
 
@@ -147,10 +147,11 @@ This produces static files in the `dist/` directory.
 
 ### Environment variables
 
-| Variable             | Description                     | Default             |
-| -------------------- | ------------------------------- | ------------------- |
-| `VITE_FHIR_BASE_URL` | The base URL of the FHIR server | `/fhir`             |
-| `VITE_CLIENT_ID`     | The OAuth client ID             | `pathling-admin-ui` |
+| Variable             | Description                     | Default                   |
+| -------------------- | ------------------------------- | ------------------------- |
+| `VITE_FHIR_BASE_URL` | The base URL of the FHIR server | `/fhir`                   |
+| `VITE_CLIENT_ID`     | The OAuth client ID             | `pathling-admin-ui`       |
+| `VITE_SCOPE`         | The OAuth scopes to request     | `openid profile user/*.*` |
 
 ### Docker deployment
 

@@ -7,7 +7,7 @@
 import type { CapabilityStatement } from "fhir/r4";
 import FHIR from "fhirclient";
 import type Client from "fhirclient/lib/Client";
-import { DEFAULT_CLIENT_ID, getEnvClientId } from "../config";
+import { DEFAULT_CLIENT_ID, getEnvClientId, getScope } from "../config";
 
 export { DEFAULT_CLIENT_ID };
 
@@ -238,7 +238,7 @@ export async function initiateAuth(fhirBaseUrl: string): Promise<void> {
   await FHIR.oauth2.authorize({
     iss: absoluteUrl,
     clientId,
-    scope: "openid profile user/*.read",
+    scope: getScope(),
     redirectUri: `${window.location.origin}/admin/callback`,
   });
 }
@@ -259,7 +259,7 @@ export function clearReturnUrl(): void {
 }
 
 /**
- * Completes the SMART on FHIR authorization flow after redirect.
+ * Completes the SMART on FHIR authorisation flow after redirect.
  */
 export async function completeAuth(): Promise<Client> {
   return FHIR.oauth2.ready();
