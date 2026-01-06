@@ -82,3 +82,28 @@ resources must be present within the token.
 
 The import, delete, and batch operations require `write` authority for all
 resource types that are referenced within the request.
+
+## SMART configuration
+
+When authorisation is enabled, Pathling exposes a
+[SMART configuration document](https://hl7.org/fhir/smart-app-launch/conformance.html)
+at `/.well-known/smart-configuration`. This document advertises the OAuth
+endpoints and capabilities supported by the server.
+
+Pathling automatically fetches and merges the issuer's OIDC discovery document
+from `{issuer}/.well-known/openid-configuration`. Fields from the OIDC discovery
+document are included in the SMART configuration response, with SMART-specific
+fields taking precedence. This provides clients with comprehensive metadata
+about supported scopes, response types, and other OAuth capabilities without
+requiring explicit configuration.
+
+The following fields can be configured explicitly and will override any values
+from the OIDC discovery document:
+
+- `authorization_endpoint` (via `pathling.auth.authUrl`)
+- `token_endpoint` (via `pathling.auth.tokenUrl`)
+- `revocation_endpoint` (via `pathling.auth.revokeUrl`)
+- `capabilities` (via `pathling.auth.capabilities`)
+- `grant_types_supported` (via `pathling.auth.grantTypesSupported`)
+- `code_challenge_methods_supported` (via
+  `pathling.auth.codeChallengeMethodsSupported`)

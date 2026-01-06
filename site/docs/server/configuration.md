@@ -333,6 +333,18 @@ spark:
   `https://pathling.csiro.au/fhir`. Must match the contents of the
   [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3)
   within bearer tokens.
+- `pathling.auth.capabilities` - (default: `launch-standalone`) A list of
+  [SMART on FHIR capabilities](https://hl7.org/fhir/smart-app-launch/conformance.html)
+  to advertise in the SMART configuration document at
+  `/.well-known/smart-configuration`.
+- `pathling.auth.grantTypesSupported` - (default: `authorization_code`) A list
+  of OAuth 2.0 grant types supported at the token endpoint, e.g.
+  `authorization_code`, `client_credentials`, `refresh_token`. See
+  [SMART App Launch Conformance](https://hl7.org/fhir/smart-app-launch/conformance.html)
+  for more details.
+- `pathling.auth.codeChallengeMethodsSupported` - (default: `S256`) A list of
+  PKCE code challenge methods supported. Must include `S256` and must not
+  include `plain` as per the SMART specification.
 
 ### Admin UI
 
