@@ -103,6 +103,12 @@ pathling:
     # Provides the URL which will be advertised as the token revocation endpoint.
     # revokeUrl: [token revocation URL]
 
+    # The list of SMART on FHIR capabilities to advertise in the SMART configuration document.
+    # Defaults to launch-standalone for backward compatibility.
+    # See: https://hl7.org/fhir/smart-app-launch/conformance.html
+    capabilities:
+      - launch-standalone
+
   # The OAuth client ID for the admin UI. When set, this value is included in the SMART
   # configuration response at /.well-known/smart-configuration as admin_ui_client_id.
   # adminUi:

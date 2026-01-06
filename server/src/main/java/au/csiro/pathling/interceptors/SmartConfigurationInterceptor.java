@@ -33,7 +33,6 @@ import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import lombok.Setter;
@@ -58,19 +57,22 @@ public class SmartConfigurationInterceptor {
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    *     from OIDC discovery
    * @param adminUiClientId the optional OAuth client ID for the admin UI
+   * @param capabilities the list of SMART capabilities to advertise
    */
   public SmartConfigurationInterceptor(
       @Nonnull final String issuer,
       @Nonnull final OidcConfiguration oidcConfiguration,
-      @Nonnull final Optional<String> adminUiClientId) {
-    response = buildResponse(issuer, oidcConfiguration, adminUiClientId);
+      @Nonnull final Optional<String> adminUiClientId,
+      @Nonnull final List<String> capabilities) {
+    response = buildResponse(issuer, oidcConfiguration, adminUiClientId, capabilities);
   }
 
   @Nonnull
   private static String buildResponse(
       @Nonnull final String issuer,
       @Nonnull final OidcConfiguration oidcConfiguration,
-      @Nonnull final Optional<String> adminUiClientId) {
+      @Nonnull final Optional<String> adminUiClientId,
+      @Nonnull final List<String> capabilities) {
     final SmartConfiguration smartConfiguration = new SmartConfiguration();
 
     final Optional<String> authUrl = oidcConfiguration.get(AUTH_URL);
@@ -82,6 +84,7 @@ public class SmartConfigurationInterceptor {
     tokenUrl.ifPresent(smartConfiguration::setTokenEndpoint);
     revokeUrl.ifPresent(smartConfiguration::setRevocationEndpoint);
     adminUiClientId.ifPresent(smartConfiguration::setAdminUiClientId);
+    smartConfiguration.setCapabilities(capabilities);
 
     final Gson gson =
         new GsonBuilder()
@@ -135,6 +138,6 @@ public class SmartConfigurationInterceptor {
 
     private String adminUiClientId;
 
-    private final List<String> capabilities = Collections.singletonList("launch-standalone");
+    private List<String> capabilities;
   }
 }

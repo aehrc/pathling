@@ -463,7 +463,10 @@ public class FhirServer extends RestfulServer {
       final String issuer = checkPresent(configuration.getAuth().getIssuer());
       final SmartConfigurationInterceptor smartConfigurationInterceptor =
           new SmartConfigurationInterceptor(
-              issuer, checkPresent(oidcConfiguration), configuration.getAdminUi().getClientId());
+              issuer,
+              checkPresent(oidcConfiguration),
+              configuration.getAdminUi().getClientId(),
+              configuration.getAuth().getCapabilities());
       registerInterceptor(smartConfigurationInterceptor);
     }
   }

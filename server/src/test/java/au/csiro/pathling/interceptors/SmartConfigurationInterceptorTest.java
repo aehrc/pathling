@@ -31,6 +31,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,12 +63,14 @@ class SmartConfigurationInterceptorTest {
   // Admin UI client ID tests
   // -------------------------------------------------------------------------
 
+  private static final List<String> DEFAULT_CAPABILITIES = List.of("launch-standalone");
+
   @Test
   void includesAdminUiClientIdWhenConfigured() throws Exception {
     // When adminUiClientId is configured, it should appear in the response.
     final SmartConfigurationInterceptor interceptor =
         new SmartConfigurationInterceptor(
-            ISSUER, oidcConfiguration, Optional.of(ADMIN_UI_CLIENT_ID));
+            ISSUER, oidcConfiguration, Optional.of(ADMIN_UI_CLIENT_ID), DEFAULT_CAPABILITIES);
 
     final String response = captureResponse(interceptor);
     final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
@@ -80,7 +83,8 @@ class SmartConfigurationInterceptorTest {
   void omitsAdminUiClientIdWhenNotConfigured() throws Exception {
     // When adminUiClientId is not configured, it should not appear in the response.
     final SmartConfigurationInterceptor interceptor =
-        new SmartConfigurationInterceptor(ISSUER, oidcConfiguration, Optional.empty());
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), DEFAULT_CAPABILITIES);
 
     final String response = captureResponse(interceptor);
     final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
@@ -96,7 +100,8 @@ class SmartConfigurationInterceptorTest {
   void includesIssuer() throws Exception {
     // The issuer should always be included in the response.
     final SmartConfigurationInterceptor interceptor =
-        new SmartConfigurationInterceptor(ISSUER, oidcConfiguration, Optional.empty());
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), DEFAULT_CAPABILITIES);
 
     final String response = captureResponse(interceptor);
     final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
@@ -108,7 +113,8 @@ class SmartConfigurationInterceptorTest {
   void includesAuthorizationEndpoint() throws Exception {
     // The authorization_endpoint should be included when configured in OIDC.
     final SmartConfigurationInterceptor interceptor =
-        new SmartConfigurationInterceptor(ISSUER, oidcConfiguration, Optional.empty());
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), DEFAULT_CAPABILITIES);
 
     final String response = captureResponse(interceptor);
     final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
@@ -120,7 +126,8 @@ class SmartConfigurationInterceptorTest {
   void includesTokenEndpoint() throws Exception {
     // The token_endpoint should be included when configured in OIDC.
     final SmartConfigurationInterceptor interceptor =
-        new SmartConfigurationInterceptor(ISSUER, oidcConfiguration, Optional.empty());
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), DEFAULT_CAPABILITIES);
 
     final String response = captureResponse(interceptor);
     final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
@@ -132,7 +139,8 @@ class SmartConfigurationInterceptorTest {
   void includesRevocationEndpoint() throws Exception {
     // The revocation_endpoint should be included when configured in OIDC.
     final SmartConfigurationInterceptor interceptor =
-        new SmartConfigurationInterceptor(ISSUER, oidcConfiguration, Optional.empty());
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), DEFAULT_CAPABILITIES);
 
     final String response = captureResponse(interceptor);
     final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
@@ -141,10 +149,11 @@ class SmartConfigurationInterceptorTest {
   }
 
   @Test
-  void includesCapabilities() throws Exception {
-    // The capabilities array should include launch-standalone.
+  void includesDefaultCapabilities() throws Exception {
+    // When using default capabilities, the array should include launch-standalone.
     final SmartConfigurationInterceptor interceptor =
-        new SmartConfigurationInterceptor(ISSUER, oidcConfiguration, Optional.empty());
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), List.of("launch-standalone"));
 
     final String response = captureResponse(interceptor);
     final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
@@ -155,6 +164,46 @@ class SmartConfigurationInterceptorTest {
   }
 
   @Test
+  void usesConfiguredCapabilities() throws Exception {
+    // When custom capabilities are configured, they should appear in the response.
+    final List<String> customCapabilities = List.of("launch-ehr", "sso-openid-connect");
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), customCapabilities);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    assertThat(json.has("capabilities")).isTrue();
+    final var capabilitiesArray = json.getAsJsonArray("capabilities");
+    assertThat(capabilitiesArray).hasSize(2);
+    assertThat(capabilitiesArray.get(0).getAsString()).isEqualTo("launch-ehr");
+    assertThat(capabilitiesArray.get(1).getAsString()).isEqualTo("sso-openid-connect");
+  }
+
+  @Test
+  void supportsMultipleCapabilities() throws Exception {
+    // Verify that multiple SMART capabilities can be configured.
+    final List<String> capabilities =
+        List.of(
+            "launch-standalone",
+            "launch-ehr",
+            "client-public",
+            "client-confidential-symmetric",
+            "sso-openid-connect",
+            "context-passthrough-banner",
+            "context-passthrough-style");
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), capabilities);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    assertThat(json.getAsJsonArray("capabilities")).hasSize(7);
+  }
+
+  @Test
   void omitsEndpointsWhenNotConfigured() throws Exception {
     // When OIDC endpoints are not configured, they should be omitted from the response.
     when(oidcConfiguration.get(AUTH_URL)).thenReturn(Optional.empty());
@@ -162,7 +211,8 @@ class SmartConfigurationInterceptorTest {
     when(oidcConfiguration.get(REVOKE_URL)).thenReturn(Optional.empty());
 
     final SmartConfigurationInterceptor interceptor =
-        new SmartConfigurationInterceptor(ISSUER, oidcConfiguration, Optional.empty());
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), DEFAULT_CAPABILITIES);
 
     final String response = captureResponse(interceptor);
     final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
@@ -180,7 +230,8 @@ class SmartConfigurationInterceptorTest {
   void servesResponseForSmartConfigurationPath() throws Exception {
     // Should return false (handled) for /.well-known/smart-configuration path.
     final SmartConfigurationInterceptor interceptor =
-        new SmartConfigurationInterceptor(ISSUER, oidcConfiguration, Optional.empty());
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), DEFAULT_CAPABILITIES);
 
     final HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getPathInfo()).thenReturn("/.well-known/smart-configuration");
@@ -198,7 +249,8 @@ class SmartConfigurationInterceptorTest {
   void continuesForOtherPaths() throws Exception {
     // Should return true (continue processing) for other paths.
     final SmartConfigurationInterceptor interceptor =
-        new SmartConfigurationInterceptor(ISSUER, oidcConfiguration, Optional.empty());
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), DEFAULT_CAPABILITIES);
 
     final HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getPathInfo()).thenReturn("/metadata");
@@ -214,7 +266,8 @@ class SmartConfigurationInterceptorTest {
   void continuesForNullPath() throws Exception {
     // Should return true (continue processing) when path is null.
     final SmartConfigurationInterceptor interceptor =
-        new SmartConfigurationInterceptor(ISSUER, oidcConfiguration, Optional.empty());
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, Optional.empty(), DEFAULT_CAPABILITIES);
 
     final HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getPathInfo()).thenReturn(null);

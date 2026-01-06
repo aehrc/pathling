@@ -20,11 +20,13 @@ package au.csiro.pathling.config;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import lombok.Data;
 import lombok.ToString;
 
-/** Represents configuration specific to authorization. */
+/** Represents configuration specific to authorisation. */
 @Data
 @ToString(doNotUseGetters = true)
 public class AuthorizationConfiguration {
@@ -40,17 +42,46 @@ public class AuthorizationConfiguration {
 
   /**
    * Configures the audience for bearer tokens, which is the FHIR endpoint that tokens are intended
-   * to be authorized for.
+   * to be authorised for.
    */
   @Nullable private String audience;
 
+  /**
+   * The list of SMART on FHIR capabilities to advertise in the SMART configuration document.
+   * Defaults to {@code ["launch-standalone"]} for backward compatibility.
+   *
+   * @see <a href="https://hl7.org/fhir/smart-app-launch/conformance.html">SMART App Launch
+   *     Conformance</a>
+   */
+  @Nonnull private List<String> capabilities = Collections.singletonList("launch-standalone");
+
+  /**
+   * Returns the configured issuer.
+   *
+   * @return the issuer, or empty if not configured
+   */
   @Nonnull
   public Optional<String> getIssuer() {
     return Optional.ofNullable(issuer);
   }
 
+  /**
+   * Returns the configured audience.
+   *
+   * @return the audience, or empty if not configured
+   */
   @Nonnull
   public Optional<String> getAudience() {
     return Optional.ofNullable(audience);
+  }
+
+  /**
+   * Returns the configured SMART capabilities.
+   *
+   * @return the list of SMART capabilities to advertise
+   */
+  @Nonnull
+  public List<String> getCapabilities() {
+    return capabilities;
   }
 }
