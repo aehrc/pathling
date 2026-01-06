@@ -469,7 +469,9 @@ public class FhirServer extends RestfulServer {
               checkPresent(oidcConfiguration),
               oidcDiscoveryFetcher,
               configuration.getAdminUi().getClientId(),
-              configuration.getAuth().getCapabilities());
+              configuration.getAuth().getCapabilities(),
+              configuration.getAuth().getGrantTypesSupported(),
+              configuration.getAuth().getCodeChallengeMethodsSupported());
       registerInterceptor(smartConfigurationInterceptor);
     }
   }

@@ -53,10 +53,13 @@ public class SmartConfigurationInterceptor {
   @Nullable private final OidcDiscoveryFetcher oidcDiscoveryFetcher;
   @Nonnull private final Optional<String> adminUiClientId;
   @Nonnull private final List<String> capabilities;
+  @Nonnull private final List<String> grantTypesSupported;
+  @Nonnull private final List<String> codeChallengeMethodsSupported;
   @Nonnull private final Gson gson;
 
   /**
-   * Constructs a new SmartConfigurationInterceptor without OIDC discovery merging.
+   * Constructs a new SmartConfigurationInterceptor without OIDC discovery merging. Uses default
+   * values for grant types and code challenge methods.
    *
    * @param issuer the required issuer of tokens
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
@@ -69,11 +72,47 @@ public class SmartConfigurationInterceptor {
       @Nonnull final OidcConfiguration oidcConfiguration,
       @Nonnull final Optional<String> adminUiClientId,
       @Nonnull final List<String> capabilities) {
-    this(issuer, oidcConfiguration, null, adminUiClientId, capabilities);
+    this(
+        issuer,
+        oidcConfiguration,
+        null,
+        adminUiClientId,
+        capabilities,
+        List.of("authorization_code"),
+        List.of("S256"));
   }
 
   /**
-   * Constructs a new SmartConfigurationInterceptor with OIDC discovery merging.
+   * Constructs a new SmartConfigurationInterceptor without OIDC discovery merging.
+   *
+   * @param issuer the required issuer of tokens
+   * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
+   *     from OIDC discovery
+   * @param adminUiClientId the optional OAuth client ID for the admin UI
+   * @param capabilities the list of SMART capabilities to advertise
+   * @param grantTypesSupported the list of grant types to advertise
+   * @param codeChallengeMethodsSupported the list of code challenge methods to advertise
+   */
+  public SmartConfigurationInterceptor(
+      @Nonnull final String issuer,
+      @Nonnull final OidcConfiguration oidcConfiguration,
+      @Nonnull final Optional<String> adminUiClientId,
+      @Nonnull final List<String> capabilities,
+      @Nonnull final List<String> grantTypesSupported,
+      @Nonnull final List<String> codeChallengeMethodsSupported) {
+    this(
+        issuer,
+        oidcConfiguration,
+        null,
+        adminUiClientId,
+        capabilities,
+        grantTypesSupported,
+        codeChallengeMethodsSupported);
+  }
+
+  /**
+   * Constructs a new SmartConfigurationInterceptor with OIDC discovery merging. Uses default values
+   * for grant types and code challenge methods.
    *
    * @param issuer the required issuer of tokens
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
@@ -89,11 +128,44 @@ public class SmartConfigurationInterceptor {
       @Nullable final OidcDiscoveryFetcher oidcDiscoveryFetcher,
       @Nonnull final Optional<String> adminUiClientId,
       @Nonnull final List<String> capabilities) {
+    this(
+        issuer,
+        oidcConfiguration,
+        oidcDiscoveryFetcher,
+        adminUiClientId,
+        capabilities,
+        List.of("authorization_code"),
+        List.of("S256"));
+  }
+
+  /**
+   * Constructs a new SmartConfigurationInterceptor with OIDC discovery merging.
+   *
+   * @param issuer the required issuer of tokens
+   * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
+   *     from OIDC discovery
+   * @param oidcDiscoveryFetcher the fetcher for OIDC discovery documents, or null to disable
+   *     merging
+   * @param adminUiClientId the optional OAuth client ID for the admin UI
+   * @param capabilities the list of SMART capabilities to advertise
+   * @param grantTypesSupported the list of grant types to advertise
+   * @param codeChallengeMethodsSupported the list of code challenge methods to advertise
+   */
+  public SmartConfigurationInterceptor(
+      @Nonnull final String issuer,
+      @Nonnull final OidcConfiguration oidcConfiguration,
+      @Nullable final OidcDiscoveryFetcher oidcDiscoveryFetcher,
+      @Nonnull final Optional<String> adminUiClientId,
+      @Nonnull final List<String> capabilities,
+      @Nonnull final List<String> grantTypesSupported,
+      @Nonnull final List<String> codeChallengeMethodsSupported) {
     this.issuer = issuer;
     this.oidcConfiguration = oidcConfiguration;
     this.oidcDiscoveryFetcher = oidcDiscoveryFetcher;
     this.adminUiClientId = adminUiClientId;
     this.capabilities = capabilities;
+    this.grantTypesSupported = grantTypesSupported;
+    this.codeChallengeMethodsSupported = codeChallengeMethodsSupported;
     this.gson = new Gson();
   }
 
@@ -151,6 +223,8 @@ public class SmartConfigurationInterceptor {
     revokeUrl.ifPresent(url -> merged.put("revocation_endpoint", url));
     adminUiClientId.ifPresent(id -> merged.put("admin_ui_client_id", id));
     merged.put("capabilities", capabilities);
+    merged.put("grant_types_supported", grantTypesSupported);
+    merged.put("code_challenge_methods_supported", codeChallengeMethodsSupported);
 
     return gson.toJson(merged);
   }

@@ -65,6 +65,8 @@ class SmartConfigurationInterceptorTest {
   // -------------------------------------------------------------------------
 
   private static final List<String> DEFAULT_CAPABILITIES = List.of("launch-standalone");
+  private static final List<String> DEFAULT_GRANT_TYPES = List.of("authorization_code");
+  private static final List<String> DEFAULT_CODE_CHALLENGE_METHODS = List.of("S256");
 
   @Test
   void includesAdminUiClientIdWhenConfigured() throws Exception {
@@ -202,6 +204,158 @@ class SmartConfigurationInterceptorTest {
     final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
 
     assertThat(json.getAsJsonArray("capabilities")).hasSize(7);
+  }
+
+  // -------------------------------------------------------------------------
+  // Grant types tests
+  // -------------------------------------------------------------------------
+
+  @Test
+  void includesDefaultGrantTypes() throws Exception {
+    // When using default grant types, the array should include authorization_code.
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER,
+            oidcConfiguration,
+            Optional.empty(),
+            DEFAULT_CAPABILITIES,
+            DEFAULT_GRANT_TYPES,
+            DEFAULT_CODE_CHALLENGE_METHODS);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    assertThat(json.has("grant_types_supported")).isTrue();
+    assertThat(json.getAsJsonArray("grant_types_supported").get(0).getAsString())
+        .isEqualTo("authorization_code");
+  }
+
+  @Test
+  void usesConfiguredGrantTypes() throws Exception {
+    // When custom grant types are configured, they should appear in the response.
+    final List<String> grantTypes = List.of("authorization_code", "client_credentials");
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER,
+            oidcConfiguration,
+            Optional.empty(),
+            DEFAULT_CAPABILITIES,
+            grantTypes,
+            DEFAULT_CODE_CHALLENGE_METHODS);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    assertThat(json.has("grant_types_supported")).isTrue();
+    final var grantTypesArray = json.getAsJsonArray("grant_types_supported");
+    assertThat(grantTypesArray).hasSize(2);
+    assertThat(grantTypesArray.get(0).getAsString()).isEqualTo("authorization_code");
+    assertThat(grantTypesArray.get(1).getAsString()).isEqualTo("client_credentials");
+  }
+
+  // -------------------------------------------------------------------------
+  // Code challenge methods tests
+  // -------------------------------------------------------------------------
+
+  @Test
+  void includesDefaultCodeChallengeMethods() throws Exception {
+    // When using default code challenge methods, the array should include S256.
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER,
+            oidcConfiguration,
+            Optional.empty(),
+            DEFAULT_CAPABILITIES,
+            DEFAULT_GRANT_TYPES,
+            DEFAULT_CODE_CHALLENGE_METHODS);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    assertThat(json.has("code_challenge_methods_supported")).isTrue();
+    assertThat(json.getAsJsonArray("code_challenge_methods_supported").get(0).getAsString())
+        .isEqualTo("S256");
+  }
+
+  @Test
+  void usesConfiguredCodeChallengeMethods() throws Exception {
+    // When custom code challenge methods are configured, they should appear in the response.
+    final List<String> methods = List.of("S256", "S384");
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER,
+            oidcConfiguration,
+            Optional.empty(),
+            DEFAULT_CAPABILITIES,
+            DEFAULT_GRANT_TYPES,
+            methods);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    assertThat(json.has("code_challenge_methods_supported")).isTrue();
+    final var methodsArray = json.getAsJsonArray("code_challenge_methods_supported");
+    assertThat(methodsArray).hasSize(2);
+    assertThat(methodsArray.get(0).getAsString()).isEqualTo("S256");
+    assertThat(methodsArray.get(1).getAsString()).isEqualTo("S384");
+  }
+
+  @Test
+  void grantTypesOverrideOidcDiscovery() throws Exception {
+    // When OIDC discovery has grant_types_supported, SMART config should take precedence.
+    final OidcDiscoveryFetcher fetcher = mock(OidcDiscoveryFetcher.class);
+    when(fetcher.fetch())
+        .thenReturn(
+            Optional.of(
+                Map.of("grant_types_supported", List.of("implicit", "password", "refresh_token"))));
+
+    final List<String> grantTypes = List.of("authorization_code");
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER,
+            oidcConfiguration,
+            fetcher,
+            Optional.empty(),
+            DEFAULT_CAPABILITIES,
+            grantTypes,
+            DEFAULT_CODE_CHALLENGE_METHODS);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    // SMART config should take precedence over OIDC discovery.
+    final var grantTypesArray = json.getAsJsonArray("grant_types_supported");
+    assertThat(grantTypesArray).hasSize(1);
+    assertThat(grantTypesArray.get(0).getAsString()).isEqualTo("authorization_code");
+  }
+
+  @Test
+  void codeChallengeMethodsOverrideOidcDiscovery() throws Exception {
+    // When OIDC discovery has code_challenge_methods_supported, SMART config should take
+    // precedence.
+    final OidcDiscoveryFetcher fetcher = mock(OidcDiscoveryFetcher.class);
+    when(fetcher.fetch())
+        .thenReturn(
+            Optional.of(Map.of("code_challenge_methods_supported", List.of("plain", "S256"))));
+
+    final List<String> methods = List.of("S256");
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER,
+            oidcConfiguration,
+            fetcher,
+            Optional.empty(),
+            DEFAULT_CAPABILITIES,
+            DEFAULT_GRANT_TYPES,
+            methods);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    // SMART config should take precedence over OIDC discovery.
+    final var methodsArray = json.getAsJsonArray("code_challenge_methods_supported");
+    assertThat(methodsArray).hasSize(1);
+    assertThat(methodsArray.get(0).getAsString()).isEqualTo("S256");
   }
 
   @Test
@@ -360,16 +514,15 @@ class SmartConfigurationInterceptorTest {
   }
 
   @Test
-  void preservesNestedOidcStructures() throws Exception {
-    // Complex OIDC structures like arrays and nested objects should be preserved.
+  void preservesOtherNestedOidcStructures() throws Exception {
+    // Complex OIDC structures like arrays should be preserved when not overridden by SMART config.
     final OidcDiscoveryFetcher fetcher = mock(OidcDiscoveryFetcher.class);
     when(fetcher.fetch())
         .thenReturn(
             Optional.of(
                 Map.of(
-                    "grant_types_supported", List.of("authorization_code", "client_credentials"),
                     "response_types_supported", List.of("code", "token"),
-                    "code_challenge_methods_supported", List.of("S256", "plain"))));
+                    "scopes_supported", List.of("openid", "profile", "email"))));
 
     final SmartConfigurationInterceptor interceptor =
         new SmartConfigurationInterceptor(
@@ -378,10 +531,13 @@ class SmartConfigurationInterceptorTest {
     final String response = captureResponse(interceptor);
     final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
 
-    // Arrays should be preserved.
-    assertThat(json.getAsJsonArray("grant_types_supported")).hasSize(2);
+    // OIDC arrays should be preserved when not overridden by SMART config.
     assertThat(json.getAsJsonArray("response_types_supported")).hasSize(2);
-    assertThat(json.getAsJsonArray("code_challenge_methods_supported")).hasSize(2);
+    assertThat(json.getAsJsonArray("scopes_supported")).hasSize(3);
+
+    // SMART config defaults should be present.
+    assertThat(json.getAsJsonArray("grant_types_supported")).hasSize(1);
+    assertThat(json.getAsJsonArray("code_challenge_methods_supported")).hasSize(1);
   }
 
   // -------------------------------------------------------------------------
