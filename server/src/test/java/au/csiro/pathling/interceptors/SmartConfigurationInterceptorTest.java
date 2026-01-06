@@ -32,6 +32,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -277,6 +278,110 @@ class SmartConfigurationInterceptorTest {
     final boolean result = interceptor.serveUris(request, response);
 
     assertThat(result).isTrue();
+  }
+
+  // -------------------------------------------------------------------------
+  // OIDC discovery merging tests
+  // -------------------------------------------------------------------------
+
+  @Test
+  void mergesOidcDiscoveryFieldsIntoResponse() throws Exception {
+    // OIDC discovery fields should appear in the response alongside SMART fields.
+    final OidcDiscoveryFetcher fetcher = mock(OidcDiscoveryFetcher.class);
+    when(fetcher.fetch())
+        .thenReturn(
+            Optional.of(
+                Map.of(
+                    "jwks_uri", "https://auth.example.com/jwks",
+                    "userinfo_endpoint", "https://auth.example.com/userinfo",
+                    "scopes_supported", List.of("openid", "profile", "email"))));
+
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, fetcher, Optional.empty(), DEFAULT_CAPABILITIES);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    // OIDC fields should be present.
+    assertThat(json.get("jwks_uri").getAsString()).isEqualTo("https://auth.example.com/jwks");
+    assertThat(json.get("userinfo_endpoint").getAsString())
+        .isEqualTo("https://auth.example.com/userinfo");
+    assertThat(json.has("scopes_supported")).isTrue();
+
+    // SMART fields should also be present.
+    assertThat(json.get("issuer").getAsString()).isEqualTo(ISSUER);
+    assertThat(json.has("capabilities")).isTrue();
+  }
+
+  @Test
+  void smartConfigTakesPrecedenceOverOidc() throws Exception {
+    // When OIDC discovery and SMART config have overlapping fields, SMART should win.
+    final OidcDiscoveryFetcher fetcher = mock(OidcDiscoveryFetcher.class);
+    when(fetcher.fetch())
+        .thenReturn(
+            Optional.of(
+                Map.of(
+                    "issuer", "https://oidc-issuer.example.com",
+                    "authorization_endpoint", "https://oidc.example.com/authorize",
+                    "token_endpoint", "https://oidc.example.com/token")));
+
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, fetcher, Optional.empty(), DEFAULT_CAPABILITIES);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    // SMART config values should take precedence.
+    assertThat(json.get("issuer").getAsString()).isEqualTo(ISSUER);
+    assertThat(json.get("authorization_endpoint").getAsString()).isEqualTo(AUTH_ENDPOINT);
+    assertThat(json.get("token_endpoint").getAsString()).isEqualTo(TOKEN_ENDPOINT);
+  }
+
+  @Test
+  void servesSmartConfigWhenOidcFetchFails() throws Exception {
+    // When OIDC discovery fetch fails, SMART config should still be served.
+    final OidcDiscoveryFetcher fetcher = mock(OidcDiscoveryFetcher.class);
+    when(fetcher.fetch()).thenReturn(Optional.empty());
+
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, fetcher, Optional.empty(), DEFAULT_CAPABILITIES);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    // SMART fields should still be present.
+    assertThat(json.get("issuer").getAsString()).isEqualTo(ISSUER);
+    assertThat(json.get("authorization_endpoint").getAsString()).isEqualTo(AUTH_ENDPOINT);
+    assertThat(json.get("token_endpoint").getAsString()).isEqualTo(TOKEN_ENDPOINT);
+    assertThat(json.has("capabilities")).isTrue();
+  }
+
+  @Test
+  void preservesNestedOidcStructures() throws Exception {
+    // Complex OIDC structures like arrays and nested objects should be preserved.
+    final OidcDiscoveryFetcher fetcher = mock(OidcDiscoveryFetcher.class);
+    when(fetcher.fetch())
+        .thenReturn(
+            Optional.of(
+                Map.of(
+                    "grant_types_supported", List.of("authorization_code", "client_credentials"),
+                    "response_types_supported", List.of("code", "token"),
+                    "code_challenge_methods_supported", List.of("S256", "plain"))));
+
+    final SmartConfigurationInterceptor interceptor =
+        new SmartConfigurationInterceptor(
+            ISSUER, oidcConfiguration, fetcher, Optional.empty(), DEFAULT_CAPABILITIES);
+
+    final String response = captureResponse(interceptor);
+    final JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+    // Arrays should be preserved.
+    assertThat(json.getAsJsonArray("grant_types_supported")).hasSize(2);
+    assertThat(json.getAsJsonArray("response_types_supported")).hasSize(2);
+    assertThat(json.getAsJsonArray("code_challenge_methods_supported")).hasSize(2);
   }
 
   // -------------------------------------------------------------------------

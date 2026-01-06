@@ -28,6 +28,7 @@ import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import au.csiro.pathling.interceptors.BulkExportDeleteInterceptor;
+import au.csiro.pathling.interceptors.OidcDiscoveryFetcher;
 import au.csiro.pathling.interceptors.ParametersToJsonInterceptor;
 import au.csiro.pathling.interceptors.SmartConfigurationInterceptor;
 import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
@@ -461,10 +462,12 @@ public class FhirServer extends RestfulServer {
   private void configureAuthorization() {
     if (configuration.getAuth().isEnabled()) {
       final String issuer = checkPresent(configuration.getAuth().getIssuer());
+      final OidcDiscoveryFetcher oidcDiscoveryFetcher = new OidcDiscoveryFetcher(issuer);
       final SmartConfigurationInterceptor smartConfigurationInterceptor =
           new SmartConfigurationInterceptor(
               issuer,
               checkPresent(oidcConfiguration),
+              oidcDiscoveryFetcher,
               configuration.getAdminUi().getClientId(),
               configuration.getAuth().getCapabilities());
       registerInterceptor(smartConfigurationInterceptor);
