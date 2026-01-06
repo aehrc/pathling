@@ -72,6 +72,8 @@ export const useBulkExport: UseBulkExportFn = (options) => {
         const baseOptions = {
           types: request.resourceTypes as ResourceType[] | undefined,
           since: request.since,
+          until: request.until,
+          elements: request.elements,
           accessToken,
         };
 

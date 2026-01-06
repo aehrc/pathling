@@ -62,6 +62,8 @@ export function Export() {
       type: formRequest.level,
       resourceTypes: formRequest.resourceTypes,
       since: formRequest.since,
+      until: formRequest.until,
+      elements: formRequest.elements,
       patientId: formRequest.patientId,
       groupId: formRequest.groupId,
     });
