@@ -5,20 +5,10 @@
  */
 
 import { PlayIcon } from "@radix-ui/react-icons";
-import {
-  Box,
-  Button,
-  Card,
-  CheckboxCards,
-  Flex,
-  Heading,
-  ScrollArea,
-  Select,
-  Text,
-  TextField,
-} from "@radix-ui/themes";
+import { Box, Button, Card, Flex, Heading, Select, Text, TextField } from "@radix-ui/themes";
 import { useState } from "react";
 import type { ExportLevel, ExportRequest } from "../../types/export";
+import { ResourceTypePicker } from "./ResourceTypePicker";
 
 interface ExportFormProps {
   onSubmit: (request: ExportRequest) => void;
@@ -34,7 +24,12 @@ const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
   { value: "group", label: "Data for patients in group" },
 ];
 
-export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: ExportFormProps) {
+export function ExportForm({
+  onSubmit,
+  isSubmitting,
+  disabled,
+  resourceTypes,
+}: Readonly<ExportFormProps>) {
   const [level, setLevel] = useState<ExportLevel>("system");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [since, setSince] = useState("");
@@ -54,10 +49,6 @@ export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
       groupId: level === "group" ? groupId : undefined,
     };
     onSubmit(request);
-  };
-
-  const clearAllTypes = () => {
-    setSelectedTypes([]);
   };
 
   return (
@@ -107,44 +98,11 @@ export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
           </Box>
         )}
 
-        <Box>
-          <Flex justify="between" align="center" mb="2">
-            <Flex gap="2" align="baseline">
-              <Text as="label" size="2" weight="medium">
-                Resource types
-              </Text>
-              <Text size="1" color="gray">
-                (leave empty to export all)
-              </Text>
-            </Flex>
-            <Text size="1" color="blue" style={{ cursor: "pointer" }} onClick={clearAllTypes}>
-              Clear
-            </Text>
-          </Flex>
-          <ScrollArea
-            style={{
-              maxHeight: 200,
-              border: "1px solid var(--gray-5)",
-              borderRadius: "var(--radius-2)",
-            }}
-          >
-            <Box p="2">
-              <CheckboxCards.Root
-                size="1"
-                value={selectedTypes}
-                onValueChange={setSelectedTypes}
-                gap="2"
-                style={{ display: "flex", flexWrap: "wrap" }}
-              >
-                {resourceTypes.map((type) => (
-                  <CheckboxCards.Item key={type} value={type}>
-                    <Text size="1">{type}</Text>
-                  </CheckboxCards.Item>
-                ))}
-              </CheckboxCards.Root>
-            </Box>
-          </ScrollArea>
-        </Box>
+        <ResourceTypePicker
+          resourceTypes={resourceTypes}
+          selectedTypes={selectedTypes}
+          onSelectedTypesChange={setSelectedTypes}
+        />
 
         <Flex gap="4">
           <Box style={{ flex: 1 }}>
