@@ -85,6 +85,8 @@ export type DeleteFn = (options: DeleteOptions) => Promise<void>;
 export interface BulkExportBaseOptions extends AuthOptions {
   types?: ResourceType[];
   since?: string;
+  until?: string;
+  elements?: string;
 }
 
 export type SystemExportKickOffOptions = BulkExportBaseOptions;

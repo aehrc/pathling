@@ -46,6 +46,14 @@ function buildExportParams(
     params._since = options.since;
   }
 
+  if (options.until) {
+    params._until = options.until;
+  }
+
+  if (options.elements) {
+    params._elements = options.elements;
+  }
+
   return params;
 }
 

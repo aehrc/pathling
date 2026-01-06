@@ -278,6 +278,31 @@ class ExportOperationExecutorTest {
   }
 
   @Test
+  void testGlobalElementInElementsParameterOtherElementsAreNotReturned() throws IOException {
+    // When only global elements are specified (e.g., "id"), non-requested elements should be
+    // filtered out from all resource types.
+    final Patient patient = new Patient();
+    patient.setId("test-id");
+    patient.addIdentifier().setValue("test");
+    patient.setActive(true);
+
+    exportExecutor = createExecutor(patient);
+    final ExportRequest req = req(BASE, List.of("id"));
+    final TestExportResponse actualResponse = execute(req);
+    final Patient actualPatient =
+        readNdjson(parser, actualResponse.getWriteDetails().fileInfos().getFirst(), Patient.class);
+
+    // id and meta are mandatory and should always be returned.
+    assertThat(actualPatient.hasId()).isTrue();
+    assertThat(actualPatient.getIdPart()).isEqualTo("test-id");
+    assertThat(actualPatient.hasMeta()).isTrue();
+
+    // Other elements should NOT be returned.
+    assertThat(actualPatient.hasIdentifier()).isFalse();
+    assertThat(actualPatient.hasActive()).isFalse();
+  }
+
+  @Test
   void testMandatoryElementsAreAlwaysReturned() throws IOException {
     final Patient patient = new Patient();
     patient.setId("test-id");

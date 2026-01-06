@@ -664,4 +664,224 @@ test.describe("Export page", () => {
       await expect(page.getByText("Error:")).toBeVisible({ timeout: 10000 });
     });
   });
+
+  test.describe("Export parameters", () => {
+    test("passes _since parameter to server", async ({ page }) => {
+      let exportUrl: string | null = null;
+
+      await page.route("**/metadata", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockCapabilityStatement),
+        });
+      });
+
+      // Intercept export request to capture URL.
+      await page.route("**/$export*", async (route) => {
+        exportUrl = route.request().url();
+        await route.fulfill({
+          status: 202,
+          headers: {
+            "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
+            "Access-Control-Expose-Headers": "Content-Location",
+          },
+          body: "",
+        });
+      });
+
+      await page.route("**/$job*", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockExportManifest),
+        });
+      });
+
+      await page.goto("/admin/export");
+
+      // Fill the Since field with a datetime value.
+      await page
+        .locator('input[type="datetime-local"]')
+        .first()
+        .fill("2024-01-15T10:30");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for export to complete.
+      await expect(page.getByText("Output files (2)")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify _since parameter was passed (colon is URL-encoded as %3A).
+      expect(exportUrl).toContain("_since=");
+      expect(exportUrl).toContain("2024-01-15");
+    });
+
+    test("passes _until parameter to server", async ({ page }) => {
+      let exportUrl: string | null = null;
+
+      await page.route("**/metadata", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockCapabilityStatement),
+        });
+      });
+
+      // Intercept export request to capture URL.
+      await page.route("**/$export*", async (route) => {
+        exportUrl = route.request().url();
+        await route.fulfill({
+          status: 202,
+          headers: {
+            "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
+            "Access-Control-Expose-Headers": "Content-Location",
+          },
+          body: "",
+        });
+      });
+
+      await page.route("**/$job*", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockExportManifest),
+        });
+      });
+
+      await page.goto("/admin/export");
+
+      // Fill the Until field with a datetime value (second datetime-local input).
+      await page
+        .locator('input[type="datetime-local"]')
+        .nth(1)
+        .fill("2024-06-30T23:59");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for export to complete.
+      await expect(page.getByText("Output files (2)")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify _until parameter was passed (colon is URL-encoded as %3A).
+      expect(exportUrl).toContain("_until=");
+      expect(exportUrl).toContain("2024-06-30");
+    });
+
+    test("passes _elements parameter to server", async ({ page }) => {
+      let exportUrl: string | null = null;
+
+      await page.route("**/metadata", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockCapabilityStatement),
+        });
+      });
+
+      // Intercept export request to capture URL.
+      await page.route("**/$export*", async (route) => {
+        exportUrl = route.request().url();
+        await route.fulfill({
+          status: 202,
+          headers: {
+            "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
+            "Access-Control-Expose-Headers": "Content-Location",
+          },
+          body: "",
+        });
+      });
+
+      await page.route("**/$job*", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockExportManifest),
+        });
+      });
+
+      await page.goto("/admin/export");
+
+      // Fill the Elements field.
+      await page.getByPlaceholder("e.g., id,meta,name").fill("id,meta,name");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for export to complete.
+      await expect(page.getByText("Output files (2)")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify _elements parameter was passed (commas are URL-encoded as %2C).
+      expect(exportUrl).toContain("_elements=");
+      expect(exportUrl).toMatch(/id.*meta.*name/);
+    });
+
+    test("passes all parameters together to server", async ({ page }) => {
+      let exportUrl: string | null = null;
+
+      await page.route("**/metadata", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockCapabilityStatement),
+        });
+      });
+
+      // Intercept export request to capture URL.
+      await page.route("**/$export*", async (route) => {
+        exportUrl = route.request().url();
+        await route.fulfill({
+          status: 202,
+          headers: {
+            "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
+            "Access-Control-Expose-Headers": "Content-Location",
+          },
+          body: "",
+        });
+      });
+
+      await page.route("**/$job*", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockExportManifest),
+        });
+      });
+
+      await page.goto("/admin/export");
+
+      // Fill all three fields.
+      await page
+        .locator('input[type="datetime-local"]')
+        .first()
+        .fill("2024-01-15T10:30");
+      await page
+        .locator('input[type="datetime-local"]')
+        .nth(1)
+        .fill("2024-06-30T23:59");
+      await page.getByPlaceholder("e.g., id,meta,name").fill("id,meta,name");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for export to complete.
+      await expect(page.getByText("Output files (2)")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify all parameters were passed (special chars are URL-encoded).
+      expect(exportUrl).toContain("_since=");
+      expect(exportUrl).toContain("2024-01-15");
+      expect(exportUrl).toContain("_until=");
+      expect(exportUrl).toContain("2024-06-30");
+      expect(exportUrl).toContain("_elements=");
+      expect(exportUrl).toMatch(/id.*meta.*name/);
+    });
+  });
 });
