@@ -103,6 +103,11 @@ pathling:
     # Provides the URL which will be advertised as the token revocation endpoint.
     # revokeUrl: [token revocation URL]
 
+  # The OAuth client ID for the admin UI. When set, this value is included in the SMART
+  # configuration response at /.well-known/smart-configuration as admin_ui_client_id.
+  # adminUi:
+  #   clientId: [client ID]
+
   # This section configures HTTP caching response headers.
   httpCaching:
     # A list of values to return within the Vary header.

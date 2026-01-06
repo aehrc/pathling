@@ -66,15 +66,17 @@ test.describe("Authentication", () => {
       ).toBeVisible();
     });
 
-    test("login button initiates OAuth flow", async ({ page }) => {
+    test("login button initiates OAuth flow with correct client ID", async ({
+      page,
+    }) => {
       await setupAuthRequiredMocks(page);
 
-      // Track navigation attempts to the OAuth authorization endpoint.
-      let oauthRedirectAttempted = false;
+      // Track navigation attempts to the OAuth authorisation endpoint.
+      let authorizeUrl: URL | null = null;
 
       // Intercept navigation to OAuth endpoint.
       await page.route("**/authorize**", async (route) => {
-        oauthRedirectAttempted = true;
+        authorizeUrl = new URL(route.request().url());
         await route.abort();
       });
 
@@ -83,13 +85,18 @@ test.describe("Authentication", () => {
       // Click the login button.
       await page.getByRole("button", { name: /Login to/ }).click();
 
-      // Verify OAuth redirect was attempted.
+      // Verify OAuth redirect was attempted with correct client ID from SMART config.
       await expect
-        .poll(() => oauthRedirectAttempted, {
+        .poll(() => authorizeUrl !== null, {
           timeout: 5000,
           message: "Expected OAuth redirect to be attempted",
         })
         .toBe(true);
+
+      // Verify the client_id matches the admin_ui_client_id from SMART configuration.
+      expect(authorizeUrl!.searchParams.get("client_id")).toBe(
+        "test-client-id",
+      );
     });
 
     test("login prompt appears on all protected pages", async ({ page }) => {
@@ -160,10 +167,11 @@ test.describe("Authentication", () => {
         sessionStorage.setItem("SMART_KEY", JSON.stringify(stateKey));
 
         // fhirclient stores actual state under the state key.
+        // Note: Uses the admin_ui_client_id from the mock SMART configuration.
         sessionStorage.setItem(
           stateKey,
           JSON.stringify({
-            clientId: "pathling-export-ui",
+            clientId: "test-client-id",
             scope: "openid profile user/*.read",
             redirectUri: window.location.origin + "/admin/callback",
             serverUrl: window.location.origin + "/fhir",

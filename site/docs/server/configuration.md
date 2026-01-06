@@ -334,6 +334,15 @@ spark:
   [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3)
   within bearer tokens.
 
+### Admin UI
+
+- `pathling.adminUi.clientId` - The OAuth client ID for the admin UI. When set,
+  this value is included in the SMART configuration response at
+  `/.well-known/smart-configuration` as `admin_ui_client_id`. The admin UI uses
+  this value when initiating OAuth flows. If not set, the UI falls back to the
+  `VITE_CLIENT_ID` environment variable (set at build time), then to the default
+  value `pathling-admin-ui`. See [Admin UI](./admin-ui) for more details.
+
 ### HTTP caching
 
 - `pathling.httpCaching.vary` - (default: `Accept`, `Accept-Encoding`, `Prefer`,

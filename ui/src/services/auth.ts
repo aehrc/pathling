@@ -7,12 +7,75 @@
 import type { CapabilityStatement } from "fhir/r4";
 import FHIR from "fhirclient";
 import type Client from "fhirclient/lib/Client";
+import { DEFAULT_CLIENT_ID, getEnvClientId } from "../config";
 
-const CLIENT_ID = "pathling-export-ui";
+export { DEFAULT_CLIENT_ID };
+
 const SMART_SERVICE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/restful-security-service";
 const SMART_SERVICE_CODE = "SMART-on-FHIR";
 const RETURN_URL_KEY = "pathling_return_url";
+
+/**
+ * Response from the SMART configuration endpoint.
+ */
+interface SmartConfiguration {
+  issuer?: string;
+  authorization_endpoint?: string;
+  token_endpoint?: string;
+  revocation_endpoint?: string;
+  admin_ui_client_id?: string;
+}
+
+/**
+ * Fetches the SMART configuration from the server.
+ *
+ * @param fhirBaseUrl - The base URL of the FHIR server.
+ * @returns The SMART configuration, or null if unavailable.
+ */
+async function fetchSmartConfiguration(
+  fhirBaseUrl: string,
+): Promise<SmartConfiguration | null> {
+  try {
+    const response = await fetch(
+      `${fhirBaseUrl}/.well-known/smart-configuration`,
+    );
+    if (!response.ok) {
+      return null;
+    }
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Gets the OAuth client ID to use for authentication.
+ *
+ * Precedence:
+ * 1. admin_ui_client_id from SMART configuration
+ * 2. VITE_CLIENT_ID environment variable (set at build time)
+ * 3. Default value (pathling-admin-ui)
+ *
+ * @param fhirBaseUrl - The base URL of the FHIR server.
+ * @returns The client ID to use for OAuth flows.
+ */
+export async function getClientId(fhirBaseUrl: string): Promise<string> {
+  // Try to get client ID from SMART configuration.
+  const smartConfig = await fetchSmartConfiguration(fhirBaseUrl);
+  if (smartConfig?.admin_ui_client_id) {
+    return smartConfig.admin_ui_client_id;
+  }
+
+  // Fall back to environment variable.
+  const envClientId = getEnvClientId();
+  if (envClientId) {
+    return envClientId;
+  }
+
+  // Fall back to default.
+  return DEFAULT_CLIENT_ID;
+}
 
 export interface ServerCapabilities {
   authRequired: boolean;
@@ -155,6 +218,8 @@ export async function checkServerCapabilities(
 /**
  * Initiates SMART on FHIR standalone launch authorization.
  * Stores the current pathname so we can return to it after auth completes.
+ *
+ * @param fhirBaseUrl - The base URL of the FHIR server.
  */
 export async function initiateAuth(fhirBaseUrl: string): Promise<void> {
   // Store the current path to return to after authentication.
@@ -167,9 +232,12 @@ export async function initiateAuth(fhirBaseUrl: string): Promise<void> {
     ? fhirBaseUrl
     : `${window.location.origin}${fhirBaseUrl}`;
 
+  // Get the client ID from server configuration, env var, or default.
+  const clientId = await getClientId(fhirBaseUrl);
+
   await FHIR.oauth2.authorize({
     iss: absoluteUrl,
-    clientId: CLIENT_ID,
+    clientId,
     scope: "openid profile user/*.read",
     redirectUri: `${window.location.origin}/admin/callback`,
   });

@@ -109,6 +109,9 @@ public class ServerConfiguration {
   /** Configuration for enabling/disabling individual server operations. */
   @Valid @NotNull private OperationConfiguration operations = new OperationConfiguration();
 
+  /** Configuration for the admin UI. */
+  @Valid @NotNull private AdminUiConfiguration adminUi = new AdminUiConfiguration();
+
   /** Logs the server configuration on startup. */
   @PostConstruct
   public void logConfiguration() {

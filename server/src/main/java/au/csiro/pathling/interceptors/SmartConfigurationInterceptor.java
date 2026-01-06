@@ -52,18 +52,25 @@ public class SmartConfigurationInterceptor {
   @Nonnull private final String response;
 
   /**
+   * Constructs a new SmartConfigurationInterceptor.
+   *
    * @param issuer the required issuer of tokens
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    *     from OIDC discovery
+   * @param adminUiClientId the optional OAuth client ID for the admin UI
    */
   public SmartConfigurationInterceptor(
-      @Nonnull final String issuer, @Nonnull final OidcConfiguration oidcConfiguration) {
-    response = buildResponse(issuer, oidcConfiguration);
+      @Nonnull final String issuer,
+      @Nonnull final OidcConfiguration oidcConfiguration,
+      @Nonnull final Optional<String> adminUiClientId) {
+    response = buildResponse(issuer, oidcConfiguration, adminUiClientId);
   }
 
   @Nonnull
   private static String buildResponse(
-      @Nonnull final String issuer, @Nonnull final OidcConfiguration oidcConfiguration) {
+      @Nonnull final String issuer,
+      @Nonnull final OidcConfiguration oidcConfiguration,
+      @Nonnull final Optional<String> adminUiClientId) {
     final SmartConfiguration smartConfiguration = new SmartConfiguration();
 
     final Optional<String> authUrl = oidcConfiguration.get(AUTH_URL);
@@ -74,6 +81,7 @@ public class SmartConfigurationInterceptor {
     authUrl.ifPresent(smartConfiguration::setAuthorizationEndpoint);
     tokenUrl.ifPresent(smartConfiguration::setTokenEndpoint);
     revokeUrl.ifPresent(smartConfiguration::setRevocationEndpoint);
+    adminUiClientId.ifPresent(smartConfiguration::setAdminUiClientId);
 
     final Gson gson =
         new GsonBuilder()
@@ -124,6 +132,8 @@ public class SmartConfigurationInterceptor {
     private String tokenEndpoint;
 
     private String revocationEndpoint;
+
+    private String adminUiClientId;
 
     private final List<String> capabilities = Collections.singletonList("launch-standalone");
   }

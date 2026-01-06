@@ -333,4 +333,5 @@ export const mockSmartConfiguration = {
   authorization_endpoint: "https://auth.example.com/authorize",
   token_endpoint: "https://auth.example.com/token",
   capabilities: ["launch-standalone", "client-public"],
+  admin_ui_client_id: "test-client-id",
 };
