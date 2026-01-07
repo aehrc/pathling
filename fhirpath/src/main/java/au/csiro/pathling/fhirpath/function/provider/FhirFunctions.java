@@ -17,16 +17,18 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import static au.csiro.pathling.fhirpath.comparison.Equatable.EqualityOperation.EQUALS;
+
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
-
-import static au.csiro.pathling.fhirpath.comparison.Equatable.EqualityOperation.EQUALS;
 
 /**
  * Additional FHIRPath functions that are defined within the FHIR specification.
@@ -73,5 +75,79 @@ public class FhirFunctions {
                 // If the URL is not present, return a false Boolean literal.
                 .orElse(BooleanCollection.fromValue(false)))
     ).orElse(EmptyCollection.getInstance());
+  }
+
+  /**
+   * Returns a collection containing type information for resolved references.
+   * <p>
+   * This is a limited implementation of the {@code resolve()} function that supports type checking
+   * with the {@code is} operator, but does not perform actual resource resolution. The type
+   * information is extracted from:
+   * <ol>
+   *   <li>The {@code Reference.type} field (if present) - takes precedence</li>
+   *   <li>The resource type parsed from the {@code Reference.reference} string (if type field is absent)</li>
+   * </ol>
+   * <p>
+   * Type extraction behavior:
+   * <ul>
+   *   <li>If {@code Reference.type} is present, it is used regardless of reference format (including
+   *       contained and logical references)</li>
+   *   <li>If {@code Reference.type} is absent, type is parsed from {@code Reference.reference} for
+   *       relative, absolute, and canonical reference formats</li>
+   *   <li>Returns empty if type cannot be determined from either field</li>
+   * </ul>
+   * <p>
+   * Supported reference formats (when type field is absent):
+   * <ul>
+   *   <li>Relative: {@code Patient/123} → Patient</li>
+   *   <li>Absolute: {@code http://example.org/fhir/Patient/123} → Patient</li>
+   *   <li>Canonical: {@code http://hl7.org/fhir/ValueSet/my-valueset} → ValueSet</li>
+   * </ul>
+   * <p>
+   * Returns empty when type cannot be determined:
+   * <ul>
+   *   <li>Contained references without type field: {@code #local-id}</li>
+   *   <li>Logical references without type field (identifier-only)</li>
+   *   <li>Malformed or unparseable reference strings</li>
+   * </ul>
+   * <p>
+   * <b>Important:</b> The returned collection does not support traversal to child elements.
+   * Attempting to access fields like {@code resolve().name} will throw an
+   * {@link au.csiro.pathling.errors.UnsupportedFhirPathFeatureError}.
+   * <p>
+   * Examples:
+   * <pre>
+   *   // Supported - type checking with is operator
+   *   Appointment.participant.actor.where(resolve() is Location)
+   *   actor.resolve() is Patient
+   *
+   *   // Contained reference with type field
+   *   Reference { type: "Patient", reference: "#contained-1" } → resolves to Patient
+   *
+   *   // Type field takes precedence
+   *   Reference { type: "Organization", reference: "Patient/123" } → resolves to Organization
+   *
+   *   // NOT supported - throws UnsupportedFhirPathFeatureError
+   *   actor.resolve().name
+   * </pre>
+   *
+   * @param input The input collection (must be a ReferenceCollection)
+   * @return A collection containing type information for resolvable references
+   * @throws InvalidUserInputError if the input is not a ReferenceCollection
+   * @see <a href="https://build.fhir.org/fhirpath.html#functions">FHIRPath resolve() function</a>
+   * @see <a href="https://hl7.org/fhir/R4/references.html">FHIR Resource References</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.EXPERIMENTAL)
+  @Nonnull
+  public static Collection resolve(@Nonnull final Collection input) {
+    // Validate that input is a ReferenceCollection and delegate to its resolve() method
+    if (!(input instanceof final ReferenceCollection referenceCollection)) {
+      throw new InvalidUserInputError(
+          "resolve() can only be called on Reference elements, got: " + input.getClass()
+              .getSimpleName());
+    }
+
+    return referenceCollection.resolve();
   }
 }

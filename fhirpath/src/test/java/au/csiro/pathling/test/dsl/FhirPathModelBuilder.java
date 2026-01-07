@@ -50,6 +50,18 @@ public class FhirPathModelBuilder {
     return this;
   }
 
+  /**
+   * Creates an empty Reference with both reference and type fields set to empty.
+   * This is a convenience method for DSL tests to ensure all References have both fields present.
+   * The fields can be overridden by calling .string("reference", value) or .string("type", value).
+   *
+   * @return this builder with fhirType set to REFERENCE and empty reference and type fields
+   */
+  public FhirPathModelBuilder fhirReference() {
+    return fhirType(FHIRDefinedType.REFERENCE)
+        .stringEmpty("reference")
+        .stringEmpty("type");
+  }
 
   public FhirPathModelBuilder string(@Nonnull final String name, @Nullable final String value) {
     model.put(name, value);
