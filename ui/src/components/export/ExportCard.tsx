@@ -178,24 +178,27 @@ export function ExportCard({ request, createdAt, onError, onClose }: Readonly<Ex
               Output files ({outputFiles.length})
             </Text>
             <Flex direction="column" gap="1">
-              {outputFiles.map((output) => (
-                <Flex key={output.url} justify="between" align="center">
-                  <Text size="2">
-                    {getFilenameFromUrl(output.url)}
-                    {output.count !== undefined && (
-                      <Text color="gray"> ({output.count} resources)</Text>
-                    )}
-                  </Text>
-                  <Button
-                    size="1"
-                    variant="soft"
-                    onClick={() => handleDownloadFile(output.url, getFilenameFromUrl(output.url))}
-                  >
-                    <DownloadIcon />
-                    Download
-                  </Button>
-                </Flex>
-              ))}
+              {outputFiles
+                .slice()
+                .sort((a, b) => getFilenameFromUrl(a.url).localeCompare(getFilenameFromUrl(b.url)))
+                .map((output) => (
+                  <Flex key={output.url} justify="between" align="center">
+                    <Text size="2">
+                      {getFilenameFromUrl(output.url)}
+                      {output.count !== undefined && (
+                        <Text color="gray"> ({output.count} resources)</Text>
+                      )}
+                    </Text>
+                    <Button
+                      size="1"
+                      variant="soft"
+                      onClick={() => handleDownloadFile(output.url, getFilenameFromUrl(output.url))}
+                    >
+                      <DownloadIcon />
+                      Download
+                    </Button>
+                  </Flex>
+                ))}
             </Flex>
           </Box>
         )}
