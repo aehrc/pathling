@@ -30,7 +30,7 @@ The UI is configured via environment variables. Create a `.env.local` file for
 local development or set these at build time for production:
 
 | Variable             | Description                      | Default                   |
-|----------------------|----------------------------------|---------------------------|
+| -------------------- | -------------------------------- | ------------------------- |
 | `VITE_FHIR_BASE_URL` | FHIR server endpoint URL         | `/fhir`                   |
 | `VITE_CLIENT_ID`     | OAuth client ID for SMART launch | `pathling-admin-ui`       |
 | `VITE_SCOPE`         | OAuth scopes to request          | `openid profile user/*.*` |
@@ -66,7 +66,7 @@ The development server runs at `http://localhost:5173/admin/`.
 ### Available scripts
 
 | Script             | Description                       |
-|--------------------|-----------------------------------|
+| ------------------ | --------------------------------- |
 | `bun run dev`      | Start development server with HMR |
 | `bun run build`    | Build for production              |
 | `bun run preview`  | Preview production build locally  |
@@ -202,10 +202,10 @@ All exported functions require JSDoc comments:
  * @throws {UnauthorizedError} If authentication fails.
  */
 export async function read(
-        baseUrl: string,
-        resourceType: string,
-        id: string,
-        token?: string,
+    baseUrl: string,
+    resourceType: string,
+    id: string,
+    token?: string,
 ): Promise<Resource> {
     // ...
 }
