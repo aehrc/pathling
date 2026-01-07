@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
@@ -82,5 +83,21 @@ public class ExistenceFunctions {
   @Nonnull
   public static BooleanCollection empty(@Nonnull final Collection input) {
     return BooleanCollection.build(input.getColumn().isEmpty());
+  }
+
+  /**
+   * Returns the integer count of the number of items in the input collection. Returns 0 when the
+   * input collection is empty.
+   *
+   * @param input The input collection
+   * @return An {@link IntegerCollection} containing the count
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#count--integer">FHIRPath Specification -
+   * count</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.SHARABLE)
+  @Nonnull
+  public static IntegerCollection count(@Nonnull final Collection input) {
+    return IntegerCollection.build(input.getColumn().count());
   }
 }

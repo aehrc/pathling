@@ -155,6 +155,18 @@ excludeSet:
           - "heteroattr.ofType(Integer)"
           - "heteroattr.ofType(Decimal)"
           - "heteroattr.ofType(Boolean)"
+      - title: "where() with count() filtering on id attribute of primitive elements not supported"
+        type: feature
+        outcome: failure
+        id: "#437"
+        comment: |
+          This test uses where() to filter on the 'id' attribute of primitive elements,
+          then applies count(). Since Pathling doesn't support accessing the id attribute
+          of primitive elements (which requires support for the primitive attribute/extension
+          structure), the where() clause returns an empty collection, causing count() to
+          return 0 instead of 1.
+        any:
+          - "Patient.name.given.where(id = 'Jacomus1Id').count()"
   - title: Equality exclusions
     glob: "fhirpath-js/cases/6.1_equality.yaml"
     exclude:
@@ -231,6 +243,18 @@ excludeSet:
           recognize the element as existing.
         any:
           - "Patient.name.given[3].is(FHIR.string)"
+      - title: "as() operator with count() on primitive elements with extensions but no value"
+        type: feature
+        outcome: failure
+        id: "#437"
+        comment: |
+          These tests use count() to verify that as() successfully converts
+          Patient.name.given[3], which is a primitive element with extensions but
+          no value. Since Pathling doesn't support accessing such elements, count()
+          returns 0 instead of 1, causing the comparison to fail.
+        any:
+          - "(Patient.name.given[3] as FHIR.string).count() = 1"
+          - "Patient.name.given[3].as(FHIR.string).count() = 1"
       - title: "'is' operator precedence differs from fhirpath.js"
         type: wontfix
         comment: |
@@ -420,6 +444,17 @@ excludeSet:
           both values since the equality comparison returns NULL for incomparable quantities.
         any:
           - "(1 year | 12 months)"
+      - title: "Union with count() on primitive elements with extensions but no value"
+        type: feature
+        outcome: failure
+        id: "#437"
+        comment: |
+          This test uses count() on a union that includes Patient.name.given[3], which
+          is a primitive element with extensions but no value. Since Pathling doesn't
+          support accessing such elements, the union returns 0 elements instead of 1,
+          causing count() to return 0 instead of 1.
+        any:
+          - "(Patient.name.given[0] | Patient.name.given[3]).count()"
   - title: FHIR R4 Exclusions
     glob: "fhirpath-js/cases/fhir-r4.yaml"
     exclude:
