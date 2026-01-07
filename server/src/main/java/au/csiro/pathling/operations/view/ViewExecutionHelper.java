@@ -208,6 +208,10 @@ public class ViewExecutionHelper {
       result = executor.buildQuery(view);
     } catch (final ConstraintViolationException e) {
       throw new InvalidRequestException("Invalid ViewDefinition: " + e.getMessage());
+    } catch (final UnsupportedOperationException e) {
+      // Thrown when a FHIRPath expression is not supported, such as accessing a choice element
+      // without specifying the type via ofType().
+      throw new InvalidRequestException("Unsupported expression: " + e.getMessage());
     }
 
     // Apply limit if specified.
