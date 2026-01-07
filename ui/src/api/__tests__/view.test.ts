@@ -288,7 +288,7 @@ describe("viewExportKickOff", () => {
     });
   });
 
-  it("returns job ID from Content-Location header", async () => {
+  it("returns polling URL from Content-Location header", async () => {
     const headers = new Headers();
     headers.set(
       "Content-Location",
@@ -303,7 +303,9 @@ describe("viewExportKickOff", () => {
       views: [{ viewDefinition: sampleViewDefinition }],
     });
 
-    expect(result.jobId).toBe("view-export-123");
+    expect(result.pollingUrl).toBe(
+      "https://example.com/$job?id=view-export-123",
+    );
   });
 
   it("throws error when Content-Location header missing", async () => {

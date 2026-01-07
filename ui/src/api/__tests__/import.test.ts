@@ -110,7 +110,7 @@ describe("importKickOff", () => {
     );
   });
 
-  it("returns job ID from Content-Location header", async () => {
+  it("returns polling URL from Content-Location header", async () => {
     const headers = new Headers();
     headers.set(
       "Content-Location",
@@ -127,7 +127,9 @@ describe("importKickOff", () => {
       mode: "overwrite",
     });
 
-    expect(result.jobId).toBe("import-job-123");
+    expect(result.pollingUrl).toBe(
+      "https://example.com/$job?id=import-job-123",
+    );
   });
 
   it("throws error when Content-Location header missing", async () => {
@@ -242,7 +244,7 @@ describe("importPnpKickOff", () => {
     });
   });
 
-  it("returns job ID from Content-Location header", async () => {
+  it("returns polling URL from Content-Location header", async () => {
     const headers = new Headers();
     headers.set("Content-Location", "https://example.com/$job?id=pnp-job-456");
 
@@ -254,7 +256,7 @@ describe("importPnpKickOff", () => {
       exportUrl: "https://source.com/$export",
     });
 
-    expect(result.jobId).toBe("pnp-job-456");
+    expect(result.pollingUrl).toBe("https://example.com/$job?id=pnp-job-456");
   });
 
   it("includes Authorization header when access token provided", async () => {

@@ -12,7 +12,7 @@ import {
   mockEmptyViewRunNdjson,
   mockViewDefinition1,
   mockViewDefinitionBundle,
-  mockViewRunNdjson,
+  mockViewRunNdjson
 } from "./fixtures/fhirData";
 
 /**
@@ -678,7 +678,7 @@ test.describe("SQL on FHIR page", () => {
 
       // Wait for first query card to appear.
       await expect(
-        page.getByText("Select view definition").first(),
+        page.getByText("Run stored view definition").first(),
       ).toBeVisible({ timeout: 10000 });
 
       // Switch to custom JSON tab and start second query.
@@ -698,12 +698,10 @@ test.describe("SQL on FHIR page", () => {
       // Verify Provide JSON card appears before Select view definition card.
       // Use nth(2) to skip the tab and its nested text, getting the card labels.
       const provideJsonBox = await page
-        .getByText("Provide JSON")
-        .nth(2)
+        .getByText("Run provided view definition")
         .boundingBox();
       const selectViewBox = await page
-        .getByText("Select view definition")
-        .nth(2)
+        .getByText("Run stored view definition")
         .boundingBox();
       expect(provideJsonBox!.y).toBeLessThan(selectViewBox!.y);
     });

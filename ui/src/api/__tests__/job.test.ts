@@ -39,7 +39,7 @@ describe("jobStatus", () => {
     );
 
     await jobStatus("https://example.com/fhir", {
-      jobId: "abc-123",
+      pollingUrl: "https://example.com/fhir/$job?id=abc-123",
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -59,7 +59,7 @@ describe("jobStatus", () => {
     );
 
     await jobStatus("https://example.com/fhir", {
-      jobId: "abc-123",
+      pollingUrl: "https://example.com/fhir/$job?id=abc-123",
       accessToken: "test-token",
     });
 
@@ -82,7 +82,7 @@ describe("jobStatus", () => {
     );
 
     const result = await jobStatus("https://example.com/fhir", {
-      jobId: "abc-123",
+      pollingUrl: "https://example.com/fhir/$job?id=abc-123",
     });
 
     expect(result.status).toBe("in-progress");
@@ -97,7 +97,7 @@ describe("jobStatus", () => {
     );
 
     const result = await jobStatus("https://example.com/fhir", {
-      jobId: "abc-123",
+      pollingUrl: "https://example.com/fhir/$job?id=abc-123",
     });
 
     expect(result.status).toBe("complete");
@@ -108,7 +108,7 @@ describe("jobStatus", () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 202 }));
 
     const result = await jobStatus("https://example.com/fhir", {
-      jobId: "abc-123",
+      pollingUrl: "https://example.com/fhir/$job?id=abc-123",
     });
 
     expect(result.status).toBe("in-progress");
@@ -121,7 +121,9 @@ describe("jobStatus", () => {
     );
 
     await expect(
-      jobStatus("https://example.com/fhir", { jobId: "abc-123" }),
+      jobStatus("https://example.com/fhir", {
+        pollingUrl: "https://example.com/fhir/$job?id=abc-123",
+      }),
     ).rejects.toThrow(UnauthorizedError);
   });
 
@@ -131,7 +133,9 @@ describe("jobStatus", () => {
     );
 
     await expect(
-      jobStatus("https://example.com/fhir", { jobId: "abc-123" }),
+      jobStatus("https://example.com/fhir", {
+        pollingUrl: "https://example.com/fhir/$job?id=abc-123",
+      }),
     ).rejects.toThrow("Job status failed: 500");
   });
 });
@@ -141,7 +145,7 @@ describe("jobCancel", () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 202 }));
 
     await jobCancel("https://example.com/fhir", {
-      jobId: "abc-123",
+      pollingUrl: "https://example.com/fhir/$job?id=abc-123",
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -159,7 +163,7 @@ describe("jobCancel", () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 202 }));
 
     await jobCancel("https://example.com/fhir", {
-      jobId: "abc-123",
+      pollingUrl: "https://example.com/fhir/$job?id=abc-123",
       accessToken: "test-token",
     });
 
@@ -177,7 +181,7 @@ describe("jobCancel", () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 202 }));
 
     const result = await jobCancel("https://example.com/fhir", {
-      jobId: "abc-123",
+      pollingUrl: "https://example.com/fhir/$job?id=abc-123",
     });
 
     expect(result).toBeUndefined();
@@ -189,7 +193,9 @@ describe("jobCancel", () => {
     );
 
     await expect(
-      jobCancel("https://example.com/fhir", { jobId: "abc-123" }),
+      jobCancel("https://example.com/fhir", {
+        pollingUrl: "https://example.com/fhir/$job?id=abc-123",
+      }),
     ).rejects.toThrow(UnauthorizedError);
   });
 
@@ -199,7 +205,9 @@ describe("jobCancel", () => {
     );
 
     await expect(
-      jobCancel("https://example.com/fhir", { jobId: "abc-123" }),
+      jobCancel("https://example.com/fhir", {
+        pollingUrl: "https://example.com/fhir/$job?id=abc-123",
+      }),
     ).rejects.toThrow("Job cancel failed: 500");
   });
 });
