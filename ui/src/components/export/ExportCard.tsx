@@ -15,6 +15,7 @@ import type { BulkExportType } from "../../types/hooks";
 
 interface ExportCardProps {
   request: ExportRequest;
+  createdAt: Date;
   onError: (message: string) => void;
   onClose?: () => void;
 }
@@ -50,15 +51,33 @@ function getFilenameFromUrl(url: string): string {
 }
 
 /**
+ * Formats a date as a date time string (e.g., "7 Jan 2026, 10:30:45 AM").
+ *
+ * @param date - The date to format.
+ * @returns The formatted date time string.
+ */
+function formatDateTime(date: Date): string {
+  return date.toLocaleString([], {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+/**
  * Displays and manages a single bulk export job.
  *
  * @param props - Component props.
  * @param props.request - The export request configuration.
+ * @param props.createdAt - The timestamp when the export was created.
  * @param props.onError - Callback for error handling (e.g., auth errors).
  * @param props.onClose - Optional callback to close/remove the card.
  * @returns The rendered export card component.
  */
-export function ExportCard({ request, onError, onClose }: Readonly<ExportCardProps>) {
+export function ExportCard({ request, createdAt, onError, onClose }: Readonly<ExportCardProps>) {
   const handleDownloadFile = useDownloadFile((err) => onError(err.message));
   const hasStartedRef = useRef(false);
 
@@ -100,6 +119,9 @@ export function ExportCard({ request, onError, onClose }: Readonly<ExportCardPro
                 Types: {request.resourceTypes.join(", ")}
               </Text>
             )}
+            <Text size="1" color="gray" as="div">
+              {formatDateTime(createdAt)}
+            </Text>
           </Box>
           {isRunning && (
             <Button size="1" variant="soft" color="red" onClick={cancel}>

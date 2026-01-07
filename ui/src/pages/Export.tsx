@@ -19,6 +19,7 @@ import type { ExportRequest } from "../types/export";
 interface ExportJob {
   id: string;
   request: ExportRequest;
+  createdAt: Date;
 }
 
 export function Export() {
@@ -34,8 +35,10 @@ export function Export() {
     const newExport: ExportJob = {
       id: crypto.randomUUID(),
       request,
+      createdAt: new Date(),
     };
-    setExports((prev) => [...prev, newExport]);
+    // Prepend new exports so most recent appears first.
+    setExports((prev) => [newExport, ...prev]);
   };
 
   const handleCloseExport = (id: string) => {
@@ -73,6 +76,7 @@ export function Export() {
             <ExportCard
               key={exportJob.id}
               request={exportJob.request}
+              createdAt={exportJob.createdAt}
               onError={(message) => setError(message)}
               onClose={() => handleCloseExport(exportJob.id)}
             />

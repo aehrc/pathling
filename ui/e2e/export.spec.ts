@@ -838,6 +838,52 @@ test.describe("Export page", () => {
       await expect(page.getByText("Types: Observation")).toBeVisible();
     });
 
+    test("export card displays timestamp", async ({ page }) => {
+      await setupStandardMocks(page);
+      await page.goto("/admin/export");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for the export card to appear.
+      await expect(page.getByText("System export")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify timestamp is displayed (matches time with seconds like "10:30:45").
+      await expect(page.getByText(/\d{1,2}:\d{2}:\d{2}/)).toBeVisible();
+    });
+
+    test("most recent export appears first", async ({ page }) => {
+      await setupDelayedJobMocks(page, { pollCount: 10 });
+      await page.goto("/admin/export");
+
+      // Start first export (System export).
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for first export card to appear.
+      await expect(page.getByText("System export")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Select different export level for second export.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "All patient data" }).click();
+
+      // Start second export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Verify both cards are visible.
+      await expect(page.getByText("All patients export")).toBeVisible();
+
+      // Verify most recent (All patients) appears before older (System) export.
+      const allPatientsBox = await page
+        .getByText("All patients export")
+        .boundingBox();
+      const systemBox = await page.getByText("System export").boundingBox();
+      expect(allPatientsBox!.y).toBeLessThan(systemBox!.y);
+    });
+
     test("New Export button is not present in completed export cards", async ({
       page,
     }) => {
