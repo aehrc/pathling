@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.ReferenceValue;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import jakarta.annotation.Nonnull;
@@ -36,6 +37,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class ReferenceCollection extends Collection {
 
   private static final String REFERENCE_ELEMENT_NAME = "reference";
+  private static final String TYPE_ELEMENT_NAME = "type";
 
   /**
    * Creates a new ReferenceCollection.
@@ -84,5 +86,63 @@ public class ReferenceCollection extends Collection {
   private ColumnTransform keyFilter(@Nonnull final String pattern) {
     return col ->
         col.traverse(REFERENCE_ELEMENT_NAME, Optional.of(FHIRDefinedType.STRING)).like(pattern);
+  }
+
+  /**
+   * Performs a limited resolution of this Reference, extracting type information only.
+   *
+   * <p>This implementation:
+   *
+   * <ul>
+   *   <li>Returns type information from {@code Reference.type} field (priority) or parsed reference
+   *       string
+   *   <li>Supports the {@code is} operator for type checking
+   *   <li>Does NOT support traversal (throws error on field access)
+   *   <li>Does NOT perform actual resource resolution/joining
+   * </ul>
+   *
+   * <p>Type extraction:
+   *
+   * <ul>
+   *   <li>If {@code Reference.type} field is present, it is used regardless of reference format
+   *   <li>If {@code Reference.type} is absent, type is parsed from {@code Reference.reference}
+   *   <li>Type field always takes precedence over parsed type from reference string
+   * </ul>
+   *
+   * <p>Supported reference formats (when type field is absent):
+   *
+   * <ul>
+   *   <li>Relative: {@code Patient/123}
+   *   <li>Absolute: {@code http://example.org/fhir/Patient/123}
+   *   <li>Canonical: {@code http://hl7.org/fhir/ValueSet/my-valueset}
+   * </ul>
+   *
+   * <p>Returns empty when type cannot be determined:
+   *
+   * <ul>
+   *   <li>Contained references without type field: {@code #local-id}
+   *   <li>Logical references without type field (identifier-only)
+   *   <li>Malformed reference strings
+   * </ul>
+   *
+   * @return A {@link ResolvedReferenceCollection} containing type information, or {@link
+   *     EmptyCollection} if type cannot be determined
+   * @see <a href="https://build.fhir.org/fhirpath.html#functions">FHIRPath resolve() function</a>
+   * @see <a href="https://hl7.org/fhir/R4/references.html">FHIR Resource References</a>
+   */
+  @Nonnull
+  public Collection resolve() {
+    final ColumnRepresentation referenceColumn = getColumn().getField(REFERENCE_ELEMENT_NAME);
+    final ColumnRepresentation typeColumn = getColumn().getField(TYPE_ELEMENT_NAME);
+
+    // Extract type information using ReferenceValue
+    final ColumnRepresentation extractedType =
+        ReferenceValue.of(referenceColumn, typeColumn).extractType();
+
+    // Remove null values (unresolvable references) from the extracted type column
+    final ColumnRepresentation filteredType = extractedType.removeNulls();
+
+    // Return a ResolvedReferenceCollection with dynamic type information
+    return ResolvedReferenceCollection.build(filteredType);
   }
 }
