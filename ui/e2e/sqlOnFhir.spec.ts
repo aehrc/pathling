@@ -12,7 +12,7 @@ import {
   mockEmptyViewRunNdjson,
   mockViewDefinition1,
   mockViewDefinitionBundle,
-  mockViewRunNdjson
+  mockViewRunNdjson,
 } from "./fixtures/fhirData";
 
 /**
