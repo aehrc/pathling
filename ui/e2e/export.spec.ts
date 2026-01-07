@@ -464,6 +464,46 @@ test.describe("Export page", () => {
       // Verify resource types are shown in status card.
       await expect(page.getByText("Types: Patient, Observation")).toBeVisible();
     });
+
+    test("close button visible when export is complete", async ({ page }) => {
+      await setupStandardMocks(page);
+      await page.goto("/admin/export");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for export to complete.
+      await expect(page.getByText("Output files (2)")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify close button is visible.
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+    });
+
+    test("clicking close button removes completed export card", async ({
+      page,
+    }) => {
+      await setupStandardMocks(page);
+      await page.goto("/admin/export");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for export to complete.
+      await expect(page.getByText("Output files (2)")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify close button is visible.
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+
+      // Click close button.
+      await page.getByRole("button", { name: "Close" }).click();
+
+      // Verify the export card is removed.
+      await expect(page.getByText("System export")).not.toBeVisible();
+    });
   });
 
   test.describe("Cancellation", () => {
@@ -531,6 +571,160 @@ test.describe("Export page", () => {
       await expect(
         page.getByRole("button", { name: "Cancel" }),
       ).not.toBeVisible();
+    });
+
+    test("shows cancelled status indicator when export is cancelled", async ({
+      page,
+    }) => {
+      await page.route("**/metadata", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockCapabilityStatement),
+        });
+      });
+
+      await page.route("**/$export*", async (route) => {
+        await route.fulfill({
+          status: 202,
+          headers: {
+            "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
+            "Access-Control-Expose-Headers": "Content-Location",
+          },
+          body: "",
+        });
+      });
+
+      await page.route("**/$job*", async (route) => {
+        // Always return in-progress to keep the job running.
+        await route.fulfill({
+          status: 202,
+          contentType: "application/fhir+json",
+          headers: {
+            "X-Progress": "25/100",
+            "Access-Control-Expose-Headers": "X-Progress",
+          },
+          body: "",
+        });
+      });
+
+      await page.goto("/admin/export");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for cancel button and click it.
+      await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible({
+        timeout: 10000,
+      });
+      await page.getByRole("button", { name: "Cancel" }).click();
+
+      // Verify cancelled status indicator is visible.
+      await expect(page.getByText("Cancelled")).toBeVisible();
+    });
+
+    test("close button visible when export is cancelled", async ({ page }) => {
+      await page.route("**/metadata", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockCapabilityStatement),
+        });
+      });
+
+      await page.route("**/$export*", async (route) => {
+        await route.fulfill({
+          status: 202,
+          headers: {
+            "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
+            "Access-Control-Expose-Headers": "Content-Location",
+          },
+          body: "",
+        });
+      });
+
+      await page.route("**/$job*", async (route) => {
+        // Always return in-progress to keep the job running.
+        await route.fulfill({
+          status: 202,
+          contentType: "application/fhir+json",
+          headers: {
+            "X-Progress": "25/100",
+            "Access-Control-Expose-Headers": "X-Progress",
+          },
+          body: "",
+        });
+      });
+
+      await page.goto("/admin/export");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for cancel button and click it.
+      await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible({
+        timeout: 10000,
+      });
+      await page.getByRole("button", { name: "Cancel" }).click();
+
+      // Verify close button is visible.
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+    });
+
+    test("clicking close button removes cancelled export card", async ({
+      page,
+    }) => {
+      await page.route("**/metadata", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockCapabilityStatement),
+        });
+      });
+
+      await page.route("**/$export*", async (route) => {
+        await route.fulfill({
+          status: 202,
+          headers: {
+            "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
+            "Access-Control-Expose-Headers": "Content-Location",
+          },
+          body: "",
+        });
+      });
+
+      await page.route("**/$job*", async (route) => {
+        // Always return in-progress to keep the job running.
+        await route.fulfill({
+          status: 202,
+          contentType: "application/fhir+json",
+          headers: {
+            "X-Progress": "25/100",
+            "Access-Control-Expose-Headers": "X-Progress",
+          },
+          body: "",
+        });
+      });
+
+      await page.goto("/admin/export");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for cancel button and click it.
+      await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible({
+        timeout: 10000,
+      });
+      await page.getByRole("button", { name: "Cancel" }).click();
+
+      // Verify close button is visible.
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+
+      // Click close button.
+      await page.getByRole("button", { name: "Close" }).click();
+
+      // Verify the export card is removed.
+      await expect(page.getByText("System export")).not.toBeVisible();
     });
   });
 
@@ -733,6 +927,76 @@ test.describe("Export page", () => {
 
       // Verify error message is displayed.
       await expect(page.getByText("Error:")).toBeVisible({ timeout: 10000 });
+    });
+
+    test("close button visible when export errors", async ({ page }) => {
+      await page.route("**/metadata", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockCapabilityStatement),
+        });
+      });
+
+      await page.route("**/$export*", async (route) => {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/fhir+json",
+          body: JSON.stringify({
+            resourceType: "OperationOutcome",
+            issue: [{ severity: "error", diagnostics: "Export failed" }],
+          }),
+        });
+      });
+
+      await page.goto("/admin/export");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for error to appear.
+      await expect(page.getByText("Error:")).toBeVisible({ timeout: 10000 });
+
+      // Verify close button is visible.
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+    });
+
+    test("clicking close button removes errored export card", async ({
+      page,
+    }) => {
+      await page.route("**/metadata", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockCapabilityStatement),
+        });
+      });
+
+      await page.route("**/$export*", async (route) => {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/fhir+json",
+          body: JSON.stringify({
+            resourceType: "OperationOutcome",
+            issue: [{ severity: "error", diagnostics: "Export failed" }],
+          }),
+        });
+      });
+
+      await page.goto("/admin/export");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Wait for error and close button.
+      await expect(page.getByText("Error:")).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+
+      // Click close button.
+      await page.getByRole("button", { name: "Close" }).click();
+
+      // Verify the export card is removed.
+      await expect(page.getByText("System export")).not.toBeVisible();
     });
   });
 

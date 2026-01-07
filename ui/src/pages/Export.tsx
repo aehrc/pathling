@@ -38,6 +38,10 @@ export function Export() {
     setExports((prev) => [...prev, newExport]);
   };
 
+  const handleCloseExport = (id: string) => {
+    setExports((prev) => prev.filter((exportJob) => exportJob.id !== id));
+  };
+
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
     return (
@@ -70,6 +74,7 @@ export function Export() {
               key={exportJob.id}
               request={exportJob.request}
               onError={(message) => setError(message)}
+              onClose={() => handleCloseExport(exportJob.id)}
             />
           ))}
         </Flex>

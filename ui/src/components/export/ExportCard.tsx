@@ -16,6 +16,7 @@ import type { BulkExportType } from "../../types/hooks";
 interface ExportCardProps {
   request: ExportRequest;
   onError: (message: string) => void;
+  onClose?: () => void;
 }
 
 /**
@@ -54,9 +55,10 @@ function getFilenameFromUrl(url: string): string {
  * @param props - Component props.
  * @param props.request - The export request configuration.
  * @param props.onError - Callback for error handling (e.g., auth errors).
+ * @param props.onClose - Optional callback to close/remove the card.
  * @returns The rendered export card component.
  */
-export function ExportCard({ request, onError }: Readonly<ExportCardProps>) {
+export function ExportCard({ request, onError, onClose }: Readonly<ExportCardProps>) {
   const handleDownloadFile = useDownloadFile((err) => onError(err.message));
   const hasStartedRef = useRef(false);
 
@@ -67,6 +69,9 @@ export function ExportCard({ request, onError }: Readonly<ExportCardProps>) {
 
   // Derive isRunning from status.
   const isRunning = status === "pending" || status === "in-progress";
+
+  // Determine if the close button should be shown.
+  const canClose = status === "complete" || status === "cancelled" || status === "error";
 
   // Start the export immediately on mount.
   useEffect(() => {
@@ -102,6 +107,12 @@ export function ExportCard({ request, onError }: Readonly<ExportCardProps>) {
               Cancel
             </Button>
           )}
+          {canClose && onClose && (
+            <Button size="1" variant="soft" color="gray" onClick={onClose}>
+              <Cross2Icon />
+              Close
+            </Button>
+          )}
         </Flex>
 
         {isRunning && progress !== undefined && (
@@ -130,6 +141,12 @@ export function ExportCard({ request, onError }: Readonly<ExportCardProps>) {
         {error && (
           <Text size="2" color="red">
             Error: {error.message}
+          </Text>
+        )}
+
+        {status === "cancelled" && (
+          <Text size="2" color="gray">
+            Cancelled
           </Text>
         )}
 
