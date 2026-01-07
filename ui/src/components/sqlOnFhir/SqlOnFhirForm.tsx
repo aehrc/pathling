@@ -167,13 +167,13 @@ export function SqlOnFhirForm({
                       </Tooltip>
                       <TextArea
                         readOnly
-                        size="2"
-                        rows={8}
+                        size="1"
+                        rows={16}
                         value={
                           viewDefinitions.find((vd) => vd.id === selectedViewDefinitionId)?.json ??
                           ""
                         }
-                        style={{ fontFamily: "monospace", fontSize: "12px" }}
+                        style={{ fontFamily: "monospace" }}
                       />
                     </Box>
                   ) : (
@@ -192,9 +192,9 @@ export function SqlOnFhirForm({
                   </Text>
                 </Box>
                 <TextArea
-                  size="2"
+                  size="1"
                   resize="vertical"
-                  rows={12}
+                  rows={16}
                   placeholder={EXAMPLE_VIEW_DEFINITION}
                   value={customJson}
                   onChange={(e) => setCustomJson(e.target.value)}

@@ -91,30 +91,30 @@ export function Import() {
   // Show import form (either auth not required or user is authenticated).
   return (
     <>
-      <Tabs.Root defaultValue="urls">
-        <Tabs.List>
-          <Tabs.Trigger value="urls">Import from URLs</Tabs.Trigger>
-          <Tabs.Trigger value="fhir-server">Import from FHIR server</Tabs.Trigger>
-        </Tabs.List>
+      <Flex gap="6" direction={{ initial: "column", md: "row" }}>
+        <Tabs.Root defaultValue="urls" style={{ flex: 1 }}>
+          <Tabs.List>
+            <Tabs.Trigger value="urls">Import from URLs</Tabs.Trigger>
+            <Tabs.Trigger value="fhir-server">Import from FHIR server</Tabs.Trigger>
+          </Tabs.List>
 
-        <Box pt="4">
-          <Tabs.Content value="urls">
-            <ImportForm
-              onSubmit={handleStandardImport}
-              isSubmitting={false}
-              disabled={false}
-              resourceTypes={capabilities?.resourceTypes ?? []}
-            />
-          </Tabs.Content>
+          <Box pt="4">
+            <Tabs.Content value="urls">
+              <ImportForm
+                onSubmit={handleStandardImport}
+                isSubmitting={false}
+                disabled={false}
+                resourceTypes={capabilities?.resourceTypes ?? []}
+              />
+            </Tabs.Content>
 
-          <Tabs.Content value="fhir-server">
-            <ImportPnpForm onSubmit={handlePnpImport} isSubmitting={false} disabled={false} />
-          </Tabs.Content>
-        </Box>
-      </Tabs.Root>
+            <Tabs.Content value="fhir-server">
+              <ImportPnpForm onSubmit={handlePnpImport} isSubmitting={false} disabled={false} />
+            </Tabs.Content>
+          </Box>
+        </Tabs.Root>
 
-      {imports.length > 0 && (
-        <Flex direction="column" gap="3" mt="4">
+        <Flex direction="column" gap="3" mt="4" style={{ flex: 1 }}>
           {imports.map((job) => (
             <ImportCard
               key={job.id}
@@ -124,7 +124,7 @@ export function Import() {
             />
           ))}
         </Flex>
-      )}
+      </Flex>
 
       <SessionExpiredDialog />
     </>

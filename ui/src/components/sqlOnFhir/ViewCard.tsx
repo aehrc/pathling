@@ -35,9 +35,9 @@ interface ViewCardProps {
 function getModeLabel(mode: ViewJob["mode"]): string {
   switch (mode) {
     case "stored":
-      return "Select view definition";
+      return "Run stored view definition";
     case "inline":
-      return "Provide JSON";
+      return "Run provided view definition";
   }
 }
 
@@ -179,8 +179,18 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
       <Flex direction="column" gap="3">
         <Flex justify="between" align="start">
           <Box>
-            <Text weight="medium">{getModeLabel(job.mode)}</Text>
-            <Text size="1" color="gray" as="div">
+            <Text weight="medium" as="div" mb="1">
+              {getModeLabel(job.mode)}
+            </Text>
+            <Text size="1" color="gray" as="div" mb="1">
+              Job ID: {job.id}
+            </Text>
+            {job.viewDefinitionId ? (
+              <Text size="1" color="gray" as="div" mb="1">
+                View definition ID: {job.viewDefinitionId}
+              </Text>
+            ) : null}
+            <Text size="1" color="gray" as="div" mb="1">
               {formatDateTime(job.createdAt)}
             </Text>
           </Box>

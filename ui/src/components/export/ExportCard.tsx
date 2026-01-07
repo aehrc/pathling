@@ -97,13 +97,15 @@ export function ExportCard({ request, createdAt, onError, onClose }: Readonly<Ex
       <Flex direction="column" gap="3">
         <Flex justify="between" align="start">
           <Box>
-            <Text weight="medium">{getExportTypeLabel(request.level)}</Text>
+            <Text weight="medium" as="div">
+              {getExportTypeLabel(request.level)}
+            </Text>
             {request.resourceTypes && request.resourceTypes.length > 0 && (
-              <Text size="1" color="gray" as="div">
+              <Text size="1" color="gray" as="div" mb="1">
                 Types: {request.resourceTypes.join(", ")}
               </Text>
             )}
-            <Text size="1" color="gray" as="div">
+            <Text size="1" color="gray" as="div" mb="1">
               {formatDateTime(createdAt)}
             </Text>
           </Box>
@@ -158,7 +160,7 @@ export function ExportCard({ request, createdAt, onError, onClose }: Readonly<Ex
 
         {outputFiles.length > 0 && (
           <Box>
-            <Text size="2" weight="medium" mb="2" style={{ display: "block" }}>
+            <Text size="2" weight="medium" mb="2" as="div">
               Output files ({outputFiles.length})
             </Text>
             <Flex direction="column" gap="1">

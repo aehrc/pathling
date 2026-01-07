@@ -80,17 +80,17 @@ export function SqlOnFhir() {
 
   return (
     <>
-      <Box>
-        <SqlOnFhirForm
-          onExecute={handleExecute}
-          onSaveToServer={saveViewDefinition}
-          isExecuting={false}
-          isSaving={isSaving}
-        />
-      </Box>
+      <Flex gap="6" direction={{ initial: "column", md: "row" }}>
+        <Box style={{ flex: 1 }}>
+          <SqlOnFhirForm
+            onExecute={handleExecute}
+            onSaveToServer={saveViewDefinition}
+            isExecuting={false}
+            isSaving={isSaving}
+          />
+        </Box>
 
-      {queries.length > 0 && (
-        <Flex direction="column" gap="3" mt="4">
+        <Flex direction="column" gap="3" style={{ flex: 1, overflow: "hidden" }}>
           {queries.map((job) => (
             <ViewCard
               key={job.id}
@@ -100,7 +100,7 @@ export function SqlOnFhir() {
             />
           ))}
         </Flex>
-      )}
+      </Flex>
 
       <SessionExpiredDialog />
     </>

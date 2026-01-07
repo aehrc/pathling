@@ -111,11 +111,13 @@ export function ImportCard({ job, onError, onClose }: Readonly<ImportCardProps>)
       <Flex direction="column" gap="3">
         <Flex justify="between" align="start">
           <Box>
-            <Text weight="medium">{getImportTypeLabel(job.type)}</Text>
-            <Text size="1" color="gray" as="div">
+            <Text weight="medium" as="div" mb="1">
+              {getImportTypeLabel(job.type)}
+            </Text>
+            <Text size="1" color="gray" as="div" mb="1">
               {getImportSubtitle(job)}
             </Text>
-            <Text size="1" color="gray" as="div">
+            <Text size="1" color="gray" as="div" mb="1">
               {formatDateTime(job.createdAt)}
             </Text>
           </Box>
