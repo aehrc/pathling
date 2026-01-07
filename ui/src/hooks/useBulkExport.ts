@@ -24,6 +24,7 @@ import {
   patientExportKickOff,
   groupExportKickOff,
   bulkExportStatus,
+  bulkExportCancel,
   bulkExportDownload,
 } from "../api";
 import { config } from "../config";
@@ -103,7 +104,8 @@ export const useBulkExport: UseBulkExportFn = (options) => {
         bulkExportStatus(fhirBaseUrl!, { pollingUrl, accessToken }),
       isComplete: (status: StatusResult) => status.status === "complete",
       getResult: (status: StatusResult) => status.manifest!,
-      cancel: async () => {},
+      cancel: (pollingUrl: string) =>
+        bulkExportCancel(fhirBaseUrl!, { pollingUrl, accessToken }),
       pollingInterval: 3000,
     }),
     [fhirBaseUrl, accessToken],

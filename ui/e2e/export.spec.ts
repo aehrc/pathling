@@ -521,6 +521,8 @@ test.describe("Export page", () => {
     });
 
     test("cancelling stops the export", async ({ page }) => {
+      let cancelRequestUrl: string | null = null;
+
       await page.route("**/metadata", async (route) => {
         await route.fulfill({
           status: 200,
@@ -542,16 +544,21 @@ test.describe("Export page", () => {
       });
 
       await page.route("**/$job*", async (route) => {
-        // Always return in-progress to keep the job running.
-        await route.fulfill({
-          status: 202,
-          contentType: "application/fhir+json",
-          headers: {
-            "X-Progress": "25/100",
-            "Access-Control-Expose-Headers": "X-Progress",
-          },
-          body: "",
-        });
+        if (route.request().method() === "GET") {
+          // Always return in-progress to keep the job running.
+          await route.fulfill({
+            status: 202,
+            contentType: "application/fhir+json",
+            headers: {
+              "X-Progress": "25/100",
+              "Access-Control-Expose-Headers": "X-Progress",
+            },
+            body: "",
+          });
+        } else if (route.request().method() === "DELETE") {
+          cancelRequestUrl = route.request().url();
+          await route.fulfill({ status: 204, body: "" });
+        }
       });
 
       await page.goto("/admin/export");
@@ -567,10 +574,11 @@ test.describe("Export page", () => {
       // Click cancel.
       await page.getByRole("button", { name: "Cancel" }).click();
 
-      // Verify the export was cancelled (Cancel button disappears, status card remains).
+      // Verify the export was cancelled and DELETE request was sent to the correct URL.
       await expect(
         page.getByRole("button", { name: "Cancel" }),
       ).not.toBeVisible();
+      expect(cancelRequestUrl).toContain(`$job?id=${TEST_JOB_ID}`);
     });
 
     test("shows cancelled status indicator when export is cancelled", async ({

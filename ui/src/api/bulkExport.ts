@@ -19,6 +19,7 @@
 
 import type {
   AllPatientsExportKickOffOptions,
+  BulkExportCancelOptions,
   BulkExportDownloadOptions,
   BulkExportKickOffResult,
   BulkExportStatusOptions,
@@ -225,6 +226,35 @@ export async function bulkExportStatus(
 
   // This should never be reached, but TypeScript needs it.
   throw new Error("Unexpected response");
+}
+
+/**
+ * Cancels a bulk export operation.
+ *
+ * @param baseUrl - The FHIR server base URL.
+ * @param options - Cancel options including polling URL.
+ * @throws {UnauthorizedError} When the request receives a 401 response.
+ * @throws {Error} For other non-successful responses.
+ *
+ * @example
+ * await bulkExportCancel("https://example.com/fhir", {
+ *   pollingUrl: "https://example.com/$job?id=abc",
+ *   accessToken: "token123"
+ * });
+ */
+export async function bulkExportCancel(
+  baseUrl: string,
+  options: BulkExportCancelOptions,
+): Promise<void> {
+  const url = resolveUrl(baseUrl, options.pollingUrl);
+  const headers = buildHeaders({ accessToken: options.accessToken });
+
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers,
+  });
+
+  await checkResponse(response, "Export cancel");
 }
 
 /**

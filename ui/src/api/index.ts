@@ -27,6 +27,7 @@ export {
   patientExportKickOff,
   groupExportKickOff,
   bulkExportStatus,
+  bulkExportCancel,
   bulkExportDownload,
 } from "./bulkExport";
 

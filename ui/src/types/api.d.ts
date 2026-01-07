@@ -124,6 +124,10 @@ export interface BulkExportDownloadOptions extends AuthOptions {
   fileUrl: string;
 }
 
+export interface BulkExportCancelOptions extends AuthOptions {
+  pollingUrl: string;
+}
+
 export type SystemExportKickOffFn = (
   options: SystemExportKickOffOptions,
 ) => Promise<BulkExportKickOffResult>;
