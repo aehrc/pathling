@@ -344,7 +344,6 @@ test.describe("Import page", () => {
         await page.getByRole("button", { name: "Start import" }).click();
 
         // Verify status card appears with import info.
-        await expect(page.getByText("Standard Import")).toBeVisible();
         await expect(page.getByText("Importing 1 source(s)")).toBeVisible();
       });
 
@@ -377,10 +376,8 @@ test.describe("Import page", () => {
           page.getByText("Import completed successfully"),
         ).toBeVisible({ timeout: 10000 });
 
-        // Verify "New Import" button is shown.
-        await expect(
-          page.getByRole("button", { name: "New Import" }),
-        ).toBeVisible();
+        // Verify "Close" button is shown (replaces old "New Import" button).
+        await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
       });
 
       test("shows error message on failure", async ({ page }) => {
@@ -413,26 +410,6 @@ test.describe("Import page", () => {
 
         // Verify error message is displayed.
         await expect(page.getByText("Error:")).toBeVisible();
-      });
-
-      test("resets form with New Import button", async ({ page }) => {
-        await setupStandardMocks(page);
-        await page.goto("/admin/import");
-
-        // Complete an import.
-        await page
-          .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
-          .fill("s3a://test/data.ndjson");
-        await page.getByRole("button", { name: "Start import" }).click();
-        await expect(
-          page.getByText("Import completed successfully"),
-        ).toBeVisible({ timeout: 10000 });
-
-        // Click New Import button.
-        await page.getByRole("button", { name: "New Import" }).click();
-
-        // Verify status card is no longer visible.
-        await expect(page.getByText("Standard Import")).not.toBeVisible();
       });
     });
 
@@ -482,7 +459,7 @@ test.describe("Import page", () => {
         await page.getByRole("button", { name: "Start import" }).click();
 
         // Wait for status card to appear with Cancel button.
-        await expect(page.getByText("Standard Import")).toBeVisible();
+        await expect(page.getByText("Importing 1 source(s)")).toBeVisible();
         await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible({
           timeout: 10000,
         });
@@ -492,6 +469,166 @@ test.describe("Import page", () => {
 
         // Verify cancel was requested.
         expect(cancelRequested).toBe(true);
+      });
+
+      test("shows cancelled status indicator when import is cancelled", async ({
+        page,
+      }) => {
+        await page.route("**/metadata", async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/fhir+json",
+            body: JSON.stringify(mockCapabilityStatement),
+          });
+        });
+
+        await page.route("**/$import", async (route) => {
+          await route.fulfill({
+            status: 202,
+            headers: {
+              "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
+              "Access-Control-Expose-Headers": "Content-Location",
+            },
+            body: "",
+          });
+        });
+
+        await page.route("**/$job*", async (route) => {
+          if (route.request().method() === "GET") {
+            await route.fulfill({
+              status: 202,
+              contentType: "application/fhir+json",
+              body: JSON.stringify(mockJobStatusInProgress),
+            });
+          } else if (route.request().method() === "DELETE") {
+            await route.fulfill({ status: 204, body: "" });
+          }
+        });
+
+        await page.goto("/admin/import");
+
+        // Enter a URL and submit.
+        await page
+          .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+          .fill("s3a://test/data.ndjson");
+        await page.getByRole("button", { name: "Start import" }).click();
+
+        // Wait for cancel button and click it.
+        await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible({
+          timeout: 10000,
+        });
+        await page.getByRole("button", { name: "Cancel" }).click();
+
+        // Verify cancelled status indicator is visible.
+        await expect(page.getByText("Cancelled")).toBeVisible();
+      });
+
+      test("close button visible when import is cancelled", async ({
+        page,
+      }) => {
+        await page.route("**/metadata", async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/fhir+json",
+            body: JSON.stringify(mockCapabilityStatement),
+          });
+        });
+
+        await page.route("**/$import", async (route) => {
+          await route.fulfill({
+            status: 202,
+            headers: {
+              "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
+              "Access-Control-Expose-Headers": "Content-Location",
+            },
+            body: "",
+          });
+        });
+
+        await page.route("**/$job*", async (route) => {
+          if (route.request().method() === "GET") {
+            await route.fulfill({
+              status: 202,
+              contentType: "application/fhir+json",
+              body: JSON.stringify(mockJobStatusInProgress),
+            });
+          } else if (route.request().method() === "DELETE") {
+            await route.fulfill({ status: 204, body: "" });
+          }
+        });
+
+        await page.goto("/admin/import");
+
+        // Enter a URL and submit.
+        await page
+          .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+          .fill("s3a://test/data.ndjson");
+        await page.getByRole("button", { name: "Start import" }).click();
+
+        // Wait for cancel button and click it.
+        await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible({
+          timeout: 10000,
+        });
+        await page.getByRole("button", { name: "Cancel" }).click();
+
+        // Verify close button is visible.
+        await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+      });
+
+      test("clicking close button removes cancelled import card", async ({
+        page,
+      }) => {
+        await page.route("**/metadata", async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/fhir+json",
+            body: JSON.stringify(mockCapabilityStatement),
+          });
+        });
+
+        await page.route("**/$import", async (route) => {
+          await route.fulfill({
+            status: 202,
+            headers: {
+              "Content-Location": `http://localhost:3000/fhir/$job?id=${TEST_JOB_ID}`,
+              "Access-Control-Expose-Headers": "Content-Location",
+            },
+            body: "",
+          });
+        });
+
+        await page.route("**/$job*", async (route) => {
+          if (route.request().method() === "GET") {
+            await route.fulfill({
+              status: 202,
+              contentType: "application/fhir+json",
+              body: JSON.stringify(mockJobStatusInProgress),
+            });
+          } else if (route.request().method() === "DELETE") {
+            await route.fulfill({ status: 204, body: "" });
+          }
+        });
+
+        await page.goto("/admin/import");
+
+        // Enter a URL and submit.
+        await page
+          .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+          .fill("s3a://test/data.ndjson");
+        await page.getByRole("button", { name: "Start import" }).click();
+
+        // Wait for cancel button and click it.
+        await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible({
+          timeout: 10000,
+        });
+        await page.getByRole("button", { name: "Cancel" }).click();
+
+        // Wait for close button and click it.
+        await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+        await page.getByRole("button", { name: "Close" }).click();
+
+        // Verify the import card is removed (check for card-specific content).
+        await expect(page.getByText("Importing 1 source(s)")).not.toBeVisible();
       });
     });
   });
@@ -573,7 +710,6 @@ test.describe("Import page", () => {
         await page.getByRole("button", { name: "Start import" }).click();
 
         // Verify status card appears.
-        await expect(page.getByText("FHIR server import")).toBeVisible();
         await expect(
           page.getByText("Importing from https://test.org/fhir/$export"),
         ).toBeVisible();
@@ -602,8 +738,286 @@ test.describe("Import page", () => {
     });
   });
 
+  test.describe("Multiple imports", () => {
+    test("form remains enabled after starting import", async ({ page }) => {
+      await setupDelayedJobMocks(page, { pollCount: 10 });
+      await page.goto("/admin/import");
+
+      // Enter a URL and start import.
+      await page
+        .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+        .fill("s3a://test/data.ndjson");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Verify import card is visible.
+      await expect(page.getByText("Importing 1 source(s)")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify form is still enabled (Start import button is clickable).
+      await expect(
+        page.getByRole("button", { name: "Start import" }),
+      ).toBeEnabled();
+    });
+
+    test("starting second import creates additional result card", async ({
+      page,
+    }) => {
+      await setupDelayedJobMocks(page, { pollCount: 10 });
+      await page.goto("/admin/import");
+
+      // Start first import.
+      await page
+        .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+        .fill("s3a://test/data1.ndjson");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Verify first import card appears.
+      await expect(page.getByText("Importing 1 source(s)")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Clear the URL and start second import.
+      await page
+        .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+        .fill("s3a://test/data2.ndjson");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Verify both import cards are visible (2 cards with "Importing 1 source(s)").
+      const importCards = page.getByText("Importing 1 source(s)");
+      await expect(importCards).toHaveCount(2);
+    });
+
+    test("each result card shows its own import type", async ({ page }) => {
+      await setupDelayedJobMocks(page, { pollCount: 10 });
+      await page.goto("/admin/import");
+
+      // Start standard import.
+      await page
+        .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+        .fill("s3a://test/data.ndjson");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Verify standard import card appears.
+      await expect(page.getByText("Importing 1 source(s)")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Switch to PnP tab and start PnP import.
+      await page.getByRole("tab", { name: "Import from FHIR server" }).click();
+      await page
+        .getByPlaceholder("e.g., https://example.org/fhir/$export")
+        .fill("https://test.org/fhir/$export");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Verify both cards show their respective content.
+      await expect(page.getByText("Importing 1 source(s)")).toBeVisible();
+      await expect(
+        page.getByText("Importing from https://test.org/fhir/$export"),
+      ).toBeVisible();
+    });
+
+    test("import card displays timestamp", async ({ page }) => {
+      await setupStandardMocks(page);
+      await page.goto("/admin/import");
+
+      // Start import.
+      await page
+        .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+        .fill("s3a://test/data.ndjson");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Wait for the import card to appear.
+      await expect(page.getByText("Importing 1 source(s)")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify timestamp is displayed (matches time with seconds like "10:30:45").
+      await expect(page.getByText(/\d{1,2}:\d{2}:\d{2}/)).toBeVisible();
+    });
+
+    test("most recent import appears first", async ({ page }) => {
+      await setupDelayedJobMocks(page, { pollCount: 10 });
+      await page.goto("/admin/import");
+
+      // Start first import (standard).
+      await page
+        .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+        .fill("s3a://test/data.ndjson");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Wait for first import card to appear.
+      await expect(page.getByText("Importing 1 source(s)")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Switch to PnP tab and start second import.
+      await page.getByRole("tab", { name: "Import from FHIR server" }).click();
+      await page
+        .getByPlaceholder("e.g., https://example.org/fhir/$export")
+        .fill("https://test.org/fhir/$export");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Verify PnP card is visible.
+      await expect(
+        page.getByText("Importing from https://test.org/fhir/$export"),
+      ).toBeVisible();
+
+      // Verify most recent (FHIR server) appears before older (URLs) import.
+      const fhirServerBox = await page
+        .getByText("Importing from https://test.org/fhir/$export")
+        .boundingBox();
+      const urlsBox = await page
+        .getByText("Importing 1 source(s)")
+        .boundingBox();
+      expect(fhirServerBox!.y).toBeLessThan(urlsBox!.y);
+    });
+
+    test("New Import button is not present in completed import cards", async ({
+      page,
+    }) => {
+      await setupStandardMocks(page);
+      await page.goto("/admin/import");
+
+      // Start and complete an import.
+      await page
+        .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+        .fill("s3a://test/data.ndjson");
+      await page.getByRole("button", { name: "Start import" }).click();
+      await expect(page.getByText("Import completed successfully")).toBeVisible(
+        { timeout: 10000 },
+      );
+
+      // Verify New Import button is not present.
+      await expect(
+        page.getByRole("button", { name: "New Import" }),
+      ).not.toBeVisible();
+    });
+  });
+
+  test.describe("Close button", () => {
+    test("close button visible when import is complete", async ({ page }) => {
+      await setupStandardMocks(page);
+      await page.goto("/admin/import");
+
+      // Start import.
+      await page
+        .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+        .fill("s3a://test/data.ndjson");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Wait for import to complete.
+      await expect(page.getByText("Import completed successfully")).toBeVisible(
+        { timeout: 10000 },
+      );
+
+      // Verify close button is visible.
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+    });
+
+    test("clicking close button removes completed import card", async ({
+      page,
+    }) => {
+      await setupStandardMocks(page);
+      await page.goto("/admin/import");
+
+      // Start import.
+      await page
+        .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+        .fill("s3a://test/data.ndjson");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Wait for import to complete.
+      await expect(page.getByText("Import completed successfully")).toBeVisible(
+        { timeout: 10000 },
+      );
+
+      // Click close button.
+      await page.getByRole("button", { name: "Close" }).click();
+
+      // Verify the import card is removed (check card-specific content).
+      await expect(page.getByText("Importing 1 source(s)")).not.toBeVisible();
+    });
+
+    test("close button visible when import errors", async ({ page }) => {
+      await page.route("**/metadata", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockCapabilityStatement),
+        });
+      });
+
+      await page.route("**/$import", async (route) => {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/fhir+json",
+          body: JSON.stringify({
+            resourceType: "OperationOutcome",
+            issue: [{ severity: "error", diagnostics: "Import failed" }],
+          }),
+        });
+      });
+
+      await page.goto("/admin/import");
+
+      // Start import.
+      await page
+        .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+        .fill("s3a://test/data.ndjson");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Wait for error to appear.
+      await expect(page.getByText("Error:")).toBeVisible({ timeout: 10000 });
+
+      // Verify close button is visible.
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+    });
+
+    test("clicking close button removes errored import card", async ({
+      page,
+    }) => {
+      await page.route("**/metadata", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockCapabilityStatement),
+        });
+      });
+
+      await page.route("**/$import", async (route) => {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/fhir+json",
+          body: JSON.stringify({
+            resourceType: "OperationOutcome",
+            issue: [{ severity: "error", diagnostics: "Import failed" }],
+          }),
+        });
+      });
+
+      await page.goto("/admin/import");
+
+      // Start import.
+      await page
+        .getByPlaceholder("e.g., s3a://bucket/Patient.ndjson")
+        .fill("s3a://test/data.ndjson");
+      await page.getByRole("button", { name: "Start import" }).click();
+
+      // Wait for error and close button.
+      await expect(page.getByText("Error:")).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+
+      // Click close button.
+      await page.getByRole("button", { name: "Close" }).click();
+
+      // Verify the import card is removed (check for error message gone).
+      await expect(page.getByText("Error:")).not.toBeVisible();
+    });
+  });
+
   test.describe("Tab behaviour", () => {
-    test("tabs disabled during import", async ({ page }) => {
+    test("tabs remain enabled during import", async ({ page }) => {
       // Set up mocks that keep the job running.
       await page.route("**/metadata", async (route) => {
         await route.fulfill({
@@ -644,19 +1058,19 @@ test.describe("Import page", () => {
         .fill("s3a://test/data.ndjson");
       await page.getByRole("button", { name: "Start import" }).click();
 
-      // Wait for import to start (allow time for polling to set in-progress state).
-      await expect(page.getByText("Standard Import")).toBeVisible();
+      // Wait for import to start.
+      await expect(page.getByText("Importing 1 source(s)")).toBeVisible();
       await expect(page.getByText("Processing...")).toBeVisible({
         timeout: 10000,
       });
 
-      // Verify both tabs are disabled (Radix uses data-disabled attribute).
+      // Verify both tabs remain enabled (no data-disabled attribute).
       const urlsTab = page.getByRole("tab", { name: "Import from URLs" });
       const fhirTab = page.getByRole("tab", {
         name: "Import from FHIR server",
       });
-      await expect(urlsTab).toHaveAttribute("data-disabled", "");
-      await expect(fhirTab).toHaveAttribute("data-disabled", "");
+      await expect(urlsTab).not.toHaveAttribute("data-disabled", "");
+      await expect(fhirTab).not.toHaveAttribute("data-disabled", "");
     });
   });
 });

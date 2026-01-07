@@ -4,6 +4,8 @@
  * @author John Grimes
  */
 
+import type { ImportPnpRequest } from "./importPnp";
+
 export type SaveMode = "overwrite" | "merge" | "append" | "ignore" | "error";
 
 // MIME types for import formats.
@@ -72,3 +74,18 @@ export const SAVE_MODES: {
     description: "Fail if resources already exist",
   },
 ];
+
+/**
+ * Discriminated type for import jobs to determine which hook to use.
+ */
+export type ImportJobType = "standard" | "pnp";
+
+/**
+ * Represents an active or completed import job for tracking in the UI.
+ */
+export interface ImportJob {
+  id: string;
+  type: ImportJobType;
+  request: ImportRequest | ImportPnpRequest;
+  createdAt: Date;
+}

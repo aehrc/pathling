@@ -4,43 +4,71 @@
  * @author John Grimes
  */
 
-import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
-import { Box, Button, Card, Flex, Progress, Spinner, Tabs, Text } from "@radix-ui/themes";
+import { Box, Flex, Spinner, Tabs, Text } from "@radix-ui/themes";
+import { useState } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
+import { ImportCard } from "../components/import/ImportCard";
 import { ImportForm } from "../components/import/ImportForm";
 import { ImportPnpForm } from "../components/import/ImportPnpForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useImport, useImportPnp, useServerCapabilities } from "../hooks";
-import type { ImportRequest } from "../types/import";
+import { useServerCapabilities } from "../hooks";
+import type { ImportJob, ImportRequest } from "../types/import";
 import type { ImportPnpRequest } from "../types/importPnp";
 
 export function Import() {
   const { fhirBaseUrl } = config;
   const { isAuthenticated } = useAuth();
 
+  // Track all import jobs.
+  const [imports, setImports] = useState<ImportJob[]>([]);
+
+  // Track error messages for display.
+  const [, setError] = useState<string | null>(null);
+
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  // Use the import hooks. 401 errors are handled globally.
-  const standardImport = useImport();
-  const pnpImport = useImportPnp();
+  /**
+   * Handles submission of a standard import.
+   *
+   * @param request - The import request configuration.
+   */
+  const handleStandardImport = (request: ImportRequest) => {
+    const newImport: ImportJob = {
+      id: crypto.randomUUID(),
+      type: "standard",
+      request,
+      createdAt: new Date(),
+    };
+    setImports((prev) => [newImport, ...prev]);
+  };
 
-  // Derive running states from status.
-  const isStandardRunning =
-    standardImport.status === "pending" || standardImport.status === "in-progress";
-  const isPnpRunning = pnpImport.status === "pending" || pnpImport.status === "in-progress";
-  const isRunning = isStandardRunning || isPnpRunning;
+  /**
+   * Handles submission of a PnP import.
+   *
+   * @param request - The PnP import request configuration.
+   */
+  const handlePnpImport = (request: ImportPnpRequest) => {
+    const newImport: ImportJob = {
+      id: crypto.randomUUID(),
+      type: "pnp",
+      request,
+      createdAt: new Date(),
+    };
+    setImports((prev) => [newImport, ...prev]);
+  };
 
-  // Derive completion state from status.
-  const isStandardComplete = standardImport.status === "complete";
-  const isPnpComplete = pnpImport.status === "complete";
-
-  // Determine if we should show the status card for each import type.
-  const showStandardStatus = isStandardRunning || isStandardComplete || standardImport.error;
-  const showPnpStatus = isPnpRunning || isPnpComplete || pnpImport.error;
+  /**
+   * Handles closing/removing an import card.
+   *
+   * @param id - The ID of the import to close.
+   */
+  const handleCloseImport = (id: string) => {
+    setImports((prev) => prev.filter((job) => job.id !== id));
+  };
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
@@ -65,196 +93,39 @@ export function Import() {
     <>
       <Tabs.Root defaultValue="urls">
         <Tabs.List>
-          <Tabs.Trigger value="urls" disabled={isRunning}>
-            Import from URLs
-          </Tabs.Trigger>
-          <Tabs.Trigger value="fhir-server" disabled={isRunning}>
-            Import from FHIR server
-          </Tabs.Trigger>
+          <Tabs.Trigger value="urls">Import from URLs</Tabs.Trigger>
+          <Tabs.Trigger value="fhir-server">Import from FHIR server</Tabs.Trigger>
         </Tabs.List>
 
         <Box pt="4">
           <Tabs.Content value="urls">
-            <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-              <Box style={{ flex: 1 }}>
-                <ImportForm
-                  onSubmit={(request: ImportRequest) => {
-                    standardImport.startWith({
-                      sources: request.input.map((i) => i.url),
-                      resourceTypes: request.input.map((i) => i.type),
-                      saveMode: request.saveMode,
-                      inputFormat: request.inputFormat,
-                    });
-                  }}
-                  isSubmitting={isStandardRunning}
-                  disabled={isRunning}
-                  resourceTypes={capabilities?.resourceTypes ?? []}
-                />
-              </Box>
-              <Box style={{ flex: 1 }}>
-                {showStandardStatus && (
-                  <Card>
-                    <Flex direction="column" gap="3">
-                      <Flex justify="between" align="start">
-                        <Box>
-                          <Text weight="medium">Standard Import</Text>
-                          {standardImport.request && (
-                            <Text size="1" color="gray" as="div">
-                              Importing {standardImport.request.sources.length} source(s)
-                            </Text>
-                          )}
-                        </Box>
-                        {isStandardRunning && (
-                          <Button
-                            size="1"
-                            variant="soft"
-                            color="red"
-                            onClick={standardImport.cancel}
-                          >
-                            <Cross2Icon />
-                            Cancel
-                          </Button>
-                        )}
-                      </Flex>
-
-                      {isStandardRunning && standardImport.progress !== undefined && (
-                        <Box>
-                          <Flex justify="between" mb="1">
-                            <Text size="1" color="gray">
-                              Progress
-                            </Text>
-                            <Text size="1" color="gray">
-                              {standardImport.progress}%
-                            </Text>
-                          </Flex>
-                          <Progress value={standardImport.progress} />
-                        </Box>
-                      )}
-
-                      {isStandardRunning && standardImport.progress === undefined && (
-                        <Flex align="center" gap="2">
-                          <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
-                          <Text size="2" color="gray">
-                            Processing...
-                          </Text>
-                        </Flex>
-                      )}
-
-                      {standardImport.error && (
-                        <Text size="2" color="red">
-                          Error: {standardImport.error.message}
-                        </Text>
-                      )}
-
-                      {isStandardComplete && !standardImport.error && (
-                        <Box>
-                          <Text size="2" color="green" mb="2">
-                            Import completed successfully
-                          </Text>
-                          <Flex justify="end">
-                            <Button
-                              variant="soft"
-                              onClick={() => {
-                                standardImport.reset();
-                              }}
-                            >
-                              New Import
-                            </Button>
-                          </Flex>
-                        </Box>
-                      )}
-                    </Flex>
-                  </Card>
-                )}
-              </Box>
-            </Flex>
+            <ImportForm
+              onSubmit={handleStandardImport}
+              isSubmitting={false}
+              disabled={false}
+              resourceTypes={capabilities?.resourceTypes ?? []}
+            />
           </Tabs.Content>
 
           <Tabs.Content value="fhir-server">
-            <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-              <Box style={{ flex: 1 }}>
-                <ImportPnpForm
-                  onSubmit={(request: ImportPnpRequest) => {
-                    pnpImport.startWith({
-                      exportUrl: request.exportUrl,
-                      saveMode: request.saveMode,
-                      inputFormat: request.inputFormat,
-                    });
-                  }}
-                  isSubmitting={isPnpRunning}
-                  disabled={isRunning}
-                />
-              </Box>
-              <Box style={{ flex: 1 }}>
-                {showPnpStatus && (
-                  <Card>
-                    <Flex direction="column" gap="3">
-                      <Flex justify="between" align="start">
-                        <Box>
-                          <Text weight="medium">FHIR server import</Text>
-                          {pnpImport.request && (
-                            <Text size="1" color="gray" as="div">
-                              Importing from {pnpImport.request.exportUrl}
-                            </Text>
-                          )}
-                        </Box>
-                        {isPnpRunning && (
-                          <Button size="1" variant="soft" color="red" onClick={pnpImport.cancel}>
-                            <Cross2Icon />
-                            Cancel
-                          </Button>
-                        )}
-                      </Flex>
-
-                      {isPnpRunning && pnpImport.progress !== undefined && (
-                        <Box>
-                          <Flex justify="between" mb="1">
-                            <Text size="1" color="gray">
-                              Progress
-                            </Text>
-                            <Text size="1" color="gray">
-                              {pnpImport.progress}%
-                            </Text>
-                          </Flex>
-                          <Progress value={pnpImport.progress} />
-                        </Box>
-                      )}
-
-                      {isPnpRunning && pnpImport.progress === undefined && (
-                        <Flex align="center" gap="2">
-                          <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
-                          <Text size="2" color="gray">
-                            Processing...
-                          </Text>
-                        </Flex>
-                      )}
-
-                      {pnpImport.error && (
-                        <Text size="2" color="red">
-                          Error: {pnpImport.error.message}
-                        </Text>
-                      )}
-
-                      {isPnpComplete && !pnpImport.error && (
-                        <Box>
-                          <Text size="2" color="green" mb="2">
-                            Import completed successfully
-                          </Text>
-                          <Flex justify="end">
-                            <Button variant="soft" onClick={pnpImport.reset}>
-                              New Import
-                            </Button>
-                          </Flex>
-                        </Box>
-                      )}
-                    </Flex>
-                  </Card>
-                )}
-              </Box>
-            </Flex>
+            <ImportPnpForm onSubmit={handlePnpImport} isSubmitting={false} disabled={false} />
           </Tabs.Content>
         </Box>
       </Tabs.Root>
+
+      {imports.length > 0 && (
+        <Flex direction="column" gap="3" mt="4">
+          {imports.map((job) => (
+            <ImportCard
+              key={job.id}
+              job={job}
+              onError={(message) => setError(message)}
+              onClose={() => handleCloseImport(job.id)}
+            />
+          ))}
+        </Flex>
+      )}
+
       <SessionExpiredDialog />
     </>
   );

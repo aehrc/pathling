@@ -12,6 +12,7 @@ import { useBulkExport, useDownloadFile } from "../../hooks";
 import type { ExportRequest } from "../../types/export";
 import { getExportOutputFiles } from "../../types/export";
 import type { BulkExportType } from "../../types/hooks";
+import { formatDateTime } from "../../utils";
 
 interface ExportCardProps {
   request: ExportRequest;
@@ -48,23 +49,6 @@ function getExportTypeLabel(type: BulkExportType): string {
 function getFilenameFromUrl(url: string): string {
   const params = new URLSearchParams(new URL(url).search);
   return params.get("file") ?? "unknown";
-}
-
-/**
- * Formats a date as a date time string (e.g., "7 Jan 2026, 10:30:45 AM").
- *
- * @param date - The date to format.
- * @returns The formatted date time string.
- */
-function formatDateTime(date: Date): string {
-  return date.toLocaleString([], {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-  });
 }
 
 /**
