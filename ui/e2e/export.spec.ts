@@ -566,29 +566,100 @@ test.describe("Export page", () => {
     });
   });
 
-  test.describe("New export", () => {
-    test("New Export button resets state and re-enables form", async ({
+  test.describe("Multiple exports", () => {
+    test("form remains enabled after starting export", async ({ page }) => {
+      await setupDelayedJobMocks(page, { pollCount: 10 });
+      await page.goto("/admin/export");
+
+      // Start export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Verify export card is visible.
+      await expect(page.getByText("System export")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify form is still enabled (Start export button is clickable).
+      await expect(
+        page.getByRole("button", { name: "Start export" }),
+      ).toBeEnabled();
+    });
+
+    test("starting second export creates additional result card", async ({
+      page,
+    }) => {
+      await setupDelayedJobMocks(page, { pollCount: 10 });
+      await page.goto("/admin/export");
+
+      // Start first export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Verify first export card appears.
+      await expect(page.getByText("System export")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Select different export level for second export (while first is still running).
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "All patient data" }).click();
+
+      // Start second export immediately (don't wait for first to complete).
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Verify both export cards are visible.
+      await expect(page.getByText("System export")).toBeVisible();
+      await expect(page.getByText("All patients export")).toBeVisible();
+    });
+
+    test("each result card shows its own export type and resource types", async ({
+      page,
+    }) => {
+      await setupDelayedJobMocks(page, { pollCount: 10 });
+      await page.goto("/admin/export");
+
+      // Select Patient type for first export.
+      await page.getByLabel("Patient").click({ force: true });
+
+      // Start first export.
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Verify first export card appears (while still running).
+      await expect(page.getByText("Types: Patient")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Clear and select Observation for second export.
+      await page.getByText("Clear").click();
+      await page.getByLabel("Observation").click({ force: true });
+
+      // Select different export level for second export.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "All patient data" }).click();
+
+      // Start second export immediately (while first is still running).
+      await page.getByRole("button", { name: "Start export" }).click();
+
+      // Verify both cards show their respective resource types.
+      await expect(page.getByText("Types: Patient")).toBeVisible();
+      await expect(page.getByText("Types: Observation")).toBeVisible();
+    });
+
+    test("New Export button is not present in completed export cards", async ({
       page,
     }) => {
       await setupStandardMocks(page);
       await page.goto("/admin/export");
 
-      // Complete an export.
+      // Start and complete an export.
       await page.getByRole("button", { name: "Start export" }).click();
       await expect(page.getByText("Output files (2)")).toBeVisible({
         timeout: 10000,
       });
 
-      // Click New Export button.
-      await page.getByRole("button", { name: "New Export" }).click();
-
-      // Verify status card is no longer visible.
-      await expect(page.getByText("System export")).not.toBeVisible();
-
-      // Verify form is re-enabled.
+      // Verify New Export button is not present.
       await expect(
-        page.getByRole("button", { name: "Start export" }),
-      ).toBeEnabled();
+        page.getByRole("button", { name: "New Export" }),
+      ).not.toBeVisible();
     });
   });
 

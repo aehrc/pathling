@@ -1,0 +1,166 @@
+/**
+ * Card component that displays and manages a single bulk export job.
+ * Each card manages its own export lifecycle via the useBulkExport hook.
+ *
+ * @author John Grimes
+ */
+
+import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
+import { Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
+import { useEffect, useRef } from "react";
+import { useBulkExport, useDownloadFile } from "../../hooks";
+import type { ExportRequest } from "../../types/export";
+import { getExportOutputFiles } from "../../types/export";
+import type { BulkExportType } from "../../types/hooks";
+
+interface ExportCardProps {
+  request: ExportRequest;
+  onError: (message: string) => void;
+}
+
+/**
+ * Maps export level to hook export type.
+ *
+ * @param type - The bulk export type.
+ * @returns Human-readable label for the export type.
+ */
+function getExportTypeLabel(type: BulkExportType): string {
+  switch (type) {
+    case "system":
+      return "System export";
+    case "all-patients":
+      return "All patients export";
+    case "patient":
+      return "Patient export";
+    case "group":
+      return "Group export";
+  }
+}
+
+/**
+ * Extracts the filename from a result URL's query parameters.
+ *
+ * @param url - The URL containing the file query parameter.
+ * @returns The filename extracted from the URL.
+ */
+function getFilenameFromUrl(url: string): string {
+  const params = new URLSearchParams(new URL(url).search);
+  return params.get("file") ?? "unknown";
+}
+
+/**
+ * Displays and manages a single bulk export job.
+ *
+ * @param props - Component props.
+ * @param props.request - The export request configuration.
+ * @param props.onError - Callback for error handling (e.g., auth errors).
+ * @returns The rendered export card component.
+ */
+export function ExportCard({ request, onError }: Readonly<ExportCardProps>) {
+  const handleDownloadFile = useDownloadFile((err) => onError(err.message));
+  const hasStartedRef = useRef(false);
+
+  const { startWith, cancel, status, result, error, progress } = useBulkExport();
+
+  // Extract output files from the Parameters result.
+  const outputFiles = result ? getExportOutputFiles(result) : [];
+
+  // Derive isRunning from status.
+  const isRunning = status === "pending" || status === "in-progress";
+
+  // Start the export immediately on mount.
+  useEffect(() => {
+    if (!hasStartedRef.current) {
+      hasStartedRef.current = true;
+      startWith({
+        type: request.level,
+        resourceTypes: request.resourceTypes,
+        since: request.since,
+        until: request.until,
+        elements: request.elements,
+        patientId: request.patientId,
+        groupId: request.groupId,
+      });
+    }
+  }, [request, startWith]);
+
+  return (
+    <Card>
+      <Flex direction="column" gap="3">
+        <Flex justify="between" align="start">
+          <Box>
+            <Text weight="medium">{getExportTypeLabel(request.level)}</Text>
+            {request.resourceTypes && request.resourceTypes.length > 0 && (
+              <Text size="1" color="gray" as="div">
+                Types: {request.resourceTypes.join(", ")}
+              </Text>
+            )}
+          </Box>
+          {isRunning && (
+            <Button size="1" variant="soft" color="red" onClick={cancel}>
+              <Cross2Icon />
+              Cancel
+            </Button>
+          )}
+        </Flex>
+
+        {isRunning && progress !== undefined && (
+          <Box>
+            <Flex justify="between" mb="1">
+              <Text size="1" color="gray">
+                Progress
+              </Text>
+              <Text size="1" color="gray">
+                {progress}%
+              </Text>
+            </Flex>
+            <Progress value={progress} />
+          </Box>
+        )}
+
+        {isRunning && progress === undefined && (
+          <Flex align="center" gap="2">
+            <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
+            <Text size="2" color="gray">
+              Processing...
+            </Text>
+          </Flex>
+        )}
+
+        {error && (
+          <Text size="2" color="red">
+            Error: {error.message}
+          </Text>
+        )}
+
+        {outputFiles.length > 0 && (
+          <Box>
+            <Text size="2" weight="medium" mb="2" style={{ display: "block" }}>
+              Output files ({outputFiles.length})
+            </Text>
+            <Flex direction="column" gap="1">
+              {outputFiles.map((output) => (
+                <Flex key={output.url} justify="between" align="center">
+                  <Text size="2">
+                    {getFilenameFromUrl(output.url)}
+                    {output.count !== undefined && (
+                      <Text color="gray"> ({output.count} resources)</Text>
+                    )}
+                  </Text>
+                  <Button
+                    size="1"
+                    variant="soft"
+                    onClick={() => handleDownloadFile(output.url, getFilenameFromUrl(output.url))}
+                  >
+                    <DownloadIcon />
+                    Download
+                  </Button>
+                </Flex>
+              ))}
+            </Flex>
+          </Box>
+        )}
+      </Flex>
+    </Card>
+  );
+}

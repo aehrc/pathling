@@ -12,8 +12,6 @@ import { ResourceTypePicker } from "./ResourceTypePicker";
 
 interface ExportFormProps {
   onSubmit: (request: ExportRequest) => void;
-  isSubmitting: boolean;
-  disabled: boolean;
   resourceTypes: string[];
 }
 
@@ -24,12 +22,7 @@ const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
   { value: "group", label: "Data for patients in group" },
 ];
 
-export function ExportForm({
-  onSubmit,
-  isSubmitting,
-  disabled,
-  resourceTypes,
-}: Readonly<ExportFormProps>) {
+export function ExportForm({ onSubmit, resourceTypes }: Readonly<ExportFormProps>) {
   const [level, setLevel] = useState<ExportLevel>("system");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [since, setSince] = useState("");
@@ -150,15 +143,10 @@ export function ExportForm({
         <Button
           size="3"
           onClick={handleSubmit}
-          disabled={
-            disabled ||
-            isSubmitting ||
-            (level === "patient" && !patientId) ||
-            (level === "group" && !groupId)
-          }
+          disabled={(level === "patient" && !patientId) || (level === "group" && !groupId)}
         >
           <PlayIcon />
-          {isSubmitting ? "Starting export..." : "Start export"}
+          Start export
         </Button>
       </Flex>
     </Card>
