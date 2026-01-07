@@ -415,7 +415,7 @@ test.describe("Import page", () => {
 
     test.describe("Cancellation", () => {
       test("cancels running import", async ({ page }) => {
-        let cancelRequested = false;
+        let cancelRequestUrl: string | null = null;
 
         await page.route("**/metadata", async (route) => {
           await route.fulfill({
@@ -445,7 +445,7 @@ test.describe("Import page", () => {
               body: JSON.stringify(mockJobStatusInProgress),
             });
           } else if (route.request().method() === "DELETE") {
-            cancelRequested = true;
+            cancelRequestUrl = route.request().url();
             await route.fulfill({ status: 204, body: "" });
           }
         });
@@ -467,8 +467,8 @@ test.describe("Import page", () => {
         // Click cancel button.
         await page.getByRole("button", { name: "Cancel" }).click();
 
-        // Verify cancel was requested.
-        expect(cancelRequested).toBe(true);
+        // Verify cancel was requested to the correct URL.
+        expect(cancelRequestUrl).toContain(`$job?id=${TEST_JOB_ID}`);
       });
 
       test("shows cancelled status indicator when import is cancelled", async ({

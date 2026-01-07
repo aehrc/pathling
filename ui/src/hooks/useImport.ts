@@ -57,13 +57,13 @@ export const useImport: UseImportFn = (options) => {
           mode: request.saveMode,
           accessToken,
         }),
-      getJobId: (result: { jobId: string }) => result.jobId,
-      checkStatus: (jobId: string) =>
-        jobStatus(fhirBaseUrl!, { jobId, accessToken }),
+      getJobId: (result: { pollingUrl: string }) => result.pollingUrl,
+      checkStatus: (pollingUrl: string) =>
+        jobStatus(fhirBaseUrl!, { pollingUrl, accessToken }),
       isComplete: (status: { status: string }) => status.status === "complete",
       getResult: () => undefined,
-      cancel: (jobId: string) =>
-        jobCancel(fhirBaseUrl!, { jobId, accessToken }),
+      cancel: (pollingUrl: string) =>
+        jobCancel(fhirBaseUrl!, { pollingUrl, accessToken }),
       pollingInterval: 3000,
     }),
     [fhirBaseUrl, accessToken],

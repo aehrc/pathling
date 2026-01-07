@@ -25,12 +25,7 @@ import type {
   ViewRunOptions,
   ViewRunStoredOptions,
 } from "../types/api";
-import {
-  buildHeaders,
-  buildUrl,
-  checkResponse,
-  extractJobIdFromUrl,
-} from "./utils";
+import { buildHeaders, buildUrl, checkResponse } from "./utils";
 
 /**
  * Runs a ViewDefinition and returns the results as a stream.
@@ -168,12 +163,12 @@ export async function viewRunStored(
  *
  * @param baseUrl - The FHIR server base URL.
  * @param options - View export options including views to export.
- * @returns The job ID for tracking the export operation.
+ * @returns The polling URL for tracking the export operation.
  * @throws {UnauthorizedError} When the request receives a 401 response.
  * @throws {Error} For other non-successful responses.
  *
  * @example
- * const { jobId } = await viewExportKickOff("https://example.com/fhir", {
+ * const { pollingUrl } = await viewExportKickOff("https://example.com/fhir", {
  *   views: [{ viewDefinition: { ... }, name: "my-view" }],
  *   format: "parquet",
  *   accessToken: "token123"
@@ -247,8 +242,7 @@ export async function viewExportKickOff(
     throw new Error("View export kick-off failed: No Content-Location header");
   }
 
-  const jobId = extractJobIdFromUrl(contentLocation);
-  return { jobId };
+  return { pollingUrl: contentLocation };
 }
 
 /**

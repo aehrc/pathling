@@ -23,24 +23,19 @@ import type {
   ImportResult,
   ImportPnpKickOffOptions,
 } from "../types/api";
-import {
-  buildHeaders,
-  buildUrl,
-  checkResponse,
-  extractJobIdFromUrl,
-} from "./utils";
+import { buildHeaders, buildUrl, checkResponse } from "./utils";
 
 /**
  * Kicks off a bulk import operation.
  *
  * @param baseUrl - The FHIR server base URL.
  * @param options - Import options including input files, format, and mode.
- * @returns The job ID for tracking the import operation.
+ * @returns The polling URL for tracking the import operation.
  * @throws {UnauthorizedError} When the request receives a 401 response.
  * @throws {Error} For other non-successful responses.
  *
  * @example
- * const { jobId } = await importKickOff("https://example.com/fhir", {
+ * const { pollingUrl } = await importKickOff("https://example.com/fhir", {
  *   input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
  *   inputFormat: "application/fhir+ndjson",
  *   mode: "overwrite",
@@ -84,8 +79,7 @@ export async function importKickOff(
     throw new Error("Import kick-off failed: No Content-Location header");
   }
 
-  const jobId = extractJobIdFromUrl(contentLocation);
-  return { jobId };
+  return { pollingUrl: contentLocation };
 }
 
 /**
@@ -126,12 +120,12 @@ function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
  *
  * @param baseUrl - The FHIR server base URL.
  * @param options - Import options including export URL and optional settings.
- * @returns The job ID for tracking the import operation.
+ * @returns The polling URL for tracking the import operation.
  * @throws {UnauthorizedError} When the request receives a 401 response.
  * @throws {Error} For other non-successful responses.
  *
  * @example
- * const { jobId } = await importPnpKickOff("https://example.com/fhir", {
+ * const { pollingUrl } = await importPnpKickOff("https://example.com/fhir", {
  *   exportUrl: "https://source.com/$export",
  *   exportType: "dynamic",
  *   saveMode: "merge",
@@ -171,6 +165,5 @@ export async function importPnpKickOff(
     throw new Error("Import PnP kick-off failed: No Content-Location header");
   }
 
-  const jobId = extractJobIdFromUrl(contentLocation);
-  return { jobId };
+  return { pollingUrl: contentLocation };
 }

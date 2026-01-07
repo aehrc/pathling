@@ -23,6 +23,7 @@ import {
   viewExportDownload,
   jobStatus,
   jobCancel,
+  extractJobIdFromUrl,
 } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
@@ -43,7 +44,7 @@ export const useViewExport: UseViewExportFn = (options) => {
   const { fhirBaseUrl } = config;
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
-  const jobIdRef = useRef<string | undefined>(undefined);
+  const pollingUrlRef = useRef<string | undefined>(undefined);
 
   const callbacks = useMemo(
     () => ({
@@ -63,17 +64,17 @@ export const useViewExport: UseViewExportFn = (options) => {
           header: request.header,
           accessToken,
         }),
-      getJobId: (result: { jobId: string }) => {
-        jobIdRef.current = result.jobId;
-        return result.jobId;
+      getJobId: (result: { pollingUrl: string }) => {
+        pollingUrlRef.current = result.pollingUrl;
+        return result.pollingUrl;
       },
-      checkStatus: (jobId: string) =>
-        jobStatus(fhirBaseUrl!, { jobId, accessToken }),
+      checkStatus: (pollingUrl: string) =>
+        jobStatus(fhirBaseUrl!, { pollingUrl, accessToken }),
       isComplete: (status: { status: string }) => status.status === "complete",
       getResult: (status: { result?: unknown }) =>
         status.result as UseViewExportResult["result"],
-      cancel: (jobId: string) =>
-        jobCancel(fhirBaseUrl!, { jobId, accessToken }),
+      cancel: (pollingUrl: string) =>
+        jobCancel(fhirBaseUrl!, { pollingUrl, accessToken }),
       pollingInterval: 3000,
     }),
     [fhirBaseUrl, accessToken],
@@ -83,9 +84,10 @@ export const useViewExport: UseViewExportFn = (options) => {
 
   const download = useCallback(
     async (fileName: string) => {
-      if (!jobIdRef.current) throw new Error("No job ID available");
+      if (!pollingUrlRef.current) throw new Error("No polling URL available");
+      const jobId = extractJobIdFromUrl(pollingUrlRef.current);
       return viewExportDownload(fhirBaseUrl!, {
-        jobId: jobIdRef.current,
+        jobId,
         fileName,
         accessToken,
       });

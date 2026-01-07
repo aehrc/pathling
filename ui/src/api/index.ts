@@ -27,7 +27,6 @@ export {
   patientExportKickOff,
   groupExportKickOff,
   bulkExportStatus,
-  bulkExportCancel,
   bulkExportDownload,
 } from "./bulkExport";
 
@@ -44,7 +43,12 @@ export { jobStatus, jobCancel } from "./job";
 export { search, read, create, update, deleteResource } from "./rest";
 
 // Utility functions.
-export { buildUrl, resolveUrl, parseProgressHeader } from "./utils";
+export {
+  buildUrl,
+  resolveUrl,
+  parseProgressHeader,
+  extractJobIdFromUrl,
+} from "./utils";
 
 // ViewDefinition operations.
 export {

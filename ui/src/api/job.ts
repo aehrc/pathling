@@ -22,20 +22,20 @@ import type {
   JobStatusOptions,
   JobStatusResult,
 } from "../types/api";
-import { buildHeaders, buildUrl, checkResponse } from "./utils";
+import { buildHeaders, checkResponse, resolveUrl } from "./utils";
 
 /**
  * Checks the status of an async job.
  *
  * @param baseUrl - The FHIR server base URL.
- * @param options - Job status options including job ID.
+ * @param options - Job status options including polling URL.
  * @returns The job status result with status, optional progress, and optional result.
  * @throws {UnauthorizedError} When the request receives a 401 response.
  * @throws {Error} For other non-successful responses.
  *
  * @example
  * const status = await jobStatus("https://example.com/fhir", {
- *   jobId: "abc-123",
+ *   pollingUrl: "https://example.com/fhir/$job?id=abc-123",
  *   accessToken: "token123"
  * });
  * if (status.status === "complete") {
@@ -46,7 +46,7 @@ export async function jobStatus(
   baseUrl: string,
   options: JobStatusOptions,
 ): Promise<JobStatusResult> {
-  const url = buildUrl(baseUrl, "/$job", { id: options.jobId });
+  const url = resolveUrl(baseUrl, options.pollingUrl);
   const headers = buildHeaders({ accessToken: options.accessToken });
 
   const response = await fetch(url, {
@@ -83,13 +83,13 @@ export async function jobStatus(
  * Cancels an async job.
  *
  * @param baseUrl - The FHIR server base URL.
- * @param options - Job cancel options including job ID.
+ * @param options - Job cancel options including polling URL.
  * @throws {UnauthorizedError} When the request receives a 401 response.
  * @throws {Error} For other non-successful responses.
  *
  * @example
  * await jobCancel("https://example.com/fhir", {
- *   jobId: "abc-123",
+ *   pollingUrl: "https://example.com/fhir/$job?id=abc-123",
  *   accessToken: "token123"
  * });
  */
@@ -97,7 +97,7 @@ export async function jobCancel(
   baseUrl: string,
   options: JobCancelOptions,
 ): Promise<void> {
-  const url = buildUrl(baseUrl, "/$job", { id: options.jobId });
+  const url = resolveUrl(baseUrl, options.pollingUrl);
   const headers = buildHeaders({ accessToken: options.accessToken });
 
   const response = await fetch(url, {

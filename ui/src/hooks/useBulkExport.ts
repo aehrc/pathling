@@ -24,8 +24,8 @@ import {
   patientExportKickOff,
   groupExportKickOff,
   bulkExportStatus,
-  bulkExportCancel,
   bulkExportDownload,
+  jobCancel,
 } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
@@ -105,7 +105,7 @@ export const useBulkExport: UseBulkExportFn = (options) => {
       isComplete: (status: StatusResult) => status.status === "complete",
       getResult: (status: StatusResult) => status.manifest!,
       cancel: (pollingUrl: string) =>
-        bulkExportCancel(fhirBaseUrl!, { pollingUrl, accessToken }),
+        jobCancel(fhirBaseUrl!, { pollingUrl, accessToken }),
       pollingInterval: 3000,
     }),
     [fhirBaseUrl, accessToken],

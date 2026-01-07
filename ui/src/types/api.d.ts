@@ -124,10 +124,6 @@ export interface BulkExportDownloadOptions extends AuthOptions {
   fileUrl: string;
 }
 
-export interface BulkExportCancelOptions extends AuthOptions {
-  pollingUrl: string;
-}
-
 export type SystemExportKickOffFn = (
   options: SystemExportKickOffOptions,
 ) => Promise<BulkExportKickOffResult>;
@@ -170,7 +166,7 @@ export interface ImportKickOffOptions extends AuthOptions {
 }
 
 export interface ImportResult {
-  jobId: string;
+  pollingUrl: string;
 }
 
 export type ImportKickOffFn = (
@@ -321,7 +317,7 @@ export interface ViewExportKickOffOptions extends AuthOptions {
 }
 
 export interface ViewExportResult {
-  jobId: string;
+  pollingUrl: string;
 }
 
 export interface ViewExportDownloadOptions extends AuthOptions {
@@ -341,7 +337,7 @@ export type ViewExportDownloadFn = (
 // =============================================================================
 
 export interface JobStatusOptions extends AuthOptions {
-  jobId: string;
+  pollingUrl: string;
 }
 
 export interface JobStatusResult {
@@ -351,7 +347,7 @@ export interface JobStatusResult {
 }
 
 export interface JobCancelOptions extends AuthOptions {
-  jobId: string;
+  pollingUrl: string;
 }
 
 export type JobStatusFn = (
