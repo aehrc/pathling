@@ -17,15 +17,30 @@
 
 package au.csiro.pathling.search.filter;
 
+import static org.apache.spark.sql.functions.exists;
+
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
 
 /**
- * Interface for building SparkSQL filter expressions from search parameter values.
+ * Builds SparkSQL filter expressions from search parameter values.
+ * <p>
+ * This class handles the common logic for all search filters:
+ * <ul>
+ *   <li>Combining multiple search values with OR logic</li>
+ *   <li>Vectorizing the filter to handle both array and scalar columns</li>
+ * </ul>
+ * <p>
+ * The actual matching logic is delegated to an {@link ElementMatcher}.
  */
-public interface SearchFilter {
+@RequiredArgsConstructor
+public class SearchFilter {
+
+  @Nonnull
+  private final ElementMatcher matcher;
 
   /**
    * Builds a SparkSQL Column expression that filters rows based on the search values.
@@ -35,5 +50,18 @@ public interface SearchFilter {
    * @return a SparkSQL Column expression that evaluates to true for matching rows
    */
   @Nonnull
-  Column buildFilter(@Nonnull ColumnRepresentation valueColumn, @Nonnull List<String> searchValues);
+  public Column buildFilter(@Nonnull final ColumnRepresentation valueColumn,
+      @Nonnull final List<String> searchValues) {
+    if (searchValues.isEmpty()) {
+      throw new IllegalArgumentException("At least one search value is required");
+    }
+
+    return searchValues.stream()
+        .map(value -> valueColumn.vectorize(
+            arr -> exists(arr, elem -> matcher.match(elem, value)),
+            scalar -> matcher.match(scalar, value)
+        ).getValue())
+        .reduce(Column::or)
+        .orElseThrow(() -> new IllegalStateException("Failed to build filter expression"));
+  }
 }

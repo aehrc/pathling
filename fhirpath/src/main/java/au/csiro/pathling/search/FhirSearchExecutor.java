@@ -27,8 +27,8 @@ import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators.SingleEvaluatorFa
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.search.filter.SearchFilter;
-import au.csiro.pathling.search.filter.StringSearchFilter;
-import au.csiro.pathling.search.filter.TokenSearchFilter;
+import au.csiro.pathling.search.filter.StringMatcher;
+import au.csiro.pathling.search.filter.TokenMatcher;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import lombok.Getter;
@@ -176,8 +176,8 @@ public class FhirSearchExecutor {
   @Nonnull
   private SearchFilter getFilterForType(@Nonnull final SearchParameterType type) {
     return switch (type) {
-      case TOKEN -> new TokenSearchFilter();
-      case STRING -> new StringSearchFilter();
+      case TOKEN -> new SearchFilter(new TokenMatcher());
+      case STRING -> new SearchFilter(new StringMatcher());
       default -> throw new UnsupportedOperationException(
           "Search parameter type not yet supported: " + type);
     };
