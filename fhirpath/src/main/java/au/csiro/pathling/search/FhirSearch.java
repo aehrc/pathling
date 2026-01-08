@@ -60,30 +60,32 @@ public class FhirSearch {
     private final List<SearchCriterion> criteria = new ArrayList<>();
 
     /**
-     * Adds a search criterion with the given parameter code and values.
+     * Adds a search criterion with the given parameter code and values. The parameter code may
+     * include a modifier suffix (e.g., "gender:not" or "family:exact").
      *
-     * @param parameterCode the parameter code
+     * @param parameterCodeWithModifier the parameter code, optionally with modifier suffix
      * @param values the search values (multiple values = OR logic)
      * @return this builder
      */
     @Nonnull
-    public Builder criterion(@Nonnull final String parameterCode,
+    public Builder criterion(@Nonnull final String parameterCodeWithModifier,
         @Nonnull final String... values) {
-      criteria.add(SearchCriterion.of(parameterCode, Arrays.asList(values)));
-      return this;
+      return criterion(parameterCodeWithModifier, Arrays.asList(values));
     }
 
     /**
-     * Adds a search criterion with the given parameter code and values.
+     * Adds a search criterion with the given parameter code and values. The parameter code may
+     * include a modifier suffix (e.g., "gender:not" or "family:exact").
      *
-     * @param parameterCode the parameter code
+     * @param parameterCodeWithModifier the parameter code, optionally with modifier suffix
      * @param values the search values (multiple values = OR logic)
      * @return this builder
      */
     @Nonnull
-    public Builder criterion(@Nonnull final String parameterCode,
+    public Builder criterion(@Nonnull final String parameterCodeWithModifier,
         @Nonnull final List<String> values) {
-      criteria.add(SearchCriterion.of(parameterCode, values));
+      final String[] parts = parseParameterCode(parameterCodeWithModifier);
+      criteria.add(SearchCriterion.of(parts[0], parts[1], values));
       return this;
     }
 
@@ -97,6 +99,25 @@ public class FhirSearch {
     public Builder criterion(@Nonnull final SearchCriterion criterion) {
       criteria.add(criterion);
       return this;
+    }
+
+    /**
+     * Parses a parameter code that may include a modifier suffix.
+     *
+     * @param parameterCodeWithModifier the parameter code with optional modifier (e.g.,
+     *     "gender:not")
+     * @return an array of [parameterCode, modifier] where modifier may be null
+     */
+    @Nonnull
+    private String[] parseParameterCode(@Nonnull final String parameterCodeWithModifier) {
+      final int colonIndex = parameterCodeWithModifier.indexOf(':');
+      if (colonIndex == -1) {
+        return new String[]{parameterCodeWithModifier, null};
+      }
+      return new String[]{
+          parameterCodeWithModifier.substring(0, colonIndex),
+          parameterCodeWithModifier.substring(colonIndex + 1)
+      };
     }
 
     /**

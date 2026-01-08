@@ -109,7 +109,26 @@ class FhirSearchExecutorTest {
             "family", List.of("John"), Set.of("2")),
         Arguments.of("family search multiple values",
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
-            "family", List.of("Smith", "Jones"), Set.of("1", "2"))
+            "family", List.of("Smith", "Jones"), Set.of("1", "2")),
+
+        // :not modifier tests (token type)
+        Arguments.of("gender:not search excludes male",
+            (Supplier<ObjectDataSource>) this::createPatientDataSource,
+            "gender:not", List.of("male"), Set.of("2", "4")),  // female + no gender
+        Arguments.of("gender:not search excludes female",
+            (Supplier<ObjectDataSource>) this::createPatientDataSource,
+            "gender:not", List.of("female"), Set.of("1", "3", "4")),  // male + no gender
+
+        // :exact modifier tests (string type)
+        Arguments.of("family:exact search exact match",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
+            "family:exact", List.of("Smith"), Set.of("1")),
+        Arguments.of("family:exact search wrong case",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
+            "family:exact", List.of("smith"), Set.of()),  // case-sensitive - no match
+        Arguments.of("family:exact search partial",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
+            "family:exact", List.of("Smi"), Set.of())  // prefix doesn't match
     );
   }
 
@@ -185,6 +204,46 @@ class FhirSearchExecutorTest {
 
     // Schema should be identical
     assertEquals(original.schema(), results.schema());
+  }
+
+  @Test
+  void testInvalidModifierOnTokenThrowsException() {
+    final ObjectDataSource dataSource = createPatientDataSource();
+
+    // :exact is not valid for token type parameters
+    final FhirSearch search = FhirSearch.builder()
+        .criterion("gender:exact", "male")
+        .build();
+
+    final FhirSearchExecutor executor = new FhirSearchExecutor(
+        encoders.getContext(), dataSource);
+
+    final InvalidModifierException exception = assertThrows(
+        InvalidModifierException.class,
+        () -> executor.execute(ResourceType.PATIENT, search));
+
+    assertTrue(exception.getMessage().contains("exact"));
+    assertTrue(exception.getMessage().contains("TOKEN"));
+  }
+
+  @Test
+  void testInvalidModifierOnStringThrowsException() {
+    final ObjectDataSource dataSource = createPatientDataSourceWithNames();
+
+    // :not is not valid for string type parameters
+    final FhirSearch search = FhirSearch.builder()
+        .criterion("family:not", "Smith")
+        .build();
+
+    final FhirSearchExecutor executor = new FhirSearchExecutor(
+        encoders.getContext(), dataSource);
+
+    final InvalidModifierException exception = assertThrows(
+        InvalidModifierException.class,
+        () -> executor.execute(ResourceType.PATIENT, search));
+
+    assertTrue(exception.getMessage().contains("not"));
+    assertTrue(exception.getMessage().contains("STRING"));
   }
 
   // ========== Data source creation methods ==========

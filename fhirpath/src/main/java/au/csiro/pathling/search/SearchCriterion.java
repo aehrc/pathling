@@ -18,13 +18,14 @@
 package au.csiro.pathling.search;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import lombok.Value;
 
 /**
- * Represents a single search criterion with a parameter code and one or more values. Multiple
- * values for the same parameter are combined with OR logic.
+ * Represents a single search criterion with a parameter code, optional modifier, and one or more
+ * values. Multiple values for the same parameter are combined with OR logic.
  */
 @Value
 public class SearchCriterion {
@@ -36,13 +37,19 @@ public class SearchCriterion {
   String parameterCode;
 
   /**
+   * The search modifier (e.g., "not", "exact"), or null if no modifier.
+   */
+  @Nullable
+  String modifier;
+
+  /**
    * The search values. Multiple values are combined with OR logic.
    */
   @Nonnull
   List<String> values;
 
   /**
-   * Creates a search criterion with the given parameter code and values.
+   * Creates a search criterion with the given parameter code and values (no modifier).
    *
    * @param parameterCode the parameter code
    * @param values the search values
@@ -51,11 +58,11 @@ public class SearchCriterion {
   @Nonnull
   public static SearchCriterion of(@Nonnull final String parameterCode,
       @Nonnull final String... values) {
-    return new SearchCriterion(parameterCode, Arrays.asList(values));
+    return new SearchCriterion(parameterCode, null, Arrays.asList(values));
   }
 
   /**
-   * Creates a search criterion with the given parameter code and values.
+   * Creates a search criterion with the given parameter code and values (no modifier).
    *
    * @param parameterCode the parameter code
    * @param values the search values
@@ -64,6 +71,36 @@ public class SearchCriterion {
   @Nonnull
   public static SearchCriterion of(@Nonnull final String parameterCode,
       @Nonnull final List<String> values) {
-    return new SearchCriterion(parameterCode, values);
+    return new SearchCriterion(parameterCode, null, values);
+  }
+
+  /**
+   * Creates a search criterion with the given parameter code, modifier, and values.
+   *
+   * @param parameterCode the parameter code
+   * @param modifier the search modifier (e.g., "not", "exact"), or null
+   * @param values the search values
+   * @return the search criterion
+   */
+  @Nonnull
+  public static SearchCriterion of(@Nonnull final String parameterCode,
+      @Nullable final String modifier,
+      @Nonnull final String... values) {
+    return new SearchCriterion(parameterCode, modifier, Arrays.asList(values));
+  }
+
+  /**
+   * Creates a search criterion with the given parameter code, modifier, and values.
+   *
+   * @param parameterCode the parameter code
+   * @param modifier the search modifier (e.g., "not", "exact"), or null
+   * @param values the search values
+   * @return the search criterion
+   */
+  @Nonnull
+  public static SearchCriterion of(@Nonnull final String parameterCode,
+      @Nullable final String modifier,
+      @Nonnull final List<String> values) {
+    return new SearchCriterion(parameterCode, modifier, values);
   }
 }

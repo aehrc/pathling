@@ -17,12 +17,14 @@
 
 package au.csiro.pathling.search.filter;
 
+import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.exists;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.not;
 
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
 
 /**
@@ -32,18 +34,45 @@ import org.apache.spark.sql.Column;
  * <ul>
  *   <li>Combining multiple search values with OR logic</li>
  *   <li>Vectorizing the filter to handle both array and scalar columns</li>
+ *   <li>Optionally negating the entire filter (for :not modifier)</li>
  * </ul>
  * <p>
  * The actual matching logic is delegated to an {@link ElementMatcher}.
  */
-@RequiredArgsConstructor
 public class SearchFilter {
 
   @Nonnull
   private final ElementMatcher matcher;
 
+  private final boolean negated;
+
+  /**
+   * Creates a non-negated search filter with the given matcher.
+   *
+   * @param matcher the element matcher
+   */
+  public SearchFilter(@Nonnull final ElementMatcher matcher) {
+    this(matcher, false);
+  }
+
+  /**
+   * Creates a search filter with the given matcher and negation flag.
+   *
+   * @param matcher the element matcher
+   * @param negated if true, the filter result will be negated (for :not modifier)
+   */
+  public SearchFilter(@Nonnull final ElementMatcher matcher, final boolean negated) {
+    this.matcher = matcher;
+    this.negated = negated;
+  }
+
   /**
    * Builds a SparkSQL Column expression that filters rows based on the search values.
+   * <p>
+   * If this filter is negated (for :not modifier), the entire expression is negated. Per FHIR
+   * specification, negation applies to the SET of values, not each individual element. This means
+   * :not returns resources that do NOT have ANY matching value, including resources with no value
+   * at all.
    *
    * @param valueColumn the ColumnRepresentation containing the values to filter on
    * @param searchValues the search values to match (multiple values = OR logic)
@@ -56,12 +85,16 @@ public class SearchFilter {
       throw new IllegalArgumentException("At least one search value is required");
     }
 
-    return searchValues.stream()
+    final Column positiveFilter = searchValues.stream()
         .map(value -> valueColumn.vectorize(
             arr -> exists(arr, elem -> matcher.match(elem, value)),
-            scalar -> matcher.match(scalar, value)
+            // For scalar values, coalesce null to false so NOT(null) -> NOT(false) -> true
+            // This ensures :not matches resources with no value
+            scalar -> coalesce(matcher.match(scalar, value), lit(false))
         ).getValue())
         .reduce(Column::or)
         .orElseThrow(() -> new IllegalStateException("Failed to build filter expression"));
+
+    return negated ? not(positiveFilter) : positiveFilter;
   }
 }

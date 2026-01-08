@@ -26,11 +26,13 @@ import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators.SingleEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.search.filter.ExactStringMatcher;
 import au.csiro.pathling.search.filter.SearchFilter;
 import au.csiro.pathling.search.filter.StringMatcher;
 import au.csiro.pathling.search.filter.TokenMatcher;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
@@ -160,24 +162,43 @@ public class FhirSearchExecutor {
     final Collection result = evaluator.evaluate(fhirPath);
     final ColumnRepresentation valueColumn = result.getColumn();
 
-    // Get the appropriate filter builder for the parameter type
-    final SearchFilter filter = getFilterForType(paramDef.getType());
+    // Get the appropriate filter builder for the parameter type and modifier
+    final SearchFilter filter = getFilterForType(paramDef.getType(), criterion.getModifier());
 
     // Build and return the filter expression
     return filter.buildFilter(valueColumn, criterion.getValues());
   }
 
   /**
-   * Gets the appropriate filter implementation for a search parameter type.
+   * Gets the appropriate filter implementation for a search parameter type and modifier.
    *
    * @param type the search parameter type
+   * @param modifier the search modifier (e.g., "not", "exact"), or null for no modifier
    * @return the filter implementation
+   * @throws InvalidModifierException if the modifier is not supported for the parameter type
    */
   @Nonnull
-  private SearchFilter getFilterForType(@Nonnull final SearchParameterType type) {
+  private SearchFilter getFilterForType(@Nonnull final SearchParameterType type,
+      @Nullable final String modifier) {
     return switch (type) {
-      case TOKEN -> new SearchFilter(new TokenMatcher());
-      case STRING -> new SearchFilter(new StringMatcher());
+      case TOKEN -> {
+        if ("not".equals(modifier)) {
+          yield new SearchFilter(new TokenMatcher(), true);
+        }
+        if (modifier != null) {
+          throw new InvalidModifierException(modifier, type);
+        }
+        yield new SearchFilter(new TokenMatcher());
+      }
+      case STRING -> {
+        if ("exact".equals(modifier)) {
+          yield new SearchFilter(new ExactStringMatcher());
+        }
+        if (modifier != null) {
+          throw new InvalidModifierException(modifier, type);
+        }
+        yield new SearchFilter(new StringMatcher());
+      }
       default -> throw new UnsupportedOperationException(
           "Search parameter type not yet supported: " + type);
     };

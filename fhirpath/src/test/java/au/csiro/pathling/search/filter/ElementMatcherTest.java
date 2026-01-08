@@ -118,4 +118,43 @@ class ElementMatcherTest {
     final boolean actual = df.select(result).first().getBoolean(0);
     assertEquals(expected, actual);
   }
+
+  // ========== ExactStringMatcher tests ==========
+
+  static Stream<Arguments> exactStringMatcherCases() {
+    return Stream.of(
+        // Exact match - case-sensitive
+        Arguments.of("Smith", "Smith", true),
+        Arguments.of("Jones", "Jones", true),
+        // Case matters - no match
+        Arguments.of("Smith", "smith", false),
+        Arguments.of("smith", "Smith", false),
+        Arguments.of("SMITH", "Smith", false),
+        Arguments.of("SMITH", "smith", false),
+        // Must match exactly - not prefix
+        Arguments.of("Smithson", "Smith", false),
+        Arguments.of("Smith", "Smi", false),
+        // Different values - no match
+        Arguments.of("Jones", "Smith", false),
+        Arguments.of("Brown", "Browning", false),
+        // Empty string
+        Arguments.of("", "", true),
+        Arguments.of("Smith", "", false),
+        Arguments.of("", "Smith", false)
+    );
+  }
+
+  @ParameterizedTest(name = "ExactStringMatcher: \"{0}\" matches \"{1}\" = {2}")
+  @MethodSource("exactStringMatcherCases")
+  void testExactStringMatcher(final String element, final String searchValue,
+      final boolean expected) {
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING())
+        .toDF("value");
+
+    final ExactStringMatcher matcher = new ExactStringMatcher();
+    final Column result = matcher.match(col("value"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
 }
