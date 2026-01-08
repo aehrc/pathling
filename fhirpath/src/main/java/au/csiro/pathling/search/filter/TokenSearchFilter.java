@@ -17,8 +17,10 @@
 
 package au.csiro.pathling.search.filter;
 
+import static org.apache.spark.sql.functions.exists;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.search.TokenSearchValue;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -36,7 +38,7 @@ public class TokenSearchFilter implements SearchFilter {
 
   @Override
   @Nonnull
-  public Column buildFilter(@Nonnull final Column valueColumn,
+  public Column buildFilter(@Nonnull final ColumnRepresentation valueColumn,
       @Nonnull final List<String> searchValues) {
     // Parse all values and build filter
     final List<TokenSearchValue> parsedValues = searchValues.stream()
@@ -49,12 +51,12 @@ public class TokenSearchFilter implements SearchFilter {
   /**
    * Builds a filter expression from parsed token values.
    *
-   * @param valueColumn the Spark Column containing the values to filter on
+   * @param valueColumn the ColumnRepresentation containing the values to filter on
    * @param parsedValues the parsed token search values
    * @return a SparkSQL Column expression that evaluates to true for matching rows
    */
   @Nonnull
-  public Column buildFilterFromParsedValues(@Nonnull final Column valueColumn,
+  public Column buildFilterFromParsedValues(@Nonnull final ColumnRepresentation valueColumn,
       @Nonnull final List<TokenSearchValue> parsedValues) {
     if (parsedValues.isEmpty()) {
       throw new IllegalArgumentException("At least one search value is required");
@@ -70,21 +72,27 @@ public class TokenSearchFilter implements SearchFilter {
   /**
    * Builds a filter expression for a single token value.
    * <p>
-   * For simple code types (like Patient.gender):
+   * For simple code types (like Patient.gender), this handles both singular values and arrays:
    * <ul>
-   *   <li>{@code gender=male} → {@code valueColumn.equalTo("male")}</li>
+   *   <li>Singular: {@code gender=male} → {@code valueColumn.equalTo("male")}</li>
+   *   <li>Array: {@code address-use=home} → {@code exists(valueColumn, elem -> elem.equalTo("home"))}</li>
    * </ul>
    *
-   * @param valueColumn the Spark Column containing the value to filter on
+   * @param valueColumn the ColumnRepresentation containing the value to filter on
    * @param searchValue the parsed token search value
    * @return a SparkSQL Column expression for this single value
    */
   @Nonnull
-  private Column buildSingleValueFilter(@Nonnull final Column valueColumn,
+  private Column buildSingleValueFilter(@Nonnull final ColumnRepresentation valueColumn,
       @Nonnull final TokenSearchValue searchValue) {
     // For simple code types (no system), just match the code
     if (searchValue.getCode() != null) {
-      return valueColumn.equalTo(lit(searchValue.getCode()));
+      final Column codeValue = lit(searchValue.getCode());
+      // Use vectorize to handle both array and singular columns
+      return valueColumn.vectorize(
+          arr -> exists(arr, elem -> elem.equalTo(codeValue)),  // array: ANY element matches
+          scalar -> scalar.equalTo(codeValue)                   // singular: direct equality
+      ).getValue();
     }
 
     // System-only match is not supported for simple code types

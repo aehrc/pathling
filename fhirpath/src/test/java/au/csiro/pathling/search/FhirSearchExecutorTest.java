@@ -32,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Address.AddressUse;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Patient;
@@ -195,6 +196,132 @@ class FhirSearchExecutorTest {
 
     // Schema should be identical
     assertEquals(original.schema(), results.schema());
+  }
+
+  // ========== Array value tests (address-use) ==========
+
+  @Test
+  void testAddressUseSearchSingleAddress() {
+    final ObjectDataSource dataSource = createPatientDataSourceWithAddresses();
+
+    final FhirSearch search = FhirSearch.builder()
+        .criterion("address-use", "home")
+        .build();
+
+    final FhirSearchExecutor executor = new FhirSearchExecutor(
+        encoders.getContext(), dataSource);
+
+    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
+
+    // Patients 1 and 2 have home addresses
+    assertEquals(2, results.count());
+    final Set<String> ids = extractIds(results);
+    assertTrue(ids.contains("1"));
+    assertTrue(ids.contains("2"));
+  }
+
+  @Test
+  void testAddressUseSearchMultipleAddressesOneMatches() {
+    final ObjectDataSource dataSource = createPatientDataSourceWithAddresses();
+
+    final FhirSearch search = FhirSearch.builder()
+        .criterion("address-use", "work")
+        .build();
+
+    final FhirSearchExecutor executor = new FhirSearchExecutor(
+        encoders.getContext(), dataSource);
+
+    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
+
+    // Patient 2 has both home and work addresses
+    assertEquals(1, results.count());
+    final Set<String> ids = extractIds(results);
+    assertTrue(ids.contains("2"));
+  }
+
+  @Test
+  void testAddressUseSearchNoMatches() {
+    final ObjectDataSource dataSource = createPatientDataSourceWithAddresses();
+
+    final FhirSearch search = FhirSearch.builder()
+        .criterion("address-use", "billing")
+        .build();
+
+    final FhirSearchExecutor executor = new FhirSearchExecutor(
+        encoders.getContext(), dataSource);
+
+    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
+
+    // No patients have billing addresses
+    assertEquals(0, results.count());
+  }
+
+  @Test
+  void testAddressUseSearchPatientWithNoAddresses() {
+    final ObjectDataSource dataSource = createPatientDataSourceWithAddresses();
+
+    final FhirSearch search = FhirSearch.builder()
+        .criterion("address-use", "home")
+        .build();
+
+    final FhirSearchExecutor executor = new FhirSearchExecutor(
+        encoders.getContext(), dataSource);
+
+    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
+
+    // Patient 4 has no addresses - should not be in results
+    final Set<String> ids = extractIds(results);
+    assertFalse(ids.contains("4"));
+  }
+
+  @Test
+  void testAddressUseSearchMultipleValues() {
+    final ObjectDataSource dataSource = createPatientDataSourceWithAddresses();
+
+    // Search for home OR temp addresses
+    final FhirSearch search = FhirSearch.builder()
+        .criterion("address-use", "home", "temp")
+        .build();
+
+    final FhirSearchExecutor executor = new FhirSearchExecutor(
+        encoders.getContext(), dataSource);
+
+    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
+
+    // Patients 1, 2 (home), and 3 (temp)
+    assertEquals(3, results.count());
+    final Set<String> ids = extractIds(results);
+    assertTrue(ids.contains("1"));
+    assertTrue(ids.contains("2"));
+    assertTrue(ids.contains("3"));
+  }
+
+  /**
+   * Creates a test data source with patients having different address configurations.
+   * - Patient 1: one home address
+   * - Patient 2: home and work addresses
+   * - Patient 3: temp address
+   * - Patient 4: no addresses
+   */
+  private ObjectDataSource createPatientDataSourceWithAddresses() {
+    final Patient patient1 = new Patient();
+    patient1.setId("1");
+    patient1.addAddress().setUse(AddressUse.HOME).setCity("Sydney");
+
+    final Patient patient2 = new Patient();
+    patient2.setId("2");
+    patient2.addAddress().setUse(AddressUse.HOME).setCity("Melbourne");
+    patient2.addAddress().setUse(AddressUse.WORK).setCity("Brisbane");
+
+    final Patient patient3 = new Patient();
+    patient3.setId("3");
+    patient3.addAddress().setUse(AddressUse.TEMP).setCity("Perth");
+
+    final Patient patient4 = new Patient();
+    patient4.setId("4");
+    // No addresses
+
+    return new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3, patient4));
   }
 
   /**

@@ -21,6 +21,7 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators.SingleEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -70,19 +71,6 @@ public class FhirSearchExecutor {
   public FhirSearchExecutor(@Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource) {
     this(fhirContext, dataSource, new SearchParameterRegistry(), new Parser());
-  }
-
-  /**
-   * Creates a new FhirSearchExecutor with a custom registry.
-   *
-   * @param fhirContext the FHIR context
-   * @param dataSource the data source containing FHIR resources
-   * @param registry the search parameter registry
-   */
-  public FhirSearchExecutor(@Nonnull final FhirContext fhirContext,
-      @Nonnull final DataSource dataSource,
-      @Nonnull final SearchParameterRegistry registry) {
-    this(fhirContext, dataSource, registry, new Parser());
   }
 
   /**
@@ -169,7 +157,7 @@ public class FhirSearchExecutor {
     // Evaluate the FHIRPath to extract the value column
     final FhirPathEvaluator evaluator = evaluatorFactory.create(resourceType);
     final Collection result = evaluator.evaluate(fhirPath);
-    final Column valueColumn = result.getColumnValue();
+    final ColumnRepresentation valueColumn = result.getColumn();
 
     // Get the appropriate filter builder for the parameter type
     final SearchFilter filter = getFilterForType(paramDef.getType());

@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search.filter;
 
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import org.apache.spark.sql.Column;
@@ -29,10 +30,10 @@ public interface SearchFilter {
   /**
    * Builds a SparkSQL Column expression that filters rows based on the search values.
    *
-   * @param valueColumn the Spark Column containing the values to filter on
+   * @param valueColumn the ColumnRepresentation containing the values to filter on
    * @param searchValues the search values to match (multiple values = OR logic)
    * @return a SparkSQL Column expression that evaluates to true for matching rows
    */
   @Nonnull
-  Column buildFilter(@Nonnull Column valueColumn, @Nonnull List<String> searchValues);
+  Column buildFilter(@Nonnull ColumnRepresentation valueColumn, @Nonnull List<String> searchValues);
 }

@@ -33,7 +33,9 @@ public class SearchParameterRegistry {
   private static final Map<ResourceType, Map<String, SearchParameterDefinition>> PARAMETERS =
       Map.of(
           ResourceType.PATIENT, Map.of(
-              "gender", new SearchParameterDefinition("gender", TOKEN, "Patient.gender")
+              "gender", new SearchParameterDefinition("gender", TOKEN, "Patient.gender"),
+              "address-use", new SearchParameterDefinition("address-use", TOKEN,
+                  "Patient.address.use")
           )
       );
 
