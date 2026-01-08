@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search;
 
+import static au.csiro.pathling.search.SearchParameterType.STRING;
 import static au.csiro.pathling.search.SearchParameterType.TOKEN;
 
 import jakarta.annotation.Nonnull;
@@ -35,7 +36,8 @@ public class SearchParameterRegistry {
           ResourceType.PATIENT, Map.of(
               "gender", new SearchParameterDefinition("gender", TOKEN, "Patient.gender"),
               "address-use", new SearchParameterDefinition("address-use", TOKEN,
-                  "Patient.address.use")
+                  "Patient.address.use"),
+              "family", new SearchParameterDefinition("family", STRING, "Patient.name.family")
           )
       );
 

@@ -18,7 +18,6 @@
 package au.csiro.pathling.search;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -27,7 +26,9 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -37,12 +38,18 @@ import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Tests for {@link FhirSearchExecutor}.
  */
 @SpringBootUnitTest
+@TestInstance(Lifecycle.PER_CLASS)
 @Slf4j
 class FhirSearchExecutorTest {
 
@@ -52,12 +59,70 @@ class FhirSearchExecutorTest {
   @Autowired
   FhirEncoders encoders;
 
-  @Test
-  void testGenderSearchMale() {
-    final ObjectDataSource dataSource = createPatientDataSource();
+  // ========== Parameterized search tests ==========
+
+  Stream<Arguments> searchTestCases() {
+    return Stream.of(
+        // Gender tests
+        Arguments.of("gender search male",
+            (Supplier<ObjectDataSource>) this::createPatientDataSource,
+            "gender", List.of("male"), Set.of("1", "3")),
+        Arguments.of("gender search female",
+            (Supplier<ObjectDataSource>) this::createPatientDataSource,
+            "gender", List.of("female"), Set.of("2")),
+        Arguments.of("gender search multiple values",
+            (Supplier<ObjectDataSource>) this::createPatientDataSource,
+            "gender", List.of("male", "female"), Set.of("1", "2", "3")),
+        Arguments.of("gender search no matches",
+            (Supplier<ObjectDataSource>) this::createPatientDataSource,
+            "gender", List.of("other"), Set.of()),
+
+        // Address-use tests
+        Arguments.of("address-use search home",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithAddresses,
+            "address-use", List.of("home"), Set.of("1", "2")),
+        Arguments.of("address-use search work",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithAddresses,
+            "address-use", List.of("work"), Set.of("2")),
+        Arguments.of("address-use search no matches",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithAddresses,
+            "address-use", List.of("billing"), Set.of()),
+        Arguments.of("address-use search multiple values",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithAddresses,
+            "address-use", List.of("home", "temp"), Set.of("1", "2", "3")),
+
+        // Family tests
+        Arguments.of("family search exact match",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
+            "family", List.of("Smith"), Set.of("1")),
+        Arguments.of("family search case insensitive",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
+            "family", List.of("smith"), Set.of("1")),
+        Arguments.of("family search starts with",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
+            "family", List.of("Smi"), Set.of("1")),
+        Arguments.of("family search no match",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
+            "family", List.of("Williams"), Set.of()),
+        Arguments.of("family search multiple names",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
+            "family", List.of("John"), Set.of("2")),
+        Arguments.of("family search multiple values",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
+            "family", List.of("Smith", "Jones"), Set.of("1", "2"))
+    );
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("searchTestCases")
+  void testPatientSearch(final String testName,
+      final Supplier<ObjectDataSource> dataSourceSupplier,
+      final String paramCode, final List<String> searchValues, final Set<String> expectedIds) {
+
+    final ObjectDataSource dataSource = dataSourceSupplier.get();
 
     final FhirSearch search = FhirSearch.builder()
-        .criterion("gender", "male")
+        .criterion(paramCode, searchValues.toArray(new String[0]))
         .build();
 
     final FhirSearchExecutor executor = new FhirSearchExecutor(
@@ -65,67 +130,10 @@ class FhirSearchExecutorTest {
 
     final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
 
-    assertEquals(2, results.count());
-    final Set<String> ids = extractIds(results);
-    assertTrue(ids.contains("1"));
-    assertTrue(ids.contains("3"));
+    assertEquals(expectedIds, extractIds(results));
   }
 
-  @Test
-  void testGenderSearchFemale() {
-    final ObjectDataSource dataSource = createPatientDataSource();
-
-    final FhirSearch search = FhirSearch.builder()
-        .criterion("gender", "female")
-        .build();
-
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
-
-    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
-
-    assertEquals(1, results.count());
-    final Set<String> ids = extractIds(results);
-    assertTrue(ids.contains("2"));
-  }
-
-  @Test
-  void testGenderSearchMultipleValues() {
-    final ObjectDataSource dataSource = createPatientDataSource();
-
-    // Search for male OR female
-    final FhirSearch search = FhirSearch.builder()
-        .criterion("gender", "male", "female")
-        .build();
-
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
-
-    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
-
-    // Should match patients 1, 2, and 3 (all with gender set)
-    assertEquals(3, results.count());
-    final Set<String> ids = extractIds(results);
-    assertTrue(ids.contains("1"));
-    assertTrue(ids.contains("2"));
-    assertTrue(ids.contains("3"));
-  }
-
-  @Test
-  void testGenderSearchNoMatches() {
-    final ObjectDataSource dataSource = createPatientDataSource();
-
-    final FhirSearch search = FhirSearch.builder()
-        .criterion("gender", "other")
-        .build();
-
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
-
-    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
-
-    assertEquals(0, results.count());
-  }
+  // ========== Special tests (not parameterized) ==========
 
   @Test
   void testNoCriteriaReturnsAll() {
@@ -140,25 +148,6 @@ class FhirSearchExecutorTest {
 
     // Should return all 4 patients
     assertEquals(4, results.count());
-  }
-
-  @Test
-  void testNullGenderNotMatched() {
-    final ObjectDataSource dataSource = createPatientDataSource();
-
-    // Search for male - should NOT match patient 4 (null gender)
-    final FhirSearch search = FhirSearch.builder()
-        .criterion("gender", "male")
-        .build();
-
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
-
-    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
-
-    assertEquals(2, results.count());
-    final Set<String> ids = extractIds(results);
-    assertFalse(ids.contains("4"));
   }
 
   @Test
@@ -198,102 +187,34 @@ class FhirSearchExecutorTest {
     assertEquals(original.schema(), results.schema());
   }
 
-  // ========== Array value tests (address-use) ==========
+  // ========== Data source creation methods ==========
 
-  @Test
-  void testAddressUseSearchSingleAddress() {
-    final ObjectDataSource dataSource = createPatientDataSourceWithAddresses();
+  /**
+   * Creates a test data source with patients having different name configurations.
+   * - Patient 1: name with family "Smith"
+   * - Patient 2: two names with families "Jones" and "Johnson"
+   * - Patient 3: name with family "Brown"
+   * - Patient 4: no name
+   */
+  private ObjectDataSource createPatientDataSourceWithNames() {
+    final Patient patient1 = new Patient();
+    patient1.setId("1");
+    patient1.addName().setFamily("Smith").addGiven("John");
 
-    final FhirSearch search = FhirSearch.builder()
-        .criterion("address-use", "home")
-        .build();
+    final Patient patient2 = new Patient();
+    patient2.setId("2");
+    patient2.addName().setFamily("Jones").addGiven("Jane");
+    patient2.addName().setFamily("Johnson").addGiven("Jane");  // Maiden name
 
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
+    final Patient patient3 = new Patient();
+    patient3.setId("3");
+    patient3.addName().setFamily("Brown").addGiven("Bob");
 
-    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
+    final Patient patient4 = new Patient();
+    patient4.setId("4");
+    // No name
 
-    // Patients 1 and 2 have home addresses
-    assertEquals(2, results.count());
-    final Set<String> ids = extractIds(results);
-    assertTrue(ids.contains("1"));
-    assertTrue(ids.contains("2"));
-  }
-
-  @Test
-  void testAddressUseSearchMultipleAddressesOneMatches() {
-    final ObjectDataSource dataSource = createPatientDataSourceWithAddresses();
-
-    final FhirSearch search = FhirSearch.builder()
-        .criterion("address-use", "work")
-        .build();
-
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
-
-    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
-
-    // Patient 2 has both home and work addresses
-    assertEquals(1, results.count());
-    final Set<String> ids = extractIds(results);
-    assertTrue(ids.contains("2"));
-  }
-
-  @Test
-  void testAddressUseSearchNoMatches() {
-    final ObjectDataSource dataSource = createPatientDataSourceWithAddresses();
-
-    final FhirSearch search = FhirSearch.builder()
-        .criterion("address-use", "billing")
-        .build();
-
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
-
-    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
-
-    // No patients have billing addresses
-    assertEquals(0, results.count());
-  }
-
-  @Test
-  void testAddressUseSearchPatientWithNoAddresses() {
-    final ObjectDataSource dataSource = createPatientDataSourceWithAddresses();
-
-    final FhirSearch search = FhirSearch.builder()
-        .criterion("address-use", "home")
-        .build();
-
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
-
-    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
-
-    // Patient 4 has no addresses - should not be in results
-    final Set<String> ids = extractIds(results);
-    assertFalse(ids.contains("4"));
-  }
-
-  @Test
-  void testAddressUseSearchMultipleValues() {
-    final ObjectDataSource dataSource = createPatientDataSourceWithAddresses();
-
-    // Search for home OR temp addresses
-    final FhirSearch search = FhirSearch.builder()
-        .criterion("address-use", "home", "temp")
-        .build();
-
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
-
-    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
-
-    // Patients 1, 2 (home), and 3 (temp)
-    assertEquals(3, results.count());
-    final Set<String> ids = extractIds(results);
-    assertTrue(ids.contains("1"));
-    assertTrue(ids.contains("2"));
-    assertTrue(ids.contains("3"));
+    return new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3, patient4));
   }
 
   /**
