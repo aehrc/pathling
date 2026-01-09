@@ -49,8 +49,8 @@ public class NumberMatcher implements ElementMatcher {
   @Nonnull
   public Column match(@Nonnull final Column element, @Nonnull final String searchValue) {
     // Parse prefix and number from search value
-    final NumberPrefix prefix = NumberPrefix.fromValue(searchValue);
-    final String numberValue = NumberPrefix.stripPrefix(searchValue);
+    final SearchPrefix prefix = SearchPrefix.fromValue(searchValue);
+    final String numberValue = SearchPrefix.stripPrefix(searchValue);
 
     // Parse the number value as BigDecimal for precise comparison
     final BigDecimal searchNumber = new BigDecimal(numberValue);

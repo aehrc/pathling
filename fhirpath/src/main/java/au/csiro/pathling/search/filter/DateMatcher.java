@@ -60,8 +60,8 @@ public class DateMatcher implements ElementMatcher {
   @Nonnull
   public Column match(@Nonnull final Column element, @Nonnull final String searchValue) {
     // Parse prefix and date from search value
-    final DatePrefix prefix = DatePrefix.fromValue(searchValue);
-    final String dateValue = DatePrefix.stripPrefix(searchValue);
+    final SearchPrefix prefix = SearchPrefix.fromValue(searchValue);
+    final String dateValue = SearchPrefix.stripPrefix(searchValue);
 
     // Parse the date value to determine its precision and compute boundaries
     final FhirPathDateTime searchDateTime = FhirPathDateTime.parse(dateValue);
