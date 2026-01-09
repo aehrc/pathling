@@ -157,4 +157,55 @@ class ElementMatcherTest {
     final boolean actual = df.select(result).first().getBoolean(0);
     assertEquals(expected, actual);
   }
+
+  // ========== DateMatcher tests ==========
+
+  static Stream<Arguments> dateMatcherCases() {
+    return Stream.of(
+        // Same precision (day) - exact match
+        Arguments.of("2013-01-14", "2013-01-14", true),
+        Arguments.of("1990-05-20", "1990-05-20", true),
+
+        // Same precision (day) - no overlap
+        Arguments.of("2013-01-14", "2013-01-15", false),
+        Arguments.of("2013-01-14", "2013-02-14", false),
+        Arguments.of("2013-01-14", "2014-01-14", false),
+
+        // Coarser search precision (year-month) - overlaps with day in that month
+        Arguments.of("2013-01-14", "2013-01", true),
+        Arguments.of("2013-01-01", "2013-01", true),
+        Arguments.of("2013-01-31", "2013-01", true),
+        Arguments.of("2013-01-14", "2013-02", false),
+        Arguments.of("2013-02-01", "2013-01", false),
+
+        // Coarser search precision (year) - overlaps with day in that year
+        Arguments.of("2013-01-14", "2013", true),
+        Arguments.of("2013-12-31", "2013", true),
+        Arguments.of("2013-01-14", "2014", false),
+        Arguments.of("2014-01-01", "2013", false),
+
+        // Finer search precision (datetime) - time within the day
+        Arguments.of("2013-01-14", "2013-01-14T00:00", true),
+        Arguments.of("2013-01-14", "2013-01-14T10:00", true),
+        Arguments.of("2013-01-14", "2013-01-14T23:59", true),
+        Arguments.of("2013-01-14", "2013-01-14T23:59:59", true),
+
+        // Finer search precision (datetime) - time in different day should not match
+        Arguments.of("2013-01-14", "2013-01-15T00:00", false),
+        Arguments.of("2013-01-14", "2013-01-13T23:59:59", false)
+    );
+  }
+
+  @ParameterizedTest(name = "DateMatcher: \"{0}\" matches \"{1}\" = {2}")
+  @MethodSource("dateMatcherCases")
+  void testDateMatcher(final String element, final String searchValue, final boolean expected) {
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING())
+        .toDF("value");
+
+    final DateMatcher matcher = new DateMatcher();
+    final Column result = matcher.match(col("value"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
 }

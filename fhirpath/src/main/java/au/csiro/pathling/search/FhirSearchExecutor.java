@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators.SingleEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.search.filter.DateMatcher;
 import au.csiro.pathling.search.filter.ExactStringMatcher;
 import au.csiro.pathling.search.filter.SearchFilter;
 import au.csiro.pathling.search.filter.StringMatcher;
@@ -198,6 +199,12 @@ public class FhirSearchExecutor {
           throw new InvalidModifierException(modifier, type);
         }
         yield new SearchFilter(new StringMatcher());
+      }
+      case DATE -> {
+        if (modifier != null) {
+          throw new InvalidModifierException(modifier, type);
+        }
+        yield new SearchFilter(new DateMatcher());
       }
       default -> throw new UnsupportedOperationException(
           "Search parameter type not yet supported: " + type);

@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search;
 
+import static au.csiro.pathling.search.SearchParameterType.DATE;
 import static au.csiro.pathling.search.SearchParameterType.STRING;
 import static au.csiro.pathling.search.SearchParameterType.TOKEN;
 
@@ -37,7 +38,8 @@ public class SearchParameterRegistry {
               "gender", new SearchParameterDefinition("gender", TOKEN, "Patient.gender"),
               "address-use", new SearchParameterDefinition("address-use", TOKEN,
                   "Patient.address.use"),
-              "family", new SearchParameterDefinition("family", STRING, "Patient.name.family")
+              "family", new SearchParameterDefinition("family", STRING, "Patient.name.family"),
+              "birthdate", new SearchParameterDefinition("birthdate", DATE, "Patient.birthDate")
           )
       );
 

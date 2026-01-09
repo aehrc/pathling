@@ -36,6 +36,7 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Address.AddressUse;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -128,7 +129,21 @@ class FhirSearchExecutorTest {
             "family:exact", List.of("smith"), Set.of()),  // case-sensitive - no match
         Arguments.of("family:exact search partial",
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
-            "family:exact", List.of("Smi"), Set.of())  // prefix doesn't match
+            "family:exact", List.of("Smi"), Set.of()),  // prefix doesn't match
+
+        // Birthdate tests (date type) - basic scenarios only, precision tests are in ElementMatcherTest
+        Arguments.of("birthdate search match",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
+            "birthdate", List.of("1990-01-15"), Set.of("1", "3")),
+        Arguments.of("birthdate search no match",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
+            "birthdate", List.of("2000-01-01"), Set.of()),
+        Arguments.of("birthdate search with datetime value",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
+            "birthdate", List.of("1990-01-15T10:00"), Set.of("1", "3")),
+        Arguments.of("birthdate search multiple values",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
+            "birthdate", List.of("1990-01-15", "1985-06-20"), Set.of("1", "2", "3"))
     );
   }
 
@@ -246,6 +261,26 @@ class FhirSearchExecutorTest {
     assertTrue(exception.getMessage().contains("STRING"));
   }
 
+  @Test
+  void testInvalidModifierOnDateThrowsException() {
+    final ObjectDataSource dataSource = createPatientDataSourceWithBirthDates();
+
+    // No modifiers are supported for date type parameters in the limited implementation
+    final FhirSearch search = FhirSearch.builder()
+        .criterion("birthdate:exact", "1990-01-15")
+        .build();
+
+    final FhirSearchExecutor executor = new FhirSearchExecutor(
+        encoders.getContext(), dataSource);
+
+    final InvalidModifierException exception = assertThrows(
+        InvalidModifierException.class,
+        () -> executor.execute(ResourceType.PATIENT, search));
+
+    assertTrue(exception.getMessage().contains("exact"));
+    assertTrue(exception.getMessage().contains("DATE"));
+  }
+
   // ========== Data source creation methods ==========
 
   /**
@@ -300,6 +335,33 @@ class FhirSearchExecutorTest {
     final Patient patient4 = new Patient();
     patient4.setId("4");
     // No addresses
+
+    return new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3, patient4));
+  }
+
+  /**
+   * Creates a test data source with patients having different birth dates.
+   * - Patient 1: birthDate = "1990-01-15"
+   * - Patient 2: birthDate = "1985-06-20"
+   * - Patient 3: birthDate = "1990-01-15" (same as Patient 1)
+   * - Patient 4: no birthDate
+   */
+  private ObjectDataSource createPatientDataSourceWithBirthDates() {
+    final Patient patient1 = new Patient();
+    patient1.setId("1");
+    patient1.setBirthDateElement(new DateType("1990-01-15"));
+
+    final Patient patient2 = new Patient();
+    patient2.setId("2");
+    patient2.setBirthDateElement(new DateType("1985-06-20"));
+
+    final Patient patient3 = new Patient();
+    patient3.setId("3");
+    patient3.setBirthDateElement(new DateType("1990-01-15"));
+
+    final Patient patient4 = new Patient();
+    patient4.setId("4");
+    // No birthDate set
 
     return new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3, patient4));
   }
