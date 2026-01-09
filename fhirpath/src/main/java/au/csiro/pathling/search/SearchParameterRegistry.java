@@ -18,6 +18,7 @@
 package au.csiro.pathling.search;
 
 import static au.csiro.pathling.search.SearchParameterType.DATE;
+import static au.csiro.pathling.search.SearchParameterType.NUMBER;
 import static au.csiro.pathling.search.SearchParameterType.STRING;
 import static au.csiro.pathling.search.SearchParameterType.TOKEN;
 
@@ -40,6 +41,10 @@ public class SearchParameterRegistry {
                   "Patient.address.use"),
               "family", new SearchParameterDefinition("family", STRING, "Patient.name.family"),
               "birthdate", new SearchParameterDefinition("birthdate", DATE, "Patient.birthDate")
+          ),
+          ResourceType.RISKASSESSMENT, Map.of(
+              "probability", new SearchParameterDefinition("probability", NUMBER,
+                  "RiskAssessment.prediction.probability.ofType(decimal)")
           )
       );
 

@@ -37,7 +37,10 @@ import org.hl7.fhir.r4.model.Address.AddressUse;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.DateType;
+import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.RiskAssessment;
+import org.hl7.fhir.r4.model.RiskAssessment.RiskAssessmentPredictionComponent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -65,120 +68,157 @@ class FhirSearchExecutorTest {
   Stream<Arguments> searchTestCases() {
     return Stream.of(
         // Gender tests
-        Arguments.of("gender search male",
+        Arguments.of("gender search male", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSource,
             "gender", List.of("male"), Set.of("1", "3")),
-        Arguments.of("gender search female",
+        Arguments.of("gender search female", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSource,
             "gender", List.of("female"), Set.of("2")),
-        Arguments.of("gender search multiple values",
+        Arguments.of("gender search multiple values", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSource,
             "gender", List.of("male", "female"), Set.of("1", "2", "3")),
-        Arguments.of("gender search no matches",
+        Arguments.of("gender search no matches", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSource,
             "gender", List.of("other"), Set.of()),
 
         // Address-use tests
-        Arguments.of("address-use search home",
+        Arguments.of("address-use search home", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithAddresses,
             "address-use", List.of("home"), Set.of("1", "2")),
-        Arguments.of("address-use search work",
+        Arguments.of("address-use search work", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithAddresses,
             "address-use", List.of("work"), Set.of("2")),
-        Arguments.of("address-use search no matches",
+        Arguments.of("address-use search no matches", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithAddresses,
             "address-use", List.of("billing"), Set.of()),
-        Arguments.of("address-use search multiple values",
+        Arguments.of("address-use search multiple values", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithAddresses,
             "address-use", List.of("home", "temp"), Set.of("1", "2", "3")),
 
         // Family tests
-        Arguments.of("family search exact match",
+        Arguments.of("family search exact match", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
             "family", List.of("Smith"), Set.of("1")),
-        Arguments.of("family search case insensitive",
+        Arguments.of("family search case insensitive", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
             "family", List.of("smith"), Set.of("1")),
-        Arguments.of("family search starts with",
+        Arguments.of("family search starts with", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
             "family", List.of("Smi"), Set.of("1")),
-        Arguments.of("family search no match",
+        Arguments.of("family search no match", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
             "family", List.of("Williams"), Set.of()),
-        Arguments.of("family search multiple names",
+        Arguments.of("family search multiple names", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
             "family", List.of("John"), Set.of("2")),
-        Arguments.of("family search multiple values",
+        Arguments.of("family search multiple values", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
             "family", List.of("Smith", "Jones"), Set.of("1", "2")),
 
         // :not modifier tests (token type)
-        Arguments.of("gender:not search excludes male",
+        Arguments.of("gender:not search excludes male", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSource,
             "gender:not", List.of("male"), Set.of("2", "4")),  // female + no gender
-        Arguments.of("gender:not search excludes female",
+        Arguments.of("gender:not search excludes female", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSource,
             "gender:not", List.of("female"), Set.of("1", "3", "4")),  // male + no gender
 
         // :exact modifier tests (string type)
-        Arguments.of("family:exact search exact match",
+        Arguments.of("family:exact search exact match", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
             "family:exact", List.of("Smith"), Set.of("1")),
-        Arguments.of("family:exact search wrong case",
+        Arguments.of("family:exact search wrong case", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
             "family:exact", List.of("smith"), Set.of()),  // case-sensitive - no match
-        Arguments.of("family:exact search partial",
+        Arguments.of("family:exact search partial", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithNames,
             "family:exact", List.of("Smi"), Set.of()),  // prefix doesn't match
 
         // Birthdate tests (date type) - basic scenarios only, precision tests are in ElementMatcherTest
-        Arguments.of("birthdate search match",
+        Arguments.of("birthdate search match", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
             "birthdate", List.of("1990-01-15"), Set.of("1", "3")),
-        Arguments.of("birthdate search no match",
+        Arguments.of("birthdate search no match", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
             "birthdate", List.of("2000-01-01"), Set.of()),
-        Arguments.of("birthdate search with datetime value",
+        Arguments.of("birthdate search with datetime value", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
             "birthdate", List.of("1990-01-15T10:00"), Set.of("1", "3")),
-        Arguments.of("birthdate search multiple values",
+        Arguments.of("birthdate search multiple values", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
             "birthdate", List.of("1990-01-15", "1985-06-20"), Set.of("1", "2", "3")),
 
         // Date prefix tests - basic scenarios only, exhaustive tests are in ElementMatcherTest
         // ge - greater or equal
-        Arguments.of("birthdate ge prefix",
+        Arguments.of("birthdate ge prefix", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
             "birthdate", List.of("ge1990-01-15"), Set.of("1", "3")),  // born on or after Jan 15, 1990
-        Arguments.of("birthdate ge prefix with year",
+        Arguments.of("birthdate ge prefix with year", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
             "birthdate", List.of("ge1986"), Set.of("1", "3")),  // born 1986 or later
 
         // le - less or equal
-        Arguments.of("birthdate le prefix",
+        Arguments.of("birthdate le prefix", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
             "birthdate", List.of("le1989"), Set.of("2")),  // born 1989 or earlier
 
         // gt - greater than
-        Arguments.of("birthdate gt prefix",
+        Arguments.of("birthdate gt prefix", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
             "birthdate", List.of("gt1985-06-20"), Set.of("1", "3")),  // born after Jun 20, 1985
 
         // lt - less than
-        Arguments.of("birthdate lt prefix",
+        Arguments.of("birthdate lt prefix", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
             "birthdate", List.of("lt1990-01-15"), Set.of("2")),  // born before Jan 15, 1990
 
         // ne - not equal
-        Arguments.of("birthdate ne prefix",
+        Arguments.of("birthdate ne prefix", ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
-            "birthdate", List.of("ne1990-01-15"), Set.of("2"))  // NOT born on Jan 15, 1990
+            "birthdate", List.of("ne1990-01-15"), Set.of("2")),  // NOT born on Jan 15, 1990
+
+        // ========== RiskAssessment probability tests (number type) ==========
+        // eq - equals (default)
+        Arguments.of("probability exact match", ResourceType.RISKASSESSMENT,
+            (Supplier<ObjectDataSource>) this::createRiskAssessmentDataSource,
+            "probability", List.of("0.5"), Set.of("2")),
+        Arguments.of("probability eq prefix", ResourceType.RISKASSESSMENT,
+            (Supplier<ObjectDataSource>) this::createRiskAssessmentDataSource,
+            "probability", List.of("eq0.5"), Set.of("2")),
+        Arguments.of("probability multiple values", ResourceType.RISKASSESSMENT,
+            (Supplier<ObjectDataSource>) this::createRiskAssessmentDataSource,
+            "probability", List.of("0.2", "0.8"), Set.of("1", "3")),
+
+        // gt - greater than
+        Arguments.of("probability gt prefix", ResourceType.RISKASSESSMENT,
+            (Supplier<ObjectDataSource>) this::createRiskAssessmentDataSource,
+            "probability", List.of("gt0.5"), Set.of("3")),
+
+        // ge - greater or equal
+        Arguments.of("probability ge prefix", ResourceType.RISKASSESSMENT,
+            (Supplier<ObjectDataSource>) this::createRiskAssessmentDataSource,
+            "probability", List.of("ge0.5"), Set.of("2", "3")),
+
+        // lt - less than
+        Arguments.of("probability lt prefix", ResourceType.RISKASSESSMENT,
+            (Supplier<ObjectDataSource>) this::createRiskAssessmentDataSource,
+            "probability", List.of("lt0.5"), Set.of("1")),
+
+        // le - less or equal
+        Arguments.of("probability le prefix", ResourceType.RISKASSESSMENT,
+            (Supplier<ObjectDataSource>) this::createRiskAssessmentDataSource,
+            "probability", List.of("le0.5"), Set.of("1", "2")),
+
+        // ne - not equal
+        Arguments.of("probability ne prefix", ResourceType.RISKASSESSMENT,
+            (Supplier<ObjectDataSource>) this::createRiskAssessmentDataSource,
+            "probability", List.of("ne0.5"), Set.of("1", "3"))
     );
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("searchTestCases")
-  void testPatientSearch(final String testName,
+  void testSearch(final String testName, final ResourceType resourceType,
       final Supplier<ObjectDataSource> dataSourceSupplier,
       final String paramCode, final List<String> searchValues, final Set<String> expectedIds) {
 
@@ -191,7 +231,7 @@ class FhirSearchExecutorTest {
     final FhirSearchExecutor executor = new FhirSearchExecutor(
         encoders.getContext(), dataSource);
 
-    final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
+    final Dataset<Row> results = executor.execute(resourceType, search);
 
     assertEquals(expectedIds, extractIds(results));
   }
@@ -419,7 +459,37 @@ class FhirSearchExecutorTest {
   }
 
   /**
-   * Extracts patient IDs from a result dataset.
+   * Creates a test data source with RiskAssessments having different probabilities.
+   * - RiskAssessment 1: probability = 0.2
+   * - RiskAssessment 2: probability = 0.5
+   * - RiskAssessment 3: probability = 0.8
+   * - RiskAssessment 4: no probability
+   */
+  private ObjectDataSource createRiskAssessmentDataSource() {
+    final RiskAssessment ra1 = new RiskAssessment();
+    ra1.setId("1");
+    final RiskAssessmentPredictionComponent prediction1 = ra1.addPrediction();
+    prediction1.setProbability(new DecimalType("0.2"));
+
+    final RiskAssessment ra2 = new RiskAssessment();
+    ra2.setId("2");
+    final RiskAssessmentPredictionComponent prediction2 = ra2.addPrediction();
+    prediction2.setProbability(new DecimalType("0.5"));
+
+    final RiskAssessment ra3 = new RiskAssessment();
+    ra3.setId("3");
+    final RiskAssessmentPredictionComponent prediction3 = ra3.addPrediction();
+    prediction3.setProbability(new DecimalType("0.8"));
+
+    final RiskAssessment ra4 = new RiskAssessment();
+    ra4.setId("4");
+    // No prediction/probability
+
+    return new ObjectDataSource(spark, encoders, List.of(ra1, ra2, ra3, ra4));
+  }
+
+  /**
+   * Extracts resource IDs from a result dataset.
    */
   private Set<String> extractIds(final Dataset<Row> results) {
     return results.select("id").collectAsList().stream()

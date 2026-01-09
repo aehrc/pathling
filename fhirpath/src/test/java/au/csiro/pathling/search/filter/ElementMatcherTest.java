@@ -21,6 +21,7 @@ import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
@@ -244,6 +245,82 @@ class ElementMatcherTest {
         .toDF("value");
 
     final DateMatcher matcher = new DateMatcher();
+    final Column result = matcher.match(col("value"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== NumberMatcher tests ==========
+
+  static Stream<Arguments> numberMatcherCases() {
+    return Stream.of(
+        // ========== eq prefix (default) - exact match ==========
+        Arguments.of(new BigDecimal("0.75"), "0.75", true),
+        Arguments.of(new BigDecimal("0.75"), "eq0.75", true),
+        Arguments.of(new BigDecimal("0.75"), "0.8", false),
+        Arguments.of(new BigDecimal("100"), "100", true),
+        Arguments.of(new BigDecimal("100"), "100.0", true),
+        Arguments.of(new BigDecimal("-5.5"), "-5.5", true),
+
+        // ========== ne prefix - not equal ==========
+        Arguments.of(new BigDecimal("0.75"), "ne0.75", false),
+        Arguments.of(new BigDecimal("0.75"), "ne0.8", true),
+        Arguments.of(new BigDecimal("0.75"), "ne0.5", true),
+        Arguments.of(new BigDecimal("100"), "ne100", false),
+        Arguments.of(new BigDecimal("100"), "ne99", true),
+
+        // ========== gt prefix - greater than ==========
+        Arguments.of(new BigDecimal("0.75"), "gt0.5", true),
+        Arguments.of(new BigDecimal("0.75"), "gt0.74", true),
+        Arguments.of(new BigDecimal("0.75"), "gt0.75", false),
+        Arguments.of(new BigDecimal("0.75"), "gt0.76", false),
+        Arguments.of(new BigDecimal("0.75"), "gt0.8", false),
+        Arguments.of(new BigDecimal("-5"), "gt-10", true),
+        Arguments.of(new BigDecimal("-5"), "gt0", false),
+
+        // ========== ge prefix - greater or equal ==========
+        Arguments.of(new BigDecimal("0.75"), "ge0.5", true),
+        Arguments.of(new BigDecimal("0.75"), "ge0.75", true),
+        Arguments.of(new BigDecimal("0.75"), "ge0.76", false),
+        Arguments.of(new BigDecimal("0.75"), "ge0.8", false),
+        Arguments.of(new BigDecimal("100"), "ge100", true),
+        Arguments.of(new BigDecimal("100"), "ge99", true),
+        Arguments.of(new BigDecimal("100"), "ge101", false),
+
+        // ========== lt prefix - less than ==========
+        Arguments.of(new BigDecimal("0.75"), "lt0.8", true),
+        Arguments.of(new BigDecimal("0.75"), "lt0.76", true),
+        Arguments.of(new BigDecimal("0.75"), "lt0.75", false),
+        Arguments.of(new BigDecimal("0.75"), "lt0.5", false),
+        Arguments.of(new BigDecimal("-5"), "lt0", true),
+        Arguments.of(new BigDecimal("-5"), "lt-10", false),
+
+        // ========== le prefix - less or equal ==========
+        Arguments.of(new BigDecimal("0.75"), "le0.8", true),
+        Arguments.of(new BigDecimal("0.75"), "le0.75", true),
+        Arguments.of(new BigDecimal("0.75"), "le0.74", false),
+        Arguments.of(new BigDecimal("0.75"), "le0.5", false),
+        Arguments.of(new BigDecimal("100"), "le100", true),
+        Arguments.of(new BigDecimal("100"), "le101", true),
+        Arguments.of(new BigDecimal("100"), "le99", false),
+
+        // ========== Scientific notation ==========
+        Arguments.of(new BigDecimal("100"), "1e2", true),
+        Arguments.of(new BigDecimal("0.001"), "1e-3", true),
+        Arguments.of(new BigDecimal("1000"), "gt1e2", true),
+        Arguments.of(new BigDecimal("50"), "lt1e2", true)
+    );
+  }
+
+  @ParameterizedTest(name = "NumberMatcher: {0} matches \"{1}\" = {2}")
+  @MethodSource("numberMatcherCases")
+  void testNumberMatcher(final BigDecimal element, final String searchValue,
+      final boolean expected) {
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.DECIMAL())
+        .toDF("value");
+
+    final NumberMatcher matcher = new NumberMatcher();
     final Column result = matcher.match(col("value"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
