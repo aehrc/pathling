@@ -31,6 +31,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -66,13 +67,13 @@ class ElementMatcherTest {
     );
   }
 
-  @ParameterizedTest(name = "TokenMatcher: \"{0}\" matches \"{1}\" = {2}")
+  @ParameterizedTest(name = "TokenMatcher(code): \"{0}\" matches \"{1}\" = {2}")
   @MethodSource("tokenMatcherCases")
   void testTokenMatcher(final String element, final String searchValue, final boolean expected) {
     final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING())
         .toDF("value");
 
-    final TokenMatcher matcher = new TokenMatcher();
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CODE);
     final Column result = matcher.match(col("value"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -421,6 +422,187 @@ class ElementMatcherTest {
 
     final DateMatcher matcher = new DateMatcher(true);  // isPeriodType = true
     final Column result = matcher.match(col("period"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== TokenMatcher Coding tests ==========
+
+  static Stream<Arguments> tokenCodingMatcherCases() {
+    return Stream.of(
+        // Code only (any system)
+        Arguments.of("http://example.org", "male", "male", true),
+        Arguments.of("http://example.org", "female", "male", false),
+        Arguments.of(null, "male", "male", true),  // null system still matches
+
+        // System and code
+        Arguments.of("http://example.org", "male", "http://example.org|male", true),
+        Arguments.of("http://other.org", "male", "http://example.org|male", false),  // wrong system
+        Arguments.of("http://example.org", "female", "http://example.org|male", false),  // wrong code
+
+        // Explicit no system (|code)
+        Arguments.of(null, "male", "|male", true),
+        Arguments.of("http://example.org", "male", "|male", false),  // has system, should not match
+
+        // System only (system|)
+        Arguments.of("http://example.org", "male", "http://example.org|", true),
+        Arguments.of("http://example.org", "female", "http://example.org|", true),  // any code
+        Arguments.of("http://other.org", "male", "http://example.org|", false)  // wrong system
+    );
+  }
+
+  @ParameterizedTest(name = "TokenMatcher(Coding): system=\"{0}\", code=\"{1}\" matches \"{2}\" = {3}")
+  @MethodSource("tokenCodingMatcherCases")
+  void testTokenCodingMatcher(final String system, final String code,
+      final String searchValue, final boolean expected) {
+    // Create a DataFrame with a Coding-like struct
+    final Column systemCol = system != null ? lit(system) : lit(null).cast("string");
+    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
+        .select(struct(systemCol.as("system"), lit(code).as("code")).as("coding"));
+
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CODING);
+    final Column result = matcher.match(col("coding"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== TokenMatcher Identifier tests ==========
+
+  static Stream<Arguments> tokenIdentifierMatcherCases() {
+    return Stream.of(
+        // Value only (any system)
+        Arguments.of("http://hospital.org/mrn", "12345", "12345", true),
+        Arguments.of("http://hospital.org/mrn", "67890", "12345", false),
+        Arguments.of(null, "12345", "12345", true),  // null system still matches
+
+        // System and value
+        Arguments.of("http://hospital.org/mrn", "12345", "http://hospital.org/mrn|12345", true),
+        Arguments.of("http://other.org", "12345", "http://hospital.org/mrn|12345", false),
+
+        // Explicit no system (|value)
+        Arguments.of(null, "12345", "|12345", true),
+        Arguments.of("http://hospital.org/mrn", "12345", "|12345", false)
+    );
+  }
+
+  @ParameterizedTest(name = "TokenMatcher(Identifier): system=\"{0}\", value=\"{1}\" matches \"{2}\" = {3}")
+  @MethodSource("tokenIdentifierMatcherCases")
+  void testTokenIdentifierMatcher(final String system, final String value,
+      final String searchValue, final boolean expected) {
+    // Create a DataFrame with an Identifier-like struct
+    final Column systemCol = system != null ? lit(system) : lit(null).cast("string");
+    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
+        .select(struct(systemCol.as("system"), lit(value).as("value")).as("identifier"));
+
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.IDENTIFIER);
+    final Column result = matcher.match(col("identifier"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== TokenMatcher ContactPoint tests ==========
+
+  static Stream<Arguments> tokenContactPointMatcherCases() {
+    return Stream.of(
+        // Value only matching
+        Arguments.of("555-1234", "555-1234", true),
+        Arguments.of("555-1234", "555-5678", false),
+        Arguments.of("test@example.com", "test@example.com", true),
+        Arguments.of("test@example.com", "other@example.com", false)
+    );
+  }
+
+  @ParameterizedTest(name = "TokenMatcher(ContactPoint): value=\"{0}\" matches \"{1}\" = {2}")
+  @MethodSource("tokenContactPointMatcherCases")
+  void testTokenContactPointMatcher(final String value, final String searchValue,
+      final boolean expected) {
+    // Create a DataFrame with a ContactPoint-like struct
+    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
+        .select(struct(lit(value).as("value")).as("telecom"));
+
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CONTACTPOINT);
+    final Column result = matcher.match(col("telecom"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== TokenMatcher Boolean tests ==========
+
+  static Stream<Arguments> tokenBooleanMatcherCases() {
+    return Stream.of(
+        Arguments.of(true, "true", true),
+        Arguments.of(true, "false", false),
+        Arguments.of(false, "false", true),
+        Arguments.of(false, "true", false),
+        Arguments.of(true, "TRUE", true),  // case-insensitive
+        Arguments.of(false, "FALSE", true)  // case-insensitive
+    );
+  }
+
+  @ParameterizedTest(name = "TokenMatcher(Boolean): {0} matches \"{1}\" = {2}")
+  @MethodSource("tokenBooleanMatcherCases")
+  void testTokenBooleanMatcher(final boolean element, final String searchValue,
+      final boolean expected) {
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.BOOLEAN())
+        .toDF("active");
+
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.BOOLEAN);
+    final Column result = matcher.match(col("active"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== TokenMatcher CodeableConcept tests ==========
+
+  static Stream<Arguments> tokenCodeableConceptMatcherCases() {
+    return Stream.of(
+        // Code matches first coding
+        Arguments.of("http://loinc.org", "12345-6", null, null, "12345-6", true),
+        // Code matches second coding
+        Arguments.of("http://loinc.org", "12345-6", "http://snomed.info/sct", "123456", "123456", true),
+        // System|code matches first coding
+        Arguments.of("http://loinc.org", "12345-6", null, null, "http://loinc.org|12345-6", true),
+        // System|code matches second coding
+        Arguments.of("http://loinc.org", "12345-6", "http://snomed.info/sct", "123456",
+            "http://snomed.info/sct|123456", true),
+        // No match
+        Arguments.of("http://loinc.org", "12345-6", null, null, "99999-9", false),
+        // Wrong system
+        Arguments.of("http://loinc.org", "12345-6", null, null, "http://other.org|12345-6", false)
+    );
+  }
+
+  @ParameterizedTest(name = "TokenMatcher(CodeableConcept): coding1=[{0},{1}], coding2=[{2},{3}] matches \"{4}\" = {5}")
+  @MethodSource("tokenCodeableConceptMatcherCases")
+  void testTokenCodeableConceptMatcher(final String system1, final String code1,
+      final String system2, final String code2,
+      final String searchValue, final boolean expected) {
+    // Create a CodeableConcept with one or two codings
+
+    final Column coding1 = struct(
+        (system1 != null ? lit(system1) : lit(null).cast("string")).as("system"),
+        lit(code1).as("code"));
+
+    final Column codingArray;
+    if (system2 != null || code2 != null) {
+      final Column coding2 = struct(
+          (system2 != null ? lit(system2) : lit(null).cast("string")).as("system"),
+          lit(code2).as("code"));
+      codingArray = org.apache.spark.sql.functions.array(coding1, coding2);
+    } else {
+      codingArray = org.apache.spark.sql.functions.array(coding1);
+    }
+
+    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
+        .select(struct(codingArray.as("coding")).as("codeableConcept"));
+
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CODEABLECONCEPT);
+    final Column result = matcher.match(col("codeableConcept"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
     assertEquals(expected, actual);

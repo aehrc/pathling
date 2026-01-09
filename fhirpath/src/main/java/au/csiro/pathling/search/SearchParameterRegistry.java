@@ -40,7 +40,13 @@ public class SearchParameterRegistry {
               "address-use", new SearchParameterDefinition("address-use", TOKEN,
                   "Patient.address.use"),
               "family", new SearchParameterDefinition("family", STRING, "Patient.name.family"),
-              "birthdate", new SearchParameterDefinition("birthdate", DATE, "Patient.birthDate")
+              "birthdate", new SearchParameterDefinition("birthdate", DATE, "Patient.birthDate"),
+              "identifier", new SearchParameterDefinition("identifier", TOKEN, "Patient.identifier"),
+              "telecom", new SearchParameterDefinition("telecom", TOKEN, "Patient.telecom"),
+              "active", new SearchParameterDefinition("active", TOKEN, "Patient.active")
+          ),
+          ResourceType.OBSERVATION, Map.of(
+              "code", new SearchParameterDefinition("code", TOKEN, "Observation.code")
           ),
           ResourceType.RISKASSESSMENT, Map.of(
               "probability", new SearchParameterDefinition("probability", NUMBER,

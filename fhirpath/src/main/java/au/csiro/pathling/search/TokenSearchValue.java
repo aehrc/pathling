@@ -88,4 +88,33 @@ public class TokenSearchValue {
 
     return new TokenSearchValue(system, code, explicitNoSystem);
   }
+
+  /**
+   * Returns the code value for types that only support simple code values (no system).
+   * <p>
+   * This method validates that:
+   * <ul>
+   *   <li>No system was specified (system|code syntax is not allowed)</li>
+   *   <li>A code value is present</li>
+   * </ul>
+   * <p>
+   * Use this for FHIR types that don't have a system field, such as:
+   * {@code ContactPoint}, {@code code}, {@code uri}, {@code id}, {@code string}, {@code boolean}.
+   *
+   * @return the non-null code value
+   * @throws IllegalArgumentException if a system was specified or code is missing
+   */
+  @Nonnull
+  public String requiresSimpleCode() {
+    if (system != null) {
+      throw new IllegalArgumentException(
+          "System|code syntax is not supported for this search parameter type. "
+              + "Use a simple code value instead of: " + system + "|" + (code != null ? code : ""));
+    }
+    if (code == null) {
+      throw new IllegalArgumentException(
+          "A code value is required for this search parameter type.");
+    }
+    return code;
+  }
 }

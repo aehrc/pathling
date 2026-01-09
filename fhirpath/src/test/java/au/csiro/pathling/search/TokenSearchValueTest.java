@@ -20,6 +20,7 @@ package au.csiro.pathling.search;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -90,5 +91,54 @@ class TokenSearchValueTest {
     assertNull(result.getSystem());
     assertNull(result.getCode());
     assertTrue(result.isExplicitNoSystem());
+  }
+
+  // ========== getSimpleCode() tests ==========
+
+  @Test
+  void testRequiresSimpleCodeSuccess() {
+    final TokenSearchValue result = TokenSearchValue.parse("male");
+    assertEquals("male", result.requiresSimpleCode());
+  }
+
+  @Test
+  void testRequiresSimpleCodeWithExplicitNoSystem() {
+    // |code syntax should work - system is null
+    final TokenSearchValue result = TokenSearchValue.parse("|ABC123");
+    assertEquals("ABC123", result.requiresSimpleCode());
+  }
+
+  @Test
+  void testRequiresSimpleCodeFailsWithSystem() {
+    final TokenSearchValue result = TokenSearchValue.parse("http://example.org|ABC123");
+
+    final IllegalArgumentException exception = assertThrows(
+        IllegalArgumentException.class,
+        result::requiresSimpleCode);
+
+    assertTrue(exception.getMessage().contains("System|code syntax is not supported"));
+    assertTrue(exception.getMessage().contains("http://example.org"));
+  }
+
+  @Test
+  void testRequiresSimpleCodeFailsWithSystemOnly() {
+    final TokenSearchValue result = TokenSearchValue.parse("http://example.org|");
+
+    final IllegalArgumentException exception = assertThrows(
+        IllegalArgumentException.class,
+        result::requiresSimpleCode);
+
+    assertTrue(exception.getMessage().contains("System|code syntax is not supported"));
+  }
+
+  @Test
+  void testRequiresSimpleCodeFailsWithNoCode() {
+    final TokenSearchValue result = TokenSearchValue.parse("|");
+
+    final IllegalArgumentException exception = assertThrows(
+        IllegalArgumentException.class,
+        result::requiresSimpleCode);
+
+    assertTrue(exception.getMessage().contains("code value is required"));
   }
 }

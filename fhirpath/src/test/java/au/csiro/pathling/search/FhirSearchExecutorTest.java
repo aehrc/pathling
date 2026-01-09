@@ -35,14 +35,19 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Address.AddressUse;
 import org.hl7.fhir.r4.model.AuditEvent;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.ContactPoint.ContactPointSystem;
 import org.hl7.fhir.r4.model.Coverage;
 import org.hl7.fhir.r4.model.DateTimeType;
-import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.DecimalType;
+import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.RiskAssessment;
@@ -64,7 +69,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 class FhirSearchExecutorTest {
 
   @Autowired
-  SparkSession spark;
+SparkSession spark;
 
   @Autowired
   FhirEncoders encoders;
@@ -293,7 +298,66 @@ class FhirSearchExecutorTest {
         // ne - not equal
         Arguments.of("date ne prefix", ResourceType.AUDITEVENT,
             (Supplier<ObjectDataSource>) this::createAuditEventDataSource,
-            "date", List.of("ne2023-03-15"), Set.of("2"))  // only AuditEvent 2
+            "date", List.of("ne2023-03-15"), Set.of("2")),  // only AuditEvent 2
+
+        // ========== Patient identifier tests (Identifier type - system|value) ==========
+        Arguments.of("identifier search code only", ResourceType.PATIENT,
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithIdentifiers,
+            "identifier", List.of("12345"), Set.of("1")),
+        Arguments.of("identifier search system|code", ResourceType.PATIENT,
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithIdentifiers,
+            "identifier", List.of("http://hospital.org/mrn|12345"), Set.of("1")),
+        Arguments.of("identifier search system|code wrong system", ResourceType.PATIENT,
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithIdentifiers,
+            "identifier", List.of("http://other.org/mrn|12345"), Set.of()),  // wrong system
+        Arguments.of("identifier search |code (no system)", ResourceType.PATIENT,
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithIdentifiers,
+            "identifier", List.of("|99999"), Set.of("3")),  // identifier with null system
+        Arguments.of("identifier search system| (any code)", ResourceType.PATIENT,
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithIdentifiers,
+            "identifier", List.of("http://hospital.org/mrn|"), Set.of("1", "2")),  // any code in system
+
+        // ========== Patient telecom tests (ContactPoint type - value only) ==========
+        Arguments.of("telecom search phone", ResourceType.PATIENT,
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithTelecoms,
+            "telecom", List.of("555-1234"), Set.of("1")),
+        Arguments.of("telecom search email", ResourceType.PATIENT,
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithTelecoms,
+            "telecom", List.of("john@example.com"), Set.of("1")),
+        Arguments.of("telecom search no match", ResourceType.PATIENT,
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithTelecoms,
+            "telecom", List.of("999-9999"), Set.of()),
+        Arguments.of("telecom search multiple values", ResourceType.PATIENT,
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithTelecoms,
+            "telecom", List.of("555-1234", "555-5678"), Set.of("1", "2")),
+
+        // ========== Patient active tests (boolean type) ==========
+        Arguments.of("active search true", ResourceType.PATIENT,
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithActive,
+            "active", List.of("true"), Set.of("1", "3")),
+        Arguments.of("active search false", ResourceType.PATIENT,
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithActive,
+            "active", List.of("false"), Set.of("2")),
+
+        // ========== Observation code tests (CodeableConcept type - system|code) ==========
+        Arguments.of("code search code only", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSource,
+            "code", List.of("29463-7"), Set.of("1", "2")),  // body weight code
+        Arguments.of("code search system|code", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSource,
+            "code", List.of("http://loinc.org|29463-7"), Set.of("1", "2")),
+        Arguments.of("code search system|code wrong system", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSource,
+            "code", List.of("http://snomed.info/sct|29463-7"), Set.of()),  // wrong system
+        Arguments.of("code search |code (no system)", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSource,
+            "code", List.of("|local-99"), Set.of("3")),  // coding with null system
+        Arguments.of("code search system| (any code)", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSource,
+            "code", List.of("http://loinc.org|"), Set.of("1", "2")),  // any LOINC code
+        Arguments.of("code search multiple codings match", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSource,
+            "code", List.of("http://snomed.info/sct|27113001"), Set.of("2"))  // obs 2 has SNOMED coding too
     );
   }
 
@@ -670,6 +734,138 @@ class FhirSearchExecutorTest {
 
     return new ObjectDataSource(spark, encoders,
         List.of(event1, event2, event3, event4));
+  }
+
+  /**
+   * Creates a test data source with patients having different identifiers.
+   * - Patient 1: identifier with system "http://hospital.org/mrn" and value "12345"
+   * - Patient 2: identifier with system "http://hospital.org/mrn" and value "67890"
+   * - Patient 3: identifier with null system and value "99999"
+   * - Patient 4: no identifier
+   */
+  private ObjectDataSource createPatientDataSourceWithIdentifiers() {
+    final Patient patient1 = new Patient();
+    patient1.setId("1");
+    patient1.addIdentifier()
+        .setSystem("http://hospital.org/mrn")
+        .setValue("12345");
+
+    final Patient patient2 = new Patient();
+    patient2.setId("2");
+    patient2.addIdentifier()
+        .setSystem("http://hospital.org/mrn")
+        .setValue("67890");
+
+    final Patient patient3 = new Patient();
+    patient3.setId("3");
+    final Identifier identifierNoSystem = new Identifier();
+    identifierNoSystem.setValue("99999");
+    // No system set
+    patient3.addIdentifier(identifierNoSystem);
+
+    final Patient patient4 = new Patient();
+    patient4.setId("4");
+    // No identifier
+
+    return new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3, patient4));
+  }
+
+  /**
+   * Creates a test data source with patients having different telecoms (ContactPoint).
+   * - Patient 1: phone "555-1234" and email "john@example.com"
+   * - Patient 2: phone "555-5678"
+   * - Patient 3: no telecom
+   */
+  private ObjectDataSource createPatientDataSourceWithTelecoms() {
+    final Patient patient1 = new Patient();
+    patient1.setId("1");
+    patient1.addTelecom()
+        .setSystem(ContactPointSystem.PHONE)
+        .setValue("555-1234");
+    patient1.addTelecom()
+        .setSystem(ContactPointSystem.EMAIL)
+        .setValue("john@example.com");
+
+    final Patient patient2 = new Patient();
+    patient2.setId("2");
+    patient2.addTelecom()
+        .setSystem(ContactPointSystem.PHONE)
+        .setValue("555-5678");
+
+    final Patient patient3 = new Patient();
+    patient3.setId("3");
+    // No telecom
+
+    return new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3));
+  }
+
+  /**
+   * Creates a test data source with patients having different active values.
+   * - Patient 1: active = true
+   * - Patient 2: active = false
+   * - Patient 3: active = true
+   * - Patient 4: no active value (null)
+   */
+  private ObjectDataSource createPatientDataSourceWithActive() {
+    final Patient patient1 = new Patient();
+    patient1.setId("1");
+    patient1.setActive(true);
+
+    final Patient patient2 = new Patient();
+    patient2.setId("2");
+    patient2.setActive(false);
+
+    final Patient patient3 = new Patient();
+    patient3.setId("3");
+    patient3.setActive(true);
+
+    final Patient patient4 = new Patient();
+    patient4.setId("4");
+    // No active value
+
+    return new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3, patient4));
+  }
+
+  /**
+   * Creates a test data source with Observations having different codes (CodeableConcept).
+   * - Observation 1: code with LOINC 29463-7 (Body Weight)
+   * - Observation 2: code with LOINC 29463-7 AND SNOMED 27113001 (multiple codings)
+   * - Observation 3: code with null system and code "local-99"
+   * - Observation 4: no code
+   */
+  private ObjectDataSource createObservationDataSource() {
+    final Observation obs1 = new Observation();
+    obs1.setId("1");
+    obs1.setCode(new CodeableConcept()
+        .addCoding(new Coding()
+            .setSystem("http://loinc.org")
+            .setCode("29463-7")
+            .setDisplay("Body Weight")));
+
+    final Observation obs2 = new Observation();
+    obs2.setId("2");
+    obs2.setCode(new CodeableConcept()
+        .addCoding(new Coding()
+            .setSystem("http://loinc.org")
+            .setCode("29463-7")
+            .setDisplay("Body Weight"))
+        .addCoding(new Coding()
+            .setSystem("http://snomed.info/sct")
+            .setCode("27113001")
+            .setDisplay("Body weight")));
+
+    final Observation obs3 = new Observation();
+    obs3.setId("3");
+    final Coding localCoding = new Coding();
+    localCoding.setCode("local-99");
+    // No system set
+    obs3.setCode(new CodeableConcept().addCoding(localCoding));
+
+    final Observation obs4 = new Observation();
+    obs4.setId("4");
+    // No code
+
+    return new ObjectDataSource(spark, encoders, List.of(obs1, obs2, obs3, obs4));
   }
 
   /**

@@ -205,12 +205,12 @@ public class FhirSearchExecutor {
     return switch (type) {
       case TOKEN -> {
         if ("not".equals(modifier)) {
-          yield new SearchFilter(new TokenMatcher(), true);
+          yield new SearchFilter(new TokenMatcher(fhirType), true);
         }
         if (modifier != null) {
           throw new InvalidModifierException(modifier, type);
         }
-        yield new SearchFilter(new TokenMatcher());
+        yield new SearchFilter(new TokenMatcher(fhirType));
       }
       case STRING -> {
         if ("exact".equals(modifier)) {
