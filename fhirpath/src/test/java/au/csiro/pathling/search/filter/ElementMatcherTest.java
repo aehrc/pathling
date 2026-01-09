@@ -162,8 +162,10 @@ class ElementMatcherTest {
 
   static Stream<Arguments> dateMatcherCases() {
     return Stream.of(
+        // ========== eq prefix (default) - ranges overlap ==========
         // Same precision (day) - exact match
         Arguments.of("2013-01-14", "2013-01-14", true),
+        Arguments.of("2013-01-14", "eq2013-01-14", true),
         Arguments.of("1990-05-20", "1990-05-20", true),
 
         // Same precision (day) - no overlap
@@ -173,6 +175,7 @@ class ElementMatcherTest {
 
         // Coarser search precision (year-month) - overlaps with day in that month
         Arguments.of("2013-01-14", "2013-01", true),
+        Arguments.of("2013-01-14", "eq2013-01", true),
         Arguments.of("2013-01-01", "2013-01", true),
         Arguments.of("2013-01-31", "2013-01", true),
         Arguments.of("2013-01-14", "2013-02", false),
@@ -192,7 +195,45 @@ class ElementMatcherTest {
 
         // Finer search precision (datetime) - time in different day should not match
         Arguments.of("2013-01-14", "2013-01-15T00:00", false),
-        Arguments.of("2013-01-14", "2013-01-13T23:59:59", false)
+        Arguments.of("2013-01-14", "2013-01-13T23:59:59", false),
+
+        // ========== ne prefix - no overlap ==========
+        Arguments.of("2023-01-15", "ne2023-01-15", false),   // same day = overlap exists
+        Arguments.of("2023-01-15", "ne2023-01-14", true),    // different day = no overlap
+        Arguments.of("2023-01-15", "ne2023-01-16", true),    // different day = no overlap
+        Arguments.of("2023-01-15", "ne2023-02", true),       // different month = no overlap
+        Arguments.of("2023-01-15", "ne2023-01", false),      // same month = overlap exists
+        Arguments.of("2023-01-15", "ne2024", true),          // different year = no overlap
+
+        // ========== gt prefix - resource ends after parameter ==========
+        Arguments.of("2023-01-15", "gt2023-01-14", true),    // 15 ends after 14
+        Arguments.of("2023-01-15", "gt2023-01-15", false),   // 15 does not end after 15
+        Arguments.of("2023-01-15", "gt2023-01-16", false),   // 15 does not end after 16
+        Arguments.of("2023-01-15", "gt2023-01", false),      // day doesn't end after month containing it
+        Arguments.of("2023-02-01", "gt2023-01", true),       // Feb 1 ends after Jan
+
+        // ========== ge prefix - resource starts at or after parameter start ==========
+        Arguments.of("2023-01-15", "ge2023-01-14", true),    // 15 >= 14
+        Arguments.of("2023-01-15", "ge2023-01-15", true),    // 15 >= 15
+        Arguments.of("2023-01-15", "ge2023-01-16", false),   // 15 not >= 16
+        Arguments.of("2023-01-15", "ge2023-01", true),       // 15 starts after month start
+        Arguments.of("2023-01-01", "ge2023-01", true),       // 1st starts at month start
+        Arguments.of("2022-12-31", "ge2023-01", false),      // Dec 31 before Jan start
+
+        // ========== lt prefix - resource starts before parameter ==========
+        Arguments.of("2023-01-15", "lt2023-01-16", true),    // 15 < 16
+        Arguments.of("2023-01-15", "lt2023-01-15", false),   // 15 not < 15
+        Arguments.of("2023-01-15", "lt2023-01-14", false),   // 15 not < 14
+        Arguments.of("2023-01-15", "lt2023-02", true),       // 15 starts before Feb
+        Arguments.of("2023-01-15", "lt2023-01", false),      // 15 not before Jan start
+
+        // ========== le prefix - resource ends at or before parameter end ==========
+        Arguments.of("2023-01-15", "le2023-01-16", true),    // 15 ends <= 16 end
+        Arguments.of("2023-01-15", "le2023-01-15", true),    // 15 ends <= 15 end
+        Arguments.of("2023-01-15", "le2023-01-14", false),   // 15 ends not <= 14 end
+        Arguments.of("2023-01-15", "le2023-01", true),       // 15 ends within Jan
+        Arguments.of("2023-01-31", "le2023-01", true),       // last day ends at month end
+        Arguments.of("2023-02-01", "le2023-01", false)       // Feb 1 ends after Jan
     );
   }
 

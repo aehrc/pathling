@@ -143,7 +143,36 @@ class FhirSearchExecutorTest {
             "birthdate", List.of("1990-01-15T10:00"), Set.of("1", "3")),
         Arguments.of("birthdate search multiple values",
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
-            "birthdate", List.of("1990-01-15", "1985-06-20"), Set.of("1", "2", "3"))
+            "birthdate", List.of("1990-01-15", "1985-06-20"), Set.of("1", "2", "3")),
+
+        // Date prefix tests - basic scenarios only, exhaustive tests are in ElementMatcherTest
+        // ge - greater or equal
+        Arguments.of("birthdate ge prefix",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
+            "birthdate", List.of("ge1990-01-15"), Set.of("1", "3")),  // born on or after Jan 15, 1990
+        Arguments.of("birthdate ge prefix with year",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
+            "birthdate", List.of("ge1986"), Set.of("1", "3")),  // born 1986 or later
+
+        // le - less or equal
+        Arguments.of("birthdate le prefix",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
+            "birthdate", List.of("le1989"), Set.of("2")),  // born 1989 or earlier
+
+        // gt - greater than
+        Arguments.of("birthdate gt prefix",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
+            "birthdate", List.of("gt1985-06-20"), Set.of("1", "3")),  // born after Jun 20, 1985
+
+        // lt - less than
+        Arguments.of("birthdate lt prefix",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
+            "birthdate", List.of("lt1990-01-15"), Set.of("2")),  // born before Jan 15, 1990
+
+        // ne - not equal
+        Arguments.of("birthdate ne prefix",
+            (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
+            "birthdate", List.of("ne1990-01-15"), Set.of("2"))  // NOT born on Jan 15, 1990
     );
   }
 

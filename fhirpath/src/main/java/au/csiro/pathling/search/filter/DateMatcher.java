@@ -28,11 +28,21 @@ import java.sql.Timestamp;
 import org.apache.spark.sql.Column;
 
 /**
- * Matches elements using range overlap for date search parameters.
+ * Matches elements using range-based comparisons for date search parameters.
  * <p>
  * Per FHIR specification, date searches are intrinsically range-based. Both the element value and
- * search value represent implicit ranges based on their precision. For the default `eq` prefix,
- * a match occurs when the ranges overlap.
+ * search value represent implicit ranges based on their precision. The search value can be prefixed
+ * with a comparison operator (e.g., "ge2023-01-15" for greater-or-equal).
+ * <p>
+ * Supported prefixes:
+ * <ul>
+ *   <li>{@code eq} (default) - ranges overlap</li>
+ *   <li>{@code ne} - ranges do not overlap</li>
+ *   <li>{@code gt} - resource ends after parameter</li>
+ *   <li>{@code ge} - resource starts at or after parameter start</li>
+ *   <li>{@code lt} - resource starts before parameter</li>
+ *   <li>{@code le} - resource ends at or before parameter end</li>
+ * </ul>
  * <p>
  * Examples of implicit ranges:
  * <ul>
@@ -42,23 +52,36 @@ import org.apache.spark.sql.Column;
  * </ul>
  *
  * @see <a href="https://hl7.org/fhir/search.html#date">Date Search</a>
+ * @see <a href="https://hl7.org/fhir/search.html#prefix">Search Prefixes</a>
  */
 public class DateMatcher implements ElementMatcher {
 
   @Override
   @Nonnull
   public Column match(@Nonnull final Column element, @Nonnull final String searchValue) {
-    // Parse the search value to determine its precision and compute boundaries
-    final FhirPathDateTime searchDateTime = FhirPathDateTime.parse(searchValue);
-    final Timestamp searchLow = Timestamp.from(searchDateTime.getLowerBoundary());
-    final Timestamp searchHigh = Timestamp.from(searchDateTime.getUpperBoundary());
+    // Parse prefix and date from search value
+    final DatePrefix prefix = DatePrefix.fromValue(searchValue);
+    final String dateValue = DatePrefix.stripPrefix(searchValue);
+
+    // Parse the date value to determine its precision and compute boundaries
+    final FhirPathDateTime searchDateTime = FhirPathDateTime.parse(dateValue);
+    final Timestamp paramLow = Timestamp.from(searchDateTime.getLowerBoundary());
+    final Timestamp paramHigh = Timestamp.from(searchDateTime.getUpperBoundary());
 
     // Get element boundaries using UDFs (handles date strings and precision)
-    final Column elementLow = callUDF(LowBoundaryForDateTime.FUNCTION_NAME, element);
-    final Column elementHigh = callUDF(HighBoundaryForDateTime.FUNCTION_NAME, element);
+    final Column resourceLow = callUDF(LowBoundaryForDateTime.FUNCTION_NAME, element);
+    final Column resourceHigh = callUDF(HighBoundaryForDateTime.FUNCTION_NAME, element);
 
-    // Overlap condition: elementLow <= searchHigh AND searchLow <= elementHigh
-    return elementLow.leq(lit(searchHigh))
-        .and(lit(searchLow).leq(elementHigh));
+    // Apply comparison based on prefix
+    return switch (prefix) {
+      case EQ -> resourceLow.leq(lit(paramHigh))
+          .and(lit(paramLow).leq(resourceHigh));  // overlap (current behavior)
+      case NE -> resourceLow.gt(lit(paramHigh))
+          .or(resourceHigh.lt(lit(paramLow)));    // no overlap
+      case GT -> resourceHigh.gt(lit(paramHigh));
+      case GE -> resourceLow.geq(lit(paramLow));
+      case LT -> resourceLow.lt(lit(paramLow));
+      case LE -> resourceHigh.leq(lit(paramHigh));
+    };
   }
 }
