@@ -18,6 +18,7 @@
 package au.csiro.pathling.search.filter;
 
 import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPathDateTime;
@@ -25,6 +26,8 @@ import au.csiro.pathling.sql.misc.HighBoundaryForDateTime;
 import au.csiro.pathling.sql.misc.LowBoundaryForDateTime;
 import jakarta.annotation.Nonnull;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import org.apache.spark.sql.Column;
 
 /**
@@ -33,6 +36,11 @@ import org.apache.spark.sql.Column;
  * Per FHIR specification, date searches are intrinsically range-based. Both the element value and
  * search value represent implicit ranges based on their precision. The search value can be prefixed
  * with a comparison operator (e.g., "ge2023-01-15" for greater-or-equal).
+ * <p>
+ * This matcher supports both scalar date types (date, dateTime, instant) and Period types. For
+ * scalar types, UDFs are used to compute precision-aware boundaries. For Period types, the start
+ * and end fields are extracted and boundaries computed, with null values treated as negative and
+ * positive infinity respectively.
  * <p>
  * Supported prefixes:
  * <ul>
@@ -56,6 +64,38 @@ import org.apache.spark.sql.Column;
  */
 public class DateMatcher implements ElementMatcher {
 
+  /**
+   * Practical minimum timestamp for unbounded Period start. Using year 0001 to avoid Spark
+   * timestamp overflow issues with Instant.MIN.
+   */
+  private static final Timestamp MIN_TIMESTAMP = Timestamp.from(
+      LocalDateTime.of(1, 1, 1, 0, 0, 0).toInstant(ZoneOffset.UTC));
+
+  /**
+   * Practical maximum timestamp for unbounded Period end. Using year 9999 to avoid Spark timestamp
+   * overflow issues with Instant.MAX.
+   */
+  private static final Timestamp MAX_TIMESTAMP = Timestamp.from(
+      LocalDateTime.of(9999, 12, 31, 23, 59, 59).toInstant(ZoneOffset.UTC));
+
+  private final boolean isPeriodType;
+
+  /**
+   * Creates a DateMatcher for scalar date types (date, dateTime, instant).
+   */
+  public DateMatcher() {
+    this(false);
+  }
+
+  /**
+   * Creates a DateMatcher for either scalar date types or Period type.
+   *
+   * @param isPeriodType true if the element is a Period type, false for scalar date types
+   */
+  public DateMatcher(final boolean isPeriodType) {
+    this.isPeriodType = isPeriodType;
+  }
+
   @Override
   @Nonnull
   public Column match(@Nonnull final Column element, @Nonnull final String searchValue) {
@@ -68,12 +108,27 @@ public class DateMatcher implements ElementMatcher {
     final Timestamp paramLow = Timestamp.from(searchDateTime.getLowerBoundary());
     final Timestamp paramHigh = Timestamp.from(searchDateTime.getUpperBoundary());
 
-    // Get element boundaries using UDFs (handles date strings and precision)
-    final Column resourceLow = callUDF(LowBoundaryForDateTime.FUNCTION_NAME, element);
-    final Column resourceHigh = callUDF(HighBoundaryForDateTime.FUNCTION_NAME, element);
+    // Get element boundaries based on FHIR type
+    final Column resourceLow;
+    final Column resourceHigh;
+
+    if (isPeriodType) {
+      // Period: start/end are STRING fields representing dateTime values
+      // Apply UDFs to get precision-aware boundaries, coalesce null to infinity
+      resourceLow = coalesce(
+          callUDF(LowBoundaryForDateTime.FUNCTION_NAME, element.getField("start")),
+          lit(MIN_TIMESTAMP));
+      resourceHigh = coalesce(
+          callUDF(HighBoundaryForDateTime.FUNCTION_NAME, element.getField("end")),
+          lit(MAX_TIMESTAMP));
+    } else {
+      // Scalar date/dateTime/instant: apply UDFs directly to the element
+      resourceLow = callUDF(LowBoundaryForDateTime.FUNCTION_NAME, element);
+      resourceHigh = callUDF(HighBoundaryForDateTime.FUNCTION_NAME, element);
+    }
 
     // Apply comparison based on prefix
-    return switch (prefix) {
+    final Column comparison = switch (prefix) {
       case EQ -> resourceLow.leq(lit(paramHigh))
           .and(lit(paramLow).leq(resourceHigh));  // overlap (current behavior)
       case NE -> resourceLow.gt(lit(paramHigh))
@@ -83,5 +138,11 @@ public class DateMatcher implements ElementMatcher {
       case LT -> resourceLow.lt(lit(paramLow));
       case LE -> resourceHigh.leq(lit(paramHigh));
     };
+
+    // For Period type, ensure the element itself is not null (resource must have a period)
+    if (isPeriodType) {
+      return element.isNotNull().and(comparison);
+    }
+    return comparison;
   }
 }

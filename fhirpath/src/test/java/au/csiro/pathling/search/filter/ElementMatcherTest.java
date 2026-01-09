@@ -18,6 +18,8 @@
 package au.csiro.pathling.search.filter;
 
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.struct;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -322,6 +324,103 @@ class ElementMatcherTest {
 
     final NumberMatcher matcher = new NumberMatcher();
     final Column result = matcher.match(col("value"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== DateMatcher Period tests ==========
+
+  static Stream<Arguments> periodMatcherCases() {
+    return Stream.of(
+        // ========== eq prefix (default) - ranges overlap ==========
+        // Period fully within search range
+        Arguments.of("2023-01-15", "2023-06-30", "2023-03-15", true),
+        Arguments.of("2023-01-15", "2023-06-30", "2023-01", true),
+        Arguments.of("2023-01-15", "2023-06-30", "2023", true),
+        // Period partially overlaps search range
+        Arguments.of("2023-01-15", "2023-06-30", "2023-06-15", true),  // overlaps end
+        Arguments.of("2023-01-15", "2023-06-30", "2023-01-15", true),  // overlaps start (same day as Period start)
+        // Period does not overlap search range
+        Arguments.of("2023-01-15", "2023-06-30", "2022-12-01", false),
+        Arguments.of("2023-01-15", "2023-06-30", "2023-07-01", false),
+
+        // ========== ne prefix - no overlap ==========
+        Arguments.of("2023-01-15", "2023-06-30", "ne2023-03-15", false),  // overlap exists
+        Arguments.of("2023-01-15", "2023-06-30", "ne2022-12-01", true),   // no overlap
+        Arguments.of("2023-01-15", "2023-06-30", "ne2023-07-01", true),   // no overlap
+
+        // ========== ge prefix - resource starts at or after parameter start ==========
+        Arguments.of("2023-06-01", "2023-12-31", "ge2023-06-01", true),   // starts at same time
+        Arguments.of("2023-06-01", "2023-12-31", "ge2023-05-01", true),   // starts after
+        Arguments.of("2023-06-01", "2023-12-31", "ge2023-07-01", false),  // starts before
+
+        // ========== le prefix - resource ends at or before parameter end ==========
+        Arguments.of("2023-01-01", "2023-06-30", "le2023-06-30", true),   // ends at same time
+        Arguments.of("2023-01-01", "2023-06-30", "le2023-07-31", true),   // ends before
+        Arguments.of("2023-01-01", "2023-06-30", "le2023-05-31", false),  // ends after
+
+        // ========== gt prefix - resource ends after parameter ==========
+        Arguments.of("2023-01-01", "2023-12-31", "gt2023-06-30", true),   // ends after Jun 30
+        Arguments.of("2023-01-01", "2023-06-30", "gt2023-06-30", false),  // ends at Jun 30
+        Arguments.of("2023-01-01", "2023-06-30", "gt2023-12-31", false),  // ends before Dec 31
+
+        // ========== lt prefix - resource starts before parameter ==========
+        Arguments.of("2023-01-01", "2023-06-30", "lt2023-06-01", true),   // starts before Jun 1
+        Arguments.of("2023-06-01", "2023-12-31", "lt2023-06-01", false),  // starts at Jun 1
+        Arguments.of("2023-06-01", "2023-12-31", "lt2023-01-01", false)   // starts after Jan 1
+    );
+  }
+
+  @ParameterizedTest(name = "DateMatcher(Period): [{0}, {1}] matches \"{2}\" = {3}")
+  @MethodSource("periodMatcherCases")
+  void testPeriodMatcher(final String periodStart, final String periodEnd,
+      final String searchValue, final boolean expected) {
+    // Create a DataFrame with a Period-like struct (start, end as strings)
+    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
+        .select(struct(lit(periodStart).as("start"), lit(periodEnd).as("end")).as("period"));
+
+    final DateMatcher matcher = new DateMatcher(true);  // isPeriodType = true
+    final Column result = matcher.match(col("period"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== DateMatcher Period with null boundaries tests ==========
+
+  static Stream<Arguments> periodNullBoundaryMatcherCases() {
+    return Stream.of(
+        // Open-ended future (null end = positive infinity)
+        Arguments.of("2024-01-01", null, "gt2023-12-31", true),   // ends after Dec 31 (infinity > anything)
+        Arguments.of("2024-01-01", null, "gt2025-12-31", true),   // still ends after (infinity)
+        Arguments.of("2024-01-01", null, "le2023-12-31", false),  // doesn't end <= Dec 31
+
+        // Open-ended past (null start = negative infinity)
+        Arguments.of(null, "2022-12-31", "lt2023-01-01", true),   // starts before Jan 1 (-infinity < anything)
+        Arguments.of(null, "2022-12-31", "lt2020-01-01", true),   // still starts before (-infinity)
+        Arguments.of(null, "2022-12-31", "ge2023-01-01", false),  // doesn't start >= Jan 1
+
+        // Both null (infinite range - overlaps with any eq, but ge/le have specific semantics)
+        Arguments.of(null, null, "2023-06-15", true),   // eq: infinite range overlaps with anything
+        Arguments.of(null, null, "ge2023-01-01", false), // ge: -infinity is NOT >= 2023-01-01
+        Arguments.of(null, null, "le2023-12-31", false)  // le: +infinity is NOT <= 2023-12-31
+    );
+  }
+
+  @ParameterizedTest(name = "DateMatcher(Period null): [{0}, {1}] matches \"{2}\" = {3}")
+  @MethodSource("periodNullBoundaryMatcherCases")
+  void testPeriodMatcherWithNullBoundaries(final String periodStart, final String periodEnd,
+      final String searchValue, final boolean expected) {
+    // Create a DataFrame with a Period-like struct with potentially null boundaries
+    final Column startCol = periodStart != null ? lit(periodStart) : lit(null).cast("string");
+    final Column endCol = periodEnd != null ? lit(periodEnd) : lit(null).cast("string");
+
+    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
+        .select(struct(startCol.as("start"), endCol.as("end")).as("period"));
+
+    final DateMatcher matcher = new DateMatcher(true);  // isPeriodType = true
+    final Column result = matcher.match(col("period"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
     assertEquals(expected, actual);

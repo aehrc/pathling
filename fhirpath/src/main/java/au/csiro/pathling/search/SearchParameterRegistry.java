@@ -45,6 +45,16 @@ public class SearchParameterRegistry {
           ResourceType.RISKASSESSMENT, Map.of(
               "probability", new SearchParameterDefinition("probability", NUMBER,
                   "RiskAssessment.prediction.probability.ofType(decimal)")
+          ),
+          ResourceType.COVERAGE, Map.of(
+              "period", new SearchParameterDefinition("period", DATE, "Coverage.period")
+          ),
+          ResourceType.CONDITION, Map.of(
+              "recorded-date", new SearchParameterDefinition("recorded-date", DATE,
+                  "Condition.recordedDate")
+          ),
+          ResourceType.AUDITEVENT, Map.of(
+              "date", new SearchParameterDefinition("date", DATE, "AuditEvent.recorded")
           )
       );
 

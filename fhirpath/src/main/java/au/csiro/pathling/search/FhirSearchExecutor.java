@@ -40,6 +40,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -164,24 +165,43 @@ public class FhirSearchExecutor {
     final Collection result = evaluator.evaluate(fhirPath);
     final ColumnRepresentation valueColumn = result.getColumn();
 
-    // Get the appropriate filter builder for the parameter type and modifier
-    final SearchFilter filter = getFilterForType(paramDef.getType(), criterion.getModifier());
+    // Get FHIR type from collection - fail if not available
+    final FHIRDefinedType fhirType = result.getFhirType()
+        .orElseThrow(() -> new InvalidSearchParameterException(
+            "Cannot determine FHIR type for search parameter: " + criterion.getParameterCode()));
+
+    // Get the appropriate filter builder for the parameter type, modifier, and FHIR type
+    final SearchFilter filter = getFilterForType(paramDef.getType(), criterion.getModifier(),
+        fhirType);
 
     // Build and return the filter expression
     return filter.buildFilter(valueColumn, criterion.getValues());
   }
 
   /**
-   * Gets the appropriate filter implementation for a search parameter type and modifier.
+   * Gets the appropriate filter implementation for a search parameter type, modifier, and FHIR
+   * type.
    *
    * @param type the search parameter type
    * @param modifier the search modifier (e.g., "not", "exact"), or null for no modifier
+   * @param fhirType the FHIR type of the element being searched
    * @return the filter implementation
    * @throws InvalidModifierException if the modifier is not supported for the parameter type
+   * @throws InvalidSearchParameterException if the FHIR type is not valid for the search parameter
+   * type
    */
   @Nonnull
   private SearchFilter getFilterForType(@Nonnull final SearchParameterType type,
-      @Nullable final String modifier) {
+      @Nullable final String modifier,
+      @Nonnull final FHIRDefinedType fhirType) {
+
+    // Validate FHIR type is allowed for this search parameter type
+    if (!type.isAllowedFhirType(fhirType)) {
+      throw new InvalidSearchParameterException(
+          String.format("FHIR type '%s' is not valid for search parameter type '%s'. "
+              + "Allowed types: %s", fhirType.toCode(), type, type.getAllowedFhirTypes()));
+    }
+
     return switch (type) {
       case TOKEN -> {
         if ("not".equals(modifier)) {
@@ -205,7 +225,9 @@ public class FhirSearchExecutor {
         if (modifier != null) {
           throw new InvalidModifierException(modifier, type);
         }
-        yield new SearchFilter(new DateMatcher());
+        // Choose matcher based on FHIR type
+        final boolean isPeriod = fhirType == FHIRDefinedType.PERIOD;
+        yield new SearchFilter(new DateMatcher(isPeriod));
       }
       case NUMBER -> {
         if (modifier != null) {

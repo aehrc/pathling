@@ -34,11 +34,17 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Address.AddressUse;
+import org.hl7.fhir.r4.model.AuditEvent;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.Coverage;
+import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.DecimalType;
+import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.RiskAssessment;
 import org.hl7.fhir.r4.model.RiskAssessment.RiskAssessmentPredictionComponent;
 import org.junit.jupiter.api.Test;
@@ -212,7 +218,82 @@ class FhirSearchExecutorTest {
         // ne - not equal
         Arguments.of("probability ne prefix", ResourceType.RISKASSESSMENT,
             (Supplier<ObjectDataSource>) this::createRiskAssessmentDataSource,
-            "probability", List.of("ne0.5"), Set.of("1", "3"))
+            "probability", List.of("ne0.5"), Set.of("1", "3")),
+
+        // ========== Coverage period tests (Period type date search) ==========
+        // eq - ranges overlap
+        Arguments.of("period search within range", ResourceType.COVERAGE,
+            (Supplier<ObjectDataSource>) this::createCoverageDataSource,
+            "period", List.of("2023-03-15"), Set.of("1")),  // within Coverage 1's period
+        Arguments.of("period search overlapping periods", ResourceType.COVERAGE,
+            (Supplier<ObjectDataSource>) this::createCoverageDataSource,
+            "period", List.of("2023-06-15"), Set.of("1", "2")),  // overlaps both
+        Arguments.of("period search month precision", ResourceType.COVERAGE,
+            (Supplier<ObjectDataSource>) this::createCoverageDataSource,
+            "period", List.of("2023-06"), Set.of("1", "2")),  // June overlaps both
+
+        // ge - starts at or after parameter start
+        Arguments.of("period ge prefix", ResourceType.COVERAGE,
+            (Supplier<ObjectDataSource>) this::createCoverageDataSource,
+            "period", List.of("ge2023-06-01"), Set.of("2", "3")),  // Coverage 2 and 3 start >= June 1
+
+        // le - ends at or before parameter end
+        Arguments.of("period le prefix", ResourceType.COVERAGE,
+            (Supplier<ObjectDataSource>) this::createCoverageDataSource,
+            "period", List.of("le2023-06-30"), Set.of("1", "4")),  // Coverage 1 and 4 end <= June 30
+
+        // gt - ends after parameter
+        Arguments.of("period gt prefix", ResourceType.COVERAGE,
+            (Supplier<ObjectDataSource>) this::createCoverageDataSource,
+            "period", List.of("gt2023-12-31"), Set.of("3")),  // only open-ended Coverage 3
+
+        // lt - starts before parameter
+        Arguments.of("period lt prefix", ResourceType.COVERAGE,
+            (Supplier<ObjectDataSource>) this::createCoverageDataSource,
+            "period", List.of("lt2023-01-01"), Set.of("4")),  // only Coverage 4 (null start = -infinity)
+
+        // ne - no overlap
+        Arguments.of("period ne prefix", ResourceType.COVERAGE,
+            (Supplier<ObjectDataSource>) this::createCoverageDataSource,
+            "period", List.of("ne2023-03-15"), Set.of("2", "3", "4")),  // doesn't overlap with Mar 15
+
+        // ========== Condition recorded-date tests (dateTime type) ==========
+        // eq - day precision matching dateTime
+        Arguments.of("recorded-date search day precision", ResourceType.CONDITION,
+            (Supplier<ObjectDataSource>) this::createConditionDataSource,
+            "recorded-date", List.of("2023-03-15"), Set.of("1", "3")),  // matches Condition 1 and 3
+        Arguments.of("recorded-date search no match", ResourceType.CONDITION,
+            (Supplier<ObjectDataSource>) this::createConditionDataSource,
+            "recorded-date", List.of("2023-01-01"), Set.of()),  // no match
+
+        // ge - greater or equal
+        Arguments.of("recorded-date ge prefix", ResourceType.CONDITION,
+            (Supplier<ObjectDataSource>) this::createConditionDataSource,
+            "recorded-date", List.of("ge2023-06-01"), Set.of("2")),  // Condition 2 only
+
+        // lt - less than
+        Arguments.of("recorded-date lt prefix", ResourceType.CONDITION,
+            (Supplier<ObjectDataSource>) this::createConditionDataSource,
+            "recorded-date", List.of("lt2023-06-01"), Set.of("1", "3")),  // Condition 1 and 3
+
+        // ========== AuditEvent date tests (instant type) ==========
+        // eq - instant matching with day precision
+        Arguments.of("date search day precision", ResourceType.AUDITEVENT,
+            (Supplier<ObjectDataSource>) this::createAuditEventDataSource,
+            "date", List.of("2023-03-15"), Set.of("1", "3")),  // matches AuditEvent 1 and 3
+        Arguments.of("date search no match", ResourceType.AUDITEVENT,
+            (Supplier<ObjectDataSource>) this::createAuditEventDataSource,
+            "date", List.of("2023-01-01"), Set.of()),  // no match
+
+        // ge - greater or equal
+        Arguments.of("date ge prefix", ResourceType.AUDITEVENT,
+            (Supplier<ObjectDataSource>) this::createAuditEventDataSource,
+            "date", List.of("ge2023-06-01"), Set.of("2")),  // AuditEvent 2 only
+
+        // ne - not equal
+        Arguments.of("date ne prefix", ResourceType.AUDITEVENT,
+            (Supplier<ObjectDataSource>) this::createAuditEventDataSource,
+            "date", List.of("ne2023-03-15"), Set.of("2"))  // only AuditEvent 2
     );
   }
 
@@ -486,6 +567,109 @@ class FhirSearchExecutorTest {
     // No prediction/probability
 
     return new ObjectDataSource(spark, encoders, List.of(ra1, ra2, ra3, ra4));
+  }
+
+  /**
+   * Creates a test data source with Coverage resources having different period configurations.
+   * - Coverage 1: period = [2023-01-01, 2023-06-30] (first half of 2023)
+   * - Coverage 2: period = [2023-06-01, 2023-12-31] (second half of 2023, overlaps with 1)
+   * - Coverage 3: period = [2024-01-01, null] (open-ended future)
+   * - Coverage 4: period = [null, 2022-12-31] (open-ended past)
+   * - Coverage 5: no period
+   */
+  private ObjectDataSource createCoverageDataSource() {
+    final Coverage coverage1 = new Coverage();
+    coverage1.setId("1");
+    final Period period1 = new Period();
+    period1.setStartElement(new DateTimeType("2023-01-01"));
+    period1.setEndElement(new DateTimeType("2023-06-30"));
+    coverage1.setPeriod(period1);
+
+    final Coverage coverage2 = new Coverage();
+    coverage2.setId("2");
+    final Period period2 = new Period();
+    period2.setStartElement(new DateTimeType("2023-06-01"));
+    period2.setEndElement(new DateTimeType("2023-12-31"));
+    coverage2.setPeriod(period2);
+
+    final Coverage coverage3 = new Coverage();
+    coverage3.setId("3");
+    final Period period3 = new Period();
+    period3.setStartElement(new DateTimeType("2024-01-01"));
+    // No end = open-ended future (positive infinity)
+    coverage3.setPeriod(period3);
+
+    final Coverage coverage4 = new Coverage();
+    coverage4.setId("4");
+    final Period period4 = new Period();
+    // No start = open-ended past (negative infinity)
+    period4.setEndElement(new DateTimeType("2022-12-31"));
+    coverage4.setPeriod(period4);
+
+    final Coverage coverage5 = new Coverage();
+    coverage5.setId("5");
+    // No period at all
+
+    return new ObjectDataSource(spark, encoders,
+        List.of(coverage1, coverage2, coverage3, coverage4, coverage5));
+  }
+
+  /**
+   * Creates a test data source with Condition resources having different recordedDate values.
+   * Uses dateTime type.
+   * - Condition 1: recordedDate = "2023-03-15T10:30:00Z" (full dateTime)
+   * - Condition 2: recordedDate = "2023-06-20T14:45:00Z" (different date)
+   * - Condition 3: recordedDate = "2023-03-15" (day precision only)
+   * - Condition 4: no recordedDate
+   */
+  private ObjectDataSource createConditionDataSource() {
+    final Condition condition1 = new Condition();
+    condition1.setId("1");
+    condition1.setRecordedDateElement(new DateTimeType("2023-03-15T10:30:00Z"));
+
+    final Condition condition2 = new Condition();
+    condition2.setId("2");
+    condition2.setRecordedDateElement(new DateTimeType("2023-06-20T14:45:00Z"));
+
+    final Condition condition3 = new Condition();
+    condition3.setId("3");
+    condition3.setRecordedDateElement(new DateTimeType("2023-03-15"));
+
+    final Condition condition4 = new Condition();
+    condition4.setId("4");
+    // No recordedDate
+
+    return new ObjectDataSource(spark, encoders,
+        List.of(condition1, condition2, condition3, condition4));
+  }
+
+  /**
+   * Creates a test data source with AuditEvent resources having different recorded values.
+   * Uses instant type (always full precision).
+   * - AuditEvent 1: recorded = "2023-03-15T10:30:00.123Z"
+   * - AuditEvent 2: recorded = "2023-06-20T14:45:30.456Z"
+   * - AuditEvent 3: recorded = "2023-03-15T10:30:00.123Z" (duplicate for multi-match)
+   * - AuditEvent 4: no recorded (null)
+   */
+  private ObjectDataSource createAuditEventDataSource() {
+    final AuditEvent event1 = new AuditEvent();
+    event1.setId("1");
+    event1.setRecordedElement(new InstantType("2023-03-15T10:30:00.123Z"));
+
+    final AuditEvent event2 = new AuditEvent();
+    event2.setId("2");
+    event2.setRecordedElement(new InstantType("2023-06-20T14:45:30.456Z"));
+
+    final AuditEvent event3 = new AuditEvent();
+    event3.setId("3");
+    event3.setRecordedElement(new InstantType("2023-03-15T10:30:00.123Z"));
+
+    final AuditEvent event4 = new AuditEvent();
+    event4.setId("4");
+    // No recorded (null)
+
+    return new ObjectDataSource(spark, encoders,
+        List.of(event1, event2, event3, event4));
   }
 
   /**
