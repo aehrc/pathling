@@ -134,6 +134,10 @@ public class FhirSearchExecutor {
 
   /**
    * Builds a filter expression for a single search criterion.
+   * <p>
+   * For polymorphic search parameters with multiple expressions, each expression is evaluated
+   * separately and the filter results are combined with OR logic. This handles cases like
+   * Observation.effective which can be dateTime, Period, or instant.
    *
    * @param resourceType the resource type
    * @param criterion the search criterion
@@ -152,8 +156,36 @@ public class FhirSearchExecutor {
         .orElseThrow(() -> new UnknownSearchParameterException(
             criterion.getParameterCode(), resourceType));
 
+    // Build filter for each expression and combine with OR
+    // For single-expression parameters, this is equivalent to the previous behavior
+    // For multi-expression (polymorphic) parameters, any matching expression satisfies the filter
+    return paramDef.expressions().stream()
+        .map(expression -> buildExpressionFilter(
+            resourceType, paramDef.type(), criterion, expression, evaluatorFactory))
+        .reduce(Column::or)
+        .orElse(lit(false));  // Should never happen - expressions list is never empty
+  }
+
+  /**
+   * Builds a filter expression for a single FHIRPath expression within a search criterion.
+   *
+   * @param resourceType the resource type
+   * @param paramType the search parameter type
+   * @param criterion the search criterion (for modifier and values)
+   * @param expression the FHIRPath expression to evaluate
+   * @param evaluatorFactory the evaluator factory
+   * @return a SparkSQL Column expression for this expression
+   */
+  @Nonnull
+  private Column buildExpressionFilter(
+      @Nonnull final ResourceType resourceType,
+      @Nonnull final SearchParameterType paramType,
+      @Nonnull final SearchCriterion criterion,
+      @Nonnull final String expression,
+      @Nonnull final FhirPathEvaluator.Factory evaluatorFactory) {
+
     // Parse the FHIRPath expression
-    final FhirPath fhirPath = parser.parse(paramDef.getExpression());
+    final FhirPath fhirPath = parser.parse(expression);
 
     // Evaluate the FHIRPath to extract the value column
     final FhirPathEvaluator evaluator = evaluatorFactory.create(resourceType);
@@ -163,11 +195,10 @@ public class FhirSearchExecutor {
     // Get FHIR type from collection - fail if not available
     final FHIRDefinedType fhirType = result.getFhirType()
         .orElseThrow(() -> new InvalidSearchParameterException(
-            "Cannot determine FHIR type for search parameter: " + criterion.getParameterCode()));
+            "Cannot determine FHIR type for expression: " + expression));
 
-    // Get the appropriate filter builder for the parameter type, modifier, and FHIR type
-    final SearchFilter filter = getFilterForType(paramDef.getType(), criterion.getModifier(),
-        fhirType);
+    // Get the appropriate filter for the parameter type, modifier, and FHIR type
+    final SearchFilter filter = getFilterForType(paramType, criterion.getModifier(), fhirType);
 
     // Build and return the filter expression
     return filter.buildFilter(valueColumn, criterion.getValues());

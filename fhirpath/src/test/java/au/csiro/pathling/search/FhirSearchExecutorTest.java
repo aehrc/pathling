@@ -357,7 +357,43 @@ SparkSession spark;
             "code", List.of("http://loinc.org|"), Set.of("1", "2")),  // any LOINC code
         Arguments.of("code search multiple codings match", ResourceType.OBSERVATION,
             (Supplier<ObjectDataSource>) this::createObservationDataSource,
-            "code", List.of("http://snomed.info/sct|27113001"), Set.of("2"))  // obs 2 has SNOMED coding too
+            "code", List.of("http://snomed.info/sct|27113001"), Set.of("2")),  // obs 2 has SNOMED coding too
+
+        // ========== Observation date tests (polymorphic effective[x] with multiple types) ==========
+        // Observation.effective can be: dateTime, Period, Timing (unsupported), or instant
+        // This tests the multi-expression search parameter support
+
+        // eq - matches across dateTime, Period, and instant types
+        Arguments.of("observation date search matching dateTime", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
+            "date", List.of("2023-03-15"), Set.of("1")),  // dateTime obs
+        Arguments.of("observation date search matching Period", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
+            "date", List.of("2023-06-15"), Set.of("2")),  // within Period obs
+        Arguments.of("observation date search matching instant", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
+            "date", List.of("2023-09-15"), Set.of("3")),  // instant obs
+        Arguments.of("observation date search matching multiple types", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
+            "date", List.of("2023-03-15", "2023-06-15", "2023-09-15"), Set.of("1", "2", "3")),
+
+        // ge - greater or equal across types
+        Arguments.of("observation date ge matching all", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
+            "date", List.of("ge2023-01-01"), Set.of("1", "2", "3")),  // all on or after Jan 1
+        Arguments.of("observation date ge matching some", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
+            "date", List.of("ge2023-06-01"), Set.of("2", "3")),  // Period starts June 1, instant is Sept
+
+        // lt - less than across types
+        Arguments.of("observation date lt matching dateTime only", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
+            "date", List.of("lt2023-06-01"), Set.of("1")),  // only dateTime is before June 1
+
+        // Period overlap test
+        Arguments.of("observation date Period overlap", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
+            "date", List.of("2023-07-01"), Set.of("2"))  // within Period [June 1 - Aug 31]
     );
   }
 
@@ -738,7 +774,7 @@ SparkSession spark;
 
   /**
    * Creates a test data source with patients having different identifiers.
-   * - Patient 1: identifier with system "http://hospital.org/mrn" and value "12345"
+   * - Patient 1: identifier with system "http://hospital.org/mrn' and value "12345"
    * - Patient 2: identifier with system "http://hospital.org/mrn" and value "67890"
    * - Patient 3: identifier with null system and value "99999"
    * - Patient 4: no identifier
@@ -824,6 +860,37 @@ SparkSession spark;
     // No active value
 
     return new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3, patient4));
+  }
+
+  /**
+   * Creates a test data source with Observations having different effective types.
+   * This tests the polymorphic effective[x] field with multiple expression support.
+   * - Observation 1: effectiveDateTime = "2023-03-15T10:30:00Z"
+   * - Observation 2: effectivePeriod = [2023-06-01, 2023-08-31]
+   * - Observation 3: effectiveInstant = "2023-09-15T14:45:00.123Z"
+   * - Observation 4: no effective
+   */
+  private ObjectDataSource createObservationDataSourceWithDates() {
+    final Observation obs1 = new Observation();
+    obs1.setId("1");
+    obs1.setEffective(new DateTimeType("2023-03-15T10:30:00Z"));
+
+    final Observation obs2 = new Observation();
+    obs2.setId("2");
+    final Period period = new Period();
+    period.setStartElement(new DateTimeType("2023-06-01"));
+    period.setEndElement(new DateTimeType("2023-08-31"));
+    obs2.setEffective(period);
+
+    final Observation obs3 = new Observation();
+    obs3.setId("3");
+    obs3.setEffective(new InstantType("2023-09-15T14:45:00.123Z"));
+
+    final Observation obs4 = new Observation();
+    obs4.setId("4");
+    // No effective set
+
+    return new ObjectDataSource(spark, encoders, List.of(obs1, obs2, obs3, obs4));
   }
 
   /**

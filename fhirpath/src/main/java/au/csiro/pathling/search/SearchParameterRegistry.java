@@ -23,6 +23,7 @@ import static au.csiro.pathling.search.SearchParameterType.STRING;
 import static au.csiro.pathling.search.SearchParameterType.TOKEN;
 
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -46,7 +47,12 @@ public class SearchParameterRegistry {
               "active", new SearchParameterDefinition("active", TOKEN, "Patient.active")
           ),
           ResourceType.OBSERVATION, Map.of(
-              "code", new SearchParameterDefinition("code", TOKEN, "Observation.code")
+              "code", new SearchParameterDefinition("code", TOKEN, "Observation.code"),
+              "date", new SearchParameterDefinition("date", DATE, List.of(
+                  "Observation.effective.ofType(dateTime)",
+                  "Observation.effective.ofType(Period)",
+                  "Observation.effective.ofType(instant)"
+              ))
           ),
           ResourceType.RISKASSESSMENT, Map.of(
               "probability", new SearchParameterDefinition("probability", NUMBER,
