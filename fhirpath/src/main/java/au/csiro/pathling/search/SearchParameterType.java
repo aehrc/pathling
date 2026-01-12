@@ -17,54 +17,97 @@
 
 package au.csiro.pathling.search;
 
+import au.csiro.pathling.search.filter.DateMatcher;
+import au.csiro.pathling.search.filter.ExactStringMatcher;
+import au.csiro.pathling.search.filter.MatcherFactory;
+import au.csiro.pathling.search.filter.NumberMatcher;
+import au.csiro.pathling.search.filter.SearchFilter;
+import au.csiro.pathling.search.filter.StringMatcher;
+import au.csiro.pathling.search.filter.TokenMatcher;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Set;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Enum representing the types of FHIR search parameters.
  * <p>
- * Each search parameter type has a set of allowed FHIR types that can be searched using that
- * parameter type.
+ * Each search parameter type has a set of allowed FHIR types that can be searched
+ * and implements {@link MatcherFactory} to create appropriate search filters.
+ * <p>
+ * Implemented types override {@link #createFilter(String, FHIRDefinedType)} with
+ * type-specific logic. Unimplemented types use the default implementation which
+ * throws {@link UnsupportedOperationException}.
  *
  * @see <a href="https://hl7.org/fhir/search.html#ptypes">Search Parameter Types</a>
  */
-public enum SearchParameterType {
+public enum SearchParameterType implements MatcherFactory {
 
   /**
    * A token type search parameter matches a system and/or code.
+   * Supports the {@code :not} modifier for negated matching.
    */
   TOKEN(Set.of(
       FHIRDefinedType.CODE, FHIRDefinedType.CODING, FHIRDefinedType.CODEABLECONCEPT,
       FHIRDefinedType.IDENTIFIER, FHIRDefinedType.CONTACTPOINT,
       FHIRDefinedType.BOOLEAN, FHIRDefinedType.STRING, FHIRDefinedType.URI, FHIRDefinedType.ID
-  )),
+  )) {
+    @Nonnull
+    @Override
+    public SearchFilter createFilter(@Nullable final String modifier,
+                                    @Nonnull final FHIRDefinedType fhirType) {
+      if ("not".equals(modifier)) {
+        return new SearchFilter(new TokenMatcher(fhirType), true);
+      }
+      if (modifier != null) {
+        throw new InvalidModifierException(modifier, this);
+      }
+      return new SearchFilter(new TokenMatcher(fhirType));
+    }
+  },
 
   /**
    * A string type search parameter matches string values.
+   * Supports the {@code :exact} modifier for case-sensitive exact matching.
+   * Default is case-insensitive prefix matching.
    */
   STRING(Set.of(
       FHIRDefinedType.STRING, FHIRDefinedType.HUMANNAME, FHIRDefinedType.ADDRESS,
       FHIRDefinedType.MARKDOWN
-  )),
+  )) {
+    @Nonnull
+    @Override
+    public SearchFilter createFilter(@Nullable final String modifier,
+                                    @Nonnull final FHIRDefinedType fhirType) {
+      if ("exact".equals(modifier)) {
+        return new SearchFilter(new ExactStringMatcher());
+      }
+      if (modifier != null) {
+        throw new InvalidModifierException(modifier, this);
+      }
+      return new SearchFilter(new StringMatcher());
+    }
+  },
 
   /**
    * A date type search parameter matches date/time values.
+   * Handles both scalar date types (date, dateTime, instant) and Period type.
    */
   DATE(Set.of(
       FHIRDefinedType.DATE, FHIRDefinedType.DATETIME, FHIRDefinedType.INSTANT,
       FHIRDefinedType.PERIOD
-  )),
-
-  /**
-   * A quantity type search parameter matches quantity values with optional units.
-   */
-  QUANTITY(Set.of()),
-
-  /**
-   * A reference type search parameter matches references to other resources.
-   */
-  REFERENCE(Set.of()),
+  )) {
+    @Nonnull
+    @Override
+    public SearchFilter createFilter(@Nullable final String modifier,
+                                    @Nonnull final FHIRDefinedType fhirType) {
+      if (modifier != null) {
+        throw new InvalidModifierException(modifier, this);
+      }
+      final boolean isPeriod = fhirType == FHIRDefinedType.PERIOD;
+      return new SearchFilter(new DateMatcher(isPeriod));
+    }
+  },
 
   /**
    * A number type search parameter matches numeric values.
@@ -72,20 +115,45 @@ public enum SearchParameterType {
   NUMBER(Set.of(
       FHIRDefinedType.INTEGER, FHIRDefinedType.DECIMAL,
       FHIRDefinedType.POSITIVEINT, FHIRDefinedType.UNSIGNEDINT
-  )),
+  )) {
+    @Nonnull
+    @Override
+    public SearchFilter createFilter(@Nullable final String modifier,
+                                    @Nonnull final FHIRDefinedType fhirType) {
+      if (modifier != null) {
+        throw new InvalidModifierException(modifier, this);
+      }
+      return new SearchFilter(new NumberMatcher());
+    }
+  },
+
+  /**
+   * A quantity type search parameter matches quantity values with optional units.
+   * Not yet implemented.
+   */
+  QUANTITY(Set.of()),
+
+  /**
+   * A reference type search parameter matches references to other resources.
+   * Not yet implemented.
+   */
+  REFERENCE(Set.of()),
 
   /**
    * A URI type search parameter matches URI values.
+   * Not yet implemented.
    */
   URI(Set.of()),
 
   /**
    * A composite type search parameter combines multiple parameters.
+   * Not yet implemented.
    */
   COMPOSITE(Set.of()),
 
   /**
    * A special type search parameter has custom behavior.
+   * Not yet implemented.
    */
   SPECIAL(Set.of());
 
@@ -114,5 +182,25 @@ public enum SearchParameterType {
   @Nonnull
   public Set<FHIRDefinedType> getAllowedFhirTypes() {
     return allowedFhirTypes;
+  }
+
+  /**
+   * Creates a search filter for this parameter type with the given modifier and FHIR type.
+   * <p>
+   * Implemented types override this method with type-specific logic.
+   * Unimplemented types use this default implementation.
+   *
+   * @param modifier the search modifier (e.g., "not", "exact"), or null for no modifier
+   * @param fhirType the FHIR type of the element being searched
+   * @return a configured SearchFilter
+   * @throws UnsupportedOperationException if this search parameter type is not yet implemented
+   * @throws InvalidModifierException if the modifier is not supported for this type
+   */
+  @Nonnull
+  @Override
+  public SearchFilter createFilter(@Nullable final String modifier,
+                                  @Nonnull final FHIRDefinedType fhirType) {
+    throw new UnsupportedOperationException(
+        "Search parameter type not yet supported: " + this);
   }
 }

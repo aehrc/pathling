@@ -26,12 +26,7 @@ import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators.SingleEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.search.filter.DateMatcher;
-import au.csiro.pathling.search.filter.ExactStringMatcher;
-import au.csiro.pathling.search.filter.NumberMatcher;
 import au.csiro.pathling.search.filter.SearchFilter;
-import au.csiro.pathling.search.filter.StringMatcher;
-import au.csiro.pathling.search.filter.TokenMatcher;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -202,41 +197,7 @@ public class FhirSearchExecutor {
               + "Allowed types: %s", fhirType.toCode(), type, type.getAllowedFhirTypes()));
     }
 
-    return switch (type) {
-      case TOKEN -> {
-        if ("not".equals(modifier)) {
-          yield new SearchFilter(new TokenMatcher(fhirType), true);
-        }
-        if (modifier != null) {
-          throw new InvalidModifierException(modifier, type);
-        }
-        yield new SearchFilter(new TokenMatcher(fhirType));
-      }
-      case STRING -> {
-        if ("exact".equals(modifier)) {
-          yield new SearchFilter(new ExactStringMatcher());
-        }
-        if (modifier != null) {
-          throw new InvalidModifierException(modifier, type);
-        }
-        yield new SearchFilter(new StringMatcher());
-      }
-      case DATE -> {
-        if (modifier != null) {
-          throw new InvalidModifierException(modifier, type);
-        }
-        // Choose matcher based on FHIR type
-        final boolean isPeriod = fhirType == FHIRDefinedType.PERIOD;
-        yield new SearchFilter(new DateMatcher(isPeriod));
-      }
-      case NUMBER -> {
-        if (modifier != null) {
-          throw new InvalidModifierException(modifier, type);
-        }
-        yield new SearchFilter(new NumberMatcher());
-      }
-      default -> throw new UnsupportedOperationException(
-          "Search parameter type not yet supported: " + type);
-    };
+    // Delegate to enum constant's createFilter() implementation
+    return type.createFilter(modifier, fhirType);
   }
 }
