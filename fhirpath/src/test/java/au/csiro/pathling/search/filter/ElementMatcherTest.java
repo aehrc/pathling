@@ -255,25 +255,49 @@ class ElementMatcherTest {
   }
 
   // ========== NumberMatcher tests ==========
+  // Note: eq/ne use range-based semantics based on significant figures
+  // Comparison prefixes (gt, ge, lt, le) use exact value semantics
 
   static Stream<Arguments> numberMatcherCases() {
     return Stream.of(
-        // ========== eq prefix (default) - exact match ==========
+        // ========== eq prefix (default) - range-based matching ==========
+        // "100" (3 sig figs) matches range [99.5, 100.5)
+        Arguments.of(new BigDecimal("100"), "100", true),       // exact match - within range
+        Arguments.of(new BigDecimal("99.7"), "100", true),      // within [99.5, 100.5)
+        Arguments.of(new BigDecimal("100.4"), "100", true),     // within [99.5, 100.5)
+        Arguments.of(new BigDecimal("99.4"), "100", false),     // below 99.5
+        Arguments.of(new BigDecimal("100.5"), "100", false),    // at upper boundary (exclusive)
+        Arguments.of(new BigDecimal("100.6"), "100", false),    // above 100.5
+
+        // "100.00" (5 sig figs) matches range [99.995, 100.005)
+        Arguments.of(new BigDecimal("100"), "100.00", true),      // within range
+        Arguments.of(new BigDecimal("99.999"), "100.00", true),   // within range
+        Arguments.of(new BigDecimal("100.004"), "100.00", true),  // within range
+        Arguments.of(new BigDecimal("99.99"), "100.00", false),   // outside range
+        Arguments.of(new BigDecimal("100.01"), "100.00", false),  // outside range
+
+        // "0.75" (2 sig figs) matches range [0.745, 0.755)
         Arguments.of(new BigDecimal("0.75"), "0.75", true),
         Arguments.of(new BigDecimal("0.75"), "eq0.75", true),
-        Arguments.of(new BigDecimal("0.75"), "0.8", false),
-        Arguments.of(new BigDecimal("100"), "100", true),
-        Arguments.of(new BigDecimal("100"), "100.0", true),
+        Arguments.of(new BigDecimal("0.749"), "0.75", true),      // within [0.745, 0.755)
+        Arguments.of(new BigDecimal("0.744"), "0.75", false),     // outside range
+        Arguments.of(new BigDecimal("0.755"), "0.75", false),     // at upper boundary (exclusive)
+
+        // Negative values: "-5.5" (2 sig figs) matches range [-5.55, -5.45)
         Arguments.of(new BigDecimal("-5.5"), "-5.5", true),
+        Arguments.of(new BigDecimal("-5.52"), "-5.5", true),      // within range
+        Arguments.of(new BigDecimal("-5.48"), "-5.5", true),      // within range
+        Arguments.of(new BigDecimal("-5.56"), "-5.5", false),     // outside range
+        Arguments.of(new BigDecimal("-5.44"), "-5.5", false),     // outside range
 
-        // ========== ne prefix - not equal ==========
-        Arguments.of(new BigDecimal("0.75"), "ne0.75", false),
-        Arguments.of(new BigDecimal("0.75"), "ne0.8", true),
-        Arguments.of(new BigDecimal("0.75"), "ne0.5", true),
-        Arguments.of(new BigDecimal("100"), "ne100", false),
-        Arguments.of(new BigDecimal("100"), "ne99", true),
+        // ========== ne prefix - outside range ==========
+        Arguments.of(new BigDecimal("100"), "ne100", false),      // within [99.5, 100.5) - no match
+        Arguments.of(new BigDecimal("99.4"), "ne100", true),      // outside range - matches
+        Arguments.of(new BigDecimal("100.5"), "ne100", true),     // at upper boundary - matches
+        Arguments.of(new BigDecimal("0.75"), "ne0.75", false),    // within range
+        Arguments.of(new BigDecimal("0.76"), "ne0.75", true),     // outside range
 
-        // ========== gt prefix - greater than ==========
+        // ========== gt prefix - greater than (exact semantics) ==========
         Arguments.of(new BigDecimal("0.75"), "gt0.5", true),
         Arguments.of(new BigDecimal("0.75"), "gt0.74", true),
         Arguments.of(new BigDecimal("0.75"), "gt0.75", false),
@@ -282,7 +306,7 @@ class ElementMatcherTest {
         Arguments.of(new BigDecimal("-5"), "gt-10", true),
         Arguments.of(new BigDecimal("-5"), "gt0", false),
 
-        // ========== ge prefix - greater or equal ==========
+        // ========== ge prefix - greater or equal (exact semantics) ==========
         Arguments.of(new BigDecimal("0.75"), "ge0.5", true),
         Arguments.of(new BigDecimal("0.75"), "ge0.75", true),
         Arguments.of(new BigDecimal("0.75"), "ge0.76", false),
@@ -291,7 +315,7 @@ class ElementMatcherTest {
         Arguments.of(new BigDecimal("100"), "ge99", true),
         Arguments.of(new BigDecimal("100"), "ge101", false),
 
-        // ========== lt prefix - less than ==========
+        // ========== lt prefix - less than (exact semantics) ==========
         Arguments.of(new BigDecimal("0.75"), "lt0.8", true),
         Arguments.of(new BigDecimal("0.75"), "lt0.76", true),
         Arguments.of(new BigDecimal("0.75"), "lt0.75", false),
@@ -299,7 +323,7 @@ class ElementMatcherTest {
         Arguments.of(new BigDecimal("-5"), "lt0", true),
         Arguments.of(new BigDecimal("-5"), "lt-10", false),
 
-        // ========== le prefix - less or equal ==========
+        // ========== le prefix - less or equal (exact semantics) ==========
         Arguments.of(new BigDecimal("0.75"), "le0.8", true),
         Arguments.of(new BigDecimal("0.75"), "le0.75", true),
         Arguments.of(new BigDecimal("0.75"), "le0.74", false),
@@ -308,22 +332,88 @@ class ElementMatcherTest {
         Arguments.of(new BigDecimal("100"), "le101", true),
         Arguments.of(new BigDecimal("100"), "le99", false),
 
-        // ========== Scientific notation ==========
-        Arguments.of(new BigDecimal("100"), "1e2", true),
-        Arguments.of(new BigDecimal("0.001"), "1e-3", true),
-        Arguments.of(new BigDecimal("1000"), "gt1e2", true),
-        Arguments.of(new BigDecimal("50"), "lt1e2", true)
+        // ========== Scientific notation with range semantics ==========
+        // "1e2" (1 sig fig) matches range [50, 150)
+        Arguments.of(new BigDecimal("100"), "1e2", true),         // exact value
+        Arguments.of(new BigDecimal("50"), "1e2", true),          // at lower boundary (inclusive)
+        Arguments.of(new BigDecimal("149"), "1e2", true),         // within range
+        Arguments.of(new BigDecimal("49"), "1e2", false),         // below lower boundary
+        Arguments.of(new BigDecimal("150"), "1e2", false),        // at upper boundary (exclusive)
+
+        // "1e-3" (1 sig fig) matches range [0.0005, 0.0015)
+        Arguments.of(new BigDecimal("0.001"), "1e-3", true),      // exact value
+        Arguments.of(new BigDecimal("0.0005"), "1e-3", true),     // at lower boundary
+        Arguments.of(new BigDecimal("0.0014"), "1e-3", true),     // within range
+
+        // Scientific notation with exact semantics
+        Arguments.of(new BigDecimal("1000"), "gt1e2", true),      // 1000 > 100
+        Arguments.of(new BigDecimal("50"), "lt1e2", true)         // 50 < 100
     );
   }
 
-  @ParameterizedTest(name = "NumberMatcher: {0} matches \"{1}\" = {2}")
+  @ParameterizedTest(name = "NumberMatcher(DECIMAL): {0} matches \"{1}\" = {2}")
   @MethodSource("numberMatcherCases")
   void testNumberMatcher(final BigDecimal element, final String searchValue,
       final boolean expected) {
     final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.DECIMAL())
         .toDF("value");
 
-    final NumberMatcher matcher = new NumberMatcher();
+    // Use DECIMAL type for the existing tests (range-based semantics for eq/ne)
+    final NumberMatcher matcher = new NumberMatcher(FHIRDefinedType.DECIMAL);
+    final Column result = matcher.match(col("value"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== NumberMatcher tests for INTEGER types ==========
+  // Integer types use exact match semantics for eq/ne
+
+  static Stream<Arguments> integerNumberMatcherCases() {
+    return Stream.of(
+        // ========== eq prefix - exact match for integers ==========
+        Arguments.of(100, "100", true),          // exact match
+        Arguments.of(100, "eq100", true),        // explicit eq prefix
+        Arguments.of(99, "100", false),          // not equal
+        Arguments.of(101, "100", false),         // not equal
+        Arguments.of(100, "100.0", true),        // 100.0 has no fractional part -> exact match
+        Arguments.of(99, "100.0", false),        // not equal
+
+        // Search with fractional value -> no integer can match
+        Arguments.of(100, "100.5", false),       // fractional search -> no matches
+        Arguments.of(100, "99.5", false),        // fractional search -> no matches
+        Arguments.of(1, "0.5", false),           // fractional search -> no matches
+
+        // ========== ne prefix - not equal for integers ==========
+        Arguments.of(100, "ne100", false),       // equal -> not a match
+        Arguments.of(99, "ne100", true),         // not equal -> matches
+        Arguments.of(101, "ne100", true),        // not equal -> matches
+
+        // Search with fractional value -> all integers match ne
+        Arguments.of(100, "ne100.5", true),      // all integers ne fractional
+        Arguments.of(1, "ne0.5", true),          // all integers ne fractional
+
+        // ========== Comparison prefixes - same as decimal (exact semantics) ==========
+        Arguments.of(100, "gt99", true),
+        Arguments.of(100, "gt100", false),
+        Arguments.of(100, "ge100", true),
+        Arguments.of(100, "ge101", false),
+        Arguments.of(100, "lt101", true),
+        Arguments.of(100, "lt100", false),
+        Arguments.of(100, "le100", true),
+        Arguments.of(100, "le99", false)
+    );
+  }
+
+  @ParameterizedTest(name = "NumberMatcher(INTEGER): {0} matches \"{1}\" = {2}")
+  @MethodSource("integerNumberMatcherCases")
+  void testIntegerNumberMatcher(final Integer element, final String searchValue,
+      final boolean expected) {
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.INT())
+        .toDF("value");
+
+    // Use INTEGER type for integer tests (exact match semantics for eq/ne)
+    final NumberMatcher matcher = new NumberMatcher(FHIRDefinedType.INTEGER);
     final Column result = matcher.match(col("value"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);

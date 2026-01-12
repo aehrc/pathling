@@ -111,6 +111,8 @@ public enum SearchParameterType implements MatcherFactory {
 
   /**
    * A number type search parameter matches numeric values.
+   * For integer types (integer, positiveInt, unsignedInt), exact match semantics are used.
+   * For decimal types, range-based semantics based on significant figures are used.
    */
   NUMBER(Set.of(
       FHIRDefinedType.INTEGER, FHIRDefinedType.DECIMAL,
@@ -123,7 +125,7 @@ public enum SearchParameterType implements MatcherFactory {
       if (modifier != null) {
         throw new InvalidModifierException(modifier, this);
       }
-      return new SearchFilter(new NumberMatcher());
+      return new SearchFilter(new NumberMatcher(fhirType));
     }
   },
 
