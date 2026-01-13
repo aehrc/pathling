@@ -17,61 +17,60 @@
 
 package au.csiro.pathling.search;
 
-import static au.csiro.pathling.search.SearchParameterType.DATE;
-import static au.csiro.pathling.search.SearchParameterType.NUMBER;
-import static au.csiro.pathling.search.SearchParameterType.QUANTITY;
-import static au.csiro.pathling.search.SearchParameterType.STRING;
-import static au.csiro.pathling.search.SearchParameterType.TOKEN;
-
+import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
-import java.util.List;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.Map;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Registry for FHIR search parameter definitions. Currently uses hardcoded parameters, but will be
- * extended to load from the FHIR search parameters JSON registry.
+ * Registry for FHIR search parameter definitions.
+ * <p>
+ * By default, loads search parameters from a bundled JSON resource file. The registry maps
+ * resource types to their available search parameters.
+ *
+ * @see SearchParameterDefinition
+ * @see JsonSearchParameterLoader
  */
 public class SearchParameterRegistry {
 
-  private static final Map<ResourceType, Map<String, SearchParameterDefinition>> PARAMETERS =
-      Map.of(
-          ResourceType.PATIENT, Map.of(
-              "gender", new SearchParameterDefinition("gender", TOKEN, "Patient.gender"),
-              "address-use", new SearchParameterDefinition("address-use", TOKEN,
-                  "Patient.address.use"),
-              "family", new SearchParameterDefinition("family", STRING, "Patient.name.family"),
-              "birthdate", new SearchParameterDefinition("birthdate", DATE, "Patient.birthDate"),
-              "identifier", new SearchParameterDefinition("identifier", TOKEN, "Patient.identifier"),
-              "telecom", new SearchParameterDefinition("telecom", TOKEN, "Patient.telecom"),
-              "active", new SearchParameterDefinition("active", TOKEN, "Patient.active")
-          ),
-          ResourceType.OBSERVATION, Map.of(
-              "code", new SearchParameterDefinition("code", TOKEN, "Observation.code"),
-              "date", new SearchParameterDefinition("date", DATE, List.of(
-                  "Observation.effective.ofType(dateTime)",
-                  "Observation.effective.ofType(Period)",
-                  "Observation.effective.ofType(instant)"
-              )),
-              "value-quantity", new SearchParameterDefinition("value-quantity", QUANTITY,
-                  "Observation.value.ofType(Quantity)")
-          ),
-          ResourceType.RISKASSESSMENT, Map.of(
-              "probability", new SearchParameterDefinition("probability", NUMBER,
-                  "RiskAssessment.prediction.probability.ofType(decimal)")
-          ),
-          ResourceType.COVERAGE, Map.of(
-              "period", new SearchParameterDefinition("period", DATE, "Coverage.period")
-          ),
-          ResourceType.CONDITION, Map.of(
-              "recorded-date", new SearchParameterDefinition("recorded-date", DATE,
-                  "Condition.recordedDate")
-          ),
-          ResourceType.AUDITEVENT, Map.of(
-              "date", new SearchParameterDefinition("date", DATE, "AuditEvent.recorded")
-          )
-      );
+  private static final String DEFAULT_RESOURCE = "/search-parameters.json";
+
+  @Nonnull
+  private final Map<ResourceType, Map<String, SearchParameterDefinition>> parameters;
+
+  /**
+   * Creates a registry by loading from the bundled JSON resource.
+   * <p>
+   * Uses the default FHIR R4 context for parsing.
+   */
+  public SearchParameterRegistry() {
+    this(FhirContext.forR4());
+  }
+
+  /**
+   * Creates a registry by loading from the bundled JSON resource.
+   *
+   * @param fhirContext the FHIR context to use for parsing
+   */
+  public SearchParameterRegistry(@Nonnull final FhirContext fhirContext) {
+    this.parameters = loadFromClasspathResource(fhirContext);
+  }
+
+  /**
+   * Creates a registry with pre-loaded parameters.
+   * <p>
+   * This constructor is for subclasses (e.g., test registries) that provide static parameters.
+   *
+   * @param parameters the pre-loaded parameter map
+   */
+  protected SearchParameterRegistry(
+      @Nonnull final Map<ResourceType, Map<String, SearchParameterDefinition>> parameters) {
+    this.parameters = parameters;
+  }
 
   /**
    * Gets the search parameter definition for a given resource type and parameter code.
@@ -84,7 +83,29 @@ public class SearchParameterRegistry {
   public Optional<SearchParameterDefinition> getParameter(
       @Nonnull final ResourceType resourceType,
       @Nonnull final String code) {
-    return Optional.ofNullable(PARAMETERS.get(resourceType))
+    return Optional.ofNullable(parameters.get(resourceType))
         .map(params -> params.get(code));
+  }
+
+  /**
+   * Loads parameters from the bundled classpath resource.
+   *
+   * @param fhirContext the FHIR context for parsing
+   * @return the loaded parameters map
+   */
+  @Nonnull
+  private static Map<ResourceType, Map<String, SearchParameterDefinition>> loadFromClasspathResource(
+      @Nonnull final FhirContext fhirContext) {
+    try (final InputStream is = SearchParameterRegistry.class.getResourceAsStream(
+        DEFAULT_RESOURCE)) {
+      if (is == null) {
+        throw new IllegalStateException(
+            "Search parameters resource not found: " + DEFAULT_RESOURCE);
+      }
+      return new JsonSearchParameterLoader(fhirContext).load(is);
+    } catch (final IOException e) {
+      throw new UncheckedIOException(
+          "Failed to load search parameters from: " + DEFAULT_RESOURCE, e);
+    }
   }
 }

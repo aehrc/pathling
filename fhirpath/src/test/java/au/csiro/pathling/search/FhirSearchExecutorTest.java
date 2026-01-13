@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
 import java.math.BigDecimal;
@@ -71,10 +72,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 class FhirSearchExecutorTest {
 
   @Autowired
-SparkSession spark;
+  SparkSession spark;
 
   @Autowired
   FhirEncoders encoders;
+
+  private final SearchParameterRegistry registry = new TestSearchParameterRegistry();
+  private final Parser parser = new Parser();
 
   // ========== Parameterized search tests ==========
 
@@ -525,7 +529,7 @@ SparkSession spark;
         .build();
 
     final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
+        encoders.getContext(), dataSource, registry, parser);
 
     final Dataset<Row> results = executor.execute(resourceType, search);
 
@@ -541,7 +545,7 @@ SparkSession spark;
     final FhirSearch search = FhirSearch.builder().build();
 
     final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
+        encoders.getContext(), dataSource, registry, parser);
 
     final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
 
@@ -558,7 +562,7 @@ SparkSession spark;
         .build();
 
     final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
+        encoders.getContext(), dataSource, registry, parser);
 
     final UnknownSearchParameterException exception = assertThrows(
         UnknownSearchParameterException.class,
@@ -577,7 +581,7 @@ SparkSession spark;
         .build();
 
     final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
+        encoders.getContext(), dataSource, registry, parser);
 
     final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
     final Dataset<Row> original = dataSource.read("Patient");
@@ -596,7 +600,7 @@ SparkSession spark;
         .build();
 
     final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
+        encoders.getContext(), dataSource, registry, parser);
 
     final InvalidModifierException exception = assertThrows(
         InvalidModifierException.class,
@@ -616,7 +620,7 @@ SparkSession spark;
         .build();
 
     final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
+        encoders.getContext(), dataSource, registry, parser);
 
     final InvalidModifierException exception = assertThrows(
         InvalidModifierException.class,
@@ -636,7 +640,7 @@ SparkSession spark;
         .build();
 
     final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource);
+        encoders.getContext(), dataSource, registry, parser);
 
     final InvalidModifierException exception = assertThrows(
         InvalidModifierException.class,
