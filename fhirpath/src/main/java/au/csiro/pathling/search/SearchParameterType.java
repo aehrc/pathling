@@ -21,6 +21,7 @@ import au.csiro.pathling.search.filter.DateMatcher;
 import au.csiro.pathling.search.filter.ExactStringMatcher;
 import au.csiro.pathling.search.filter.MatcherFactory;
 import au.csiro.pathling.search.filter.NumberMatcher;
+import au.csiro.pathling.search.filter.QuantityMatcher;
 import au.csiro.pathling.search.filter.SearchFilter;
 import au.csiro.pathling.search.filter.StringMatcher;
 import au.csiro.pathling.search.filter.TokenMatcher;
@@ -131,9 +132,21 @@ public enum SearchParameterType implements MatcherFactory {
 
   /**
    * A quantity type search parameter matches quantity values with optional units.
-   * Not yet implemented.
+   * Supports value-only matching and will support UCUM unit normalization.
    */
-  QUANTITY(Set.of()),
+  QUANTITY(Set.of(
+      FHIRDefinedType.QUANTITY
+  )) {
+    @Nonnull
+    @Override
+    public SearchFilter createFilter(@Nullable final String modifier,
+                                    @Nonnull final FHIRDefinedType fhirType) {
+      if (modifier != null) {
+        throw new InvalidModifierException(modifier, this);
+      }
+      return new SearchFilter(new QuantityMatcher());
+    }
+  },
 
   /**
    * A reference type search parameter matches references to other resources.

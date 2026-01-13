@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -50,6 +51,7 @@ import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Period;
+import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.RiskAssessment;
 import org.hl7.fhir.r4.model.RiskAssessment.RiskAssessmentPredictionComponent;
 import org.junit.jupiter.api.Test;
@@ -393,7 +395,120 @@ SparkSession spark;
         // Period overlap test
         Arguments.of("observation date Period overlap", ResourceType.OBSERVATION,
             (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
-            "date", List.of("2023-07-01"), Set.of("2"))  // within Period [June 1 - Aug 31]
+            "date", List.of("2023-07-01"), Set.of("2")),  // within Period [June 1 - Aug 31]
+
+        // ========== Observation value-quantity tests (Quantity type) ==========
+        // eq (default) - uses range semantics based on significant figures
+        // "70" (2 sig figs) matches range [69.5, 70.5)
+        Arguments.of("value-quantity eq match", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("70"), Set.of("1")),  // value=70
+        Arguments.of("value-quantity eq no match", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("71"), Set.of()),  // no value in [70.5, 71.5)
+        Arguments.of("value-quantity eq with precision", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("85.5"), Set.of("2")),  // value=85.5
+        Arguments.of("value-quantity multiple values", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("70", "120"), Set.of("1", "3")),
+
+        // gt - greater than (exact semantics)
+        Arguments.of("value-quantity gt prefix", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("gt85"), Set.of("2", "3")),  // 85.5 and 120 > 85
+
+        // ge - greater or equal (exact semantics)
+        Arguments.of("value-quantity ge prefix", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("ge85.5"), Set.of("2", "3")),  // 85.5 and 120 >= 85.5
+
+        // lt - less than (exact semantics)
+        Arguments.of("value-quantity lt prefix", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("lt85"), Set.of("1")),  // only 70 < 85
+
+        // le - less or equal (exact semantics)
+        Arguments.of("value-quantity le prefix", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("le85.5"), Set.of("1", "2")),  // 70 and 85.5 <= 85.5
+
+        // ne - not equal (range semantics)
+        Arguments.of("value-quantity ne prefix", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("ne70"), Set.of("2", "3")),  // exclude value in [69.5, 70.5)
+
+        // ========== Observation value-quantity tests with system|code ==========
+        // See SPEC_CLARIFICATIONS.md for format rules
+
+        // value|system|code - full match
+        Arguments.of("value-quantity with system|code match", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("70|http://unitsofmeasure.org|kg"), Set.of("1")),
+        Arguments.of("value-quantity with system|code wrong system", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("70|http://other.org|kg"), Set.of()),
+        Arguments.of("value-quantity with system|code wrong code", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("70|http://unitsofmeasure.org|g"), Set.of()),
+
+        // value||code - any system, exact code
+        // Empty system means "any system" (no constraint on system)
+        Arguments.of("value-quantity with ||code matches any system", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("70||kg"), Set.of("1")),  // matches UCUM kg
+        Arguments.of("value-quantity with ||code matches null system too", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantitiesAndNullSystem,
+            "value-quantity", List.of("50||local"), Set.of("4")),  // matches null system with code "local"
+
+        // Prefix with system|code
+        Arguments.of("value-quantity gt with system|code", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("gt80|http://unitsofmeasure.org|kg"), Set.of("2")),  // 85.5 > 80
+
+        // Prefix with ||code (any system)
+        Arguments.of("value-quantity gt with ||code", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceWithQuantities,
+            "value-quantity", List.of("gt80||kg"), Set.of("2")),  // 85.5 > 80, any system
+
+        // ========== Observation value-quantity UCUM normalization tests ==========
+        // UCUM normalization enables matching across equivalent unit representations
+        // Data source: obs1=1g, obs2=500mg, obs3=0.5g, obs4=2000mg, obs5=no value
+
+        // Search for 1000 mg -> should match obs1 (1g = 1000mg) and obs4 (2000mg via fallback)
+        Arguments.of("value-quantity UCUM: 1000mg matches 1g", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceForUcumNormalization,
+            "value-quantity", List.of("1000|http://unitsofmeasure.org|mg"), Set.of("1")),
+
+        // Search for 1 g -> should match obs1 (1g) directly
+        Arguments.of("value-quantity UCUM: 1g matches 1g", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceForUcumNormalization,
+            "value-quantity", List.of("1|http://unitsofmeasure.org|g"), Set.of("1")),
+
+        // Search for 500 mg -> should match obs2 (500mg) and obs3 (0.5g = 500mg)
+        Arguments.of("value-quantity UCUM: 500mg matches 500mg and 0.5g", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceForUcumNormalization,
+            "value-quantity", List.of("500|http://unitsofmeasure.org|mg"), Set.of("2", "3")),
+
+        // Search for 0.5 g -> should match obs2 (500mg) and obs3 (0.5g)
+        Arguments.of("value-quantity UCUM: 0.5g matches 500mg and 0.5g", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceForUcumNormalization,
+            "value-quantity", List.of("0.5|http://unitsofmeasure.org|g"), Set.of("2", "3")),
+
+        // Search for 2 g -> should match obs4 (2000mg = 2g)
+        Arguments.of("value-quantity UCUM: 2g matches 2000mg", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceForUcumNormalization,
+            "value-quantity", List.of("2|http://unitsofmeasure.org|g"), Set.of("4")),
+
+        // UCUM with prefix: gt 750 mg -> should match obs1 (1g=1000mg) and obs4 (2000mg)
+        Arguments.of("value-quantity UCUM: gt750mg", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceForUcumNormalization,
+            "value-quantity", List.of("gt750|http://unitsofmeasure.org|mg"), Set.of("1", "4")),
+
+        // UCUM with prefix: lt 1 g -> should match obs2 (500mg) and obs3 (0.5g)
+        Arguments.of("value-quantity UCUM: lt1g", ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceForUcumNormalization,
+            "value-quantity", List.of("lt1|http://unitsofmeasure.org|g"), Set.of("2", "3"))
     );
   }
 
@@ -774,7 +889,7 @@ SparkSession spark;
 
   /**
    * Creates a test data source with patients having different identifiers.
-   * - Patient 1: identifier with system "http://hospital.org/mrn' and value "12345"
+   * - Patient 1: identifier with system "http://hospital.org/mrn" and value "12345"
    * - Patient 2: identifier with system "http://hospital.org/mrn" and value "67890"
    * - Patient 3: identifier with null system and value "99999"
    * - Patient 4: no identifier
@@ -891,6 +1006,143 @@ SparkSession spark;
     // No effective set
 
     return new ObjectDataSource(spark, encoders, List.of(obs1, obs2, obs3, obs4));
+  }
+
+  /**
+   * Creates a test data source with Observations having different Quantity values.
+   * - Observation 1: value = 70 kg (body weight)
+   * - Observation 2: value = 85.5 kg (body weight)
+   * - Observation 3: value = 120 mmHg (blood pressure)
+   * - Observation 4: no value
+   */
+  private ObjectDataSource createObservationDataSourceWithQuantities() {
+    final Observation obs1 = new Observation();
+    obs1.setId("1");
+    obs1.setValue(new Quantity()
+        .setValue(70)
+        .setUnit("kg")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("kg"));
+
+    final Observation obs2 = new Observation();
+    obs2.setId("2");
+    obs2.setValue(new Quantity()
+        .setValue(85.5)
+        .setUnit("kg")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("kg"));
+
+    final Observation obs3 = new Observation();
+    obs3.setId("3");
+    obs3.setValue(new Quantity()
+        .setValue(120)
+        .setUnit("mmHg")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("mm[Hg]"));
+
+    final Observation obs4 = new Observation();
+    obs4.setId("4");
+    // No value
+
+    return new ObjectDataSource(spark, encoders, List.of(obs1, obs2, obs3, obs4));
+  }
+
+  /**
+   * Creates a test data source with Observations having Quantity values including null system.
+   * - Observation 1: value = 70 kg (UCUM)
+   * - Observation 2: value = 85.5 kg (UCUM)
+   * - Observation 3: value = 120 mmHg (UCUM)
+   * - Observation 4: value = 50 (null system, code = "local")
+   * - Observation 5: no value
+   */
+  private ObjectDataSource createObservationDataSourceWithQuantitiesAndNullSystem() {
+    final Observation obs1 = new Observation();
+    obs1.setId("1");
+    obs1.setValue(new Quantity()
+        .setValue(70)
+        .setUnit("kg")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("kg"));
+
+    final Observation obs2 = new Observation();
+    obs2.setId("2");
+    obs2.setValue(new Quantity()
+        .setValue(85.5)
+        .setUnit("kg")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("kg"));
+
+    final Observation obs3 = new Observation();
+    obs3.setId("3");
+    obs3.setValue(new Quantity()
+        .setValue(120)
+        .setUnit("mmHg")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("mm[Hg]"));
+
+    final Observation obs4 = new Observation();
+    obs4.setId("4");
+    // Quantity with null system (local unit)
+    final Quantity localQuantity = new Quantity();
+    localQuantity.setValue(50);
+    localQuantity.setCode("local");
+    // No system set
+    obs4.setValue(localQuantity);
+
+    final Observation obs5 = new Observation();
+    obs5.setId("5");
+    // No value
+
+    return new ObjectDataSource(spark, encoders, List.of(obs1, obs2, obs3, obs4, obs5));
+  }
+
+  /**
+   * Creates a test data source with Observations for UCUM normalization testing.
+   * Uses different but equivalent UCUM units to verify normalization works.
+   * - Observation 1: value = 1 g
+   * - Observation 2: value = 500 mg
+   * - Observation 3: value = 0.5 g (equivalent to 500 mg)
+   * - Observation 4: value = 2000 mg (equivalent to 2 g)
+   * - Observation 5: no value
+   */
+  private ObjectDataSource createObservationDataSourceForUcumNormalization() {
+    final Observation obs1 = new Observation();
+    obs1.setId("1");
+    obs1.setValue(new Quantity()
+        .setValue(1)
+        .setUnit("g")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("g"));
+
+    final Observation obs2 = new Observation();
+    obs2.setId("2");
+    obs2.setValue(new Quantity()
+        .setValue(500)
+        .setUnit("mg")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("mg"));
+
+    final Observation obs3 = new Observation();
+    obs3.setId("3");
+    obs3.setValue(new Quantity()
+        .setValue(new BigDecimal("0.5"))
+        .setUnit("g")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("g"));
+
+    final Observation obs4 = new Observation();
+    obs4.setId("4");
+    obs4.setValue(new Quantity()
+        .setValue(2000)
+        .setUnit("mg")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("mg"));
+
+    final Observation obs5 = new Observation();
+    obs5.setId("5");
+    // No value
+
+    return new ObjectDataSource(spark, encoders, List.of(obs1, obs2, obs3, obs4, obs5));
   }
 
   /**

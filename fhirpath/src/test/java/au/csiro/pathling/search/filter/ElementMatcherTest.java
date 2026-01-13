@@ -22,6 +22,8 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import au.csiro.pathling.fhirpath.FhirPathQuantity;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import java.math.BigDecimal;
 import java.util.List;
@@ -693,6 +695,247 @@ class ElementMatcherTest {
 
     final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CODEABLECONCEPT);
     final Column result = matcher.match(col("codeableConcept"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== QuantityMatcher tests (value-only matching) ==========
+  // Step 1: Basic value matching with range semantics for eq/ne
+
+  static Stream<Arguments> quantityValueMatcherCases() {
+    return Stream.of(
+        // ========== eq prefix (default) - range-based matching ==========
+        // "5.4" (2 sig figs) matches range [5.35, 5.45)
+        Arguments.of(new BigDecimal("5.4"), "5.4", true),       // exact match
+        Arguments.of(new BigDecimal("5.4"), "eq5.4", true),     // explicit eq prefix
+        Arguments.of(new BigDecimal("5.38"), "5.4", true),      // within [5.35, 5.45)
+        Arguments.of(new BigDecimal("5.44"), "5.4", true),      // within [5.35, 5.45)
+        Arguments.of(new BigDecimal("5.34"), "5.4", false),     // below 5.35
+        Arguments.of(new BigDecimal("5.45"), "5.4", false),     // at upper boundary (exclusive)
+
+        // "100" (3 sig figs) matches range [99.5, 100.5)
+        Arguments.of(new BigDecimal("100"), "100", true),
+        Arguments.of(new BigDecimal("99.6"), "100", true),
+        Arguments.of(new BigDecimal("100.4"), "100", true),
+        Arguments.of(new BigDecimal("99.4"), "100", false),
+        Arguments.of(new BigDecimal("100.5"), "100", false),
+
+        // ========== ne prefix - outside range ==========
+        Arguments.of(new BigDecimal("5.4"), "ne5.4", false),    // within range
+        Arguments.of(new BigDecimal("5.3"), "ne5.4", true),     // outside range
+        Arguments.of(new BigDecimal("5.5"), "ne5.4", true),     // outside range
+
+        // ========== gt prefix - greater than (exact semantics) ==========
+        Arguments.of(new BigDecimal("5.5"), "gt5.4", true),
+        Arguments.of(new BigDecimal("5.4"), "gt5.4", false),
+        Arguments.of(new BigDecimal("5.3"), "gt5.4", false),
+
+        // ========== ge prefix - greater or equal (exact semantics) ==========
+        Arguments.of(new BigDecimal("5.5"), "ge5.4", true),
+        Arguments.of(new BigDecimal("5.4"), "ge5.4", true),
+        Arguments.of(new BigDecimal("5.3"), "ge5.4", false),
+
+        // ========== lt prefix - less than (exact semantics) ==========
+        Arguments.of(new BigDecimal("5.3"), "lt5.4", true),
+        Arguments.of(new BigDecimal("5.4"), "lt5.4", false),
+        Arguments.of(new BigDecimal("5.5"), "lt5.4", false),
+
+        // ========== le prefix - less or equal (exact semantics) ==========
+        Arguments.of(new BigDecimal("5.3"), "le5.4", true),
+        Arguments.of(new BigDecimal("5.4"), "le5.4", true),
+        Arguments.of(new BigDecimal("5.5"), "le5.4", false)
+    );
+  }
+
+  @ParameterizedTest(name = "QuantityMatcher: value={0} matches \"{1}\" = {2}")
+  @MethodSource("quantityValueMatcherCases")
+  void testQuantityValueMatcher(final BigDecimal value, final String searchValue,
+      final boolean expected) {
+    // Create a DataFrame with a Quantity-like struct containing just 'value' field
+    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
+        .select(struct(lit(value).as("value")).as("quantity"));
+
+    final QuantityMatcher matcher = new QuantityMatcher();
+    final Column result = matcher.match(col("quantity"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== QuantityMatcher tests (system/code matching) ==========
+  // Step 2: System and code matching with value
+  // See SPEC_CLARIFICATIONS.md for format rules
+
+  static Stream<Arguments> quantitySystemCodeMatcherCases() {
+    return Stream.of(
+        // ========== value|system|code - full match ==========
+        // Match: value in range, system equals, code equals
+        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", null,
+            "70|http://unitsofmeasure.org|kg", true),
+        // No match: wrong system
+        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", null,
+            "70|http://other.org|kg", false),
+        // No match: wrong code
+        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", null,
+            "70|http://unitsofmeasure.org|g", false),
+        // No match: wrong value
+        Arguments.of(new BigDecimal("80"), "http://unitsofmeasure.org", "kg", null,
+            "70|http://unitsofmeasure.org|kg", false),
+        // Match: system and code match even if unit field differs
+        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "Kilogram",
+            "70|http://unitsofmeasure.org|kg", true),
+
+        // ========== value||code - matches code OR unit, any system ==========
+        // Code matches, unit is different
+        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "kilogram",
+            "70||kg", true),  // code matches
+        // Unit matches, code is different
+        Arguments.of(new BigDecimal("70"), "http://other.org", "lbs", "kg",
+            "70||kg", true),  // unit matches, any system
+        // Neither code nor unit match
+        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "mg", "milligram",
+            "70||kg", false),  // neither code nor unit matches
+        // Both code and unit match
+        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "kg",
+            "70||kg", true),  // both code and unit match
+        // Null system, code matches
+        Arguments.of(new BigDecimal("70"), null, "kg", "kilogram",
+            "70||kg", true),  // code matches, null system
+        // Null system, unit matches
+        Arguments.of(new BigDecimal("70"), null, "lbs", "kg",
+            "70||kg", true),  // unit matches, null system
+        // Null code and unit, search for code
+        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", null, null,
+            "70||kg", false),  // no code or unit to match
+
+        // ========== value|| - any system, any code (equivalent to value-only) ==========
+        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "kilogram",
+            "70||", true),
+        Arguments.of(new BigDecimal("70"), null, null, null,
+            "70||", true),
+        Arguments.of(new BigDecimal("70"), "http://other.org", "mg", "milligram",
+            "70||", true),  // any system and code
+
+        // ========== value only - no system/code constraints ==========
+        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "kilogram",
+            "70", true),
+        Arguments.of(new BigDecimal("70"), null, null, null,
+            "70", true),
+
+        // ========== with prefixes on value|system|code ==========
+        Arguments.of(new BigDecimal("80"), "http://unitsofmeasure.org", "kg", "kilogram",
+            "gt70|http://unitsofmeasure.org|kg", true),
+        Arguments.of(new BigDecimal("60"), "http://unitsofmeasure.org", "kg", "kilogram",
+            "gt70|http://unitsofmeasure.org|kg", false),  // value not > 70
+        Arguments.of(new BigDecimal("80"), "http://other.org", "kg", "kilogram",
+            "gt70|http://unitsofmeasure.org|kg", false),  // wrong system
+
+        // ========== with prefixes on value||code ==========
+        Arguments.of(new BigDecimal("80"), "http://unitsofmeasure.org", "kg", "kilogram",
+            "gt70||kg", true),  // any system, code matches
+        Arguments.of(new BigDecimal("80"), null, "lbs", "kg",
+            "gt70||kg", true),  // null system, unit matches
+        Arguments.of(new BigDecimal("60"), "http://unitsofmeasure.org", "kg", "kilogram",
+            "gt70||kg", false),  // value not > 70
+        Arguments.of(new BigDecimal("80"), "http://other.org", "lbs", "milligram",
+            "gt70||kg", false),  // neither code nor unit matches
+        Arguments.of(new BigDecimal("70.25"), "http://unitsofmeasure.org", "kg", "kilogram",
+            "ge70||kg", true),  // value >= 70, code matches
+        Arguments.of(new BigDecimal("69.75"), "http://unitsofmeasure.org", "kg", "kilogram",
+            "ge70||kg", false)  // value < 70
+    );
+  }
+
+  @ParameterizedTest(name = "QuantityMatcher: value={0}, system={1}, code={2}, unit={3} matches \"{4}\" = {5}")
+  @MethodSource("quantitySystemCodeMatcherCases")
+  void testQuantitySystemCodeMatcher(final BigDecimal value, final String system, final String code,
+      final String unit, final String searchValue, final boolean expected) {
+    // Create a DataFrame with a full Quantity-like struct
+    // Include canonicalized fields (set to null) since the matcher references them
+    // for UCUM system searches. With null canonical values, it falls back to standard matching.
+    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
+        .select(struct(
+            lit(value).as("value"),
+            lit(system).as("system"),
+            lit(code).as("code"),
+            lit(unit).as("unit"),
+            lit(null).cast("struct<value:decimal(38,0),scale:int>").as("_value_canonicalized"),
+            lit(null).cast("string").as("_code_canonicalized")
+        ).as("quantity"));
+
+    final QuantityMatcher matcher = new QuantityMatcher();
+    final Column result = matcher.match(col("quantity"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== QuantityMatcher tests (UCUM normalization) ==========
+  // Step 3: UCUM-aware matching using canonicalized values
+  // Enables matching across equivalent unit representations (e.g., 1000 mg matches 1 g)
+
+  static Stream<Arguments> quantityUcumNormalizationCases() {
+    // UCUM canonical base units:
+    // - g (gram) is the base mass unit
+    // - mg = 10^-3 g, kg = 10^3 g
+    // Canonical values are computed automatically by QuantityEncoding.encodeLiteral()
+    return Stream.of(
+        // ========== UCUM canonicalization - matching equivalent units ==========
+        // Resource has 70 kg, canonical = (70000, "g")
+        // Search for 70000 g, canonical = (70000, "g") -> should match
+        Arguments.of(new BigDecimal("70"), "kg", "70000|http://unitsofmeasure.org|g", true),
+
+        // Resource has 1 g, canonical = (1, "g")
+        // Search for 1000 mg, canonical = (1, "g") -> should match
+        Arguments.of(new BigDecimal("1"), "g", "1000|http://unitsofmeasure.org|mg", true),
+
+        // Resource has 1000 mg, canonical = (1, "g")
+        // Search for 1 g, canonical = (1, "g") -> should match
+        Arguments.of(new BigDecimal("1000"), "mg", "1|http://unitsofmeasure.org|g", true),
+
+        // ========== UCUM - no match when canonical values differ ==========
+        // Resource has 70 kg, canonical = (70000, "g")
+        // Search for 80000 g, canonical = (80000, "g") -> should NOT match
+        Arguments.of(new BigDecimal("70"), "kg", "80000|http://unitsofmeasure.org|g", false),
+
+        // ========== UCUM with prefixes ==========
+        // Resource has 100 kg, canonical = (100000, "g")
+        // Search for gt50000 g -> 100000 > 50000, should match
+        Arguments.of(new BigDecimal("100"), "kg", "gt50000|http://unitsofmeasure.org|g", true),
+
+        // Resource has 100 kg, canonical = (100000, "g")
+        // Search for lt50000 g -> 100000 < 50000 is false, should NOT match
+        Arguments.of(new BigDecimal("100"), "kg", "lt50000|http://unitsofmeasure.org|g", false),
+
+        // ========== Cross-unit matching with prefixes ==========
+        // Resource has 500 mg, canonical = (0.5, "g")
+        // Search for gt400 mg -> 500 > 400, should match
+        Arguments.of(new BigDecimal("500"), "mg", "gt400|http://unitsofmeasure.org|mg", true),
+
+        // Resource has 500 mg, canonical = (0.5, "g")
+        // Search for lt0.4 g -> 0.5 < 0.4 is false, should NOT match
+        Arguments.of(new BigDecimal("500"), "mg", "lt0.4|http://unitsofmeasure.org|g", false),
+
+        // Resource has 500 mg, canonical = (0.5, "g")
+        // Search for ge0.5 g -> 0.5 >= 0.5, should match
+        Arguments.of(new BigDecimal("500"), "mg", "ge0.5|http://unitsofmeasure.org|g", true)
+    );
+  }
+
+  @ParameterizedTest(name = "QuantityMatcher UCUM: value={0}, code={1} matches \"{2}\" = {3}")
+  @MethodSource("quantityUcumNormalizationCases")
+  void testQuantityUcumNormalization(final BigDecimal value, final String code,
+      final String searchValue, final boolean expected) {
+    // Use QuantityEncoding.encodeLiteral() which properly handles UCUM canonicalization
+    final FhirPathQuantity quantity = FhirPathQuantity.ofUcum(value, code);
+    final Column quantityColumn = QuantityEncoding.encodeLiteral(quantity);
+
+    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
+        .select(quantityColumn.as("quantity"));
+
+    final QuantityMatcher matcher = new QuantityMatcher();
+    final Column result = matcher.match(col("quantity"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
     assertEquals(expected, actual);

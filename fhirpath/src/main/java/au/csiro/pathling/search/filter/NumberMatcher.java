@@ -139,8 +139,7 @@ public class NumberMatcher implements ElementMatcher {
   /**
    * Matches using range semantics based on significant figures.
    * <p>
-   * For scalar resource values (treated as having infinite precision), the value matches if it
-   * falls within the parameter's implicit range [lower, upper).
+   * Delegates to {@link NumericMatchingSupport} for the actual comparison logic.
    *
    * @param element the column to match against
    * @param numberValue the numeric search value (without prefix)
@@ -151,27 +150,13 @@ public class NumberMatcher implements ElementMatcher {
   private Column matchWithRangeSemantics(@Nonnull final Column element,
       @Nonnull final String numberValue,
       @Nonnull final SearchPrefix prefix) {
-    // Parse the number to get precision-aware boundaries
-    final FhirPathNumber searchNumber = FhirPathNumber.parse(numberValue);
-    final BigDecimal lowerBoundary = searchNumber.getLowerBoundary();
-    final BigDecimal upperBoundary = searchNumber.getUpperBoundary();
-
-    // For resource values (treated as points with infinite precision):
-    // EQ: value is within [lower, upper)
-    // NE: value is outside [lower, upper)
-    return switch (prefix) {
-      case EQ -> element.geq(lit(lowerBoundary)).and(element.lt(lit(upperBoundary)));
-      case NE -> element.lt(lit(lowerBoundary)).or(element.geq(lit(upperBoundary)));
-      default -> throw new IllegalArgumentException("Unexpected prefix for range semantics: "
-          + prefix);
-    };
+    return NumericMatchingSupport.matchWithRangeSemantics(element, numberValue, prefix);
   }
 
   /**
    * Matches using exact value semantics (infinite precision).
    * <p>
-   * Comparison prefixes ignore the implicit range and treat both the search value and resource
-   * value as having arbitrary precision.
+   * Delegates to {@link NumericMatchingSupport} for the actual comparison logic.
    *
    * @param element the column to match against
    * @param numberValue the numeric search value (without prefix)
@@ -182,16 +167,6 @@ public class NumberMatcher implements ElementMatcher {
   private Column matchWithExactSemantics(@Nonnull final Column element,
       @Nonnull final String numberValue,
       @Nonnull final SearchPrefix prefix) {
-    // Parse the number value as BigDecimal for precise comparison
-    final BigDecimal searchNumber = new BigDecimal(numberValue);
-
-    return switch (prefix) {
-      case GT -> element.gt(lit(searchNumber));
-      case GE -> element.geq(lit(searchNumber));
-      case LT -> element.lt(lit(searchNumber));
-      case LE -> element.leq(lit(searchNumber));
-      default -> throw new IllegalArgumentException("Unexpected prefix for exact semantics: "
-          + prefix);
-    };
+    return NumericMatchingSupport.matchWithExactSemantics(element, numberValue, prefix);
   }
 }

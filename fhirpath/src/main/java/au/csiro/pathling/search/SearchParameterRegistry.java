@@ -19,6 +19,7 @@ package au.csiro.pathling.search;
 
 import static au.csiro.pathling.search.SearchParameterType.DATE;
 import static au.csiro.pathling.search.SearchParameterType.NUMBER;
+import static au.csiro.pathling.search.SearchParameterType.QUANTITY;
 import static au.csiro.pathling.search.SearchParameterType.STRING;
 import static au.csiro.pathling.search.SearchParameterType.TOKEN;
 
@@ -52,7 +53,9 @@ public class SearchParameterRegistry {
                   "Observation.effective.ofType(dateTime)",
                   "Observation.effective.ofType(Period)",
                   "Observation.effective.ofType(instant)"
-              ))
+              )),
+              "value-quantity", new SearchParameterDefinition("value-quantity", QUANTITY,
+                  "Observation.value.ofType(Quantity)")
           ),
           ResourceType.RISKASSESSMENT, Map.of(
               "probability", new SearchParameterDefinition("probability", NUMBER,
