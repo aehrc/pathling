@@ -249,7 +249,7 @@ class ElementMatcherTest {
     final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING())
         .toDF("value");
 
-    final DateMatcher matcher = new DateMatcher();
+    final DateMatcher matcher = DateMatcher.forScalarDates();
     final Column result = matcher.match(col("value"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -473,7 +473,7 @@ class ElementMatcherTest {
     final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
         .select(struct(lit(periodStart).as("start"), lit(periodEnd).as("end")).as("period"));
 
-    final DateMatcher matcher = new DateMatcher(true);  // isPeriodType = true
+    final DateMatcher matcher = DateMatcher.forPeriod();  // isPeriodType = true
     final Column result = matcher.match(col("period"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -512,7 +512,7 @@ class ElementMatcherTest {
     final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
         .select(struct(startCol.as("start"), endCol.as("end")).as("period"));
 
-    final DateMatcher matcher = new DateMatcher(true);  // isPeriodType = true
+    final DateMatcher matcher = DateMatcher.forPeriod();  // isPeriodType = true
     final Column result = matcher.match(col("period"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);

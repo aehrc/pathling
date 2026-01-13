@@ -18,8 +18,8 @@
 package au.csiro.pathling.search;
 
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
-import lombok.Value;
+import lombok.Getter;
+import java.util.Optional;
 
 /**
  * Represents a parsed token search value.
@@ -32,38 +32,57 @@ import lombok.Value;
  *   <li>{@code system|} - matches any resource with any code in the given system</li>
  * </ul>
  *
+ * System and code use {@link Optional} semantics:
+ * <ul>
+ *   <li>{@code Optional.empty()} - no constraint for that field</li>
+ *   <li>{@code Optional.of("value")} - must match exact value</li>
+ * </ul>
+ *
  * @see <a href="https://hl7.org/fhir/search.html#token">Token Search</a>
  */
-@Value
 public class TokenSearchValue {
 
   /**
-   * The system URI, or null if not specified.
+   * The system URI, or empty if not specified.
    */
-  @Nullable
-  String system;
+  @Nonnull
+  private final Optional<String> system;
 
   /**
-   * The code value, or null if only a system was specified.
+   * The code value, or empty if only a system was specified.
    */
-  @Nullable
-  String code;
+  @Nonnull
+  private final Optional<String> code;
 
   /**
    * Whether an explicit empty system was specified (i.e., the value started with "|").
+   * -- GETTER --
+   *  Returns whether an explicit empty system was specified.
+   *
+   * @return true if the value started with "|" (explicit no system), false otherwise
+
    */
-  boolean explicitNoSystem;
+  @Getter
+  private final boolean explicitNoSystem;
+
+  private TokenSearchValue(@Nonnull final Optional<String> system,
+      @Nonnull final Optional<String> code,
+      final boolean explicitNoSystem) {
+    this.system = system;
+    this.code = code;
+    this.explicitNoSystem = explicitNoSystem;
+  }
 
   /**
    * Parses a token search value string.
    * <p>
    * Parsing rules:
    * <ul>
-   *   <li>{@code "male"} → system=null, code="male", explicitNoSystem=false</li>
+   *   <li>{@code "male"} → system=empty, code="male", explicitNoSystem=false</li>
    *   <li>{@code "http://example.org|male"} → system="http://example.org", code="male",
    *       explicitNoSystem=false</li>
-   *   <li>{@code "|male"} → system=null, code="male", explicitNoSystem=true</li>
-   *   <li>{@code "http://example.org|"} → system="http://example.org", code=null,
+   *   <li>{@code "|male"} → system=empty, code="male", explicitNoSystem=true</li>
+   *   <li>{@code "http://example.org|"} → system="http://example.org", code=empty,
    *       explicitNoSystem=false</li>
    * </ul>
    *
@@ -76,17 +95,37 @@ public class TokenSearchValue {
 
     if (pipeIndex < 0) {
       // No pipe: just a code
-      return new TokenSearchValue(null, value, false);
+      return new TokenSearchValue(Optional.empty(), Optional.of(value), false);
     }
 
     final String systemPart = value.substring(0, pipeIndex);
     final String codePart = value.substring(pipeIndex + 1);
 
-    final String system = systemPart.isEmpty() ? null : systemPart;
-    final String code = codePart.isEmpty() ? null : codePart;
+    final Optional<String> system = systemPart.isEmpty() ? Optional.empty() : Optional.of(systemPart);
+    final Optional<String> code = codePart.isEmpty() ? Optional.empty() : Optional.of(codePart);
     final boolean explicitNoSystem = systemPart.isEmpty();
 
     return new TokenSearchValue(system, code, explicitNoSystem);
+  }
+
+  /**
+   * Gets the system URI.
+   *
+   * @return the system URI to match, or empty for no constraint (any system)
+   */
+  @Nonnull
+  public Optional<String> getSystem() {
+    return system;
+  }
+
+  /**
+   * Gets the code value.
+   *
+   * @return the code to match, or empty for no constraint (any code)
+   */
+  @Nonnull
+  public Optional<String> getCode() {
+    return code;
   }
 
   /**
@@ -106,15 +145,14 @@ public class TokenSearchValue {
    */
   @Nonnull
   public String requiresSimpleCode() {
-    if (system != null) {
+    if (system.isPresent()) {
+      final String systemValue = system.get();
+      final String codeValue = code.orElse("");
       throw new IllegalArgumentException(
           "System|code syntax is not supported for this search parameter type. "
-              + "Use a simple code value instead of: " + system + "|" + (code != null ? code : ""));
+              + "Use a simple code value instead of: " + systemValue + "|" + codeValue);
     }
-    if (code == null) {
-      throw new IllegalArgumentException(
-          "A code value is required for this search parameter type.");
-    }
-    return code;
+    return code.orElseThrow(() -> new IllegalArgumentException(
+        "A code value is required for this search parameter type."));
   }
 }

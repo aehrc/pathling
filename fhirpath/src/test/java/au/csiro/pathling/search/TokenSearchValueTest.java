@@ -19,7 +19,6 @@ package au.csiro.pathling.search;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -34,8 +33,8 @@ class TokenSearchValueTest {
   void testParseCodeOnly() {
     final TokenSearchValue result = TokenSearchValue.parse("male");
 
-    assertNull(result.getSystem());
-    assertEquals("male", result.getCode());
+    assertTrue(result.getSystem().isEmpty());
+    assertEquals("male", result.getCode().orElseThrow());
     assertFalse(result.isExplicitNoSystem());
   }
 
@@ -43,8 +42,8 @@ class TokenSearchValueTest {
   void testParseSystemAndCode() {
     final TokenSearchValue result = TokenSearchValue.parse("http://example.org|ABC123");
 
-    assertEquals("http://example.org", result.getSystem());
-    assertEquals("ABC123", result.getCode());
+    assertEquals("http://example.org", result.getSystem().orElseThrow());
+    assertEquals("ABC123", result.getCode().orElseThrow());
     assertFalse(result.isExplicitNoSystem());
   }
 
@@ -52,8 +51,8 @@ class TokenSearchValueTest {
   void testParseExplicitNoSystem() {
     final TokenSearchValue result = TokenSearchValue.parse("|ABC123");
 
-    assertNull(result.getSystem());
-    assertEquals("ABC123", result.getCode());
+    assertTrue(result.getSystem().isEmpty());
+    assertEquals("ABC123", result.getCode().orElseThrow());
     assertTrue(result.isExplicitNoSystem());
   }
 
@@ -61,8 +60,8 @@ class TokenSearchValueTest {
   void testParseSystemOnly() {
     final TokenSearchValue result = TokenSearchValue.parse("http://example.org|");
 
-    assertEquals("http://example.org", result.getSystem());
-    assertNull(result.getCode());
+    assertEquals("http://example.org", result.getSystem().orElseThrow());
+    assertTrue(result.getCode().isEmpty());
     assertFalse(result.isExplicitNoSystem());
   }
 
@@ -70,8 +69,8 @@ class TokenSearchValueTest {
   void testParseCodeWithSpecialCharacters() {
     final TokenSearchValue result = TokenSearchValue.parse("http://loinc.org|12345-6");
 
-    assertEquals("http://loinc.org", result.getSystem());
-    assertEquals("12345-6", result.getCode());
+    assertEquals("http://loinc.org", result.getSystem().orElseThrow());
+    assertEquals("12345-6", result.getCode().orElseThrow());
     assertFalse(result.isExplicitNoSystem());
   }
 
@@ -79,8 +78,8 @@ class TokenSearchValueTest {
   void testParseEmptyString() {
     final TokenSearchValue result = TokenSearchValue.parse("");
 
-    assertNull(result.getSystem());
-    assertEquals("", result.getCode());
+    assertTrue(result.getSystem().isEmpty());
+    assertEquals("", result.getCode().orElseThrow());
     assertFalse(result.isExplicitNoSystem());
   }
 
@@ -88,8 +87,8 @@ class TokenSearchValueTest {
   void testParsePipeOnly() {
     final TokenSearchValue result = TokenSearchValue.parse("|");
 
-    assertNull(result.getSystem());
-    assertNull(result.getCode());
+    assertTrue(result.getSystem().isEmpty());
+    assertTrue(result.getCode().isEmpty());
     assertTrue(result.isExplicitNoSystem());
   }
 

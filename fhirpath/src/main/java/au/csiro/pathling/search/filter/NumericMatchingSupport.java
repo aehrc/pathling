@@ -67,8 +67,8 @@ public final class NumericMatchingSupport {
     return switch (prefix) {
       case EQ -> valueColumn.geq(lit(lowerBoundary)).and(valueColumn.lt(lit(upperBoundary)));
       case NE -> valueColumn.lt(lit(lowerBoundary)).or(valueColumn.geq(lit(upperBoundary)));
-      default -> throw new IllegalArgumentException("Unexpected prefix for range semantics: "
-          + prefix);
+      case GT, GE, LT, LE -> throw new IllegalArgumentException(
+          "Range semantics not supported for prefix: " + prefix);
     };
   }
 
@@ -95,8 +95,8 @@ public final class NumericMatchingSupport {
       case GE -> valueColumn.geq(lit(searchNumber));
       case LT -> valueColumn.lt(lit(searchNumber));
       case LE -> valueColumn.leq(lit(searchNumber));
-      default -> throw new IllegalArgumentException("Unexpected prefix for exact semantics: "
-          + prefix);
+      case EQ, NE -> throw new IllegalArgumentException(
+          "Exact semantics requires a comparison prefix, got: " + prefix);
     };
   }
 }

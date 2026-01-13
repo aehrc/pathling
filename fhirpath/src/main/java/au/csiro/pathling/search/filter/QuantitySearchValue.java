@@ -90,8 +90,9 @@ public class QuantitySearchValue {
    */
   @Nonnull
   public static QuantitySearchValue parse(@Nonnull final String searchValue) {
-    final SearchPrefix prefix = SearchPrefix.fromValue(searchValue);
-    final String valueWithoutPrefix = SearchPrefix.stripPrefix(searchValue);
+    final SearchPrefix.ParsedValue parsedPrefix = SearchPrefix.parseValue(searchValue);
+    final SearchPrefix prefix = parsedPrefix.prefix;
+    final String valueWithoutPrefix = parsedPrefix.value;
 
     // Split by pipe - should have 1 or 3 parts
     // Use -1 limit to keep trailing empty strings

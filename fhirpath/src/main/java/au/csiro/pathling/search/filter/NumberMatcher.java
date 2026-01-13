@@ -117,23 +117,20 @@ public class NumberMatcher implements ElementMatcher {
       @Nonnull final String numberValue,
       @Nonnull final SearchPrefix prefix) {
     final FhirPathNumber searchNumber = FhirPathNumber.parse(numberValue);
+    final boolean isEq = prefix == SearchPrefix.EQ;
 
     // If search value has a fractional part, no integer can match
     if (searchNumber.hasFractionalPart()) {
-      return switch (prefix) {
-        case EQ -> lit(false);  // No integer equals a fractional value
-        case NE -> lit(true);   // All integers are not equal to a fractional value
-        default -> throw new IllegalArgumentException("Unexpected prefix: " + prefix);
-      };
+      // EQ: no integer equals a fractional value (return false)
+      // NE: all integers are not equal to a fractional value (return true)
+      return lit(!isEq);
     }
 
     // For integer search values, use exact match semantics
     final BigDecimal searchValueDecimal = searchNumber.getValue();
-    return switch (prefix) {
-      case EQ -> element.equalTo(lit(searchValueDecimal));
-      case NE -> element.notEqual(lit(searchValueDecimal));
-      default -> throw new IllegalArgumentException("Unexpected prefix: " + prefix);
-    };
+    return isEq
+        ? element.equalTo(lit(searchValueDecimal))
+        : element.notEqual(lit(searchValueDecimal));
   }
 
   /**

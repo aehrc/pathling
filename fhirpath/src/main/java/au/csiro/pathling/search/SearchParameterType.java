@@ -105,8 +105,10 @@ public enum SearchParameterType implements MatcherFactory {
       if (modifier != null) {
         throw new InvalidModifierException(modifier, this);
       }
-      final boolean isPeriod = fhirType == FHIRDefinedType.PERIOD;
-      return new SearchFilter(new DateMatcher(isPeriod));
+      final DateMatcher matcher = fhirType == FHIRDefinedType.PERIOD
+          ? DateMatcher.forPeriod()
+          : DateMatcher.forScalarDates();
+      return new SearchFilter(matcher);
     }
   },
 

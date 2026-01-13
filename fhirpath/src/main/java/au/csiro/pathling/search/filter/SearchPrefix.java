@@ -18,6 +18,7 @@
 package au.csiro.pathling.search.filter;
 
 import jakarta.annotation.Nonnull;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -71,6 +72,23 @@ public enum SearchPrefix {
   private static final Pattern PREFIX_PATTERN =
       Pattern.compile("^(eq|ne|gt|ge|lt|le)", Pattern.CASE_INSENSITIVE);
 
+  /**
+   * Holds both the extracted prefix and the remaining value portion after prefix removal.
+   * This is used internally to avoid executing the regex pattern twice when both are needed.
+   */
+  public static class ParsedValue {
+    @Nonnull
+    public final SearchPrefix prefix;
+
+    @Nonnull
+    public final String value;
+
+    private ParsedValue(@Nonnull final SearchPrefix prefix, @Nonnull final String value) {
+      this.prefix = prefix;
+      this.value = value;
+    }
+  }
+
   @Nonnull
   private final String code;
 
@@ -89,6 +107,29 @@ public enum SearchPrefix {
   }
 
   /**
+   * Parses both the prefix and value from a search string in a single operation.
+   * <p>
+   * This method is more efficient than calling {@link #fromValue(String)} and
+   * {@link #stripPrefix(String)} separately, as it executes the regex pattern only once.
+   *
+   * @param value the search value, possibly prefixed
+   * @return a ParsedValue containing both the extracted prefix and the remaining value
+   */
+  @Nonnull
+  public static ParsedValue parseValue(@Nonnull final String value) {
+    final Matcher matcher = PREFIX_PATTERN.matcher(value);
+    if (matcher.find()) {
+      final String prefixCode = matcher.group(1).toLowerCase();
+      final SearchPrefix prefix = Arrays.stream(values())
+          .filter(p -> p.code.equals(prefixCode))
+          .findFirst()
+          .orElse(EQ);
+      return new ParsedValue(prefix, value.substring(matcher.end()));
+    }
+    return new ParsedValue(EQ, value);
+  }
+
+  /**
    * Extracts the prefix from a search value.
    * <p>
    * If the value starts with a recognized prefix (e.g., "ge2023-01-15" or "gt0.8"), returns the
@@ -99,16 +140,7 @@ public enum SearchPrefix {
    */
   @Nonnull
   public static SearchPrefix fromValue(@Nonnull final String value) {
-    final Matcher matcher = PREFIX_PATTERN.matcher(value);
-    if (matcher.find()) {
-      final String prefixCode = matcher.group(1).toLowerCase();
-      for (final SearchPrefix prefix : values()) {
-        if (prefix.code.equals(prefixCode)) {
-          return prefix;
-        }
-      }
-    }
-    return EQ;
+    return parseValue(value).prefix;
   }
 
   /**
@@ -122,10 +154,6 @@ public enum SearchPrefix {
    */
   @Nonnull
   public static String stripPrefix(@Nonnull final String value) {
-    final Matcher matcher = PREFIX_PATTERN.matcher(value);
-    if (matcher.find()) {
-      return value.substring(matcher.end());
-    }
-    return value;
+    return parseValue(value).value;
   }
 }

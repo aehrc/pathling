@@ -17,6 +17,10 @@
 
 package au.csiro.pathling.search.filter;
 
+import static au.csiro.pathling.search.filter.FhirFieldNames.CODE;
+import static au.csiro.pathling.search.filter.FhirFieldNames.CODING;
+import static au.csiro.pathling.search.filter.FhirFieldNames.SYSTEM;
+import static au.csiro.pathling.search.filter.FhirFieldNames.VALUE;
 import static org.apache.spark.sql.functions.exists;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.lower;
@@ -51,11 +55,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @see <a href="https://hl7.org/fhir/search.html#token">Token Search</a>
  */
 public class TokenMatcher implements ElementMatcher {
-
-  private static final String SYSTEM_FIELD = "system";
-  private static final String CODE_FIELD = "code";
-  private static final String VALUE_FIELD = "value";
-  private static final String CODING_FIELD = "coding";
 
   @Nonnull
   private final FHIRDefinedType fhirType;
@@ -97,8 +96,8 @@ public class TokenMatcher implements ElementMatcher {
   @Nonnull
   private Column matchCoding(@Nonnull final Column element, @Nonnull final TokenSearchValue token) {
     return matchSystemAndCode(
-        element.getField(SYSTEM_FIELD),
-        element.getField(CODE_FIELD),
+        element.getField(SYSTEM),
+        element.getField(CODE),
         token);
   }
 
@@ -113,11 +112,11 @@ public class TokenMatcher implements ElementMatcher {
   @Nonnull
   private Column matchCodeableConcept(@Nonnull final Column element,
       @Nonnull final TokenSearchValue token) {
-    final Column codingArray = element.getField(CODING_FIELD);
+    final Column codingArray = element.getField(CODING);
     // Match if ANY coding in the array matches
     return exists(codingArray, coding -> matchSystemAndCode(
-        coding.getField(SYSTEM_FIELD),
-        coding.getField(CODE_FIELD),
+        coding.getField(SYSTEM),
+        coding.getField(CODE),
         token));
   }
 
@@ -133,8 +132,8 @@ public class TokenMatcher implements ElementMatcher {
   private Column matchIdentifier(@Nonnull final Column element,
       @Nonnull final TokenSearchValue token) {
     return matchSystemAndCode(
-        element.getField(SYSTEM_FIELD),
-        element.getField(VALUE_FIELD),  // Identifier uses 'value', not 'code'
+        element.getField(SYSTEM),
+        element.getField(VALUE),  // Identifier uses 'value', not 'code'
         token);
   }
 
@@ -150,7 +149,7 @@ public class TokenMatcher implements ElementMatcher {
   private Column matchContactPoint(@Nonnull final Column element,
       @Nonnull final TokenSearchValue token) {
     // ContactPoint only matches on value - system|code syntax not applicable
-    return element.getField(VALUE_FIELD).equalTo(lit(token.requiresSimpleCode()));
+    return element.getField(VALUE).equalTo(lit(token.requiresSimpleCode()));
   }
 
   /**
@@ -211,19 +210,35 @@ public class TokenMatcher implements ElementMatcher {
       @Nonnull final Column codeCol,
       @Nonnull final TokenSearchValue token) {
 
-    if (token.getSystem() != null && token.getCode() != null) {
-      // system|code - both must match
-      return systemCol.equalTo(lit(token.getSystem()))
-          .and(codeCol.equalTo(lit(token.getCode())));
-    } else if (token.getSystem() != null) {
-      // system| - system matches, any code
-      return systemCol.equalTo(lit(token.getSystem()));
-    } else if (token.isExplicitNoSystem()) {
-      // |code - code matches AND system must be null
-      return systemCol.isNull().and(codeCol.equalTo(lit(token.getCode())));
-    } else {
-      // code - code matches, any system
-      return codeCol.equalTo(lit(token.getCode()));
+    // Both system and code specified: system|code - both must match
+    final Column systemAndCodeMatch = token.getSystem()
+        .flatMap(system -> token.getCode()
+            .map(code -> systemCol.equalTo(lit(system))
+                .and(codeCol.equalTo(lit(code)))))
+        .orElse(null);
+    if (systemAndCodeMatch != null) {
+      return systemAndCodeMatch;
     }
+
+    // System only: system| - system matches, any code
+    final Column systemOnlyMatch = token.getSystem()
+        .filter(system -> token.getCode().isEmpty())
+        .map(system -> systemCol.equalTo(lit(system)))
+        .orElse(null);
+    if (systemOnlyMatch != null) {
+      return systemOnlyMatch;
+    }
+
+    // Explicit no system: |code - code matches AND system must be null
+    if (token.isExplicitNoSystem()) {
+      return token.getCode()
+          .map(code -> systemCol.isNull().and(codeCol.equalTo(lit(code))))
+          .orElse(systemCol.isNull());  // |* syntax matches only null system
+    }
+
+    // Code only: code - code matches, any system
+    return token.getCode()
+        .map(code -> codeCol.equalTo(lit(code)))
+        .orElse(lit(true));  // No constraints
   }
 }

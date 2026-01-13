@@ -82,17 +82,31 @@ public class DateMatcher implements ElementMatcher {
 
   /**
    * Creates a DateMatcher for scalar date types (date, dateTime, instant).
+   *
+   * @return a new DateMatcher configured for scalar date types
    */
-  public DateMatcher() {
-    this(false);
+  @Nonnull
+  public static DateMatcher forScalarDates() {
+    return new DateMatcher(false);
+  }
+
+  /**
+   * Creates a DateMatcher for Period types.
+   *
+   * @return a new DateMatcher configured for Period types
+   */
+  @Nonnull
+  public static DateMatcher forPeriod() {
+    return new DateMatcher(true);
   }
 
   /**
    * Creates a DateMatcher for either scalar date types or Period type.
+   * Prefer using {@link #forScalarDates()} or {@link #forPeriod()} factory methods.
    *
    * @param isPeriodType true if the element is a Period type, false for scalar date types
    */
-  public DateMatcher(final boolean isPeriodType) {
+  private DateMatcher(final boolean isPeriodType) {
     this.isPeriodType = isPeriodType;
   }
 

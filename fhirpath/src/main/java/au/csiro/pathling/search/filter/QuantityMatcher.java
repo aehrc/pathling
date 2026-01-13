@@ -17,6 +17,12 @@
 
 package au.csiro.pathling.search.filter;
 
+import static au.csiro.pathling.search.filter.FhirFieldNames.CANONICALIZED_CODE;
+import static au.csiro.pathling.search.filter.FhirFieldNames.CANONICALIZED_VALUE;
+import static au.csiro.pathling.search.filter.FhirFieldNames.CODE;
+import static au.csiro.pathling.search.filter.FhirFieldNames.SYSTEM;
+import static au.csiro.pathling.search.filter.FhirFieldNames.UNIT;
+import static au.csiro.pathling.search.filter.FhirFieldNames.VALUE;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
@@ -73,13 +79,6 @@ import org.apache.spark.sql.Column;
  */
 public class QuantityMatcher implements ElementMatcher {
 
-  private static final String VALUE_FIELD = "value";
-  private static final String SYSTEM_FIELD = "system";
-  private static final String CODE_FIELD = "code";
-  private static final String UNIT_FIELD = "unit";
-  private static final String CANONICALIZED_VALUE_FIELD = "_value_canonicalized";
-  private static final String CANONICALIZED_CODE_FIELD = "_code_canonicalized";
-
   @Override
   @Nonnull
   public Column match(@Nonnull final Column element, @Nonnull final String searchValue) {
@@ -98,7 +97,7 @@ public class QuantityMatcher implements ElementMatcher {
   @Nonnull
   private Column matchStandard(@Nonnull final Column element,
       @Nonnull final QuantitySearchValue parsedValue) {
-    final Column valueMatch = matchValue(element.getField(VALUE_FIELD),
+    final Column valueMatch = matchValue(element.getField(VALUE),
         parsedValue.getNumericValue(), parsedValue.getPrefix());
 
     return parsedValue.getSystem()
@@ -118,8 +117,8 @@ public class QuantityMatcher implements ElementMatcher {
   private Column matchWithSystem(@Nonnull final Column element, @Nonnull final String system,
       @Nonnull final QuantitySearchValue parsedValue, @Nonnull final Column valueMatch) {
     return valueMatch
-        .and(element.getField(SYSTEM_FIELD).equalTo(lit(system)))
-        .and(matchOptionalField(element.getField(CODE_FIELD), parsedValue.getCode()));
+        .and(element.getField(SYSTEM).equalTo(lit(system)))
+        .and(matchOptionalField(element.getField(CODE), parsedValue.getCode()));
   }
 
   /**
@@ -170,15 +169,15 @@ public class QuantityMatcher implements ElementMatcher {
       @Nonnull final String system, @Nonnull final String code,
       @Nonnull final ValueWithUnit canonical, @Nonnull final QuantitySearchValue parsedValue) {
     final Column canonicalMatch = when(
-        element.getField(CANONICALIZED_CODE_FIELD).equalTo(lit(canonical.unit())),
-        matchCanonicalValue(element.getField(CANONICALIZED_VALUE_FIELD), canonical.value(),
+        element.getField(CANONICALIZED_CODE).equalTo(lit(canonical.unit())),
+        matchCanonicalValue(element.getField(CANONICALIZED_VALUE), canonical.value(),
             parsedValue.getPrefix())
     );
 
-    final Column standardMatch = matchValue(element.getField(VALUE_FIELD),
+    final Column standardMatch = matchValue(element.getField(VALUE),
         parsedValue.getNumericValue(), parsedValue.getPrefix())
-        .and(element.getField(SYSTEM_FIELD).equalTo(lit(system)))
-        .and(element.getField(CODE_FIELD).equalTo(lit(code)));
+        .and(element.getField(SYSTEM).equalTo(lit(system)))
+        .and(element.getField(CODE).equalTo(lit(code)));
 
     return coalesce(canonicalMatch, standardMatch);
   }
@@ -207,8 +206,8 @@ public class QuantityMatcher implements ElementMatcher {
    */
   @Nonnull
   private Column matchCodeOrUnit(@Nonnull final Column element, @Nonnull final String code) {
-    return matchFieldOrNull(element.getField(CODE_FIELD), code)
-        .or(matchFieldOrNull(element.getField(UNIT_FIELD), code));
+    return matchFieldOrNull(element.getField(CODE), code)
+        .or(matchFieldOrNull(element.getField(UNIT), code));
   }
 
   /**
