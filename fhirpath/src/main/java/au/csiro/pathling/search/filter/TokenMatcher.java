@@ -27,6 +27,8 @@ import static org.apache.spark.sql.functions.lower;
 
 import au.csiro.pathling.search.TokenSearchValue;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -210,35 +212,19 @@ public class TokenMatcher implements ElementMatcher {
       @Nonnull final Column codeCol,
       @Nonnull final TokenSearchValue token) {
 
-    // Both system and code specified: system|code - both must match
-    final Column systemAndCodeMatch = token.getSystem()
-        .flatMap(system -> token.getCode()
-            .map(code -> systemCol.equalTo(lit(system))
-                .and(codeCol.equalTo(lit(code)))))
-        .orElse(null);
-    if (systemAndCodeMatch != null) {
-      return systemAndCodeMatch;
-    }
+    // System condition: explicit null check for |code, otherwise match value if present
+    final Optional<Column> systemCondition = token.isExplicitNoSystem()
+        ? Optional.of(systemCol.isNull())
+        : token.getSystem().map(s -> systemCol.equalTo(lit(s)));
 
-    // System only: system| - system matches, any code
-    final Column systemOnlyMatch = token.getSystem()
-        .filter(system -> token.getCode().isEmpty())
-        .map(system -> systemCol.equalTo(lit(system)))
-        .orElse(null);
-    if (systemOnlyMatch != null) {
-      return systemOnlyMatch;
-    }
+    // Code condition: match value if present
+    final Optional<Column> codeCondition = token.getCode()
+        .map(c -> codeCol.equalTo(lit(c)));
 
-    // Explicit no system: |code - code matches AND system must be null
-    if (token.isExplicitNoSystem()) {
-      return token.getCode()
-          .map(code -> systemCol.isNull().and(codeCol.equalTo(lit(code))))
-          .orElse(systemCol.isNull());  // |* syntax matches only null system
-    }
-
-    // Code only: code - code matches, any system
-    return token.getCode()
-        .map(code -> codeCol.equalTo(lit(code)))
-        .orElse(lit(true));  // No constraints
+    // Combine all present conditions with AND, or true if no constraints
+    return Stream.of(systemCondition, codeCondition)
+        .flatMap(Optional::stream)
+        .reduce(Column::and)
+        .orElse(lit(true));
   }
 }
