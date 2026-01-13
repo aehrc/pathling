@@ -66,7 +66,7 @@ import org.hl7.fhir.r4.model.UuidType;
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
  */
-@SuppressWarnings({"unused", "MissingJavadoc"})
+@SuppressWarnings({"unused", "MissingJavadoc", "CheckStyle"})
 @Setter
 @ResourceDef(
     name = "ViewDefinition",
@@ -273,6 +273,10 @@ public class ViewDefinitionResource extends DomainResource {
     @Child(name = "unionAll", max = Child.MAX_UNLIMITED)
     private List<SelectComponent> unionAll;
 
+    @Setter
+    @Child(name = "repeat", max = Child.MAX_UNLIMITED)
+    private List<StringType> repeat;
+
     public List<ColumnComponent> getColumn() {
       if (column == null) {
         column = new ArrayList<>();
@@ -336,6 +340,17 @@ public class ViewDefinitionResource extends DomainResource {
       return unionAll != null && !unionAll.isEmpty();
     }
 
+    public List<StringType> getRepeat() {
+      if (repeat == null) {
+        repeat = new ArrayList<>();
+      }
+      return repeat;
+    }
+
+    public boolean hasRepeat() {
+      return repeat != null && !repeat.isEmpty();
+    }
+
     @Override
     public SelectComponent copy() {
       final SelectComponent copy = new SelectComponent();
@@ -360,6 +375,12 @@ public class ViewDefinitionResource extends DomainResource {
           copy.unionAll.add(u.copy());
         }
       }
+      if (repeat != null) {
+        copy.repeat = new ArrayList<>();
+        for (final StringType r : repeat) {
+          copy.repeat.add(r.copy());
+        }
+      }
       return copy;
     }
 
@@ -370,7 +391,8 @@ public class ViewDefinitionResource extends DomainResource {
           && (select == null || select.isEmpty())
           && forEach == null
           && forEachOrNull == null
-          && (unionAll == null || unionAll.isEmpty());
+          && (unionAll == null || unionAll.isEmpty())
+          && (repeat == null || repeat.isEmpty());
     }
   }
 
