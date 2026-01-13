@@ -121,7 +121,7 @@ public class SearchProvider implements IResourceProvider {
 
   @Nonnull
   private IBundleProvider buildSearchExecutor(@Nonnull final Optional<StringAndListParam> filters) {
-    final boolean cacheResults = configuration.getQuery().getCacheResults();
+    final boolean cacheResults = configuration.getQuery().isCacheResults();
     return new SearchExecutor(
         fhirContext, dataSource, fhirEncoders, resourceTypeCode, filters, cacheResults);
   }
