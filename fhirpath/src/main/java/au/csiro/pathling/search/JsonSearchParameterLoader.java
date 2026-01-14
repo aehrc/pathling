@@ -42,11 +42,14 @@ import org.hl7.fhir.r4.model.SearchParameter;
  * <p>
  * Parses the JSON using HAPI FHIR's parser and transforms each SearchParameter into
  * {@link SearchParameterDefinition} entries mapped by resource type.
+ * <p>
+ * This is an internal implementation class. Use {@link SearchParameterRegistry} factory methods
+ * for creating registries.
  *
  * @see SearchParameterDefinition
  * @see FhirPathUnionParser
  */
-public class JsonSearchParameterLoader {
+class JsonSearchParameterLoader {
 
   @Nonnull
   private final FhirContext fhirContext;
@@ -105,12 +108,35 @@ public class JsonSearchParameterLoader {
   }
 
   /**
+   * Processes a list of SearchParameter objects into registry format.
+   * <p>
+   * This method is static because it doesn't require a FhirContext - the SearchParameter
+   * objects are already parsed.
+   *
+   * @param searchParameters the search parameters to process
+   * @return map of resource type to map of parameter code to definition
+   */
+  @Nonnull
+  static Map<ResourceType, Map<String, SearchParameterDefinition>> processSearchParameters(
+      @Nonnull final List<SearchParameter> searchParameters) {
+
+    final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
+        new EnumMap<>(ResourceType.class);
+
+    for (final SearchParameter sp : searchParameters) {
+      processSearchParameter(sp, result);
+    }
+
+    return result;
+  }
+
+  /**
    * Processes a single SearchParameter and adds entries to the result map.
    *
    * @param sp the search parameter to process
    * @param result the result map to populate
    */
-  private void processSearchParameter(
+  private static void processSearchParameter(
       @Nonnull final SearchParameter sp,
       @Nonnull final Map<ResourceType, Map<String, SearchParameterDefinition>> result) {
 
@@ -166,7 +192,7 @@ public class JsonSearchParameterLoader {
    * @param hapiType the HAPI type (may be null for unknown types from lenient parsing)
    * @return the mapped type, or null if unsupported or unknown
    */
-  private SearchParameterType mapType(final SearchParamType hapiType) {
+  private static SearchParameterType mapType(final SearchParamType hapiType) {
     if (hapiType == null) {
       return null;
     }

@@ -19,46 +19,27 @@ package au.csiro.pathling.search;
 
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.SearchParameter;
 
 /**
  * Registry for FHIR search parameter definitions.
  * <p>
- * By default, loads search parameters from a bundled JSON resource file. The registry maps
- * resource types to their available search parameters.
+ * This is a pure data holder that maps resource types to their available search parameters.
+ * Use the static factory methods to create instances.
  *
  * @see SearchParameterDefinition
- * @see JsonSearchParameterLoader
+ * @see #fromInputStream(FhirContext, InputStream)
+ * @see #fromSearchParameters(List)
  */
 public class SearchParameterRegistry {
 
-  private static final String DEFAULT_RESOURCE = "/search-parameters.json";
-
   @Nonnull
   private final Map<ResourceType, Map<String, SearchParameterDefinition>> parameters;
-
-  /**
-   * Creates a registry by loading from the bundled JSON resource.
-   * <p>
-   * Uses the default FHIR R4 context for parsing.
-   */
-  public SearchParameterRegistry() {
-    this(FhirContext.forR4());
-  }
-
-  /**
-   * Creates a registry by loading from the bundled JSON resource.
-   *
-   * @param fhirContext the FHIR context to use for parsing
-   */
-  public SearchParameterRegistry(@Nonnull final FhirContext fhirContext) {
-    this.parameters = loadFromClasspathResource(fhirContext);
-  }
 
   /**
    * Creates a registry with pre-loaded parameters.
@@ -70,6 +51,35 @@ public class SearchParameterRegistry {
   protected SearchParameterRegistry(
       @Nonnull final Map<ResourceType, Map<String, SearchParameterDefinition>> parameters) {
     this.parameters = parameters;
+  }
+
+  /**
+   * Creates a registry by loading from a JSON input stream.
+   *
+   * @param fhirContext the FHIR context for parsing
+   * @param inputStream the input stream containing JSON (a FHIR Bundle of SearchParameter
+   *     resources)
+   * @return a new registry with loaded parameters
+   */
+  @Nonnull
+  public static SearchParameterRegistry fromInputStream(
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final InputStream inputStream) {
+    return new SearchParameterRegistry(
+        new JsonSearchParameterLoader(fhirContext).load(inputStream));
+  }
+
+  /**
+   * Creates a registry from a list of HAPI SearchParameter objects.
+   *
+   * @param searchParameters the search parameters to include
+   * @return a new registry with the provided parameters
+   */
+  @Nonnull
+  public static SearchParameterRegistry fromSearchParameters(
+      @Nonnull final List<SearchParameter> searchParameters) {
+    return new SearchParameterRegistry(
+        JsonSearchParameterLoader.processSearchParameters(searchParameters));
   }
 
   /**
@@ -85,27 +95,5 @@ public class SearchParameterRegistry {
       @Nonnull final String code) {
     return Optional.ofNullable(parameters.get(resourceType))
         .map(params -> params.get(code));
-  }
-
-  /**
-   * Loads parameters from the bundled classpath resource.
-   *
-   * @param fhirContext the FHIR context for parsing
-   * @return the loaded parameters map
-   */
-  @Nonnull
-  private static Map<ResourceType, Map<String, SearchParameterDefinition>> loadFromClasspathResource(
-      @Nonnull final FhirContext fhirContext) {
-    try (final InputStream is = SearchParameterRegistry.class.getResourceAsStream(
-        DEFAULT_RESOURCE)) {
-      if (is == null) {
-        throw new IllegalStateException(
-            "Search parameters resource not found: " + DEFAULT_RESOURCE);
-      }
-      return new JsonSearchParameterLoader(fhirContext).load(is);
-    } catch (final IOException e) {
-      throw new UncheckedIOException(
-          "Failed to load search parameters from: " + DEFAULT_RESOURCE, e);
-    }
   }
 }

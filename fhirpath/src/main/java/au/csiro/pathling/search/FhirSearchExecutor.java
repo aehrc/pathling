@@ -28,8 +28,12 @@ import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.search.filter.SearchFilter;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
@@ -51,6 +55,14 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @RequiredArgsConstructor
 public class FhirSearchExecutor {
 
+  /**
+   * Resource path for the bundled R4 search parameters.
+   * <p>
+   * Source: <a href="https://hl7.org/fhir/R4/search-parameters.json">HL7 FHIR R4 Search
+   * Parameters</a>
+   */
+  private static final String R4_REGISTRY_RESOURCE = "/fhir/R4/search-parameters.json";
+
   @Nonnull
   private final FhirContext fhirContext;
 
@@ -64,14 +76,52 @@ public class FhirSearchExecutor {
   private final Parser parser;
 
   /**
-   * Creates a new FhirSearchExecutor with a default parser and registry.
+   * Creates an executor with the default bundled search parameter registry for FHIR R4.
+   * <p>
+   * This method requires an R4 FhirContext and uses the bundled R4 search parameters from the HL7
+   * FHIR specification.
+   *
+   * @param fhirContext the FHIR context (must be R4)
+   * @param dataSource the data source
+   * @return a new executor with the default R4 registry
+   * @throws IllegalArgumentException if the FhirContext is not R4
+   */
+  @Nonnull
+  public static FhirSearchExecutor withDefaultRegistry(
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final DataSource dataSource) {
+    if (fhirContext.getVersion().getVersion() != FhirVersionEnum.R4) {
+      throw new IllegalArgumentException(
+          "Default registry requires FHIR R4 context, but got: "
+              + fhirContext.getVersion().getVersion());
+    }
+    try (final InputStream is = FhirSearchExecutor.class.getResourceAsStream(
+        R4_REGISTRY_RESOURCE)) {
+      if (is == null) {
+        throw new IllegalStateException(
+            "Search parameters resource not found: " + R4_REGISTRY_RESOURCE);
+      }
+      return withRegistry(fhirContext, dataSource,
+          SearchParameterRegistry.fromInputStream(fhirContext, is));
+    } catch (final IOException e) {
+      throw new UncheckedIOException("Failed to load default search parameters", e);
+    }
+  }
+
+  /**
+   * Creates an executor with an explicit registry.
    *
    * @param fhirContext the FHIR context
-   * @param dataSource the data source containing FHIR resources
+   * @param dataSource the data source
+   * @param registry the search parameter registry
+   * @return a new executor
    */
-  public FhirSearchExecutor(@Nonnull final FhirContext fhirContext,
-      @Nonnull final DataSource dataSource) {
-    this(fhirContext, dataSource, new SearchParameterRegistry(), new Parser());
+  @Nonnull
+  public static FhirSearchExecutor withRegistry(
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final DataSource dataSource,
+      @Nonnull final SearchParameterRegistry registry) {
+    return new FhirSearchExecutor(fhirContext, dataSource, registry, new Parser());
   }
 
   /**

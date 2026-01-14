@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -648,6 +649,33 @@ class FhirSearchExecutorTest {
 
     assertTrue(exception.getMessage().contains("exact"));
     assertTrue(exception.getMessage().contains("DATE"));
+  }
+
+  // ========== Factory method tests ==========
+
+  @Test
+  void withDefaultRegistry_loadsStandardFhirParameters() {
+    // This tests the production factory method with the bundled JSON resource.
+    // We use a minimal data source since we're only verifying the defaultRegistry content.
+    final ObjectDataSource dataSource = createPatientDataSource();
+
+    final FhirSearchExecutor executor = FhirSearchExecutor.withDefaultRegistry(
+        encoders.getContext(), dataSource);
+
+    final SearchParameterRegistry defaultRegistry = executor.getRegistry();
+
+    // Verify a sample of standard FHIR search parameters are loaded.
+    // These are stable parameters defined in the FHIR R4 spec.
+    assertAll(
+        () -> assertTrue(defaultRegistry.getParameter(ResourceType.PATIENT, "gender").isPresent(),
+            "Patient.gender should be present"),
+        () -> assertTrue(defaultRegistry.getParameter(ResourceType.PATIENT, "birthdate").isPresent(),
+            "Patient.birthdate should be present"),
+        () -> assertTrue(defaultRegistry.getParameter(ResourceType.OBSERVATION, "code").isPresent(),
+            "Observation.code should be present"),
+        () -> assertTrue(defaultRegistry.getParameter(ResourceType.OBSERVATION, "date").isPresent(),
+            "Observation.date should be present")
+    );
   }
 
   // ========== Data source creation methods ==========
