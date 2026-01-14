@@ -6,6 +6,7 @@
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useState } from "react";
+
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { SqlOnFhirForm } from "../components/sqlOnFhir/SqlOnFhirForm";
@@ -13,9 +14,13 @@ import { ViewCard } from "../components/sqlOnFhir/ViewCard";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useSaveViewDefinition, useServerCapabilities } from "../hooks";
+
 import type { ViewRunRequest } from "../types/hooks";
 import type { ViewJob } from "../types/viewJob";
 
+/**
+ *
+ */
 export function SqlOnFhir() {
   const { fhirBaseUrl } = config;
   const { isAuthenticated } = useAuth();

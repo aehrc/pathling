@@ -4,10 +4,13 @@
  * @author John Grimes
  */
 
-import type { CapabilityStatement } from "fhir/r4";
 import FHIR from "fhirclient";
-import type Client from "fhirclient/lib/Client";
+
 import { DEFAULT_CLIENT_ID, getEnvClientId, getScope } from "../config";
+
+import type { CapabilityStatement } from "fhir/r4";
+import type Client from "fhirclient/lib/Client";
+
 
 export { DEFAULT_CLIENT_ID };
 
@@ -100,6 +103,7 @@ export interface OperationCapability {
 
 /**
  * Fetches the CapabilityStatement and extracts server information.
+ * @param fhirBaseUrl
  */
 export async function checkServerCapabilities(
   fhirBaseUrl: string,

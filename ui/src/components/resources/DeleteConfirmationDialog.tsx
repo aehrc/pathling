@@ -17,6 +17,17 @@ interface DeleteConfirmationDialogProps {
   isDeleting: boolean;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.open
+ * @param root0.onOpenChange
+ * @param root0.resourceType
+ * @param root0.resourceId
+ * @param root0.resourceSummary
+ * @param root0.onConfirm
+ * @param root0.isDeleting
+ */
 export function DeleteConfirmationDialog({
   open,
   onOpenChange,

@@ -5,8 +5,10 @@
  */
 
 import { Box, Flex, RadioCards, Text } from "@radix-ui/themes";
-import type { SaveMode } from "../../types/import";
+
 import { SAVE_MODES } from "../../types/import";
+
+import type { SaveMode } from "../../types/import";
 
 interface SaveModeFieldProps {
   value: SaveMode;

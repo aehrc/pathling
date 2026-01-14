@@ -18,13 +18,14 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import type { CapabilityStatement } from "fhir/r4";
+
 import type {
   UseServerCapabilitiesFn,
   ServerCapabilities,
   ResourceCapability,
   OperationCapability,
 } from "../types/hooks";
+import type { CapabilityStatement } from "fhir/r4";
 
 const SMART_SERVICE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/restful-security-service";
@@ -32,6 +33,7 @@ const SMART_SERVICE_CODE = "SMART-on-FHIR";
 
 /**
  * Parses a CapabilityStatement to extract server capabilities.
+ * @param capability
  */
 function parseCapabilities(
   capability: CapabilityStatement,

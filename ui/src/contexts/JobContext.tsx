@@ -5,6 +5,10 @@
  */
 
 import { createContext, use, useReducer, useMemo, type ReactNode } from "react";
+
+import type { StatusManifest } from "../types/bulkSubmit";
+import type { ExportManifest } from "../types/export";
+import type { ImportManifest } from "../types/import";
 import type {
   Job,
   ExportJob,
@@ -14,9 +18,6 @@ import type {
   ViewExportJob,
   JobStatus,
 } from "../types/job";
-import type { StatusManifest } from "../types/bulkSubmit";
-import type { ExportManifest } from "../types/export";
-import type { ImportManifest } from "../types/import";
 import type { ViewExportManifest } from "../types/viewExport";
 
 interface JobState {
@@ -80,6 +81,11 @@ function jobReducer(state: JobState, action: JobAction): JobState {
   }
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.children
+ */
 export function JobProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(jobReducer, { jobs: [] });
 
@@ -193,6 +199,9 @@ export function JobProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ *
+ */
 export function useJobs(): JobContextValue {
   const context = use(JobContext);
   if (!context) {

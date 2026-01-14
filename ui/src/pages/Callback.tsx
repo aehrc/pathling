@@ -8,9 +8,13 @@ import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { Box, Callout, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+
 import { useAuth } from "../contexts/AuthContext";
 import { clearReturnUrl, completeAuth, getReturnUrl } from "../services/auth";
 
+/**
+ *
+ */
 export function Callback() {
   const navigate = useNavigate();
   const { setClient, setError } = useAuth();

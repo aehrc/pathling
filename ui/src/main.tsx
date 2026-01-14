@@ -4,20 +4,21 @@
  * @author John Grimes
  */
 
+import { Theme } from "@radix-ui/themes";
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
-import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Theme } from "@radix-ui/themes";
+
 import "@radix-ui/themes/styles.css";
 import "./index.css";
+import App from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { JobProvider } from "./contexts/JobContext";
 import { ToastProvider } from "./contexts/ToastContext";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import { setupGlobalErrorHandlers } from "./utils/errorHandler";
 import { UnauthorizedError } from "./types/errors";
-import App from "./App";
+import { setupGlobalErrorHandlers } from "./utils/errorHandler";
 
 setupGlobalErrorHandlers();
 

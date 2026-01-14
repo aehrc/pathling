@@ -6,6 +6,7 @@
  */
 
 import { Component, type ReactNode } from "react";
+
 import { getGlobalShowToast } from "../contexts/ToastContext";
 
 interface Props {
@@ -17,15 +18,26 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
+  /**
+   *
+   * @param props
+   */
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
   }
 
+  /**
+   *
+   */
   static getDerivedStateFromError(): State {
     return { hasError: true };
   }
 
+  /**
+   *
+   * @param error
+   */
   componentDidCatch(error: Error): void {
     const showToast = getGlobalShowToast();
     if (showToast) {
@@ -33,6 +45,9 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   }
 
+  /**
+   *
+   */
   render(): ReactNode {
     if (this.state.hasError) {
       // Reset error state to allow recovery on next render.

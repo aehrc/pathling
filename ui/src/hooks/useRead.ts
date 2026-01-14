@@ -18,11 +18,13 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import type { Resource } from "fhir/r4";
+
 import { read } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
+
 import type { UseReadFn } from "../types/hooks";
+import type { Resource } from "fhir/r4";
 
 /**
  * Read a single FHIR resource by type and ID.

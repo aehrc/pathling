@@ -17,7 +17,8 @@
  * Author: John Grimes
  */
 
-import type { Parameters, ParametersParameter } from "fhir/r4";
+import { buildHeaders, buildUrl, checkResponse } from "./utils";
+
 import type {
   ViewExportDownloadOptions,
   ViewExportKickOffOptions,
@@ -25,7 +26,7 @@ import type {
   ViewRunOptions,
   ViewRunStoredOptions,
 } from "../types/api";
-import { buildHeaders, buildUrl, checkResponse } from "./utils";
+import type { Parameters, ParametersParameter } from "fhir/r4";
 
 /**
  * Runs a ViewDefinition and returns the results as a stream.

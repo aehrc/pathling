@@ -4,9 +4,11 @@
  * @author John Grimes
  */
 
-import type Client from "fhirclient/lib/Client";
 import { createContext, type ReactNode, use, useEffect, useState } from "react";
+
 import { registerClearSession } from "../main";
+
+import type Client from "fhirclient/lib/Client";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -29,6 +31,11 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ *
+ * @param root0
+ * @param root0.children
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     isAuthenticated: false,
@@ -129,6 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ *
+ */
 export function useAuth(): AuthContextValue {
   const context = use(AuthContext);
   if (!context) {

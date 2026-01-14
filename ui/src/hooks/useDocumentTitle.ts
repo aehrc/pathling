@@ -5,6 +5,7 @@
  */
 
 import { useEffect } from "react";
+
 import { useServerCapabilities } from "./useServerCapabilities";
 import { config } from "../config";
 

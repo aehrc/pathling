@@ -6,8 +6,10 @@
 
 import { ExclamationTriangleIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
-import type { Resource } from "fhir/r4";
+
 import { ResourceCard } from "./ResourceCard";
+
+import type { Resource } from "fhir/r4";
 
 interface ResourceResultListProps {
   resources: Resource[] | undefined;
@@ -19,6 +21,17 @@ interface ResourceResultListProps {
   onDelete: (resourceType: string, resourceId: string, summary: string | null) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.resources
+ * @param root0.total
+ * @param root0.isLoading
+ * @param root0.error
+ * @param root0.hasSearched
+ * @param root0.fhirBaseUrl
+ * @param root0.onDelete
+ */
 export function ResourceResultList({
   resources,
   total,

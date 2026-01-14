@@ -17,7 +17,13 @@
  * Author: John Grimes
  */
 
-import type { Parameters, ParametersParameter } from "fhir/r4";
+import {
+  buildHeaders,
+  buildUrl,
+  checkResponse,
+  extractJobIdFromUrl,
+} from "./utils";
+
 import type {
   BulkSubmitOptions,
   BulkSubmitResult,
@@ -26,15 +32,11 @@ import type {
   BulkSubmitDownloadOptions,
   BulkSubmitManifest,
 } from "../types/api";
-import {
-  buildHeaders,
-  buildUrl,
-  checkResponse,
-  extractJobIdFromUrl,
-} from "./utils";
+import type { Parameters, ParametersParameter } from "fhir/r4";
 
 /**
  * Builds FHIR Parameters resource for bulk submit request.
+ * @param options
  */
 function buildSubmitParameters(options: BulkSubmitOptions): Parameters {
   const parameter: ParametersParameter[] = [
@@ -104,6 +106,7 @@ function buildSubmitParameters(options: BulkSubmitOptions): Parameters {
 
 /**
  * Extracts result from Parameters response.
+ * @param params
  */
 function parseSubmitResponse(params: Parameters): BulkSubmitResult {
   let submissionId = "";

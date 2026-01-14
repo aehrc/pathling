@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "@playwright/test";
+
 import {
   mockCapabilityStatement,
   mockCapabilityStatementWithAuth,
@@ -15,6 +16,7 @@ import {
 /**
  * Sets up API mocks for standard functionality tests.
  * Mocks capabilities without auth and provides patient search results.
+ * @param page
  */
 async function setupStandardMocks(page: import("@playwright/test").Page) {
   // Mock the metadata endpoint (matches any host).
@@ -391,6 +393,7 @@ test.describe("Resources page", () => {
     /**
      * Helper to get the delete button for the first resource card.
      * The delete button is the 2nd button (index 1) within the card.
+     * @param page
      */
     function getDeleteButton(page: import("@playwright/test").Page) {
       const firstCard = page.getByText("patient-123").locator("../../..");
@@ -522,22 +525,18 @@ test.describe("Resources page", () => {
       await page.route(
         /\/(Patient|Observation|Condition)(\?|\/|$)/,
         async (route) => {
-          if (route.request().method() === "DELETE") {
-            await route.fulfill({
+          await (route.request().method() === "DELETE" ? route.fulfill({
               status: 500,
               contentType: "application/fhir+json",
               body: JSON.stringify({
                 resourceType: "OperationOutcome",
                 issue: [{ severity: "error", diagnostics: "Internal error" }],
               }),
-            });
-          } else {
-            await route.fulfill({
+            }) : route.fulfill({
               status: 200,
               contentType: "application/fhir+json",
               body: JSON.stringify(mockPatientBundle),
-            });
-          }
+            }));
         },
       );
 

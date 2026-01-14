@@ -1,0 +1,7 @@
+{
+  "threshold": 0,
+  "reporters": ["console"],
+  "path": ["src", "e2e"],
+  "ignore": ["**/node_modules/**", "**/*.test.ts", "**/*.test.tsx"],
+  "absolute": true
+}

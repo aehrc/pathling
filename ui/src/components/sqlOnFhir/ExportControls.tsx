@@ -7,6 +7,7 @@
 import { DownloadIcon } from "@radix-ui/react-icons";
 import { Button, Flex, Select } from "@radix-ui/themes";
 import { useState } from "react";
+
 import type { ViewExportFormat } from "../../types/viewExport";
 
 interface ExportControlsProps {
@@ -20,6 +21,12 @@ const FORMAT_OPTIONS: { value: ViewExportFormat; label: string }[] = [
   { value: "parquet", label: "Parquet" },
 ];
 
+/**
+ *
+ * @param root0
+ * @param root0.onExport
+ * @param root0.disabled
+ */
 export function ExportControls({ onExport, disabled }: ExportControlsProps) {
   const [format, setFormat] = useState<ViewExportFormat>("ndjson");
 

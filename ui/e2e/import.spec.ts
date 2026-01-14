@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "@playwright/test";
+
 import {
   mockCapabilityStatement,
   mockCapabilityStatementWithAuth,
@@ -17,6 +18,7 @@ const TEST_JOB_ID = "test-job-123";
 /**
  * Sets up standard API mocks for import page tests.
  * Mocks capabilities without auth and provides immediate job completion.
+ * @param page
  */
 async function setupStandardMocks(page: import("@playwright/test").Page) {
   // Mock the metadata endpoint.
@@ -68,6 +70,10 @@ async function setupStandardMocks(page: import("@playwright/test").Page) {
 
 /**
  * Sets up mocks with delayed job completion to observe progress states.
+ * @param page
+ * @param options
+ * @param options.pollCount
+ * @param options.progress
  */
 async function setupDelayedJobMocks(
   page: import("@playwright/test").Page,

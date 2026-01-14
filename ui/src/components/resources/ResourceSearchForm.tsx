@@ -17,6 +17,7 @@ import {
   TextField,
 } from "@radix-ui/themes";
 import { useRef, useState } from "react";
+
 import type { SearchRequest } from "../../types/search";
 
 interface FilterInputWithId {
@@ -31,6 +32,14 @@ interface ResourceSearchFormProps {
   resourceTypes: string[];
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.onSubmit
+ * @param root0.isLoading
+ * @param root0.disabled
+ * @param root0.resourceTypes
+ */
 export function ResourceSearchForm({
   onSubmit,
   isLoading,

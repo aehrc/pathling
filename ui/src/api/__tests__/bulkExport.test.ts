@@ -17,8 +17,8 @@
  * Author: John Grimes
  */
 
-import type { Parameters } from "fhir/r4";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { UnauthorizedError } from "../../types/errors";
 import {
   allPatientsExportKickOff,
@@ -28,6 +28,8 @@ import {
   patientExportKickOff,
   systemExportKickOff,
 } from "../bulkExport";
+
+import type { Parameters } from "fhir/r4";
 
 const mockFetch = vi.fn();
 

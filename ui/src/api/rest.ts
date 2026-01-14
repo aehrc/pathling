@@ -17,7 +17,8 @@
  * Author: John Grimes
  */
 
-import type { Bundle, Resource } from "fhir/r4";
+import { buildHeaders, buildUrl, checkResponse } from "./utils";
+
 import type {
   SearchOptions,
   SearchResult,
@@ -26,7 +27,7 @@ import type {
   UpdateOptions,
   DeleteOptions,
 } from "../types/api";
-import { buildHeaders, buildUrl, checkResponse } from "./utils";
+import type { Bundle, Resource } from "fhir/r4";
 
 /**
  * Searches for FHIR resources of a given type.

@@ -16,9 +16,11 @@ import {
   Text,
   Tooltip,
 } from "@radix-ui/themes";
-import type { Resource } from "fhir/r4";
 import { useState } from "react";
+
 import { useClipboard } from "../../hooks";
+
+import type { Resource } from "fhir/r4";
 
 interface ResourceCardProps {
   resource: Resource;
@@ -28,6 +30,7 @@ interface ResourceCardProps {
 
 /**
  * Extracts a human-readable summary from a FHIR resource based on its type.
+ * @param resource
  */
 function getResourceSummary(resource: Resource): string | null {
   const r = resource as unknown as Record<string, unknown>;
@@ -105,6 +108,13 @@ function getResourceSummary(resource: Resource): string | null {
   return null;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.resource
+ * @param root0.fhirBaseUrl
+ * @param root0.onDelete
+ */
 export function ResourceCard({ resource, fhirBaseUrl, onDelete }: ResourceCardProps) {
   const [expanded, setExpanded] = useState(false);
   const summary = getResourceSummary(resource);

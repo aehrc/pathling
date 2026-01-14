@@ -18,6 +18,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+
 import { NotFoundError, UnauthorizedError } from "../../types/errors";
 import {
   buildHeaders,

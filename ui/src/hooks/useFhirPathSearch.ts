@@ -18,11 +18,13 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import type { Bundle, Resource } from "fhir/r4";
+
 import { search } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
+
 import type { UseFhirPathSearchFn } from "../types/hooks";
+import type { Bundle, Resource } from "fhir/r4";
 
 /**
  * Search for resources using FHIRPath filter expressions.

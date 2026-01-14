@@ -18,9 +18,11 @@
  */
 
 import { useMutation } from "@tanstack/react-query";
+
 import { deleteResource } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
+
 import type { UseDeleteFn, UseDeleteVariables } from "../types/hooks";
 
 /**

@@ -6,6 +6,7 @@
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useState } from "react";
+
 import { deleteResource } from "../api";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
@@ -16,6 +17,7 @@ import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import { useFhirPathSearch, useServerCapabilities } from "../hooks";
+
 import type { SearchRequest } from "../types/search";
 
 interface DeleteTarget {
@@ -24,6 +26,9 @@ interface DeleteTarget {
   summary: string | null;
 }
 
+/**
+ *
+ */
 export function Resources() {
   const { fhirBaseUrl } = config;
   const { client, isAuthenticated } = useAuth();

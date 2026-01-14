@@ -6,10 +6,12 @@
 
 import { ExclamationTriangleIcon, TableIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Callout, Code, Flex, Heading, Spinner, Table, Text } from "@radix-ui/themes";
-import type { ViewExportJob } from "../../types/job";
-import type { ViewExportFormat } from "../../types/viewExport";
+
 import { ExportControls } from "./ExportControls";
 import { ViewExportCard } from "./ViewExportCard";
+
+import type { ViewExportJob } from "../../types/job";
+import type { ViewExportFormat } from "../../types/viewExport";
 
 interface SqlOnFhirResultTableProps {
   rows: Record<string, unknown>[] | undefined;
@@ -26,6 +28,7 @@ interface SqlOnFhirResultTableProps {
 
 /**
  * Formats a cell value for display.
+ * @param value
  */
 function formatCellValue(value: unknown): string {
   if (value === null || value === undefined) {
@@ -37,6 +40,20 @@ function formatCellValue(value: unknown): string {
   return String(value);
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.rows
+ * @param root0.columns
+ * @param root0.isLoading
+ * @param root0.error
+ * @param root0.hasExecuted
+ * @param root0.onExport
+ * @param root0.exportJob
+ * @param root0.onDownload
+ * @param root0.onCancelExport
+ * @param root0.isExporting
+ */
 export function SqlOnFhirResultTable({
   rows,
   columns,

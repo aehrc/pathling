@@ -18,14 +18,16 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import type { Bundle } from "fhir/r4";
+
 import { search } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
+
 import type {
   UseViewDefinitionsFn,
   ViewDefinitionSummary,
 } from "../types/hooks";
+import type { Bundle } from "fhir/r4";
 
 /**
  * Fetch available ViewDefinitions from the server.

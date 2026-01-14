@@ -18,11 +18,13 @@
  */
 
 import { useMutation } from "@tanstack/react-query";
-import type { Resource } from "fhir/r4";
+
 import { update } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
+
 import type { UseUpdateFn, UseUpdateVariables } from "../types/hooks";
+import type { Resource } from "fhir/r4";
 
 /**
  * Update an existing FHIR resource.

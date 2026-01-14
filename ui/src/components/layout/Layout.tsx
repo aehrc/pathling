@@ -14,6 +14,7 @@ import {
 } from "@radix-ui/react-icons";
 import { Box, Container, DropdownMenu, Flex, IconButton, Text } from "@radix-ui/themes";
 import { Link, Outlet, useLocation } from "react-router";
+
 import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
@@ -116,6 +117,9 @@ function getHostname(url: string): string {
   }
 }
 
+/**
+ *
+ */
 export function Layout() {
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();

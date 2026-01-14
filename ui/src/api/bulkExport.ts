@@ -17,6 +17,8 @@
  * Author: John Grimes
  */
 
+import { buildHeaders, buildUrl, checkResponse, resolveUrl } from "./utils";
+
 import type {
   AllPatientsExportKickOffOptions,
   BulkExportDownloadOptions,
@@ -28,10 +30,10 @@ import type {
   PatientExportKickOffOptions,
   SystemExportKickOffOptions,
 } from "../types/api";
-import { buildHeaders, buildUrl, checkResponse, resolveUrl } from "./utils";
 
 /**
  * Builds query parameters for bulk export operations.
+ * @param options
  */
 function buildExportParams(
   options: SystemExportKickOffOptions | AllPatientsExportKickOffOptions,
@@ -59,6 +61,9 @@ function buildExportParams(
 
 /**
  * Kicks off an export and returns the polling URL.
+ * @param baseUrl
+ * @param path
+ * @param options
  */
 async function kickOffExport(
   baseUrl: string,
@@ -231,6 +236,7 @@ export async function bulkExportStatus(
  * Downloads an exported file from a bulk export operation.
  *
  * @param baseUrl - The FHIR server base URL (unused but included for consistency).
+ * @param _baseUrl
  * @param options - Download options including file URL.
  * @returns A ReadableStream of the file contents.
  * @throws {UnauthorizedError} When the request receives a 401 response.

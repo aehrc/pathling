@@ -18,9 +18,11 @@
  */
 
 import { useState, useCallback, useRef } from "react";
+
 import { executeAsyncJob, parseProgressHeader } from "../api";
-import type { AsyncJobStatus } from "../types/hooks";
+
 import type { AsyncJobExecutorOptions } from "../types/api";
+import type { AsyncJobStatus } from "../types/hooks";
 
 export interface UseAsyncJobResult<TRequest, TResult> {
   status: AsyncJobStatus;
@@ -41,6 +43,9 @@ export interface UseAsyncJobResult<TRequest, TResult> {
  *
  * @param buildOptions - Function that builds executor options from a request object.
  * @param callbacks - Optional callbacks for progress, completion, and error events.
+ * @param callbacks.onProgress
+ * @param callbacks.onComplete
+ * @param callbacks.onError
  * @returns Hook result with status, result, and control functions.
  */
 export function useAsyncJob<TRequest, TKickOffResult, TStatusResult, TResult>(

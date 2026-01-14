@@ -4,9 +4,10 @@
  * @author John Grimes
  */
 
-import { useState } from "react";
-import { Box, Button, Card, Flex, Heading, Text, TextField } from "@radix-ui/themes";
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { Box, Button, Card, Flex, Heading, Text, TextField } from "@radix-ui/themes";
+import { useState } from "react";
+
 import type { SubmitterIdentifier } from "../../types/bulkSubmit";
 
 interface BulkSubmitMonitorFormProps {
@@ -15,6 +16,13 @@ interface BulkSubmitMonitorFormProps {
   disabled: boolean;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.onMonitor
+ * @param root0.isSubmitting
+ * @param root0.disabled
+ */
 export function BulkSubmitMonitorForm({
   onMonitor,
   isSubmitting,

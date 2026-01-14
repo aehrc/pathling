@@ -21,8 +21,10 @@ import {
   Tooltip,
 } from "@radix-ui/themes";
 import { useState } from "react";
+
 import { useClipboard } from "../../hooks";
 import { useViewDefinitions } from "../../hooks/useViewDefinitions";
+
 import type { ViewRunRequest } from "../../types/hooks";
 import type { CreateViewDefinitionResult } from "../../types/sqlOnFhir";
 
@@ -48,6 +50,15 @@ const EXAMPLE_VIEW_DEFINITION = `{
   ]
 }`;
 
+/**
+ *
+ * @param root0
+ * @param root0.onExecute
+ * @param root0.onSaveToServer
+ * @param root0.isExecuting
+ * @param root0.isSaving
+ * @param root0.disabled
+ */
 export function SqlOnFhirForm({
   onExecute,
   onSaveToServer,

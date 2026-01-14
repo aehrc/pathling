@@ -7,10 +7,14 @@
 
 import { LockClosedIcon } from "@radix-ui/react-icons";
 import { AlertDialog, Button, Flex } from "@radix-ui/themes";
+
 import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
 import { initiateAuth } from "../../services/auth";
 
+/**
+ *
+ */
 export function SessionExpiredDialog() {
   const { sessionExpired, setSessionExpired, setLoading, setError } = useAuth();
   const { fhirBaseUrl } = config;

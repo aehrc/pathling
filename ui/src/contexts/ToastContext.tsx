@@ -5,6 +5,9 @@
  * @author John Grimes
  */
 
+import { Cross2Icon } from "@radix-ui/react-icons";
+import * as Toast from "@radix-ui/react-toast";
+import { IconButton, Text } from "@radix-ui/themes";
 import {
   createContext,
   use,
@@ -14,9 +17,6 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import * as Toast from "@radix-ui/react-toast";
-import { Cross2Icon } from "@radix-ui/react-icons";
-import { IconButton, Text } from "@radix-ui/themes";
 import "./ToastContext.css";
 
 interface ToastData {
@@ -34,10 +34,18 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 // Module-level reference for error handlers to access showToast without hooks.
 let globalShowToast: ((title: string, description?: string) => void) | null = null;
 
+/**
+ *
+ */
 export function getGlobalShowToast() {
   return globalShowToast;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.children
+ */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastData[]>([]);
   const toastIdCounter = useRef(0);
@@ -94,6 +102,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ *
+ */
 export function useToast(): ToastContextValue {
   const context = use(ToastContext);
   if (!context) {

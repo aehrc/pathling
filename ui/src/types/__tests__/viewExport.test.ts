@@ -5,8 +5,10 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { Parameters } from "fhir/r4";
+
 import { getViewExportOutputFiles } from "../viewExport";
+
+import type { Parameters } from "fhir/r4";
 
 describe("getViewExportOutputFiles", () => {
   it("extracts output files from Parameters resource", () => {

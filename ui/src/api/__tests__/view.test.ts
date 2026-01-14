@@ -18,7 +18,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ViewDefinition } from "../../types/api";
+
 import { UnauthorizedError } from "../../types/errors";
 import {
   viewExportDownload,
@@ -26,6 +26,8 @@ import {
   viewRun,
   viewRunStored,
 } from "../view";
+
+import type { ViewDefinition } from "../../types/api";
 
 const mockFetch = vi.fn();
 

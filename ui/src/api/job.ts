@@ -17,12 +17,13 @@
  * Author: John Grimes
  */
 
+import { buildHeaders, checkResponse, resolveUrl } from "./utils";
+
 import type {
   JobCancelOptions,
   JobStatusOptions,
   JobStatusResult,
 } from "../types/api";
-import { buildHeaders, checkResponse, resolveUrl } from "./utils";
 
 /**
  * Checks the status of an async job.

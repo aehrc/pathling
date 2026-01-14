@@ -6,12 +6,16 @@
 
 import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
 import { Box, Button, Callout } from "@radix-ui/themes";
+
+import { SessionExpiredDialog } from "./SessionExpiredDialog";
 import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
 import { useServerCapabilities } from "../../hooks/useServerCapabilities";
 import { initiateAuth } from "../../services/auth";
-import { SessionExpiredDialog } from "./SessionExpiredDialog";
 
+/**
+ *
+ */
 export function LoginRequired() {
   const { fhirBaseUrl } = config;
   const { setLoading, setError } = useAuth();

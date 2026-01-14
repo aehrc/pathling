@@ -17,9 +17,11 @@ import {
   TextField,
 } from "@radix-ui/themes";
 import { useRef, useState } from "react";
-import type { ImportFormat, ImportRequest, SaveMode } from "../../types/import";
-import { IMPORT_FORMATS } from "../../types/import";
+
 import { SaveModeField } from "./SaveModeField";
+import { IMPORT_FORMATS } from "../../types/import";
+
+import type { ImportFormat, ImportRequest, SaveMode } from "../../types/import";
 
 interface ImportInputWithId {
   id: number;
@@ -34,6 +36,14 @@ interface ImportFormProps {
   resourceTypes: string[];
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.onSubmit
+ * @param root0.isSubmitting
+ * @param root0.disabled
+ * @param root0.resourceTypes
+ */
 export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: ImportFormProps) {
   const idCounter = useRef(1);
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");

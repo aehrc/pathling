@@ -7,8 +7,10 @@
 
 import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
-import type { ViewExportJob } from "../../types/job";
+
 import { getViewExportOutputFiles } from "../../types/viewExport";
+
+import type { ViewExportJob } from "../../types/job";
 
 interface ViewExportCardProps {
   job: ViewExportJob;
@@ -34,12 +36,20 @@ const STATUS_LABELS: Record<ViewExportJob["status"], string> = {
 
 /**
  * Extracts the filename from a result URL's query parameters.
+ * @param url
  */
 function getFilenameFromUrl(url: string): string {
   const params = new URLSearchParams(new URL(url).search);
   return params.get("file") ?? "unknown";
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.job
+ * @param root0.onCancel
+ * @param root0.onDownload
+ */
 export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProps) {
   const isActive = job.status === "pending" || job.status === "in_progress";
   const showProgress = isActive && job.progress !== null;

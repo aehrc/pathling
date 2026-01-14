@@ -5,6 +5,7 @@
  */
 
 import { Routes, Route } from "react-router";
+
 import { Layout } from "./components/layout/Layout";
 import { BulkSubmit } from "./pages/BulkSubmit";
 import { Callback } from "./pages/Callback";
@@ -14,6 +15,9 @@ import { Import } from "./pages/Import";
 import { Resources } from "./pages/Resources";
 import { SqlOnFhir } from "./pages/SqlOnFhir";
 
+/**
+ *
+ */
 export default function App() {
   return (
     <Routes>

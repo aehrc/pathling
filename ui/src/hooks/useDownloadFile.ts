@@ -18,8 +18,9 @@
  */
 
 import { useCallback } from "react";
-import { useAuth } from "../contexts/AuthContext";
+
 import { checkResponse } from "../api/utils";
+import { useAuth } from "../contexts/AuthContext";
 
 /**
  * Hook that provides authenticated file download functionality.

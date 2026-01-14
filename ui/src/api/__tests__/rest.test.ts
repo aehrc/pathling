@@ -18,8 +18,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { search, read, create, update, deleteResource } from "../rest";
+
 import { UnauthorizedError, NotFoundError } from "../../types/errors";
+import { search, read, create, update, deleteResource } from "../rest";
+
 import type { Bundle, Patient } from "fhir/r4";
 
 const mockFetch = vi.fn();

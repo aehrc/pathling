@@ -17,9 +17,13 @@ import {
   Table,
   Text,
 } from "@radix-ui/themes";
+
 import { config } from "../config";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 
+/**
+ *
+ */
 export function Dashboard() {
   const { fhirBaseUrl } = config;
   const { data: capabilities, isLoading, error } = useServerCapabilities(fhirBaseUrl);

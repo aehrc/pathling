@@ -17,13 +17,14 @@
  * Author: John Grimes
  */
 
-import type { Parameters } from "fhir/r4";
+import { buildHeaders, buildUrl, checkResponse } from "./utils";
+
 import type {
   ImportKickOffOptions,
   ImportResult,
   ImportPnpKickOffOptions,
 } from "../types/api";
-import { buildHeaders, buildUrl, checkResponse } from "./utils";
+import type { Parameters } from "fhir/r4";
 
 /**
  * Kicks off a bulk import operation.
@@ -84,6 +85,7 @@ export async function importKickOff(
 
 /**
  * Builds a FHIR Parameters resource for the import-pnp operation.
+ * @param options
  */
 function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
   const parameters: Parameters = {

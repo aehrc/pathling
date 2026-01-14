@@ -6,14 +6,19 @@
 
 import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Progress, Spinner, Text } from "@radix-ui/themes";
+
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { BulkSubmitMonitorForm } from "../components/bulkSubmit/BulkSubmitMonitorForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useBulkSubmitMonitor, useServerCapabilities } from "../hooks";
+
 import type { SubmitterIdentifier } from "../types/bulkSubmit";
 
+/**
+ *
+ */
 export function BulkSubmit() {
   const { fhirBaseUrl } = config;
   const { isAuthenticated, setError } = useAuth();
