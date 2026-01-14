@@ -16,58 +16,100 @@ import {
   mockViewRunNdjson,
 } from "./fixtures/fhirData";
 
+import type { Page } from "@playwright/test";
+
+// =============================================================================
+// Composable mock helpers
+// =============================================================================
+
+/**
+ * Sets up metadata endpoint mock.
+ *
+ * @param page - The Playwright page object.
+ * @param capabilities - The CapabilityStatement to return.
+ */
+async function mockMetadata(
+  page: Page,
+  capabilities: object = mockCapabilityStatement,
+) {
+  await page.route("**/metadata", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/fhir+json",
+      body: JSON.stringify(capabilities),
+    });
+  });
+}
+
+/**
+ * Sets up ViewDefinition search and single-resource mocks.
+ *
+ * @param page - The Playwright page object.
+ * @param bundle - The Bundle to return for ViewDefinition searches.
+ */
+async function mockViewDefinitions(
+  page: Page,
+  bundle: object = mockViewDefinitionBundle,
+) {
+  await page.route("**/ViewDefinition?*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/fhir+json",
+      body: JSON.stringify(bundle),
+    });
+  });
+  await page.route(/\/ViewDefinition$/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/fhir+json",
+      body: JSON.stringify(bundle),
+    });
+  });
+}
+
+/**
+ * Sets up view run endpoint mock with custom response.
+ *
+ * @param page - The Playwright page object.
+ * @param response - The response configuration.
+ * @param response.status - HTTP status code (defaults to 200).
+ * @param response.body - Response body (string or object).
+ * @param response.delayMs - Optional delay before responding.
+ */
+async function mockViewRun(
+  page: Page,
+  response: { status?: number; body: string | object; delayMs?: number },
+) {
+  const { status = 200, body, delayMs } = response;
+  const bodyStr = typeof body === "string" ? body : JSON.stringify(body);
+  const contentType =
+    status === 200 ? "application/x-ndjson" : "application/fhir+json";
+
+  await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
+    if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    await route.fulfill({ status, contentType, body: bodyStr });
+  });
+
+  await page.route("**/ViewDefinition/$run", async (route) => {
+    if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    await route.fulfill({ status, contentType, body: bodyStr });
+  });
+}
+
+// =============================================================================
+// Composite setup helpers
+// =============================================================================
+
 /**
  * Sets up API mocks for standard functionality tests.
  * Mocks capabilities without auth, ViewDefinition search, and view run.
  *
  * @param page - The Playwright page object.
  */
-async function setupStandardMocks(page: import("@playwright/test").Page) {
-  // Mock the metadata endpoint.
-  await page.route("**/metadata", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/fhir+json",
-      body: JSON.stringify(mockCapabilityStatement),
-    });
-  });
-
-  // Mock ViewDefinition search endpoint.
-  await page.route("**/ViewDefinition?*", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/fhir+json",
-      body: JSON.stringify(mockViewDefinitionBundle),
-    });
-  });
-
-  // Also match ViewDefinition without query params.
-  await page.route(/\/ViewDefinition$/, async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/fhir+json",
-      body: JSON.stringify(mockViewDefinitionBundle),
-    });
-  });
-
-  // Mock view run endpoints (both stored and inline).
-  await page.route("**/ViewDefinition/$run", async (route) => {
-    // POST request for inline view run.
-    await route.fulfill({
-      status: 200,
-      contentType: "application/x-ndjson",
-      body: mockViewRunNdjson,
-    });
-  });
-
-  await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-    // GET request for stored view run.
-    await route.fulfill({
-      status: 200,
-      contentType: "application/x-ndjson",
-      body: mockViewRunNdjson,
-    });
-  });
+async function setupStandardMocks(page: Page) {
+  await mockMetadata(page);
+  await mockViewDefinitions(page);
+  await mockViewRun(page, { body: mockViewRunNdjson });
 }
 
 /**
@@ -78,53 +120,13 @@ async function setupStandardMocks(page: import("@playwright/test").Page) {
  * @param options.delayMs - Delay in milliseconds before responding.
  */
 async function setupDelayedViewRunMocks(
-  page: import("@playwright/test").Page,
+  page: Page,
   options: { delayMs?: number } = {},
 ) {
   const { delayMs = 2000 } = options;
-
-  await page.route("**/metadata", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/fhir+json",
-      body: JSON.stringify(mockCapabilityStatement),
-    });
-  });
-
-  await page.route("**/ViewDefinition?*", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/fhir+json",
-      body: JSON.stringify(mockViewDefinitionBundle),
-    });
-  });
-
-  await page.route(/\/ViewDefinition$/, async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/fhir+json",
-      body: JSON.stringify(mockViewDefinitionBundle),
-    });
-  });
-
-  // Delay the view run response.
-  await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-    await route.fulfill({
-      status: 200,
-      contentType: "application/x-ndjson",
-      body: mockViewRunNdjson,
-    });
-  });
-
-  await page.route("**/ViewDefinition/$run", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-    await route.fulfill({
-      status: 200,
-      contentType: "application/x-ndjson",
-      body: mockViewRunNdjson,
-    });
-  });
+  await mockMetadata(page);
+  await mockViewDefinitions(page);
+  await mockViewRun(page, { body: mockViewRunNdjson, delayMs });
 }
 
 test.describe("SQL on FHIR page", () => {
@@ -175,14 +177,7 @@ test.describe("SQL on FHIR page", () => {
     test("shows login prompt when auth required but not authenticated", async ({
       page,
     }) => {
-      // Mock capabilities with auth required.
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatementWithAuth),
-        });
-      });
+      await mockMetadata(page, mockCapabilityStatementWithAuth);
 
       await page.goto("/admin/sql-on-fhir");
 
@@ -275,29 +270,8 @@ test.describe("SQL on FHIR page", () => {
 
     test("shows message when no definitions available", async ({ page }) => {
       // Mock with empty ViewDefinition bundle.
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
-      await page.route("**/ViewDefinition?*", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockEmptyViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition$/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockEmptyViewDefinitionBundle),
-        });
-      });
+      await mockMetadata(page);
+      await mockViewDefinitions(page, mockEmptyViewDefinitionBundle);
 
       await page.goto("/admin/sql-on-fhir");
 
@@ -436,37 +410,9 @@ test.describe("SQL on FHIR page", () => {
     });
 
     test("shows empty results message when no rows", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
-      await page.route("**/ViewDefinition?*", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition$/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/x-ndjson",
-          body: mockEmptyViewRunNdjson,
-        });
-      });
+      await mockMetadata(page);
+      await mockViewDefinitions(page);
+      await mockViewRun(page, { body: mockEmptyViewRunNdjson });
 
       await page.goto("/admin/sql-on-fhir");
 
@@ -480,42 +426,14 @@ test.describe("SQL on FHIR page", () => {
     });
 
     test("displays error message on execution failure", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
+      const errorOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [{ severity: "error", diagnostics: "Invalid view definition" }],
+      };
 
-      await page.route("**/ViewDefinition?*", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition$/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-        await route.fulfill({
-          status: 400,
-          contentType: "application/fhir+json",
-          body: JSON.stringify({
-            resourceType: "OperationOutcome",
-            issue: [
-              { severity: "error", diagnostics: "Invalid view definition" },
-            ],
-          }),
-        });
-      });
+      await mockMetadata(page);
+      await mockViewDefinitions(page);
+      await mockViewRun(page, { status: 400, body: errorOutcome });
 
       await page.goto("/admin/sql-on-fhir");
 
@@ -757,40 +675,14 @@ test.describe("SQL on FHIR page", () => {
     });
 
     test("close button visible when query errors", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
+      const errorOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [{ severity: "error", diagnostics: "Query failed" }],
+      };
 
-      await page.route("**/ViewDefinition?*", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition$/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-        await route.fulfill({
-          status: 500,
-          contentType: "application/fhir+json",
-          body: JSON.stringify({
-            resourceType: "OperationOutcome",
-            issue: [{ severity: "error", diagnostics: "Query failed" }],
-          }),
-        });
-      });
+      await mockMetadata(page);
+      await mockViewDefinitions(page);
+      await mockViewRun(page, { status: 500, body: errorOutcome });
 
       await page.goto("/admin/sql-on-fhir");
 
@@ -811,40 +703,14 @@ test.describe("SQL on FHIR page", () => {
     test("clicking close button removes errored query card", async ({
       page,
     }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
+      const errorOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [{ severity: "error", diagnostics: "Query failed" }],
+      };
 
-      await page.route("**/ViewDefinition?*", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition$/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-        await route.fulfill({
-          status: 500,
-          contentType: "application/fhir+json",
-          body: JSON.stringify({
-            resourceType: "OperationOutcome",
-            issue: [{ severity: "error", diagnostics: "Query failed" }],
-          }),
-        });
-      });
+      await mockMetadata(page);
+      await mockViewDefinitions(page);
+      await mockViewRun(page, { status: 500, body: errorOutcome });
 
       await page.goto("/admin/sql-on-fhir");
 

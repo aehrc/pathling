@@ -30,7 +30,10 @@ export { useBulkExport } from "./useBulkExport";
 export { useImport } from "./useImport";
 export { useImportPnp } from "./useImportPnp";
 export { useBulkSubmit } from "./useBulkSubmit";
-export { useBulkSubmitMonitor } from "./useBulkSubmitMonitor";
+/**
+ * @deprecated Use useBulkSubmit with mode: 'monitor' instead.
+ */
+export { useBulkSubmit as useBulkSubmitMonitor } from "./useBulkSubmit";
 export { useViewExport } from "./useViewExport";
 
 // View operations.

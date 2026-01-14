@@ -236,10 +236,8 @@ export type ExportManifest = Parameters;
 /**
  * Result of useBulkExport hook.
  */
-export interface UseBulkExportResult extends AsyncJobResult<
-  BulkExportRequest,
-  ExportManifest
-> {
+export interface UseBulkExportResult
+  extends AsyncJobResult<BulkExportRequest, ExportManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -307,9 +305,9 @@ export interface SubmitterIdentifier {
 }
 
 /**
- * Request parameters for bulk submit operations.
+ * Base request parameters for bulk submit operations (submit mode).
  */
-export interface BulkSubmitRequest {
+export interface BulkSubmitRequestBase {
   /** Unique submission ID. */
   submissionId: string;
   /** Submitter identifier. */
@@ -327,6 +325,23 @@ export interface BulkSubmitRequest {
   /** Headers to include when fetching files. */
   fileRequestHeaders?: Record<string, string>;
 }
+
+/**
+ * Request parameters for bulk submit operations (submit mode).
+ */
+export interface BulkSubmitRequest extends BulkSubmitRequestBase {
+  /** Operation mode: submit a new submission. */
+  mode: "submit";
+}
+
+/**
+ * Unified request type for bulk submit operations.
+ * Use mode: 'submit' to create a new submission.
+ * Use mode: 'monitor' to monitor an existing submission.
+ */
+export type BulkSubmitRequestUnion =
+  | BulkSubmitRequest
+  | BulkSubmitMonitorRequest;
 
 /**
  * Options for useBulkSubmit hook (callbacks only).
@@ -355,10 +370,8 @@ export interface BulkSubmitManifest {
 /**
  * Result of useBulkSubmit hook.
  */
-export interface UseBulkSubmitResult extends AsyncJobResult<
-  BulkSubmitRequest,
-  BulkSubmitManifest
-> {
+export interface UseBulkSubmitResult
+  extends AsyncJobResult<BulkSubmitRequestUnion, BulkSubmitManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -367,6 +380,8 @@ export interface UseBulkSubmitResult extends AsyncJobResult<
  * Request parameters for monitoring an existing bulk submit operation.
  */
 export interface BulkSubmitMonitorRequest {
+  /** Operation mode: monitor an existing submission. */
+  mode: "monitor";
   /** Unique submission ID to monitor. */
   submissionId: string;
   /** Submitter identifier. */
@@ -381,10 +396,8 @@ export type UseBulkSubmitMonitorOptions = AsyncJobOptions;
 /**
  * Result of useBulkSubmitMonitor hook.
  */
-export interface UseBulkSubmitMonitorResult extends AsyncJobResult<
-  BulkSubmitMonitorRequest,
-  BulkSubmitManifest
-> {
+export interface UseBulkSubmitMonitorResult
+  extends AsyncJobResult<BulkSubmitMonitorRequest, BulkSubmitManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -493,10 +506,8 @@ export type UseViewExportOptions = AsyncJobOptions;
 /**
  * Result of useViewExport hook.
  */
-export interface UseViewExportResult extends AsyncJobResult<
-  ViewExportRequest,
-  ViewExportManifest
-> {
+export interface UseViewExportResult
+  extends AsyncJobResult<ViewExportRequest, ViewExportManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -682,10 +693,9 @@ export type UseBulkSubmitFn = (
 
 /**
  * Monitor an existing bulk submit operation with polling.
+ * @deprecated Use useBulkSubmit with mode: 'monitor' instead.
  */
-export type UseBulkSubmitMonitorFn = (
-  options?: UseBulkSubmitMonitorOptions,
-) => UseBulkSubmitMonitorResult;
+export type UseBulkSubmitMonitorFn = UseBulkSubmitFn;
 
 /**
  * Execute a ViewDefinition and return parsed results.
