@@ -13,7 +13,9 @@ import { useAuth } from "../contexts/AuthContext";
 import { clearReturnUrl, completeAuth, getReturnUrl } from "../services/auth";
 
 /**
+ * Handles the OAuth callback and completes authentication.
  *
+ * @returns The callback page component.
  */
 export function Callback() {
   const navigate = useNavigate();

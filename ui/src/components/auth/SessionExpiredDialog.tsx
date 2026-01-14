@@ -13,7 +13,9 @@ import { useAuth } from "../../contexts/AuthContext";
 import { initiateAuth } from "../../services/auth";
 
 /**
+ * Dialog prompting the user to re-authenticate after session expiry.
  *
+ * @returns The session expired dialog component.
  */
 export function SessionExpiredDialog() {
   const { sessionExpired, setSessionExpired, setLoading, setError } = useAuth();

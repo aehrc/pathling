@@ -36,7 +36,9 @@ import type { Parameters, ParametersParameter } from "fhir/r4";
 
 /**
  * Builds FHIR Parameters resource for bulk submit request.
- * @param options
+ *
+ * @param options - Bulk submit options including submission details.
+ * @returns The constructed FHIR Parameters resource.
  */
 function buildSubmitParameters(options: BulkSubmitOptions): Parameters {
   const parameter: ParametersParameter[] = [
@@ -106,7 +108,9 @@ function buildSubmitParameters(options: BulkSubmitOptions): Parameters {
 
 /**
  * Extracts result from Parameters response.
- * @param params
+ *
+ * @param params - The FHIR Parameters response from the server.
+ * @returns The extracted submission ID and status.
  */
 function parseSubmitResponse(params: Parameters): BulkSubmitResult {
   let submissionId = "";

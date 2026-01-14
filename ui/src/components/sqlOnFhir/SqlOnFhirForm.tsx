@@ -51,13 +51,15 @@ const EXAMPLE_VIEW_DEFINITION = `{
 }`;
 
 /**
+ * Form for selecting and executing ViewDefinitions.
  *
- * @param root0
- * @param root0.onExecute
- * @param root0.onSaveToServer
- * @param root0.isExecuting
- * @param root0.isSaving
- * @param root0.disabled
+ * @param root0 - The component props.
+ * @param root0.onExecute - Callback when view is executed.
+ * @param root0.onSaveToServer - Callback to save view definition to server.
+ * @param root0.isExecuting - Whether execution is in progress.
+ * @param root0.isSaving - Whether save is in progress.
+ * @param root0.disabled - Whether the form is disabled.
+ * @returns The SQL on FHIR form component.
  */
 export function SqlOnFhirForm({
   onExecute,

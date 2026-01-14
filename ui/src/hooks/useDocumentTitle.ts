@@ -18,11 +18,7 @@ export function useDocumentTitle() {
 
   useEffect(() => {
     const serverName = capabilities?.serverName;
-    if (serverName) {
-      document.title = serverName;
-    } else {
-      // Fall back to the hostname.
-      document.title = window.location.hostname;
-    }
+    // Use server name if available, otherwise fall back to hostname.
+    document.title = serverName ? serverName : window.location.hostname;
   }, [capabilities?.serverName]);
 }

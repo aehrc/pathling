@@ -19,7 +19,9 @@ import type { ViewRunRequest } from "../types/hooks";
 import type { ViewJob } from "../types/viewJob";
 
 /**
+ * Page component for executing SQL on FHIR ViewDefinitions.
  *
+ * @returns The SQL on FHIR page component.
  */
 export function SqlOnFhir() {
   const { fhirBaseUrl } = config;

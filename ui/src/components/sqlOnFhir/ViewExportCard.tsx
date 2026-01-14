@@ -36,7 +36,9 @@ const STATUS_LABELS: Record<ViewExportJob["status"], string> = {
 
 /**
  * Extracts the filename from a result URL's query parameters.
- * @param url
+ *
+ * @param url - The URL to extract the filename from.
+ * @returns The extracted filename or "unknown" if not found.
  */
 function getFilenameFromUrl(url: string): string {
   const params = new URLSearchParams(new URL(url).search);
@@ -44,11 +46,13 @@ function getFilenameFromUrl(url: string): string {
 }
 
 /**
+ * Displays export job status with progress and download links.
  *
- * @param root0
- * @param root0.job
- * @param root0.onCancel
- * @param root0.onDownload
+ * @param root0 - The component props.
+ * @param root0.job - The view export job to display.
+ * @param root0.onCancel - Callback to cancel the export.
+ * @param root0.onDownload - Callback to download an output file.
+ * @returns The view export card component.
  */
 export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProps) {
   const isActive = job.status === "pending" || job.status === "in_progress";

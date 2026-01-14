@@ -19,8 +19,9 @@ interface State {
 
 export class ErrorBoundary extends Component<Props, State> {
   /**
+   * Creates a new ErrorBoundary instance.
    *
-   * @param props
+   * @param props - The component props.
    */
   constructor(props: Props) {
     super(props);
@@ -28,15 +29,18 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   /**
+   * Updates state when an error is caught.
    *
+   * @returns The new state with hasError set to true.
    */
   static getDerivedStateFromError(): State {
     return { hasError: true };
   }
 
   /**
+   * Handles caught errors by showing a toast notification.
    *
-   * @param error
+   * @param error - The error that was caught.
    */
   componentDidCatch(error: Error): void {
     const showToast = getGlobalShowToast();
@@ -46,7 +50,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   /**
+   * Renders the children or resets on error.
    *
+   * @returns The children components.
    */
   render(): ReactNode {
     if (this.state.hasError) {

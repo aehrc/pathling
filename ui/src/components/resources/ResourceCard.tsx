@@ -30,7 +30,9 @@ interface ResourceCardProps {
 
 /**
  * Extracts a human-readable summary from a FHIR resource based on its type.
- * @param resource
+ *
+ * @param resource - The FHIR resource to summarise.
+ * @returns A human-readable summary string or null if not available.
  */
 function getResourceSummary(resource: Resource): string | null {
   const r = resource as unknown as Record<string, unknown>;
@@ -109,11 +111,13 @@ function getResourceSummary(resource: Resource): string | null {
 }
 
 /**
+ * Displays a single FHIR resource with expandable JSON view.
  *
- * @param root0
- * @param root0.resource
- * @param root0.fhirBaseUrl
- * @param root0.onDelete
+ * @param root0 - The component props.
+ * @param root0.resource - The FHIR resource to display.
+ * @param root0.fhirBaseUrl - Base URL of the FHIR server.
+ * @param root0.onDelete - Callback when delete is requested.
+ * @returns The resource card component.
  */
 export function ResourceCard({ resource, fhirBaseUrl, onDelete }: ResourceCardProps) {
   const [expanded, setExpanded] = useState(false);

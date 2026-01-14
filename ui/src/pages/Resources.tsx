@@ -27,7 +27,9 @@ interface DeleteTarget {
 }
 
 /**
+ * Page component for browsing and managing FHIR resources.
  *
+ * @returns The resources page component.
  */
 export function Resources() {
   const { fhirBaseUrl } = config;

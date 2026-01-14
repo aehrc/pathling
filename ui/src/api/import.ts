@@ -85,7 +85,9 @@ export async function importKickOff(
 
 /**
  * Builds a FHIR Parameters resource for the import-pnp operation.
- * @param options
+ *
+ * @param options - Import PnP options including export URL and settings.
+ * @returns The constructed FHIR Parameters resource.
  */
 function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
   const parameters: Parameters = {

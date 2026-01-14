@@ -17,11 +17,13 @@ interface BulkSubmitMonitorFormProps {
 }
 
 /**
+ * Form for entering and monitoring existing bulk submissions.
  *
- * @param root0
- * @param root0.onMonitor
- * @param root0.isSubmitting
- * @param root0.disabled
+ * @param root0 - The component props.
+ * @param root0.onMonitor - Callback when monitoring is requested.
+ * @param root0.isSubmitting - Whether a submission is in progress.
+ * @param root0.disabled - Whether the form is disabled.
+ * @returns The bulk submit monitor form component.
  */
 export function BulkSubmitMonitorForm({
   onMonitor,

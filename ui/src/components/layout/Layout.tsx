@@ -118,7 +118,9 @@ function getHostname(url: string): string {
 }
 
 /**
+ * Main application layout with navigation header and content area.
  *
+ * @returns The layout component with header and outlet.
  */
 export function Layout() {
   const location = useLocation();

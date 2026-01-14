@@ -33,7 +33,9 @@ const SMART_SERVICE_CODE = "SMART-on-FHIR";
 
 /**
  * Parses a CapabilityStatement to extract server capabilities.
- * @param capability
+ *
+ * @param capability - The FHIR CapabilityStatement resource.
+ * @returns Parsed server capabilities object.
  */
 function parseCapabilities(
   capability: CapabilityStatement,

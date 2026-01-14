@@ -37,12 +37,14 @@ interface ImportFormProps {
 }
 
 /**
+ * Form for configuring and starting a bulk data import.
  *
- * @param root0
- * @param root0.onSubmit
- * @param root0.isSubmitting
- * @param root0.disabled
- * @param root0.resourceTypes
+ * @param root0 - The component props.
+ * @param root0.onSubmit - Callback when import is submitted.
+ * @param root0.isSubmitting - Whether an import is in progress.
+ * @param root0.disabled - Whether the form is disabled.
+ * @param root0.resourceTypes - Available resource types for selection.
+ * @returns The import form component.
  */
 export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: ImportFormProps) {
   const idCounter = useRef(1);

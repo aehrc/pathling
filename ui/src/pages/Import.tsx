@@ -20,7 +20,9 @@ import type { ImportJob, ImportRequest } from "../types/import";
 import type { ImportPnpRequest } from "../types/importPnp";
 
 /**
+ * Page component for managing bulk data imports.
  *
+ * @returns The import page component.
  */
 export function Import() {
   const { fhirBaseUrl } = config;

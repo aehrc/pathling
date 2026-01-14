@@ -11,7 +11,6 @@ import { DEFAULT_CLIENT_ID, getEnvClientId, getScope } from "../config";
 import type { CapabilityStatement } from "fhir/r4";
 import type Client from "fhirclient/lib/Client";
 
-
 export { DEFAULT_CLIENT_ID };
 
 const SMART_SERVICE_SYSTEM =
@@ -103,7 +102,9 @@ export interface OperationCapability {
 
 /**
  * Fetches the CapabilityStatement and extracts server information.
- * @param fhirBaseUrl
+ *
+ * @param fhirBaseUrl - The base URL of the FHIR server.
+ * @returns Server capabilities including auth requirements.
  */
 export async function checkServerCapabilities(
   fhirBaseUrl: string,
@@ -249,7 +250,8 @@ export async function initiateAuth(fhirBaseUrl: string): Promise<void> {
 
 /**
  * Gets the stored return URL from before authentication without clearing it.
- * Returns "/" if no URL was stored.
+ *
+ * @returns The stored return URL or "/" if none was stored.
  */
 export function getReturnUrl(): string {
   return sessionStorage.getItem(RETURN_URL_KEY) || "/";
@@ -264,6 +266,8 @@ export function clearReturnUrl(): void {
 
 /**
  * Completes the SMART on FHIR authorisation flow after redirect.
+ *
+ * @returns The authenticated FHIR client.
  */
 export async function completeAuth(): Promise<Client> {
   return FHIR.oauth2.ready();
@@ -271,6 +275,8 @@ export async function completeAuth(): Promise<Client> {
 
 /**
  * Checks if there is an existing SMART session.
+ *
+ * @returns True if a session exists, false otherwise.
  */
 export function hasExistingSession(): boolean {
   return sessionStorage.getItem("SMART_KEY") !== null;

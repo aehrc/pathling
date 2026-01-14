@@ -14,7 +14,6 @@ import { IMPORT_FORMATS } from "../../types/import";
 import type { ImportFormat, SaveMode } from "../../types/import";
 import type { ExportType, ImportPnpRequest } from "../../types/importPnp";
 
-
 interface ImportPnpFormProps {
   onSubmit: (request: ImportPnpRequest) => void;
   isSubmitting: boolean;
@@ -22,11 +21,13 @@ interface ImportPnpFormProps {
 }
 
 /**
+ * Form for configuring and starting a ping-and-pull import.
  *
- * @param root0
- * @param root0.onSubmit
- * @param root0.isSubmitting
- * @param root0.disabled
+ * @param root0 - The component props.
+ * @param root0.onSubmit - Callback when import is submitted.
+ * @param root0.isSubmitting - Whether an import is in progress.
+ * @param root0.disabled - Whether the form is disabled.
+ * @returns The import PnP form component.
  */
 export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFormProps) {
   const [exportUrl, setExportUrl] = useState("");

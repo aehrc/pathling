@@ -43,9 +43,9 @@ export interface UseAsyncJobResult<TRequest, TResult> {
  *
  * @param buildOptions - Function that builds executor options from a request object.
  * @param callbacks - Optional callbacks for progress, completion, and error events.
- * @param callbacks.onProgress
- * @param callbacks.onComplete
- * @param callbacks.onError
+ * @param callbacks.onProgress - Called when progress is updated.
+ * @param callbacks.onComplete - Called when the job completes successfully.
+ * @param callbacks.onError - Called when the job fails with an error.
  * @returns Hook result with status, result, and control functions.
  */
 export function useAsyncJob<TRequest, TKickOffResult, TStatusResult, TResult>(

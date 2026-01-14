@@ -17,7 +17,9 @@ import { useBulkSubmitMonitor, useServerCapabilities } from "../hooks";
 import type { SubmitterIdentifier } from "../types/bulkSubmit";
 
 /**
+ * Page component for monitoring bulk submit operations.
  *
+ * @returns The bulk submit page component.
  */
 export function BulkSubmit() {
   const { fhirBaseUrl } = config;

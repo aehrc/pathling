@@ -82,11 +82,13 @@ function jobReducer(state: JobState, action: JobAction): JobState {
 }
 
 /**
+ * Provider component for job state management.
  *
- * @param root0
- * @param root0.children
+ * @param root0 - The component props.
+ * @param root0.children - The child components to render.
+ * @returns The provider component wrapping children.
  */
-export function JobProvider({ children }: { children: ReactNode }) {
+export function JobProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [state, dispatch] = useReducer(jobReducer, { jobs: [] });
 
   const addJob = (job: Omit<Job, "createdAt">) => {
@@ -200,7 +202,10 @@ export function JobProvider({ children }: { children: ReactNode }) {
 }
 
 /**
+ * Hook for accessing the job context.
  *
+ * @returns The job context value.
+ * @throws Error if used outside of a JobProvider.
  */
 export function useJobs(): JobContextValue {
   const context = use(JobContext);

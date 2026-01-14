@@ -22,10 +22,12 @@ const FORMAT_OPTIONS: { value: ViewExportFormat; label: string }[] = [
 ];
 
 /**
+ * Controls for selecting export format and triggering export.
  *
- * @param root0
- * @param root0.onExport
- * @param root0.disabled
+ * @param root0 - The component props.
+ * @param root0.onExport - Callback when export is triggered.
+ * @param root0.disabled - Whether the controls are disabled.
+ * @returns The export controls component.
  */
 export function ExportControls({ onExport, disabled }: ExportControlsProps) {
   const [format, setFormat] = useState<ViewExportFormat>("ndjson");

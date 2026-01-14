@@ -33,12 +33,14 @@ interface ResourceSearchFormProps {
 }
 
 /**
+ * Form for searching FHIR resources with FHIRPath filters.
  *
- * @param root0
- * @param root0.onSubmit
- * @param root0.isLoading
- * @param root0.disabled
- * @param root0.resourceTypes
+ * @param root0 - The component props.
+ * @param root0.onSubmit - Callback when search is submitted.
+ * @param root0.isLoading - Whether search is in progress.
+ * @param root0.disabled - Whether the form is disabled.
+ * @param root0.resourceTypes - Available resource types for selection.
+ * @returns The resource search form component.
  */
 export function ResourceSearchForm({
   onSubmit,

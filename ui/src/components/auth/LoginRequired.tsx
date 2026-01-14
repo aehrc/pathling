@@ -14,7 +14,9 @@ import { useServerCapabilities } from "../../hooks/useServerCapabilities";
 import { initiateAuth } from "../../services/auth";
 
 /**
+ * Displays a login prompt when authentication is required.
  *
+ * @returns The login required component.
  */
 export function LoginRequired() {
   const { fhirBaseUrl } = config;

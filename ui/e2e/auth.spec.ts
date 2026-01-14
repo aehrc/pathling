@@ -16,7 +16,8 @@ import {
 /**
  * Sets up mocks for a server that requires authentication.
  * Mocks the metadata endpoint to indicate SMART-on-FHIR is required.
- * @param page
+ *
+ * @param page - The Playwright page object.
  */
 async function setupAuthRequiredMocks(page: Page) {
   await page.route("**/metadata", async (route) => {
@@ -38,7 +39,8 @@ async function setupAuthRequiredMocks(page: Page) {
 
 /**
  * Sets up mocks for a server that does not require authentication.
- * @param page
+ *
+ * @param page - The Playwright page object.
  */
 async function setupNoAuthMocks(page: Page) {
   await page.route("**/metadata", async (route) => {

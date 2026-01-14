@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import { createContext, type ReactNode, use, useEffect, useState } from "react";
+import { createContext, type ReactNode, use, useCallback, useEffect, useState } from "react";
 
 import { registerClearSession } from "../main";
 
@@ -32,11 +32,13 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
+ * Provider component for SMART on FHIR authentication state.
  *
- * @param root0
- * @param root0.children
+ * @param root0 - The component props.
+ * @param root0.children - The child components to render.
+ * @returns The provider component wrapping children.
  */
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [state, setState] = useState<AuthState>({
     isAuthenticated: false,
     isLoading: false,
@@ -86,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const clearSessionAndPromptLogin = () => {
+  const clearSessionAndPromptLogin = useCallback(() => {
     setState((prev) => ({
       ...prev,
       isAuthenticated: false,
@@ -96,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionExpired: true,
     }));
     sessionStorage.removeItem("SMART_KEY");
-  };
+  }, []);
 
   const logout = () => {
     setState((prev) => ({
@@ -137,7 +139,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 /**
+ * Hook for accessing the authentication context.
  *
+ * @returns The authentication context value.
+ * @throws Error if used outside of an AuthProvider.
  */
 export function useAuth(): AuthContextValue {
   const context = use(AuthContext);

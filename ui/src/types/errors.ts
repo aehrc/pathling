@@ -10,8 +10,9 @@
  */
 export class UnauthorizedError extends Error {
   /**
+   * Creates a new UnauthorizedError instance.
    *
-   * @param message
+   * @param message - The error message.
    */
   constructor(message: string = "Session expired or unauthorized") {
     super(message);
@@ -25,8 +26,9 @@ export class UnauthorizedError extends Error {
  */
 export class NotFoundError extends Error {
   /**
+   * Creates a new NotFoundError instance.
    *
-   * @param message
+   * @param message - The error message.
    */
   constructor(message: string = "Resource not found") {
     super(message);

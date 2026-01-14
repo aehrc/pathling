@@ -28,7 +28,9 @@ interface SqlOnFhirResultTableProps {
 
 /**
  * Formats a cell value for display.
- * @param value
+ *
+ * @param value - The value to format.
+ * @returns The formatted string representation.
  */
 function formatCellValue(value: unknown): string {
   if (value === null || value === undefined) {
@@ -41,18 +43,20 @@ function formatCellValue(value: unknown): string {
 }
 
 /**
+ * Displays ViewDefinition execution results in a table format.
  *
- * @param root0
- * @param root0.rows
- * @param root0.columns
- * @param root0.isLoading
- * @param root0.error
- * @param root0.hasExecuted
- * @param root0.onExport
- * @param root0.exportJob
- * @param root0.onDownload
- * @param root0.onCancelExport
- * @param root0.isExporting
+ * @param root0 - The component props.
+ * @param root0.rows - Array of result rows.
+ * @param root0.columns - Column names for the table header.
+ * @param root0.isLoading - Whether execution is in progress.
+ * @param root0.error - Error from failed execution, if any.
+ * @param root0.hasExecuted - Whether execution has been attempted.
+ * @param root0.onExport - Callback when export is triggered.
+ * @param root0.exportJob - Current export job, if any.
+ * @param root0.onDownload - Callback to download export file.
+ * @param root0.onCancelExport - Callback to cancel export.
+ * @param root0.isExporting - Whether export is in progress.
+ * @returns The SQL on FHIR result table component.
  */
 export function SqlOnFhirResultTable({
   rows,

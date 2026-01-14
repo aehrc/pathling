@@ -35,18 +35,22 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 let globalShowToast: ((title: string, description?: string) => void) | null = null;
 
 /**
+ * Returns the global showToast function for use in non-React contexts.
  *
+ * @returns The showToast function or null if provider not mounted.
  */
 export function getGlobalShowToast() {
   return globalShowToast;
 }
 
 /**
+ * Provider component for toast notifications.
  *
- * @param root0
- * @param root0.children
+ * @param root0 - The component props.
+ * @param root0.children - The child components to render.
+ * @returns The provider component wrapping children.
  */
-export function ToastProvider({ children }: { children: ReactNode }) {
+export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [toasts, setToasts] = useState<ToastData[]>([]);
   const toastIdCounter = useRef(0);
 
@@ -103,7 +107,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 }
 
 /**
+ * Hook for accessing the toast context.
  *
+ * @returns The toast context value.
+ * @throws Error if used outside of a ToastProvider.
  */
 export function useToast(): ToastContextValue {
   const context = use(ToastContext);

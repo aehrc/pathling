@@ -22,7 +22,9 @@ import { config } from "../config";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 
 /**
+ * Displays server information from the CapabilityStatement.
  *
+ * @returns The dashboard page component.
  */
 export function Dashboard() {
   const { fhirBaseUrl } = config;

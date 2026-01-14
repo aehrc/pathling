@@ -19,7 +19,8 @@ import {
 /**
  * Sets up API mocks for standard functionality tests.
  * Mocks capabilities without auth, ViewDefinition search, and view run.
- * @param page
+ *
+ * @param page - The Playwright page object.
  */
 async function setupStandardMocks(page: import("@playwright/test").Page) {
   // Mock the metadata endpoint.
@@ -71,9 +72,10 @@ async function setupStandardMocks(page: import("@playwright/test").Page) {
 
 /**
  * Sets up mocks with delayed view run response to observe in-progress states.
- * @param page
- * @param options
- * @param options.delayMs
+ *
+ * @param page - The Playwright page object.
+ * @param options - Configuration options for the mock.
+ * @param options.delayMs - Delay in milliseconds before responding.
  */
 async function setupDelayedViewRunMocks(
   page: import("@playwright/test").Page,

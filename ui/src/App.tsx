@@ -16,7 +16,9 @@ import { Resources } from "./pages/Resources";
 import { SqlOnFhir } from "./pages/SqlOnFhir";
 
 /**
+ * Main application component with route definitions.
  *
+ * @returns The application component with routing.
  */
 export default function App() {
   return (

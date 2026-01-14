@@ -25,10 +25,12 @@ const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
 ];
 
 /**
+ * Form for configuring and starting a bulk data export.
  *
- * @param root0
- * @param root0.onSubmit
- * @param root0.resourceTypes
+ * @param root0 - The component props.
+ * @param root0.onSubmit - Callback when export is submitted.
+ * @param root0.resourceTypes - Available resource types for selection.
+ * @returns The export form component.
  */
 export function ExportForm({ onSubmit, resourceTypes }: Readonly<ExportFormProps>) {
   const [level, setLevel] = useState<ExportLevel>("system");

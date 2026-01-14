@@ -17,7 +17,8 @@ const TEST_JOB_ID = "export-job-123";
 /**
  * Sets up standard API mocks for export page tests.
  * Mocks capabilities without auth and provides immediate job completion.
- * @param page
+ *
+ * @param page - The Playwright page object.
  */
 async function setupStandardMocks(page: import("@playwright/test").Page) {
   // Mock the metadata endpoint.
@@ -67,10 +68,11 @@ async function setupStandardMocks(page: import("@playwright/test").Page) {
 
 /**
  * Sets up mocks with delayed job completion to observe progress states.
- * @param page
- * @param options
- * @param options.pollCount
- * @param options.progress
+ *
+ * @param page - The Playwright page object.
+ * @param options - Configuration options for the mock.
+ * @param options.pollCount - Number of poll attempts before job completes.
+ * @param options.progress - Progress string to return during polling.
  */
 async function setupDelayedJobMocks(
   page: import("@playwright/test").Page,
@@ -105,25 +107,24 @@ async function setupDelayedJobMocks(
   await page.route("**/$job*", async (route) => {
     if (route.request().method() === "GET") {
       pollAttempts++;
-      if (pollAttempts < pollCount) {
-        // Return in-progress with progress header.
-        await route.fulfill({
-          status: 202,
-          contentType: "application/fhir+json",
-          headers: {
-            "X-Progress": progress,
-            "Access-Control-Expose-Headers": "X-Progress",
-          },
-          body: "",
-        });
-      } else {
-        // Return complete with manifest.
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockExportManifest),
-        });
-      }
+      // Return in-progress or complete based on poll count.
+      await route.fulfill(
+        pollAttempts < pollCount
+          ? {
+              status: 202,
+              contentType: "application/fhir+json",
+              headers: {
+                "X-Progress": progress,
+                "Access-Control-Expose-Headers": "X-Progress",
+              },
+              body: "",
+            }
+          : {
+              status: 200,
+              contentType: "application/fhir+json",
+              body: JSON.stringify(mockExportManifest),
+            },
+      );
     } else if (route.request().method() === "DELETE") {
       await route.fulfill({ status: 204, body: "" });
     }

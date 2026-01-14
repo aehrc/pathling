@@ -18,15 +18,17 @@ interface DeleteConfirmationDialogProps {
 }
 
 /**
+ * Confirmation dialog for deleting a FHIR resource.
  *
- * @param root0
- * @param root0.open
- * @param root0.onOpenChange
- * @param root0.resourceType
- * @param root0.resourceId
- * @param root0.resourceSummary
- * @param root0.onConfirm
- * @param root0.isDeleting
+ * @param root0 - The component props.
+ * @param root0.open - Whether the dialog is open.
+ * @param root0.onOpenChange - Callback when dialog open state changes.
+ * @param root0.resourceType - Type of the resource to delete.
+ * @param root0.resourceId - ID of the resource to delete.
+ * @param root0.resourceSummary - Human-readable summary of the resource.
+ * @param root0.onConfirm - Callback when deletion is confirmed.
+ * @param root0.isDeleting - Whether deletion is in progress.
+ * @returns The delete confirmation dialog component.
  */
 export function DeleteConfirmationDialog({
   open,

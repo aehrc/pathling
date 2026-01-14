@@ -22,15 +22,17 @@ interface ResourceResultListProps {
 }
 
 /**
+ * Displays search results as a list of resource cards.
  *
- * @param root0
- * @param root0.resources
- * @param root0.total
- * @param root0.isLoading
- * @param root0.error
- * @param root0.hasSearched
- * @param root0.fhirBaseUrl
- * @param root0.onDelete
+ * @param root0 - The component props.
+ * @param root0.resources - Array of FHIR resources to display.
+ * @param root0.total - Total count from server (may exceed displayed count).
+ * @param root0.isLoading - Whether search is in progress.
+ * @param root0.error - Error from failed search, if any.
+ * @param root0.hasSearched - Whether a search has been executed.
+ * @param root0.fhirBaseUrl - Base URL of the FHIR server.
+ * @param root0.onDelete - Callback when delete is requested.
+ * @returns The resource result list component.
  */
 export function ResourceResultList({
   resources,

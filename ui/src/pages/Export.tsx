@@ -25,7 +25,9 @@ interface ExportJob {
 }
 
 /**
+ * Page component for managing bulk data exports.
  *
+ * @returns The export page component.
  */
 export function Export() {
   const { fhirBaseUrl } = config;
