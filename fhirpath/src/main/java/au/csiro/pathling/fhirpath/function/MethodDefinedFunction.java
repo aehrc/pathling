@@ -30,6 +30,8 @@ import java.util.stream.Stream;
 /**
  * A {@link NamedFunction} that is defined using a static method.
  *
+ * @param name the name of the function
+ * @param method the method that implements the function
  * @author Piotr Szul
  * @author John Grimes
  */

@@ -44,6 +44,8 @@ import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
  * Provides access to the FHIR terminology UDFs, including overloads where this makes it more
  * convenient to use them.
  */
+// Method names use snake_case to match SQL function naming conventions.
+@SuppressWarnings("checkstyle:MethodName")
 public interface Terminology {
 
   /**

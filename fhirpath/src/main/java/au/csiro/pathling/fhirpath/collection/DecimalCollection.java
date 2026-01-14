@@ -154,6 +154,8 @@ public class DecimalCollection extends Collection
   }
 
   /**
+   * Gets the decimal data type used for representing decimal values in Spark.
+   *
    * @return the {@link org.apache.spark.sql.types.DataType} used for representing decimal values in
    *     Spark
    */

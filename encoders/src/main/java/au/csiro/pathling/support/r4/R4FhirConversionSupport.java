@@ -62,21 +62,21 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
         .collect(Collectors.toList());
   }
 
-  private static boolean isURNReference(@Nonnull final Reference reference) {
+  private static boolean isUrnReference(@Nonnull final Reference reference) {
     return reference.hasReference() && reference.getReference().startsWith("urn:");
   }
 
-  static void resolveURNReference(@Nonnull final Base base) {
+  static void resolveUrnReference(@Nonnull final Base base) {
     if (base instanceof final Reference reference) {
       final Resource resource = (Resource) reference.getResource();
-      if (isURNReference(reference) && resource != null && resource.hasIdElement()) {
+      if (isUrnReference(reference) && resource != null && resource.hasIdElement()) {
         reference.setReference(resource.getIdElement().getValue());
       }
     }
   }
 
-  private static void resolveURNReferences(@Nonnull final Resource resource) {
-    FhirTraversal.processRecursive(resource, R4FhirConversionSupport::resolveURNReference);
+  private static void resolveUrnReferences(@Nonnull final Resource resource) {
+    FhirTraversal.processRecursive(resource, R4FhirConversionSupport::resolveUrnReference);
   }
 
   /** {@inheritDoc} */
@@ -86,7 +86,7 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
     final Bundle r4Bundle = (Bundle) bundle;
     r4Bundle.getEntry().stream()
         .map(Bundle.BundleEntryComponent::getResource)
-        .forEach(R4FhirConversionSupport::resolveURNReferences);
+        .forEach(R4FhirConversionSupport::resolveUrnReferences);
     return r4Bundle;
   }
 }

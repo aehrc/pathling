@@ -59,6 +59,8 @@ public interface TerminologyOperation<R, T> {
   T extractResult(@Nonnull final R response);
 
   /**
+   * Returns the fallback result for invalid requests.
+   *
    * @return the result that should be returned to the user if the terminology server returns a 400
    *     series response
    */

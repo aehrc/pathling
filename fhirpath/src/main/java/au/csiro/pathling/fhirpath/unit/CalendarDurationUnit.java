@@ -59,7 +59,7 @@ import org.apache.commons.lang3.tuple.Pair;
  *   <li>1 month = 30 days (does not account for varying month lengths)
  * </ul>
  *
- * These approximations are used for conversion purposes only, not for calendar-aware arithmetic.
+ * <p>These approximations are used for conversion purposes only, not for calendar-aware arithmetic.
  */
 public enum CalendarDurationUnit implements FhirPathUnit {
   /**

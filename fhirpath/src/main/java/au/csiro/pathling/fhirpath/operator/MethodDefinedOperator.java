@@ -28,12 +28,15 @@ import java.util.stream.Stream;
 /**
  * A {@link FhirPathBinaryOperator} that is defined using a static method.
  *
+ * @param method the method that implements the operator
  * @author Piotr Szul
  * @author John Grimes
  */
 public record MethodDefinedOperator(Method method) implements FhirPathBinaryOperator {
 
   /**
+   * Invokes the operator with the specified input.
+   *
    * @param operatorInput the input to the operator
    * @return the result of invoking the method defined by this operator
    * @throws MethodInvocationError if the method cannot be invoked due to an error

@@ -37,12 +37,16 @@ import org.apache.spark.sql.Row;
 public interface QueryableDataSource extends DataSource {
 
   /**
+   * Gets a builder capable of writing this data source using various methods.
+   *
    * @return a builder capable of writing this data source using various methods
    */
   @Nonnull
   DataSinkBuilder write();
 
   /**
+   * Creates a view query for the specified subject resource.
+   *
    * @param subjectResource the subject resource code
    * @return an executable {@link FhirViewQuery}
    */
@@ -50,6 +54,8 @@ public interface QueryableDataSource extends DataSource {
   FhirViewQuery view(@Nullable final String subjectResource);
 
   /**
+   * Creates a view query for the specified FHIR view.
+   *
    * @param view a {@link FhirView} to be executed
    * @return an executable {@link FhirViewQuery}
    */

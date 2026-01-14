@@ -25,12 +25,16 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public interface ElementDefinition extends ChildDefinition {
 
   /**
+   * Gets the name of this element.
+   *
    * @return the name of this element
    */
   @Nonnull
   String getElementName();
 
   /**
+   * Gets the FHIR type of this element.
+   *
    * @return The {@link FHIRDefinedType} that corresponds to the type of this element. Not all
    *     elements have a type, e.g. polymorphic elements.
    */
@@ -38,6 +42,8 @@ public interface ElementDefinition extends ChildDefinition {
   Optional<FHIRDefinedType> getFhirType();
 
   /**
+   * Checks if this element is a choice element.
+   *
    * @return true if this element is a choice element, false otherwise
    */
   default boolean isChoiceElement() {

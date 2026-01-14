@@ -48,12 +48,16 @@ public interface Numeric {
   Function<Numeric, Collection> getMathOperation(@Nonnull MathOperation operation);
 
   /**
+   * Gets the column representation for this numeric value.
+   *
    * @return a {@link Column} within the dataset containing the values of the nodes
    */
   @Nonnull
   ColumnRepresentation getColumn();
 
   /**
+   * Gets the numeric value column for use in math operations.
+   *
    * @return a {@link Column} that provides a value that can me used in math operations
    */
   @Nonnull

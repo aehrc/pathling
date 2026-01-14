@@ -41,7 +41,7 @@ class R4FhirConversionSupportTest {
     final IBaseResource referenceResource = new Patient().setId(new IdType("Patient", "1234"));
     final Reference urnReference =
         (Reference) new Reference().setReference("urn:uuid:1234").setResource(referenceResource);
-    R4FhirConversionSupport.resolveURNReference(urnReference);
+    R4FhirConversionSupport.resolveUrnReference(urnReference);
     assertEquals("Patient/1234", urnReference.getReference());
   }
 
@@ -50,21 +50,21 @@ class R4FhirConversionSupportTest {
     final IBaseResource referenceResource = new Patient();
     final Reference urnReference =
         (Reference) new Reference().setReference("urn:uuid:1234").setResource(referenceResource);
-    R4FhirConversionSupport.resolveURNReference(urnReference);
+    R4FhirConversionSupport.resolveUrnReference(urnReference);
     assertEquals("urn:uuid:1234", urnReference.getReference());
   }
 
   @Test
   void testKeepsUnresolvedNonURNReference() {
     final Reference urnReference = new Reference().setReference("Condition/2345");
-    R4FhirConversionSupport.resolveURNReference(urnReference);
+    R4FhirConversionSupport.resolveUrnReference(urnReference);
     assertEquals("Condition/2345", urnReference.getReference());
   }
 
   @Test
   void testKeepsUnresolvedURNReference() {
     final Reference urnReference = new Reference().setReference("urn:uuid:1234");
-    R4FhirConversionSupport.resolveURNReference(urnReference);
+    R4FhirConversionSupport.resolveUrnReference(urnReference);
     assertEquals("urn:uuid:1234", urnReference.getReference());
   }
 
@@ -72,7 +72,7 @@ class R4FhirConversionSupportTest {
   void testNoOpForNonReferences() {
     final StringType nonReference = new StringType("someString");
     final StringType nonReferenceCopy = nonReference.copy();
-    R4FhirConversionSupport.resolveURNReference(nonReference);
+    R4FhirConversionSupport.resolveUrnReference(nonReference);
     assertTrue(nonReferenceCopy.equalsDeep(nonReference), "Non-reference should not be modified");
   }
 }

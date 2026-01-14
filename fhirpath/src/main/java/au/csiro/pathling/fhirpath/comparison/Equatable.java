@@ -38,6 +38,8 @@ import org.apache.spark.sql.Column;
 public interface Equatable {
 
   /**
+   * Gets the comparator to use for equality comparisons.
+   *
    * @return the comparator to use for equality comparisons
    */
   @Nonnull

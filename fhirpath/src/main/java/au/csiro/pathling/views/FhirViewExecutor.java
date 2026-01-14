@@ -74,6 +74,8 @@ public class FhirViewExecutor {
   @Nonnull private final QueryConfiguration queryConfiguration;
 
   /**
+   * Constructs a new FhirViewExecutor.
+   *
    * @param fhirContext The FHIR context to use for the execution context
    * @param sparkSession The Spark session to use for the execution context
    * @param dataset The data source to use for the execution context
@@ -92,6 +94,8 @@ public class FhirViewExecutor {
   }
 
   /**
+   * Constructs a new FhirViewExecutor with default query configuration.
+   *
    * @param fhirContext The FHIR context to use for the execution context
    * @param sparkSession The Spark session to use for the execution context
    * @param dataset The data source to use for the execution context

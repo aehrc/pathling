@@ -66,7 +66,7 @@ import org.hl7.fhir.r4.model.UuidType;
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
  */
-@SuppressWarnings({"unused", "MissingJavadoc", "CheckStyle"})
+@SuppressWarnings({"unused", "MissingJavadocMethod", "checkstyle:MissingJavadocMethod"})
 @Setter
 @ResourceDef(
     name = "ViewDefinition",

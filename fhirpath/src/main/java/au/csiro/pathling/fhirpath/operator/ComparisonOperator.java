@@ -36,6 +36,8 @@ public class ComparisonOperator extends SameTypeBinaryOperator {
   @Nonnull private final ComparisonOperation type;
 
   /**
+   * Constructs a new ComparisonOperator.
+   *
    * @param type The type of operator
    */
   public ComparisonOperator(@Nonnull final ComparisonOperation type) {

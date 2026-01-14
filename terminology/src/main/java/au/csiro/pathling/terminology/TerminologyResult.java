@@ -39,7 +39,7 @@ public class TerminologyResult<T extends Serializable> implements Serializable {
   @Nullable T data;
 
   /** The ETag returned in the response that generated this value. */
-  @Nullable String eTag;
+  @Nullable String etag;
 
   /** The expiry time in milliseconds since the epoch. */
   @Nullable Long expires;

@@ -62,6 +62,8 @@ public class EmptyCollection extends Collection
   }
 
   /**
+   * Gets the singleton instance.
+   *
    * @return A singleton instance of this class
    */
   public static EmptyCollection getInstance() {

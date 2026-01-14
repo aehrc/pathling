@@ -41,6 +41,8 @@ public interface CollectionTransform extends Function<Collection, Collection> {
   }
 
   /**
+   * Converts this transform to a column transformation.
+   *
    * @param input the input collection
    * @return a function that applies the transformation and returns the column representation
    */

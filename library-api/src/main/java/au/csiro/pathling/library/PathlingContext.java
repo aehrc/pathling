@@ -109,7 +109,7 @@ public class PathlingContext {
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.queryConfiguration = queryConfiguration;
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
-    PathlingUdfConfigurer.registerUDFs(spark);
+    PathlingUdfConfigurer.registerUdfs(spark);
     gson = buildGson();
   }
 
@@ -397,7 +397,7 @@ public class PathlingContext {
    * Takes a dataframe with string representations of FHIR resources and encodes the resources of
    * the given type as a Spark dataframe.
    *
-   * @param stringResourcesDF the dataframe with the string representation of the resources.
+   * @param stringResourcesDf the dataframe with the string representation of the resources.
    * @param resourceName the name of the resources to encode.
    * @param inputMimeType the mime type of the encoding for the input strings.
    * @param maybeColumnName the name of the column in the input dataframe that contains the resource
@@ -406,18 +406,52 @@ public class PathlingContext {
    */
   @Nonnull
   public Dataset<Row> encode(
-      @Nonnull final Dataset<Row> stringResourcesDF,
+      @Nonnull final Dataset<Row> stringResourcesDf,
       @Nonnull final String resourceName,
       @Nonnull final String inputMimeType,
       @Nullable final String maybeColumnName) {
 
     final Dataset<String> stringResources =
-        (nonNull(maybeColumnName) ? stringResourcesDF.select(maybeColumnName) : stringResourcesDF)
+        (nonNull(maybeColumnName) ? stringResourcesDf.select(maybeColumnName) : stringResourcesDf)
             .as(Encoders.STRING());
 
     final RuntimeResourceDefinition definition =
         FhirEncoders.contextFor(fhirVersion).getResourceDefinition(resourceName);
     return encode(stringResources, definition.getImplementingClass(), inputMimeType).toDF();
+  }
+
+  /**
+   * Takes a dataframe with string representations of FHIR resources and encodes the resources of
+   * the given type as a Spark dataframe.
+   *
+   * @param stringResourcesDf the dataframe with the string representation of the resources. The
+   *     dataframe must have a single column of type string.
+   * @param resourceName the name of the resources to encode.
+   * @param inputMimeType the mime type of the encoding for the input strings.
+   * @return the dataframe with Spark encoded resources.
+   */
+  @Nonnull
+  public Dataset<Row> encode(
+      @Nonnull final Dataset<Row> stringResourcesDf,
+      @Nonnull final String resourceName,
+      @Nonnull final String inputMimeType) {
+
+    return encode(stringResourcesDf, resourceName, inputMimeType, null);
+  }
+
+  /**
+   * Takes a dataframe with JSON representations of FHIR resources and encodes the resources of the
+   * given type as a Spark dataframe.
+   *
+   * @param stringResourcesDf the dataframe with the JSON representation of the resources. The
+   *     dataframe must have a single column of type string.
+   * @param resourceName the name of the resources to encode.
+   * @return the dataframe with Spark encoded resources.
+   */
+  @Nonnull
+  public Dataset<Row> encode(
+      @Nonnull final Dataset<Row> stringResourcesDf, @Nonnull final String resourceName) {
+    return encode(stringResourcesDf, resourceName, FHIR_JSON);
   }
 
   /**
@@ -451,40 +485,6 @@ public class PathlingContext {
   }
 
   /**
-   * Takes a dataframe with string representations of FHIR resources and encodes the resources of
-   * the given type as a Spark dataframe.
-   *
-   * @param stringResourcesDF the dataframe with the string representation of the resources. The
-   *     dataframe must have a single column of type string.
-   * @param resourceName the name of the resources to encode.
-   * @param inputMimeType the mime type of the encoding for the input strings.
-   * @return the dataframe with Spark encoded resources.
-   */
-  @Nonnull
-  public Dataset<Row> encode(
-      @Nonnull final Dataset<Row> stringResourcesDF,
-      @Nonnull final String resourceName,
-      @Nonnull final String inputMimeType) {
-
-    return encode(stringResourcesDF, resourceName, inputMimeType, null);
-  }
-
-  /**
-   * Takes a dataframe with JSON representations of FHIR resources and encodes the resources of the
-   * given type as a Spark dataframe.
-   *
-   * @param stringResourcesDF the dataframe with the JSON representation of the resources. The
-   *     dataframe must have a single column of type string.
-   * @param resourceName the name of the resources to encode.
-   * @return the dataframe with Spark encoded resources.
-   */
-  @Nonnull
-  public Dataset<Row> encode(
-      @Nonnull final Dataset<Row> stringResourcesDF, @Nonnull final String resourceName) {
-    return encode(stringResourcesDF, resourceName, FHIR_JSON);
-  }
-
-  /**
    * Takes a dataset with string representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataset.
    *
@@ -508,7 +508,7 @@ public class PathlingContext {
    * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataframe.
    *
-   * @param stringBundlesDF the dataframe with the string representation of the resources
+   * @param stringBundlesDf the dataframe with the string representation of the resources
    * @param resourceName the name of the resources to encode
    * @param inputMimeType the MIME type of the input strings
    * @param maybeColumnName the name of the column in the input dataframe that contains the bundle
@@ -517,13 +517,13 @@ public class PathlingContext {
    */
   @Nonnull
   public Dataset<Row> encodeBundle(
-      @Nonnull final Dataset<Row> stringBundlesDF,
+      @Nonnull final Dataset<Row> stringBundlesDf,
       @Nonnull final String resourceName,
       @Nonnull final String inputMimeType,
       @Nullable final String maybeColumnName) {
 
     final Dataset<String> stringResources =
-        (nonNull(maybeColumnName) ? stringBundlesDF.select(maybeColumnName) : stringBundlesDF)
+        (nonNull(maybeColumnName) ? stringBundlesDf.select(maybeColumnName) : stringBundlesDf)
             .as(Encoders.STRING());
 
     final RuntimeResourceDefinition definition =
@@ -535,7 +535,7 @@ public class PathlingContext {
    * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataframe.
    *
-   * @param stringBundlesDF the dataframe with the string representation of the bundles. The
+   * @param stringBundlesDf the dataframe with the string representation of the bundles. The
    *     dataframe must have a single column of type string.
    * @param resourceName the name of the resources to encode
    * @param inputMimeType the MIME type of the input strings
@@ -543,28 +543,30 @@ public class PathlingContext {
    */
   @Nonnull
   public Dataset<Row> encodeBundle(
-      @Nonnull final Dataset<Row> stringBundlesDF,
+      @Nonnull final Dataset<Row> stringBundlesDf,
       @Nonnull final String resourceName,
       @Nonnull final String inputMimeType) {
-    return encodeBundle(stringBundlesDF, resourceName, inputMimeType, null);
+    return encodeBundle(stringBundlesDf, resourceName, inputMimeType, null);
   }
 
   /**
    * Takes a dataframe with JSON representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataframe.
    *
-   * @param stringBundlesDF the dataframe with the JSON representation of the resources. The
+   * @param stringBundlesDf the dataframe with the JSON representation of the resources. The
    *     dataframe must have a single column of type string.
    * @param resourceName the name of the resources to encode
    * @return a Spark dataframe containing the encoded resources
    */
   @Nonnull
   public Dataset<Row> encodeBundle(
-      @Nonnull final Dataset<Row> stringBundlesDF, @Nonnull final String resourceName) {
-    return encodeBundle(stringBundlesDF, resourceName, FHIR_JSON);
+      @Nonnull final Dataset<Row> stringBundlesDf, @Nonnull final String resourceName) {
+    return encodeBundle(stringBundlesDf, resourceName, FHIR_JSON);
   }
 
   /**
+   * Creates a new DataSourceBuilder for reading FHIR data from various sources.
+   *
    * @return a new {@link DataSourceBuilder} that can be used to read from a variety of different
    *     data sources
    */
@@ -574,6 +576,8 @@ public class PathlingContext {
   }
 
   /**
+   * Gets the version of the Pathling library.
+   *
    * @return the version of the Pathling library
    */
   @Nonnull

@@ -65,8 +65,8 @@ public abstract class FileSource extends DatasetSource {
   @Nonnull protected final DataFrameReader reader;
 
   /**
-   * A function that transforms a {@link Dataset<Row>} containing raw source data of a specified
-   * resource type into a {@link Dataset<Row>} containing the imported data.
+   * A function that transforms a Dataset containing raw source data of a specified resource type
+   * into a Dataset containing the imported data.
    */
   @Nonnull protected final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer;
 
@@ -97,8 +97,8 @@ public abstract class FileSource extends DatasetSource {
    *     use the default naming convention
    * @param extension the file extension that this source expects for its source files
    * @param reader a {@link DataFrameReader} that can be used to read the source files
-   * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
-   *     of a specified resource type into a {@link Dataset<Row>} containing the imported data
+   * @param transformer a function that transforms a Dataset containing raw source data of a
+   *     specified resource type into a Dataset containing the imported data
    * @param additionalResourceTypeFilter filter to filter out specific resource types if desired
    */
   protected FileSource(
@@ -142,8 +142,8 @@ public abstract class FileSource extends DatasetSource {
    *     values are collections of file paths containing data for that resource type
    * @param extension the file extension that this source expects for its source files
    * @param reader a {@link DataFrameReader} that can be used to read the source files
-   * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
-   *     of a specified resource type into a {@link Dataset<Row>} containing the imported data
+   * @param transformer a function that transforms a Dataset containing raw source data of a
+   *     specified resource type into a Dataset containing the imported data
    * @param additionalResourceTypeFilter filter to filter out specific resource types if desired
    */
   protected FileSource(

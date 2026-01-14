@@ -44,11 +44,11 @@ public class TemporalComparator implements ColumnComparator, ElementWiseEquality
   private static final TemporalComparator TIME_COMPARATOR =
       new TemporalComparator(LowBoundaryForTime.FUNCTION_NAME, HighBoundaryForTime.FUNCTION_NAME);
 
-  /** The names of the UDFs to compute the low and high boundaries for a temporal value. */
-  @Nonnull private final String lowBoundaryUDF;
+  /** The name of the UDF to compute the low boundary for a temporal value. */
+  @Nonnull private final String lowBoundaryUdf;
 
-  /** The names of the UDFs to compute the low and high boundaries for a temporal value. */
-  @Nonnull private final String highBoundaryUDF;
+  /** The name of the UDF to compute the high boundary for a temporal value. */
+  @Nonnull private final String highBoundaryUdf;
 
   /** Record to hold the low and high boundary columns for a dateTime value. */
   private record Bounds(@Nonnull Column low, @Nonnull Column high) {}
@@ -82,7 +82,7 @@ public class TemporalComparator implements ColumnComparator, ElementWiseEquality
   @Nonnull
   private Bounds getBounds(@Nonnull final Column column) {
     return new Bounds(
-        functions.callUDF(lowBoundaryUDF, column), functions.callUDF(highBoundaryUDF, column));
+        functions.callUDF(lowBoundaryUdf, column), functions.callUDF(highBoundaryUdf, column));
   }
 
   @Nonnull

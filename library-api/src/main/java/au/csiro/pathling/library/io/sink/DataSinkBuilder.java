@@ -44,6 +44,8 @@ public class DataSinkBuilder {
   @Nonnull private SaveMode saveMode = SaveMode.ERROR_IF_EXISTS;
 
   /**
+   * Constructs a new DataSinkBuilder with the specified context and data source.
+   *
    * @param context the Pathling context to use for writing data
    * @param source the data source containing the data to write
    */

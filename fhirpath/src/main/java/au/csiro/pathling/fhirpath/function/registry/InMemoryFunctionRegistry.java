@@ -32,6 +32,8 @@ public class InMemoryFunctionRegistry implements FunctionRegistry {
   @Nonnull private final Map<String, NamedFunction> functions;
 
   /**
+   * Constructs a new InMemoryFunctionRegistry with the specified functions.
+   *
    * @param functions The map of functions to store
    */
   public InMemoryFunctionRegistry(@Nonnull final Map<String, NamedFunction> functions) {

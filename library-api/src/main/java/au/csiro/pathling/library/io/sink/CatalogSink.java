@@ -130,6 +130,7 @@ class CatalogSink implements DataSink {
             writeDataset(dataset, tableName, SaveMode.ERROR_IF_EXISTS);
           }
         }
+        default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
     }
     return new WriteDetails(fileInfos);
@@ -151,6 +152,8 @@ class CatalogSink implements DataSink {
   }
 
   /**
+   * Gets the table name for the given resource type.
+   *
    * @param resourceType the resource type to get the table name for
    * @return the name of the table for the given resource type, qualified by the specified schema if
    *     one is provided

@@ -29,10 +29,16 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class ParserPaths {
 
-  /** Special path used to pass values between visitor in the FHIRPath parser. */
+  /**
+   * Special path used to pass values between visitor in the FHIRPath parser.
+   *
+   * @param <T> the type of value contained in this path
+   */
   public interface ValuePath<T> extends FhirPath {
 
     /**
+     * Gets the value contained in this path.
+     *
      * @return the value of this path
      */
     T getValue();

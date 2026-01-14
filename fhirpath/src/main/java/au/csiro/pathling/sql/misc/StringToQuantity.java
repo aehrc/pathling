@@ -35,7 +35,7 @@ import org.apache.spark.sql.types.DataType;
  *   <li>Calendar duration units: {@code "value unit"} (e.g., {@code "4 days"}, {@code "1 year"})
  * </ul>
  *
- * Returns null if the string cannot be parsed as a valid quantity.
+ * <p>Returns null if the string cannot be parsed as a valid quantity.
  *
  * @see FhirPathQuantity#parse(String)
  * @see QuantityEncoding#encode(FhirPathQuantity)

@@ -68,7 +68,7 @@ public abstract class FhirConversionSupport implements Serializable {
    * Resolves URN references in the given bundle to relative references for resources defined in the
    * bundle. URN references to resources not defined in the bundle are left unchanged. The
    * references are resolved in-place, that is the input bundle is modified. The implementation may
-   * relay on {@link org.hl7.fhir.instance.model.api.IBaseReference@getResource()} being set the
+   * rely on {@link org.hl7.fhir.instance.model.api.IBaseReference#getResource()} being set to the
    * referenced resource.
    *
    * @param bundle the bundle

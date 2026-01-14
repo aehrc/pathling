@@ -86,6 +86,10 @@ public class QuantityValue {
    * <p>Provides methods to extract different representations of a Quantity (normalized, original,
    * literal) and to compare two {@link ValueWithUnit} instances using a provided comparator,
    * ensuring that the units are the same.
+   *
+   * @param value the value column
+   * @param unit the unit column
+   * @param system the system column
    */
   public record ValueWithUnit(
       @Nonnull Column value, @Nonnull Column unit, @Nullable Column system) {

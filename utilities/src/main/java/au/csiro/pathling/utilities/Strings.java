@@ -36,6 +36,8 @@ public abstract class Strings {
   private Strings() {}
 
   /**
+   * Removes surrounding single quotes from a string.
+   *
    * @param value a String surrounded by single quotes
    * @return the unquoted String
    */
@@ -45,6 +47,8 @@ public abstract class Strings {
   }
 
   /**
+   * Generates a short random string for use as a column alias.
+   *
    * @return a short, random String for use as a column alias
    */
   @Nonnull

@@ -42,7 +42,7 @@ public class PathlingUdfConfigurer implements SparkConfigurer {
    *
    * @param spark the Spark session to register the UDFs with
    */
-  public static void registerUDFs(@Nonnull final SparkSession spark) {
+  public static void registerUdfs(@Nonnull final SparkSession spark) {
     new PathlingUdfConfigurer().configure(spark);
   }
 }

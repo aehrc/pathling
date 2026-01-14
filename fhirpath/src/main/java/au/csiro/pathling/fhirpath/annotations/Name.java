@@ -29,6 +29,8 @@ import java.lang.annotation.RetentionPolicy;
 public @interface Name {
 
   /**
+   * Gets the name of the function.
+   *
    * @return The name of the function
    */
   String value();

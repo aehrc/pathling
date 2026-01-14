@@ -928,6 +928,7 @@
             <includeTestSourceDirectory>false</includeTestSourceDirectory>
             <consoleOutput>true</consoleOutput>
             <failsOnError>true</failsOnError>
+            <failOnViolation>true</failOnViolation>
           </configuration>
           <dependencies>
             <dependency>

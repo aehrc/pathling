@@ -25,6 +25,8 @@ public class NoSuchFunctionError extends Exception {
   @Serial private static final long serialVersionUID = 1L;
 
   /**
+   * Constructs a new NoSuchFunctionError with the specified message.
+   *
    * @param message The message to include in the exception
    */
   public NoSuchFunctionError(final String message) {

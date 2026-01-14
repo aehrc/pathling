@@ -30,6 +30,8 @@ import jakarta.annotation.Nonnull;
 public interface StringCoercible {
 
   /**
+   * Gets the String representation of this path.
+   *
    * @return a new {@link Collection} representing the String representation of this path
    */
   @Nonnull

@@ -53,6 +53,8 @@ final class NdjsonSink implements DataSink {
   @Nonnull private final UnaryOperator<String> fileNameMapper;
 
   /**
+   * Constructs an NdjsonSink with a custom file name mapper.
+   *
    * @param context the {@link PathlingContext} to use
    * @param path the path to write the NDJSON files to
    * @param saveMode the {@link SaveMode} to use
@@ -70,6 +72,8 @@ final class NdjsonSink implements DataSink {
   }
 
   /**
+   * Constructs an NdjsonSink with default file naming.
+   *
    * @param context the {@link PathlingContext} to use
    * @param path the path to write the NDJSON files to
    * @param saveMode the {@link SaveMode} to use
@@ -101,6 +105,7 @@ final class NdjsonSink implements DataSink {
             writeJsonStrings(jsonStrings, resultUrl, saveMode);
         case MERGE ->
             throw new UnsupportedOperationException("Merge operation is not supported for NDJSON");
+        default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
       // Remove the partitioned directory and replace it with the renamed partitioned files
       // <resource_type>.<partId>.ndjson, i.e. Patient.00000.ndjson

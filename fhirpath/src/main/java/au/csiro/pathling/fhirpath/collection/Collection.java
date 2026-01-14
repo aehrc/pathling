@@ -211,6 +211,8 @@ public class Collection implements Equatable {
   }
 
   /**
+   * Gets the collection class for a given FHIR type.
+   *
    * @param fhirType a {@link FHIRDefinedType}
    * @return The subtype of {@link Collection} that represents this type
    */
@@ -464,18 +466,6 @@ public class Collection implements Equatable {
   }
 
   /**
-   * Returns a new collection with the same type and representation, the colum value of which is
-   * computed by the lambda based on the current column value.
-   *
-   * @param columnMapper The lambda to use for mapping
-   * @return A new collection with new values determined by the specified lambda
-   */
-  @Nonnull
-  public Collection mapColumn(@Nonnull final UnaryOperator<Column> columnMapper) {
-    return map(cr -> cr.map(columnMapper));
-  }
-
-  /**
    * Returns a new collection with new values determined by the specified lambda.
    *
    * @param mapper The lambda to use for mapping
@@ -488,6 +478,18 @@ public class Collection implements Equatable {
       @Nonnull final ColumnTransform mapper,
       @Nonnull final Function<ColumnRepresentation, C> constructor) {
     return constructor.apply(mapper.apply(getColumn()));
+  }
+
+  /**
+   * Returns a new collection with the same type and representation, the colum value of which is
+   * computed by the lambda based on the current column value.
+   *
+   * @param columnMapper The lambda to use for mapping
+   * @return A new collection with new values determined by the specified lambda
+   */
+  @Nonnull
+  public Collection mapColumn(@Nonnull final UnaryOperator<Column> columnMapper) {
+    return map(cr -> cr.map(columnMapper));
   }
 
   /**
@@ -548,7 +550,7 @@ public class Collection implements Equatable {
   }
 
   /**
-   * This collection can be converted to the other collection type
+   * Checks if this collection can be converted to the other collection type.
    *
    * @param other the other collection
    * @return true if the other collection can be converted to the other collection type
@@ -606,6 +608,8 @@ public class Collection implements Equatable {
   }
 
   /**
+   * Gets a new BooleanCollection representing the Boolean representation of this path.
+   *
    * @return a new {@link Collection} representing the Boolean representation of this path
    */
   @Nonnull

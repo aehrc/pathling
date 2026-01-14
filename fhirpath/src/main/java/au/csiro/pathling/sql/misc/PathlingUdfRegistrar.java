@@ -16,14 +16,14 @@
  */
 package au.csiro.pathling.sql.misc;
 
-import au.csiro.pathling.sql.udf.AbstractUDFRegistrar;
+import au.csiro.pathling.sql.udf.AbstractUdfRegistrar;
 import jakarta.annotation.Nonnull;
 
 /** Registration of miscellaneous UDFs. */
-public class PathlingUdfRegistrar extends AbstractUDFRegistrar {
+public class PathlingUdfRegistrar extends AbstractUdfRegistrar {
 
   @Override
-  protected void registerUDFs(@Nonnull final UDFRegistrar udfRegistrar) {
+  protected void registerUdfs(@Nonnull final UdfRegistrar udfRegistrar) {
     udfRegistrar
         .register(new CodingToLiteral())
         .register(new DecimalToLiteral())

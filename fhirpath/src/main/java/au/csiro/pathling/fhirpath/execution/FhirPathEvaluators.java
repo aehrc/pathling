@@ -125,6 +125,11 @@ public class FhirPathEvaluators {
    * <p>The `create` method initializes a single resource evaluator by utilizing the provided
    * subject resource and dynamically supplied context paths, which guide the evaluation process for
    * FHIRPath expressions.
+   *
+   * @param fhirContext provides FHIR context information for FHIR model operations
+   * @param functionRegistry manages available FHIRPath functions during evaluation
+   * @param variables represents variables that can be used within the FHIRPath expressions
+   * @param dataSource the source containing the resource data to be queried
    */
   public record SingleEvaluatorProvider(
       @Nonnull FhirContext fhirContext,

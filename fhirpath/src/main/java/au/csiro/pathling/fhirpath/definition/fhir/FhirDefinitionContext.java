@@ -57,6 +57,20 @@ public class FhirDefinitionContext implements DefinitionContext {
   }
 
   /**
+   * Finds the resource definition for the given {@link ResourceType}.
+   *
+   * @param resourceType the FHIR resource type to find the definition for
+   * @return the corresponding {@link ResourceDefinition} for the resource type
+   */
+  @Nonnull
+  public ResourceDefinition findResourceDefinition(@Nonnull final ResourceType resourceType) {
+    final String resourceCode = resourceType.toCode();
+    final RuntimeResourceDefinition hapiDefinition =
+        fhirContext.getResourceDefinition(resourceCode);
+    return new FhirResourceDefinition(resourceType, requireNonNull(hapiDefinition));
+  }
+
+  /**
    * Attempts to resolve a resource code to a standard FHIR ResourceType.
    *
    * @param resourceCode the resource code to resolve
@@ -73,21 +87,10 @@ public class FhirDefinitionContext implements DefinitionContext {
   }
 
   /**
-   * Finds the resource definition for the given {@link ResourceType}.
+   * Builds an ElementDefinition from a HAPI child definition.
    *
-   * @param resourceType the FHIR resource type to find the definition for
-   * @return the corresponding {@link ResourceDefinition} for the resource type
-   */
-  @Nonnull
-  public ResourceDefinition findResourceDefinition(@Nonnull final ResourceType resourceType) {
-    final String resourceCode = resourceType.toCode();
-    final RuntimeResourceDefinition hapiDefinition =
-        fhirContext.getResourceDefinition(resourceCode);
-    return new FhirResourceDefinition(resourceType, requireNonNull(hapiDefinition));
-  }
-
-  /**
    * @param childDefinition A HAPI {@link BaseRuntimeChildDefinition} that describes this element
+   * @param elementName the name of the element
    * @return A shiny new ElementDefinition
    */
   @Nonnull

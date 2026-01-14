@@ -30,7 +30,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
 
-/** Utility classes to facilitate JRS-380 based validation */
+/** Utility classes to facilitate JRS-380 based validation. */
 public final class ValidationUtils {
 
   private ValidationUtils() {

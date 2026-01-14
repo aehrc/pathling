@@ -77,6 +77,8 @@ public class TypeSpecifier {
   }
 
   /**
+   * Checks if this type specifier is a type in FHIR namespace.
+   *
    * @return true if this type specifier is a type in FHIR namespace.
    */
   public boolean isFhirType() {
@@ -84,6 +86,8 @@ public class TypeSpecifier {
   }
 
   /**
+   * Checks if this type specifier is a type in System namespace.
+   *
    * @return true if this type specifier is a type in System namespace.
    */
   public boolean isSystemType() {
@@ -119,6 +123,8 @@ public class TypeSpecifier {
   }
 
   /**
+   * Gets the FHIR resource type represented by this type specifier.
+   *
    * @return The FHIR resource type represented by this type specifier if a valid FHIR resource
    *     type.
    */

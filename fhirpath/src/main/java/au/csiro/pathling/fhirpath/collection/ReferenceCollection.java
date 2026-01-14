@@ -56,6 +56,8 @@ public class ReferenceCollection extends Collection {
   }
 
   /**
+   * Gets a collection containing the keys of the references.
+   *
    * @param typeSpecifier The type specifier to filter by
    * @return a {@link Collection} containing the keys of the references in this collection, suitable
    *     for joining with resource keys

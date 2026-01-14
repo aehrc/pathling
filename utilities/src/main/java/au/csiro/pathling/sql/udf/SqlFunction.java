@@ -33,7 +33,7 @@ public interface SqlFunction {
   String getName();
 
   /**
-   * Gets the return type of the UDF
+   * Gets the return type of the UDF.
    *
    * @return the SQL type returned by the UDF.
    */

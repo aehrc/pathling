@@ -137,6 +137,8 @@ public class CatalogSource extends AbstractSource {
   }
 
   /**
+   * Gets the table name for the given resource type.
+   *
    * @param resourceType the resource type to get the table name for
    * @return the name of the table for the given resource type, qualified by the specified schema if
    *     one is provided
@@ -147,6 +149,8 @@ public class CatalogSource extends AbstractSource {
   }
 
   /**
+   * Gets the list of tables from the catalog.
+   *
    * @return the list of tables from the catalog, using the specified schema if one is provided
    * @throws PersistenceError if the specified schema does not exist
    */

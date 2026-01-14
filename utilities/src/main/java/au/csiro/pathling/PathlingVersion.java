@@ -61,6 +61,8 @@ public class PathlingVersion {
   }
 
   /**
+   * Returns the POM version of the application.
+   *
    * @return the POM version of the application
    */
   public Optional<String> getBuildVersion() {
@@ -68,6 +70,8 @@ public class PathlingVersion {
   }
 
   /**
+   * Returns a descriptive version including the POM version and Git commit SHA.
+   *
    * @return a descriptive version that includes the POM version and the Git commit SHA at the time
    *     of the build
    */
@@ -81,6 +85,8 @@ public class PathlingVersion {
   }
 
   /**
+   * Returns the major version component of the POM version.
+   *
    * @return the major version component of the POM version
    * @see <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning 2.0.0</a>
    */

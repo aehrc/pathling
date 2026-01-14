@@ -74,7 +74,7 @@ public class PathlingBenchmarkState {
           "UsCoreBloodPressures",
           "QuestionnaireResponseFlat");
 
-  /** File extension for JSON view definition files stored as resources */
+  /** File extension for JSON view definition files stored as resources. */
   private static final String JSON_EXTENSION = ".json";
 
   /**

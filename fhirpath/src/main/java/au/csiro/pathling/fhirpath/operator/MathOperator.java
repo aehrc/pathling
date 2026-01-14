@@ -44,6 +44,8 @@ public class MathOperator implements FhirPathBinaryOperator {
   @Nonnull private final MathOperation type;
 
   /**
+   * Constructs a new MathOperator.
+   *
    * @param type The type of math operation
    */
   public MathOperator(@Nonnull final MathOperation type) {

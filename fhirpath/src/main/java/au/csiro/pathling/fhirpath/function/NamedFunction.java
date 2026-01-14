@@ -31,6 +31,8 @@ import jakarta.annotation.Nonnull;
 public interface NamedFunction {
 
   /**
+   * Gets the name of this function.
+   *
    * @return the name of this function
    */
   @Nonnull

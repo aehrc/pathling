@@ -104,7 +104,7 @@ public final class FlexiDecimal {
   }
 
   /**
-   * Decodes a flexible decimal from the Row
+   * Decodes a flexible decimal from a Row.
    *
    * @param row the row to decode
    * @return the BigDecimal representation of the row
@@ -115,7 +115,7 @@ public final class FlexiDecimal {
   }
 
   /**
-   * Encodes a flexible decimal into a Row
+   * Encodes a flexible decimal into a Row.
    *
    * @param decimal the decimal to encode
    * @return the Row representation of the decimal
@@ -138,6 +138,17 @@ public final class FlexiDecimal {
   private static Row negate(@Nullable final Row row) {
     final BigDecimal value = fromValue(row);
     return value == null ? null : toValue(value.negate());
+  }
+
+  /**
+   * Negates (applies unary `-`) the value of the specified flexible decimal.
+   *
+   * @param flexiDecimal the flexible decimal to negate
+   * @return the negated value
+   */
+  @Nonnull
+  public static Column negate(@Nonnull final Column flexiDecimal) {
+    return NEGATE_UDF.apply(flexiDecimal);
   }
 
   /**
@@ -304,16 +315,5 @@ public final class FlexiDecimal {
   @Nonnull
   public static Column toDecimal(@Nonnull final Column flexiDecimal) {
     return TO_DECIMAL.apply(flexiDecimal);
-  }
-
-  /**
-   * Negates (applied unary `-`) the value of the specified flexible decimal.
-   *
-   * @param flexiDecimal the flexible decimal to negate
-   * @return the negated value
-   */
-  @Nonnull
-  public static Column negate(@Nonnull final Column flexiDecimal) {
-    return NEGATE_UDF.apply(flexiDecimal);
   }
 }

@@ -32,6 +32,7 @@ import org.apache.spark.sql.Column;
 /**
  * Creates a projection from the requested columns.
  *
+ * @param columns the list of requested columns for the projection
  * @author John Grimes
  * @author Piotr Szul
  */

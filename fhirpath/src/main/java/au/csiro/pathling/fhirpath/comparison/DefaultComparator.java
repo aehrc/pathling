@@ -29,7 +29,7 @@ public class DefaultComparator implements ColumnComparator {
   private static final DefaultComparator INSTANCE = new DefaultComparator();
 
   /**
-   * Gets the singleton instance of the {@link DefaultComparator}
+   * Gets the singleton instance of the {@link DefaultComparator}.
    *
    * @return the singleton instance of {@link DefaultComparator}
    */

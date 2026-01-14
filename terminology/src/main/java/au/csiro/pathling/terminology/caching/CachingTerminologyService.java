@@ -90,6 +90,8 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   @Nonnull protected final Cache<Integer, TerminologyResult<PropertyOrDesignationList>> lookupCache;
 
   /**
+   * Creates a new caching terminology service.
+   *
    * @param terminologyClient The terminology client to cache results from
    * @param configuration The caching configuration for the HTTP client
    * @param resourcesToClose Any resources that should be closed when this service is closed
@@ -217,8 +219,8 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
 
     // Add an If-None-Match header if the cached result is accompanied by an ETag.
     cached
-        .flatMap(c -> Optional.ofNullable(c.getETag()))
-        .ifPresent(eTag -> request.withAdditionalHeader(IF_NONE_MATCH_HEADER_NAME, eTag));
+        .flatMap(c -> Optional.ofNullable(c.getEtag()))
+        .ifPresent(tag -> request.withAdditionalHeader(IF_NONE_MATCH_HEADER_NAME, tag));
 
     // We use a default expiry if the server does not provide one.
     final Optional<Long> defaultExpires =
@@ -234,11 +236,11 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
       // If the response was 200 OK, use the data from the fresh response.
       @SuppressWarnings("unchecked")
       final R result = operation.extractResult((S) outcome.getResource());
-      final Optional<String> newETag = getSingularHeader(outcome, ETAG_HEADER_NAME);
+      final Optional<String> newEtag = getSingularHeader(outcome, ETAG_HEADER_NAME);
       final Optional<Long> serverExpires = getExpires(outcome);
       return new TerminologyResult<>(
           result,
-          newETag.orElse(null),
+          newEtag.orElse(null),
           // Expiry values are used in this order:
           // 1. The override expiry, if present;
           // 2. The expiry provided by the server, if present, then;
@@ -249,13 +251,13 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
     } catch (final NotModifiedException e) {
       // If the response was 304 Not Modified, use the data from the cached response and update
       // the ETag and expiry.
-      final Optional<String> newETag = getSingularHeader(e.getResponseHeaders(), ETAG_HEADER_NAME);
+      final Optional<String> newEtag = getSingularHeader(e.getResponseHeaders(), ETAG_HEADER_NAME);
       final TerminologyResult<R> previous = checkPresent(cached);
       final Optional<Long> serverExpires = getExpires(e.getResponseHeaders());
       final Optional<Long> previousExpiry = Optional.ofNullable(previous.getExpires());
       return new TerminologyResult<>(
           previous.getData(),
-          newETag.orElse(previous.getETag()),
+          newEtag.orElse(previous.getEtag()),
           // Expiry values are used in this order:
           // 1. The override expiry, if present;
           // 2. The expiry from the 304 response, if present;
@@ -277,11 +279,15 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   }
 
   /**
+   * Builds a cache manager for this terminology service.
+   *
    * @return a new {@link EmbeddedCacheManager} instance appropriate for the specific implementation
    */
   protected abstract EmbeddedCacheManager buildCacheManager();
 
   /**
+   * Builds a cache for storing terminology results.
+   *
    * @param <T> the type of the cache value
    * @param cacheManager the {@link EmbeddedCacheManager} to use to construct the cache
    * @param cacheName a name for the cache

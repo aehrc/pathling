@@ -206,13 +206,13 @@ public class Literals {
    *
    * @param literalValue the numeric value as a string
    * @param unit the unit of measurement
-   * @param isUCUM whether the unit is a UCUM unit
+   * @param isUcum whether the unit is a UCUM unit
    * @return a new quantity literal instance
    * @throws UnsupportedOperationException always, as quantity literals are not supported
    */
   public static LiteralPath quantityLiteral(
-      @Nonnull final String literalValue, @Nonnull final String unit, final boolean isUCUM) {
-    return isUCUM
+      @Nonnull final String literalValue, @Nonnull final String unit, final boolean isUcum) {
+    return isUcum
         ? ucumQuantityLiteral(String.format("%s %s", literalValue, unit))
         : calendarDurationLiteral(String.format("%s %s", literalValue, unit));
   }

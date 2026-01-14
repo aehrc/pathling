@@ -45,6 +45,8 @@ final class ParquetSink implements DataSink {
   @Nonnull private final UnaryOperator<String> fileNameMapper;
 
   /**
+   * Constructs a ParquetSink with a custom file name mapper.
+   *
    * @param path the path to write the Parquet files to
    * @param saveMode the {@link SaveMode} to use
    * @param fileNameMapper a function that maps resource type to file name
@@ -59,6 +61,8 @@ final class ParquetSink implements DataSink {
   }
 
   /**
+   * Constructs a ParquetSink with default file naming.
+   *
    * @param path the path to write the Parquet files to
    * @param saveMode the {@link SaveMode} to use
    */
@@ -84,6 +88,7 @@ final class ParquetSink implements DataSink {
         case MERGE ->
             throw new UnsupportedOperationException(
                 "Merge operation is not supported for Parquet - use Delta if merging is required");
+        default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
     }
     return new WriteDetails(fileInfos);

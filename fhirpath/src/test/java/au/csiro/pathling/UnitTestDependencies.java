@@ -88,7 +88,7 @@ public class UnitTestDependencies {
             .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
             .getOrCreate();
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
-    PathlingUdfConfigurer.registerUDFs(spark);
+    PathlingUdfConfigurer.registerUdfs(spark);
     return spark;
   }
 

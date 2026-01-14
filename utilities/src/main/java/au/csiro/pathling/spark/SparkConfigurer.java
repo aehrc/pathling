@@ -20,12 +20,12 @@ package au.csiro.pathling.spark;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 
-/** Common interface for functions/classes that can configure {@link SparkSession}. */
+/** Common interface for functions/classes that can configure a {@link SparkSession}. */
 @FunctionalInterface
 public interface SparkConfigurer {
 
   /**
-   * Configure some aspect of {@link SparkSession}
+   * Configures some aspect of a {@link SparkSession}.
    *
    * @param spark the {@link SparkSession} to configure.
    */

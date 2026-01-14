@@ -60,6 +60,8 @@ public interface CodingSchema {
   String FID_FIELD = "_fid";
 
   /**
+   * Creates the Spark StructType for a Coding.
+   *
    * @return a {@link StructType} that can house a Coding
    */
   @Nonnull
@@ -98,7 +100,7 @@ public interface CodingSchema {
   int USER_SELECTED_INDEX = DATA_TYPE.fieldIndex(USER_SELECTED_FIELD);
 
   /**
-   * Encodes a Coding to a Row (spark SQL compatible type)
+   * Encodes a Coding to a Row (Spark SQL compatible type).
    *
    * @param coding a coding to encode
    * @return the Row representation of the coding
@@ -143,7 +145,7 @@ public interface CodingSchema {
   }
 
   /**
-   * Encodes a list of Codings to a list of {@link Row} objects
+   * Encodes a list of Codings to a list of {@link Row} objects.
    *
    * @param codings a list of codings to encode
    * @return a list of the Row representations of the coding
@@ -154,7 +156,7 @@ public interface CodingSchema {
   }
 
   /**
-   * Encodes a list of Codings to an array of {@link Row} objects
+   * Encodes a list of Codings to an array of {@link Row} objects.
    *
    * @param codings a list of codings to encode
    * @return an array of the Row representations of the coding

@@ -41,6 +41,8 @@ public interface DataSource {
   Dataset<Row> read(@Nullable final String resourceCode);
 
   /**
+   * Gets the resource types available through this data source.
+   *
    * @return the set of resources that are available through this data source
    */
   @Nonnull

@@ -43,6 +43,8 @@ public class EqualityOperator extends SameTypeBinaryOperator {
   @Nonnull private final EqualityOperation type;
 
   /**
+   * Constructs a new EqualityOperator.
+   *
    * @param type The type of operator
    */
   public EqualityOperator(@Nonnull final EqualityOperation type) {

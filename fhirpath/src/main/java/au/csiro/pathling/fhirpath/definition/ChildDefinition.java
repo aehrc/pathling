@@ -27,6 +27,8 @@ import jakarta.annotation.Nonnull;
 public interface ChildDefinition extends NodeDefinition {
 
   /**
+   * Gets the name of this child.
+   *
    * @return the name of this child
    */
   @Nonnull

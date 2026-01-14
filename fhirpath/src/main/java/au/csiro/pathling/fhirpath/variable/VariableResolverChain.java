@@ -28,6 +28,7 @@ import java.util.Optional;
 /**
  * A chain of variable resolvers that can be queried in sequence.
  *
+ * @param resolvers the list of variable resolvers in the chain
  * @author John Grimes
  */
 public record VariableResolverChain(@Nonnull List<EnvironmentVariableResolver> resolvers)

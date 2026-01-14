@@ -173,6 +173,8 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   /**
+   * Visits an indexer expression and returns a FhirPath expression.
+   *
    * @param ctx The {@link IndexerExpressionContext}
    * @return A {@link FhirPath} expression
    * @throws MethodInvocationError if the index operator cannot be invoked

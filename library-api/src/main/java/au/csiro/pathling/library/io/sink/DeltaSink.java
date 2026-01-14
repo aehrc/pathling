@@ -50,6 +50,8 @@ final class DeltaSink implements DataSink {
   @Nonnull private final UnaryOperator<String> fileNameMapper;
 
   /**
+   * Constructs a DeltaSink with a custom file name mapper.
+   *
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
@@ -67,6 +69,8 @@ final class DeltaSink implements DataSink {
   }
 
   /**
+   * Constructs a DeltaSink with default file naming.
+   *
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
@@ -104,6 +108,7 @@ final class DeltaSink implements DataSink {
             writeDataset(dataset, tablePath, SaveMode.ERROR_IF_EXISTS);
           }
         }
+        default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
     }
     return new WriteDetails(fileInfos);

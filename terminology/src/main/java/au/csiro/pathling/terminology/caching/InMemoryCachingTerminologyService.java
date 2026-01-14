@@ -39,6 +39,8 @@ import org.infinispan.manager.EmbeddedCacheManager;
 public class InMemoryCachingTerminologyService extends CachingTerminologyService {
 
   /**
+   * Creates a new in-memory caching terminology service.
+   *
    * @param terminologyClient the terminology client to use for requests
    * @param configuration the caching configuration
    * @param resourcesToClose additional resources to close when this service is closed

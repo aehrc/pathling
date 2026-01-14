@@ -46,7 +46,12 @@ public class Ucum {
 
   public static final String NO_UNIT_CODE = "1";
 
-  /** A record to hold a canonical value and unit pair. */
+  /**
+   * A record to hold a canonical value and unit pair.
+   *
+   * @param value the canonical value
+   * @param unit the canonical unit code
+   */
   public record ValueWithUnit(@Nonnull BigDecimal value, @Nonnull String unit) {}
 
   private static final UCUMService service;
@@ -58,6 +63,11 @@ public class Ucum {
 
   private Ucum() {}
 
+  /**
+   * Returns the shared UCUM service instance.
+   *
+   * @return the UCUM service
+   */
   @Nonnull
   public static UCUMService service() {
     return service;

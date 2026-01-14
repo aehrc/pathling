@@ -140,7 +140,7 @@ public final class ParametersUtils {
   }
 
   /**
-   * Extracts 'match' parts from the result of 'translate()'
+   * Extracts 'match' parts from the result of 'translate()'.
    *
    * @param parameters the parameters to convert.
    * @return the stream of 'match' parts.
@@ -186,7 +186,7 @@ public final class ParametersUtils {
   }
 
   /**
-   * Extracts 'property' parts from the result of '$lookup'
+   * Extracts 'property' parts from the result of '$lookup'.
    *
    * @param parameters the parameters to convert.
    * @return the stream of 'property' parts.
@@ -213,7 +213,7 @@ public final class ParametersUtils {
   }
 
   /**
-   * Extracts 'designation' parts from the result of '$lookup'
+   * Extracts 'designation' parts from the result of '$lookup'.
    *
    * @param parameters the parameters to convert.
    * @return the stream of 'designation' parts.

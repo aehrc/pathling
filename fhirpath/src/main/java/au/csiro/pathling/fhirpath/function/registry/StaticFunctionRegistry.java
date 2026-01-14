@@ -59,6 +59,8 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry {
   }
 
   /**
+   * Gets the singleton instance of the registry.
+   *
    * @return The singleton instance of the registry
    */
   public static StaticFunctionRegistry getInstance() {

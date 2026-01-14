@@ -71,10 +71,13 @@ public class QuantityCollection extends Collection implements Comparable, String
   private static final ElementDefinition LITERAL_DEFINITION = createDefinition("", 1);
 
   /**
+   * Constructs a new QuantityCollection.
+   *
    * @param columnRepresentation The column representation to use
    * @param type The FHIRPath type
    * @param fhirType The FHIR type
    * @param definition The FHIR definition
+   * @param extensionMapColumn The extension map column
    */
   public QuantityCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,

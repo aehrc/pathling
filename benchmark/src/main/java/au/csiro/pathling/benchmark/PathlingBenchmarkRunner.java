@@ -28,6 +28,12 @@ import org.openjdk.jmh.runner.options.CommandLineOptions;
  */
 public class PathlingBenchmarkRunner {
 
+  /**
+   * Entry point for running the benchmarks.
+   *
+   * @param args command line arguments to pass to JMH
+   * @throws Exception if an error occurs while running the benchmarks
+   */
   public static void main(final String[] args) throws Exception {
     final CommandLineOptions options = new CommandLineOptions(args);
     new Runner(options).run();

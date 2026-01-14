@@ -37,6 +37,8 @@ public class BooleanOperator implements FhirPathBinaryOperator {
   private final BooleanOperatorType type;
 
   /**
+   * Constructs a new BooleanOperator.
+   *
    * @param type The type of operator
    */
   public BooleanOperator(final BooleanOperatorType type) {

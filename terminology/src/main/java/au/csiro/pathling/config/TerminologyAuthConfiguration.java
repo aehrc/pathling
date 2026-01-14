@@ -69,7 +69,7 @@ public class TerminologyAuthConfiguration implements Serializable {
    * A private key in JWK format for use with private key JWT authentication (asymmetric
    * authentication). If provided, this takes precedence over clientSecret.
    */
-  @Nullable @ToString.Exclude private String privateKeyJWK;
+  @Nullable @ToString.Exclude private String privateKeyJwk;
 
   /**
    * When true, sends client credentials in the request body instead of using HTTP Basic
@@ -102,7 +102,7 @@ public class TerminologyAuthConfiguration implements Serializable {
         .tokenEndpoint(tokenEndpoint)
         .clientId(clientId)
         .clientSecret(clientSecret)
-        .privateKeyJWK(privateKeyJWK)
+        .privateKeyJWK(privateKeyJwk)
         .useFormForBasicAuth(useFormForBasicAuth)
         .scope(scope)
         .tokenExpiryTolerance(tokenExpiryTolerance)
@@ -150,7 +150,7 @@ public class TerminologyAuthConfiguration implements Serializable {
         final TerminologyAuthConfiguration value, final ConstraintValidatorContext context) {
       if (value.isEnabled()) {
         final boolean hasCredentials =
-            nonNull(value.getClientSecret()) || nonNull(value.getPrivateKeyJWK());
+            nonNull(value.getClientSecret()) || nonNull(value.getPrivateKeyJwk());
         return nonNull(value.getTokenEndpoint()) && nonNull(value.getClientId()) && hasCredentials;
       }
       return true;
