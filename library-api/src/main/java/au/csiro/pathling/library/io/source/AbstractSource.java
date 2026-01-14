@@ -23,12 +23,17 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.query.DefaultQueryDispatcher;
+import au.csiro.pathling.library.query.DefaultSearchDispatcher;
+import au.csiro.pathling.library.query.FhirSearchQuery;
 import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.library.query.QueryDispatcher;
+import au.csiro.pathling.library.query.SearchDispatcher;
+import au.csiro.pathling.search.FhirSearchExecutor;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Provides common functionality for all queryable data sources.
@@ -44,10 +49,16 @@ public abstract class AbstractSource implements QueryableDataSource {
   protected final PathlingContext context;
 
   /**
-   * The dispatcher used to execute queries against the data source.
+   * The dispatcher used to execute view queries against the data source.
    */
   @Nonnull
   protected final QueryDispatcher dispatcher;
+
+  /**
+   * The dispatcher used to execute search queries against the data source.
+   */
+  @Nonnull
+  protected final SearchDispatcher searchDispatcher;
 
   /**
    * Constructs an AbstractSource with the specified PathlingContext.
@@ -57,6 +68,7 @@ public abstract class AbstractSource implements QueryableDataSource {
   protected AbstractSource(@Nonnull final PathlingContext context) {
     this.context = context;
     dispatcher = buildDispatcher(context, this);
+    searchDispatcher = buildSearchDispatcher(context, this);
   }
 
   @Nonnull
@@ -68,6 +80,14 @@ public abstract class AbstractSource implements QueryableDataSource {
 
     // Build the dispatcher using the executors.
     return new DefaultQueryDispatcher(viewExecutor);
+  }
+
+  @Nonnull
+  private SearchDispatcher buildSearchDispatcher(final @Nonnull PathlingContext context,
+      final DataSource dataSource) {
+    final FhirSearchExecutor searchExecutor = FhirSearchExecutor.withDefaultRegistry(
+        context.getFhirContext(), dataSource);
+    return new DefaultSearchDispatcher(searchExecutor);
   }
 
   @Nonnull
@@ -88,6 +108,20 @@ public abstract class AbstractSource implements QueryableDataSource {
   public FhirViewQuery view(@Nullable final FhirView view) {
     requireNonNull(view);
     return new FhirViewQuery(dispatcher, view.getResource(), context.getGson()).view(view);
+  }
+
+  @Nonnull
+  @Override
+  public FhirSearchQuery search(@Nonnull final String resourceType) {
+    requireNonNull(resourceType);
+    return new FhirSearchQuery(searchDispatcher, ResourceType.fromCode(resourceType));
+  }
+
+  @Nonnull
+  @Override
+  public FhirSearchQuery search(@Nonnull final ResourceType resourceType) {
+    requireNonNull(resourceType);
+    return new FhirSearchQuery(searchDispatcher, resourceType);
   }
 
 }

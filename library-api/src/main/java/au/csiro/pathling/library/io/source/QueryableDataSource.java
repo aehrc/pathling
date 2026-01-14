@@ -18,6 +18,7 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
+import au.csiro.pathling.library.query.FhirSearchQuery;
 import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
@@ -25,6 +26,7 @@ import jakarta.annotation.Nullable;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A FHIR data source that can be queried, and can also be written out to a data sink.
@@ -53,6 +55,24 @@ public interface QueryableDataSource extends DataSource {
    */
   @Nonnull
   FhirViewQuery view(@Nullable FhirView view);
+
+  /**
+   * Creates a FHIR search query for the specified resource type.
+   *
+   * @param resourceType the resource type code (e.g., "Patient", "Observation")
+   * @return a configurable {@link FhirSearchQuery}
+   */
+  @Nonnull
+  FhirSearchQuery search(@Nonnull String resourceType);
+
+  /**
+   * Creates a FHIR search query for the specified resource type.
+   *
+   * @param resourceType the resource type
+   * @return a configurable {@link FhirSearchQuery}
+   */
+  @Nonnull
+  FhirSearchQuery search(@Nonnull ResourceType resourceType);
 
   /**
    * Applies a transformation to each dataset within this data source.

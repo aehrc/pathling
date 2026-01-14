@@ -30,8 +30,10 @@ import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.search.FhirSearch;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.assertions.DatasetAssert;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -641,6 +643,117 @@ class DataSourcesTest {
     assertEquals(2, data.getResourceTypes().size());
     assertTrue(data.getResourceTypes().contains("Patient"));
     assertTrue(data.getResourceTypes().contains("Condition"));
+  }
+
+  // FHIR Search Tests
+  @Test
+  void searchWithCriterion() {
+    // Read the test NDJSON data.
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Search for male patients using criterion method.
+    final Dataset<Row> result = data.search("Patient")
+        .criterion("gender", "male")
+        .execute();
+
+    // Verify the count matches the expected number of male patients.
+    assertEquals(5, result.count());
+  }
+
+  @Test
+  void searchWithResourceType() {
+    // Read the test NDJSON data.
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Search using ResourceType enum.
+    final Dataset<Row> result = data.search(ResourceType.PATIENT)
+        .criterion("gender", "male")
+        .execute();
+
+    // Verify the count matches the expected number of male patients.
+    assertEquals(5, result.count());
+  }
+
+  @Test
+  void searchWithQueryString() {
+    // Read the test NDJSON data.
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Search using query string format.
+    final Dataset<Row> result = data.search("Patient")
+        .queryString("gender=male")
+        .execute();
+
+    // Verify the count matches the expected number of male patients.
+    assertEquals(5, result.count());
+  }
+
+  @Test
+  void searchWithFhirSearch() {
+    // Read the test NDJSON data.
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Create a FhirSearch object.
+    final FhirSearch search = FhirSearch.builder()
+        .criterion("gender", "male")
+        .build();
+
+    // Search using the pre-built FhirSearch.
+    final Dataset<Row> result = data.search("Patient")
+        .query(search)
+        .execute();
+
+    // Verify the count matches the expected number of male patients.
+    assertEquals(5, result.count());
+  }
+
+  @Test
+  void searchWithNoCriteria() {
+    // Read the test NDJSON data.
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Search with no criteria should return all resources.
+    final Dataset<Row> result = data.search("Patient")
+        .execute();
+
+    // Verify all patients are returned (9 total in test data).
+    assertEquals(9, result.count());
+  }
+
+  @Test
+  void searchWithMultipleCriteria() {
+    // Read the test NDJSON data.
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Search with multiple criteria (AND logic).
+    final Dataset<Row> result = data.search("Patient")
+        .criterion("gender", "male")
+        .criterion("active", "true")
+        .execute();
+
+    // Multiple criteria should filter further.
+    assertTrue(result.count() <= 5);
+  }
+
+  @Test
+  void searchWithOrValues() {
+    // Read the test NDJSON data.
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Search with OR values (male OR female).
+    final Dataset<Row> result = data.search("Patient")
+        .criterion("gender", "male", "female")
+        .execute();
+
+    // Should return all patients with gender set.
+    assertEquals(9, result.count());
   }
 
 
