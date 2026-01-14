@@ -108,6 +108,9 @@ public class FhirServer extends RestfulServer {
   private static final int MAX_PAGE_SIZE = Integer.MAX_VALUE;
   private static final int SEARCH_MAP_SIZE = 10;
 
+  /** The resource type code for ViewDefinition resources from the SQL on FHIR specification. */
+  public static final String VIEW_DEFINITION = "ViewDefinition";
+
   @Nonnull private final transient ServerConfiguration configuration;
 
   @Nonnull private final transient Optional<OidcConfiguration> oidcConfiguration;
@@ -298,7 +301,7 @@ public class FhirServer extends RestfulServer {
           registerProvider(searchProviderFactory.createSearchProvider(resourceType));
         }
         // ViewDefinition search.
-        registerProvider(searchProviderFactory.createSearchProvider("ViewDefinition"));
+        registerProvider(searchProviderFactory.createSearchProvider(VIEW_DEFINITION));
       }
 
       // Register update providers for all supported resource types.
@@ -307,7 +310,7 @@ public class FhirServer extends RestfulServer {
           registerProvider(updateProviderFactory.createUpdateProvider(resourceType));
         }
         // ViewDefinition update.
-        registerProvider(updateProviderFactory.createUpdateProvider("ViewDefinition"));
+        registerProvider(updateProviderFactory.createUpdateProvider(VIEW_DEFINITION));
       }
 
       // Register create providers for all supported resource types.
@@ -316,7 +319,7 @@ public class FhirServer extends RestfulServer {
           registerProvider(createProviderFactory.createCreateProvider(resourceType));
         }
         // ViewDefinition create.
-        registerProvider(createProviderFactory.createCreateProvider("ViewDefinition"));
+        registerProvider(createProviderFactory.createCreateProvider(VIEW_DEFINITION));
       }
 
       // Register read providers for all supported resource types.
@@ -325,7 +328,7 @@ public class FhirServer extends RestfulServer {
           registerProvider(readProviderFactory.createReadProvider(resourceType));
         }
         // ViewDefinition read.
-        registerProvider(readProviderFactory.createReadProvider("ViewDefinition"));
+        registerProvider(readProviderFactory.createReadProvider(VIEW_DEFINITION));
       }
 
       // Register delete providers for all supported resource types.
@@ -334,7 +337,7 @@ public class FhirServer extends RestfulServer {
           registerProvider(deleteProviderFactory.createDeleteProvider(resourceType));
         }
         // ViewDefinition delete.
-        registerProvider(deleteProviderFactory.createDeleteProvider("ViewDefinition"));
+        registerProvider(deleteProviderFactory.createDeleteProvider(VIEW_DEFINITION));
       }
 
       // Register batch provider.
@@ -544,6 +547,6 @@ public class FhirServer extends RestfulServer {
    * @return true if the resource code is a supported custom type, false otherwise
    */
   public static boolean isCustomResourceType(@Nonnull final String resourceCode) {
-    return "ViewDefinition".equals(resourceCode);
+    return VIEW_DEFINITION.equals(resourceCode);
   }
 }

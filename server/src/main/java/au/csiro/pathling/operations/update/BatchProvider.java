@@ -221,12 +221,12 @@ public class BatchProvider {
     if (configuration.getAuth().isEnabled()) {
       checkHasAuthority(PathlingAuthority.operationAccess("update"));
     }
-    for (final ResourceType resourceType : resourcesForUpdate.keySet()) {
+    for (final var entry : resourcesForUpdate.entrySet()) {
       log.debug(
           "Batch updating {} resource(s) of type {}",
-          resourcesForUpdate.get(resourceType).size(),
-          resourceType.toCode());
-      updateExecutor.merge(resourceType, resourcesForUpdate.get(resourceType));
+          entry.getValue().size(),
+          entry.getKey().toCode());
+      updateExecutor.merge(entry.getKey(), entry.getValue());
     }
   }
 

@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -139,7 +138,7 @@ public class SubmissionRegistry {
       @Nonnull final SubmitterIdentifier submitter,
       @Nonnull final String submissionId,
       @Nonnull final String manifestJobId,
-      @Nonnull final Function<ManifestJob, ManifestJob> updater) {
+      @Nonnull final java.util.function.UnaryOperator<ManifestJob> updater) {
     return get(submitter, submissionId)
         .flatMap(
             submission -> {

@@ -279,12 +279,8 @@ public class ViewDefinitionExportExecutor {
     result.write().mode(SaveMode.Overwrite).json(outputPath);
 
     // Rename partitioned files to follow naming convention.
-    final List<String> renamedFiles =
-        new ArrayList<>(
-            FileSystemPersistence.renamePartitionedFiles(
-                sparkSession, outputPath, outputPath, "json"));
-
-    return renamedFiles;
+    return new ArrayList<>(
+        FileSystemPersistence.renamePartitionedFiles(sparkSession, outputPath, outputPath, "json"));
   }
 
   /** Writes the result as CSV files. */
@@ -299,12 +295,8 @@ public class ViewDefinitionExportExecutor {
     result.write().mode(SaveMode.Overwrite).option("header", includeHeader).csv(outputPath);
 
     // Rename partitioned files to follow naming convention.
-    final List<String> renamedFiles =
-        new ArrayList<>(
-            FileSystemPersistence.renamePartitionedFiles(
-                sparkSession, outputPath, outputPath, "csv"));
-
-    return renamedFiles;
+    return new ArrayList<>(
+        FileSystemPersistence.renamePartitionedFiles(sparkSession, outputPath, outputPath, "csv"));
   }
 
   /** Writes the result as Parquet files. */

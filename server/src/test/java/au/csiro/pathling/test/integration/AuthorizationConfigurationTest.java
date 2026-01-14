@@ -80,9 +80,9 @@ class AuthorizationConfigurationTest extends IntegrationTest {
 
   TestRestTemplate restTemplate;
 
-  @MockBean JwtDecoder jwtDecoder;
+  @MockBean private JwtDecoder jwtDecoder;
 
-  @MockBean JwtAuthenticationConverter jwtAuthenticationConverter;
+  @MockBean private JwtAuthenticationConverter jwtAuthenticationConverter;
 
   @BeforeEach
   void setup() {

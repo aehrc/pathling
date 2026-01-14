@@ -80,6 +80,7 @@ public class ErrorHandlingInterceptor {
    * @return a HAPI {@link BaseServerResponseException} that will deliver an appropriate response to
    *     a user of the FHIR API
    */
+  @SuppressWarnings("java:S3776") // Complexity is acceptable for centralised exception handling.
   @Nonnull
   public static BaseServerResponseException convertError(@Nonnull final Throwable error) {
     try {

@@ -194,6 +194,7 @@ public class JobProvider {
     log.debug("Deleted dir {}", jobDirToDel);
   }
 
+  @SuppressWarnings("java:S3776") // Complexity is inherent to async job state handling.
   private IBaseResource handleJobGetRequest(
       @NotNull HttpServletRequest request,
       @Nullable HttpServletResponse response,

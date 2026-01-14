@@ -92,6 +92,7 @@ public class ParamUtil {
         parts, partName, typeClazz, mapper, useDefaultValue, defaultValue, lenient, null);
   }
 
+  @SuppressWarnings("java:S3776") // Complexity is inherent to flexible parameter extraction.
   public static <T, R> R extractFromPart(
       Collection<ParametersParameterComponent> parts,
       String partName,

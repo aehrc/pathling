@@ -80,9 +80,9 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
 
   protected SystemExportProvider exportProvider;
 
-  @MockBean protected ServletRequestDetails requestDetails;
+  @MockBean private ServletRequestDetails requestDetails;
 
-  @MockBean protected JobRegistry jobRegistry;
+  @MockBean private JobRegistry jobRegistry;
 
   @Autowired protected RequestTagFactory requestTagFactory;
 

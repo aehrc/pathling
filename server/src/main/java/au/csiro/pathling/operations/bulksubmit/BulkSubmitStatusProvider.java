@@ -180,6 +180,7 @@ public class BulkSubmitStatusProvider {
     return resultBuilder.buildStatusManifest(submission, requestUrl, fhirServerBase);
   }
 
+  @SuppressWarnings("java:S3776") // Complexity is inherent to async job result handling.
   @Nonnull
   private Parameters redirectToJob(
       @Nonnull final String jobId, @Nonnull final ServletRequestDetails requestDetails) {

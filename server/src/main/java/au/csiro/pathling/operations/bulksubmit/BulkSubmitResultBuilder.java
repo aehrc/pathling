@@ -42,6 +42,7 @@ public class BulkSubmitResultBuilder {
 
   private static final String SUBMISSION_ID_EXT_URL =
       "http://hl7.org/fhir/uv/bulkdata/StructureDefinition/bulk-submit-submission-id";
+  private static final String EXTENSION = "extension";
 
   /**
    * Builds a status manifest for a submission.
@@ -67,7 +68,7 @@ public class BulkSubmitResultBuilder {
 
     // Add submission ID extension parameter.
     final ParametersParameterComponent extensionParam = parameters.addParameter();
-    extensionParam.setName("extension");
+    extensionParam.setName(EXTENSION);
     extensionParam.addPart().setName("url").setValue(new UriType(SUBMISSION_ID_EXT_URL));
     extensionParam
         .addPart()
@@ -105,7 +106,7 @@ public class BulkSubmitResultBuilder {
 
           // Add manifestUrl extension per spec.
           final ParametersParameterComponent extPart = outputParam.addPart();
-          extPart.setName("extension");
+          extPart.setName(EXTENSION);
           extPart.addPart().setName("url").setValue(new UriType("manifestUrl"));
           extPart.addPart().setName("valueUrl").setValue(new UriType(file.manifestUrl()));
         }
@@ -128,7 +129,7 @@ public class BulkSubmitResultBuilder {
 
         // Add manifestUrl extension per spec.
         final ParametersParameterComponent extPart = errorParam.addPart();
-        extPart.setName("extension");
+        extPart.setName(EXTENSION);
         extPart.addPart().setName("url").setValue(new UriType("manifestUrl"));
         extPart.addPart().setName("valueUrl").setValue(new UriType(job.manifestUrl()));
       }

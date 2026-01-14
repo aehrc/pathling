@@ -49,6 +49,7 @@ public final class AsyncJobContext {
    *
    * @return an Optional containing the current job, or empty if no job is set
    */
+  @SuppressWarnings("java:S1452") // Wildcard is intentional - jobs can have any result type.
   @Nonnull
   public static Optional<Job<?>> getCurrentJob() {
     return Optional.ofNullable(CURRENT_JOB.get());

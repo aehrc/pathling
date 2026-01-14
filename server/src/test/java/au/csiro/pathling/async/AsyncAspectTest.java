@@ -66,11 +66,11 @@ class AsyncAspectTest {
 
   @MockBean private CacheableDatabase database;
 
-  @MockBean StageMap stageMap;
+  @MockBean private StageMap stageMap;
 
-  @MockBean ProceedingJoinPoint proceedingJoinPoint;
+  @MockBean private ProceedingJoinPoint proceedingJoinPoint;
 
-  @MockBean JobProvider jobProvider;
+  @MockBean private JobProvider jobProvider;
 
   @Autowired SparkSession spark;
 

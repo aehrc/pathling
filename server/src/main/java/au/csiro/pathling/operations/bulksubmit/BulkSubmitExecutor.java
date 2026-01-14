@@ -76,6 +76,7 @@ import org.springframework.stereotype.Component;
 public class BulkSubmitExecutor {
 
   private static final Duration HTTP_TIMEOUT = Duration.ofMinutes(5);
+  private static final String OUTPUT_ENTRY_PREFIX = "Output entry ";
 
   @Nonnull private final ImportExecutor importExecutor;
 
@@ -193,6 +194,7 @@ public class BulkSubmitExecutor {
                 submission, manifestJob, fileRequestHeaders, fhirServerBase, jobId, resultFuture));
   }
 
+  @SuppressWarnings("java:S3776") // Complexity is inherent to manifest download orchestration.
   private void downloadManifestJobInternal(
       @Nonnull final Submission submission,
       @Nonnull final ManifestJob manifestJob,
@@ -433,6 +435,7 @@ public class BulkSubmitExecutor {
     CompletableFuture.runAsync(() -> importSubmissionInternal(submission));
   }
 
+  @SuppressWarnings("java:S3776") // Complexity is inherent to multi-resource import handling.
   private void importSubmissionInternal(@Nonnull final Submission submission) {
     try {
       // Collect all downloaded file paths from all manifest jobs.
@@ -578,11 +581,13 @@ public class BulkSubmitExecutor {
       final String url = fileNode.has("url") ? fileNode.get("url").asText() : null;
 
       if (type == null && url == null) {
-        errors.add("Output entry " + entryIndex + " is missing both 'type' and 'url' fields");
+        errors.add(OUTPUT_ENTRY_PREFIX + entryIndex + " is missing both 'type' and 'url' fields");
       } else if (type == null) {
-        errors.add("Output entry " + entryIndex + " (url: " + url + ") is missing 'type' field");
+        errors.add(
+            OUTPUT_ENTRY_PREFIX + entryIndex + " (url: " + url + ") is missing 'type' field");
       } else if (url == null) {
-        errors.add("Output entry " + entryIndex + " (type: " + type + ") is missing 'url' field");
+        errors.add(
+            OUTPUT_ENTRY_PREFIX + entryIndex + " (type: " + type + ") is missing 'url' field");
       } else {
         result.computeIfAbsent(type, k -> new ArrayList<>()).add(url);
       }

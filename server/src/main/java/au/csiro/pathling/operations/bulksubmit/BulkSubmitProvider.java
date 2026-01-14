@@ -108,6 +108,7 @@ public class BulkSubmitProvider {
     }
   }
 
+  @SuppressWarnings("java:S3776") // Complexity is inherent to submission state management.
   @Nonnull
   private Parameters handleInProgressSubmission(
       @Nonnull final BulkSubmitRequest request,

@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -263,7 +264,7 @@ public record Submission(
    */
   @Nonnull
   public List<String> getAllJobIds() {
-    return manifestJobs.stream().map(ManifestJob::jobId).filter(jobId -> jobId != null).toList();
+    return manifestJobs.stream().map(ManifestJob::jobId).filter(Objects::nonNull).toList();
   }
 
   /**

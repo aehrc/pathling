@@ -19,7 +19,6 @@ package au.csiro.pathling.operations.bulksubmit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
@@ -41,12 +40,10 @@ class BulkSubmitResultBuilderTest {
   private static final String SUBMISSION_ID = "test-submission-123";
 
   private BulkSubmitResultBuilder resultBuilder;
-  private FhirContext fhirContext;
 
   @BeforeEach
   void setUp() {
     resultBuilder = new BulkSubmitResultBuilder();
-    fhirContext = FhirContext.forR4();
   }
 
   @Test

@@ -80,7 +80,7 @@ public record SubmitterConfiguration(
         .tokenExpiryTolerance(
             tokenExpiryTolerance != null ? tokenExpiryTolerance : DEFAULT_TOKEN_EXPIRY_TOLERANCE)
         // SMART Backend Services spec expects credentials in form body for symmetric auth.
-        .useFormForBasicAuth(useFormForBasicAuth != null ? useFormForBasicAuth : true)
+        .useFormForBasicAuth(useFormForBasicAuth == null || useFormForBasicAuth)
         .build();
   }
 }

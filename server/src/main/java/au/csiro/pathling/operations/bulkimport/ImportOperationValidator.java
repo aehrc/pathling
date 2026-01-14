@@ -84,7 +84,7 @@ public class ImportOperationValidator {
         inputParts.stream()
             .map(this::mapInputFieldsFromParameters)
             .filter(Objects::nonNull)
-            .filter(this::filterUnsupportedResourceTypes)
+            .peek(this::validateResourceType)
             .collect(
                 Collectors.groupingBy(
                     InputParams::resourceType,
@@ -129,7 +129,7 @@ public class ImportOperationValidator {
     final Map<String, Collection<String>> input =
         manifest.input().stream()
             .map(this::mapInputFieldsFromJson)
-            .filter(this::filterUnsupportedResourceTypes)
+            .peek(this::validateResourceType)
             .collect(
                 Collectors.groupingBy(
                     InputParams::resourceType,
@@ -155,7 +155,7 @@ public class ImportOperationValidator {
     return new PreAsyncValidationResult<>(importRequest, issues);
   }
 
-  private boolean filterUnsupportedResourceTypes(final InputParams inputParams) {
+  private void validateResourceType(final InputParams inputParams) {
     final String resourceType = inputParams.resourceType();
     try {
       final boolean supported =
@@ -164,13 +164,11 @@ public class ImportOperationValidator {
         throw new InvalidUserInputError(
             "The resource type '%s' is not supported.".formatted(resourceType));
       }
-      return true;
     } catch (final FHIRException e) {
       // Check if this is a custom resource type (e.g., ViewDefinition).
-      if (FhirServer.isCustomResourceType(resourceType)) {
-        return true;
+      if (!FhirServer.isCustomResourceType(resourceType)) {
+        throw new InvalidUserInputError("Unknown resource type.", e);
       }
-      throw new InvalidUserInputError("Unknown resource type.", e);
     }
   }
 
