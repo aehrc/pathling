@@ -12,75 +12,13 @@ on:
         description: "Chart version to release (must match Chart.yaml)"
         required: true
 
-permissions:
-  contents: write
-
 jobs:
-  release-helm-chart:
-    name: Package and release Helm chart
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v4
-
-      - name: Extract and validate version
-        working-directory: deployment/cache/chart
-        run: |
-          # Get version from tag or manual input.
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION="${GITHUB_REF_NAME#helm-cache-v}"
-          fi
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-
-          # Validate against Chart.yaml.
-          CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}')
-          if [ "$VERSION" != "$CHART_VERSION" ]; then
-            echo "Error: Tag version ($VERSION) does not match Chart.yaml ($CHART_VERSION)"
-            exit 1
-          fi
-
-          echo "Releasing chart version: ${VERSION}"
-
-      - name: Package chart
-        run: |
-          helm package deployment/cache/chart
-          PACKAGE_NAME="pathling-cache-${VERSION}.tgz"
-          echo "PACKAGE_NAME=${PACKAGE_NAME}" >> $GITHUB_ENV
-
-          if [ ! -f "$PACKAGE_NAME" ]; then
-            echo "Error: Expected package ${PACKAGE_NAME} was not created"
-            exit 1
-          fi
-
-      - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages
-
-      - name: Check for existing chart version
-        run: |
-          if [ -f "gh-pages/helm/${PACKAGE_NAME}" ]; then
-            echo "Error: ${PACKAGE_NAME} already exists in the Helm repository"
-            exit 1
-          fi
-
-      - name: Add chart to repository
-        run: |
-          cp "${PACKAGE_NAME}" gh-pages/helm/
-          helm repo index gh-pages/helm/ --url https://pathling.csiro.au/helm --merge gh-pages/helm/index.yaml
-
-      - name: Commit and push
-        working-directory: gh-pages
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add helm/
-          git commit -m "Release Helm chart pathling-cache-${VERSION}"
-          git push
+  release:
+    uses: ./.github/workflows/helm-release.yml
+    with:
+      chart-path: deployment/cache/chart
+      chart-name: pathling-cache
+      tag-prefix: helm-cache-v
+      version: ${{ inputs.version }}
+    permissions:
+      contents: write

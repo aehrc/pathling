@@ -37,11 +37,11 @@ jobs:
           fetch-depth: 0
           ref: ${{ steps.get_run_info.outputs.commit_sha }}
 
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
         with:
-          java-version: 21
-          distribution: "zulu"
+          java: "true"
+          sonar-cache: "false"
 
       - name: Download JARs from specified run
         uses: actions/download-artifact@v4

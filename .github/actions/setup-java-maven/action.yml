@@ -1,0 +1,50 @@
+# Sets up Java with Maven caching and required environment variables.
+#
+# Author: John Grimes
+
+name: Setup Java and Maven
+description: Sets up Java with Maven repository caching, SonarQube caching, and MAVEN_OPTS.
+
+inputs:
+  java-version:
+    description: Java version to install.
+    required: false
+    default: "21"
+  distribution:
+    description: JDK distribution to use.
+    required: false
+    default: zulu
+  enable-sonar-cache:
+    description: Enable SonarQube cache.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.java-version }}
+        distribution: ${{ inputs.distribution }}
+
+    - name: Cache local Maven repository
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |-
+          ${{ runner.os }}-maven-
+
+    - name: Cache SonarQube packages
+      if: inputs.enable-sonar-cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/.sonar/cache
+        key: ${{ runner.os }}-sonar
+        restore-keys: ${{ runner.os }}-sonar
+
+    # The add-exports and add-opens flags are required for Java 21.
+    - name: Set MAVEN_OPTS
+      shell: bash
+      run: echo "MAVEN_OPTS=--add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED" >> $GITHUB_ENV

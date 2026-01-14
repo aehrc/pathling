@@ -9,10 +9,6 @@ on:
       - "server/**"
       - ".github/workflows/test-server.yml"
 
-env:
-  # The add-exports and add-opens flags are required for Java 21.
-  MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
-
 permissions:
   contents: read
 
@@ -28,29 +24,12 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
         with:
-          java-version: 21
-          distribution: "zulu"
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-
-
-      - name: Cache SonarQube packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
+          java: "true"
+          bun: "true"
+          sonar-cache: "true"
 
       - name: Build and test
         env:
@@ -75,11 +54,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
+          name: server-coverage-reports
           path: |
             server/**/jacoco.exec
             server/**/jacoco.xml
             server/**/target/site/jacoco
-          name: server-coverage-reports
 
       - name: Save built JAR
         if: success()
