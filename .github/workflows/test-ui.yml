@@ -5,6 +5,7 @@ on:
 
 jobs:
   test:
+    name: Build and test UI
     runs-on: ubuntu-latest
     defaults:
       run:
