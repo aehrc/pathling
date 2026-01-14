@@ -56,8 +56,10 @@ public class EntityTagInterceptor {
   private static final Pattern ETAG_HEADER_PATTERN = Pattern.compile("^W/\"([^\"]+)\"$");
 
   /**
+   * Creates a new EntityTagInterceptor.
+   *
    * @param configuration configuration controlling the behaviour of the interceptor
-   * @param database {@link Database} for use in retrieving cache keys
+   * @param database {@link CacheableDatabase} for use in retrieving cache keys
    * @param conformanceProvider for determining the cacheability of conformance statement requests
    */
   public EntityTagInterceptor(

@@ -26,10 +26,21 @@ public class SecurityError extends RuntimeException {
 
   private static final long serialVersionUID = -4574080049289748708L;
 
+  /**
+   * Creates a new SecurityError with the given message.
+   *
+   * @param message the detail message for the error
+   */
   public SecurityError(final String message) {
     super(message);
   }
 
+  /**
+   * Creates a new SecurityError with the given message and cause.
+   *
+   * @param message the detail message for the error
+   * @param cause the underlying cause of the error
+   */
   public SecurityError(final String message, final Throwable cause) {
     super(message, cause);
   }

@@ -30,6 +30,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 /**
  * Represents a background job that is in progress or complete.
  *
+ * @param <T> the type of the pre-async validation result
  * @author John Grimes
  * @author Felix Naumann
  */
@@ -79,6 +80,8 @@ public class Job<T> {
   @Setter private int lastProgress;
 
   /**
+   * Creates a new Job.
+   *
    * @param id the unique identifier for the job
    * @param operation the operation that initiated the job, used for enforcing authorisation
    * @param result the {@link Future} result
@@ -106,10 +109,20 @@ public class Job<T> {
     completedStages++;
   }
 
+  /**
+   * Calculates the progress percentage based on completed and total stages.
+   *
+   * @return the progress percentage (0-100)
+   */
   public int getProgressPercentage() {
     return (completedStages * 100) / totalStages;
   }
 
+  /**
+   * Sets the pre-async validation result for this job.
+   *
+   * @param preAsyncValidationResult the validation result to store
+   */
   @SuppressWarnings("unchecked")
   public void setPreAsyncValidationResult(final Object preAsyncValidationResult) {
     try {
@@ -119,6 +132,11 @@ public class Job<T> {
     }
   }
 
+  /**
+   * Checks whether this job has been cancelled.
+   *
+   * @return true if the job was cancelled, false otherwise
+   */
   public boolean isCancelled() {
     return result.isCancelled();
   }

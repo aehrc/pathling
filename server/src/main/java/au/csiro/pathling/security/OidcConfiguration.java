@@ -44,6 +44,8 @@ public class OidcConfiguration {
   private final Map<String, Object> oidcConfigurationMap;
 
   /**
+   * Creates an OidcConfiguration from the server configuration.
+   *
    * @param configuration A {@link ServerConfiguration} instance which controls the behaviour of the
    *     server
    */
@@ -79,6 +81,8 @@ public class OidcConfiguration {
   }
 
   /**
+   * Retrieves an OIDC configuration item value.
+   *
    * @param item the {@link ConfigItem} to retrieve
    * @return the value, if present
    */

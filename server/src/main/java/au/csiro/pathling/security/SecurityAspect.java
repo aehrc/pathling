@@ -97,6 +97,12 @@ public class SecurityAspect {
     }
   }
 
+  /**
+   * Checks whether the current user has the specified authority.
+   *
+   * @param requiredAuthority the authority to check for
+   * @return true if the user has the authority, false otherwise
+   */
   public static boolean hasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     final AbstractAuthenticationToken authToken =
@@ -142,6 +148,12 @@ public class SecurityAspect {
     }
   }
 
+  /**
+   * Retrieves the current user's subject identifier from the authentication token.
+   *
+   * @param authentication the Spring Security authentication object
+   * @return the user's subject identifier, or empty if not available
+   */
   @Nonnull
   public static Optional<String> getCurrentUserId(@Nullable final Authentication authentication) {
     String subject = null;

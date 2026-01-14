@@ -26,10 +26,23 @@ import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.Type;
 
 /**
+ * Utility methods for extracting parameters from FHIR Parameters resources.
+ *
  * @author Felix Naumann
  */
 public class ParamUtil {
 
+  /**
+   * Extracts multiple values of a specified type from a Parameters resource.
+   *
+   * @param parts the parameter parts to search
+   * @param partName the name of the parameter to extract
+   * @param typeClazz the expected type class
+   * @param lenient whether to be lenient on missing parameters
+   * @param onError the exception to throw if not lenient and parameter is missing
+   * @param <T> the type of values to extract
+   * @return the collection of extracted values
+   */
   public static <T> Collection<T> extractManyFromParameters(
       Collection<ParametersParameterComponent> parts,
       String partName,
@@ -39,6 +52,17 @@ public class ParamUtil {
     return extractManyFromParameters(parts, partName, typeClazz, false, null, lenient, onError);
   }
 
+  /**
+   * Extracts multiple values of a specified type from a Parameters resource with a default value.
+   *
+   * @param parts the parameter parts to search
+   * @param partName the name of the parameter to extract
+   * @param typeClazz the expected type class
+   * @param defaultValue the default value if not found
+   * @param lenient whether to be lenient on missing parameters
+   * @param <T> the type of values to extract
+   * @return the collection of extracted values, or default if not found
+   */
   public static <T extends Type> Collection<T> extractManyFromParameters(
       Collection<ParametersParameterComponent> parts,
       String partName,
@@ -48,6 +72,19 @@ public class ParamUtil {
     return extractManyFromParameters(parts, partName, typeClazz, true, defaultValue, lenient, null);
   }
 
+  /**
+   * Extracts multiple values of a specified type from a Parameters resource with full options.
+   *
+   * @param parts the parameter parts to search
+   * @param partName the name of the parameter to extract
+   * @param typeClazz the expected type class
+   * @param useDefaultValueOnEmpty whether to use default when empty
+   * @param defaultValue the default value if not found
+   * @param lenient whether to be lenient on missing parameters
+   * @param onError the exception to throw if not lenient and parameter is missing
+   * @param <T> the type of values to extract
+   * @return the collection of extracted values
+   */
   public static <T> Collection<T> extractManyFromParameters(
       Collection<ParametersParameterComponent> parts,
       String partName,
@@ -70,6 +107,19 @@ public class ParamUtil {
     throw onError;
   }
 
+  /**
+   * Extracts a single value from a parameter part and maps it to a result type.
+   *
+   * @param parts the parameter parts to search
+   * @param partName the name of the parameter to extract
+   * @param clazz the expected type class
+   * @param mapper the function to map the value to the result type
+   * @param lenient whether to be lenient on missing parameters
+   * @param onError the exception to throw if not lenient and parameter is missing
+   * @param <T> the input type
+   * @param <R> the result type
+   * @return the mapped result
+   */
   public static <T, R> R extractFromPart(
       Collection<ParametersParameterComponent> parts,
       String partName,
@@ -80,6 +130,20 @@ public class ParamUtil {
     return extractFromPart(parts, partName, clazz, mapper, false, null, lenient, onError);
   }
 
+  /**
+   * Extracts a single value from a parameter part with a default value.
+   *
+   * @param parts the parameter parts to search
+   * @param partName the name of the parameter to extract
+   * @param typeClazz the expected type class
+   * @param mapper the function to map the value to the result type
+   * @param useDefaultValue whether to use default when not found
+   * @param defaultValue the default value if not found
+   * @param lenient whether to be lenient on missing parameters
+   * @param <T> the input type
+   * @param <R> the result type
+   * @return the mapped result, or default if not found
+   */
   public static <T, R> R extractFromPart(
       Collection<ParametersParameterComponent> parts,
       String partName,
@@ -92,6 +156,21 @@ public class ParamUtil {
         parts, partName, typeClazz, mapper, useDefaultValue, defaultValue, lenient, null);
   }
 
+  /**
+   * Extracts a single value from a parameter part with full options.
+   *
+   * @param parts the parameter parts to search
+   * @param partName the name of the parameter to extract
+   * @param typeClazz the expected type class
+   * @param mapper the function to map the value to the result type
+   * @param useDefaultValue whether to use default when not found
+   * @param defaultValue the default value if not found
+   * @param lenient whether to be lenient on missing parameters
+   * @param onError the exception to throw if not lenient and parameter is missing
+   * @param <T> the input type
+   * @param <R> the result type
+   * @return the mapped result
+   */
   public static <T, R> R extractFromPart(
       Collection<ParametersParameterComponent> parts,
       String partName,

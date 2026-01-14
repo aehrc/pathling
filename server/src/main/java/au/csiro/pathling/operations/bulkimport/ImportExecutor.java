@@ -64,6 +64,8 @@ public class ImportExecutor {
   @Nonnull private final CacheableDatabase cacheableDatabase;
 
   /**
+   * Creates a new ImportExecutor.
+   *
    * @param accessRules a {@link AccessRules} for validating access to URLs
    * @param pathlingContext the Pathling context for Spark and FHIR operations
    * @param databasePath directory to where the data will be imported

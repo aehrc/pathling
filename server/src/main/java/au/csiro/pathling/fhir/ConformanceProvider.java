@@ -150,6 +150,8 @@ public class ConformanceProvider
   @Nonnull private final List<String> systemLevelOperations;
 
   /**
+   * Creates a new ConformanceProvider.
+   *
    * @param configuration a {@link ServerConfiguration} object controlling the behaviour of the
    *     capability statement
    * @param oidcConfiguration the OIDC configuration for security

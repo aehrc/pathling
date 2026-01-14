@@ -59,6 +59,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
+ * Provides operations for querying and managing asynchronous jobs.
+ *
  * @author John Grimes
  */
 @Component
@@ -78,8 +80,12 @@ public class JobProvider {
   private final String databasePath;
 
   /**
+   * Creates a new JobProvider.
+   *
    * @param configuration a {@link ServerConfiguration} for determining if authorization is enabled
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
+   * @param sparkSession the Spark session for file system operations
+   * @param databasePath the path to the database for job file storage
    */
   public JobProvider(
       @Nonnull final ServerConfiguration configuration,
@@ -93,6 +99,11 @@ public class JobProvider {
     this.databasePath = new Path(databasePath, "jobs").toString();
   }
 
+  /**
+   * Deletes a job and its associated resources.
+   *
+   * @param jobId the ID of the job to delete
+   */
   public void deleteJob(String jobId) {
     final Job<?> job = getJob(jobId);
     handleJobDeleteRequest(job);
@@ -182,6 +193,12 @@ public class JobProvider {
         "The job and its resources will be deleted.", buildDeletionOutcome());
   }
 
+  /**
+   * Deletes the files associated with a job from the file system.
+   *
+   * @param jobId the ID of the job whose files should be deleted
+   * @throws IOException if file deletion fails
+   */
   public void deleteJobFiles(String jobId) throws IOException {
     Configuration hadoopConfig = sparkSession.sparkContext().hadoopConfiguration();
     FileSystem fs = FileSystem.get(hadoopConfig);

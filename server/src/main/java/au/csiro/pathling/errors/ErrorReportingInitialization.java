@@ -39,6 +39,8 @@ public class ErrorReportingInitialization implements ApplicationListener<Applica
   @Nonnull private final PathlingServerVersion version;
 
   /**
+   * Creates a new ErrorReportingInitialization.
+   *
    * @param configuration A {@link ServerConfiguration} object to control the behaviour of the
    *     listener
    * @param version A {@link PathlingServerVersion} object containing version information about the

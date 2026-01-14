@@ -195,6 +195,8 @@ public class CacheableDatabase implements Cacheable {
   }
 
   /**
+   * Converts an S3 URL to an S3A URL.
+   *
    * @param s3Url The S3 URL that should be converted
    * @return A S3A URL
    */

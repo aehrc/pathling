@@ -25,6 +25,9 @@ import java.util.List;
 import org.hl7.fhir.r4.model.OperationOutcome;
 
 /**
+ * Interface for operations that need to perform validation before async execution.
+ *
+ * @param <R> the type of the validation result
  * @author Felix Naumann
  */
 public interface PreAsyncValidation<R> {
@@ -43,6 +46,13 @@ public interface PreAsyncValidation<R> {
       @Nonnull ServletRequestDetails servletRequestDetails, @Nonnull Object[] params)
       throws InvalidRequestException;
 
+  /**
+   * Contains the result of pre-async validation along with any warnings.
+   *
+   * @param result the parsed request result
+   * @param warnings any warnings generated during validation
+   * @param <R> the type of the result
+   */
   record PreAsyncValidationResult<R>(
       @Nullable R result,
       @Nonnull List<OperationOutcome.OperationOutcomeIssueComponent> warnings) {}

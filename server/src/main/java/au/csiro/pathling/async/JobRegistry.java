@@ -75,6 +75,13 @@ public class JobRegistry {
     }
   }
 
+  /**
+   * Gets the job with the given tag if it exists.
+   *
+   * @param jobTag the tag of the job
+   * @param <T> the type of the job's pre-async validation result
+   * @return the job, or null if not found
+   */
   @SuppressWarnings("unchecked")
   public synchronized <T> Job<T> get(JobTag jobTag) {
     return (Job<T>) jobsByTags.get(jobTag);
@@ -108,6 +115,13 @@ public class JobRegistry {
     log.debug("Registered job: {}", job.getId());
   }
 
+  /**
+   * Removes a job from the registry.
+   *
+   * @param job the job to remove
+   * @param <T> the type of the job's pre-async validation result
+   * @return true if the job was removed, false otherwise
+   */
   public synchronized <T> boolean remove(@Nonnull Job<T> job) {
     boolean removed = jobsById.remove(job.getId(), job);
     if (!removed) {
@@ -124,10 +138,22 @@ public class JobRegistry {
     return true;
   }
 
+  /**
+   * Checks if a job was removed from the registry but still has Spark resources.
+   *
+   * @param jobId the job ID to check
+   * @return true if the job is in the pending cleanup set
+   */
   public boolean removedFromRegistryButStillWithSparkJobContains(String jobId) {
     return removedFromRegistryButStillWithSparkJob.contains(jobId);
   }
 
+  /**
+   * Removes a job ID from the pending Spark cleanup set after cleanup is complete.
+   *
+   * @param jobId the job ID to remove
+   * @return true if the job ID was removed from the set
+   */
   public boolean removeCompletelyAfterSparkCleanup(String jobId) {
     return removedFromRegistryButStillWithSparkJob.remove(jobId);
   }

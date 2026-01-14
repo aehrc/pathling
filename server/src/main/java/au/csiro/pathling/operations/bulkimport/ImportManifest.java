@@ -25,6 +25,10 @@ import java.util.List;
 /**
  * Represents a SMART Bulk Data Import manifest request body.
  *
+ * @param inputFormat the format of the input data
+ * @param inputSource the source of the input data
+ * @param input the list of input items
+ * @param mode the import mode
  * @author John Grimes
  */
 public record ImportManifest(

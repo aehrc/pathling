@@ -20,9 +20,16 @@ package au.csiro.pathling.cache;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
+/**
+ * Interface for objects that can be cached using an entity tag.
+ *
+ * @author John Grimes
+ */
 public interface Cacheable {
 
   /**
+   * Returns the cache key for the object.
+   *
    * @return the cache key for the object
    */
   Optional<String> getCacheKey();

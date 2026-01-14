@@ -27,10 +27,21 @@ public class ResourceNotFoundError extends RuntimeException {
 
   private static final long serialVersionUID = -4574080049289748708L;
 
+  /**
+   * Creates a new ResourceNotFoundError with the given message.
+   *
+   * @param message the detail message for the error
+   */
   public ResourceNotFoundError(final String message) {
     super(message);
   }
 
+  /**
+   * Creates a new ResourceNotFoundError with the given message and cause.
+   *
+   * @param message the detail message for the error
+   * @param cause the underlying cause of the error
+   */
   public ResourceNotFoundError(final String message, final Throwable cause) {
     super(message, cause);
   }

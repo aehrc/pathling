@@ -21,6 +21,11 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.Data;
 
+/**
+ * Configuration for HTTP server caching headers.
+ *
+ * @author John Grimes
+ */
 @Data
 public class HttpServerCachingConfiguration {
 

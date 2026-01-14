@@ -49,6 +49,8 @@ public class Spark {
   private Spark() {}
 
   /**
+   * Builds and configures a Spark session for the Pathling server.
+   *
    * @param configuration a {@link ServerConfiguration} object containing the parameters to use in
    *     the creation
    * @param environment Spring {@link Environment} from which to harvest Spark configuration

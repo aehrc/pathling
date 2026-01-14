@@ -40,6 +40,8 @@ public class PathlingJwtDecoderFactory implements JwtDecoderFactory<ServerConfig
   @Nonnull private final PathlingJwtDecoderBuilder builder;
 
   /**
+   * Creates a new PathlingJwtDecoderFactory.
+   *
    * @param builder a builder that can create a {@link JwtDecoder}
    */
   public PathlingJwtDecoderFactory(@Nonnull final PathlingJwtDecoderBuilder builder) {
@@ -53,6 +55,8 @@ public class PathlingJwtDecoderFactory implements JwtDecoderFactory<ServerConfig
   }
 
   /**
+   * Creates a JwtDecoder bean for Spring Security.
+   *
    * @param configuration that controls the behaviour of the decoder factory
    * @param factory a factory that can create a {@link JwtDecoder}
    * @return a shiny new {@link JwtDecoder}

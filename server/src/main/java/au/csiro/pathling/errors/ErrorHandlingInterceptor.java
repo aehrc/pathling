@@ -54,7 +54,7 @@ import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 public class ErrorHandlingInterceptor {
 
   /**
-   * HAPI hook to convert errors and exceptions to BaseServerResponseException
+   * HAPI hook to convert errors and exceptions to BaseServerResponseException.
    *
    * @param requestDetails the details of the request (HAPI)
    * @param servletRequestDetails further details of the request (HAPI)
@@ -76,6 +76,8 @@ public class ErrorHandlingInterceptor {
   }
 
   /**
+   * Converts an error into a HAPI BaseServerResponseException.
+   *
    * @param error an error that could be raised during processing
    * @return a HAPI {@link BaseServerResponseException} that will deliver an appropriate response to
    *     a user of the FHIR API

@@ -31,6 +31,8 @@ public class JwtDecoderProviderConfigurationUtilsProxy {
   private JwtDecoderProviderConfigurationUtilsProxy() {}
 
   /**
+   * Retrieves the OIDC configuration for the specified issuer.
+   *
    * @param issuer the issuer required to be asserted within the token
    * @return a {@link Map} containing the OIDC configuration values
    */

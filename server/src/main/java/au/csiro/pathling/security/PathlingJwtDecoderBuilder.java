@@ -68,6 +68,8 @@ import org.springframework.web.client.RestOperations;
 import org.springframework.web.client.RestTemplate;
 
 /**
+ * Builds JWT decoders with Pathling-specific validation and key selection.
+ *
  * @author John Grimes
  */
 @Component
@@ -80,6 +82,8 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   @Nonnull private final RestOperations restOperations = new RestTemplate();
 
   /**
+   * Creates a new PathlingJwtDecoderBuilder.
+   *
    * @param oidcConfiguration configuration used to instantiate the builder
    */
   public PathlingJwtDecoderBuilder(@Nonnull final OidcConfiguration oidcConfiguration) {
@@ -87,6 +91,8 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   }
 
   /**
+   * Builds a JWT decoder with the specified configuration.
+   *
    * @param configuration controls the behaviour of the resulting JWT decoder
    * @return a JWT decoder
    */

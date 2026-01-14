@@ -32,6 +32,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /**
+ * Configuration properties for the Pathling server.
+ *
  * @author Felix Naumann
  */
 @ConfigurationProperties(prefix = "pathling")
@@ -82,15 +84,15 @@ public class ServerConfiguration {
   @Valid
   @NotNull
   @JsonProperty("import")
-  private ImportConfiguration import_;
+  private ImportConfiguration importConfig;
 
   @Nullable
   public ImportConfiguration getImport() {
-    return import_;
+    return importConfig;
   }
 
   public void setImport(@Nonnull final ImportConfiguration newImport) {
-    this.import_ = newImport;
+    this.importConfig = newImport;
   }
 
   @Valid

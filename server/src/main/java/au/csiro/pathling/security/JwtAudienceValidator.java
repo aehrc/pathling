@@ -34,6 +34,8 @@ public class JwtAudienceValidator implements OAuth2TokenValidator<Jwt> {
   private final String audience;
 
   /**
+   * Creates a new JwtAudienceValidator.
+   *
    * @param audience the required audience value to be presented within tokens
    */
   public JwtAudienceValidator(final String audience) {

@@ -29,6 +29,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
+ * REST controller for serving job output files.
+ *
  * @author Felix Naumann
  */
 @RestController
@@ -36,12 +38,24 @@ public class FileController {
 
   private final String databasePath;
 
+  /**
+   * Creates a new FileController.
+   *
+   * @param databasePath the path to the database directory
+   */
   public FileController(
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
           String databasePath) {
     this.databasePath = databasePath;
   }
 
+  /**
+   * Serves a file from a job's output directory.
+   *
+   * @param jobId the job identifier
+   * @param filename the name of the file to serve
+   * @return the file content as a response entity
+   */
   @GetMapping("/jobs/{jobId}/{filename}")
   public ResponseEntity<Resource> serveFile(
       @PathVariable("jobId") String jobId, @PathVariable("filename") String filename) {

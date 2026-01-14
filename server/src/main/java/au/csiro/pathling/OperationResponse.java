@@ -20,6 +20,7 @@ package au.csiro.pathling;
 /**
  * Represents the response of an operation.
  *
+ * @param <T> the type of the output object
  * @author Felix Naumann
  */
 public interface OperationResponse<T> {

@@ -39,6 +39,13 @@ public class ImportResponse implements OperationResponse<Parameters> {
   private final WriteDetails originalInternalWriteDetails;
   private final List<String> inputUrls;
 
+  /**
+   * Creates a new ImportResponse.
+   *
+   * @param kickOffRequestUrl the original kick-off request URL
+   * @param importRequest the import request that was processed
+   * @param writeDetails the details of the write operation
+   */
   public ImportResponse(
       final String kickOffRequestUrl,
       final ImportRequest importRequest,

@@ -79,6 +79,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import scala.jdk.javaapi.CollectionConverters;
 
 /**
+ * The main FHIR server servlet that handles all FHIR REST interactions.
+ *
  * @author Felix Naumann
  */
 @WebServlet(urlPatterns = "/fhir/*")
@@ -510,6 +512,8 @@ public class FhirServer extends RestfulServer {
   }
 
   /**
+   * Returns the set of resource types currently supported by this server.
+   *
    * @return The set of resource types currently supported by this server.
    */
   @Nonnull
@@ -521,6 +525,8 @@ public class FhirServer extends RestfulServer {
   }
 
   /**
+   * Returns the set of resource types not supported by this server.
+   *
    * @return The set of resource types currently UN-supported by this server.
    */
   @Nonnull

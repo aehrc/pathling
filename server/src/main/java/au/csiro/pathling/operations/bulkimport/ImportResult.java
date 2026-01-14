@@ -20,6 +20,9 @@ package au.csiro.pathling.operations.bulkimport;
 import java.util.Optional;
 
 /**
+ * Represents the result of an import operation.
+ *
+ * @param ownerId the identifier of the user who initiated the import
  * @author Felix Naumann
  */
 public record ImportResult(Optional<String> ownerId) {}

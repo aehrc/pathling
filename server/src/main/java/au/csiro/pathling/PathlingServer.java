@@ -25,6 +25,8 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.Import;
 
 /**
+ * The main entry point for the Pathling FHIR server application.
+ *
  * @author Felix Naumann
  */
 @SpringBootApplication
@@ -33,6 +35,11 @@ import org.springframework.context.annotation.Import;
 @EnableAspectJAutoProxy
 public class PathlingServer {
 
+  /**
+   * Main entry point for the Pathling server application.
+   *
+   * @param args command line arguments
+   */
   public static void main(String[] args) {
     new SpringApplicationBuilder(PathlingServer.class).run(args);
   }

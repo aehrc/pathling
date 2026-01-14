@@ -178,7 +178,7 @@ public class ViewExecutionHelper {
 
       // For CSV with header, write header immediately to minimise TTFB.
       if (outputFormat == ViewOutputFormat.CSV && shouldIncludeHeader) {
-        writeCSVHeader(outputStream, columnNames);
+        writeCsvHeader(outputStream, columnNames);
         outputStream.flush();
       }
 
@@ -226,7 +226,7 @@ public class ViewExecutionHelper {
     switch (outputFormat) {
       case NDJSON -> streamNdjson(outputStream, iterator, schema);
       case JSON -> writeJson(outputStream, iterator, schema);
-      default -> streamCSV(outputStream, iterator, schema);
+      default -> streamCsv(outputStream, iterator, schema);
     }
   }
 
@@ -334,7 +334,7 @@ public class ViewExecutionHelper {
   }
 
   /** Writes the CSV header row. */
-  private void writeCSVHeader(
+  private void writeCsvHeader(
       @Nonnull final OutputStream outputStream, @Nonnull final List<String> columnNames)
       throws IOException {
     final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
@@ -366,7 +366,7 @@ public class ViewExecutionHelper {
   }
 
   /** Streams results as CSV. The header is written separately for TTFB optimisation. */
-  private void streamCSV(
+  private void streamCsv(
       @Nonnull final OutputStream outputStream,
       @Nonnull final Iterator<Row> iterator,
       @Nonnull final StructType schema)
@@ -458,14 +458,14 @@ public class ViewExecutionHelper {
     final StructField[] fields = schema.fields();
     for (int i = 0; i < fields.length; i++) {
       final Object value = row.get(i);
-      values.add(convertValueForCSV(value, fields[i].dataType()));
+      values.add(convertValueForCsv(value, fields[i].dataType()));
     }
     return values;
   }
 
   /** Converts a value for CSV output. */
   @Nullable
-  private Object convertValueForCSV(
+  private Object convertValueForCsv(
       @Nullable final Object value, @Nonnull final org.apache.spark.sql.types.DataType dataType) {
     if (value == null) {
       return null;

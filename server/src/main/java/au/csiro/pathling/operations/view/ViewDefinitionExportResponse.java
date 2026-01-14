@@ -116,11 +116,11 @@ public class ViewDefinitionExportResponse implements OperationResponse<Parameter
       @Nonnull final String baseUrl, @Nonnull final String localUrl) {
     try {
       final String[] parts = localUrl.split("/jobs/")[1].split("/");
-      final String jobUUID = parts[0];
+      final String jobUuid = parts[0];
       final String file = parts[1];
 
       return new URIBuilder(baseUrl + "$result")
-          .addParameter("job", jobUUID)
+          .addParameter("job", jobUuid)
           .addParameter("file", file)
           .build()
           .toString();

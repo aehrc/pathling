@@ -82,11 +82,14 @@ public class AsyncAspect {
   private final JobProvider jobProvider;
 
   /**
+   * Creates a new AsyncAspect.
+   *
    * @param executor used to run asynchronous jobs in the background
    * @param requestTagFactory used to create {@link RequestTag} instances
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    * @param stageMap the {@link StageMap} used to map stages to job IDs
    * @param spark used for updating the Spark Context with job identity
+   * @param jobProvider the provider for job management
    */
   public AsyncAspect(
       @Nonnull final ThreadPoolTaskExecutor executor,

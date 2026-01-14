@@ -40,6 +40,8 @@ public class AccessRules {
   @Nonnull private final List<String> allowableSources;
 
   /**
+   * Creates a new AccessRules instance.
+   *
    * @param configuration a {@link ServerConfiguration} object which controls the behaviour of the
    *     AccessRules
    */

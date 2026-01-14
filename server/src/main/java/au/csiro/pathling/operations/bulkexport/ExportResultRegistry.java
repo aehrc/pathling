@@ -23,6 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
+ * A registry for tracking export results by job ID.
+ *
  * @author Felix Naumann
  */
 @Slf4j

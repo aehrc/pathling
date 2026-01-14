@@ -35,6 +35,8 @@ public class AccessDeniedError extends RuntimeException {
   @Nullable private final String missingAuthority;
 
   /**
+   * Creates a new AccessDeniedError with the given message.
+   *
    * @param message the detail message for the error
    */
   public AccessDeniedError(@Nonnull final String message) {
@@ -43,6 +45,8 @@ public class AccessDeniedError extends RuntimeException {
   }
 
   /**
+   * Creates a new AccessDeniedError with the given message and missing authority.
+   *
    * @param message the detail message for the error
    * @param missingAuthority the missing authority that caused the error
    */

@@ -23,6 +23,8 @@ import jakarta.annotation.Nonnull;
 /**
  * Represents an input item in the SMART Bulk Data Import manifest.
  *
+ * @param type the FHIR resource type
+ * @param url the URL to the data file
  * @author John Grimes
  */
 public record ImportManifestInput(

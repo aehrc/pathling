@@ -26,6 +26,14 @@ import jakarta.annotation.Nullable;
  * Configuration for an allowed bulk submit submitter, including optional OAuth credentials for
  * authenticated file downloads.
  *
+ * @param system the identifier system
+ * @param value the identifier value
+ * @param clientId the OAuth client ID
+ * @param clientSecret the OAuth client secret
+ * @param privateKeyJwk the private key JWK for asymmetric auth
+ * @param scope the OAuth scope to request
+ * @param tokenExpiryTolerance the token expiry tolerance in seconds
+ * @param useFormForBasicAuth whether to use form encoding for basic auth
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */

@@ -45,6 +45,8 @@ public class SparkJobListener extends org.apache.spark.scheduler.SparkListener {
   private final SparkSession sparkSession;
 
   /**
+   * Creates a new SparkJobListener.
+   *
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    * @param stageMap the {@link StageMap} used to map stages to job IDs
    * @param sparkSession the {@link SparkSession} used to cancel job groups

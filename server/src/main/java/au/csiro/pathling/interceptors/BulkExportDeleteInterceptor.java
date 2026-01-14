@@ -37,10 +37,23 @@ public class BulkExportDeleteInterceptor {
 
   private final JobProvider jobProvider;
 
+  /**
+   * Creates a new BulkExportDeleteInterceptor.
+   *
+   * @param jobProvider the job provider for managing async jobs
+   */
   public BulkExportDeleteInterceptor(JobProvider jobProvider) {
     this.jobProvider = jobProvider;
   }
 
+  /**
+   * Intercepts DELETE requests to the $job endpoint and delegates to the job provider.
+   *
+   * @param request the HTTP servlet request
+   * @param response the HTTP servlet response
+   * @param requestDetails the HAPI request details
+   * @return true to continue processing, false if the request was handled
+   */
   @Hook(Pointcut.SERVER_INCOMING_REQUEST_POST_PROCESSED)
   public boolean interceptJobDeletion(
       HttpServletRequest request,

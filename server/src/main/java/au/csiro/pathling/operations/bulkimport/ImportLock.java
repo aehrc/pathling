@@ -25,6 +25,8 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 
 /**
+ * An aspect that enforces mutual exclusion on import operations.
+ *
  * @author John Grimes
  */
 @Aspect
