@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
 import type { ImportFormat, SaveMode } from "./import";
@@ -236,8 +234,10 @@ export type ExportManifest = Parameters;
 /**
  * Result of useBulkExport hook.
  */
-export interface UseBulkExportResult
-  extends AsyncJobResult<BulkExportRequest, ExportManifest> {
+export interface UseBulkExportResult extends AsyncJobResult<
+  BulkExportRequest,
+  ExportManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -370,8 +370,10 @@ export interface BulkSubmitManifest {
 /**
  * Result of useBulkSubmit hook.
  */
-export interface UseBulkSubmitResult
-  extends AsyncJobResult<BulkSubmitRequestUnion, BulkSubmitManifest> {
+export interface UseBulkSubmitResult extends AsyncJobResult<
+  BulkSubmitRequestUnion,
+  BulkSubmitManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -396,8 +398,10 @@ export type UseBulkSubmitMonitorOptions = AsyncJobOptions;
 /**
  * Result of useBulkSubmitMonitor hook.
  */
-export interface UseBulkSubmitMonitorResult
-  extends AsyncJobResult<BulkSubmitMonitorRequest, BulkSubmitManifest> {
+export interface UseBulkSubmitMonitorResult extends AsyncJobResult<
+  BulkSubmitMonitorRequest,
+  BulkSubmitManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -506,8 +510,10 @@ export type UseViewExportOptions = AsyncJobOptions;
 /**
  * Result of useViewExport hook.
  */
-export interface UseViewExportResult
-  extends AsyncJobResult<ViewExportRequest, ViewExportManifest> {
+export interface UseViewExportResult extends AsyncJobResult<
+  ViewExportRequest,
+  ViewExportManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
