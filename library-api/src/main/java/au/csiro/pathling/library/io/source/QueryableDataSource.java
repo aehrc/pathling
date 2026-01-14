@@ -26,7 +26,6 @@ import jakarta.annotation.Nullable;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A FHIR data source that can be queried, and can also be written out to a data sink.
@@ -64,15 +63,6 @@ public interface QueryableDataSource extends DataSource {
    */
   @Nonnull
   FhirSearchQuery search(@Nonnull String resourceType);
-
-  /**
-   * Creates a FHIR search query for the specified resource type.
-   *
-   * @param resourceType the resource type
-   * @return a configurable {@link FhirSearchQuery}
-   */
-  @Nonnull
-  FhirSearchQuery search(@Nonnull ResourceType resourceType);
 
   /**
    * Applies a transformation to each dataset within this data source.

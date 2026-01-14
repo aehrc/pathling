@@ -19,18 +19,12 @@ package au.csiro.pathling.library.io.source;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
-import au.csiro.pathling.library.query.DefaultQueryDispatcher;
-import au.csiro.pathling.library.query.DefaultSearchDispatcher;
 import au.csiro.pathling.library.query.FhirSearchQuery;
 import au.csiro.pathling.library.query.FhirViewQuery;
-import au.csiro.pathling.library.query.QueryDispatcher;
-import au.csiro.pathling.library.query.SearchDispatcher;
-import au.csiro.pathling.search.FhirSearchExecutor;
+import au.csiro.pathling.library.query.QueryContext;
 import au.csiro.pathling.views.FhirView;
-import au.csiro.pathling.views.FhirViewExecutor;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -49,16 +43,10 @@ public abstract class AbstractSource implements QueryableDataSource {
   protected final PathlingContext context;
 
   /**
-   * The dispatcher used to execute view queries against the data source.
+   * The unified query context holding executors for view and search queries.
    */
   @Nonnull
-  protected final QueryDispatcher dispatcher;
-
-  /**
-   * The dispatcher used to execute search queries against the data source.
-   */
-  @Nonnull
-  protected final SearchDispatcher searchDispatcher;
+  protected final QueryContext queryContext;
 
   /**
    * Constructs an AbstractSource with the specified PathlingContext.
@@ -67,27 +55,7 @@ public abstract class AbstractSource implements QueryableDataSource {
    */
   protected AbstractSource(@Nonnull final PathlingContext context) {
     this.context = context;
-    dispatcher = buildDispatcher(context, this);
-    searchDispatcher = buildSearchDispatcher(context, this);
-  }
-
-  @Nonnull
-  private QueryDispatcher buildDispatcher(final @Nonnull PathlingContext context,
-      final DataSource dataSource) {
-    final FhirViewExecutor viewExecutor = new FhirViewExecutor(context.getFhirContext(),
-        context.getSpark(), dataSource, context.getQueryConfiguration()
-    );
-
-    // Build the dispatcher using the executors.
-    return new DefaultQueryDispatcher(viewExecutor);
-  }
-
-  @Nonnull
-  private SearchDispatcher buildSearchDispatcher(final @Nonnull PathlingContext context,
-      final DataSource dataSource) {
-    final FhirSearchExecutor searchExecutor = FhirSearchExecutor.withDefaultRegistry(
-        context.getFhirContext(), dataSource);
-    return new DefaultSearchDispatcher(searchExecutor);
+    this.queryContext = new QueryContext(context, this);
   }
 
   @Nonnull
@@ -100,28 +68,33 @@ public abstract class AbstractSource implements QueryableDataSource {
   @Override
   public FhirViewQuery view(@Nullable final String subjectResource) {
     requireNonNull(subjectResource);
-    return new FhirViewQuery(dispatcher, subjectResource, context.getGson());
+    return new FhirViewQuery(
+        subjectResource,
+        queryContext.getViewExecutor()::buildQuery,
+        queryContext.getGson()
+    );
   }
 
   @Nonnull
   @Override
   public FhirViewQuery view(@Nullable final FhirView view) {
     requireNonNull(view);
-    return new FhirViewQuery(dispatcher, view.getResource(), context.getGson()).view(view);
+    return new FhirViewQuery(
+        view.getResource(),
+        queryContext.getViewExecutor()::buildQuery,
+        queryContext.getGson()
+    ).view(view);
   }
 
   @Nonnull
   @Override
   public FhirSearchQuery search(@Nonnull final String resourceType) {
     requireNonNull(resourceType);
-    return new FhirSearchQuery(searchDispatcher, ResourceType.fromCode(resourceType));
-  }
-
-  @Nonnull
-  @Override
-  public FhirSearchQuery search(@Nonnull final ResourceType resourceType) {
-    requireNonNull(resourceType);
-    return new FhirSearchQuery(searchDispatcher, resourceType);
+    final ResourceType type = ResourceType.fromCode(resourceType);
+    return new FhirSearchQuery(
+        type,
+        search -> queryContext.getSearchExecutor().execute(type, search)
+    );
   }
 
 }

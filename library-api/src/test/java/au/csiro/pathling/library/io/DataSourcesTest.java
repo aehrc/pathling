@@ -33,7 +33,6 @@ import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.search.FhirSearch;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.assertions.DatasetAssert;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -654,21 +653,6 @@ class DataSourcesTest {
 
     // Search for male patients using criterion method.
     final Dataset<Row> result = data.search("Patient")
-        .criterion("gender", "male")
-        .execute();
-
-    // Verify the count matches the expected number of male patients.
-    assertEquals(5, result.count());
-  }
-
-  @Test
-  void searchWithResourceType() {
-    // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-
-    // Search using ResourceType enum.
-    final Dataset<Row> result = data.search(ResourceType.PATIENT)
         .criterion("gender", "male")
         .execute();
 

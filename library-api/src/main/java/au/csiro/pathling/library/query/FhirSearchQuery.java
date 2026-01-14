@@ -20,6 +20,7 @@ package au.csiro.pathling.library.query;
 import au.csiro.pathling.search.FhirSearch;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.function.Function;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -58,15 +59,14 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author Piotr Szul
  * @see FhirSearch
- * @see SearchDispatcher
  */
 public class FhirSearchQuery {
 
   @Nonnull
-  private final SearchDispatcher dispatcher;
+  private final ResourceType resourceType;
 
   @Nonnull
-  private final ResourceType resourceType;
+  private final Function<FhirSearch, Dataset<Row>> executor;
 
   @Nullable
   private FhirSearch fhirSearch;
@@ -77,13 +77,13 @@ public class FhirSearchQuery {
   /**
    * Creates a new FhirSearchQuery instance.
    *
-   * @param dispatcher the search dispatcher responsible for executing the search query
    * @param resourceType the FHIR resource type to search
+   * @param executor the function responsible for executing the search query
    */
-  public FhirSearchQuery(@Nonnull final SearchDispatcher dispatcher,
-      @Nonnull final ResourceType resourceType) {
-    this.dispatcher = dispatcher;
+  public FhirSearchQuery(@Nonnull final ResourceType resourceType,
+      @Nonnull final Function<FhirSearch, Dataset<Row>> executor) {
     this.resourceType = resourceType;
+    this.executor = executor;
   }
 
   /**
@@ -152,7 +152,7 @@ public class FhirSearchQuery {
   @Nonnull
   public Dataset<Row> execute() {
     final FhirSearch search = buildSearch();
-    return dispatcher.dispatch(resourceType, search);
+    return executor.apply(search);
   }
 
   /**
