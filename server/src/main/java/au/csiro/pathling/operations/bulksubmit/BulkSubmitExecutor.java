@@ -194,7 +194,6 @@ public class BulkSubmitExecutor {
                 submission, manifestJob, fileRequestHeaders, fhirServerBase, jobId, resultFuture));
   }
 
-  @SuppressWarnings("java:S3776") // Complexity is inherent to manifest download orchestration.
   private void downloadManifestJobInternal(
       @Nonnull final Submission submission,
       @Nonnull final ManifestJob manifestJob,
@@ -221,130 +220,189 @@ public class BulkSubmitExecutor {
     }
 
     try {
-      // Acquire OAuth2 access token if credentials are configured for this submitter.
-      final String accessToken =
-          acquireAccessToken(
-              submission.submitter(), manifestJob.fhirBaseUrl(), manifestJob.oauthMetadataUrl());
-
-      // Fetch and parse the manifest.
-      final JsonNode manifest = fetchManifest(manifestJob, fileRequestHeaders, accessToken);
-
-      // Check if files require authentication based on the manifest's requiresAccessToken field.
-      final boolean requiresAccessToken =
-          manifest.has("requiresAccessToken")
-              && manifest.get("requiresAccessToken").asBoolean(false);
-      final String fileAccessToken = requiresAccessToken ? accessToken : null;
-
-      // Log authentication status for debugging.
-      if (requiresAccessToken) {
-        if (fileAccessToken != null) {
-          log.info(
-              "Manifest requires authentication - using OAuth2 access token for file downloads");
-        } else {
-          log.warn(
-              "Manifest requires authentication but no OAuth credentials configured for "
-                  + "submitter {} - file downloads may fail",
-              submission.submitter().toKey());
-        }
-      }
-
-      // Extract file URLs from the manifest.
-      final Map<String, Collection<String>> fileUrls = extractUrlsFromManifest(manifest);
-
-      if (fileUrls.isEmpty()) {
-        throw new InvalidUserInputError("No files found in manifest");
-      }
-
-      // Create persistent directory for downloaded files (same structure as export).
-      final Path downloadDir = createDownloadDirectory(submission.submissionId());
-
-      // Download files to persistent storage.
-      final List<DownloadedFile> downloadedFiles =
-          downloadFilesToPersistentStorage(
-              fileUrls,
-              downloadDir,
-              manifestJob.manifestJobId(),
-              manifestJob.manifestUrl(),
-              fileRequestHeaders,
-              fileAccessToken);
-
-      // Register submission in ExportResultRegistry so files can be served via $result.
-      final Optional<String> ownerId = Optional.ofNullable(submission.ownerId());
-      exportResultRegistry.put(submission.submissionId(), new ExportResult(ownerId));
-      log.info("Registered submission {} in export result registry", submission.submissionId());
-
-      // Update manifest job with downloaded files and DOWNLOADED state.
-      submissionRegistry.updateManifestJob(
-          submission.submitter(),
-          submission.submissionId(),
-          manifestJob.manifestJobId(),
-          mj -> mj.withDownloadedFiles(downloadedFiles).withState(ManifestJobState.DOWNLOADED));
-
-      log.info(
-          "Manifest job {} download completed successfully with {} files",
-          manifestJob.manifestJobId(),
-          downloadedFiles.size());
-
-      // Complete the async job if enabled.
-      if (resultFuture != null) {
-        final Submission updatedSubmission =
-            submissionRegistry
-                .get(submission.submitter(), submission.submissionId())
-                .orElse(submission);
-        final String requestUrl = buildStatusRequestUrl(fhirServerBase, submission);
-        final IBaseResource statusManifest =
-            resultBuilder.buildStatusManifest(updatedSubmission, requestUrl, fhirServerBase);
-        resultFuture.complete(statusManifest);
-      }
-
+      executeManifestDownload(submission, manifestJob, fileRequestHeaders);
+      completeJobWithStatusManifest(submission, fhirServerBase, resultFuture);
     } catch (final Exception e) {
       log.error(
           "Failed to download manifest job {}: {}", manifestJob.manifestJobId(), e.getMessage(), e);
-
-      // Write error to NDJSON file and update manifest job.
-      String errorFileName = null;
-      try {
-        // Register in export registry so error file can be served via $result.
-        final Optional<String> ownerId = Optional.ofNullable(submission.ownerId());
-        exportResultRegistry.put(submission.submissionId(), new ExportResult(ownerId));
-
-        errorFileName =
-            writeErrorFile(submission.submissionId(), manifestJob.manifestJobId(), e.getMessage());
-      } catch (final IOException ioEx) {
-        log.error(
-            "Failed to write error file for manifest job {}: {}",
-            manifestJob.manifestJobId(),
-            ioEx.getMessage(),
-            ioEx);
-      }
-
-      final String finalErrorFileName = errorFileName;
-      submissionRegistry.updateManifestJob(
-          submission.submitter(),
-          submission.submissionId(),
-          manifestJob.manifestJobId(),
-          mj -> mj.withError(e.getMessage(), finalErrorFileName));
-
-      // Complete the job normally with a status manifest containing errors.
-      // Per the bulk submit spec, errors should be reported in the manifest error section,
-      // not as HTTP exceptions.
-      if (resultFuture != null) {
-        final Submission updatedSubmission =
-            submissionRegistry
-                .get(submission.submitter(), submission.submissionId())
-                .orElse(submission);
-        final String requestUrl = buildStatusRequestUrl(fhirServerBase, submission);
-        final IBaseResource statusManifest =
-            resultBuilder.buildStatusManifest(updatedSubmission, requestUrl, fhirServerBase);
-        resultFuture.complete(statusManifest);
-      }
+      handleDownloadFailure(submission, manifestJob, e.getMessage());
+      completeJobWithStatusManifest(submission, fhirServerBase, resultFuture);
     } finally {
-      // Clear Spark job group.
       if (sparkSession != null) {
         sparkSession.sparkContext().clearJobGroup();
       }
-      // Note: Downloaded files are NOT cleaned up - they persist until explicit deletion.
     }
+  }
+
+  /**
+   * Executes the manifest download process: fetches manifest, downloads files, updates state.
+   *
+   * @param submission The submission containing the manifest job.
+   * @param manifestJob The manifest job to process.
+   * @param fileRequestHeaders Custom HTTP headers for file downloads.
+   * @throws IOException If manifest fetch or file download fails.
+   */
+  private void executeManifestDownload(
+      @Nonnull final Submission submission,
+      @Nonnull final ManifestJob manifestJob,
+      @Nonnull final List<FileRequestHeader> fileRequestHeaders)
+      throws IOException {
+    // Acquire OAuth2 access token if configured.
+    final String accessToken =
+        acquireAccessToken(
+            submission.submitter(), manifestJob.fhirBaseUrl(), manifestJob.oauthMetadataUrl());
+
+    // Fetch and parse the manifest.
+    final JsonNode manifest = fetchManifest(manifestJob, fileRequestHeaders, accessToken);
+
+    // Determine file access token based on manifest requirements.
+    final String fileAccessToken = getFileAccessToken(manifest, accessToken, submission);
+
+    // Extract and validate file URLs.
+    final Map<String, Collection<String>> fileUrls = extractUrlsFromManifest(manifest);
+    if (fileUrls.isEmpty()) {
+      throw new InvalidUserInputError("No files found in manifest");
+    }
+
+    // Download files to persistent storage.
+    final Path downloadDir = createDownloadDirectory(submission.submissionId());
+    final List<DownloadedFile> downloadedFiles =
+        downloadFilesToPersistentStorage(
+            fileUrls,
+            downloadDir,
+            manifestJob.manifestJobId(),
+            manifestJob.manifestUrl(),
+            fileRequestHeaders,
+            fileAccessToken);
+
+    // Register and update state.
+    registerSubmissionForExport(submission);
+    updateManifestJobWithDownloadedFiles(submission, manifestJob, downloadedFiles);
+
+    log.info(
+        "Manifest job {} download completed successfully with {} files",
+        manifestJob.manifestJobId(),
+        downloadedFiles.size());
+  }
+
+  /**
+   * Determines the access token to use for file downloads based on manifest requirements.
+   *
+   * @param manifest The parsed manifest JSON.
+   * @param accessToken The OAuth2 access token (may be null).
+   * @param submission The submission for logging context.
+   * @return The access token to use, or null if not required.
+   */
+  @Nullable
+  private String getFileAccessToken(
+      @Nonnull final JsonNode manifest,
+      @Nullable final String accessToken,
+      @Nonnull final Submission submission) {
+    final boolean requiresAccessToken =
+        manifest.has("requiresAccessToken") && manifest.get("requiresAccessToken").asBoolean(false);
+
+    if (!requiresAccessToken) {
+      return null;
+    }
+
+    if (accessToken != null) {
+      log.info("Manifest requires authentication - using OAuth2 access token for file downloads");
+    } else {
+      log.warn(
+          "Manifest requires authentication but no OAuth credentials configured for "
+              + "submitter {} - file downloads may fail",
+          submission.submitter().toKey());
+    }
+    return accessToken;
+  }
+
+  /**
+   * Registers the submission in the export result registry.
+   *
+   * @param submission The submission to register.
+   */
+  private void registerSubmissionForExport(@Nonnull final Submission submission) {
+    final Optional<String> ownerId = Optional.ofNullable(submission.ownerId());
+    exportResultRegistry.put(submission.submissionId(), new ExportResult(ownerId));
+    log.info("Registered submission {} in export result registry", submission.submissionId());
+  }
+
+  /**
+   * Updates the manifest job with downloaded files and DOWNLOADED state.
+   *
+   * @param submission The submission containing the manifest job.
+   * @param manifestJob The manifest job to update.
+   * @param downloadedFiles The list of downloaded files.
+   */
+  private void updateManifestJobWithDownloadedFiles(
+      @Nonnull final Submission submission,
+      @Nonnull final ManifestJob manifestJob,
+      @Nonnull final List<DownloadedFile> downloadedFiles) {
+    submissionRegistry.updateManifestJob(
+        submission.submitter(),
+        submission.submissionId(),
+        manifestJob.manifestJobId(),
+        mj -> mj.withDownloadedFiles(downloadedFiles).withState(ManifestJobState.DOWNLOADED));
+  }
+
+  /**
+   * Handles download failure by writing error file and updating manifest job state.
+   *
+   * @param submission The submission containing the manifest job.
+   * @param manifestJob The manifest job that failed.
+   * @param errorMessage The error message.
+   */
+  private void handleDownloadFailure(
+      @Nonnull final Submission submission,
+      @Nonnull final ManifestJob manifestJob,
+      @Nonnull final String errorMessage) {
+    // Register in export registry so error file can be served via $result.
+    registerSubmissionForExport(submission);
+
+    String errorFileName = null;
+    try {
+      errorFileName =
+          writeErrorFile(submission.submissionId(), manifestJob.manifestJobId(), errorMessage);
+    } catch (final IOException ioEx) {
+      log.error(
+          "Failed to write error file for manifest job {}: {}",
+          manifestJob.manifestJobId(),
+          ioEx.getMessage(),
+          ioEx);
+    }
+
+    final String finalErrorFileName = errorFileName;
+    submissionRegistry.updateManifestJob(
+        submission.submitter(),
+        submission.submissionId(),
+        manifestJob.manifestJobId(),
+        mj -> mj.withError(errorMessage, finalErrorFileName));
+  }
+
+  /**
+   * Completes the async job with a status manifest if a result future is provided. Per the bulk
+   * submit spec, errors are reported in the manifest error section, not as HTTP exceptions.
+   *
+   * @param submission The submission to build the status manifest for.
+   * @param fhirServerBase The FHIR server base URL.
+   * @param resultFuture The future to complete (may be null if async is disabled).
+   */
+  private void completeJobWithStatusManifest(
+      @Nonnull final Submission submission,
+      @Nonnull final String fhirServerBase,
+      @Nullable final CompletableFuture<IBaseResource> resultFuture) {
+    if (resultFuture == null) {
+      return;
+    }
+
+    final Submission updatedSubmission =
+        submissionRegistry
+            .get(submission.submitter(), submission.submissionId())
+            .orElse(submission);
+    final String requestUrl = buildStatusRequestUrl(fhirServerBase, submission);
+    final IBaseResource statusManifest =
+        resultBuilder.buildStatusManifest(updatedSubmission, requestUrl, fhirServerBase);
+    resultFuture.complete(statusManifest);
   }
 
   /**
@@ -435,80 +493,120 @@ public class BulkSubmitExecutor {
     CompletableFuture.runAsync(() -> importSubmissionInternal(submission));
   }
 
-  @SuppressWarnings("java:S3776") // Complexity is inherent to multi-resource import handling.
   private void importSubmissionInternal(@Nonnull final Submission submission) {
     try {
-      // Collect all downloaded file paths from all manifest jobs.
-      final Map<String, Collection<String>> allFilePaths = new HashMap<>();
-
-      for (final ManifestJob job : submission.manifestJobs()) {
-        if (job.downloadedFiles() != null) {
-          for (final DownloadedFile file : job.downloadedFiles()) {
-            allFilePaths
-                .computeIfAbsent(file.resourceType(), k -> new ArrayList<>())
-                .add(file.localPath());
-          }
-        }
-      }
+      final Map<String, Collection<String>> allFilePaths = collectDownloadedFilePaths(submission);
 
       if (allFilePaths.isEmpty()) {
         log.warn("No files to import for submission {}", submission.submissionId());
         return;
       }
 
-      // Create ImportRequest with aggregated file paths.
-      final ImportRequest importRequest =
-          new ImportRequest(
-              submission.submissionId(), allFilePaths, SaveMode.MERGE, ImportFormat.NDJSON);
-
-      // Execute the import with the bulk submit allowable sources.
-      final BulkSubmitConfiguration bulkSubmitConfig = serverConfiguration.getBulkSubmit();
-      final List<String> allowableSources =
-          bulkSubmitConfig != null ? bulkSubmitConfig.getAllowableSources() : List.of();
-      importExecutor.execute(importRequest, submission.submissionId(), allowableSources);
-
-      // Update all manifest jobs to COMPLETED state.
-      for (final ManifestJob job : submission.manifestJobs()) {
-        if (job.state() == ManifestJobState.DOWNLOADED) {
-          submissionRegistry.updateManifestJob(
-              submission.submitter(),
-              submission.submissionId(),
-              job.manifestJobId(),
-              mj -> mj.withState(ManifestJobState.COMPLETED));
-        }
-      }
+      executeImport(submission, allFilePaths);
+      markManifestJobsCompleted(submission);
 
       log.info("Import completed successfully for submission {}", submission.submissionId());
 
     } catch (final Exception e) {
       log.error("Failed to import submission {}: {}", submission.submissionId(), e.getMessage(), e);
+      markManifestJobsFailed(submission, e.getMessage());
+    }
+  }
 
-      // Update all DOWNLOADED manifest jobs to FAILED state with error files.
-      for (final ManifestJob job : submission.manifestJobs()) {
-        if (job.state() == ManifestJobState.DOWNLOADED) {
-          String errorFileName = null;
-          try {
-            errorFileName =
-                writeErrorFile(
-                    submission.submissionId(),
-                    job.manifestJobId(),
-                    "Import failed: " + e.getMessage());
-          } catch (final IOException ioEx) {
-            log.error(
-                "Failed to write error file for manifest job {}: {}",
-                job.manifestJobId(),
-                ioEx.getMessage(),
-                ioEx);
-          }
+  /**
+   * Collects all downloaded file paths from manifest jobs, grouped by resource type.
+   *
+   * @param submission The submission containing manifest jobs.
+   * @return Map of resource type to collection of local file paths.
+   */
+  @Nonnull
+  private static Map<String, Collection<String>> collectDownloadedFilePaths(
+      @Nonnull final Submission submission) {
+    final Map<String, Collection<String>> allFilePaths = new HashMap<>();
 
-          final String finalErrorFileName = errorFileName;
-          submissionRegistry.updateManifestJob(
-              submission.submitter(),
-              submission.submissionId(),
-              job.manifestJobId(),
-              mj -> mj.withError("Import failed: " + e.getMessage(), finalErrorFileName));
-        }
+    for (final ManifestJob job : submission.manifestJobs()) {
+      if (job.downloadedFiles() == null) {
+        continue;
       }
+      for (final DownloadedFile file : job.downloadedFiles()) {
+        allFilePaths
+            .computeIfAbsent(file.resourceType(), k -> new ArrayList<>())
+            .add(file.localPath());
+      }
+    }
+
+    return allFilePaths;
+  }
+
+  /**
+   * Executes the import for the submission with collected file paths.
+   *
+   * @param submission The submission being imported.
+   * @param allFilePaths The file paths to import, grouped by resource type.
+   */
+  private void executeImport(
+      @Nonnull final Submission submission,
+      @Nonnull final Map<String, Collection<String>> allFilePaths) {
+    final ImportRequest importRequest =
+        new ImportRequest(
+            submission.submissionId(), allFilePaths, SaveMode.MERGE, ImportFormat.NDJSON);
+
+    final BulkSubmitConfiguration bulkSubmitConfig = serverConfiguration.getBulkSubmit();
+    final List<String> allowableSources =
+        bulkSubmitConfig != null ? bulkSubmitConfig.getAllowableSources() : List.of();
+
+    importExecutor.execute(importRequest, submission.submissionId(), allowableSources);
+  }
+
+  /**
+   * Marks all DOWNLOADED manifest jobs as COMPLETED.
+   *
+   * @param submission The submission containing manifest jobs.
+   */
+  private void markManifestJobsCompleted(@Nonnull final Submission submission) {
+    for (final ManifestJob job : submission.manifestJobs()) {
+      if (job.state() == ManifestJobState.DOWNLOADED) {
+        submissionRegistry.updateManifestJob(
+            submission.submitter(),
+            submission.submissionId(),
+            job.manifestJobId(),
+            mj -> mj.withState(ManifestJobState.COMPLETED));
+      }
+    }
+  }
+
+  /**
+   * Marks all DOWNLOADED manifest jobs as FAILED with error files.
+   *
+   * @param submission The submission containing manifest jobs.
+   * @param errorMessage The error message to include.
+   */
+  private void markManifestJobsFailed(
+      @Nonnull final Submission submission, @Nonnull final String errorMessage) {
+    for (final ManifestJob job : submission.manifestJobs()) {
+      if (job.state() != ManifestJobState.DOWNLOADED) {
+        continue;
+      }
+
+      String errorFileName = null;
+      try {
+        errorFileName =
+            writeErrorFile(
+                submission.submissionId(), job.manifestJobId(), "Import failed: " + errorMessage);
+      } catch (final IOException ioEx) {
+        log.error(
+            "Failed to write error file for manifest job {}: {}",
+            job.manifestJobId(),
+            ioEx.getMessage(),
+            ioEx);
+      }
+
+      final String finalErrorFileName = errorFileName;
+      submissionRegistry.updateManifestJob(
+          submission.submitter(),
+          submission.submissionId(),
+          job.manifestJobId(),
+          mj -> mj.withError("Import failed: " + errorMessage, finalErrorFileName));
     }
   }
 

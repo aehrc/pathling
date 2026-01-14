@@ -180,44 +180,71 @@ public class BulkSubmitStatusProvider {
     return resultBuilder.buildStatusManifest(submission, requestUrl, fhirServerBase);
   }
 
-  @SuppressWarnings("java:S3776") // Complexity is inherent to async job result handling.
   @Nonnull
   private Parameters redirectToJob(
       @Nonnull final String jobId, @Nonnull final ServletRequestDetails requestDetails) {
-    // Check if the job has completed.
-    if (jobRegistry != null) {
-      final Job<?> job = jobRegistry.get(jobId);
-      if (job != null && job.getResult().isDone()) {
-        // Job is done, return the result directly.
-        try {
-          final IBaseResource result = job.getResult().get();
-          if (result instanceof final Parameters parameters) {
-            return parameters;
-          }
-          // Unexpected result type - should not happen.
-          throw new InternalErrorException("Unexpected job result type: " + result.getClass());
-        } catch (final InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new InternalErrorException("Interrupted while getting job result", e);
-        } catch (final ExecutionException e) {
-          // Job failed, unwrap and rethrow the cause.
-          final Throwable cause = e.getCause();
-          if (cause instanceof final RuntimeException runtimeException) {
-            throw runtimeException;
-          }
-          throw new InternalErrorException("Job execution failed", cause);
-        }
-      }
+    // Check if the job has completed and return result directly if so.
+    final Parameters completedResult = getCompletedJobResult(jobId);
+    if (completedResult != null) {
+      return completedResult;
     }
 
-    // Job is still running, return 202 with Content-Location and X-Progress.
+    // Job is still running, return 202 with progress headers.
+    return buildPendingJobResponse(jobId, requestDetails);
+  }
+
+  /**
+   * Retrieves the result of a completed job if available.
+   *
+   * @param jobId The job ID to check.
+   * @return The job result as Parameters, or null if job is not complete.
+   * @throws InternalErrorException If the job failed or returned unexpected type.
+   */
+  @Nullable
+  private Parameters getCompletedJobResult(@Nonnull final String jobId) {
+    if (jobRegistry == null) {
+      return null;
+    }
+
+    final Job<?> job = jobRegistry.get(jobId);
+    if (job == null || !job.getResult().isDone()) {
+      return null;
+    }
+
+    try {
+      final IBaseResource result = job.getResult().get();
+      if (result instanceof final Parameters parameters) {
+        return parameters;
+      }
+      throw new InternalErrorException("Unexpected job result type: " + result.getClass());
+    } catch (final InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new InternalErrorException("Interrupted while getting job result", e);
+    } catch (final ExecutionException e) {
+      final Throwable cause = e.getCause();
+      if (cause instanceof final RuntimeException runtimeException) {
+        throw runtimeException;
+      }
+      throw new InternalErrorException("Job execution failed", cause);
+    }
+  }
+
+  /**
+   * Builds a 202 response for a pending job with appropriate headers.
+   *
+   * @param jobId The job ID.
+   * @param requestDetails The servlet request details.
+   * @return Never returns, always throws.
+   * @throws ProcessingNotCompletedException Always thrown with 202 status.
+   */
+  @Nonnull
+  private Parameters buildPendingJobResponse(
+      @Nonnull final String jobId, @Nonnull final ServletRequestDetails requestDetails) {
     final HttpServletResponse response = requestDetails.getServletResponse();
     final String jobUrl = requestDetails.getFhirServerBase() + "/$job?id=" + jobId;
-    response.setHeader("Content-Location", jobUrl);
 
-    // Add X-Progress header showing percentage complete.
-    final int progress = calculateProgressForJob(jobId);
-    response.setHeader("X-Progress", progress + "%");
+    response.setHeader("Content-Location", jobUrl);
+    response.setHeader("X-Progress", calculateProgressForJob(jobId) + "%");
 
     throw new ProcessingNotCompletedException("Processing", buildProcessingOutcome(jobUrl));
   }

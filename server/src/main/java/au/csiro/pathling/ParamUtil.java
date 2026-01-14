@@ -92,7 +92,6 @@ public class ParamUtil {
         parts, partName, typeClazz, mapper, useDefaultValue, defaultValue, lenient, null);
   }
 
-  @SuppressWarnings("java:S3776") // Complexity is inherent to flexible parameter extraction.
   public static <T, R> R extractFromPart(
       Collection<ParametersParameterComponent> parts,
       String partName,
@@ -102,40 +101,100 @@ public class ParamUtil {
       @Nullable R defaultValue,
       boolean lenient,
       RuntimeException onError) {
-    Optional<Type> type =
+    final Optional<Type> type =
         parts.stream()
             .filter(param -> partName.equals(param.getName()))
             .findFirst()
             .map(ParametersParameterComponent::getValue);
-    if (type.isPresent()) {
-      final T casted;
-      try {
-        casted = typeClazz.cast(type.get());
-      } catch (final ClassCastException e) {
-        // Convert ClassCastException to InvalidUserInputError for proper HTTP 400 response.
-        if (onError != null) {
-          onError.initCause(e);
-          throw onError;
-        }
-        throw new InvalidUserInputError(
-            "Invalid parameter type for '%s': expected %s but got %s"
-                .formatted(
-                    partName, typeClazz.getSimpleName(), type.get().getClass().getSimpleName()),
-            e);
-      }
-      try {
-        return mapper.apply(casted);
-      } catch (final IllegalArgumentException e) {
-        if (lenient && useDefaultValue) {
-          return defaultValue;
-        }
-        if (onError != null) {
-          onError.initCause(e);
-          throw onError;
-        }
-        throw e;
-      }
+
+    if (type.isEmpty()) {
+      return handleMissingParameter(useDefaultValue, lenient, defaultValue, onError);
     }
+
+    final T casted = castParameterValue(type.get(), partName, typeClazz, onError);
+    return applyMapperWithFallback(casted, mapper, useDefaultValue, lenient, defaultValue, onError);
+  }
+
+  /**
+   * Casts a parameter value to the expected type.
+   *
+   * @param value The value to cast.
+   * @param partName The parameter name for error messages.
+   * @param typeClazz The expected type class.
+   * @param onError Custom exception to throw on error (may be null).
+   * @param <T> The target type.
+   * @return The cast value.
+   * @throws InvalidUserInputError If the value cannot be cast.
+   */
+  private static <T> T castParameterValue(
+      @Nullable final Type value,
+      final String partName,
+      final Class<? extends T> typeClazz,
+      @Nullable final RuntimeException onError) {
+    try {
+      return typeClazz.cast(value);
+    } catch (final ClassCastException e) {
+      if (onError != null) {
+        onError.initCause(e);
+        throw onError;
+      }
+      throw new InvalidUserInputError(
+          "Invalid parameter type for '%s': expected %s but got %s"
+              .formatted(partName, typeClazz.getSimpleName(), value.getClass().getSimpleName()),
+          e);
+    }
+  }
+
+  /**
+   * Applies the mapper function with fallback handling for errors.
+   *
+   * @param value The value to map.
+   * @param mapper The mapping function.
+   * @param useDefaultValue Whether to use default on error.
+   * @param lenient Whether to be lenient on errors.
+   * @param defaultValue The default value to return on error.
+   * @param onError Custom exception to throw on error (may be null).
+   * @param <T> The input type.
+   * @param <R> The result type.
+   * @return The mapped result or default value.
+   */
+  private static <T, R> R applyMapperWithFallback(
+      final T value,
+      final Function<T, R> mapper,
+      final boolean useDefaultValue,
+      final boolean lenient,
+      @Nullable final R defaultValue,
+      @Nullable final RuntimeException onError) {
+    try {
+      return mapper.apply(value);
+    } catch (final IllegalArgumentException e) {
+      if (lenient && useDefaultValue) {
+        return defaultValue;
+      }
+      if (onError != null) {
+        onError.initCause(e);
+        throw onError;
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * Handles the case when a parameter is missing.
+   *
+   * @param useDefaultValue Whether to return the default value.
+   * @param lenient Whether to be lenient and return default.
+   * @param defaultValue The default value to return.
+   * @param onError The exception to throw if not lenient.
+   * @param <R> The result type.
+   * @return The default value if allowed.
+   * @throws RuntimeException If parameter is required.
+   */
+  private static <R> R handleMissingParameter(
+      final boolean useDefaultValue,
+      final boolean lenient,
+      @Nullable final R defaultValue,
+      final RuntimeException onError) {
     if (useDefaultValue || lenient) {
       return defaultValue;
     }

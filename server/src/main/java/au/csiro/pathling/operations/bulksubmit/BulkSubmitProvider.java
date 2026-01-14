@@ -108,94 +108,138 @@ public class BulkSubmitProvider {
     }
   }
 
-  @SuppressWarnings("java:S3776") // Complexity is inherent to submission state management.
   @Nonnull
   private Parameters handleInProgressSubmission(
       @Nonnull final BulkSubmitRequest request,
       @Nonnull final Optional<Submission> existingSubmission,
       @Nonnull final Optional<String> ownerId,
       @Nonnull final String fhirServerBase) {
-    // For "in-progress" status, create or update the submission and process manifest if provided.
-    Submission submission;
+    // Get or create the submission, validating state if it exists.
+    Submission submission = getOrCreatePendingSubmission(request, existingSubmission, ownerId);
+
+    // Handle manifest replacement if specified.
+    if (request.replacesManifestUrl() != null) {
+      submission = handleManifestReplacement(request, submission);
+    }
+
+    // Process new manifest if provided.
+    if (request.manifestUrl() != null) {
+      processNewManifestJob(request, submission, fhirServerBase);
+    } else {
+      log.debug("Received in-progress notification for submission: {}", request.submissionId());
+    }
+
+    return createAcknowledgementResponse(request.submissionId(), "in-progress");
+  }
+
+  /**
+   * Gets an existing submission or creates a new pending one.
+   *
+   * @param request The bulk submit request.
+   * @param existingSubmission The existing submission if present.
+   * @param ownerId The owner ID for new submissions.
+   * @return The submission to use.
+   * @throws InvalidRequestException If the existing submission is in an invalid state.
+   */
+  @Nonnull
+  private Submission getOrCreatePendingSubmission(
+      @Nonnull final BulkSubmitRequest request,
+      @Nonnull final Optional<Submission> existingSubmission,
+      @Nonnull final Optional<String> ownerId) {
     if (existingSubmission.isPresent()) {
-      submission = existingSubmission.get();
+      final Submission submission = existingSubmission.get();
       if (submission.state() != SubmissionState.PENDING
           && submission.state() != SubmissionState.PROCESSING) {
         throw new InvalidRequestException(
             "Cannot update submission %s: current state is %s."
                 .formatted(request.submissionId(), submission.state()));
       }
+      return submission;
+    }
+
+    final Submission submission =
+        Submission.createPending(request.submissionId(), request.submitter(), ownerId);
+    submissionRegistry.put(submission);
+    log.info("Created new submission: {}", request.submissionId());
+    return submission;
+  }
+
+  /**
+   * Handles manifest replacement by aborting and removing the old manifest job.
+   *
+   * @param request The bulk submit request containing the replacesManifestUrl.
+   * @param submission The current submission.
+   * @return The updated submission with the old manifest job removed.
+   * @throws InvalidRequestException If no job exists for the URL to replace.
+   */
+  @Nonnull
+  private Submission handleManifestReplacement(
+      @Nonnull final BulkSubmitRequest request, @Nonnull final Submission submission) {
+    final Optional<ManifestJob> jobToReplace =
+        submission.findManifestJobByUrl(request.replacesManifestUrl());
+    if (jobToReplace.isEmpty()) {
+      throw new InvalidRequestException(
+          "Cannot replace manifest: no job found for URL " + request.replacesManifestUrl());
+    }
+
+    // Abort the old job.
+    if (executor != null) {
+      executor.abortManifestJob(submission, jobToReplace.get());
+    }
+
+    // Remove the old job and persist.
+    final Submission updated = submission.withoutManifestJob(jobToReplace.get().manifestJobId());
+    submissionRegistry.put(updated);
+    log.info(
+        "Replaced manifest job for URL {} in submission {}",
+        request.replacesManifestUrl(),
+        request.submissionId());
+    return updated;
+  }
+
+  /**
+   * Creates and processes a new manifest job for the submission.
+   *
+   * @param request The bulk submit request containing manifest details.
+   * @param submission The submission to add the manifest job to.
+   * @param fhirServerBase The FHIR server base URL.
+   */
+  private void processNewManifestJob(
+      @Nonnull final BulkSubmitRequest request,
+      @Nonnull final Submission submission,
+      @Nonnull final String fhirServerBase) {
+    final ManifestJob manifestJob =
+        ManifestJob.createPending(
+            UUID.randomUUID().toString(),
+            request.manifestUrl(),
+            request.fhirBaseUrl(),
+            request.oauthMetadataUrl());
+
+    // Build the updated submission with the new manifest job.
+    Submission updated = submission.withManifestJob(manifestJob);
+    if (request.metadata() != null) {
+      updated = updated.withMetadata(request.metadata());
+    }
+    if (updated.state() == SubmissionState.PENDING) {
+      updated = updated.withState(SubmissionState.PROCESSING);
+    }
+    submissionRegistry.put(updated);
+
+    log.info(
+        "Added manifest job {} to submission {} for manifest: {}",
+        manifestJob.manifestJobId(),
+        request.submissionId(),
+        request.manifestUrl());
+
+    // Start downloading the manifest files.
+    if (executor != null) {
+      executor.downloadManifestJob(
+          updated, manifestJob, request.fileRequestHeaders(), fhirServerBase);
     } else {
-      // Create new submission.
-      submission = Submission.createPending(request.submissionId(), request.submitter(), ownerId);
-      submissionRegistry.put(submission);
-      log.info("Created new submission: {}", request.submissionId());
+      log.warn(
+          "BulkSubmitExecutor not available - manifest job {} will not be processed",
+          manifestJob.manifestJobId());
     }
-
-    // Handle replacesManifestUrl - abort the old manifest job if specified.
-    if (request.replacesManifestUrl() != null) {
-      final Optional<ManifestJob> jobToReplace =
-          submission.findManifestJobByUrl(request.replacesManifestUrl());
-      if (jobToReplace.isEmpty()) {
-        throw new InvalidRequestException(
-            "Cannot replace manifest: no job found for URL " + request.replacesManifestUrl());
-      }
-
-      // Abort the old job.
-      if (executor != null) {
-        executor.abortManifestJob(submission, jobToReplace.get());
-      }
-
-      // Remove the old job from submission.
-      submission = submission.withoutManifestJob(jobToReplace.get().manifestJobId());
-      submissionRegistry.put(submission);
-      log.info(
-          "Replaced manifest job for URL {} in submission {}",
-          request.replacesManifestUrl(),
-          request.submissionId());
-    }
-
-    // If manifest URL provided, create a manifest job and start processing.
-    if (request.manifestUrl() != null) {
-      final ManifestJob manifestJob =
-          ManifestJob.createPending(
-              UUID.randomUUID().toString(),
-              request.manifestUrl(),
-              request.fhirBaseUrl(),
-              request.oauthMetadataUrl());
-
-      // Add manifest job to submission.
-      submission = submission.withManifestJob(manifestJob);
-      if (request.metadata() != null) {
-        submission = submission.withMetadata(request.metadata());
-      }
-
-      // Transition to PROCESSING if not already.
-      if (submission.state() == SubmissionState.PENDING) {
-        submission = submission.withState(SubmissionState.PROCESSING);
-      }
-      submissionRegistry.put(submission);
-
-      log.info(
-          "Added manifest job {} to submission {} for manifest: {}",
-          manifestJob.manifestJobId(),
-          request.submissionId(),
-          request.manifestUrl());
-
-      // Start downloading the manifest files.
-      if (executor != null) {
-        executor.downloadManifestJob(
-            submission, manifestJob, request.fileRequestHeaders(), fhirServerBase);
-      } else {
-        log.warn(
-            "BulkSubmitExecutor not available - manifest job {} will not be processed",
-            manifestJob.manifestJobId());
-      }
-    } else {
-      log.debug("Received in-progress notification for submission: {}", request.submissionId());
-    }
-
-    return createAcknowledgementResponse(request.submissionId(), "in-progress");
   }
 
   @Nonnull

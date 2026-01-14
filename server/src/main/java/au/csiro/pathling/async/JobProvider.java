@@ -194,58 +194,118 @@ public class JobProvider {
     log.debug("Deleted dir {}", jobDirToDel);
   }
 
-  @SuppressWarnings("java:S3776") // Complexity is inherent to async job state handling.
   private IBaseResource handleJobGetRequest(
       @NotNull HttpServletRequest request,
       @Nullable HttpServletResponse response,
       @NotNull Job<?> job) {
     if (job.getResult().isCancelled()) {
-      // a DELETE request was initiated before the job completed
-      // Depending on the async task is running, the task may periodically check the isCancelled
-      // state and abort.
-      // Otherwise, the job actually finishes but the user will never see the result (unless they
-      // initiate a new request and the cache-layer determined that is can reuse the result)
-      throw new ResourceNotFoundException(
-          "A DELETE request cancelled this job or deleted all files associated with this job.");
+      throw handleCancelledJob();
     }
     if (job.getResult().isDone()) {
-      // If the job is done, we return the Parameters resource.
-      try {
-        job.getResponseModification().accept(response);
-        return job.getResult().get();
-      } catch (final InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new InternalErrorException("Job was interrupted", e);
-      } catch (final ExecutionException e) {
-        // Unwrap the cause chain safely. The Future wraps exceptions in ExecutionException,
-        // and AsyncAspect wraps them in IllegalStateException.
-        Throwable cause = e.getCause();
-        if (cause != null && cause.getCause() != null) {
-          cause = cause.getCause();
-        }
-        throw ErrorHandlingInterceptor.convertError(cause != null ? cause : e);
-      }
+      return handleCompletedJob(job, response);
+    }
+    return handleInProgressJob(request, response, job);
+  }
+
+  /**
+   * Handles a cancelled job by throwing a ResourceNotFoundException.
+   *
+   * @return Never returns, always throws.
+   * @throws ResourceNotFoundException Always thrown.
+   */
+  @Nonnull
+  private static ResourceNotFoundException handleCancelledJob() {
+    // A DELETE request was initiated before the job completed. Depending on the async task, it may
+    // periodically check the isCancelled state and abort. Otherwise, the job finishes but the user
+    // will not see the result unless they initiate a new request and the cache layer reuses it.
+    return new ResourceNotFoundException(
+        "A DELETE request cancelled this job or deleted all files associated with this job.");
+  }
+
+  /**
+   * Handles a completed job by returning its result or converting exceptions.
+   *
+   * @param job The completed job.
+   * @param response The HTTP response for applying response modifications.
+   * @return The job result.
+   * @throws InternalErrorException If the job was interrupted.
+   */
+  @Nonnull
+  private static IBaseResource handleCompletedJob(
+      @Nonnull final Job<?> job, @Nullable final HttpServletResponse response) {
+    try {
+      job.getResponseModification().accept(response);
+      return job.getResult().get();
+    } catch (final InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new InternalErrorException("Job was interrupted", e);
+    } catch (final ExecutionException e) {
+      throw ErrorHandlingInterceptor.convertError(unwrapExecutionException(e));
+    }
+  }
+
+  /**
+   * Unwraps the cause chain from an ExecutionException. The Future wraps exceptions in
+   * ExecutionException, and AsyncAspect may wrap them in IllegalStateException.
+   *
+   * @param e The ExecutionException to unwrap.
+   * @return The root cause or the original exception.
+   */
+  @Nonnull
+  private static Throwable unwrapExecutionException(@Nonnull final ExecutionException e) {
+    Throwable cause = e.getCause();
+    if (cause != null && cause.getCause() != null) {
+      cause = cause.getCause();
+    }
+    return cause != null ? cause : e;
+  }
+
+  /**
+   * Handles an in-progress job by setting headers and throwing ProcessingNotCompletedException.
+   *
+   * @param request The HTTP request for checking cacheability.
+   * @param response The HTTP response for setting headers.
+   * @param job The in-progress job.
+   * @return Never returns, always throws.
+   * @throws ProcessingNotCompletedException Always thrown with 202 status.
+   */
+  @Nonnull
+  private IBaseResource handleInProgressJob(
+      @Nonnull final HttpServletRequest request,
+      @Nullable final HttpServletResponse response,
+      @Nonnull final Job<?> job) {
+    requireNonNull(response);
+
+    // Ensure incomplete responses are never cached.
+    if (EntityTagInterceptor.requestIsCacheable(request)) {
+      EntityTagInterceptor.makeRequestNonCacheable(response, configuration);
+    }
+
+    setProgressHeader(response, job);
+
+    throw new ProcessingNotCompletedException("Processing", buildProcessingOutcome());
+  }
+
+  /**
+   * Sets the X-Progress header based on job progress.
+   *
+   * @param response The HTTP response.
+   * @param job The job to get progress from.
+   */
+  private static void setProgressHeader(
+      @Nonnull final HttpServletResponse response, @Nonnull final Job<?> job) {
+    if (job.getTotalStages() <= 0) {
+      return;
+    }
+
+    final int progress = job.getProgressPercentage();
+    if (progress != 100) {
+      // We don't show 100% as it usually means outstanding stages have not yet been submitted.
+      response.setHeader(PROGRESS_HEADER, progress + "%");
+      job.setLastProgress(progress);
     } else {
-      // If the job is not done, we return a 202 along with an OperationOutcome and progress header.
-      requireNonNull(response);
-      // We need to set the caching headers such that the incomplete response is never cached.
-      if (EntityTagInterceptor.requestIsCacheable(request)) {
-        EntityTagInterceptor.makeRequestNonCacheable(response, configuration);
-      }
-      // Add progress information to the response.
-      if (job.getTotalStages() > 0) {
-        final int progress = job.getProgressPercentage();
-        if (progress != 100) {
-          // We don't bother showing 100%, this usually means that there are outstanding stages
-          // which have not yet been submitted.
-          response.setHeader(PROGRESS_HEADER, progress + "%");
-          job.setLastProgress(progress);
-        } else {
-          // instead show last percentage again
-          response.setHeader(PROGRESS_HEADER, job.getLastProgress() + "%");
-        }
-      }
-      throw new ProcessingNotCompletedException("Processing", buildProcessingOutcome());
+      // Show the last recorded percentage instead.
+      response.setHeader(PROGRESS_HEADER, job.getLastProgress() + "%");
     }
   }
 
