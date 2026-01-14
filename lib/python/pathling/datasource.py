@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 from datetime import datetime
-from typing import Dict, Sequence, Optional, Callable
+from typing import Dict, Sequence, Optional, Callable, Union
 from typing import List, TYPE_CHECKING
 
 from json import dumps, loads
@@ -103,6 +103,64 @@ class DataSource(SparkConversionsMixin):
         jquery = self._jds.view(resource)
         jquery.json(query_json)
         return self._wrap_df(jquery.execute())
+
+    def search(
+        self,
+        resource: str,
+        query_string: Optional[str] = None,
+        criteria: Optional[Dict[str, Union[str, List[str]]]] = None,
+    ) -> DataFrame:
+        """
+        Executes a FHIR search query and returns matching resources as a DataFrame.
+
+        :param resource: The FHIR resource type to search (e.g., 'Patient', 'Observation').
+        :param query_string: A URL query string containing search criteria
+               (e.g., "gender=male&birthdate=ge1990-01-01"). If provided, the criteria
+               parameter is ignored.
+        :param criteria: A dictionary of search criteria where keys are parameter names
+               (including any modifiers) and values are strings or lists of strings.
+               Multiple values for a parameter use OR logic; multiple parameters use AND logic.
+        :return: A Spark DataFrame containing the matching FHIR resources.
+
+        Examples:
+            # Simple search with single criterion
+            patients = data.search("Patient", criteria={"gender": "male"})
+
+            # Multiple criteria (AND logic between parameters)
+            patients = data.search("Patient", criteria={
+                "gender": "male",
+                "birthdate": "ge1990-01-01"
+            })
+
+            # Multiple values for same parameter (OR logic)
+            patients = data.search("Patient", criteria={"gender": ["male", "female"]})
+
+            # Hyphenated parameter names (common in FHIR)
+            patients = data.search("Patient", criteria={"general-practitioner": "123"})
+
+            # With search modifiers
+            patients = data.search("Patient", criteria={"family:exact": "Smith"})
+
+            # Using query string format
+            patients = data.search("Patient", query_string="gender=male&birthdate=ge1990")
+        """
+        jsearch = self._jds.search(resource)
+
+        if query_string:
+            jsearch.queryString(query_string)
+        elif criteria:
+            # Get gateway for creating Java arrays (needed for varargs)
+            gateway = self.pc.spark.sparkContext._gateway
+            for param, values in criteria.items():
+                # Normalize to list
+                values_list = list(values) if isinstance(values, (list, tuple)) else [values]
+                # Create Java String array for varargs parameter
+                jarray = gateway.new_array(gateway.jvm.java.lang.String, len(values_list))
+                for i, v in enumerate(values_list):
+                    jarray[i] = v
+                jsearch.criterion(param, jarray)
+
+        return self._wrap_df(jsearch.execute())
 
 
 class DataSources(SparkConversionsMixin):
