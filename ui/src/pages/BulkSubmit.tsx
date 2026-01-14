@@ -12,7 +12,7 @@ import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { BulkSubmitMonitorForm } from "../components/bulkSubmit/BulkSubmitMonitorForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useBulkSubmitMonitor, useServerCapabilities } from "../hooks";
+import { useBulkSubmit, useServerCapabilities } from "../hooks";
 
 import type { SubmitterIdentifier } from "../types/bulkSubmit";
 
@@ -30,7 +30,7 @@ export function BulkSubmit() {
     useServerCapabilities(fhirBaseUrl);
 
   // Monitor bulk submit operations. 401 errors handled globally.
-  const monitor = useBulkSubmitMonitor({
+  const monitor = useBulkSubmit({
     onError: (error) => setError(error.message),
   });
 
@@ -67,7 +67,7 @@ export function BulkSubmit() {
         <Box style={{ flex: 1 }}>
           <BulkSubmitMonitorForm
             onMonitor={(submissionId: string, submitter: SubmitterIdentifier) => {
-              monitor.startWith({ submissionId, submitter });
+              monitor.startWith({ mode: "monitor", submissionId, submitter });
             }}
             isSubmitting={isActive}
             disabled={isMonitoring}
