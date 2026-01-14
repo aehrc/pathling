@@ -176,6 +176,7 @@ class ViewDefinitionSearchTest {
     assertThat(result.size()).isEqualTo(3);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources)
+        .isNotEmpty()
         .allSatisfy(
             r -> {
               final ViewDefinitionResource view = (ViewDefinitionResource) r;
@@ -217,6 +218,7 @@ class ViewDefinitionSearchTest {
     assertThat(result.size()).isEqualTo(4);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources)
+        .isNotEmpty()
         .allSatisfy(
             r -> {
               final ViewDefinitionResource view = (ViewDefinitionResource) r;
@@ -258,6 +260,7 @@ class ViewDefinitionSearchTest {
     assertThat(result.size()).isEqualTo(3);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources)
+        .isNotEmpty()
         .allSatisfy(
             r -> {
               final ViewDefinitionResource view = (ViewDefinitionResource) r;
@@ -293,7 +296,7 @@ class ViewDefinitionSearchTest {
             .map(r -> ((ViewDefinitionResource) r).getIdElement().getIdPart())
             .toList();
 
-    assertThat(firstPageIds).doesNotContainAnyElementsOf(secondPageIds);
+    assertThat(firstPageIds).isNotEmpty().doesNotContainAnyElementsOf(secondPageIds);
   }
 
   // -------------------------------------------------------------------------

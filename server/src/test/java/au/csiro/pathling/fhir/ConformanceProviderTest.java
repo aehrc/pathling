@@ -275,9 +275,9 @@ class ConformanceProviderTest {
               .map(ResourceInteractionComponent::getCode)
               .collect(Collectors.toSet());
 
-      assertThat(interactions)
+      assertThat(interactions.contains(interaction))
           .as("Resource type " + resource.getType() + " should not have " + interaction)
-          .doesNotContain(interaction);
+          .isFalse();
     }
   }
 
@@ -322,9 +322,9 @@ class ConformanceProviderTest {
             .map(CapabilityStatement.SystemInteractionComponent::getCode)
             .collect(Collectors.toSet());
 
-    assertThat(systemInteractions)
+    assertThat(systemInteractions.contains(CapabilityStatement.SystemRestfulInteraction.BATCH))
         .as("System interactions should not include BATCH when disabled")
-        .doesNotContain(CapabilityStatement.SystemRestfulInteraction.BATCH);
+        .isFalse();
   }
 
   @Test
@@ -364,9 +364,9 @@ class ConformanceProviderTest {
             .map(CapabilityStatementRestResourceOperationComponent::getName)
             .collect(Collectors.toSet());
 
-    assertThat(operationNames)
+    assertThat(operationNames.contains(operationName))
         .as("System-level operations should not include " + operationName + " when disabled")
-        .doesNotContain(operationName);
+        .isFalse();
   }
 
   static Stream<Arguments> disabledSystemOperations() {
@@ -411,9 +411,9 @@ class ConformanceProviderTest {
             .map(CapabilityStatementRestResourceOperationComponent::getName)
             .collect(Collectors.toSet());
 
-    assertThat(operations)
+    assertThat(operations.contains(operationName))
         .as(resourceType + " should not have " + operationName + " operation when disabled")
-        .doesNotContain(operationName);
+        .isFalse();
   }
 
   static Stream<Arguments> disabledResourceOperations() {

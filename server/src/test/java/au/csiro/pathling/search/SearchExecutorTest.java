@@ -193,7 +193,7 @@ class SearchExecutorTest {
     final List<String> secondPageIds =
         secondPage.stream().map(r -> ((Patient) r).getIdElement().getIdPart()).toList();
 
-    assertThat(firstPageIds).doesNotContainAnyElementsOf(secondPageIds);
+    assertThat(firstPageIds).isNotEmpty().doesNotContainAnyElementsOf(secondPageIds);
   }
 
   @Test
