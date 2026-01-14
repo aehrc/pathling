@@ -18,9 +18,10 @@
 package au.csiro.pathling.search;
 
 import jakarta.annotation.Nonnull;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import lombok.Value;
 
@@ -50,6 +51,111 @@ public class FhirSearch {
   @Nonnull
   public static Builder builder() {
     return new Builder();
+  }
+
+  /**
+   * Parses a FHIR search query string into a FhirSearch.
+   * <p>
+   * The query string should be in standard URL query format without the leading '?'. Values are
+   * expected to be URL-encoded per RFC 3986.
+   * <p>
+   * Multiple values for the same parameter (comma-separated) are combined with OR logic within a
+   * single criterion. Repeated parameters create separate criteria combined with AND logic.
+   * <p>
+   * FHIR escape sequences are supported: {@code \,} for literal comma, {@code \\} for literal
+   * backslash.
+   *
+   * @param queryString the query string (e.g., "gender=male&amp;birthdate=ge1990")
+   * @return a FhirSearch representing the query
+   * @see <a href="https://hl7.org/fhir/search.html#escaping">FHIR Search Escaping</a>
+   */
+  @Nonnull
+  public static FhirSearch fromQueryString(@Nonnull final String queryString) {
+    if (queryString.isEmpty()) {
+      return new FhirSearch(List.of());
+    }
+
+    final Builder builder = builder();
+
+    for (final String pair : queryString.split("&")) {
+      if (!pair.isEmpty()) {
+        parsePair(pair, builder);
+      }
+    }
+
+    return builder.build();
+  }
+
+  /**
+   * Parses a single parameter=value pair and adds it to the builder.
+   *
+   * @param pair the parameter pair (e.g., "gender=male" or "family:exact=Smith")
+   * @param builder the builder to add the criterion to
+   */
+  private static void parsePair(@Nonnull final String pair, @Nonnull final Builder builder) {
+    final int equalsIndex = pair.indexOf('=');
+    if (equalsIndex == -1) {
+      // Parameter without value - treat as empty value
+      builder.criterion(pair, List.of(""));
+    } else {
+      final String parameterCode = pair.substring(0, equalsIndex);
+      final String encodedValue = pair.substring(equalsIndex + 1);
+
+      // URL decode the value
+      final String decodedValue = URLDecoder.decode(encodedValue, StandardCharsets.UTF_8);
+
+      // Split on unescaped commas to get OR values
+      final List<String> values = splitOnComma(decodedValue);
+
+      builder.criterion(parameterCode, values);
+    }
+  }
+
+  /**
+   * Splits a value on commas, respecting FHIR backslash escape sequences.
+   * <p>
+   * Escape rules:
+   * <ul>
+   *   <li>{@code \,} - literal comma (not a delimiter)</li>
+   *   <li>{@code \\} - literal backslash</li>
+   * </ul>
+   *
+   * @param value the decoded value to split
+   * @return list of individual values with escapes resolved
+   */
+  @Nonnull
+  static List<String> splitOnComma(@Nonnull final String value) {
+    final List<String> result = new ArrayList<>();
+    final StringBuilder current = new StringBuilder();
+    boolean escaped = false;
+
+    for (final char c : value.toCharArray()) {
+      if (escaped) {
+        // Previous char was backslash - this char is literal
+        current.append(c);
+        escaped = false;
+      } else if (c == '\\') {
+        // Start escape sequence
+        escaped = true;
+      } else if (c == ',') {
+        // Unescaped comma - split here
+        result.add(current.toString());
+        current.setLength(0);
+      } else {
+        current.append(c);
+      }
+    }
+
+    // Add the last segment (result is never empty after this)
+    result.add(current.toString());
+
+    // Handle trailing backslash (keep it as literal)
+    if (escaped) {
+      final int lastIndex = result.size() - 1;
+      result.set(lastIndex, result.get(lastIndex) + "\\");
+    }
+
+    return result;
   }
 
   /**
@@ -127,7 +233,7 @@ public class FhirSearch {
      */
     @Nonnull
     public FhirSearch build() {
-      return new FhirSearch(Collections.unmodifiableList(new ArrayList<>(criteria)));
+      return new FhirSearch(List.copyOf(criteria));
     }
   }
 }
