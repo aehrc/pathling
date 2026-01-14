@@ -2,12 +2,8 @@
 
 name: Test server
 
-# This workflow runs on pull requests that modify server-related files.
 on:
-  pull_request:
-    paths:
-      - "server/**"
-      - ".github/workflows/test-server.yml"
+  workflow_call:
 
 permissions:
   contents: read

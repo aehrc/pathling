@@ -14,10 +14,35 @@ permissions:
   id-token: write
 
 jobs:
+  detect-changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      ui: ${{ steps.filter.outputs.ui }}
+      server: ${{ steps.filter.outputs.server }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # Compare against the merge base to detect all changes on the release branch.
+          base: main
+          filters: |
+            ui:
+              - 'ui/**'
+            server:
+              - 'server/**'
+
   pre-release:
     name: Pre-release to Maven Central
     environment: maven-central
     runs-on: ubuntu-latest
+    needs: detect-changes
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -97,3 +122,16 @@ jobs:
 
       - name: Upload SQL on FHIR test report to S3
         run: aws s3 cp fhirpath/target/fhir-view-compliance-test.json s3://pathling-benchmark/test-reports/${{ github.ref }}/sof-test-results.json
+
+  test-ui:
+    name: Test UI
+    needs: [detect-changes, pre-release]
+    if: needs.detect-changes.outputs.ui == 'true'
+    uses: ./.github/workflows/test-ui.yml
+
+  test-server:
+    name: Test server
+    needs: [detect-changes, pre-release]
+    if: needs.detect-changes.outputs.server == 'true'
+    uses: ./.github/workflows/test-server.yml
+    secrets: inherit

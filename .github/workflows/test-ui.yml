@@ -1,10 +1,7 @@
 name: Test UI
 
 on:
-  pull_request:
-    paths:
-      - "ui/**"
-      - ".github/workflows/test-ui.yml"
+  workflow_call:
 
 jobs:
   test:
