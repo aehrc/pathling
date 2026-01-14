@@ -88,7 +88,7 @@
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
     <pathling.derbyVersion>10.16.1.1</pathling.derbyVersion>
     <pathling.bulkExportVersion>1.0.4-SNAPSHOT</pathling.bulkExportVersion>
-    <pathling.fhirAuthVersion>1.0.0-SNAPSHOT</pathling.fhirAuthVersion>
+    <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
   </properties>
 
   <modules>
