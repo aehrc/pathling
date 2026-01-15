@@ -28,13 +28,15 @@ const config = {
   tagline: "Analytics on FHIR&reg;",
   markdown: {
     mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: "warn",
+    },
   },
   themes: ["@docusaurus/theme-mermaid"],
   plugins: [require.resolve("./src/plugins/staticHomePage.js")],
   url: "https://pathling.csiro.au",
   baseUrl: "/",
   onBrokenLinks: "warn",
-  onBrokenMarkdownLinks: "warn",
   favicon: "favicon.ico",
 
   organizationName: "aehrc",
