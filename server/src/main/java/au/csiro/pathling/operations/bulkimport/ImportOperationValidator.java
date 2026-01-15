@@ -36,6 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -72,13 +73,14 @@ public class ImportOperationValidator {
     // Extract input parameters.
     final Collection<ParametersParameterComponent> inputParts =
         ParamUtil.extractManyFromParameters(
-            parameters.getParameter(),
-            "input",
-            ParametersParameterComponent.class,
-            false,
-            Collections.emptyList(),
-            false,
-            new InvalidUserInputError("The input may not be empty."));
+                parameters.getParameter(),
+                "input",
+                ParametersParameterComponent.class,
+                false,
+                Optional.of(Collections.emptyList()),
+                false,
+                Optional.of(new InvalidUserInputError("The input may not be empty.")))
+            .orElseThrow();
 
     final Map<String, Collection<String>> input =
         inputParts.stream()
@@ -174,26 +176,28 @@ public class ImportOperationValidator {
 
   private ImportFormat getImportFormatFromParameters(final Parameters parameters) {
     return ParamUtil.extractFromPart(
-        parameters.getParameter(),
-        "inputFormat",
-        CodeType.class,
-        code -> parseImportFormat(code.getCode()),
-        true,
-        ImportFormat.NDJSON, // Default to NDJSON.
-        false,
-        new InvalidUserInputError("Unknown format."));
+            parameters.getParameter(),
+            "inputFormat",
+            CodeType.class,
+            code -> parseImportFormat(code.getCode()),
+            true,
+            Optional.of(ImportFormat.NDJSON), // Default to NDJSON.
+            false,
+            Optional.of(new InvalidUserInputError("Unknown format.")))
+        .orElseThrow();
   }
 
   private SaveMode getSaveModeFromParameters(final Parameters parameters) {
     return ParamUtil.extractFromPart(
-        parameters.getParameter(),
-        "saveMode",
-        CodeType.class,
-        code -> SaveMode.fromCode(code.getCode()),
-        true,
-        SaveMode.OVERWRITE, // Default to OVERWRITE.
-        false,
-        new InvalidUserInputError("Unknown saveMode."));
+            parameters.getParameter(),
+            "saveMode",
+            CodeType.class,
+            code -> SaveMode.fromCode(code.getCode()),
+            true,
+            Optional.of(SaveMode.OVERWRITE), // Default to OVERWRITE.
+            false,
+            Optional.of(new InvalidUserInputError("Unknown saveMode.")))
+        .orElseThrow();
   }
 
   /**
@@ -266,27 +270,29 @@ public class ImportOperationValidator {
   private String getUrlFromParameters(
       final List<ParametersParameterComponent> partContainingResourceTypeAndUrl) {
     return ParamUtil.extractFromPart(
-        partContainingResourceTypeAndUrl,
-        "url",
-        UrlType.class,
-        UrlType::getValue,
-        false,
-        null,
-        false,
-        new InvalidUserInputError("Missing url part in input parameter."));
+            partContainingResourceTypeAndUrl,
+            "url",
+            UrlType.class,
+            UrlType::getValue,
+            false,
+            Optional.empty(),
+            false,
+            Optional.of(new InvalidUserInputError("Missing url part in input parameter.")))
+        .orElse(null);
   }
 
   @Nullable
   private String getResourceTypeFromParameters(
       final List<ParametersParameterComponent> partContainingResourceTypeAndUrl) {
     return ParamUtil.extractFromPart(
-        partContainingResourceTypeAndUrl,
-        "resourceType",
-        CodeType.class,
-        CodeType::getCode,
-        false,
-        null,
-        false,
-        new InvalidUserInputError("Missing resourceType part in input parameter."));
+            partContainingResourceTypeAndUrl,
+            "resourceType",
+            CodeType.class,
+            CodeType::getCode,
+            false,
+            Optional.empty(),
+            false,
+            Optional.of(new InvalidUserInputError("Missing resourceType part in input parameter.")))
+        .orElse(null);
   }
 }

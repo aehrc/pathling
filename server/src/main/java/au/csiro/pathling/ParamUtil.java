@@ -18,7 +18,7 @@
 package au.csiro.pathling;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import jakarta.annotation.Nullable;
+import jakarta.annotation.Nonnull;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Function;
@@ -29,8 +29,13 @@ import org.hl7.fhir.r4.model.Type;
  * Utility methods for extracting parameters from FHIR Parameters resources.
  *
  * @author Felix Naumann
+ * @author John Grimes
  */
-public class ParamUtil {
+public final class ParamUtil {
+
+  private ParamUtil() {
+    // Utility class.
+  }
 
   /**
    * Extracts multiple values of a specified type from a Parameters resource.
@@ -43,13 +48,15 @@ public class ParamUtil {
    * @param <T> the type of values to extract
    * @return the collection of extracted values
    */
-  public static <T> Collection<T> extractManyFromParameters(
-      final Collection<ParametersParameterComponent> parts,
-      final String partName,
-      final Class<T> typeClazz,
+  @Nonnull
+  public static <T> Optional<Collection<T>> extractManyFromParameters(
+      @Nonnull final Collection<ParametersParameterComponent> parts,
+      @Nonnull final String partName,
+      @Nonnull final Class<T> typeClazz,
       final boolean lenient,
-      final RuntimeException onError) {
-    return extractManyFromParameters(parts, partName, typeClazz, false, null, lenient, onError);
+      @Nonnull final Optional<RuntimeException> onError) {
+    return extractManyFromParameters(
+        parts, partName, typeClazz, false, Optional.empty(), lenient, onError);
   }
 
   /**
@@ -63,13 +70,15 @@ public class ParamUtil {
    * @param <T> the type of values to extract
    * @return the collection of extracted values, or default if not found
    */
-  public static <T extends Type> Collection<T> extractManyFromParameters(
-      final Collection<ParametersParameterComponent> parts,
-      final String partName,
-      final Class<T> typeClazz,
-      @Nullable final Collection<T> defaultValue,
+  @Nonnull
+  public static <T extends Type> Optional<Collection<T>> extractManyFromParameters(
+      @Nonnull final Collection<ParametersParameterComponent> parts,
+      @Nonnull final String partName,
+      @Nonnull final Class<T> typeClazz,
+      @Nonnull final Optional<Collection<T>> defaultValue,
       final boolean lenient) {
-    return extractManyFromParameters(parts, partName, typeClazz, true, defaultValue, lenient, null);
+    return extractManyFromParameters(
+        parts, partName, typeClazz, true, defaultValue, lenient, Optional.empty());
   }
 
   /**
@@ -85,26 +94,31 @@ public class ParamUtil {
    * @param <T> the type of values to extract
    * @return the collection of extracted values
    */
-  public static <T> Collection<T> extractManyFromParameters(
-      final Collection<ParametersParameterComponent> parts,
-      final String partName,
-      final Class<T> typeClazz,
+  @Nonnull
+  public static <T> Optional<Collection<T>> extractManyFromParameters(
+      @Nonnull final Collection<ParametersParameterComponent> parts,
+      @Nonnull final String partName,
+      @Nonnull final Class<T> typeClazz,
       final boolean useDefaultValueOnEmpty,
-      @Nullable final Collection<T> defaultValue,
+      @Nonnull final Optional<Collection<T>> defaultValue,
       final boolean lenient,
-      final RuntimeException onError) {
+      @Nonnull final Optional<RuntimeException> onError) {
     final Collection<T> types =
         parts.stream()
             .filter(param -> partName.equals(param.getName()))
             .map(typeClazz::cast)
             .toList();
     if (!types.isEmpty()) {
-      return types;
+      return Optional.of(types);
     }
     if (useDefaultValueOnEmpty || lenient) {
       return defaultValue;
     }
-    throw onError;
+    throw onError.orElseThrow(
+        () ->
+            new InvalidUserInputError(
+                "Required parameter '%s' is missing and no error handler provided"
+                    .formatted(partName)));
   }
 
   /**
@@ -120,14 +134,16 @@ public class ParamUtil {
    * @param <R> the result type
    * @return the mapped result
    */
-  public static <T, R> R extractFromPart(
-      final Collection<ParametersParameterComponent> parts,
-      final String partName,
-      final Class<? extends T> clazz,
-      final Function<T, R> mapper,
+  @Nonnull
+  public static <T, R> Optional<R> extractFromPart(
+      @Nonnull final Collection<ParametersParameterComponent> parts,
+      @Nonnull final String partName,
+      @Nonnull final Class<? extends T> clazz,
+      @Nonnull final Function<T, R> mapper,
       final boolean lenient,
-      final RuntimeException onError) {
-    return extractFromPart(parts, partName, clazz, mapper, false, null, lenient, onError);
+      @Nonnull final Optional<RuntimeException> onError) {
+    return extractFromPart(
+        parts, partName, clazz, mapper, false, Optional.empty(), lenient, onError);
   }
 
   /**
@@ -144,16 +160,24 @@ public class ParamUtil {
    * @param <R> the result type
    * @return the mapped result, or default if not found
    */
-  public static <T, R> R extractFromPart(
-      final Collection<ParametersParameterComponent> parts,
-      final String partName,
-      final Class<? extends T> typeClazz,
-      final Function<T, R> mapper,
+  @Nonnull
+  public static <T, R> Optional<R> extractFromPart(
+      @Nonnull final Collection<ParametersParameterComponent> parts,
+      @Nonnull final String partName,
+      @Nonnull final Class<? extends T> typeClazz,
+      @Nonnull final Function<T, R> mapper,
       final boolean useDefaultValue,
-      @Nullable final R defaultValue,
+      @Nonnull final Optional<R> defaultValue,
       final boolean lenient) {
     return extractFromPart(
-        parts, partName, typeClazz, mapper, useDefaultValue, defaultValue, lenient, null);
+        parts,
+        partName,
+        typeClazz,
+        mapper,
+        useDefaultValue,
+        defaultValue,
+        lenient,
+        Optional.empty());
   }
 
   /**
@@ -171,15 +195,16 @@ public class ParamUtil {
    * @param <R> the result type
    * @return the mapped result
    */
-  public static <T, R> R extractFromPart(
-      Collection<ParametersParameterComponent> parts,
-      String partName,
-      Class<? extends T> typeClazz,
-      Function<T, R> mapper,
-      boolean useDefaultValue,
-      @Nullable R defaultValue,
-      boolean lenient,
-      RuntimeException onError) {
+  @Nonnull
+  public static <T, R> Optional<R> extractFromPart(
+      @Nonnull final Collection<ParametersParameterComponent> parts,
+      @Nonnull final String partName,
+      @Nonnull final Class<? extends T> typeClazz,
+      @Nonnull final Function<T, R> mapper,
+      final boolean useDefaultValue,
+      @Nonnull final Optional<R> defaultValue,
+      final boolean lenient,
+      @Nonnull final Optional<RuntimeException> onError) {
     final Optional<Type> type =
         parts.stream()
             .filter(param -> partName.equals(param.getName()))
@@ -187,7 +212,7 @@ public class ParamUtil {
             .map(ParametersParameterComponent::getValue);
 
     if (type.isEmpty()) {
-      return handleMissingParameter(useDefaultValue, lenient, defaultValue, onError);
+      return handleMissingParameter(partName, useDefaultValue, lenient, defaultValue, onError);
     }
 
     final T casted = castParameterValue(type.get(), partName, typeClazz, onError);
@@ -197,25 +222,26 @@ public class ParamUtil {
   /**
    * Casts a parameter value to the expected type.
    *
-   * @param value The value to cast.
-   * @param partName The parameter name for error messages.
-   * @param typeClazz The expected type class.
-   * @param onError Custom exception to throw on error (may be null).
-   * @param <T> The target type.
-   * @return The cast value.
-   * @throws InvalidUserInputError If the value cannot be cast.
+   * @param value the value to cast
+   * @param partName the parameter name for error messages
+   * @param typeClazz the expected type class
+   * @param onError custom exception to throw on error
+   * @param <T> the target type
+   * @return the cast value
+   * @throws InvalidUserInputError if the value cannot be cast
    */
+  @Nonnull
   private static <T> T castParameterValue(
-      @Nullable final Type value,
-      final String partName,
-      final Class<? extends T> typeClazz,
-      @Nullable final RuntimeException onError) {
+      @Nonnull final Type value,
+      @Nonnull final String partName,
+      @Nonnull final Class<? extends T> typeClazz,
+      @Nonnull final Optional<RuntimeException> onError) {
     try {
       return typeClazz.cast(value);
     } catch (final ClassCastException e) {
-      if (onError != null) {
-        onError.initCause(e);
-        throw onError;
+      if (onError.isPresent()) {
+        onError.get().initCause(e);
+        throw onError.get();
       }
       throw new InvalidUserInputError(
           "Invalid parameter type for '%s': expected %s but got %s"
@@ -227,32 +253,33 @@ public class ParamUtil {
   /**
    * Applies the mapper function with fallback handling for errors.
    *
-   * @param value The value to map.
-   * @param mapper The mapping function.
-   * @param useDefaultValue Whether to use default on error.
-   * @param lenient Whether to be lenient on errors.
-   * @param defaultValue The default value to return on error.
-   * @param onError Custom exception to throw on error (may be null).
-   * @param <T> The input type.
-   * @param <R> The result type.
-   * @return The mapped result or default value.
+   * @param value the value to map
+   * @param mapper the mapping function
+   * @param useDefaultValue whether to use default on error
+   * @param lenient whether to be lenient on errors
+   * @param defaultValue the default value to return on error
+   * @param onError custom exception to throw on error
+   * @param <T> the input type
+   * @param <R> the result type
+   * @return the mapped result or default value wrapped in Optional
    */
-  private static <T, R> R applyMapperWithFallback(
-      final T value,
-      final Function<T, R> mapper,
+  @Nonnull
+  private static <T, R> Optional<R> applyMapperWithFallback(
+      @Nonnull final T value,
+      @Nonnull final Function<T, R> mapper,
       final boolean useDefaultValue,
       final boolean lenient,
-      @Nullable final R defaultValue,
-      @Nullable final RuntimeException onError) {
+      @Nonnull final Optional<R> defaultValue,
+      @Nonnull final Optional<RuntimeException> onError) {
     try {
-      return mapper.apply(value);
+      return Optional.of(mapper.apply(value));
     } catch (final IllegalArgumentException e) {
       if (lenient && useDefaultValue) {
         return defaultValue;
       }
-      if (onError != null) {
-        onError.initCause(e);
-        throw onError;
+      if (onError.isPresent()) {
+        onError.get().initCause(e);
+        throw onError.get();
       }
       throw e;
     }
@@ -261,22 +288,32 @@ public class ParamUtil {
   /**
    * Handles the case when a parameter is missing.
    *
-   * @param useDefaultValue Whether to return the default value.
-   * @param lenient Whether to be lenient and return default.
-   * @param defaultValue The default value to return.
-   * @param onError The exception to throw if not lenient.
-   * @param <R> The result type.
-   * @return The default value if allowed.
-   * @throws RuntimeException If parameter is required.
+   * @param partName the name of the missing parameter
+   * @param useDefaultValue whether to return the default value
+   * @param lenient whether to be lenient and return empty
+   * @param defaultValue the default value to return
+   * @param onError the exception to throw if not lenient
+   * @param <R> the result type
+   * @return the default value wrapped in Optional, or empty if lenient
+   * @throws RuntimeException if parameter is required
    */
-  private static <R> R handleMissingParameter(
+  @Nonnull
+  private static <R> Optional<R> handleMissingParameter(
+      @Nonnull final String partName,
       final boolean useDefaultValue,
       final boolean lenient,
-      @Nullable final R defaultValue,
-      final RuntimeException onError) {
-    if (useDefaultValue || lenient) {
+      @Nonnull final Optional<R> defaultValue,
+      @Nonnull final Optional<RuntimeException> onError) {
+    if (useDefaultValue) {
       return defaultValue;
     }
-    throw onError;
+    if (lenient) {
+      return Optional.empty();
+    }
+    throw onError.orElseThrow(
+        () ->
+            new InvalidUserInputError(
+                "Required parameter '%s' is missing and no error handler provided"
+                    .formatted(partName)));
   }
 }

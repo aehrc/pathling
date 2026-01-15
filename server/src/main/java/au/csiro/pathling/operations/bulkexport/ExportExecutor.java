@@ -246,14 +246,11 @@ public class ExportExecutor {
                     coalesce(col("meta.id"), lit(null).cast(DataTypes.StringType)).as("id"),
                     coalesce(col("meta.versionId"), lit(null).cast(DataTypes.StringType))
                         .as("versionId"),
-                    coalesce(
-                            col("meta.versionId_versioned"),
-                            lit(null).cast(DataTypes.StringType))
+                    coalesce(col("meta.versionId_versioned"), lit(null).cast(DataTypes.StringType))
                         .as("versionId_versioned"),
                     coalesce(col("meta.lastUpdated"), lit(null).cast(DataTypes.TimestampType))
                         .as("lastUpdated"),
-                    coalesce(col("meta.source"), lit(null).cast(DataTypes.StringType))
-                        .as("source"),
+                    coalesce(col("meta.source"), lit(null).cast(DataTypes.StringType)).as("source"),
                     coalesce(
                             col("meta.profile"),
                             lit(null).cast(DataTypes.createArrayType(DataTypes.StringType)))
@@ -282,10 +279,8 @@ public class ExportExecutor {
                                             }))))
                         .as("security"),
                     // Always combine existing tags with the new SUBSETTED tag
-                    array_union(coalesce(col("meta.tag"), array()), subsettedTagArray)
-                        .as("tag"),
-                    coalesce(col("meta._fid"), lit(null).cast(DataTypes.IntegerType))
-                        .as("_fid"))));
+                    array_union(coalesce(col("meta.tag"), array()), subsettedTagArray).as("tag"),
+                    coalesce(col("meta._fid"), lit(null).cast(DataTypes.IntegerType)).as("_fid"))));
   }
 
   @Nonnull

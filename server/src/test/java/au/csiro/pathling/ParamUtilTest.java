@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import java.util.List;
+import java.util.Optional;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
@@ -56,7 +57,7 @@ class ParamUtilTest {
                     Coding.class,
                     Coding::getCode,
                     false,
-                    new InvalidUserInputError("Invalid parameter type")))
+                    Optional.of(new InvalidUserInputError("Invalid parameter type"))))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("Invalid parameter type");
   }
@@ -82,7 +83,7 @@ class ParamUtilTest {
                     CodeType.class,
                     CodeType::getCode,
                     false,
-                    expectedError))
+                    Optional.of(expectedError)))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("Custom error message");
   }
@@ -102,7 +103,13 @@ class ParamUtilTest {
     assertThatThrownBy(
             () ->
                 ParamUtil.extractFromPart(
-                    List.of(param), "testParam", Coding.class, Coding::getCode, true, null, false))
+                    List.of(param),
+                    "testParam",
+                    Coding.class,
+                    Coding::getCode,
+                    true,
+                    Optional.empty(),
+                    false))
         .isInstanceOf(InvalidUserInputError.class);
   }
 
@@ -115,15 +122,43 @@ class ParamUtilTest {
     param.setValue(new CodeType("expectedValue"));
 
     // Extract as CodeType (correct type) - should succeed.
-    final String result =
+    final Optional<String> result =
         ParamUtil.extractFromPart(
             List.of(param),
             "testParam",
             CodeType.class,
             CodeType::getCode,
             false,
-            new InvalidUserInputError("Should not be thrown"));
+            Optional.of(new InvalidUserInputError("Should not be thrown")));
 
-    assertThat(result).isEqualTo("expectedValue");
+    assertThat(result).isPresent().hasValue("expectedValue");
+  }
+
+  /** Tests that extraction returns empty Optional when parameter is missing and lenient is true. */
+  @Test
+  void returnsEmptyOptionalWhenParameterMissingAndLenient() {
+    // Extract from empty list with lenient=true - should return empty Optional.
+    final Optional<String> result =
+        ParamUtil.extractFromPart(
+            List.of(), "missingParam", CodeType.class, CodeType::getCode, true, Optional.empty());
+
+    assertThat(result).isEmpty();
+  }
+
+  /** Tests that extraction returns default value when parameter is missing and default provided. */
+  @Test
+  void returnsDefaultValueWhenParameterMissingAndDefaultProvided() {
+    // Extract from empty list with default value - should return default.
+    final Optional<String> result =
+        ParamUtil.extractFromPart(
+            List.of(),
+            "missingParam",
+            CodeType.class,
+            CodeType::getCode,
+            true,
+            Optional.of("defaultValue"),
+            false);
+
+    assertThat(result).isPresent().hasValue("defaultValue");
   }
 }

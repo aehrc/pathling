@@ -26,6 +26,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Coding;
@@ -153,14 +154,15 @@ public class BulkSubmitValidator {
       @Nonnull final Parameters parameters, @Nonnull final String paramName) {
     final String value =
         ParamUtil.extractFromPart(
-            parameters.getParameter(),
-            paramName,
-            StringType.class,
-            StringType::getValue,
-            false,
-            null,
-            false,
-            new InvalidUserInputError("Missing required parameter: " + paramName));
+                parameters.getParameter(),
+                paramName,
+                StringType.class,
+                StringType::getValue,
+                false,
+                Optional.empty(),
+                false,
+                Optional.of(new InvalidUserInputError("Missing required parameter: " + paramName)))
+            .orElse(null);
     if (value == null || value.isBlank()) {
       throw new InvalidUserInputError("Missing required parameter: " + paramName);
     }
@@ -171,14 +173,15 @@ public class BulkSubmitValidator {
   private SubmitterIdentifier extractSubmitter(@Nonnull final Parameters parameters) {
     final Identifier identifier =
         ParamUtil.extractFromPart(
-            parameters.getParameter(),
-            "submitter",
-            Identifier.class,
-            i -> i,
-            false,
-            null,
-            false,
-            new InvalidUserInputError("Missing required parameter: submitter"));
+                parameters.getParameter(),
+                "submitter",
+                Identifier.class,
+                i -> i,
+                false,
+                Optional.empty(),
+                false,
+                Optional.of(new InvalidUserInputError("Missing required parameter: submitter")))
+            .orElse(null);
     if (identifier == null) {
       throw new InvalidUserInputError("Missing required parameter: submitter");
     }
@@ -195,14 +198,16 @@ public class BulkSubmitValidator {
   private String extractSubmissionStatus(@Nonnull final Parameters parameters) {
     final String status =
         ParamUtil.extractFromPart(
-            parameters.getParameter(),
-            "submissionStatus",
-            Coding.class,
-            Coding::getCode,
-            false,
-            null,
-            false,
-            new InvalidUserInputError("Missing required parameter: submissionStatus"));
+                parameters.getParameter(),
+                "submissionStatus",
+                Coding.class,
+                Coding::getCode,
+                false,
+                Optional.empty(),
+                false,
+                Optional.of(
+                    new InvalidUserInputError("Missing required parameter: submissionStatus")))
+            .orElse(null);
     if (status == null || status.isBlank()) {
       throw new InvalidUserInputError("Missing required parameter: submissionStatus");
     }
@@ -218,14 +223,15 @@ public class BulkSubmitValidator {
       @Nonnull final Parameters parameters, @Nonnull final String paramName) {
     // Per Argonaut spec, URL parameters are string (url), not FHIR url type.
     return ParamUtil.extractFromPart(
-        parameters.getParameter(),
-        paramName,
-        StringType.class,
-        StringType::getValue,
-        true,
-        null,
-        false,
-        null);
+            parameters.getParameter(),
+            paramName,
+            StringType.class,
+            StringType::getValue,
+            true,
+            Optional.empty(),
+            false,
+            Optional.empty())
+        .orElse(null);
   }
 
   private void validateUrl(
@@ -269,11 +275,27 @@ public class BulkSubmitValidator {
 
     final String headerName =
         ParamUtil.extractFromPart(
-            parts, "headerName", StringType.class, StringType::getValue, true, null, false, null);
+                parts,
+                "headerName",
+                StringType.class,
+                StringType::getValue,
+                true,
+                Optional.empty(),
+                false,
+                Optional.empty())
+            .orElse(null);
 
     final String headerValue =
         ParamUtil.extractFromPart(
-            parts, "headerValue", StringType.class, StringType::getValue, true, null, false, null);
+                parts,
+                "headerValue",
+                StringType.class,
+                StringType::getValue,
+                true,
+                Optional.empty(),
+                false,
+                Optional.empty())
+            .orElse(null);
 
     if (headerName == null || headerName.isBlank() || headerValue == null) {
       return null;
