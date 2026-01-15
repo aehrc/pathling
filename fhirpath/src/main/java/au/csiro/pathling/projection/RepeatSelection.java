@@ -65,7 +65,9 @@ public record RepeatSelection(
                 ctx ->
                     ValueFunctions.transformTree(
                         ctx.inputContext().getColumnValue(),
-                        c -> component.evaluateElementWise(ctx.withInputColumn(c)),
+                        c ->
+                            ValueFunctions.emptyArrayIfMissingField(
+                                component.evaluateElementWise(ctx.withInputColumn(c))),
                         paths.stream().map(ctx::asColumnOperator).toList(),
                         maxDepth))
             .toArray(Column[]::new);

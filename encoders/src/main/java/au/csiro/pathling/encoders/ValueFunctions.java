@@ -146,6 +146,23 @@ public class ValueFunctions {
   }
 
   /**
+   * Returns an empty array when a struct field doesn't exist in the schema, instead of throwing an
+   * error. This is similar to {@link #nullIfMissingField} but returns an empty array instead of
+   * null, making it suitable for use in array concatenation contexts where type compatibility is
+   * required.
+   *
+   * @param value The column expression that may reference a non-existent field
+   * @return A column that resolves to an empty array if the field is not found in the schema, or
+   *     the field's value if the field exists
+   */
+  @Nonnull
+  public static Column emptyArrayIfMissingField(@Nonnull final Column value) {
+    final Expression valueExpr = expression(value);
+    final Expression emptyOrExpr = new UnresolvedEmptyArrayIfMissingField(valueExpr);
+    return column(emptyOrExpr);
+  }
+
+  /**
    * Performs a recursive tree traversal with value extraction at each level.
    *
    * <p>This method implements a depth-first traversal of nested structures, applying a sequence of

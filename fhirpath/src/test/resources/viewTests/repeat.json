@@ -20,7 +20,8 @@
                       "url": "urn:id4",
                       "valueString": "value4"
                     }
-                  ]                }
+                  ]
+                }
               ]
             }
           ]
@@ -30,9 +31,7 @@
         {
           "use": "official",
           "family": "f1.1",
-          "given": [
-            "g1.1"
-          ]
+          "given": ["g1.1"]
         }
       ]
     }
@@ -91,6 +90,64 @@
           "id": "pt1",
           "url": "urn:id4",
           "valueString": "value4"
+        }
+      ]
+    },
+    {
+      "title": "forEach on same path as repeat",
+      "tags": ["shareable"],
+      "view": {
+        "resource": "Patient",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "repeat": ["extension"],
+            "column": [
+              {
+                "name": "parent_url",
+                "path": "url",
+                "type": "uri"
+              }
+            ],
+            "select": [
+              {
+                "forEach": "extension",
+                "column": [
+                  {
+                    "name": "child_url",
+                    "path": "url",
+                    "type": "uri"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "pt1",
+          "parent_url": "urn:id1",
+          "child_url": "urn:id2"
+        },
+        {
+          "id": "pt1",
+          "parent_url": "urn:id2",
+          "child_url": "urn:id3"
+        },
+        {
+          "id": "pt1",
+          "parent_url": "urn:id3",
+          "child_url": "urn:id4"
         }
       ]
     }
