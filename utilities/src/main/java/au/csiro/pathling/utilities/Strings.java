@@ -21,7 +21,7 @@ import static java.util.function.Predicate.not;
 
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.Unmodifiable;
@@ -53,7 +53,9 @@ public abstract class Strings {
    */
   @Nonnull
   public static String randomAlias() {
-    final int randomNumber = Math.abs(new Random().nextInt());
+    // Use ThreadLocalRandom to avoid creating new Random instances and to handle the edge case
+    // where nextInt() returns Integer.MIN_VALUE (which would overflow with Math.abs()).
+    final int randomNumber = ThreadLocalRandom.current().nextInt(0, Integer.MAX_VALUE);
     return "@" + Integer.toString(randomNumber, Character.MAX_RADIX);
   }
 

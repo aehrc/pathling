@@ -47,11 +47,12 @@ public class SqlFunctionRegistrar implements SparkConfigurer {
       @Nonnull final List<SqlFunction3<?, ?, ?, ?>> sqlFunction3,
       @Nonnull final List<SqlFunction4<?, ?, ?, ?, ?>> sqlFunction4,
       @Nonnull final List<SqlFunction5<?, ?, ?, ?, ?, ?>> sqlFunction5) {
-    this.sqlFunction1 = sqlFunction1;
-    this.sqlFunction2 = sqlFunction2;
-    this.sqlFunction3 = sqlFunction3;
-    this.sqlFunction4 = sqlFunction4;
-    this.sqlFunction5 = sqlFunction5;
+    // Create defensive copies to prevent external mutation of internal state.
+    this.sqlFunction1 = List.copyOf(sqlFunction1);
+    this.sqlFunction2 = List.copyOf(sqlFunction2);
+    this.sqlFunction3 = List.copyOf(sqlFunction3);
+    this.sqlFunction4 = List.copyOf(sqlFunction4);
+    this.sqlFunction5 = List.copyOf(sqlFunction5);
   }
 
   @Override
