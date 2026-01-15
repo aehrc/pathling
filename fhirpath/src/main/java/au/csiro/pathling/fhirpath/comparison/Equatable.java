@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,6 +38,8 @@ import org.apache.spark.sql.Column;
 public interface Equatable {
 
   /**
+   * Gets the comparator to use for equality comparisons.
+   *
    * @return the comparator to use for equality comparisons
    */
   @Nonnull
@@ -61,25 +63,24 @@ public interface Equatable {
     }
   }
 
-
   /**
    * Get a function that can take two Equatable paths and return a {@link ColumnRepresentation} that
    * contains an element equality condition. The type of condition is controlled by supplying
    * a{@link EqualityOperation}.
    *
    * @param operation The {@link EqualityOperation} type to retrieve the equality for
-   * @return A {@link Function} that takes an Equatable as its parameter, and returns a
-   * {@link ColumnRepresentation}
+   * @return A {@link Function} that takes an Equatable as its parameter, and returns a {@link
+   *     ColumnRepresentation}
    */
   @Nonnull
   default Function<Equatable, ColumnRepresentation> getElementEquality(
       @Nonnull final EqualityOperation operation) {
     return target -> {
-
-      final Column columnResult = operation.equalityFunction.apply(getComparator(),
-          getColumn().singular("Element equality requires singular left operand").getValue(),
-          target.getColumn().singular("Element equality singular right operand").getValue()
-      );
+      final Column columnResult =
+          operation.equalityFunction.apply(
+              getComparator(),
+              getColumn().singular("Element equality requires singular left operand").getValue(),
+              target.getColumn().singular("Element equality singular right operand").getValue());
       return new DefaultRepresentation(columnResult);
     };
   }
@@ -100,27 +101,20 @@ public interface Equatable {
   @Nonnull
   ColumnRepresentation getColumn();
 
-  /**
-   * Represents a type of comparison operation.
-   */
+  /** Represents a type of comparison operation. */
   enum EqualityOperation {
-    /**
-     * The equals operation.
-     */
+    /** The equals operation. */
     EQUALS("=", ColumnEquality::equalsTo),
 
-    /**
-     * The not equals operation.
-     */
+    /** The not equals operation. */
     NOT_EQUALS("!=", ColumnEquality::notEqual);
 
-    @Nonnull
-    private final String fhirPath;
+    @Nonnull private final String fhirPath;
 
-    @Nonnull
-    private final TriFunction<ColumnEquality, Column, Column, Column> equalityFunction;
+    @Nonnull private final TriFunction<ColumnEquality, Column, Column, Column> equalityFunction;
 
-    EqualityOperation(@Nonnull final String fhirPath,
+    EqualityOperation(
+        @Nonnull final String fhirPath,
         @Nonnull final TriFunction<ColumnEquality, Column, Column, Column> equalityFunction) {
       this.fhirPath = fhirPath;
       this.equalityFunction = equalityFunction;
@@ -133,9 +127,8 @@ public interface Equatable {
     }
 
     /**
-     * Binds a {@link ColumnEquality} to this operation, returning a function that takes two
-     * {@link Column} objects and produces a {@link Column} containing the result of the
-     * comparison.
+     * Binds a {@link ColumnEquality} to this operation, returning a function that takes two {@link
+     * Column} objects and produces a {@link Column} containing the result of the comparison.
      *
      * @param comparator the comparator to bind
      * @return a function that takes two columns and produces a comparison result column

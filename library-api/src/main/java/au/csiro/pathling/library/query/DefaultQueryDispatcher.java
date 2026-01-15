@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,20 +24,19 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 /**
- * Default implementation of the {@link QueryDispatcher} interface, which uses a
- * {@link FhirViewExecutor} to execute FHIR views.
+ * Default implementation of the {@link QueryDispatcher} interface, which uses a {@link
+ * FhirViewExecutor} to execute FHIR views.
  *
  * @param viewExecutor the executor used to build and execute FHIR views
  * @author Piotr Szul
  * @author John Grimes
  */
-public record DefaultQueryDispatcher(@Nonnull FhirViewExecutor viewExecutor) implements
-    QueryDispatcher {
+public record DefaultQueryDispatcher(@Nonnull FhirViewExecutor viewExecutor)
+    implements QueryDispatcher {
 
   @Nonnull
   @Override
   public Dataset<Row> dispatch(@Nonnull final FhirView view) {
     return viewExecutor.buildQuery(view);
   }
-
 }

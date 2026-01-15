@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,10 +31,8 @@ import org.apache.spark.sql.SparkSession;
 @Value(staticConstructor = "of")
 public class RuntimeContext implements ResolverBuilder {
 
-  @Nonnull
-  SparkSession spark;
-  @Nonnull
-  FhirEncoders fhirEncoders;
+  @Nonnull SparkSession spark;
+  @Nonnull FhirEncoders fhirEncoders;
 
   @Override
   @Nonnull

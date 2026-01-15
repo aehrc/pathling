@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,14 +26,16 @@ import org.springframework.security.oauth2.jwt.Jwt;
  * Audience validator for JWTs.
  *
  * @see <a
- * href="https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization">Spring
- * Security 5 Java API: Authorization</a>
+ *     href="https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization">Spring
+ *     Security 5 Java API: Authorization</a>
  */
 public class JwtAudienceValidator implements OAuth2TokenValidator<Jwt> {
 
   private final String audience;
 
   /**
+   * Creates a new JwtAudienceValidator.
+   *
    * @param audience the required audience value to be presented within tokens
    */
   public JwtAudienceValidator(final String audience) {
@@ -42,13 +44,12 @@ public class JwtAudienceValidator implements OAuth2TokenValidator<Jwt> {
 
   @Override
   public OAuth2TokenValidatorResult validate(final Jwt jwt) {
-    final OAuth2Error error = new OAuth2Error("invalid_token", "The required audience is missing",
-        null);
+    final OAuth2Error error =
+        new OAuth2Error("invalid_token", "The required audience is missing", null);
 
     if (jwt.getAudience().contains(audience)) {
       return OAuth2TokenValidatorResult.success();
     }
     return OAuth2TokenValidatorResult.failure(error);
   }
-
 }

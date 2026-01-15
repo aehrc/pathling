@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,6 @@
 package au.csiro.pathling.async;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -94,10 +93,12 @@ class AsyncJobContextTest {
     final AtomicReference<Optional<Job<?>>> otherThreadResult = new AtomicReference<>();
 
     // When we check the context from another thread.
-    final Thread otherThread = new Thread(() -> {
-      otherThreadResult.set(AsyncJobContext.getCurrentJob());
-      latch.countDown();
-    });
+    final Thread otherThread =
+        new Thread(
+            () -> {
+              otherThreadResult.set(AsyncJobContext.getCurrentJob());
+              latch.countDown();
+            });
     otherThread.start();
 
     // Wait for the other thread to complete.
@@ -105,8 +106,7 @@ class AsyncJobContextTest {
     assertTrue(completed, "Thread should complete within timeout");
 
     // Then the other thread should see an empty context (ThreadLocal is per-thread).
-    assertTrue(otherThreadResult.get().isEmpty(),
-        "Other thread should not see main thread's job");
+    assertTrue(otherThreadResult.get().isEmpty(), "Other thread should not see main thread's job");
 
     // And the main thread should still see its job.
     assertTrue(AsyncJobContext.getCurrentJob().isPresent());
@@ -135,5 +135,4 @@ class AsyncJobContextTest {
     when(mockJob.getId()).thenReturn(jobId);
     return mockJob;
   }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -81,9 +81,7 @@ public class DatasetAssert {
     return new DatasetAssert(dataset);
   }
 
-  @Getter
-  @Nonnull
-  private Dataset<Row> dataset;
+  @Getter @Nonnull private Dataset<Row> dataset;
 
   public DatasetAssert(@Nonnull final Dataset<Row> dataset) {
     this.dataset = dataset;
@@ -109,13 +107,15 @@ public class DatasetAssert {
 
   @SuppressWarnings("unused")
   @Nonnull
-  public DatasetAssert hasRows(@Nonnull final SparkSession spark,
-      @Nonnull final String expectedCsvPath) {
+  public DatasetAssert hasRows(
+      @Nonnull final SparkSession spark, @Nonnull final String expectedCsvPath) {
     return hasRows(spark, expectedCsvPath, false);
   }
 
-  public DatasetAssert hasRows(@Nonnull final SparkSession spark,
-      @Nonnull final String expectedCsvPath, final boolean header) {
+  public DatasetAssert hasRows(
+      @Nonnull final SparkSession spark,
+      @Nonnull final String expectedCsvPath,
+      final boolean header) {
     Assertions.assertDatasetAgainstTsv(spark, expectedCsvPath, dataset, header);
     return this;
   }
@@ -127,8 +127,7 @@ public class DatasetAssert {
 
   private static class MyMultiSet<T> extends HashMultiSet<T> {
 
-    @Serial
-    private static final long serialVersionUID = -2511025757690743888L;
+    @Serial private static final long serialVersionUID = -2511025757690743888L;
 
     public MyMultiSet(@Nonnull final Collection<T> collection) {
       super(collection);
@@ -136,10 +135,7 @@ public class DatasetAssert {
 
     @Override
     public String toString() {
-      return entrySet().stream()
-          .map(Object::toString)
-          .sorted()
-          .collect(Collectors.joining("\n"));
+      return entrySet().stream().map(Object::toString).sorted().collect(Collectors.joining("\n"));
     }
   }
 
@@ -174,10 +170,10 @@ public class DatasetAssert {
     assertEquals(expectedColumns, actualColumns);
 
     // Then re-project the expected and actual datasets using the ordered list of columns.
-    final Dataset<Row> expectedReprojected = expected.select(expectedColumns.stream()
-        .map(expected::col).toArray(Column[]::new));
-    final Dataset<Row> actualReprojected = dataset.select(actualColumns.stream()
-        .map(dataset::col).toArray(Column[]::new));
+    final Dataset<Row> expectedReprojected =
+        expected.select(expectedColumns.stream().map(expected::col).toArray(Column[]::new));
+    final Dataset<Row> actualReprojected =
+        dataset.select(actualColumns.stream().map(dataset::col).toArray(Column[]::new));
 
     // Finally, assert that the re-projected datasets are equal.
     new DatasetAssert(actualReprojected).hasRowsUnordered(expectedReprojected);
@@ -236,8 +232,10 @@ public class DatasetAssert {
 
   @Nonnull
   @SuppressWarnings({"unused", "UnusedReturnValue"})
-  public DatasetAssert saveAllRowsToCsv(@Nonnull final SparkSession spark,
-      @Nonnull final String location, @Nonnull final String name) {
+  public DatasetAssert saveAllRowsToCsv(
+      @Nonnull final SparkSession spark,
+      @Nonnull final String location,
+      @Nonnull final String name) {
     final Path path = Path.of(location, name + ".csv");
 
     try {
@@ -247,18 +245,21 @@ public class DatasetAssert {
     }
     writeCsv(dataset, path.toUri().toString(), SaveMode.Overwrite);
     throw new AssertionError(
-        "Rows saved to CSV, check that the file is correct and replace this line with an assertion");
+        "Rows saved to CSV, check that the file is correct and replace this line with an"
+            + " assertion");
   }
-
 
   @Nonnull
   @SuppressWarnings({"unused", "UnusedReturnValue"})
   public DatasetAssert printAsTsv() {
-    dataset.select(
-            functions.array_join(
-                functions.array(
-                    Stream.of(dataset.columns()).map(functions::col).toArray(Column[]::new)), "\t"
-            ).as("value"))
+    dataset
+        .select(
+            functions
+                .array_join(
+                    functions.array(
+                        Stream.of(dataset.columns()).map(functions::col).toArray(Column[]::new)),
+                    "\t")
+                .as("value"))
         .as(Encoders.STRING())
         .collectAsList()
         .forEach(System.out::println);
@@ -273,7 +274,9 @@ public class DatasetAssert {
    * @param saveMode the {@link SaveMode} to use
    * @return the URL of the result
    */
-  private static String writeCsv(@Nonnull final Dataset<?> result, @Nonnull final String fileUrl,
+  private static String writeCsv(
+      @Nonnull final Dataset<?> result,
+      @Nonnull final String fileUrl,
       @Nonnull final SaveMode saveMode) {
 
     Preconditions.check(fileUrl.endsWith(".csv"), "fileUrl must have .csv extension");
@@ -282,8 +285,9 @@ public class DatasetAssert {
 
     // Get a handle for the Hadoop FileSystem representing the result location, and check that it
     // is accessible.
-    @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
-        .hadoopConfiguration();
+    @Nullable
+    final org.apache.hadoop.conf.Configuration hadoopConfiguration =
+        spark.sparkContext().hadoopConfiguration();
     requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouseLocation;
     try {
@@ -299,10 +303,7 @@ public class DatasetAssert {
     final String resultDatasetUrl = fileUrl + ".tmp";
     log.info("Writing result: {}", resultDatasetUrl);
     try {
-      result.coalesce(1)
-          .write()
-          .mode(saveMode)
-          .csv(resultDatasetUrl);
+      result.coalesce(1).write().mode(saveMode).csv(resultDatasetUrl);
     } catch (final Exception e) {
       throw new RuntimeException("Problem writing to file: " + resultDatasetUrl, e);
     }
@@ -311,14 +312,15 @@ public class DatasetAssert {
     try {
       final org.apache.hadoop.fs.Path resultPath = new org.apache.hadoop.fs.Path(resultDatasetUrl);
       final FileStatus[] partitionFiles = warehouseLocation.listStatus(resultPath);
-      final String targetFile = Arrays.stream(partitionFiles)
-          .map(f -> f.getPath().toString())
-          .filter(f -> f.endsWith(".csv"))
-          .findFirst()
-          .orElseThrow(() -> new IOException("Partition file not found"));
+      final String targetFile =
+          Arrays.stream(partitionFiles)
+              .map(f -> f.getPath().toString())
+              .filter(f -> f.endsWith(".csv"))
+              .findFirst()
+              .orElseThrow(() -> new IOException("Partition file not found"));
       log.info("Renaming result to: {}", fileUrl);
-      warehouseLocation.rename(new org.apache.hadoop.fs.Path(targetFile),
-          new org.apache.hadoop.fs.Path(fileUrl));
+      warehouseLocation.rename(
+          new org.apache.hadoop.fs.Path(targetFile), new org.apache.hadoop.fs.Path(fileUrl));
       log.info("Cleaning up: {}", resultDatasetUrl);
       warehouseLocation.delete(resultPath, true);
     } catch (final IOException e) {
@@ -326,5 +328,4 @@ public class DatasetAssert {
     }
     return fileUrl;
   }
-
 }

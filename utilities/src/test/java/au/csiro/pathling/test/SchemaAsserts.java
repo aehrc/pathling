@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,18 +25,17 @@ import org.apache.spark.sql.types.StructType;
 
 public interface SchemaAsserts {
 
-  static void assertFieldNotPresent(final String fieldName,
-      final DataType maybeStructType) {
+  static void assertFieldNotPresent(final String fieldName, final DataType maybeStructType) {
     assertInstanceOf(StructType.class, maybeStructType, "Must be struct type.");
-    assertTrue(((StructType) maybeStructType).getFieldIndex(fieldName).isEmpty(),
+    assertTrue(
+        ((StructType) maybeStructType).getFieldIndex(fieldName).isEmpty(),
         "Field: '" + fieldName + "' not present in struct type.");
   }
 
-  static void assertFieldPresent(final String fieldName,
-      final DataType maybeStructType) {
+  static void assertFieldPresent(final String fieldName, final DataType maybeStructType) {
     assertInstanceOf(StructType.class, maybeStructType, "Must be struct type.");
-    assertTrue(((StructType) maybeStructType).getFieldIndex(fieldName).isDefined(),
+    assertTrue(
+        ((StructType) maybeStructType).getFieldIndex(fieldName).isDefined(),
         "Field: '" + fieldName + "' not present in struct type.");
   }
-
 }

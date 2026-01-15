@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +30,8 @@ import lombok.Value;
  * Represents a set of concepts, which can be either a single concept or a union of multiple
  * concepts.
  */
-public sealed interface TerminologyConcepts permits TerminologyConcepts.Set, TerminologyConcepts.Union {
+public sealed interface TerminologyConcepts
+    permits TerminologyConcepts.Set, TerminologyConcepts.Union {
 
   /**
    * Apply a user defined function to this set of concepts.
@@ -40,9 +41,8 @@ public sealed interface TerminologyConcepts permits TerminologyConcepts.Set, Ter
    * @return the result of applying the UDF
    */
   @Nonnull
-  ColumnRepresentation apply(@Nonnull final String name,
-      @Nonnull final ColumnRepresentation... args);
-
+  ColumnRepresentation apply(
+      @Nonnull final String name, @Nonnull final ColumnRepresentation... args);
 
   /**
    * Flatten this set of concepts. This will convert any union of concepts into a set of concepts.
@@ -60,9 +60,7 @@ public sealed interface TerminologyConcepts permits TerminologyConcepts.Set, Ter
   @Nonnull
   CodingCollection getCodingTemplate();
 
-  /**
-   * Represents a collection of codings.  which should be treated as independent concepts.
-   */
+  /** Represents a collection of codings. which should be treated as independent concepts. */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
   class Set implements TerminologyConcepts {
@@ -72,10 +70,10 @@ public sealed interface TerminologyConcepts permits TerminologyConcepts.Set, Ter
 
     @Override
     @Nonnull
-    public ColumnRepresentation apply(@Nonnull final String name,
-        @Nonnull final ColumnRepresentation... args) {
+    public ColumnRepresentation apply(
+        @Nonnull final String name, @Nonnull final ColumnRepresentation... args) {
       // here we are getting either a single coding or an array of codings
-      // representing individual concepts 
+      // representing individual concepts
       // so this is easy to discern - just transform with udf
       return codings.transformWithUdf(name, args);
     }
@@ -85,7 +83,6 @@ public sealed interface TerminologyConcepts permits TerminologyConcepts.Set, Ter
     public Set flatten() {
       return this;
     }
-
   }
 
   /**
@@ -101,23 +98,24 @@ public sealed interface TerminologyConcepts permits TerminologyConcepts.Set, Ter
 
     @Override
     @Nonnull
-    public ColumnRepresentation apply(@Nonnull final String name,
-        @Nonnull final ColumnRepresentation... args) {
+    public ColumnRepresentation apply(
+        @Nonnull final String name, @Nonnull final ColumnRepresentation... args) {
 
       // here we are getting either a single array of codings
       // representing a single concept and an array of arrays of codings representing
       // multiple concepts each with a union of codings
 
       // hmm how can we decide what to use?
-      // we would have to have something like is array of arrays? 
+      // we would have to have something like is array of arrays?
       // looks that we need another operator for this case
 
       return codingUnion.map(
-          c -> ValueFunctions.ifArray2(c,
-              // array of arrays
-              aa -> new DefaultRepresentation(aa).transformWithUdf(name, args).getValue(),
-              as -> new DefaultRepresentation(as).callUdf(name, args).getValue()
-          ));
+          c ->
+              ValueFunctions.ifArray2(
+                  c,
+                  // array of arrays
+                  aa -> new DefaultRepresentation(aa).transformWithUdf(name, args).getValue(),
+                  as -> new DefaultRepresentation(as).callUdf(name, args).getValue()));
     }
 
     @Override
@@ -135,7 +133,8 @@ public sealed interface TerminologyConcepts permits TerminologyConcepts.Set, Ter
    * @return a new set of concepts
    */
   @Nonnull
-  static TerminologyConcepts set(@Nonnull final ColumnRepresentation codingSet,
+  static TerminologyConcepts set(
+      @Nonnull final ColumnRepresentation codingSet,
       @Nonnull final CodingCollection codingTemplate) {
     return new Set(codingSet, codingTemplate);
   }
@@ -148,7 +147,8 @@ public sealed interface TerminologyConcepts permits TerminologyConcepts.Set, Ter
    * @return a new union of concepts
    */
   @Nonnull
-  static TerminologyConcepts union(@Nonnull final ColumnRepresentation codingUnion,
+  static TerminologyConcepts union(
+      @Nonnull final ColumnRepresentation codingUnion,
       @Nonnull final CodingCollection codingTemplate) {
     return new Union(codingUnion, codingTemplate);
   }

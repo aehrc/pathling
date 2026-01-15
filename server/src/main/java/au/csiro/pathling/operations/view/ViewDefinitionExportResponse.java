@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -116,11 +116,11 @@ public class ViewDefinitionExportResponse implements OperationResponse<Parameter
       @Nonnull final String baseUrl, @Nonnull final String localUrl) {
     try {
       final String[] parts = localUrl.split("/jobs/")[1].split("/");
-      final String jobUUID = parts[0];
+      final String jobUuid = parts[0];
       final String file = parts[1];
 
       return new URIBuilder(baseUrl + "$result")
-          .addParameter("job", jobUUID)
+          .addParameter("job", jobUuid)
           .addParameter("file", file)
           .build()
           .toString();

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.test;
 
-
 import au.csiro.pathling.UnitTestDependencies;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -30,6 +29,4 @@ import org.springframework.test.context.ActiveProfiles;
 @Retention(RetentionPolicy.RUNTIME)
 @SpringBootTest(classes = UnitTestDependencies.class)
 @ActiveProfiles({"unit-test"})
-public @interface SpringBootUnitTest {
-
-}
+public @interface SpringBootUnitTest {}

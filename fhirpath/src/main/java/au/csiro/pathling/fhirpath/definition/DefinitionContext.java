@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,9 +19,7 @@ package au.csiro.pathling.fhirpath.definition;
 
 import jakarta.annotation.Nonnull;
 
-/**
- * A context for finding definitions of resource types.
- */
+/** A context for finding definitions of resource types. */
 public interface DefinitionContext {
 
   /**
@@ -29,9 +27,8 @@ public interface DefinitionContext {
    *
    * @param resourceType the type of the resource to find
    * @return the definition of the resource type Throws IllegalArgumentException if the resource
-   * type is not found.
+   *     type is not found.
    */
   @Nonnull
   ResourceDefinition findResourceDefinition(@Nonnull final String resourceType);
-
 }

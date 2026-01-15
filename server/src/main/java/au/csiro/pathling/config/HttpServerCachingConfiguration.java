@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,25 +21,20 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.Data;
 
+/**
+ * Configuration for HTTP server caching headers.
+ *
+ * @author John Grimes
+ */
 @Data
 public class HttpServerCachingConfiguration {
 
-  /**
-   * A list of values to return within the Vary header.
-   */
-  @NotNull
-  private List<String> vary;
+  /** A list of values to return within the Vary header. */
+  @NotNull private List<String> vary;
 
-  /**
-   * A list of values to return within the Cache-Control header, for cacheable responses.
-   */
-  @NotNull
-  private List<String> cacheableControl;
+  /** A list of values to return within the Cache-Control header, for cacheable responses. */
+  @NotNull private List<String> cacheableControl;
 
-  /**
-   * A list of values to return within the Cache-Control header, for uncacheable responses.
-   */
-  @NotNull
-  private List<String> uncacheableControl;
-
+  /** A list of values to return within the Cache-Control header, for uncacheable responses. */
+  @NotNull private List<String> uncacheableControl;
 }

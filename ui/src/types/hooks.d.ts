@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +13,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
-import type { Bundle, Parameters, Resource } from "fhir/r4";
-import type { UseQueryResult, UseMutationResult } from "@tanstack/react-query";
 import type { ImportFormat, SaveMode } from "./import";
 import type { ViewExportManifest } from "./viewExport";
+import type { UseQueryResult, UseMutationResult } from "@tanstack/react-query";
+import type { Bundle, Parameters, Resource } from "fhir/r4";
 
 // ============================================================================
 // Common Types
@@ -215,6 +213,10 @@ export interface BulkExportRequest {
   resourceTypes?: string[];
   /** Export since date (optional). */
   since?: string;
+  /** Export until date (optional). */
+  until?: string;
+  /** Comma-separated list of element names to include (optional). */
+  elements?: string;
   /** Output format. */
   outputFormat?: string;
 }
@@ -303,9 +305,9 @@ export interface SubmitterIdentifier {
 }
 
 /**
- * Request parameters for bulk submit operations.
+ * Base request parameters for bulk submit operations (submit mode).
  */
-export interface BulkSubmitRequest {
+export interface BulkSubmitRequestBase {
   /** Unique submission ID. */
   submissionId: string;
   /** Submitter identifier. */
@@ -323,6 +325,23 @@ export interface BulkSubmitRequest {
   /** Headers to include when fetching files. */
   fileRequestHeaders?: Record<string, string>;
 }
+
+/**
+ * Request parameters for bulk submit operations (submit mode).
+ */
+export interface BulkSubmitRequest extends BulkSubmitRequestBase {
+  /** Operation mode: submit a new submission. */
+  mode: "submit";
+}
+
+/**
+ * Unified request type for bulk submit operations.
+ * Use mode: 'submit' to create a new submission.
+ * Use mode: 'monitor' to monitor an existing submission.
+ */
+export type BulkSubmitRequestUnion =
+  | BulkSubmitRequest
+  | BulkSubmitMonitorRequest;
 
 /**
  * Options for useBulkSubmit hook (callbacks only).
@@ -352,7 +371,7 @@ export interface BulkSubmitManifest {
  * Result of useBulkSubmit hook.
  */
 export interface UseBulkSubmitResult extends AsyncJobResult<
-  BulkSubmitRequest,
+  BulkSubmitRequestUnion,
   BulkSubmitManifest
 > {
   /** Function to download a file from the manifest. */
@@ -363,6 +382,8 @@ export interface UseBulkSubmitResult extends AsyncJobResult<
  * Request parameters for monitoring an existing bulk submit operation.
  */
 export interface BulkSubmitMonitorRequest {
+  /** Operation mode: monitor an existing submission. */
+  mode: "monitor";
   /** Unique submission ID to monitor. */
   submissionId: string;
   /** Submitter identifier. */
@@ -678,10 +699,9 @@ export type UseBulkSubmitFn = (
 
 /**
  * Monitor an existing bulk submit operation with polling.
+ * @deprecated Use useBulkSubmit with mode: 'monitor' instead.
  */
-export type UseBulkSubmitMonitorFn = (
-  options?: UseBulkSubmitMonitorOptions,
-) => UseBulkSubmitMonitorResult;
+export type UseBulkSubmitMonitorFn = UseBulkSubmitFn;
 
 /**
  * Execute a ViewDefinition and return parsed results.

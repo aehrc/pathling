@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,18 +17,13 @@
 
 package au.csiro.pathling.terminology;
 
-import static au.csiro.pathling.sql.TerminologySupport.parseCsvEquivalences;
-
-import au.csiro.pathling.sql.Terminology;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
-/**
- * Describes the interface to the terminology functions from a library context.
- */
+/** Describes the interface to the terminology functions from a library context. */
 public interface TerminologyFunctions {
 
   /**
@@ -41,11 +36,14 @@ public interface TerminologyFunctions {
    * @param outputColumnName the name of the output column
    * @return a new dataset with a new column containing the result
    * @see <a href="https://www.hl7.org/fhir/valueset-operation-validate-code.html">Operation
-   * $validate-code on ValueSet</a>
+   *     $validate-code on ValueSet</a>
    */
   @Nonnull
-  Dataset<Row> memberOf(@Nonnull final Column codingArrayCol, @Nonnull final String valueSetUri,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName);
+  Dataset<Row> memberOf(
+      @Nonnull final Column codingArrayCol,
+      @Nonnull final String valueSetUri,
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String outputColumnName);
 
   /**
    * Translates the codings within the specified column using a concept map known to the terminology
@@ -60,11 +58,15 @@ public interface TerminologyFunctions {
    * @param outputColumnName the name of the output column
    * @return a new dataset with a new column containing the result
    * @see <a href="https://www.hl7.org/fhir/conceptmap-operation-translate.html">Operation
-   * $translate on ConceptMap</a>
+   *     $translate on ConceptMap</a>
    */
   @Nonnull
-  Dataset<Row> translate(@Nonnull final Column codingArrayCol, @Nonnull final String conceptMapUrl,
-      final boolean reverse, @Nonnull final String equivalencesCsv, @Nullable final String target,
+  Dataset<Row> translate(
+      @Nonnull final Column codingArrayCol,
+      @Nonnull final String conceptMapUrl,
+      final boolean reverse,
+      @Nonnull final String equivalencesCsv,
+      @Nullable final String target,
       @Nonnull final Dataset<Row> dataset,
       @Nonnull final String outputColumnName);
 
@@ -78,12 +80,15 @@ public interface TerminologyFunctions {
    * @param inverted if true, the subsumption test will be inverted
    * @return a new dataset with a new column containing the result
    * @see <a href="https://www.hl7.org/fhir/codesystem-operation-subsumes.html">Operation $subsumes
-   * on CodeSystem</a>
+   *     on CodeSystem</a>
    */
   @Nonnull
-  Dataset<Row> subsumes(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB,
-      @Nonnull final String outputColumnName, final boolean inverted);
+  Dataset<Row> subsumes(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column codingArrayA,
+      @Nonnull final Column codingArrayB,
+      @Nonnull final String outputColumnName,
+      final boolean inverted);
 
   /**
    * Creates a new instance of TerminologyFunctions.
@@ -94,45 +99,4 @@ public interface TerminologyFunctions {
   static TerminologyFunctions build() {
     return new TerminologyFunctionsImpl();
   }
-}
-
-/**
- * An implementation of the library terminology functions interface that uses the UDFs.
- */
-class TerminologyFunctionsImpl implements TerminologyFunctions {
-
-  TerminologyFunctionsImpl() {
-  }
-
-  @Nonnull
-  @Override
-  public Dataset<Row> memberOf(@Nonnull final Column codingArrayCol,
-      @Nonnull final String valueSetUri, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String outputColumnName) {
-    return dataset.withColumn(outputColumnName, Terminology.member_of(codingArrayCol, valueSetUri));
-  }
-
-  @Nonnull
-  @Override
-  public Dataset<Row> translate(@Nonnull final Column codingArrayCol,
-      @Nonnull final String conceptMapUrl, final boolean reverse,
-      @Nonnull final String equivalencesCsv,
-      @Nullable final String target,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName) {
-    return dataset.withColumn(outputColumnName,
-        Terminology.translate(codingArrayCol, conceptMapUrl, reverse,
-            parseCsvEquivalences(equivalencesCsv), target));
-  }
-
-  @Override
-  @Nonnull
-  public Dataset<Row> subsumes(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB,
-      @Nonnull final String outputColumnName, final boolean inverted) {
-    return dataset.withColumn(outputColumnName,
-        inverted
-        ? Terminology.subsumed_by(codingArrayA, codingArrayB)
-        : Terminology.subsumes(codingArrayA, codingArrayB));
-  }
-
 }

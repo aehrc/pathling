@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,21 +33,21 @@ public interface CollectionTransform extends Function<Collection, Collection> {
    * Ensures that the result of the transformation is a singleton boolean collection.
    *
    * @return the {@link CollectionTransform} that is guaranteed to return a singleton boolean
-   * collection (or throws an evaluation error if the input collection cannot be coerced to a
-   * boolean singleton).
+   *     collection (or throws an evaluation error if the input collection cannot be coerced to a
+   *     boolean singleton).
    */
   default CollectionTransform requireBooleanSingleton() {
     return input -> apply(input).asBooleanSingleton();
   }
 
   /**
+   * Converts this transform to a column transformation.
+   *
    * @param input the input collection
    * @return a function that applies the transformation and returns the column representation
    */
-  default ColumnTransform toColumnTransformation(
-      @Nonnull final Collection input) {
+  default ColumnTransform toColumnTransformation(@Nonnull final Collection input) {
     // The type of the element Collection needs to be the same as the input.
     return c -> apply(input.copyWith(c)).getColumn();
   }
-
 }

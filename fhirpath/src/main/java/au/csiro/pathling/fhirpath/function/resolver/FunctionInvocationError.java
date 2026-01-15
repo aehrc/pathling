@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,8 +26,7 @@ import java.io.Serial;
  */
 public class FunctionInvocationError extends RuntimeException {
 
-  @Serial
-  private static final long serialVersionUID = -3228718152389969726L;
+  @Serial private static final long serialVersionUID = -3228718152389969726L;
 
   /**
    * Creates a new FunctionInvocationError.
@@ -38,5 +37,4 @@ public class FunctionInvocationError extends RuntimeException {
   public FunctionInvocationError(final String message, final Throwable cause) {
     super(message, cause);
   }
- 
 }

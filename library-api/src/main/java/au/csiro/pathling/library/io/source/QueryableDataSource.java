@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,12 +37,16 @@ import org.apache.spark.sql.Row;
 public interface QueryableDataSource extends DataSource {
 
   /**
+   * Gets a builder capable of writing this data source using various methods.
+   *
    * @return a builder capable of writing this data source using various methods
    */
   @Nonnull
   DataSinkBuilder write();
 
   /**
+   * Creates a view query for the specified subject resource.
+   *
    * @param subjectResource the subject resource code
    * @return an executable {@link FhirViewQuery}
    */
@@ -50,6 +54,8 @@ public interface QueryableDataSource extends DataSource {
   FhirViewQuery view(@Nullable final String subjectResource);
 
   /**
+   * Creates a view query for the specified FHIR view.
+   *
    * @param view a {@link FhirView} to be executed
    * @return an executable {@link FhirViewQuery}
    */
@@ -69,29 +75,32 @@ public interface QueryableDataSource extends DataSource {
 
   /**
    * Applies a transformation to each dataset within this data source.
+   *
    * @param operator the transformation to apply
    * @return a new DataSource containing the transformed datasets
    */
   QueryableDataSource map(@Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator);
 
   /**
-   * Filter the dataset by resource type to remove entire datasets.
-   * This does not filter IN the dataset, but the datasets as a whole. If filtering of specific columns
-   * across all datasets is desired, use
+   * Filter the dataset by resource type to remove entire datasets. This does not filter IN the
+   * dataset, but the datasets as a whole. If filtering of specific columns across all datasets is
+   * desired, use
+   *
    * <pre>{@code
-   *   dataSource.map(dataset -> dataset.filter(...));
+   * dataSource.map(dataset -> dataset.filter(...));
    * }</pre>
+   *
    * @param resourceTypePredicate The predicate to keep datasets
-   * @return a new DataSource containing only the datasets where the associated resource type matched the predicate
+   * @return a new DataSource containing only the datasets where the associated resource type
+   *     matched the predicate
    */
   @Nonnull
   QueryableDataSource filterByResourceType(@Nonnull final Predicate<String> resourceTypePredicate);
-  
+
   /**
    * Caches the datasets in this data source to improve performance for subsequent queries.
    *
    * @return a new DataSource with cached datasets
    */
   DataSource cache();
-
 }

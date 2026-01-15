@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,12 +27,22 @@ public class ResourceNotFoundError extends RuntimeException {
 
   private static final long serialVersionUID = -4574080049289748708L;
 
+  /**
+   * Creates a new ResourceNotFoundError with the given message.
+   *
+   * @param message the detail message for the error
+   */
   public ResourceNotFoundError(final String message) {
     super(message);
   }
 
+  /**
+   * Creates a new ResourceNotFoundError with the given message and cause.
+   *
+   * @param message the detail message for the error
+   * @param cause the underlying cause of the error
+   */
   public ResourceNotFoundError(final String message, final Throwable cause) {
     super(message, cause);
   }
-
 }

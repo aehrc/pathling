@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,19 +42,14 @@ import java.util.stream.Stream;
 /**
  * Resolves function parameters for method-defined FHIRPath functions.
  *
- * @param evaluationContext The evaluation context for resolving variables and executing
- * expressions
+ * @param evaluationContext The evaluation context for resolving variables and executing expressions
  * @param input The input collection that the function will operate on
- * @param actualArguments The list of FHIRPath expressions that will be bound to function
- * parameters
+ * @param actualArguments The list of FHIRPath expressions that will be bound to function parameters
  * @author Piotr Szul
  * @author John Grimes
  */
 public record FunctionParameterResolver(
-    EvaluationContext evaluationContext,
-    Collection input,
-    List<FhirPath> actualArguments
-) {
+    EvaluationContext evaluationContext, Collection input, List<FhirPath> actualArguments) {
 
   /**
    * Creates a FunctionParameterResolver from a FunctionInput object.
@@ -66,21 +61,20 @@ public record FunctionParameterResolver(
   public static FunctionParameterResolver fromFunctionInput(
       @Nonnull final FunctionInput functionInput) {
     return new FunctionParameterResolver(
-        functionInput.context(),
-        functionInput.input(),
-        functionInput.arguments());
+        functionInput.context(), functionInput.input(), functionInput.arguments());
   }
 
   /**
    * Binds the input and arguments to the specified method.
-   * <p>
-   * This method performs type checking and conversion of FHIRPath expressions to Java objects that
-   * can be passed to the method. It validates that:
+   *
+   * <p>This method performs type checking and conversion of FHIRPath expressions to Java objects
+   * that can be passed to the method. It validates that:
+   *
    * <ul>
-   *   <li>The method has at least one parameter (for the input)</li>
-   *   <li>The number of arguments does not exceed the method's parameter count</li>
-   *   <li>Required parameters have corresponding arguments</li>
-   *   <li>Arguments can be converted to the expected parameter types</li>
+   *   <li>The method has at least one parameter (for the input)
+   *   <li>The number of arguments does not exceed the method's parameter count
+   *   <li>Required parameters have corresponding arguments
+   *   <li>Arguments can be converted to the expected parameter types
    * </ul>
    *
    * @param method The method to bind parameters to
@@ -93,45 +87,54 @@ public record FunctionParameterResolver(
 
     // This check ensures that the method has at least one parameter.
     if (method.getParameterCount() == 0) {
-      throw new AssertionError("Function '" + method.getName()
-          + "' does not accept any parameters and is a not a valid FhirPath function implementation");
+      throw new AssertionError(
+          "Function '"
+              + method.getName()
+              + "' does not accept any parameters and is a not a valid FhirPath function"
+              + " implementation");
     }
 
     final BindingContext context = BindingContext.forMethod(method);
 
     // Resolve the input.
-    final Object resolvedInput = resolveCollection(input, method.getParameters()[0],
-        context.forInput());
+    final Object resolvedInput =
+        resolveCollection(input, method.getParameters()[0], context.forInput());
 
     // Check that not extra arguments are provided.
-    context.check(actualArguments.size() <= method.getParameterCount() - 1,
+    context.check(
+        actualArguments.size() <= method.getParameterCount() - 1,
         "Too many arguments provided. Expected "
-            + (method.getParameterCount() - 1) + ", got " + actualArguments.size());
+            + (method.getParameterCount() - 1)
+            + ", got "
+            + actualArguments.size());
 
     // Resolve each pair of method parameter and argument.
-    final Stream<Object> resolvedArguments = IntStream.range(0, method.getParameterCount() - 1)
-        .mapToObj(i -> {
-          final Parameter parameter = method.getParameters()[i + 1];
-          return resolveArgument(parameter,
-              (i < actualArguments.size())
-              ? actualArguments.get(i)
-              : null,
-              context.forArgument(i, parameter.getType()));
-        });
+    final Stream<Object> resolvedArguments =
+        IntStream.range(0, method.getParameterCount() - 1)
+            .mapToObj(
+                i -> {
+                  final Parameter parameter = method.getParameters()[i + 1];
+                  return resolveArgument(
+                      parameter,
+                      (i < actualArguments.size()) ? actualArguments.get(i) : null,
+                      context.forArgument(i, parameter.getType()));
+                });
 
-    return new FunctionInvocation(method,
-        Stream.concat(Stream.of(resolvedInput), resolvedArguments)
-            .toArray(Object[]::new));
+    return new FunctionInvocation(
+        method, Stream.concat(Stream.of(resolvedInput), resolvedArguments).toArray(Object[]::new));
   }
 
   /**
    * Resolves a FHIRPath argument to a Java object that can be passed to a method parameter.
-   * <p>
-   * This method handles different parameter types:
+   *
+   * <p>This method handles different parameter types:
+   *
    * <ul>
-   *   <li>Collection and TerminologyConcepts - evaluates the FHIRPath and converts to the appropriate type</li>
-   *   <li>CollectionTransform - creates a transform that applies the FHIRPath with the current context</li>
-   *   <li>TypeSpecifier - extracts the TypeSpecifier value from a TypeSpecifierPath</li>
+   *   <li>Collection and TerminologyConcepts - evaluates the FHIRPath and converts to the
+   *       appropriate type
+   *   <li>CollectionTransform - creates a transform that applies the FHIRPath with the current
+   *       context
+   *   <li>TypeSpecifier - extracts the TypeSpecifier value from a TypeSpecifierPath
    * </ul>
    *
    * @param parameter The method parameter to resolve an argument for
@@ -142,8 +145,10 @@ public record FunctionParameterResolver(
    * @throws RuntimeException if the parameter type is not supported
    */
   @Nullable
-  private Object resolveArgument(@Nonnull final Parameter parameter,
-      @Nullable final FhirPath argument, @Nonnull final BindingContext context) {
+  private Object resolveArgument(
+      @Nonnull final Parameter parameter,
+      @Nullable final FhirPath argument,
+      @Nonnull final BindingContext context) {
 
     if (isNull(argument)) {
       // check the parameter is happy with a null value
@@ -154,10 +159,11 @@ public record FunctionParameterResolver(
       }
     } else if (Collection.class.isAssignableFrom(parameter.getType())
         || TerminologyConcepts.class.isAssignableFrom(parameter.getType())) {
-      // evaluate collection types 
+      // evaluate collection types
       return resolveCollection(
           argument.apply(evaluationContext.getInputContext(), evaluationContext),
-          parameter, context);
+          parameter,
+          context);
     } else if (CollectionTransform.class.isAssignableFrom(parameter.getType())) {
       // bind with context
       return (CollectionTransform) (c -> argument.apply(c, evaluationContext));
@@ -177,13 +183,16 @@ public record FunctionParameterResolver(
 
   /**
    * Resolves a Collection to a type that can be passed to a method parameter.
-   * <p>
-   * This method handles:
+   *
+   * <p>This method handles:
+   *
    * <ul>
-   *   <li>Converting collections to BooleanCollection when the parameter type is BooleanCollection</li>
-   *   <li>Converting collections to TerminologyConcepts when the parameter type is TerminologyConcepts</li>
-   *   <li>Converting EmptyCollection to specific collection types when needed</li>
-   *   <li>Passing collections directly when the parameter type is assignable from the collection type</li>
+   *   <li>Converting collections to BooleanCollection when the parameter type is BooleanCollection
+   *   <li>Converting collections to TerminologyConcepts when the parameter type is
+   *       TerminologyConcepts
+   *   <li>Converting EmptyCollection to specific collection types when needed
+   *   <li>Passing collections directly when the parameter type is assignable from the collection
+   *       type
    * </ul>
    *
    * @param collection The collection to resolve
@@ -193,47 +202,55 @@ public record FunctionParameterResolver(
    * @throws InvalidUserInputError if the collection cannot be converted to the parameter type
    */
   @Nonnull
-  private Object resolveCollection(@Nonnull final Collection collection,
-      @Nonnull final Parameter parameter, @Nonnull final BindingContext context) {
-    // Check if the parameter expects a BooleanCollection type, if so convert the collection to a 
+  private Object resolveCollection(
+      @Nonnull final Collection collection,
+      @Nonnull final Parameter parameter,
+      @Nonnull final BindingContext context) {
+    // Check if the parameter expects a BooleanCollection type, if so convert the collection to a
     // Boolean representation.
     if (BooleanCollection.class.isAssignableFrom(parameter.getType())) {
       return collection.asBooleanPath();
 
     } else if (TerminologyConcepts.class.isAssignableFrom(parameter.getType())) {
-      // Check if the parameter expects a TerminologyConcepts type. Attempt to convert the 
+      // Check if the parameter expects a TerminologyConcepts type. Attempt to convert the
       // collection to TerminologyConcepts, reporting an error if conversion fails.
-      return collection.toConcepts().orElseGet(
-          () -> context.reportError("Cannot convert collection of type " +
-              collection.getClass().getSimpleName() + " to TerminologyConcepts")
-      );
+      return collection
+          .toConcepts()
+          .orElseGet(
+              () ->
+                  context.reportError(
+                      "Cannot convert collection of type "
+                          + collection.getClass().getSimpleName()
+                          + " to TerminologyConcepts"));
 
     } else if (parameter.getType().isAssignableFrom(collection.getClass())) {
-      // Check if the parameter type can directly accept the collection type. Return the collection 
+      // Check if the parameter type can directly accept the collection type. Return the collection
       // directly as it's already compatible.
       return collection;
 
-    } else if (collection instanceof EmptyCollection && Collection.class.isAssignableFrom(
-        parameter.getType())) {
-      // Handle the case where we have an empty collection and the parameter expects a Collection 
+    } else if (collection instanceof EmptyCollection
+        && Collection.class.isAssignableFrom(parameter.getType())) {
+      // Handle the case where we have an empty collection and the parameter expects a Collection
       // type. Convert the empty collection to the expected collection type.
       return convertEmptyCollectionToType(parameter.getType(), context);
 
     } else {
-      // None of the above conditions matched, indicating a type mismatch. Report an error for 
+      // None of the above conditions matched, indicating a type mismatch. Report an error for
       // unsupported type conversion.
-      return context.reportError("Type mismatch: expected " + parameter.getType().getSimpleName() +
-          " but got " + collection.getClass().getSimpleName());
+      return context.reportError(
+          "Type mismatch: expected "
+              + parameter.getType().getSimpleName()
+              + " but got "
+              + collection.getClass().getSimpleName());
     }
   }
 
   /**
-   * Converts an EmptyCollection to a specific collection type by calling the static empty()
-   * method.
-   * <p>
-   * This method uses reflection to invoke the static empty() method on the target collection class.
-   * According to the FHIRPath specification, empty collections should be handled gracefully by
-   * functions, and functions that operate on empty collections should return appropriate empty
+   * Converts an EmptyCollection to a specific collection type by calling the static empty() method.
+   *
+   * <p>This method uses reflection to invoke the static empty() method on the target collection
+   * class. According to the FHIRPath specification, empty collections should be handled gracefully
+   * by functions, and functions that operate on empty collections should return appropriate empty
    * results.
    *
    * @param targetType The target collection class
@@ -242,8 +259,8 @@ public record FunctionParameterResolver(
    * @throws InvalidUserInputError if the conversion cannot be performed
    */
   @Nonnull
-  private Object convertEmptyCollectionToType(@Nonnull final Class<?> targetType,
-      @Nonnull final BindingContext context) {
+  private Object convertEmptyCollectionToType(
+      @Nonnull final Class<?> targetType, @Nonnull final BindingContext context) {
     try {
       // Try to find and invoke the static empty() method on the target collection class.
       final Method emptyMethod = targetType.getMethod("empty");

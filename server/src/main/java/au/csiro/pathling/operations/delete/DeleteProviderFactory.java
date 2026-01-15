@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,14 +34,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class DeleteProviderFactory {
 
-  @Nonnull
-  private final ApplicationContext applicationContext;
+  @Nonnull private final ApplicationContext applicationContext;
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull
-  private final DeleteExecutor deleteExecutor;
+  @Nonnull private final DeleteExecutor deleteExecutor;
 
   /**
    * Constructs a new DeleteProviderFactory.
@@ -50,7 +47,8 @@ public class DeleteProviderFactory {
    * @param fhirContext the FHIR context for resource definitions
    * @param deleteExecutor the executor for performing delete operations
    */
-  public DeleteProviderFactory(@Nonnull final ApplicationContext applicationContext,
+  public DeleteProviderFactory(
+      @Nonnull final ApplicationContext applicationContext,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DeleteExecutor deleteExecutor) {
     this.applicationContext = applicationContext;
@@ -66,11 +64,11 @@ public class DeleteProviderFactory {
    */
   @Nonnull
   public DeleteProvider createDeleteProvider(@Nonnull final ResourceType resourceType) {
-    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
-        .getResourceDefinition(resourceType.name()).getImplementingClass();
+    final Class<? extends IBaseResource> resourceTypeClass =
+        fhirContext.getResourceDefinition(resourceType.name()).getImplementingClass();
 
-    return applicationContext.getBean(DeleteProvider.class, deleteExecutor, fhirContext,
-        resourceTypeClass);
+    return applicationContext.getBean(
+        DeleteProvider.class, deleteExecutor, fhirContext, resourceTypeClass);
   }
 
   /**
@@ -82,11 +80,10 @@ public class DeleteProviderFactory {
    */
   @Nonnull
   public DeleteProvider createDeleteProvider(@Nonnull final String resourceTypeCode) {
-    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
-        .getResourceDefinition(resourceTypeCode).getImplementingClass();
+    final Class<? extends IBaseResource> resourceTypeClass =
+        fhirContext.getResourceDefinition(resourceTypeCode).getImplementingClass();
 
-    return applicationContext.getBean(DeleteProvider.class, deleteExecutor, fhirContext,
-        resourceTypeClass);
+    return applicationContext.getBean(
+        DeleteProvider.class, deleteExecutor, fhirContext, resourceTypeClass);
   }
-
 }

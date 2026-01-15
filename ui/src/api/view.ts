@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
-import type { Parameters, ParametersParameter } from "fhir/r4";
+import { buildHeaders, buildUrl, checkResponse } from "./utils";
+
 import type {
   ViewExportDownloadOptions,
   ViewExportKickOffOptions,
@@ -25,12 +24,7 @@ import type {
   ViewRunOptions,
   ViewRunStoredOptions,
 } from "../types/api";
-import {
-  buildHeaders,
-  buildUrl,
-  checkResponse,
-  extractJobIdFromUrl,
-} from "./utils";
+import type { Parameters, ParametersParameter } from "fhir/r4";
 
 /**
  * Runs a ViewDefinition and returns the results as a stream.
@@ -168,12 +162,12 @@ export async function viewRunStored(
  *
  * @param baseUrl - The FHIR server base URL.
  * @param options - View export options including views to export.
- * @returns The job ID for tracking the export operation.
+ * @returns The polling URL for tracking the export operation.
  * @throws {UnauthorizedError} When the request receives a 401 response.
  * @throws {Error} For other non-successful responses.
  *
  * @example
- * const { jobId } = await viewExportKickOff("https://example.com/fhir", {
+ * const { pollingUrl } = await viewExportKickOff("https://example.com/fhir", {
  *   views: [{ viewDefinition: { ... }, name: "my-view" }],
  *   format: "parquet",
  *   accessToken: "token123"
@@ -247,8 +241,7 @@ export async function viewExportKickOff(
     throw new Error("View export kick-off failed: No Content-Location header");
   }
 
-  const jobId = extractJobIdFromUrl(contentLocation);
-  return { jobId };
+  return { pollingUrl: contentLocation };
 }
 
 /**

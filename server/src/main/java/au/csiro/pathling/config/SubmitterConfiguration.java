@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +26,14 @@ import jakarta.annotation.Nullable;
  * Configuration for an allowed bulk submit submitter, including optional OAuth credentials for
  * authenticated file downloads.
  *
+ * @param system the identifier system
+ * @param value the identifier value
+ * @param clientId the OAuth client ID
+ * @param clientSecret the OAuth client secret
+ * @param privateKeyJwk the private key JWK for asymmetric auth
+ * @param scope the OAuth scope to request
+ * @param tokenExpiryTolerance the token expiry tolerance in seconds
+ * @param useFormForBasicAuth whether to use form encoding for basic auth
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
@@ -37,12 +45,9 @@ public record SubmitterConfiguration(
     @Nullable String privateKeyJwk,
     @Nullable String scope,
     @Nullable Long tokenExpiryTolerance,
-    @Nullable Boolean useFormForBasicAuth
-) {
+    @Nullable Boolean useFormForBasicAuth) {
 
-  /**
-   * Default token expiry tolerance in seconds.
-   */
+  /** Default token expiry tolerance in seconds. */
   public static final long DEFAULT_TOKEN_EXPIRY_TOLERANCE = 120;
 
   /**
@@ -80,12 +85,10 @@ public record SubmitterConfiguration(
         .clientSecret(clientSecret)
         .privateKeyJWK(privateKeyJwk)
         .scope(scope)
-        .tokenExpiryTolerance(tokenExpiryTolerance != null
-            ? tokenExpiryTolerance
-            : DEFAULT_TOKEN_EXPIRY_TOLERANCE)
+        .tokenExpiryTolerance(
+            tokenExpiryTolerance != null ? tokenExpiryTolerance : DEFAULT_TOKEN_EXPIRY_TOLERANCE)
         // SMART Backend Services spec expects credentials in form body for symmetric auth.
-        .useFormForBasicAuth(useFormForBasicAuth != null ? useFormForBasicAuth : true)
+        .useFormForBasicAuth(useFormForBasicAuth == null || useFormForBasicAuth)
         .build();
   }
-
 }

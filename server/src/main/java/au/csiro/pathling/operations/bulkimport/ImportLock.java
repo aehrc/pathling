@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,8 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 
 /**
+ * An aspect that enforces mutual exclusion on import operations.
+ *
  * @author John Grimes
  */
 @Aspect
@@ -37,8 +39,8 @@ public class ImportLock {
   private synchronized Object enforce(@Nonnull final ProceedingJoinPoint joinPoint)
       throws Throwable {
     if (locked) {
-      throw new UnclassifiedServerFailureException(503,
-          "Another import operation is currently in progress");
+      throw new UnclassifiedServerFailureException(
+          503, "Another import operation is currently in progress");
     }
     try {
       locked = true;
@@ -47,5 +49,4 @@ public class ImportLock {
       locked = false;
     }
   }
-
 }

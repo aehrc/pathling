@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,10 +32,11 @@ public class AccessDeniedError extends RuntimeException {
 
   private static final long serialVersionUID = -4574080049289748708L;
 
-  @Nullable
-  private final String missingAuthority;
+  @Nullable private final String missingAuthority;
 
   /**
+   * Creates a new AccessDeniedError with the given message.
+   *
    * @param message the detail message for the error
    */
   public AccessDeniedError(@Nonnull final String message) {
@@ -44,6 +45,8 @@ public class AccessDeniedError extends RuntimeException {
   }
 
   /**
+   * Creates a new AccessDeniedError with the given message and missing authority.
+   *
    * @param message the detail message for the error
    * @param missingAuthority the missing authority that caused the error
    */
@@ -51,5 +54,4 @@ public class AccessDeniedError extends RuntimeException {
     super(message);
     this.missingAuthority = missingAuthority;
   }
-
 }

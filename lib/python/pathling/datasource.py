@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -14,16 +14,15 @@
 #  limitations under the License.
 
 from datetime import datetime
-from typing import Dict, Sequence, Optional, Callable
-from typing import List, TYPE_CHECKING
-
 from json import dumps, loads
-from py4j.java_gateway import JavaObject
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Sequence
+
 from py4j.java_collections import SetConverter
+from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
 
 from pathling import PathlingContext
-from pathling.core import StringToStringSetMapper, SparkConversionsMixin
+from pathling.core import SparkConversionsMixin, StringToStringSetMapper
 from pathling.fhir import MimeType
 from pathling.spark import Dfs
 
@@ -54,7 +53,7 @@ class DataSource(SparkConversionsMixin):
     def resource_types(self):
         """
         Returns a list of the resource types that are available in the data source.
-        
+
         :return: A list of strings representing the resource types.
         """
         return list(self._jds.getResourceTypes())
@@ -66,6 +65,7 @@ class DataSource(SparkConversionsMixin):
         """
         # Import here to avoid circular dependency
         from pathling.datasink import DataSinks
+
         return DataSinks(self)
 
     def view(
@@ -240,14 +240,14 @@ class DataSources(SparkConversionsMixin):
         type_filters: Optional[List[str]] = None,
         timeout: Optional[int] = None,
         max_concurrent_downloads: int = 10,
-        auth_config: Optional[Dict] = None
+        auth_config: Optional[Dict] = None,
     ) -> DataSource:
         """
-        Creates a data source from a FHIR Bulk Data Access API endpoint. 
+        Creates a data source from a FHIR Bulk Data Access API endpoint.
         Currently only supports bulk export in the ndjson format.
-        
+
         :param fhir_endpoint_url: The URL of the FHIR server to export from
-        :param output_dir: The directory to write the output files to. 
+        :param output_dir: The directory to write the output files to.
                 This should be a valid path in the Spark's filesystem.
                 If set to `None`, a temporary directory will be used instead.
         :param overwrite: Whether to overwrite the output directory if it already exists. Defaults to True.
@@ -277,7 +277,9 @@ class DataSources(SparkConversionsMixin):
         dfs = Dfs(self._pc.spark)
 
         # If `output_dir` is not provided, create a temporary directory
-        output_dir = output_dir or dfs.get_temp_dir_path(prefix="tmp-bulk-export", qualified=True)
+        output_dir = output_dir or dfs.get_temp_dir_path(
+            prefix="tmp-bulk-export", qualified=True
+        )
         # If `overwrite`, then ensure the output directory does not exist
         if overwrite and dfs.exists(output_dir):
             dfs.delete(output_dir, recursive=True)
@@ -301,7 +303,7 @@ class DataSources(SparkConversionsMixin):
                 output_extension=output_extension,
                 timeout=timeout,
                 max_concurrent_downloads=max_concurrent_downloads,
-                auth_config=auth_config
+                auth_config=auth_config,
             )
         elif patients is not None:
             client = BulkExportClient.for_patient(
@@ -318,7 +320,7 @@ class DataSources(SparkConversionsMixin):
                 output_extension=output_extension,
                 timeout=timeout,
                 max_concurrent_downloads=max_concurrent_downloads,
-                auth_config=auth_config
+                auth_config=auth_config,
             )
         else:
             client = BulkExportClient.for_system(
@@ -334,7 +336,7 @@ class DataSources(SparkConversionsMixin):
                 output_extension=output_extension,
                 timeout=timeout,
                 max_concurrent_downloads=max_concurrent_downloads,
-                auth_config=auth_config
+                auth_config=auth_config,
             )
 
         # Perform the export

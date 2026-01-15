@@ -1,6 +1,12 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230.
+ * This is a modified version of the Bunsen library, originally published at
+ * https://github.com/cerner/bunsen.
+ *
+ * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
+ * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+ *
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +19,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package au.csiro.pathling.encoders;
@@ -59,7 +66,7 @@ import org.hl7.fhir.r4.model.UuidType;
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
  */
-@SuppressWarnings({"unused", "MissingJavadoc"})
+@SuppressWarnings({"unused", "MissingJavadocMethod", "checkstyle:MissingJavadocMethod"})
 @Setter
 @ResourceDef(
     name = "ViewDefinition",
@@ -266,6 +273,10 @@ public class ViewDefinitionResource extends DomainResource {
     @Child(name = "unionAll", max = Child.MAX_UNLIMITED)
     private List<SelectComponent> unionAll;
 
+    @Setter
+    @Child(name = "repeat", max = Child.MAX_UNLIMITED)
+    private List<StringType> repeat;
+
     public List<ColumnComponent> getColumn() {
       if (column == null) {
         column = new ArrayList<>();
@@ -329,6 +340,17 @@ public class ViewDefinitionResource extends DomainResource {
       return unionAll != null && !unionAll.isEmpty();
     }
 
+    public List<StringType> getRepeat() {
+      if (repeat == null) {
+        repeat = new ArrayList<>();
+      }
+      return repeat;
+    }
+
+    public boolean hasRepeat() {
+      return repeat != null && !repeat.isEmpty();
+    }
+
     @Override
     public SelectComponent copy() {
       final SelectComponent copy = new SelectComponent();
@@ -353,6 +375,12 @@ public class ViewDefinitionResource extends DomainResource {
           copy.unionAll.add(u.copy());
         }
       }
+      if (repeat != null) {
+        copy.repeat = new ArrayList<>();
+        for (final StringType r : repeat) {
+          copy.repeat.add(r.copy());
+        }
+      }
       return copy;
     }
 
@@ -363,7 +391,8 @@ public class ViewDefinitionResource extends DomainResource {
           && (select == null || select.isEmpty())
           && forEach == null
           && forEachOrNull == null
-          && (unionAll == null || unionAll.isEmpty());
+          && (unionAll == null || unionAll.isEmpty())
+          && (repeat == null || repeat.isEmpty());
     }
   }
 

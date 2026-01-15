@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,6 +59,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
+ * Provides operations for querying and managing asynchronous jobs.
+ *
  * @author John Grimes
  */
 @Component
@@ -66,40 +68,46 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class JobProvider {
 
-
   // regex for UUID
-  private static final Pattern ID_PATTERN = Pattern.compile(
-      "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
+  private static final Pattern ID_PATTERN =
+      Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
   private static final String PROGRESS_HEADER = "X-Progress";
 
-  @Nonnull
-  private final ServerConfiguration configuration;
+  @Nonnull private final ServerConfiguration configuration;
 
-  @Nonnull
-  private final JobRegistry jobRegistry;
+  @Nonnull private final JobRegistry jobRegistry;
   private final SparkSession sparkSession;
   private final String databasePath;
 
   /**
-   * @param configuration a {@link ServerConfiguration} for determining if authorization is enabled
+   * Creates a new JobProvider.
+   *
+   * @param configuration a {@link ServerConfiguration} for determining if authorisation is enabled
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
+   * @param sparkSession the Spark session for file system operations
+   * @param databasePath the path to the database for job file storage
    */
-  public JobProvider(@Nonnull final ServerConfiguration configuration,
-      @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession,
+  public JobProvider(
+      @Nonnull final ServerConfiguration configuration,
+      @Nonnull final JobRegistry jobRegistry,
+      final SparkSession sparkSession,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      String databasePath) {
+          final String databasePath) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
     this.sparkSession = sparkSession;
     this.databasePath = new Path(databasePath, "jobs").toString();
   }
 
-
-  public void deleteJob(String jobId) {
+  /**
+   * Deletes a job and its associated resources.
+   *
+   * @param jobId the ID of the job to delete
+   */
+  public void deleteJob(final String jobId) {
     final Job<?> job = getJob(jobId);
     handleJobDeleteRequest(job);
   }
-
 
   /**
    * Queries a running job for its progress, completion status and final result.
@@ -111,7 +119,8 @@ public class JobProvider {
    */
   @SuppressWarnings({"unused", "TypeMayBeWeakened"})
   @Operation(name = "$job", idempotent = true)
-  public IBaseResource job(@Nullable @OperationParam(name = "id") final String id,
+  public IBaseResource job(
+      @Nullable @OperationParam(name = "id") final String id,
       @jakarta.validation.constraints.NotNull final HttpServletRequest request,
       @Nullable final HttpServletResponse response) {
     log.debug("Received $job request with id: {}", id);
@@ -131,7 +140,7 @@ public class JobProvider {
     return handleJobGetRequest(request, response, job);
   }
 
-  private @NotNull Job<?> getJob(@Nullable String id) {
+  private @NotNull Job<?> getJob(@Nullable final String id) {
     // Validate that the ID looks reasonable.
     if (id == null || !ID_PATTERN.matcher(id).matches()) {
       throw new ResourceNotFoundError("Job ID not found");
@@ -146,15 +155,18 @@ public class JobProvider {
     return job;
   }
 
-  private void handleJobDeleteRequest(Job<?> job) {
+  private void handleJobDeleteRequest(final Job<?> job) {
     /*
     Two possible situations:
       - The initial kick-off request is still ongoing -> cancel it and delete the partial files
-      - The initial kick-off request is complete (and the client may have already downloaded the files) 
-        -> interpret delete request from client as "do no longer need them". Depending on the caching setup,
-        these files may or may not be deleted. Either way return a success status code
-        
-      handle if a delete request was initiated and another delete request is being called before the old one finishes
+      - The initial kick-off request is complete (and the client may have already downloaded the
+        files)
+        -> interpret delete request from client as "do no longer need them". Depending on the
+           caching setup, these files may or may not be deleted. Either way return a success status
+           code
+
+      handle if a delete request was initiated and another delete request is being called before the
+      old one finishes
       -> just return success as well but don't schedule a new deletion internally OR return a 404
      */
     if (job.isMarkedAsDeleted()) {
@@ -168,89 +180,159 @@ public class JobProvider {
     }
     try {
       deleteJobFiles(job.getId());
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new InternalErrorException("Failed to delete files associated with the job.", e);
     } finally {
-      boolean removed = jobRegistry.remove(job);
+      final boolean removed = jobRegistry.remove(job);
       if (removed) {
         log.debug("Removed job {} from registry.", job.getId());
       } else {
-        log.warn("Failed to remove job {} from registry. This might in wrong caching results.",
+        log.warn(
+            "Failed to remove job {} from registry. This might in wrong caching results.",
             job.getId());
       }
     }
-    throw new ProcessingNotCompletedException("The job and its resources will be deleted.",
-        buildDeletionOutcome());
+    throw new ProcessingNotCompletedException(
+        "The job and its resources will be deleted.", buildDeletionOutcome());
   }
 
-  public void deleteJobFiles(String jobId) throws IOException {
-    Configuration hadoopConfig = sparkSession.sparkContext().hadoopConfiguration();
-    FileSystem fs = FileSystem.get(hadoopConfig);
-    Path jobDirToDel = new Path(databasePath, jobId);
+  /**
+   * Deletes the files associated with a job from the file system.
+   *
+   * @param jobId the ID of the job whose files should be deleted
+   * @throws IOException if file deletion fails
+   */
+  public void deleteJobFiles(final String jobId) throws IOException {
+    final Configuration hadoopConfig = sparkSession.sparkContext().hadoopConfiguration();
+    final FileSystem fs = FileSystem.get(hadoopConfig);
+    final Path jobDirToDel = new Path(databasePath, jobId);
     log.debug("Deleting dir {}", jobDirToDel);
-    boolean deleted = fs.delete(jobDirToDel, true);
+    final boolean deleted = fs.delete(jobDirToDel, true);
     if (!deleted) {
       log.warn("Failed to delete dir {}", jobDirToDel);
     }
     log.debug("Deleted dir {}", jobDirToDel);
   }
 
-  private IBaseResource handleJobGetRequest(@NotNull HttpServletRequest request,
-      @Nullable HttpServletResponse response, @NotNull Job<?> job) {
+  private IBaseResource handleJobGetRequest(
+      @NotNull final HttpServletRequest request,
+      @Nullable final HttpServletResponse response,
+      @NotNull final Job<?> job) {
     if (job.getResult().isCancelled()) {
-      // a DELETE request was initiated before the job completed
-      // Depending on the async task is running, the task may periodically check the isCancelled state and abort.
-      // Otherwise, the job actually finishes but the user will never see the result (unless they 
-      // initiate a new request and the cache-layer determined that is can reuse the result)
-      throw new ResourceNotFoundException(
-          "A DELETE request cancelled this job or deleted all files associated with this job.");
+      throw handleCancelledJob();
     }
     if (job.getResult().isDone()) {
-      // If the job is done, we return the Parameters resource.
-      try {
-        job.getResponseModification().accept(response);
-        return job.getResult().get();
-      } catch (final InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new InternalErrorException("Job was interrupted", e);
-      } catch (final ExecutionException e) {
-        // Unwrap the cause chain safely. The Future wraps exceptions in ExecutionException,
-        // and AsyncAspect wraps them in IllegalStateException.
-        Throwable cause = e.getCause();
-        if (cause != null && cause.getCause() != null) {
-          cause = cause.getCause();
-        }
-        throw ErrorHandlingInterceptor.convertError(cause != null
-                                                    ? cause
-                                                    : e);
-      }
+      return handleCompletedJob(job, response);
+    }
+    return handleInProgressJob(request, response, job);
+  }
+
+  /**
+   * Handles a cancelled job by throwing a ResourceNotFoundException.
+   *
+   * @return Never returns, always throws.
+   * @throws ResourceNotFoundException Always thrown.
+   */
+  @Nonnull
+  private static ResourceNotFoundException handleCancelledJob() {
+    // A DELETE request was initiated before the job completed. Depending on the async task, it may
+    // periodically check the isCancelled state and abort. Otherwise, the job finishes but the user
+    // will not see the result unless they initiate a new request and the cache layer reuses it.
+    return new ResourceNotFoundException(
+        "A DELETE request cancelled this job or deleted all files associated with this job.");
+  }
+
+  /**
+   * Handles a completed job by returning its result or converting exceptions.
+   *
+   * @param job The completed job.
+   * @param response The HTTP response for applying response modifications.
+   * @return The job result.
+   * @throws InternalErrorException If the job was interrupted.
+   */
+  @Nonnull
+  private static IBaseResource handleCompletedJob(
+      @Nonnull final Job<?> job, @Nullable final HttpServletResponse response) {
+    try {
+      job.getResponseModification().accept(response);
+      return job.getResult().get();
+    } catch (final InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new InternalErrorException("Job was interrupted", e);
+    } catch (final ExecutionException e) {
+      throw ErrorHandlingInterceptor.convertError(unwrapExecutionException(e));
+    }
+  }
+
+  /**
+   * Unwraps the cause chain from an ExecutionException. The Future wraps exceptions in
+   * ExecutionException, and AsyncAspect may wrap them in IllegalStateException.
+   *
+   * @param e The ExecutionException to unwrap.
+   * @return The root cause or the original exception.
+   */
+  @Nonnull
+  private static Throwable unwrapExecutionException(@Nonnull final ExecutionException e) {
+    Throwable cause = e.getCause();
+    if (cause != null && cause.getCause() != null) {
+      cause = cause.getCause();
+    }
+    return cause != null ? cause : e;
+  }
+
+  /**
+   * Handles an in-progress job by setting headers and throwing ProcessingNotCompletedException.
+   *
+   * @param request The HTTP request for checking cacheability.
+   * @param response The HTTP response for setting headers.
+   * @param job The in-progress job.
+   * @return Never returns, always throws.
+   * @throws ProcessingNotCompletedException Always thrown with 202 status.
+   */
+  @Nonnull
+  private IBaseResource handleInProgressJob(
+      @Nonnull final HttpServletRequest request,
+      @Nullable final HttpServletResponse response,
+      @Nonnull final Job<?> job) {
+    requireNonNull(response);
+
+    // Ensure incomplete responses are never cached.
+    if (EntityTagInterceptor.requestIsCacheable(request)) {
+      EntityTagInterceptor.makeRequestNonCacheable(response, configuration);
+    }
+
+    setProgressHeader(response, job);
+
+    throw new ProcessingNotCompletedException("Processing", buildProcessingOutcome());
+  }
+
+  /**
+   * Sets the X-Progress header based on job progress.
+   *
+   * @param response The HTTP response.
+   * @param job The job to get progress from.
+   */
+  private static void setProgressHeader(
+      @Nonnull final HttpServletResponse response, @Nonnull final Job<?> job) {
+    if (job.getTotalStages() <= 0) {
+      return;
+    }
+
+    final int progress = job.getProgressPercentage();
+    if (progress != 100) {
+      // We don't show 100% as it usually means outstanding stages have not yet been submitted.
+      response.setHeader(PROGRESS_HEADER, progress + "%");
+      job.setLastProgress(progress);
     } else {
-      // If the job is not done, we return a 202 along with an OperationOutcome and progress header.
-      requireNonNull(response);
-      // We need to set the caching headers such that the incomplete response is never cached.
-      if (EntityTagInterceptor.requestIsCacheable(request)) {
-        EntityTagInterceptor.makeRequestNonCacheable(response, configuration);
-      }
-      // Add progress information to the response.
-      if (job.getTotalStages() > 0) {
-        final int progress = job.getProgressPercentage();
-        if (progress != 100) {
-          // We don't bother showing 100%, this usually means that there are outstanding stages
-          // which have not yet been submitted.
-          response.setHeader(PROGRESS_HEADER, progress + "%");
-          job.setLastProgress(progress);
-        } else {
-          // instead show last percentage again
-          response.setHeader(PROGRESS_HEADER, job.getLastProgress() + "%");
-        }
-      }
-      throw new ProcessingNotCompletedException("Processing", buildProcessingOutcome());
+      // Show the last recorded percentage instead.
+      response.setHeader(PROGRESS_HEADER, job.getLastProgress() + "%");
     }
   }
 
   private static IBaseOperationOutcome buildDeletionOutcome() {
-    OperationOutcome operationOutcome = new OperationOutcome();
-    operationOutcome.addIssue()
+    final OperationOutcome operationOutcome = new OperationOutcome();
+    operationOutcome
+        .addIssue()
         .setCode(IssueType.INFORMATIONAL)
         .setSeverity(IssueSeverity.INFORMATION)
         .setDiagnostics("The job and its resources will be deleted.");
@@ -267,5 +349,4 @@ public class JobProvider {
     opOutcome.addIssue(issue);
     return opOutcome;
   }
-
 }

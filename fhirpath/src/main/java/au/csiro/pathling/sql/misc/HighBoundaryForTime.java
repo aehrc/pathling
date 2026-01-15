@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,20 +28,17 @@ import org.apache.spark.sql.types.DataTypes;
 
 /**
  * UDF that calculates the high boundary for a FHIR time string.
- * <p>
- * This function handles partial times and returns the latest possible timestamp for the given
+ *
+ * <p>This function handles partial times and returns the latest possible timestamp for the given
  * precision level.
  *
  * @author Piotr Szul
  */
 public class HighBoundaryForTime implements SqlFunction1<String, Timestamp> {
 
-  @Serial
-  private static final long serialVersionUID = 413946955701564310L;
+  @Serial private static final long serialVersionUID = 413946955701564310L;
 
-  /**
-   * The name of this UDF as registered in Spark.
-   */
+  /** The name of this UDF as registered in Spark. */
   public static final String FUNCTION_NAME = "high_boundary_for_time";
 
   /**

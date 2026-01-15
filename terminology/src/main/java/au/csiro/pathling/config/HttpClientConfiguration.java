@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,8 +34,7 @@ import lombok.Data;
 @Builder
 public class HttpClientConfiguration implements Serializable {
 
-  @Serial
-  private static final long serialVersionUID = -1624276800166930462L;
+  @Serial private static final long serialVersionUID = -1624276800166930462L;
 
   /**
    * The maximum period (in milliseconds) that the server should wait for incoming data from the
@@ -69,13 +68,9 @@ public class HttpClientConfiguration implements Serializable {
    * Controls whether terminology requests that fail for possibly transient reasons (network
    * connections, DNS problems) should be retried.
    */
-  @NotNull
-  @Builder.Default
-  private boolean retryEnabled = true;
+  @NotNull @Builder.Default private boolean retryEnabled = true;
 
-  /**
-   * The number of times to retry failed terminology requests.
-   */
+  /** The number of times to retry failed terminology requests. */
   @NotNull
   @Min(1)
   @Builder.Default

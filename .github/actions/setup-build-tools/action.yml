@@ -1,0 +1,65 @@
+# Orchestrates setup of all build tools based on project requirements.
+#
+# Author: John Grimes
+
+name: Setup Build Tools
+description: Orchestrates setup of Java, R, Python, and Bun build environments.
+
+inputs:
+  java:
+    description: Set up Java/Maven environment.
+    required: false
+    default: "true"
+  java-version:
+    description: Java version to install.
+    required: false
+    default: "21"
+  r:
+    description: Set up R environment.
+    required: false
+    default: "false"
+  r-version:
+    description: R version to install.
+    required: false
+    default: "4.1.3"
+  r-pandoc:
+    description: Install Pandoc for R documentation.
+    required: false
+    default: "false"
+  python:
+    description: Set up Python/uv environment.
+    required: false
+    default: "false"
+  bun:
+    description: Set up Bun runtime.
+    required: false
+    default: "false"
+  sonar-cache:
+    description: Enable SonarQube cache.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Java and Maven
+      if: inputs.java == 'true'
+      uses: ./.github/actions/setup-java-maven
+      with:
+        java-version: ${{ inputs.java-version }}
+        enable-sonar-cache: ${{ inputs.sonar-cache }}
+
+    - name: Set up R
+      if: inputs.r == 'true'
+      uses: ./.github/actions/setup-r
+      with:
+        r-version: ${{ inputs.r-version }}
+        install-pandoc: ${{ inputs.r-pandoc }}
+
+    - name: Set up Python
+      if: inputs.python == 'true'
+      uses: ./.github/actions/setup-python
+
+    - name: Set up Bun
+      if: inputs.bun == 'true'
+      uses: oven-sh/setup-bun@v2

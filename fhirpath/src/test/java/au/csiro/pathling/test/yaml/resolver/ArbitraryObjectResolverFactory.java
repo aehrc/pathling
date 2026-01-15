@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,25 +44,25 @@ import org.apache.spark.sql.types.StructType;
 @Value(staticConstructor = "of")
 public class ArbitraryObjectResolverFactory implements Function<RuntimeContext, ResourceResolver> {
 
-  @Nonnull
-  Map<Object, Object> subjectOM;  // Changed back to Map<Object, Object>
+  @Nonnull Map<Object, Object> subjectOM; // Changed back to Map<Object, Object>
 
   @Override
   @Nonnull
   public ResourceResolver apply(final RuntimeContext rt) {
-    final String subjectResourceCode = Optional.ofNullable(subjectOM.get("resourceType"))
-        .map(String.class::cast)
-        .orElse("Test");
+    final String subjectResourceCode =
+        Optional.ofNullable(subjectOM.get("resourceType")).map(String.class::cast).orElse("Test");
 
-    final DefaultResourceDefinition subjectDefinition = (DefaultResourceDefinition) YamlSupport
-        .yamlToDefinition(subjectResourceCode, subjectOM);
+    final DefaultResourceDefinition subjectDefinition =
+        (DefaultResourceDefinition) YamlSupport.yamlToDefinition(subjectResourceCode, subjectOM);
     final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition);
 
     final String subjectOMJson = YamlSupport.omToJson(subjectOM);
     log.trace("subjectOMJson: \n{}", subjectOMJson);
-    final Dataset<Row> inputDS = rt.getSpark().read().schema(subjectSchema)
-        .json(rt.getSpark().createDataset(List.of(subjectOMJson),
-            Encoders.STRING()));
+    final Dataset<Row> inputDS =
+        rt.getSpark()
+            .read()
+            .schema(subjectSchema)
+            .json(rt.getSpark().createDataset(List.of(subjectOMJson), Encoders.STRING()));
 
     log.trace("Yaml definition: {}", subjectDefinition);
     log.trace("Subject schema: {}", subjectSchema.treeString());
@@ -70,8 +70,7 @@ public class ArbitraryObjectResolverFactory implements Function<RuntimeContext, 
     return DefaultResourceResolver.of(
         DefaultResourceTag.of(subjectResourceCode),
         DefaultDefinitionContext.of(subjectDefinition),
-        inputDS
-    );
+        inputDS);
   }
 
   @Override

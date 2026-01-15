@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,17 +37,11 @@ import jakarta.annotation.Nullable;
  */
 public abstract class AbstractSource implements QueryableDataSource {
 
-  /**
-   * The Pathling context that provides access to dependencies such as the Spark session.
-   */
-  @Nonnull
-  protected final PathlingContext context;
+  /** The Pathling context that provides access to dependencies such as the Spark session. */
+  @Nonnull protected final PathlingContext context;
 
-  /**
-   * The dispatcher used to execute queries against the data source.
-   */
-  @Nonnull
-  protected final QueryDispatcher dispatcher;
+  /** The dispatcher used to execute queries against the data source. */
+  @Nonnull protected final QueryDispatcher dispatcher;
 
   /**
    * Constructs an AbstractSource with the specified PathlingContext.
@@ -60,11 +54,14 @@ public abstract class AbstractSource implements QueryableDataSource {
   }
 
   @Nonnull
-  private QueryDispatcher buildDispatcher(final @Nonnull PathlingContext context,
-      final DataSource dataSource) {
-    final FhirViewExecutor viewExecutor = new FhirViewExecutor(context.getFhirContext(),
-        context.getSpark(), dataSource, context.getQueryConfiguration()
-    );
+  private QueryDispatcher buildDispatcher(
+      final @Nonnull PathlingContext context, final DataSource dataSource) {
+    final FhirViewExecutor viewExecutor =
+        new FhirViewExecutor(
+            context.getFhirContext(),
+            context.getSpark(),
+            dataSource,
+            context.getQueryConfiguration());
 
     // Build the dispatcher using the executors.
     return new DefaultQueryDispatcher(viewExecutor);
@@ -89,5 +86,4 @@ public abstract class AbstractSource implements QueryableDataSource {
     requireNonNull(view);
     return new FhirViewQuery(dispatcher, view.getResource(), context.getGson()).view(view);
   }
-
 }

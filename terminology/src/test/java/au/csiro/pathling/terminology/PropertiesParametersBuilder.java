@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,27 +32,25 @@ class PropertiesParametersBuilder {
   private final Parameters parameters = new Parameters();
   private Parameters.ParametersParameterComponent currentGroup = null;
 
-  PropertiesParametersBuilder withStdProperty(@Nonnull final String code,
-      @Nonnull final Type value) {
+  PropertiesParametersBuilder withStdProperty(
+      @Nonnull final String code, @Nonnull final Type value) {
     parameters.addParameter(code, value);
     return this;
   }
 
-  PropertiesParametersBuilder withStdProperty(@Nonnull final String code,
-      @Nonnull final String value) {
+  PropertiesParametersBuilder withStdProperty(
+      @Nonnull final String code, @Nonnull final String value) {
     parameters.addParameter(code, value);
     return this;
   }
 
   PropertiesParametersBuilder withStdProperties(@Nonnull final Coding coding) {
-    return this
-        .withStdProperty("display", coding.getDisplay())
+    return this.withStdProperty("display", coding.getDisplay())
         .withStdProperty("code", new CodeType(coding.getCode()))
         .withStdProperty("name", "My Test Coding System");
   }
 
-  PropertiesParametersBuilder withProperty(@Nonnull final String code,
-      @Nonnull final Type value) {
+  PropertiesParametersBuilder withProperty(@Nonnull final String code, @Nonnull final Type value) {
     final Parameters.ParametersParameterComponent component = parameters.addParameter();
     component.setName("property");
     component.addPart().setName("code").setValue(new CodeType(code));
@@ -60,8 +58,8 @@ class PropertiesParametersBuilder {
     return this;
   }
 
-  PropertiesParametersBuilder withProperty(@Nonnull final String code,
-      @Nonnull final String stringValue) {
+  PropertiesParametersBuilder withProperty(
+      @Nonnull final String code, @Nonnull final String stringValue) {
     return withProperty(code, new StringType(stringValue));
   }
 
@@ -73,36 +71,38 @@ class PropertiesParametersBuilder {
     return this;
   }
 
-  PropertiesParametersBuilder withSubProperty(@Nonnull final String code,
-      @Nonnull final Type value) {
-    final ParametersParameterComponent subcomponent = currentGroup.addPart()
-        .setName("subproperty");
+  PropertiesParametersBuilder withSubProperty(
+      @Nonnull final String code, @Nonnull final Type value) {
+    final ParametersParameterComponent subcomponent = currentGroup.addPart().setName("subproperty");
     subcomponent.addPart().setName("code").setValue(new CodeType(code));
     subcomponent.addPart().setName("value").setValue(value);
     return this;
   }
 
-  PropertiesParametersBuilder withSubProperty(@Nonnull final String code,
-      @Nonnull final String stringValue) {
+  PropertiesParametersBuilder withSubProperty(
+      @Nonnull final String code, @Nonnull final String stringValue) {
     return withSubProperty(code, new StringType(stringValue));
   }
 
   @Nonnull
-  PropertiesParametersBuilder withDesignation(@Nonnull final String value,
-      @Nonnull final Coding use, @Nonnull final String languageCode) {
+  PropertiesParametersBuilder withDesignation(
+      @Nonnull final String value, @Nonnull final Coding use, @Nonnull final String languageCode) {
     return withDesignation(value, Optional.of(use), Optional.of(languageCode));
   }
 
   @Nonnull
-  PropertiesParametersBuilder withDesignation(@Nonnull final String value,
-      @Nonnull final Optional<Coding> maybeUse, @Nonnull final Optional<String> maybeLanguageCode) {
-    final Parameters.ParametersParameterComponent component = parameters
-        .addParameter().setName("designation");
+  PropertiesParametersBuilder withDesignation(
+      @Nonnull final String value,
+      @Nonnull final Optional<Coding> maybeUse,
+      @Nonnull final Optional<String> maybeLanguageCode) {
+    final Parameters.ParametersParameterComponent component =
+        parameters.addParameter().setName("designation");
 
     component.addPart().setName("value").setValue(new StringType(value));
     maybeUse.ifPresent(use -> component.addPart().setName("use").setValue(use));
-    maybeLanguageCode.ifPresent(languageCode ->
-        component.addPart().setName("language").setValue(new CodeType(languageCode)));
+    maybeLanguageCode.ifPresent(
+        languageCode ->
+            component.addPart().setName("language").setValue(new CodeType(languageCode)));
     return this;
   }
 

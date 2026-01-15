@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,13 +31,10 @@ import org.apache.spark.sql.types.DataTypes;
  */
 public class ToNull implements SqlFunction1<Object, Object> {
 
-  /**
-   * The name of this function when used within SQL.
-   */
+  /** The name of this function when used within SQL. */
   public static final String FUNCTION_NAME = "to_null";
 
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   @Override
   public String getName() {

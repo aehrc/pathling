@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.library.io;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -21,34 +38,37 @@ import org.junit.jupiter.api.io.TempDir;
  */
 class FileSystemPersistenceTest {
 
-  @TempDir
-  private File tempDir;
-  
+  @TempDir private File tempDir;
+
   private FileSystem fs;
   private Path hadoopPath;
-  
+
   @BeforeEach
   void setup() throws IOException {
     fs = FileSystem.get(new Configuration());
     hadoopPath = new Path(tempDir.toURI());
-    copyTestFiles(fs, "src/test/resources/test-data/spark-partitioned-data/", hadoopPath.toString());
+    copyTestFiles(
+        fs, "src/test/resources/test-data/spark-partitioned-data/", hadoopPath.toString());
     TestDataFileLogger.logDirectoryContents(hadoopPath);
   }
-  
+
   @Test
   void test_files_are_renamed_following_pathling_pattern() throws IOException {
     Path partitionPath = new Path(hadoopPath, "Patient.ndjson");
-    assumeTrue(fs.exists(partitionPath), "Expected partition path %s to exist.".formatted(partitionPath.toString()));
-    
-    FileSystemPersistence.renamePartitionedFiles(fs, partitionPath.toString(), partitionPath.toString(), "txt");
+    assumeTrue(
+        fs.exists(partitionPath),
+        "Expected partition path %s to exist.".formatted(partitionPath.toString()));
+
+    FileSystemPersistence.renamePartitionedFiles(
+        fs, partitionPath.toString(), partitionPath.toString(), "txt");
     TestDataFileLogger.logDirectoryContents(hadoopPath);
-    
+
     // assert that the files have been renamed
     assertTrue(fs.exists(new Path(hadoopPath, "Patient.00000.ndjson")));
     assertTrue(fs.exists(new Path(hadoopPath, "Patient.00001.ndjson")));
     assertTrue(fs.exists(new Path(hadoopPath, "Patient.00002.ndjson")));
     assertTrue(fs.exists(new Path(hadoopPath, "Patient.00003.ndjson")));
-    
+
     // assert that the partitioned files have been deleted
     assertFalse(fs.exists(new Path(hadoopPath, "Patient.ndjson")));
   }
@@ -57,9 +77,12 @@ class FileSystemPersistenceTest {
   void test_throws_exception_when_partition_files_not_found() {
     String partitionPath = new Path(hadoopPath, "NonExistent.ndjson").toString();
 
-    PersistenceError exception = assertThrows(PersistenceError.class, () ->
-        FileSystemPersistence.renamePartitionedFiles(fs, partitionPath, partitionPath, "txt")
-    );
+    PersistenceError exception =
+        assertThrows(
+            PersistenceError.class,
+            () ->
+                FileSystemPersistence.renamePartitionedFiles(
+                    fs, partitionPath, partitionPath, "txt"));
 
     assertInstanceOf(IOException.class, exception.getCause());
   }
@@ -75,10 +98,13 @@ class FileSystemPersistenceTest {
     fs.create(wrongExtFile).close();
 
     String testDirString = testDir.toString();
-    
-    PersistenceError exception = assertThrows(PersistenceError.class, () ->
-        FileSystemPersistence.renamePartitionedFiles(fs, testDirString, testDirString, "txt")
-    );
+
+    PersistenceError exception =
+        assertThrows(
+            PersistenceError.class,
+            () ->
+                FileSystemPersistence.renamePartitionedFiles(
+                    fs, testDirString, testDirString, "txt"));
 
     assertInstanceOf(IOException.class, exception.getCause());
     assertTrue(exception.getCause().getMessage().contains("Partition file not found"));
@@ -89,22 +115,30 @@ class FileSystemPersistenceTest {
     String partitionPath = new Path(hadoopPath, "Patient.ndjson").toString();
     String invalidDepartitionedUrl = new Path(hadoopPath, "InvalidFilename").toString(); // No dot
 
-    PersistenceError exception = assertThrows(PersistenceError.class, () ->
-        FileSystemPersistence.renamePartitionedFiles(fs, partitionPath, invalidDepartitionedUrl, "txt")
-    );
+    PersistenceError exception =
+        assertThrows(
+            PersistenceError.class,
+            () ->
+                FileSystemPersistence.renamePartitionedFiles(
+                    fs, partitionPath, invalidDepartitionedUrl, "txt"));
 
     assertTrue(exception.getMessage().contains("Unexpected departitioning filename structure"));
-    assertTrue(exception.getMessage().contains("exactly one FHIR resource type and the ndjson extension"));
+    assertTrue(
+        exception.getMessage().contains("exactly one FHIR resource type and the ndjson extension"));
   }
 
   @Test
   void test_throws_exception_for_invalid_departitioned_filename_multiple_dots() {
     String partitionPath = new Path(hadoopPath, "Patient.ndjson").toString();
-    String invalidDepartitionedUrl = new Path(hadoopPath, "Patient.backup.ndjson").toString(); // Multiple dots
+    String invalidDepartitionedUrl =
+        new Path(hadoopPath, "Patient.backup.ndjson").toString(); // Multiple dots
 
-    PersistenceError exception = assertThrows(PersistenceError.class, () ->
-        FileSystemPersistence.renamePartitionedFiles(fs, partitionPath, invalidDepartitionedUrl, "txt")
-    );
+    PersistenceError exception =
+        assertThrows(
+            PersistenceError.class,
+            () ->
+                FileSystemPersistence.renamePartitionedFiles(
+                    fs, partitionPath, invalidDepartitionedUrl, "txt"));
 
     assertTrue(exception.getMessage().contains("Unexpected departitioning filename structure"));
   }
@@ -120,10 +154,13 @@ class FileSystemPersistenceTest {
     fs.create(invalidFile).close();
 
     String testDirString = testDir.toString();
-    
-    PersistenceError exception = assertThrows(PersistenceError.class, () ->
-        FileSystemPersistence.renamePartitionedFiles(fs, testDirString, testDirString, "txt")
-    );
+
+    PersistenceError exception =
+        assertThrows(
+            PersistenceError.class,
+            () ->
+                FileSystemPersistence.renamePartitionedFiles(
+                    fs, testDirString, testDirString, "txt"));
 
     assertTrue(exception.getMessage().contains("Unexpected spark partitioning structure"));
     assertTrue(exception.getMessage().contains("partitioned id after the first '-'"));
@@ -141,13 +178,16 @@ class FileSystemPersistenceTest {
 
     String testDirString = testDir.toString();
 
-    PersistenceError exception = assertThrows(PersistenceError.class, () ->
-        FileSystemPersistence.renamePartitionedFiles(fs, testDirString, testDirString, "txt")
-    );
+    PersistenceError exception =
+        assertThrows(
+            PersistenceError.class,
+            () ->
+                FileSystemPersistence.renamePartitionedFiles(
+                    fs, testDirString, testDirString, "txt"));
 
     assertTrue(exception.getMessage().contains("Unexpected spark partitioning structure"));
   }
-  
+
   private static void copyTestFiles(FileSystem fs, String from, String to) throws IOException {
     Path fromPath = new Path(from);
     Path toPath = new Path(to);

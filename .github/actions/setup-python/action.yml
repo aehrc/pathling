@@ -1,0 +1,20 @@
+# Sets up Python environment using uv with caching.
+#
+# Author: John Grimes
+
+name: Setup Python
+description: Sets up Python using uv with caching enabled.
+
+inputs:
+  enable-cache:
+    description: Enable uv cache.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: ${{ inputs.enable-cache }}

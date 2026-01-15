@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,18 +13,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
 import { useQuery } from "@tanstack/react-query";
-import type { CapabilityStatement } from "fhir/r4";
+
 import type {
   UseServerCapabilitiesFn,
   ServerCapabilities,
   ResourceCapability,
   OperationCapability,
 } from "../types/hooks";
+import type { CapabilityStatement } from "fhir/r4";
 
 const SMART_SERVICE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/restful-security-service";
@@ -32,6 +31,9 @@ const SMART_SERVICE_CODE = "SMART-on-FHIR";
 
 /**
  * Parses a CapabilityStatement to extract server capabilities.
+ *
+ * @param capability - The FHIR CapabilityStatement resource.
+ * @returns Parsed server capabilities object.
  */
 function parseCapabilities(
   capability: CapabilityStatement,

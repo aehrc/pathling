@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.operations.bulkimport;
 
 import au.csiro.pathling.FhirServer;
@@ -19,6 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -55,19 +73,20 @@ public class ImportOperationValidator {
     // Extract input parameters.
     final Collection<ParametersParameterComponent> inputParts =
         ParamUtil.extractManyFromParameters(
-            parameters.getParameter(),
-            "input",
-            ParametersParameterComponent.class,
-            false,
-            Collections.emptyList(),
-            false,
-            new InvalidUserInputError("The input may not be empty."));
+                parameters.getParameter(),
+                "input",
+                ParametersParameterComponent.class,
+                false,
+                Optional.of(Collections.emptyList()),
+                false,
+                Optional.of(new InvalidUserInputError("The input may not be empty.")))
+            .orElseThrow();
 
     final Map<String, Collection<String>> input =
         inputParts.stream()
             .map(this::mapInputFieldsFromParameters)
             .filter(Objects::nonNull)
-            .filter(this::filterUnsupportedResourceTypes)
+            .peek(this::validateResourceType)
             .collect(
                 Collectors.groupingBy(
                     InputParams::resourceType,
@@ -112,7 +131,7 @@ public class ImportOperationValidator {
     final Map<String, Collection<String>> input =
         manifest.input().stream()
             .map(this::mapInputFieldsFromJson)
-            .filter(this::filterUnsupportedResourceTypes)
+            .peek(this::validateResourceType)
             .collect(
                 Collectors.groupingBy(
                     InputParams::resourceType,
@@ -138,7 +157,7 @@ public class ImportOperationValidator {
     return new PreAsyncValidationResult<>(importRequest, issues);
   }
 
-  private boolean filterUnsupportedResourceTypes(final InputParams inputParams) {
+  private void validateResourceType(final InputParams inputParams) {
     final String resourceType = inputParams.resourceType();
     try {
       final boolean supported =
@@ -147,38 +166,38 @@ public class ImportOperationValidator {
         throw new InvalidUserInputError(
             "The resource type '%s' is not supported.".formatted(resourceType));
       }
-      return true;
     } catch (final FHIRException e) {
       // Check if this is a custom resource type (e.g., ViewDefinition).
-      if (FhirServer.isCustomResourceType(resourceType)) {
-        return true;
+      if (!FhirServer.isCustomResourceType(resourceType)) {
+        throw new InvalidUserInputError("Unknown resource type.", e);
       }
-      throw new InvalidUserInputError("Unknown resource type.", e);
     }
   }
 
   private ImportFormat getImportFormatFromParameters(final Parameters parameters) {
     return ParamUtil.extractFromPart(
-        parameters.getParameter(),
-        "inputFormat",
-        CodeType.class,
-        code -> parseImportFormat(code.getCode()),
-        true,
-        ImportFormat.NDJSON, // Default to NDJSON.
-        false,
-        new InvalidUserInputError("Unknown format."));
+            parameters.getParameter(),
+            "inputFormat",
+            CodeType.class,
+            code -> parseImportFormat(code.getCode()),
+            true,
+            Optional.of(ImportFormat.NDJSON), // Default to NDJSON.
+            false,
+            Optional.of(new InvalidUserInputError("Unknown format.")))
+        .orElseThrow();
   }
 
   private SaveMode getSaveModeFromParameters(final Parameters parameters) {
     return ParamUtil.extractFromPart(
-        parameters.getParameter(),
-        "saveMode",
-        CodeType.class,
-        code -> SaveMode.fromCode(code.getCode()),
-        true,
-        SaveMode.OVERWRITE, // Default to OVERWRITE.
-        false,
-        new InvalidUserInputError("Unknown saveMode."));
+            parameters.getParameter(),
+            "saveMode",
+            CodeType.class,
+            code -> SaveMode.fromCode(code.getCode()),
+            true,
+            Optional.of(SaveMode.OVERWRITE), // Default to OVERWRITE.
+            false,
+            Optional.of(new InvalidUserInputError("Unknown saveMode.")))
+        .orElseThrow();
   }
 
   /**
@@ -251,27 +270,29 @@ public class ImportOperationValidator {
   private String getUrlFromParameters(
       final List<ParametersParameterComponent> partContainingResourceTypeAndUrl) {
     return ParamUtil.extractFromPart(
-        partContainingResourceTypeAndUrl,
-        "url",
-        UrlType.class,
-        UrlType::getValue,
-        false,
-        null,
-        false,
-        new InvalidUserInputError("Missing url part in input parameter."));
+            partContainingResourceTypeAndUrl,
+            "url",
+            UrlType.class,
+            UrlType::getValue,
+            false,
+            Optional.empty(),
+            false,
+            Optional.of(new InvalidUserInputError("Missing url part in input parameter.")))
+        .orElse(null);
   }
 
   @Nullable
   private String getResourceTypeFromParameters(
       final List<ParametersParameterComponent> partContainingResourceTypeAndUrl) {
     return ParamUtil.extractFromPart(
-        partContainingResourceTypeAndUrl,
-        "resourceType",
-        CodeType.class,
-        CodeType::getCode,
-        false,
-        null,
-        false,
-        new InvalidUserInputError("Missing resourceType part in input parameter."));
+            partContainingResourceTypeAndUrl,
+            "resourceType",
+            CodeType.class,
+            CodeType::getCode,
+            false,
+            Optional.empty(),
+            false,
+            Optional.of(new InvalidUserInputError("Missing resourceType part in input parameter.")))
+        .orElse(null);
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.column.QuantityValue;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.QuantityComparator;
@@ -33,7 +34,6 @@ import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
-import au.csiro.pathling.fhirpath.column.QuantityValue;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
@@ -63,23 +63,24 @@ public class QuantityCollection extends Collection implements Comparable, String
             DefaultPrimitiveDefinition.single("value", FHIRDefinedType.DECIMAL),
             DefaultPrimitiveDefinition.single("unit", FHIRDefinedType.STRING),
             DefaultPrimitiveDefinition.single("system", FHIRDefinedType.URI),
-            DefaultPrimitiveDefinition.single("code", FHIRDefinedType.CODE)
-        ),
+            DefaultPrimitiveDefinition.single("code", FHIRDefinedType.CODE)),
         cardinality,
-        FHIRDefinedType.QUANTITY
-    );
+        FHIRDefinedType.QUANTITY);
   }
 
-  private static final ElementDefinition LITERAL_DEFINITION =
-      createDefinition("", 1);
+  private static final ElementDefinition LITERAL_DEFINITION = createDefinition("", 1);
 
   /**
+   * Constructs a new QuantityCollection.
+   *
    * @param columnRepresentation The column representation to use
    * @param type The FHIRPath type
    * @param fhirType The FHIR type
    * @param definition The FHIR definition
+   * @param extensionMapColumn The extension map column
    */
-  public QuantityCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  public QuantityCollection(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
@@ -95,12 +96,16 @@ public class QuantityCollection extends Collection implements Comparable, String
    * @return A new instance of {@link QuantityCollection}
    */
   @Nonnull
-  public static QuantityCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static QuantityCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    return new QuantityCollection(columnRepresentation, Optional.of(FhirPathType.QUANTITY),
-        Optional.of(FHIRDefinedType.QUANTITY), definition, Optional.empty());
+    return new QuantityCollection(
+        columnRepresentation,
+        Optional.of(FhirPathType.QUANTITY),
+        Optional.of(FHIRDefinedType.QUANTITY),
+        definition,
+        Optional.empty());
   }
-
 
   /**
    * Returns a new instance with the specified columnCtx and unknown definition.
@@ -122,12 +127,11 @@ public class QuantityCollection extends Collection implements Comparable, String
    */
   @Nonnull
   public static QuantityCollection fromLiteral(@Nonnull final String quantityLiteral) {
-    return QuantityCollection.build(new DefaultRepresentation(
+    return QuantityCollection.build(
+        new DefaultRepresentation(
             QuantityEncoding.encodeLiteral(FhirPathQuantity.parse(quantityLiteral))),
-        Optional.of(LITERAL_DEFINITION)
-    );
+        Optional.of(LITERAL_DEFINITION));
   }
-
 
   /**
    * Returns a new instance, created from a numeric column representation (such as INTEGER or
@@ -142,8 +146,7 @@ public class QuantityCollection extends Collection implements Comparable, String
     // build the Quantity collection from a numeric (Decimal or Integer) representation
     // by using UCUM '1' unit.
     return QuantityCollection.build(
-        columnRepresentation.transform(QuantityEncoding::encodeNumeric),
-        Optional.empty());
+        columnRepresentation.transform(QuantityEncoding::encodeNumeric), Optional.empty());
   }
 
   @Nonnull
@@ -175,7 +178,7 @@ public class QuantityCollection extends Collection implements Comparable, String
    *
    * @param targetUnit The target unit as a Collection (should be a StringCollection)
    * @return QuantityCollection with matching unit, or EmptyCollection if the conversion is not
-   * possible.
+   *     possible.
    */
   @Nonnull
   public Collection toUnit(@Nonnull final Collection targetUnit) {

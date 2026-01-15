@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +13,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
 import { useState, useCallback, useRef } from "react";
+
 import { executeAsyncJob, parseProgressHeader } from "../api";
-import type { AsyncJobStatus } from "../types/hooks";
+
 import type { AsyncJobExecutorOptions } from "../types/api";
+import type { AsyncJobStatus } from "../types/hooks";
 
 export interface UseAsyncJobResult<TRequest, TResult> {
   status: AsyncJobStatus;
@@ -41,6 +41,9 @@ export interface UseAsyncJobResult<TRequest, TResult> {
  *
  * @param buildOptions - Function that builds executor options from a request object.
  * @param callbacks - Optional callbacks for progress, completion, and error events.
+ * @param callbacks.onProgress - Called when progress is updated.
+ * @param callbacks.onComplete - Called when the job completes successfully.
+ * @param callbacks.onError - Called when the job fails with an error.
  * @returns Hook result with status, result, and control functions.
  */
 export function useAsyncJob<TRequest, TKickOffResult, TStatusResult, TResult>(

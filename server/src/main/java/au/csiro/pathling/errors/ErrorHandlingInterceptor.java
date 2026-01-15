@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +54,7 @@ import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 public class ErrorHandlingInterceptor {
 
   /**
-   * HAPI hook to convert errors and exceptions to BaseServerResponseException
+   * HAPI hook to convert errors and exceptions to BaseServerResponseException.
    *
    * @param requestDetails the details of the request (HAPI)
    * @param servletRequestDetails further details of the request (HAPI)
@@ -76,10 +76,13 @@ public class ErrorHandlingInterceptor {
   }
 
   /**
+   * Converts an error into a HAPI BaseServerResponseException.
+   *
    * @param error an error that could be raised during processing
    * @return a HAPI {@link BaseServerResponseException} that will deliver an appropriate response to
    *     a user of the FHIR API
    */
+  @SuppressWarnings("java:S3776") // Complexity is acceptable for centralised exception handling.
   @Nonnull
   public static BaseServerResponseException convertError(@Nonnull final Throwable error) {
     try {

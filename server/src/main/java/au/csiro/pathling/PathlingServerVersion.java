@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,20 +37,17 @@ public class PathlingServerVersion {
   private static final String BUILD_VERSION_PROPERTY = "git.build.version";
   private static final String GIT_SHA_PROPERTY = "git.commit.id.abbrev";
 
-  @Nonnull
-  private final Properties gitProperties = new Properties();
+  @Nonnull private final Properties gitProperties = new Properties();
 
-  /**
-   * Default constructor for creating a new PathlingServerVersion instance.
-   */
+  /** Default constructor for creating a new PathlingServerVersion instance. */
   public PathlingServerVersion() {
     initialiseGitProperties();
     log.info("Pathling server build version: {}", getDescriptiveVersion().orElse("UNKNOWN"));
   }
 
   private void initialiseGitProperties() {
-    final InputStream gitPropertiesStream = getClass().getClassLoader()
-        .getResourceAsStream(GIT_PROPERTIES_FILE_NAME);
+    final InputStream gitPropertiesStream =
+        getClass().getClassLoader().getResourceAsStream(GIT_PROPERTIES_FILE_NAME);
     if (gitPropertiesStream != null) {
       try {
         gitProperties.load(gitPropertiesStream);
@@ -64,6 +61,8 @@ public class PathlingServerVersion {
   }
 
   /**
+   * Returns the POM version of the server.
+   *
    * @return the POM version of the server
    */
   public Optional<String> getBuildVersion() {
@@ -71,19 +70,23 @@ public class PathlingServerVersion {
   }
 
   /**
+   * Returns a descriptive version string.
+   *
    * @return a descriptive version that includes the POM version and the Git commit SHA at the time
-   * of the build
+   *     of the build
    */
   public Optional<String> getDescriptiveVersion() {
     if (getBuildVersion().isEmpty()) {
       return Optional.empty();
     }
-    final Optional<String> gitShaProperty = Optional.ofNullable(
-        gitProperties.getProperty(GIT_SHA_PROPERTY));
+    final Optional<String> gitShaProperty =
+        Optional.ofNullable(gitProperties.getProperty(GIT_SHA_PROPERTY));
     return gitShaProperty.map(sha -> String.format("%s+%s", getBuildVersion().get(), sha));
   }
 
   /**
+   * Returns the major version component.
+   *
    * @return the major version component of the POM version
    * @see <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning 2.0.0</a>
    */
@@ -91,5 +94,4 @@ public class PathlingServerVersion {
   public Optional<String> getMajorVersion() {
     return getBuildVersion().map(version -> version.split("\\.")[0]);
   }
-
 }

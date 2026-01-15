@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,11 +36,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @AllArgsConstructor
 public class UnsupportedRepresentation extends ColumnRepresentation {
 
-  /**
-   * A description of the unsupported representation, used for error messages.
-   */
-  @Nonnull
-  private final String description;
+  /** A description of the unsupported representation, used for error messages. */
+  @Nonnull private final String description;
 
   @Override
   @Nonnull
@@ -74,15 +71,14 @@ public class UnsupportedRepresentation extends ColumnRepresentation {
   }
 
   @Override
+  public @Nonnull ColumnRepresentation traverse(
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    return traverse(fieldName);
+  }
+
+  @Override
   public @Nonnull ColumnRepresentation getField(@Nonnull final String fieldName) {
     throw new UnsupportedFhirPathFeatureError(
         "Field access is not supported for this path: " + description);
   }
-
-  @Override
-  public @Nonnull ColumnRepresentation traverse(@Nonnull final String fieldName,
-      @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    return traverse(fieldName);
-  }
-
 }

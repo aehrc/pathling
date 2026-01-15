@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,8 +48,7 @@ class ParserTest {
         Arguments.of("name.empty()", "Empty function"),
         Arguments.of("name.count()", "Count function"),
         Arguments.of("birthDate > @2000", "Comparison with date literal"),
-        Arguments.of("active = true and name.exists()", "Logical operator with function")
-    );
+        Arguments.of("active = true and name.exists()", "Logical operator with function"));
   }
 
   @Nonnull
@@ -57,8 +56,7 @@ class ParserTest {
     return Stream.of(
         Arguments.of("@T12:00:00XXXXX", "Time with extra characters"),
         Arguments.of("@T12:00:00+01:00", "Time with timezone offset"),
-        Arguments.of("'dsdsds", "Unterminated string literal")
-    );
+        Arguments.of("'dsdsds", "Unterminated string literal"));
   }
 
   @ParameterizedTest(name = "{1}")

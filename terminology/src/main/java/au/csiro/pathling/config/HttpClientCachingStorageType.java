@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,18 +27,13 @@ import jakarta.annotation.Nonnull;
  * @author John Grimes
  */
 public enum HttpClientCachingStorageType {
-  /**
-   * The cache is stored in memory, and is reset when the application is restarted.
-   */
+  /** The cache is stored in memory, and is reset when the application is restarted. */
   MEMORY("memory"),
 
-  /**
-   * The cache is stored on disk, and is persisted between application restarts.
-   */
+  /** The cache is stored on disk, and is persisted between application restarts. */
   DISK("disk");
 
-  @Nonnull
-  private final String code;
+  @Nonnull private final String code;
 
   HttpClientCachingStorageType(@Nonnull final String code) {
     this.code = requireNonNull(code);
@@ -50,6 +45,8 @@ public enum HttpClientCachingStorageType {
   }
 
   /**
+   * Returns the storage type corresponding to the given code.
+   *
    * @param code the code of the storage type
    * @return the HttpClientCachingStorageType corresponding to the given code
    */

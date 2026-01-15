@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,14 +48,11 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class CreateProvider implements IResourceProvider {
 
-  @Nonnull
-  private final UpdateExecutor updateExecutor;
+  @Nonnull private final UpdateExecutor updateExecutor;
 
-  @Nonnull
-  private final Class<? extends IBaseResource> resourceClass;
+  @Nonnull private final Class<? extends IBaseResource> resourceClass;
 
-  @Nonnull
-  private final String resourceTypeCode;
+  @Nonnull private final String resourceTypeCode;
 
   /**
    * Constructs a new CreateProvider for a specific resource type.
@@ -64,7 +61,8 @@ public class CreateProvider implements IResourceProvider {
    * @param fhirContext the FHIR context for resource definitions
    * @param resourceClass the class of the resource type this provider handles
    */
-  public CreateProvider(@Nonnull final UpdateExecutor updateExecutor,
+  public CreateProvider(
+      @Nonnull final UpdateExecutor updateExecutor,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
     this.updateExecutor = updateExecutor;
@@ -104,5 +102,4 @@ public class CreateProvider implements IResourceProvider {
     outcome.setResource(resource);
     return outcome;
   }
-
 }

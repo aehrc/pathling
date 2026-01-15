@@ -7,10 +7,6 @@ on:
   release:
     types: [published]
 
-env:
-  # The add-exports and add-opens flags are required for Java 21.
-  MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
-
 permissions:
   contents: read
   packages: write
@@ -27,26 +23,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
         with:
-          java-version: 21
-          distribution: "zulu"
-
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-
-
-      - name: Cache SonarQube packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
+          java: "true"
+          sonar-cache: "true"
 
       # Release won't be possible if there are outstanding vulnerabilities of medium severity or
       # higher as reported by Trivy.

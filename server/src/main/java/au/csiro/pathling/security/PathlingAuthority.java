@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -92,8 +92,8 @@ public class PathlingAuthority {
    * @return the authority required for access.
    */
   @Nonnull
-  public static PathlingAuthority resourceAccess(@Nonnull final AccessType accessType,
-      @Nonnull final ResourceType resourceType) {
+  public static PathlingAuthority resourceAccess(
+      @Nonnull final AccessType accessType, @Nonnull final ResourceType resourceType) {
     return resourceAccess(accessType, resourceType.toCode());
   }
 
@@ -106,8 +106,8 @@ public class PathlingAuthority {
    * @return the authority required for access.
    */
   @Nonnull
-  public static PathlingAuthority resourceAccess(@Nonnull final AccessType accessType,
-      @Nonnull final String resourceTypeCode) {
+  public static PathlingAuthority resourceAccess(
+      @Nonnull final AccessType accessType, @Nonnull final String resourceTypeCode) {
     return new PathlingAuthority("pathling:" + accessType.getCode() + ":" + resourceTypeCode);
   }
 
@@ -133,9 +133,7 @@ public class PathlingAuthority {
     return new PathlingAuthority(authorityName);
   }
 
-  /**
-   * Allows: word characters, ':' and '*'.
-   */
+  /** Allows: word characters, ':' and '*'. */
   @Nonnull
   private static Permission validateAuthorityName(@Nonnull final CharSequence authority) {
     final Matcher matcher = VALID_AUTHORITY_REGEX.matcher(authority);
@@ -145,9 +143,10 @@ public class PathlingAuthority {
       final Optional<String> action = Optional.ofNullable(matcher.group(1));
       final Optional<String> subject = Optional.ofNullable(matcher.group(2));
 
-      final List<String> accessCodes = Arrays.stream(ResourceAccess.AccessType.values())
-          .map(ResourceAccess.AccessType::getCode)
-          .toList();
+      final List<String> accessCodes =
+          Arrays.stream(ResourceAccess.AccessType.values())
+              .map(ResourceAccess.AccessType::getCode)
+              .toList();
       if (action.isPresent() && !accessCodes.contains(action.get()) && subject.isPresent()) {
         throw new IllegalArgumentException("Subject not supported for action: " + action);
       }
@@ -160,7 +159,5 @@ public class PathlingAuthority {
 
     Optional<String> action;
     Optional<String> subject;
-
   }
-
 }

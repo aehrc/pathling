@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,7 +76,6 @@ class StringLiteralPathTest {
     assertEquals("Some string and it's problems", result);
   }
 
-
   @Test
   void unescapeBackSlash() {
     final String result = unescapeFhirPathString("C:\\\\Temp");
@@ -94,5 +93,4 @@ class StringLiteralPathTest {
     final String result = unescapeFhirPathString("P\\u0065ter");
     assertEquals("Peter", result);
   }
-  
 }

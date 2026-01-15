@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,20 +37,13 @@ public class BulkSubmitConfiguration {
    * The list of allowed submitters that can use the $bulk-submit operation, including optional
    * OAuth credentials for authenticated file downloads.
    */
-  @Nonnull
-  private List<SubmitterConfiguration> allowedSubmitters = new ArrayList<>();
+  @Nonnull private List<SubmitterConfiguration> allowedSubmitters = new ArrayList<>();
 
-  /**
-   * URL prefixes that are allowed as sources for manifest and file URLs.
-   */
-  @Nonnull
-  private List<String> allowableSources = new ArrayList<>();
+  /** URL prefixes that are allowed as sources for manifest and file URLs. */
+  @Nonnull private List<String> allowableSources = new ArrayList<>();
 
-  /**
-   * The directory to use for staging downloaded files before import.
-   */
-  @Nonnull
-  private String stagingDirectory = "/usr/local/staging/bulk-submit-fetch";
+  /** The directory to use for staging downloaded files before import. */
+  @Nonnull private String stagingDirectory = "/usr/local/staging/bulk-submit-fetch";
 
   /**
    * Finds the configuration for a specific submitter.
@@ -62,8 +55,10 @@ public class BulkSubmitConfiguration {
   public Optional<SubmitterConfiguration> findSubmitterConfig(
       @Nonnull final SubmitterIdentifier submitter) {
     return allowedSubmitters.stream()
-        .filter(config -> config.system().equals(submitter.system())
-            && config.value().equals(submitter.value()))
+        .filter(
+            config ->
+                config.system().equals(submitter.system())
+                    && config.value().equals(submitter.value()))
         .findFirst();
   }
 
@@ -76,5 +71,4 @@ public class BulkSubmitConfiguration {
   public boolean isSubmitterAllowed(@Nonnull final SubmitterIdentifier submitter) {
     return findSubmitterConfig(submitter).isPresent();
   }
-
 }

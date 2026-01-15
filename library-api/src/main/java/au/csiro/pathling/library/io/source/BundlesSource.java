@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,9 +48,14 @@ public class BundlesSource extends FileSource {
    * @param mimeType the MIME type of the FHIR data (e.g., "application/fhir+json")
    * @param resourceTypes the set of FHIR resource types that are expected in the bundles
    */
-  public BundlesSource(@Nonnull final PathlingContext context, @Nonnull final String path,
-      @Nonnull final String mimeType, @Nonnull final Set<String> resourceTypes) {
-    super(context, path,
+  public BundlesSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
+      @Nonnull final String mimeType,
+      @Nonnull final Set<String> resourceTypes) {
+    super(
+        context,
+        path,
         // Map to the fixed set of resource types for all files.
         p -> new HashSet<>(resourceTypes),
         // Use the file extension that matches the FHIR MIME type.
@@ -62,5 +67,4 @@ public class BundlesSource extends FileSource {
         (sourceData, resourceType) -> context.encodeBundle(sourceData, resourceType, mimeType),
         resourceType -> true);
   }
-
 }

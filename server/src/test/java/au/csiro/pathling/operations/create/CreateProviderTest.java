@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,20 +62,15 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class CreateProviderTest {
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
-  @Autowired
-  private CacheableDatabase cacheableDatabase;
+  @Autowired private CacheableDatabase cacheableDatabase;
 
   private Path tempDatabasePath;
   private CreateProvider createProvider;
@@ -87,8 +82,12 @@ class CreateProviderTest {
     tempDatabasePath = Files.createTempDirectory("create-provider-test-");
 
     // Create UpdateExecutor with the temp database path.
-    updateExecutor = new UpdateExecutor(pathlingContext, fhirEncoders,
-        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
+    updateExecutor =
+        new UpdateExecutor(
+            pathlingContext,
+            fhirEncoders,
+            tempDatabasePath.toAbsolutePath().toString(),
+            cacheableDatabase);
 
     // Create the CreateProvider.
     createProvider = new CreateProvider(updateExecutor, fhirContext, Patient.class);
@@ -162,8 +161,7 @@ class CreateProviderTest {
     assertThat(outcome.getResource()).isNotNull();
     assertThat(outcome.getResource()).isInstanceOf(Patient.class);
     final Patient returnedPatient = (Patient) outcome.getResource();
-    assertThat(returnedPatient.getIdElement().getIdPart())
-        .isEqualTo(outcome.getId().getIdPart());
+    assertThat(returnedPatient.getIdElement().getIdPart()).isEqualTo(outcome.getId().getIdPart());
   }
 
   @Test
@@ -257,8 +255,11 @@ class CreateProviderTest {
   // -------------------------------------------------------------------------
 
   @Nonnull
-  private Patient createPatient(final String id, @Nonnull final String family,
-      @Nonnull final String given, @Nonnull final AdministrativeGender gender) {
+  private Patient createPatient(
+      final String id,
+      @Nonnull final String family,
+      @Nonnull final String given,
+      @Nonnull final AdministrativeGender gender) {
     final Patient patient = new Patient();
     if (id != null) {
       patient.setId(id);
@@ -276,5 +277,4 @@ class CreateProviderTest {
       return false;
     }
   }
-
 }

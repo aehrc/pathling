@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,9 +52,11 @@ public class ErrorReportingInterceptor {
    */
   @Hook(Pointcut.SERVER_HANDLE_EXCEPTION)
   @SuppressWarnings("unused")
-  public void reportErrorToSentry(@Nullable final RequestDetails requestDetails,
+  public void reportErrorToSentry(
+      @Nullable final RequestDetails requestDetails,
       @Nullable final ServletRequestDetails servletRequestDetails,
-      @Nullable final HttpServletRequest request, @Nullable final HttpServletResponse response,
+      @Nullable final HttpServletRequest request,
+      @Nullable final HttpServletResponse response,
       @Nullable final BaseServerResponseException exception) {
 
     if (exception != null) {
@@ -83,9 +85,7 @@ public class ErrorReportingInterceptor {
    */
   @Nonnull
   public static Throwable getReportableError(@Nonnull final BaseServerResponseException exception) {
-    return exception.getCause() == null
-           ? exception
-           : exception.getCause();
+    return exception.getCause() == null ? exception : exception.getCause();
   }
 
   /**
@@ -93,8 +93,7 @@ public class ErrorReportingInterceptor {
    *
    * @param exception the exception to be reported.
    */
-  public static void reportExceptionToSentry(
-      @Nonnull final BaseServerResponseException exception) {
+  public static void reportExceptionToSentry(@Nonnull final BaseServerResponseException exception) {
     if (isReportableException(exception)) {
       Sentry.captureException(getReportableError(exception));
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,9 +33,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Value;
 
-/**
- * Represents a FHIRPath Quantity value.
- */
+/** Represents a FHIRPath Quantity value. */
 @Value
 public class FhirPathQuantity {
 
@@ -43,11 +41,13 @@ public class FhirPathQuantity {
    * Regex pattern for parsing FHIRPath quantity literals. Unit is optional per FHIRPath spec -
    * defaults to '1' when omitted.
    */
-  private static final Pattern QUANTITY_REGEX = Pattern.compile(
-      "(?<value>[+-]?\\d+(?:\\.\\d+)?)\\s*(?:'(?<unit>[^']+)'|(?<time>[a-zA-Z]+))?"
-  );
+  private static final Pattern QUANTITY_REGEX =
+      Pattern.compile(
+          "(?<value>[+-]?\\d+(?:\\.\\d+)?)\\s*(?:'(?<unit>[^']+)'|(?<time>[a-zA-Z]+))?");
 
-  private FhirPathQuantity(@Nonnull final BigDecimal value, @Nonnull final FhirPathUnit unit,
+  private FhirPathQuantity(
+      @Nonnull final BigDecimal value,
+      @Nonnull final FhirPathUnit unit,
       @Nonnull final String unitName) {
     this.value = value;
     this.unit = unit;
@@ -59,30 +59,23 @@ public class FhirPathQuantity {
     }
   }
 
-  /**
-   * The numeric value of the quantity.
-   */
-  @Nonnull
-  BigDecimal value;
+  /** The numeric value of the quantity. */
+  @Nonnull BigDecimal value;
 
-  /**
-   * The FhirPathUnit representing the unit of measure (UCUM or calendar duration).
-   */
-  @Nonnull
-  FhirPathUnit unit;
+  /** The FhirPathUnit representing the unit of measure (UCUM or calendar duration). */
+  @Nonnull FhirPathUnit unit;
 
   /**
    * The string name of the unit as it appears in the original representation (e.g., "mg", "year",
    * "years").
    */
-  @Nonnull
-  String unitName;
+  @Nonnull String unitName;
 
   /**
    * Gets the system URI for this quantity's unit.
    *
-   * @return the system URI (e.g., {@value UcumUnit#UCUM_SYSTEM_URI} or
-   * {@value CalendarDurationUnit#FHIRPATH_CALENDAR_DURATION_SYSTEM_URI})
+   * @return the system URI (e.g., {@value UcumUnit#UCUM_SYSTEM_URI} or {@value
+   *     CalendarDurationUnit#FHIRPATH_CALENDAR_DURATION_SYSTEM_URI})
    */
   @Nonnull
   public String getSystem() {
@@ -107,8 +100,8 @@ public class FhirPathQuantity {
    * @return UCUM quantity
    */
   @Nonnull
-  public static FhirPathQuantity ofUcum(@Nonnull final BigDecimal value,
-      @Nonnull final String unit) {
+  public static FhirPathQuantity ofUcum(
+      @Nonnull final BigDecimal value, @Nonnull final String unit) {
     return new FhirPathQuantity(value, new UcumUnit(unit), unit);
   }
 
@@ -117,14 +110,14 @@ public class FhirPathQuantity {
    *
    * @param value the numeric value
    * @param calendarDurationUnit the FHIRPath calendar duration unit string (e.g., "year", "month",
-   * "days") singular or plural
+   *     "days") singular or plural
    * @return calendar duration quantity
    */
   @Nonnull
-  public static FhirPathQuantity ofDuration(@Nonnull final BigDecimal value,
-      @Nonnull final String calendarDurationUnit) {
-    return ofUnit(value, CalendarDurationUnit.parseString(calendarDurationUnit),
-        calendarDurationUnit);
+  public static FhirPathQuantity ofDuration(
+      @Nonnull final BigDecimal value, @Nonnull final String calendarDurationUnit) {
+    return ofUnit(
+        value, CalendarDurationUnit.parseString(calendarDurationUnit), calendarDurationUnit);
   }
 
   /**
@@ -163,8 +156,10 @@ public class FhirPathQuantity {
    * @return quantity with the specified value and unit
    */
   @Nonnull
-  public static FhirPathQuantity ofUnit(@Nonnull final BigDecimal value,
-      @Nonnull final FhirPathUnit unit, @Nonnull final String unitName) {
+  public static FhirPathQuantity ofUnit(
+      @Nonnull final BigDecimal value,
+      @Nonnull final FhirPathUnit unit,
+      @Nonnull final String unitName) {
     return new FhirPathQuantity(value, unit, unitName);
   }
 
@@ -176,8 +171,8 @@ public class FhirPathQuantity {
    * @return quantity with the specified value and unit
    */
   @Nonnull
-  public static FhirPathQuantity ofUnit(@Nonnull final BigDecimal value,
-      @Nonnull final FhirPathUnit unit) {
+  public static FhirPathQuantity ofUnit(
+      @Nonnull final BigDecimal value, @Nonnull final FhirPathUnit unit) {
     return ofUnit(value, unit, unit.code());
   }
 
@@ -192,8 +187,11 @@ public class FhirPathQuantity {
    * @return quantity with the specified value and unit, or null if any required parameter is null
    */
   @Nullable
-  public static FhirPathQuantity of(@Nullable final BigDecimal value, @Nullable final String system,
-      @Nullable final String code, @Nullable final String unit) {
+  public static FhirPathQuantity of(
+      @Nullable final BigDecimal value,
+      @Nullable final String system,
+      @Nullable final String code,
+      @Nullable final String unit) {
 
     if (isNull(value) || isNull(system) || isNull(code)) {
       return null;
@@ -201,23 +199,22 @@ public class FhirPathQuantity {
     return switch (requireNonNull(system)) {
       case UcumUnit.UCUM_SYSTEM_URI -> ofUcum(requireNonNull(value), requireNonNull(code));
       case CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI ->
-          new FhirPathQuantity(value, CalendarDurationUnit.parseString(code),
-              unit != null
-              ? unit
-              : code);
+          new FhirPathQuantity(
+              value, CalendarDurationUnit.parseString(code), unit != null ? unit : code);
       default -> null;
     };
   }
 
   /**
    * Converts this quantity to the specified target unit if a conversion is possible.
-   * <p>
-   * Supports:
+   *
+   * <p>Supports:
+   *
    * <ul>
-   *   <li>UCUM to UCUM conversions (e.g., 'mg' to 'kg')</li>
+   *   <li>UCUM to UCUM conversions (e.g., 'mg' to 'kg')
    *   <li>Calendar duration to calendar duration conversions (only to definite units: second,
-   *       millisecond)</li>
-   *   <li>Cross-type conversions: calendar duration to UCUM 's' or 'ms', and vice versa</li>
+   *       millisecond)
+   *   <li>Cross-type conversions: calendar duration to UCUM 's' or 'ms', and vice versa
    * </ul>
    *
    * @param unitName the target unit string (e.g., "mg", "second", "s")
@@ -232,10 +229,12 @@ public class FhirPathQuantity {
       return Optional.of(FhirPathQuantity.ofUnit(getValue(), targetUnit, unitName));
     } else {
       return FhirPathUnit.convertValue(getValue(), getUnit(), targetUnit)
-          .map(convertedValue ->
-              FhirPathQuantity.ofUnit(
-                  convertedValue.setScale(scale, RoundingMode.HALF_UP).stripTrailingZeros()
-                  , targetUnit, unitName));
+          .map(
+              convertedValue ->
+                  FhirPathQuantity.ofUnit(
+                      convertedValue.setScale(scale, RoundingMode.HALF_UP).stripTrailingZeros(),
+                      targetUnit,
+                      unitName));
     }
   }
 
@@ -257,24 +256,23 @@ public class FhirPathQuantity {
    * @param value the numeric value
    * @param code the UCUM unit code
    * @return an Optional containing the canonical UCUM quantity, or empty if conversion is not
-   * possible
+   *     possible
    */
   private static Optional<FhirPathQuantity> ofUcumCanonical(
-      @Nonnull final BigDecimal value,
-      @Nonnull final String code) {
+      @Nonnull final BigDecimal value, @Nonnull final String code) {
     return Optional.ofNullable(Ucum.getCanonical(value, code))
         .map(result -> ofUcum(result.value(), result.unit()));
   }
 
   /**
    * Converts this quantity to its canonical UCUM representation if possible.
-   * <p>
-   * Uses the UCUM conversion service to determine the canonical form of the quantity. UCUM
+   *
+   * <p>Uses the UCUM conversion service to determine the canonical form of the quantity. UCUM
    * quantities are converted to their canonical UCUM units, while definite calendar durations are
    * converted to their UCUM equivalents (e.g., 's' for seconds).
    *
    * @return an Optional containing the canonical UCUM quantity, or empty if conversion is not
-   * possible
+   *     possible
    */
   public Optional<FhirPathQuantity> asCanonical() {
     return switch (unit) {

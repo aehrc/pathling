@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,15 +24,15 @@ import jakarta.annotation.Nonnull;
 
 /**
  * An interface indicating that a class can be compared as a DateTime.
- * <p>
- * This includes both DateTime and Date, as per the FHIRPath specification. Also includes Instant,
- * which has to be specified at least up to seconds precision so should be comparable with DateTime
- * of the same precision.
+ *
+ * <p>This includes both DateTime and Date, as per the FHIRPath specification. Also includes
+ * Instant, which has to be specified at least up to seconds precision so should be comparable with
+ * DateTime of the same precision.
  *
  * @author Piotr Szul
  */
 public interface DateTimeComparable extends Comparable {
-  
+
   @Override
   @Nonnull
   default ColumnComparator getComparator() {
@@ -43,5 +43,4 @@ public interface DateTimeComparable extends Comparable {
   default boolean isComparableTo(@Nonnull final Collection target) {
     return target instanceof DateTimeComparable;
   }
-
 }

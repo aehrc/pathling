@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,14 +54,11 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class ReadExecutorTest {
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
   private CustomObjectDataSource dataSource;
   private ReadExecutor readExecutor;
@@ -84,8 +81,7 @@ class ReadExecutorTest {
     resources.add(createViewDefinition("view-1", "patient_view", "Patient"));
     resources.add(createViewDefinition("view-2", "observation_view", "Observation"));
 
-    dataSource = new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders,
-        resources);
+    dataSource = new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
     readExecutor = new ReadExecutor(dataSource, fhirEncoders);
   }
 
@@ -217,8 +213,11 @@ class ReadExecutorTest {
   // -------------------------------------------------------------------------
 
   @Nonnull
-  private Patient createPatient(@Nonnull final String id, @Nonnull final String family,
-      @Nonnull final String given, @Nonnull final AdministrativeGender gender) {
+  private Patient createPatient(
+      @Nonnull final String id,
+      @Nonnull final String family,
+      @Nonnull final String given,
+      @Nonnull final AdministrativeGender gender) {
     final Patient patient = new Patient();
     patient.setId(id);
     patient.addName(new HumanName().setFamily(family).addGiven(given));
@@ -227,8 +226,7 @@ class ReadExecutorTest {
   }
 
   @Nonnull
-  private Observation createObservation(@Nonnull final String id,
-      @Nonnull final String subjectId) {
+  private Observation createObservation(@Nonnull final String id, @Nonnull final String subjectId) {
     final Observation observation = new Observation();
     observation.setId(id);
     observation.getSubject().setReference("Patient/" + subjectId);
@@ -236,8 +234,8 @@ class ReadExecutorTest {
   }
 
   @Nonnull
-  private ViewDefinitionResource createViewDefinition(@Nonnull final String id,
-      @Nonnull final String name, @Nonnull final String resource) {
+  private ViewDefinitionResource createViewDefinition(
+      @Nonnull final String id, @Nonnull final String name, @Nonnull final String resource) {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     view.setId(id);
     view.setName(new StringType(name));
@@ -254,5 +252,4 @@ class ReadExecutorTest {
 
     return view;
   }
-
 }

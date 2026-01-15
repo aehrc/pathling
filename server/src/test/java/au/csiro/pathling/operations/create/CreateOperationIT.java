@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,14 +49,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @ActiveProfiles({"integration-test"})
 class CreateOperationIT {
 
-  @LocalServerPort
-  int port;
+  @LocalServerPort int port;
 
-  @Autowired
-  WebTestClient webTestClient;
+  @Autowired WebTestClient webTestClient;
 
-  @TempDir
-  private static Path warehouseDir;
+  @TempDir private static Path warehouseDir;
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
@@ -66,10 +63,12 @@ class CreateOperationIT {
 
   @BeforeEach
   void setup() {
-    webTestClient = webTestClient.mutate()
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
-        .responseTimeout(java.time.Duration.ofSeconds(60))
-        .build();
+    webTestClient =
+        webTestClient
+            .mutate()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .responseTimeout(java.time.Duration.ofSeconds(60))
+            .build();
   }
 
   @AfterEach
@@ -82,7 +81,8 @@ class CreateOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir/Patient";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Patient",
           "name": [
@@ -95,19 +95,25 @@ class CreateOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().isCreated()
+        .expectStatus()
+        .isCreated()
         .expectBody()
-        .jsonPath("$.resourceType").isEqualTo("Patient")
-        .jsonPath("$.id").value(id -> {
-          assertThat(isValidUuid(id.toString())).isTrue();
-        })
-        .jsonPath("$.name[0].family").isEqualTo("NewFamily");
+        .jsonPath("$.resourceType")
+        .isEqualTo("Patient")
+        .jsonPath("$.id")
+        .value(
+            id -> {
+              assertThat(isValidUuid(id.toString())).isTrue();
+            })
+        .jsonPath("$.name[0].family")
+        .isEqualTo("NewFamily");
 
     log.info("Create operation completed successfully with 201 status");
   }
@@ -118,31 +124,38 @@ class CreateOperationIT {
 
     final String clientProvidedId = "client-provided-id-123";
     final String uri = "http://localhost:" + port + "/fhir/Patient";
-    final String requestBody = String.format("""
-        {
-          "resourceType": "Patient",
-          "id": "%s",
-          "name": [
+    final String requestBody =
+        String.format(
+            """
             {
-              "family": "TestFamily"
+              "resourceType": "Patient",
+              "id": "%s",
+              "name": [
+                {
+                  "family": "TestFamily"
+                }
+              ]
             }
-          ]
-        }
-        """, clientProvidedId);
+            """,
+            clientProvidedId);
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().isCreated()
+        .expectStatus()
+        .isCreated()
         .expectBody()
-        .jsonPath("$.id").value(id -> {
-          // The server should generate a new UUID, not use the client-provided ID.
-          assertThat(id.toString()).isNotEqualTo(clientProvidedId);
-          assertThat(isValidUuid(id.toString())).isTrue();
-        });
+        .jsonPath("$.id")
+        .value(
+            id -> {
+              // The server should generate a new UUID, not use the client-provided ID.
+              assertThat(id.toString()).isNotEqualTo(clientProvidedId);
+              assertThat(isValidUuid(id.toString())).isTrue();
+            });
 
     log.info("Create correctly ignored client-provided ID and generated new UUID");
   }
@@ -152,7 +165,8 @@ class CreateOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir/Patient";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Patient",
           "name": [
@@ -163,17 +177,23 @@ class CreateOperationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().isCreated()
-        .expectHeader().exists("Location")
-        .expectHeader().value("Location", location -> {
-          assertThat(location).contains("/fhir/Patient/");
-        });
+        .expectStatus()
+        .isCreated()
+        .expectHeader()
+        .exists("Location")
+        .expectHeader()
+        .value(
+            "Location",
+            location -> {
+              assertThat(location).contains("/fhir/Patient/");
+            });
 
     log.info("Create operation returned Location header");
   }
@@ -183,7 +203,8 @@ class CreateOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String createUri = "http://localhost:" + port + "/fhir/Patient";
-    final String requestBody = """
+    final String requestBody =
+        """
         {
           "resourceType": "Patient",
           "name": [
@@ -197,16 +218,19 @@ class CreateOperationIT {
         """;
 
     // Create the resource and extract the generated ID.
-    final String createdId = webTestClient.post()
-        .uri(createUri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .bodyValue(requestBody)
-        .exchange()
-        .expectStatus().isCreated()
-        .returnResult(String.class)
-        .getResponseBody()
-        .blockFirst();
+    final String createdId =
+        webTestClient
+            .post()
+            .uri(createUri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isCreated()
+            .returnResult(String.class)
+            .getResponseBody()
+            .blockFirst();
 
     // Extract the ID from the response body.
     assertThat(createdId).contains("\"id\"");
@@ -215,15 +239,20 @@ class CreateOperationIT {
 
     // Read the resource back to verify it was persisted.
     final String readUri = "http://localhost:" + port + "/fhir/Patient/" + generatedId;
-    webTestClient.get()
+    webTestClient
+        .get()
         .uri(readUri)
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().isOk()
+        .expectStatus()
+        .isOk()
         .expectBody()
-        .jsonPath("$.id").isEqualTo(generatedId)
-        .jsonPath("$.name[0].family").isEqualTo("Readable")
-        .jsonPath("$.gender").isEqualTo("female");
+        .jsonPath("$.id")
+        .isEqualTo(generatedId)
+        .jsonPath("$.name[0].family")
+        .isEqualTo("Readable")
+        .jsonPath("$.gender")
+        .isEqualTo("female");
 
     log.info("Created resource can be read back successfully");
   }
@@ -234,12 +263,14 @@ class CreateOperationIT {
 
     final String uri = "http://localhost:" + port + "/fhir/Patient";
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().is4xxClientError();
+        .expectStatus()
+        .is4xxClientError();
 
     log.info("Create with missing resource correctly returned error");
   }
@@ -265,27 +296,33 @@ class CreateOperationIT {
   }
 
   private String createAndGetId(final String uri, final String familyName) {
-    final String requestBody = String.format("""
-        {
-          "resourceType": "Patient",
-          "name": [
+    final String requestBody =
+        String.format(
+            """
             {
-              "family": "%s"
+              "resourceType": "Patient",
+              "name": [
+                {
+                  "family": "%s"
+                }
+              ]
             }
-          ]
-        }
-        """, familyName);
+            """,
+            familyName);
 
-    final String response = webTestClient.post()
-        .uri(uri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .bodyValue(requestBody)
-        .exchange()
-        .expectStatus().isCreated()
-        .returnResult(String.class)
-        .getResponseBody()
-        .blockFirst();
+    final String response =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isCreated()
+            .returnResult(String.class)
+            .getResponseBody()
+            .blockFirst();
 
     return extractIdFromJson(response);
   }
@@ -305,5 +342,4 @@ class CreateOperationIT {
     final int idEnd = json.indexOf("\"", idStart);
     return json.substring(idStart, idEnd);
   }
-
 }

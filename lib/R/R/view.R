@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 #' Execute a SQL on FHIR view
-#' 
+#'
 #' Executes a SQL on FHIR view definition and returns the result as a Spark DataFrame.
 #'
 #' @param ds The DataSource object containing the data to be queried.
@@ -24,44 +24,46 @@
 #' @param where An optional list of FHIRPath expressions that can be used to filter the view.
 #' @param json An optional JSON string representing the view definition, as an alternative to providing the parameters as R objects.
 #' @return A Spark DataFrame containing the results of the view.
-#' 
+#'
 #' @importFrom sparklyr j_invoke sdf_register
 #' @importFrom jsonlite toJSON
-#' 
+#'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/running-queries}{Pathling documentation - SQL on FHIR}
-#' 
+#'
 #' @export
 #' @examples \dontrun{
-#' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
-#' data_source %>% ds_view('Patient',
-#'      select = list(
-#'        list(
-#'          column = list(
-#'            list(path = 'id', name = 'id'),
-#'            list(path = 'gender', name = 'gender'),
-#'            list(path = "telecom.where(system='phone').value", 
-#'                              name = 'phone_numbers', collection = TRUE)
-#'          )
-#'        ),
-#'        list(
-#'          forEach = 'name',
-#'          column = list(
-#'            list(path = 'use', name = 'name_use'),
-#'            list(path = 'family', name = 'family_name')
-#'          ),
-#'          select = list(
-#'            list(
-#'              forEachOrNull = 'given',
-#'              column = list(
-#'                list(path = '$this', name = 'given_name')
-#'              )
-#'            )
-#'          )
-#'        )
-#'      ),
-#'      where = list(
-#'         list(path = "gender = 'male'")
-#'      )
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples("ndjson"))
+#' data_source %>% ds_view("Patient",
+#'   select = list(
+#'     list(
+#'       column = list(
+#'         list(path = "id", name = "id"),
+#'         list(path = "gender", name = "gender"),
+#'         list(
+#'           path = "telecom.where(system='phone').value",
+#'           name = "phone_numbers", collection = TRUE
+#'         )
+#'       )
+#'     ),
+#'     list(
+#'       forEach = "name",
+#'       column = list(
+#'         list(path = "use", name = "name_use"),
+#'         list(path = "family", name = "family_name")
+#'       ),
+#'       select = list(
+#'         list(
+#'           forEachOrNull = "given",
+#'           column = list(
+#'             list(path = "$this", name = "given_name")
+#'           )
+#'         )
+#'       )
+#'     )
+#'   ),
+#'   where = list(
+#'     list(path = "gender = 'male'")
+#'   )
 #' )
 #' }
 ds_view <- function(ds, resource, select = NULL, constants = NULL, where = NULL, json = NULL) {

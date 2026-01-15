@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.operations.bulkexport;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
@@ -38,11 +55,9 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ExportResultProvider {
 
-  @Nonnull
-  private final ExportResultRegistry exportResultRegistry;
+  @Nonnull private final ExportResultRegistry exportResultRegistry;
 
-  @Nonnull
-  private final String databasePath;
+  @Nonnull private final String databasePath;
 
   /**
    * Creates a new instance of the export result provider.
@@ -54,7 +69,7 @@ public class ExportResultProvider {
   public ExportResultProvider(
       @Nonnull final ExportResultRegistry exportResultRegistry,
       @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      final String databasePath) {
+          final String databasePath) {
     this.exportResultRegistry = exportResultRegistry;
     this.databasePath = databasePath;
   }
@@ -90,13 +105,19 @@ public class ExportResultProvider {
     if (currentUserId.isPresent() && !ownerId.equals(currentUserId)) {
       response.setStatus(HttpServletResponse.SC_NOT_FOUND);
       throw new AccessDeniedError(
-          "The requested result is not owned by the current user '%s'.".formatted(
-              currentUserId.orElse("null")));
+          "The requested result is not owned by the current user '%s'."
+              .formatted(currentUserId.orElse("null")));
     }
 
-    final Path requestedFilepath = new Path(
-        URI.create(databasePath).getPath() + Path.SEPARATOR + "jobs" + Path.SEPARATOR + jobId
-            + Path.SEPARATOR + file);
+    final Path requestedFilepath =
+        new Path(
+            URI.create(databasePath).getPath()
+                + Path.SEPARATOR
+                + "jobs"
+                + Path.SEPARATOR
+                + jobId
+                + Path.SEPARATOR
+                + file);
     final Resource resource = new FileSystemResource(requestedFilepath.toString());
 
     if (!resource.exists() || !resource.isFile()) {

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,16 +57,20 @@ public class ParquetSource extends FileSource {
    * @param path the path to the Parquet file or directory
    * @param additionalResourceTypeFilter predicate to filter resource types to be loaded
    */
-  public ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+  public ParquetSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
       @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
-    super(context, path,
+    super(
+        context,
+        path,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
         FileSource::resourceNameWithQualifierMapper,
         // Assume the "parquet" file extension.
         PARQUET_FILE_EXTENSION,
         context.getSpark().read().format(PARQUET_READ_FORMAT),
-        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData,
         additionalResourceTypeFilter);
@@ -80,11 +84,17 @@ public class ParquetSource extends FileSource {
    * @param path the path to the Parquet file or directory
    * @param fileNameMapper a function that maps a file name to a set of resource types
    */
-  public ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+  public ParquetSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
-    super(context, path, fileNameMapper, PARQUET_FILE_EXTENSION,
+    super(
+        context,
+        path,
+        fileNameMapper,
+        PARQUET_FILE_EXTENSION,
         context.getSpark().read().format(PARQUET_READ_FORMAT),
-        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData,
         resourceType -> true);
@@ -98,10 +108,13 @@ public class ParquetSource extends FileSource {
    * @param files a map where keys are resource type names and values are collections of file paths
    * @param additionalResourceTypeFilter predicate to filter resource types to be loaded
    */
-  public ParquetSource(@Nonnull final PathlingContext context,
+  public ParquetSource(
+      @Nonnull final PathlingContext context,
       @Nonnull final Map<String, Collection<String>> files,
       @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
-    super(context, files,
+    super(
+        context,
+        files,
         // Assume the "parquet" file extension.
         PARQUET_FILE_EXTENSION,
         context.getSpark().read().format(PARQUET_READ_FORMAT),
@@ -119,15 +132,18 @@ public class ParquetSource extends FileSource {
    * @param files a map where keys are resource type names and values are collections of file paths
    * @param fileNameMapper a function that maps a file name to a set of resource types
    */
-  public ParquetSource(@Nonnull final PathlingContext context,
+  public ParquetSource(
+      @Nonnull final PathlingContext context,
       @Nonnull final Map<String, Collection<String>> files,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
-    super(context, files, PARQUET_FILE_EXTENSION,
+    super(
+        context,
+        files,
+        PARQUET_FILE_EXTENSION,
         context.getSpark().read().format(PARQUET_READ_FORMAT),
         // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData,
         resourceType -> true);
   }
-
 }

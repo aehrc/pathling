@@ -34,7 +34,7 @@ operations. Authorities must be provided within the `authorities` claim within
 the JWT bearer token provided with each request.
 
 ```mermaid
-%%{init: {'themeVariables': { 'edgeLabelBackground':'#ffffff'}, 'flowchart': {'nodeSpacing': 30, 'rankSpacing': 40}}}%%
+%%{init: {'themeVariables': {'fontSize': '14px'}, 'flowchart': {'nodeSpacing': 30, 'rankSpacing': 40}}}%%
 graph TB
     operation["pathling:[operation]"]
     pathling[pathling]
@@ -47,22 +47,17 @@ graph TB
         write-resource["pathling:write:[resource type]"]
     end
 
-    pathling -->|includes| operation
-    pathling -->|includes| read
-    pathling -->|includes| write
-    read -->|includes| read-resource
-    write -->|includes| write-resource
-
-    style pathling fill:#f9d5e5,stroke:#333
-    style operation fill:#d5e5f9,stroke:#333
-    style read fill:#f9e5d5,stroke:#333
-    style write fill:#f9e5d5,stroke:#333
-    style read-resource fill:#e5f9d5,stroke:#333
-    style write-resource fill:#e5f9d5,stroke:#333
+    pathling --> operation
+    pathling --> read
+    pathling --> write
+    read --> read-resource
+    write --> write-resource
 ```
 
+→ includes
+
 | Authority                        | Description                                                                     |
-| -------------------------------- | ------------------------------------------------------------------------------- |
+|----------------------------------|---------------------------------------------------------------------------------|
 | `pathling`                       | Provides access to all operations and resources, implies all other authorities. |
 | `pathling:read`                  | Provides read access to all resource types.                                     |
 | `pathling:read:[resource type]`  | Provides read access to only a specified resource type.                         |
@@ -87,3 +82,28 @@ resources must be present within the token.
 
 The import, delete, and batch operations require `write` authority for all
 resource types that are referenced within the request.
+
+## SMART configuration
+
+When authorisation is enabled, Pathling exposes a
+[SMART configuration document](https://hl7.org/fhir/smart-app-launch/conformance.html)
+at `/.well-known/smart-configuration`. This document advertises the OAuth
+endpoints and capabilities supported by the server.
+
+Pathling automatically fetches and merges the issuer's OIDC discovery document
+from `{issuer}/.well-known/openid-configuration`. Fields from the OIDC discovery
+document are included in the SMART configuration response, with SMART-specific
+fields taking precedence. This provides clients with comprehensive metadata
+about supported scopes, response types, and other OAuth capabilities without
+requiring explicit configuration.
+
+The following fields can be configured explicitly and will override any values
+from the OIDC discovery document:
+
+- `authorization_endpoint` (via `pathling.auth.authUrl`)
+- `token_endpoint` (via `pathling.auth.tokenUrl`)
+- `revocation_endpoint` (via `pathling.auth.revokeUrl`)
+- `capabilities` (via `pathling.auth.capabilities`)
+- `grant_types_supported` (via `pathling.auth.grantTypesSupported`)
+- `code_challenge_methods_supported` (via
+  `pathling.auth.codeChallengeMethodsSupported`)

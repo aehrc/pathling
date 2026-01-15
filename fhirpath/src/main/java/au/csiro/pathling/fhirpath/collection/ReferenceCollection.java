@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,22 +46,27 @@ public class ReferenceCollection extends Collection {
    * @param definition the node definition
    * @param extensionMapColumn the extension map column
    */
-  protected ReferenceCollection(@Nonnull final ColumnRepresentation column,
-      @Nonnull final Optional<FhirPathType> type, @Nonnull final Optional<FHIRDefinedType> fhirType,
+  protected ReferenceCollection(
+      @Nonnull final ColumnRepresentation column,
+      @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(column, type, fhirType, definition, extensionMapColumn);
   }
 
   /**
+   * Gets a collection containing the keys of the references.
+   *
    * @param typeSpecifier The type specifier to filter by
    * @return a {@link Collection} containing the keys of the references in this collection, suitable
-   * for joining with resource keys
+   *     for joining with resource keys
    */
   @Nonnull
   public Collection getKeyCollection(@Nonnull final Optional<TypeSpecifier> typeSpecifier) {
     return typeSpecifier
-        // If a type was specified, create a regular expression that matches references of this type.
+        // If a type was specified, create a regular expression that matches references of this
+        // type.
         .map(ts -> ts.toFhirType().toCode() + "/.+")
         // Get a ColumnTransform that filters the reference column based on the regular expression.
         .map(this::keyFilter)
@@ -77,8 +82,7 @@ public class ReferenceCollection extends Collection {
 
   @Nonnull
   private ColumnTransform keyFilter(@Nonnull final String pattern) {
-    return col -> col.traverse(REFERENCE_ELEMENT_NAME, Optional.of(FHIRDefinedType.STRING))
-        .like(pattern);
+    return col ->
+        col.traverse(REFERENCE_ELEMENT_NAME, Optional.of(FHIRDefinedType.STRING)).like(pattern);
   }
-
 }

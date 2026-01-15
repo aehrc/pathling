@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
-import type { Parameters, ParametersParameter } from "fhir/r4";
+import {
+  buildHeaders,
+  buildUrl,
+  checkResponse,
+  extractJobIdFromUrl,
+} from "./utils";
+
 import type {
   BulkSubmitOptions,
   BulkSubmitResult,
@@ -26,15 +30,13 @@ import type {
   BulkSubmitDownloadOptions,
   BulkSubmitManifest,
 } from "../types/api";
-import {
-  buildHeaders,
-  buildUrl,
-  checkResponse,
-  extractJobIdFromUrl,
-} from "./utils";
+import type { Parameters, ParametersParameter } from "fhir/r4";
 
 /**
  * Builds FHIR Parameters resource for bulk submit request.
+ *
+ * @param options - Bulk submit options including submission details.
+ * @returns The constructed FHIR Parameters resource.
  */
 function buildSubmitParameters(options: BulkSubmitOptions): Parameters {
   const parameter: ParametersParameter[] = [
@@ -104,6 +106,9 @@ function buildSubmitParameters(options: BulkSubmitOptions): Parameters {
 
 /**
  * Extracts result from Parameters response.
+ *
+ * @param params - The FHIR Parameters response from the server.
+ * @returns The extracted submission ID and status.
  */
 function parseSubmitResponse(params: Parameters): BulkSubmitResult {
   let submissionId = "";

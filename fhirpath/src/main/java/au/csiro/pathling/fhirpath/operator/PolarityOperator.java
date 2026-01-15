@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,22 +37,17 @@ public record PolarityOperator(boolean negation) implements UnaryOperator {
   @Nonnull
   public Collection invoke(@Nullable final UnaryOperatorInput input) {
     requireNonNull(input);
-    Preconditions.checkUserInput(input.input() instanceof Numeric,
-        "Polarity operator can only be applied to numeric types");
-    final Collection singularInput = input.input().asSingular(
-        "Polarity operator (-) requires a singular operand."
-    );
-    return negation
-           ? ((Numeric) singularInput).negate()
-           : singularInput;
+    Preconditions.checkUserInput(
+        input.input() instanceof Numeric, "Polarity operator can only be applied to numeric types");
+    final Collection singularInput =
+        input.input().asSingular("Polarity operator (-) requires a singular operand.");
+    return negation ? ((Numeric) singularInput).negate() : singularInput;
   }
 
   @Override
   @Nonnull
   public String getOperatorName() {
-    return negation
-           ? "-"
-           : "+";
+    return negation ? "-" : "+";
   }
 
   /**

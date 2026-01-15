@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,17 +61,18 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   public Stream<? extends Arguments> provideArguments(final ExtensionContext context) {
     final TestConfiguration config = loadTestConfiguration(context);
     final YamlTestDefinition spec = loadTestSpec(context);
-    final Function<RuntimeContext, ResourceResolver> defaultResolverFactory = createDefaultResolverFactory(
-        spec);
+    final Function<RuntimeContext, ResourceResolver> defaultResolverFactory =
+        createDefaultResolverFactory(spec);
 
     return createTestCases(spec, config, defaultResolverFactory);
   }
 
   private TestConfiguration loadTestConfiguration(final ExtensionContext context) {
-    final boolean exclusionsOnly = "true".equals(System.getProperty(
-        YamlTestBase.PROPERTY_EXCLUSIONS_ONLY));
+    final boolean exclusionsOnly =
+        "true".equals(System.getProperty(YamlTestBase.PROPERTY_EXCLUSIONS_ONLY));
     if (exclusionsOnly) {
-      log.warn("Running excluded tests only (system property '{}' is set)",
+      log.warn(
+          "Running excluded tests only (system property '{}' is set)",
           YamlTestBase.PROPERTY_EXCLUSIONS_ONLY);
     }
 
@@ -81,11 +82,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
     }
 
     return new TestConfiguration(
-        getTestConfigPath(context),
-        getResourceBase(context),
-        disabledExclusionIds,
-        exclusionsOnly
-    );
+        getTestConfigPath(context), getResourceBase(context), disabledExclusionIds, exclusionsOnly);
   }
 
   private Set<String> parseDisabledExclusions() {
@@ -98,24 +95,28 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   }
 
   private Optional<String> getTestConfigPath(final ExtensionContext context) {
-    return context.getTestClass()
+    return context
+        .getTestClass()
         .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlTestConfiguration.class)))
         .map(YamlTestConfiguration::config)
         .filter(s -> !s.isBlank());
   }
 
   private Optional<String> getResourceBase(final ExtensionContext context) {
-    return context.getTestClass()
+    return context
+        .getTestClass()
         .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlTestConfiguration.class)))
         .map(YamlTestConfiguration::resourceBase)
         .filter(s -> !s.isBlank());
   }
 
   private YamlTestDefinition loadTestSpec(final ExtensionContext context) {
-    final String yamlSpecLocation = context.getTestMethod()
-        .orElseThrow(() -> new IllegalStateException("Test method not found in context"))
-        .getAnnotation(YamlTest.class)
-        .value();
+    final String yamlSpecLocation =
+        context
+            .getTestMethod()
+            .orElseThrow(() -> new IllegalStateException("Test method not found in context"))
+            .getAnnotation(YamlTest.class)
+            .value();
 
     log.debug("Loading test specification from: {}", yamlSpecLocation);
     final String testSpec = getResourceAsString(yamlSpecLocation);
@@ -125,19 +126,18 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   private Function<RuntimeContext, ResourceResolver> createDefaultResolverFactory(
       final YamlTestDefinition spec) {
     return Optional.ofNullable(spec.subject())
-        .map(subject -> {
-          final Map<Object, Object> convertedSubject = new HashMap<>(
-              subject);
-          return createResolverFactoryFromSubject(convertedSubject);
-        })
+        .map(
+            subject -> {
+              final Map<Object, Object> convertedSubject = new HashMap<>(subject);
+              return createResolverFactoryFromSubject(convertedSubject);
+            })
         .orElse(EmptyResolverFactory.getInstance());
   }
 
   private Function<RuntimeContext, ResourceResolver> createResolverFactoryFromSubject(
       final Map<Object, Object> subject) {
-    final String resourceTypeStr = Optional.ofNullable(subject.get("resourceType"))
-        .map(String.class::cast)
-        .orElse(null);
+    final String resourceTypeStr =
+        Optional.ofNullable(subject.get("resourceType")).map(String.class::cast).orElse(null);
 
     if (resourceTypeStr != null) {
       try {
@@ -158,16 +158,14 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
       final TestConfiguration config,
       final Function<RuntimeContext, ResourceResolver> defaultResolverFactory) {
 
-    final List<Arguments> cases = spec.cases()
-        .stream()
-        .filter(this::filterDisabledTests)
-        .map(testCase -> createRuntimeCase(testCase, config, defaultResolverFactory))
-        .map(Arguments::of)
-        .toList();
+    final List<Arguments> cases =
+        spec.cases().stream()
+            .filter(this::filterDisabledTests)
+            .map(testCase -> createRuntimeCase(testCase, config, defaultResolverFactory))
+            .map(Arguments::of)
+            .toList();
 
-    return cases.isEmpty()
-           ? Stream.of(Arguments.of(EmptyYamlTestExecutor.of()))
-           : cases.stream();
+    return cases.isEmpty() ? Stream.of(Arguments.of(EmptyYamlTestExecutor.of())) : cases.stream();
   }
 
   private boolean filterDisabledTests(final TestCase testCase) {
@@ -183,16 +181,12 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
       final TestConfiguration config,
       final Function<RuntimeContext, ResourceResolver> defaultResolverFactory) {
 
-    final Function<RuntimeContext, ResourceResolver> resolverFactory = Optional.ofNullable(
-            testCase.inputFile())
-        .map(f -> createFileBasedResolver(f, config.resourceBase()))
-        .orElse(defaultResolverFactory);
+    final Function<RuntimeContext, ResourceResolver> resolverFactory =
+        Optional.ofNullable(testCase.inputFile())
+            .map(f -> createFileBasedResolver(f, config.resourceBase()))
+            .orElse(defaultResolverFactory);
 
-    return DefaultYamlTestExecutor.of(
-        testCase,
-        resolverFactory,
-        config.excluder().apply(testCase)
-    );
+    return DefaultYamlTestExecutor.of(testCase, resolverFactory, config.excluder().apply(testCase));
   }
 
   private Function<RuntimeContext, ResourceResolver> createFileBasedResolver(
@@ -203,26 +197,27 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
 
   /**
    * Configuration record for test execution settings. Encapsulates:
+   *
    * <ul>
-   *   <li>Test configuration file path</li>
-   *   <li>Resource base directory</li>
-   *   <li>Disabled exclusion IDs</li>
-   *   <li>Exclusions-only mode flag</li>
+   *   <li>Test configuration file path
+   *   <li>Resource base directory
+   *   <li>Disabled exclusion IDs
+   *   <li>Exclusions-only mode flag
    * </ul>
    */
   private record TestConfiguration(
       Optional<String> configPath,
       Optional<String> resourceBase,
       Set<String> disabledExclusionIds,
-      boolean exclusionsOnly
-  ) {
+      boolean exclusionsOnly) {
 
     @Nonnull
     private Function<TestCase, Optional<ExcludeRule>> excluder() {
-      final YamlTestFormat config = configPath
-          .map(TestResources::getResourceAsString)
-          .map(YamlTestFormat::fromYaml)
-          .orElse(YamlTestFormat.getDefault());
+      final YamlTestFormat config =
+          configPath
+              .map(TestResources::getResourceAsString)
+              .map(YamlTestFormat::fromYaml)
+              .orElse(YamlTestFormat.getDefault());
       return config.toExcluder(disabledExclusionIds);
     }
   }

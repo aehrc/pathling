@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,11 +25,7 @@ import org.apache.spark.sql.SparkSession;
  *
  * @param spark The {@link SparkSession} for building and executing Spark queries.
  * @param fhirpathEvaluatorFactory The {@link FhirPathEvaluator.Factory} for producing FHIRPath
- * evaluators.
+ *     evaluators.
  */
 public record ExecutionContext(
-    SparkSession spark,
-    FhirPathEvaluator.Factory fhirpathEvaluatorFactory
-) {
-
-}
+    SparkSession spark, FhirPathEvaluator.Factory fhirpathEvaluatorFactory) {}

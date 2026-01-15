@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,21 +42,19 @@ import org.springframework.stereotype.Component;
  *
  * @author John Grimes
  * @see <a href="https://github.com/smart-on-fhir/bulk-import/blob/master/import-pnp.md">Bulk Data
- * Import - Ping and Pull Approach</a>
+ *     Import - Ping and Pull Approach</a>
  */
 @Component
 @Slf4j
 public class ImportPnpExecutor {
 
   // Pattern to match resource type with optional qualifier, e.g. "Patient.0000" -> "Patient"
-  private static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile(
-      "^([A-Za-z]+)(\\.[^.]+)?$");
+  private static final Pattern BASE_NAME_WITH_QUALIFIER =
+      Pattern.compile("^([A-Za-z]+)(\\.[^.]+)?$");
 
-  @Nonnull
-  private final ServerConfiguration serverConfiguration;
+  @Nonnull private final ServerConfiguration serverConfiguration;
 
-  @Nonnull
-  private final ImportExecutor importExecutor;
+  @Nonnull private final ImportExecutor importExecutor;
 
   /**
    * Constructor for ImportPnpExecutor.
@@ -64,7 +62,8 @@ public class ImportPnpExecutor {
    * @param serverConfiguration the server configuration
    * @param importExecutor the import executor for processing downloaded files
    */
-  public ImportPnpExecutor(@Nonnull final ServerConfiguration serverConfiguration,
+  public ImportPnpExecutor(
+      @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final ImportExecutor importExecutor) {
     this.serverConfiguration = serverConfiguration;
     this.importExecutor = importExecutor;
@@ -79,23 +78,24 @@ public class ImportPnpExecutor {
    */
   @Nonnull
   public ImportResponse execute(@Nonnull final ImportPnpRequest pnpRequest, final String jobId) {
-    log.info("Received $import-pnp request for exportUrl: {}, exportType: {}",
-        pnpRequest.exportUrl(), pnpRequest.exportType());
+    log.info(
+        "Received $import-pnp request for exportUrl: {}, exportType: {}",
+        pnpRequest.exportUrl(),
+        pnpRequest.exportType());
 
     Path tempDir = null;
     try {
       // Create directory for downloaded files with job ID for uniqueness.
       final PnpConfiguration pnpConfig =
-          serverConfiguration.getImport() != null
-          ? serverConfiguration.getImport().getPnp()
-          : null;
+          serverConfiguration.getImport() != null ? serverConfiguration.getImport().getPnp() : null;
       if (pnpConfig == null) {
         throw new InvalidUserInputError("PnP configuration is missing");
       }
 
-      final String downloadLocation = pnpConfig.getDownloadLocation() != null
-                                      ? pnpConfig.getDownloadLocation()
-                                      : "/usr/share/staging/pnp";
+      final String downloadLocation =
+          pnpConfig.getDownloadLocation() != null
+              ? pnpConfig.getDownloadLocation()
+              : "/usr/share/staging/pnp";
       final Path baseDir = Path.of(downloadLocation);
 
       // Ensure base directory exists.
@@ -114,32 +114,33 @@ public class ImportPnpExecutor {
 
       // Clean any existing content in the temp directory (in case of retry).
       try (final var paths = Files.walk(tempDir)) {
-        paths.filter(Files::isRegularFile)
-            .forEach(path -> {
-              try {
-                Files.delete(path);
-              } catch (final IOException e) {
-                log.warn("Failed to delete existing file in temp directory: {}", path, e);
-              }
-            });
+        paths
+            .filter(Files::isRegularFile)
+            .forEach(
+                path -> {
+                  try {
+                    Files.delete(path);
+                  } catch (final IOException e) {
+                    log.warn("Failed to delete existing file in temp directory: {}", path, e);
+                  }
+                });
       }
 
       // Determine file extension to filter for.
-      final String fileExtension = pnpConfig.getFileExtension() != null
-                                   ? pnpConfig.getFileExtension()
-                                   : ".ndjson";
+      final String fileExtension =
+          pnpConfig.getFileExtension() != null ? pnpConfig.getFileExtension() : ".ndjson";
 
       // Download files using fhir-bulk-java.
       final Map<String, Collection<String>> downloadedFiles =
           downloadFiles(pnpRequest, pnpConfig, tempDir, fileExtension);
 
       // Create an ImportRequest from the downloaded files.
-      final ImportRequest importRequest = new ImportRequest(
-          pnpRequest.originalRequest(),
-          downloadedFiles,
-          pnpRequest.saveMode(),
-          pnpRequest.importFormat()
-      );
+      final ImportRequest importRequest =
+          new ImportRequest(
+              pnpRequest.originalRequest(),
+              downloadedFiles,
+              pnpRequest.saveMode(),
+              pnpRequest.importFormat());
 
       // Execute the import using the existing ImportExecutor.
       final ImportResponse response = importExecutor.execute(importRequest, jobId);
@@ -149,8 +150,7 @@ public class ImportPnpExecutor {
 
     } catch (final IOException e) {
       log.error("Failed to create temporary directory for ping and pull import", e);
-      throw new InvalidUserInputError("Failed to create temporary directory: " + e.getMessage(),
-          e);
+      throw new InvalidUserInputError("Failed to create temporary directory: " + e.getMessage(), e);
     } catch (final Exception e) {
       log.error("Ping and pull import failed", e);
       throw new InvalidUserInputError("Ping and pull import failed: " + e.getMessage(), e);
@@ -166,7 +166,8 @@ public class ImportPnpExecutor {
       final ImportPnpRequest pnpRequest,
       final PnpConfiguration pnpConfig,
       final Path tempDir,
-      final String fileExtension) throws Exception {
+      final String fileExtension)
+      throws Exception {
 
     // Build the BulkExportClient based on export type.
     // Note: Static mode (manifest-based) is not directly supported by the current API,
@@ -179,17 +180,13 @@ public class ImportPnpExecutor {
     // Build authentication configuration if client ID is present.
     AuthConfig authConfig = null;
     if (pnpConfig.getClientId() != null && !pnpConfig.getClientId().isBlank()) {
-      final var authBuilder = AuthConfig.builder()
-          .enabled(true)
-          .clientId(pnpConfig.getClientId());
+      final var authBuilder = AuthConfig.builder().enabled(true).clientId(pnpConfig.getClientId());
 
       // Set authentication method (asymmetric or symmetric).
       if (pnpConfig.getPrivateKeyJwk() != null && !pnpConfig.getPrivateKeyJwk().isBlank()) {
-        authBuilder.useSMART(true)
-            .privateKeyJWK(pnpConfig.getPrivateKeyJwk());
+        authBuilder.useSMART(true).privateKeyJWK(pnpConfig.getPrivateKeyJwk());
       } else if (pnpConfig.getClientSecret() != null && !pnpConfig.getClientSecret().isBlank()) {
-        authBuilder.useSMART(false)
-            .clientSecret(pnpConfig.getClientSecret());
+        authBuilder.useSMART(false).clientSecret(pnpConfig.getClientSecret());
         // Set token endpoint if provided.
         if (pnpConfig.getTokenEndpoint() != null) {
           authBuilder.tokenEndpoint(pnpConfig.getTokenEndpoint());
@@ -208,11 +205,13 @@ public class ImportPnpExecutor {
     }
 
     // Build the client.
-    // Note: fhir-bulk-java creates the output directory, so we pass the parent and a subdirectory name.
+    // Note: fhir-bulk-java creates the output directory, so we pass the parent and a subdirectory
+    // name.
     final Path outputDir = tempDir.resolve("export-output");
-    final var clientBuilder = BulkExportClient.systemBuilder()
-        .withFhirEndpointUrl(pnpRequest.exportUrl())
-        .withOutputDir(outputDir.toString());
+    final var clientBuilder =
+        BulkExportClient.systemBuilder()
+            .withFhirEndpointUrl(pnpRequest.exportUrl())
+            .withOutputDir(outputDir.toString());
 
     if (authConfig != null) {
       clientBuilder.withAuthConfig(authConfig);
@@ -236,37 +235,38 @@ public class ImportPnpExecutor {
    * @param fileExtension the file extension to filter for
    * @return a map of resource type to file URLs
    */
-  private Map<String, Collection<String>> organiseDownloadedFiles(final Path downloadDir,
-      final String fileExtension)
-      throws IOException {
+  private Map<String, Collection<String>> organiseDownloadedFiles(
+      final Path downloadDir, final String fileExtension) throws IOException {
     final Map<String, Collection<String>> result = new HashMap<>();
 
     // Walk through the download directory to find all files with the specified extension.
     try (final var paths = Files.walk(downloadDir)) {
-      paths.filter(Files::isRegularFile)
+      paths
+          .filter(Files::isRegularFile)
           .filter(path -> path.toString().endsWith(fileExtension))
-          .forEach(path -> {
-            // Get the full filename (with extension)
-            final String fileName = path.getFileName().toString();
-            // Extract the base name (without extension) for resource type matching
-            final String baseName = FilenameUtils.getBaseName(fileName);
+          .forEach(
+              path -> {
+                // Get the full filename (with extension)
+                final String fileName = path.getFileName().toString();
+                // Extract the base name (without extension) for resource type matching
+                final String baseName = FilenameUtils.getBaseName(fileName);
 
-            // Extract resource type using the same pattern as FileSource
-            final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
-            if (matcher.matches()) {
-              // Group 1 contains the resource type (e.g., "Patient" from "Patient.0000")
-              final String resourceType = matcher.group(1);
+                // Extract resource type using the same pattern as FileSource
+                final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
+                if (matcher.matches()) {
+                  // Group 1 contains the resource type (e.g., "Patient" from "Patient.0000")
+                  final String resourceType = matcher.group(1);
 
-              // Convert file path to file:// URL for ImportExecutor
-              final String fileUrl = path.toUri().toString();
+                  // Convert file path to file:// URL for ImportExecutor
+                  final String fileUrl = path.toUri().toString();
 
-              // Add to map keyed by resource type
-              result.computeIfAbsent(resourceType, k -> new ArrayList<>()).add(fileUrl);
-              log.debug("Found {} file: {}", resourceType, fileName);
-            } else {
-              log.warn("Could not extract resource type from filename: {}", fileName);
-            }
-          });
+                  // Add to map keyed by resource type
+                  result.computeIfAbsent(resourceType, k -> new ArrayList<>()).add(fileUrl);
+                  log.debug("Found {} file: {}", resourceType, fileName);
+                } else {
+                  log.warn("Could not extract resource type from filename: {}", fileName);
+                }
+              });
     }
 
     if (result.isEmpty()) {
@@ -287,14 +287,16 @@ public class ImportPnpExecutor {
     try {
       if (Files.exists(tempDir)) {
         try (final var paths = Files.walk(tempDir)) {
-          paths.sorted(Comparator.reverseOrder())
-              .forEach(path -> {
-                try {
-                  Files.delete(path);
-                } catch (final IOException e) {
-                  log.warn("Failed to delete temporary file: {}", path, e);
-                }
-              });
+          paths
+              .sorted(Comparator.reverseOrder())
+              .forEach(
+                  path -> {
+                    try {
+                      Files.delete(path);
+                    } catch (final IOException e) {
+                      log.warn("Failed to delete temporary file: {}", path, e);
+                    }
+                  });
         }
         log.debug("Cleaned up temporary directory: {}", tempDir);
       }
@@ -302,5 +304,4 @@ public class ImportPnpExecutor {
       log.warn("Failed to clean up temporary directory: {}", tempDir, e);
     }
   }
-
 }

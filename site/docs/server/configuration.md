@@ -333,6 +333,27 @@ spark:
   `https://pathling.csiro.au/fhir`. Must match the contents of the
   [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3)
   within bearer tokens.
+- `pathling.auth.capabilities` - (default: `launch-standalone`) A list of
+  [SMART on FHIR capabilities](https://hl7.org/fhir/smart-app-launch/conformance.html)
+  to advertise in the SMART configuration document at
+  `/.well-known/smart-configuration`.
+- `pathling.auth.grantTypesSupported` - (default: `authorization_code`) A list
+  of OAuth 2.0 grant types supported at the token endpoint, e.g.
+  `authorization_code`, `client_credentials`, `refresh_token`. See
+  [SMART App Launch Conformance](https://hl7.org/fhir/smart-app-launch/conformance.html)
+  for more details.
+- `pathling.auth.codeChallengeMethodsSupported` - (default: `S256`) A list of
+  PKCE code challenge methods supported. Must include `S256` and must not
+  include `plain` as per the SMART specification.
+
+### Admin UI
+
+- `pathling.adminUi.clientId` - The OAuth client ID for the admin UI. When set,
+  this value is included in the SMART configuration response at
+  `/.well-known/smart-configuration` as `admin_ui_client_id`. The admin UI uses
+  this value when initiating OAuth flows. If not set, the UI falls back to the
+  `VITE_CLIENT_ID` environment variable (set at build time), then to the default
+  value `pathling-admin-ui`. See [Admin UI](./admin-ui) for more details.
 
 ### HTTP caching
 

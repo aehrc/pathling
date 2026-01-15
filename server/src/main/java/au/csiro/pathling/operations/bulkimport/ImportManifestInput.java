@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,11 +23,9 @@ import jakarta.annotation.Nonnull;
 /**
  * Represents an input item in the SMART Bulk Data Import manifest.
  *
+ * @param type the FHIR resource type
+ * @param url the URL to the data file
  * @author John Grimes
  */
 public record ImportManifestInput(
-    @Nonnull @JsonProperty("type") String type,
-    @Nonnull @JsonProperty("url") String url
-) {
-
-}
+    @Nonnull @JsonProperty("type") String type, @Nonnull @JsonProperty("url") String url) {}

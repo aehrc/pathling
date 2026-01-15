@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,20 +39,20 @@ public class QuantityComparator implements ColumnComparator, ElementWiseEquality
   }
 
   @SuppressWarnings("MissingJavadoc")
-  private QuantityComparator() {
-  }
+  private QuantityComparator() {}
 
   private static BinaryOperator<Column> wrap(
       @Nonnull final BinaryOperator<Column> decimalComparator,
-      @Nonnull final BinaryOperator<Column> flexComparator
-  ) {
+      @Nonnull final BinaryOperator<Column> flexComparator) {
 
-    return (left, right) -> functions.coalesce(
-        QuantityValue.of(left).normalizedValue()
-            .compare(QuantityValue.of(right).normalizedValue(), flexComparator),
-        QuantityValue.of(left).originalValue()
-            .compare(QuantityValue.of(right).originalValue(), decimalComparator)
-    );
+    return (left, right) ->
+        functions.coalesce(
+            QuantityValue.of(left)
+                .normalizedValue()
+                .compare(QuantityValue.of(right).normalizedValue(), flexComparator),
+            QuantityValue.of(left)
+                .originalValue()
+                .compare(QuantityValue.of(right).originalValue(), decimalComparator));
   }
 
   @Override

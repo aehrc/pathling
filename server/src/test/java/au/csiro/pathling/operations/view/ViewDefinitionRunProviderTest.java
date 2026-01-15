@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -430,6 +430,32 @@ class ViewDefinitionRunProviderTest {
                     viewResource, null, null, null, null, null, null, null, requestDetails, null))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("HTTP response is required");
+  }
+
+  // Verifies that accessing a choice element without specifying the type throws a clear error.
+  @Test
+  void choiceElementWithoutTypeThrowsDescriptiveError() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    // Create a view that accesses 'deceased' which is a choice element (deceased[x]).
+    final IBaseResource viewResource = parseViewResource(createPatientViewWithChoiceElement());
+    final String inlinePatient = createPatientJsonWithDeceased("test-1", "Smith", true);
+
+    assertThatThrownBy(
+            () ->
+                provider.run(
+                    viewResource,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    List.of(inlinePatient),
+                    mockRequestDetails(null),
+                    response))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("deceased")
+        .hasMessageContaining("ofType");
   }
 
   // -------------------------------------------------------------------------
@@ -883,5 +909,32 @@ class ViewDefinitionRunProviderTest {
     org.mockito.Mockito.when(requestDetails.getServletRequest()).thenReturn(httpRequest);
 
     return requestDetails;
+  }
+
+  // Creates a ViewDefinition that accesses the 'deceased' choice element directly.
+  @Nonnull
+  private String createPatientViewWithChoiceElement() {
+    final Map<String, Object> view = new HashMap<>();
+    view.put("resourceType", "ViewDefinition");
+    view.put("name", "patient_view_with_choice");
+    view.put("resource", "Patient");
+    view.put("status", "active");
+    view.put(
+        "select",
+        List.of(
+            Map.of("column", List.of(Map.of("name", "id", "path", "id"))),
+            // This accesses deceased[x] directly without specifying the type.
+            Map.of("column", List.of(Map.of("name", "deceased", "path", "deceased")))));
+    return gson.toJson(view);
+  }
+
+  @Nonnull
+  private String createPatientJsonWithDeceased(
+      @Nonnull final String id, @Nonnull final String familyName, final boolean deceased) {
+    final Patient patient = new Patient();
+    patient.setId(id);
+    patient.addName().setFamily(familyName);
+    patient.setDeceased(new BooleanType(deceased));
+    return fhirContext.newJsonParser().encodeResourceToString(patient);
   }
 }

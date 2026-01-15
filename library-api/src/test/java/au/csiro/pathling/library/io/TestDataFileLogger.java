@@ -1,10 +1,26 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.library.io;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -16,13 +32,11 @@ public class TestDataFileLogger {
   public static void logDirectoryContents(org.apache.hadoop.fs.Path directory) {
     logDirectoryContents(Path.of(directory.toUri()));
   }
-  
+
   public static void logDirectoryContents(Path directory) {
     try {
       log.info("Directory tree for: {}", directory);
-      List<Path> paths = Files.walk(directory)
-          .sorted()
-          .toList();
+      List<Path> paths = Files.walk(directory).sorted().toList();
 
       printTree(paths, directory);
     } catch (IOException e) {
@@ -89,12 +103,10 @@ public class TestDataFileLogger {
         return false; // Found a sibling
       }
       // If we've moved to a different parent level, stop checking
-      if (sibling.getNameCount() <= path.getNameCount() &&
-          !sibling.startsWith(parent)) {
+      if (sibling.getNameCount() <= path.getNameCount() && !sibling.startsWith(parent)) {
         break;
       }
     }
     return true;
   }
-  
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,6 +49,7 @@ public final class AsyncJobContext {
    *
    * @return an Optional containing the current job, or empty if no job is set
    */
+  @SuppressWarnings("java:S1452") // Wildcard is intentional - jobs can have any result type.
   @Nonnull
   public static Optional<Job<?>> getCurrentJob() {
     return Optional.ofNullable(CURRENT_JOB.get());
@@ -61,5 +62,4 @@ public final class AsyncJobContext {
   public static void clear() {
     CURRENT_JOB.remove();
   }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,10 +27,7 @@ import jakarta.annotation.Nonnull;
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
-public record SubmitterIdentifier(
-    @Nonnull String system,
-    @Nonnull String value
-) {
+public record SubmitterIdentifier(@Nonnull String system, @Nonnull String value) {
 
   /**
    * Returns a string key suitable for use in maps and registries.
@@ -41,5 +38,4 @@ public record SubmitterIdentifier(
   public String toKey() {
     return system + "|" + value;
   }
-
 }

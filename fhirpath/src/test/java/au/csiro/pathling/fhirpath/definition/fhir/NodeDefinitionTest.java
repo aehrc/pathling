@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,36 +35,34 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Slf4j
 class NodeDefinitionTest {
 
-  @Autowired
-  FhirContext fhirContext;
-
+  @Autowired FhirContext fhirContext;
 
   @Test
   void testSimpleReference() {
     // Test that choice with reference type returns the correct type of definition.
-    final FhirResourceDefinition conditionDefinition = new FhirResourceDefinition(
-        ResourceType.CONDITION,
-        fhirContext.getResourceDefinition(ResourceType.CONDITION.toCode()));
+    final FhirResourceDefinition conditionDefinition =
+        new FhirResourceDefinition(
+            ResourceType.CONDITION,
+            fhirContext.getResourceDefinition(ResourceType.CONDITION.toCode()));
 
-    final ChildDefinition referenceDefinition = conditionDefinition.getChildElement("subject")
-        .orElseThrow();
+    final ChildDefinition referenceDefinition =
+        conditionDefinition.getChildElement("subject").orElseThrow();
     assertInstanceOf(FhirReferenceDefinition.class, referenceDefinition);
   }
-
 
   @Test
   void testReferenceInChoiceValue() {
     // Test that choice with reference type returns the correct type of definition.
-    final FhirResourceDefinition observationDefinition = new FhirResourceDefinition(
-        ResourceType.MEDICATIONDISPENSE,
-        fhirContext.getResourceDefinition(ResourceType.MEDICATIONDISPENSE.toCode()));
+    final FhirResourceDefinition observationDefinition =
+        new FhirResourceDefinition(
+            ResourceType.MEDICATIONDISPENSE,
+            fhirContext.getResourceDefinition(ResourceType.MEDICATIONDISPENSE.toCode()));
 
-    final ChildDefinition medicationValue = observationDefinition.getChildElement("medication")
-        .orElseThrow();
+    final ChildDefinition medicationValue =
+        observationDefinition.getChildElement("medication").orElseThrow();
     assertInstanceOf(FhirChoiceDefinition.class, medicationValue);
-    final ElementDefinition referenceDefinition = ((FhirChoiceDefinition) medicationValue).getChildByType(
-            "Reference")
-        .orElseThrow();
+    final ElementDefinition referenceDefinition =
+        ((FhirChoiceDefinition) medicationValue).getChildByType("Reference").orElseThrow();
     assertInstanceOf(FhirReferenceDefinition.class, referenceDefinition);
     assertEquals("medicationReference", referenceDefinition.getElementName());
   }
@@ -72,16 +70,18 @@ class NodeDefinitionTest {
   @Test
   void testReferenceInExtensionValue() {
     // Test that choice with reference type returns the correct type of definition in extension.
-    final FhirResourceDefinition patientDefinition = new FhirResourceDefinition(
-        ResourceType.PATIENT,
-        fhirContext.getResourceDefinition(Patient.class));
+    final FhirResourceDefinition patientDefinition =
+        new FhirResourceDefinition(
+            ResourceType.PATIENT, fhirContext.getResourceDefinition(Patient.class));
 
     // Test that choice with reference type returns the correct type of definition in extension.
-    final ElementDefinition referenceDefinition = patientDefinition.getChildElement("extension")
-        .flatMap(extension -> extension.getChildElement("value"))
-        .flatMap(maybeCast(FhirChoiceDefinition.class))
-        .flatMap(value -> value.getChildByType("Reference"))
-        .orElseThrow();
+    final ElementDefinition referenceDefinition =
+        patientDefinition
+            .getChildElement("extension")
+            .flatMap(extension -> extension.getChildElement("value"))
+            .flatMap(maybeCast(FhirChoiceDefinition.class))
+            .flatMap(value -> value.getChildByType("Reference"))
+            .orElseThrow();
     assertInstanceOf(FhirReferenceDefinition.class, referenceDefinition);
     assertEquals("valueReference", referenceDefinition.getElementName());
   }

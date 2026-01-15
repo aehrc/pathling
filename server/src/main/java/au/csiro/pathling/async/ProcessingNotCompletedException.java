@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,18 +32,24 @@ public class ProcessingNotCompletedException extends BaseServerResponseException
   private static final long serialVersionUID = -1755375090680736458L;
   private static final int STATUS_CODE = Constants.STATUS_HTTP_202_ACCEPTED;
 
+  /**
+   * Creates a new ProcessingNotCompletedException with the given message.
+   *
+   * @param theMessage a descriptive message
+   */
   public ProcessingNotCompletedException(@Nonnull final String theMessage) {
     super(STATUS_CODE, theMessage);
   }
-  
+
   /**
+   * Creates a new ProcessingNotCompletedException with the given message and operation outcome.
+   *
    * @param theMessage a descriptive message
    * @param theOperationOutcome an {@link org.hl7.fhir.r4.model.OperationOutcome} describing the
-   * response
+   *     response
    */
-  public ProcessingNotCompletedException(@Nonnull final String theMessage,
-      @Nonnull final IBaseOperationOutcome theOperationOutcome) {
+  public ProcessingNotCompletedException(
+      @Nonnull final String theMessage, @Nonnull final IBaseOperationOutcome theOperationOutcome) {
     super(STATUS_CODE, theMessage, theOperationOutcome);
   }
-
 }

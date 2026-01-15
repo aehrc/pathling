@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * Form for configuring and starting a ping and pull import job.
  *
@@ -7,10 +24,12 @@
 import { UploadIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Heading, Select, Text, TextField } from "@radix-ui/themes";
 import { useState } from "react";
-import type { ImportFormat, SaveMode } from "../../types/import";
-import { IMPORT_FORMATS } from "../../types/import";
-import type { ExportType, ImportPnpRequest } from "../../types/importPnp";
+
 import { SaveModeField } from "./SaveModeField";
+import { IMPORT_FORMATS } from "../../types/import";
+
+import type { ImportFormat, SaveMode } from "../../types/import";
+import type { ExportType, ImportPnpRequest } from "../../types/importPnp";
 
 interface ImportPnpFormProps {
   onSubmit: (request: ImportPnpRequest) => void;
@@ -18,6 +37,15 @@ interface ImportPnpFormProps {
   disabled: boolean;
 }
 
+/**
+ * Form for configuring and starting a ping-and-pull import.
+ *
+ * @param root0 - The component props.
+ * @param root0.onSubmit - Callback when import is submitted.
+ * @param root0.isSubmitting - Whether an import is in progress.
+ * @param root0.disabled - Whether the form is disabled.
+ * @returns The import PnP form component.
+ */
 export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFormProps) {
   const [exportUrl, setExportUrl] = useState("");
   const [saveMode, setSaveMode] = useState<SaveMode>("overwrite");

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +28,7 @@ import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.CodeType;
@@ -87,29 +87,29 @@ public class ImportPnpOperationValidator {
 
     // Extract exportUrl parameter (required).
     final String exportUrl =
-        Objects.requireNonNull(
-            ParamUtil.extractFromPart(
+        ParamUtil.extractFromPart(
                 parameters.getParameter(),
                 "exportUrl",
                 UrlType.class,
                 UrlType::getValue,
                 false,
-                null,
+                Optional.empty(),
                 false,
-                new InvalidUserInputError("Missing required parameter: exportUrl")),
-            "exportUrl must not be null");
+                Optional.of(new InvalidUserInputError("Missing required parameter: exportUrl")))
+            .orElseThrow(() -> new InvalidUserInputError("exportUrl must not be null"));
 
     // Extract exportType parameter (optional, defaults to "dynamic").
     final String exportType =
         ParamUtil.extractFromPart(
-            parameters.getParameter(),
-            "exportType",
-            CodeType.class,
-            CodeType::getCode,
-            true,
-            EXPORT_TYPE_DYNAMIC,
-            false,
-            new InvalidUserInputError("Invalid exportType"));
+                parameters.getParameter(),
+                "exportType",
+                CodeType.class,
+                CodeType::getCode,
+                true,
+                Optional.of(EXPORT_TYPE_DYNAMIC),
+                false,
+                Optional.of(new InvalidUserInputError("Invalid exportType")))
+            .orElseThrow();
 
     // Validate exportType.
     if (!EXPORT_TYPE_DYNAMIC.equals(exportType) && !EXPORT_TYPE_STATIC.equals(exportType)) {
@@ -122,26 +122,28 @@ public class ImportPnpOperationValidator {
     // Extract saveMode parameter (optional, defaults to OVERWRITE).
     final SaveMode saveMode =
         ParamUtil.extractFromPart(
-            parameters.getParameter(),
-            "saveMode",
-            CodeType.class,
-            code -> SaveMode.fromCode(code.getCode()),
-            true,
-            SaveMode.OVERWRITE,
-            false,
-            new InvalidUserInputError("Unknown saveMode."));
+                parameters.getParameter(),
+                "saveMode",
+                CodeType.class,
+                code -> SaveMode.fromCode(code.getCode()),
+                true,
+                Optional.of(SaveMode.OVERWRITE),
+                false,
+                Optional.of(new InvalidUserInputError("Unknown saveMode.")))
+            .orElseThrow();
 
     // Extract inputFormat parameter (optional, defaults to NDJSON).
     final ImportFormat importFormat =
         ParamUtil.extractFromPart(
-            parameters.getParameter(),
-            "inputFormat",
-            CodeType.class,
-            code -> parseImportFormat(code.getCode()),
-            true,
-            ImportFormat.NDJSON,
-            false,
-            new InvalidUserInputError("Unknown format."));
+                parameters.getParameter(),
+                "inputFormat",
+                CodeType.class,
+                code -> parseImportFormat(code.getCode()),
+                true,
+                Optional.of(ImportFormat.NDJSON),
+                false,
+                Optional.of(new InvalidUserInputError("Unknown format.")))
+            .orElseThrow();
 
     final ImportPnpRequest importPnpRequest =
         new ImportPnpRequest(

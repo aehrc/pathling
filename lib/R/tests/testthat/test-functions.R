@@ -16,7 +16,7 @@ test_that("to_ecl_value_set returns expected ValueSet URI", {
     " )",
     ")"
   )
-  
+
   expected <- paste0(
     "http://snomed.info/sct?fhir_vs=ecl/%28%20%28",
     "%5E929360071000036103%7CMedicinal%20product%20unit%20of%20use%20refset%7C%20%3A",

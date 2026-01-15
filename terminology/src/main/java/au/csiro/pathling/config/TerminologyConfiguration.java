@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,42 +36,32 @@ import org.hibernate.validator.constraints.URL;
 @Builder
 public class TerminologyConfiguration implements Serializable {
 
-  @Serial
-  private static final long serialVersionUID = -5990849769947958140L;
+  @Serial private static final long serialVersionUID = -5990849769947958140L;
 
-  /**
-   * Enables the use of terminology functions.
-   */
-  @NotNull
-  @Builder.Default
-  private boolean enabled = true;
+  /** Enables the use of terminology functions. */
+  @NotNull @Builder.Default private boolean enabled = true;
 
   /**
    * The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology
    * queries.
-   * <p>
-   * The default server is suitable for testing purposes only.
+   *
+   * <p>The default server is suitable for testing purposes only.
    */
-  @NotBlank
-  @URL
-  @Builder.Default
-  private String serverUrl = "https://tx.ontoserver.csiro.au/fhir";
+  @NotBlank @URL @Builder.Default private String serverUrl = "https://tx.ontoserver.csiro.au/fhir";
 
   /**
    * Setting this option to {@code true} will enable additional logging of the details of requests
    * to the terminology service.
    */
-  @NotNull
-  @Builder.Default
-  private boolean verboseLogging = false;
+  @NotNull @Builder.Default private boolean verboseLogging = false;
 
   /**
    * The default value of the Accept-Language HTTP header passed to the terminology server. The
-   * value may contain multiple languages, with weighted preferences as defined in
-   * <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language">RFC-9110</a>
-   * If not provided, the header is not sent. The server can use the header to return the result in
-   * the preferred language if it is able. The actual behaviour may depend on the server
-   * implementation and the code systems used.
+   * value may contain multiple languages, with weighted preferences as defined in <a
+   * href="https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language">RFC-9110</a> If not
+   * provided, the header is not sent. The server can use the header to return the result in the
+   * preferred language if it is able. The actual behaviour may depend on the server implementation
+   * and the code systems used.
    *
    * @return the accept language header value
    */
@@ -80,35 +70,19 @@ public class TerminologyConfiguration implements Serializable {
     return acceptLanguage;
   }
 
-  /**
-   * The accept language header value for terminology requests.
-   */
-  @Nullable
-  @Builder.Default
-  private String acceptLanguage = null;
+  /** The accept language header value for terminology requests. */
+  @Nullable @Builder.Default private String acceptLanguage = null;
 
-  /**
-   * Configuration relating to the HTTP client used for terminology requests.
-   */
-  @NotNull
-  @Valid
-  @Builder.Default
+  /** Configuration relating to the HTTP client used for terminology requests. */
+  @NotNull @Valid @Builder.Default
   private HttpClientConfiguration client = HttpClientConfiguration.builder().build();
 
-  /**
-   * Configuration relating to the caching of terminology requests.
-   */
-  @NotNull
-  @Valid
-  @Builder.Default
+  /** Configuration relating to the caching of terminology requests. */
+  @NotNull @Valid @Builder.Default
   private HttpClientCachingConfiguration cache = HttpClientCachingConfiguration.builder().build();
 
-  /**
-   * Configuration relating to authentication of requests to the terminology service.
-   */
-  @NotNull
-  @Valid
-  @Builder.Default
-  private TerminologyAuthConfiguration authentication = TerminologyAuthConfiguration.builder()
-      .build();
+  /** Configuration relating to authentication of requests to the terminology service. */
+  @NotNull @Valid @Builder.Default
+  private TerminologyAuthConfiguration authentication =
+      TerminologyAuthConfiguration.builder().build();
 }

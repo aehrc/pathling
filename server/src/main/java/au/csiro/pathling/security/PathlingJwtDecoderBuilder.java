@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,6 +68,8 @@ import org.springframework.web.client.RestOperations;
 import org.springframework.web.client.RestTemplate;
 
 /**
+ * Builds JWT decoders with Pathling-specific validation and key selection.
+ *
  * @author John Grimes
  */
 @Component
@@ -75,13 +77,13 @@ import org.springframework.web.client.RestTemplate;
 @Primary
 public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelector<SecurityContext> {
 
-  @Nonnull
-  private final OidcConfiguration oidcConfiguration;
+  @Nonnull private final OidcConfiguration oidcConfiguration;
 
-  @Nonnull
-  private final RestOperations restOperations = new RestTemplate();
+  @Nonnull private final RestOperations restOperations = new RestTemplate();
 
   /**
+   * Creates a new PathlingJwtDecoderBuilder.
+   *
    * @param oidcConfiguration configuration used to instantiate the builder
    */
   public PathlingJwtDecoderBuilder(@Nonnull final OidcConfiguration oidcConfiguration) {
@@ -89,6 +91,8 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   }
 
   /**
+   * Builds a JWT decoder with the specified configuration.
+   *
    * @param configuration controls the behaviour of the resulting JWT decoder
    * @return a JWT decoder
    */
@@ -113,18 +117,20 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   }
 
   @Override
-  public List<? extends Key> selectKeys(@Nullable final JWSHeader header,
-      @Nullable final JWTClaimsSet claimsSet, @Nullable final SecurityContext context)
+  public List<? extends Key> selectKeys(
+      @Nullable final JWSHeader header,
+      @Nullable final JWTClaimsSet claimsSet,
+      @Nullable final SecurityContext context)
       throws KeySourceException {
     checkArgument(claimsSet != null, "claimsSet cannot be null");
     final String jwksUri = getJwksUri(claimsSet);
 
     try {
       @SuppressWarnings("deprecation")
-      final JWKSource<SecurityContext> jwkSource = new RemoteJWKSet<>(
-          URI.create(jwksUri).toURL(), new JwksRetriever(restOperations));
-      final JWSKeySelector<SecurityContext> keySelector = new JWSVerificationKeySelector<>(
-          JWSAlgorithm.RS256, jwkSource);
+      final JWKSource<SecurityContext> jwkSource =
+          new RemoteJWKSet<>(URI.create(jwksUri).toURL(), new JwksRetriever(restOperations));
+      final JWSKeySelector<SecurityContext> keySelector =
+          new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, jwkSource);
       return keySelector.selectJWSKeys(header, context);
     } catch (final IOException e) {
       throw new KeySourceException("Failed to retrieve keys from " + jwksUri, e);
@@ -155,8 +161,8 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
 
   private static class JwksRetriever implements ResourceRetriever {
 
-    private static final MediaType APPLICATION_JWK_SET_JSON = new MediaType("application",
-        "jwk-set+json");
+    private static final MediaType APPLICATION_JWK_SET_JSON =
+        new MediaType("application", "jwk-set+json");
 
     private final RestOperations restOperations;
 
@@ -180,16 +186,15 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
     }
 
     @Nonnull
-    private ResponseEntity<String> getResponse(@Nonnull final URL url,
-        @Nonnull final HttpHeaders headers) throws IOException {
+    private ResponseEntity<String> getResponse(
+        @Nonnull final URL url, @Nonnull final HttpHeaders headers) throws IOException {
       try {
-        final RequestEntity<Void> request = new RequestEntity<>(headers, HttpMethod.GET,
-            url.toURI());
+        final RequestEntity<Void> request =
+            new RequestEntity<>(headers, HttpMethod.GET, url.toURI());
         return this.restOperations.exchange(request, String.class);
       } catch (final Exception ex) {
         throw new IOException(ex);
       }
     }
-
   }
 }

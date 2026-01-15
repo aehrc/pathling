@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,16 +41,26 @@ import org.springframework.stereotype.Component;
 @Component
 public class TestDataSetup {
 
-  @Nonnull
-  private final PathlingContext pathlingContext;
+  @Nonnull private final PathlingContext pathlingContext;
 
   @Autowired
   public TestDataSetup(@Nonnull final PathlingContext pathlingContext) {
     this.pathlingContext = pathlingContext;
   }
 
-  public static void copyTestDataToTempDir(@Nonnull final Path tempDir,
-      @Nullable final String... resourceTypes) {
+  /**
+   * Returns the path to the read-only test data directory. Tests that only read data (e.g., export
+   * operations) can use this path directly instead of copying data to a temp directory.
+   *
+   * @return The absolute path to the read-only test data directory.
+   */
+  @Nonnull
+  public static Path getReadOnlyTestDataPath() {
+    return Path.of("src/test/resources/test-data/bulk/fhir/delta").toAbsolutePath();
+  }
+
+  public static void copyTestDataToTempDir(
+      @Nonnull final Path tempDir, @Nullable final String... resourceTypes) {
     try {
       final Path deltaPath = Path.of("src/test/resources/test-data/bulk/fhir/delta");
       if (resourceTypes == null || resourceTypes.length == 0) {
@@ -41,8 +68,8 @@ public class TestDataSetup {
         FileUtils.copyDirectoryToDirectory(deltaTestData, tempDir.toFile());
       } else {
         for (final String resourceType : resourceTypes) {
-          final File deltaSpecificTestResourceData = deltaPath.resolve(resourceType + ".parquet")
-              .toFile();
+          final File deltaSpecificTestResourceData =
+              deltaPath.resolve(resourceType + ".parquet").toFile();
           FileUtils.copyDirectoryToDirectory(deltaSpecificTestResourceData, tempDir.toFile());
           assertFileWasCopiedCorrectly(tempDir, resourceType);
         }
@@ -54,9 +81,10 @@ public class TestDataSetup {
     }
   }
 
-  private static void assertFileWasCopiedCorrectly(@Nonnull final Path tempDir,
-      @Nonnull final String resourceType) {
-    assertThat(tempDir.resolve(resourceType + ".parquet")).exists()
+  private static void assertFileWasCopiedCorrectly(
+      @Nonnull final Path tempDir, @Nonnull final String resourceType) {
+    assertThat(tempDir.resolve(resourceType + ".parquet"))
+        .exists()
         .isDirectoryContaining(path -> path.toString().endsWith(".parquet"));
   }
 
@@ -64,8 +92,8 @@ public class TestDataSetup {
     try {
       final Path deltaPath = ndjsonTestDataDir.resolve("delta");
       Files.createDirectories(deltaPath);
-      final NdjsonSource ndjsonSource = new NdjsonSource(pathlingContext,
-          ndjsonTestDataDir.toAbsolutePath().toString());
+      final NdjsonSource ndjsonSource =
+          new NdjsonSource(pathlingContext, ndjsonTestDataDir.toAbsolutePath().toString());
       new DataSinkBuilder(pathlingContext, ndjsonSource)
           // If the data already exists, skip the import process.
           .saveMode("ignore")
@@ -75,7 +103,6 @@ public class TestDataSetup {
     } finally {
       logDirectoryContents(ndjsonTestDataDir);
     }
-
   }
 
   public static void logDirectoryContents(@Nonnull final Path directory) {
@@ -83,9 +110,7 @@ public class TestDataSetup {
       log.debug("Directory tree for: {}", directory);
       final List<Path> paths;
       try (final var stream = Files.walk(directory)) {
-        paths = stream
-            .sorted()
-            .toList();
+        paths = stream.sorted().toList();
       }
 
       printTree(paths, directory);
@@ -142,8 +167,8 @@ public class TestDataSetup {
     return result;
   }
 
-  private static boolean isLastSiblingInPaths(@Nonnull final List<Path> paths,
-      @Nonnull final Path path) {
+  private static boolean isLastSiblingInPaths(
+      @Nonnull final List<Path> paths, @Nonnull final Path path) {
     final Path parent = path.getParent();
     if (parent == null) {
       return true;
@@ -161,8 +186,7 @@ public class TestDataSetup {
         return false; // Found a sibling
       }
       // If we've moved to a different parent level, stop checking
-      if (sibling.getNameCount() <= path.getNameCount() &&
-          !sibling.startsWith(parent)) {
+      if (sibling.getNameCount() <= path.getNameCount() && !sibling.startsWith(parent)) {
         break;
       }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -150,6 +150,8 @@ public class ConformanceProvider
   @Nonnull private final List<String> systemLevelOperations;
 
   /**
+   * Creates a new ConformanceProvider.
+   *
    * @param configuration a {@link ServerConfiguration} object controlling the behaviour of the
    *     capability statement
    * @param oidcConfiguration the OIDC configuration for security

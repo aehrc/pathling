@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,6 @@ import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
-
 /**
  * An abstraction of a terminology operation that describes how to validate, execute and extract a
  * result from the response.
@@ -36,7 +35,7 @@ public interface TerminologyOperation<R, T> {
    * Validates the parameters for this operation.
    *
    * @return An empty {@link Optional} if the parameters are valid, or an {@link Optional}
-   * containing the result to be returned to the user if the parameters are invalid.
+   *     containing the result to be returned to the user if the parameters are invalid.
    */
   @Nonnull
   Optional<T> validate();
@@ -45,7 +44,7 @@ public interface TerminologyOperation<R, T> {
    * Builds a request for this operation, ready to send to the terminology server.
    *
    * @return A request for this operation that has not been executed yet, and can still be modified
-   * (e.g. headers)
+   *     (e.g. headers)
    */
   @Nonnull
   IOperationUntypedWithInput<R> buildRequest();
@@ -60,10 +59,11 @@ public interface TerminologyOperation<R, T> {
   T extractResult(@Nonnull final R response);
 
   /**
+   * Returns the fallback result for invalid requests.
+   *
    * @return the result that should be returned to the user if the terminology server returns a 400
-   * series response
+   *     series response
    */
   @Nonnull
   T invalidRequestFallback();
-
 }

@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,16 +35,12 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
-
-/**
- * Helper application, which converts JSON bundles to XML bundles.
- */
+/** Helper application, which converts JSON bundles to XML bundles. */
 @Slf4j
 public class GenerateXMLBundlesApp {
 
   private static final String JSON_BUNDLES_DIR = "encoders/src/test/resources/data/bundles/R4/json";
   private static final String XML_BUNDLES_DIR = "encoders/src/test/resources/data/bundles/R4/xml";
-
 
   private final FhirContext fhirContext = FhirContext.forR4();
 
@@ -62,17 +58,18 @@ public class GenerateXMLBundlesApp {
       stream
           .filter(not(Files::isDirectory))
           .filter(p -> p.getFileName().toString().endsWith(".json"))
-          .forEach(p -> {
-            try {
-              final IBaseResource resource = jsonParser.parseResource(Files.readString(p));
-              final String xmlFileName = p.getFileName().toString().replace(".json", ".xml");
-              Files.writeString(Path.of(XML_BUNDLES_DIR, xmlFileName),
-                  xmlParser.encodeResourceToString(resource));
-            } catch (final IOException e) {
-              log.error("Error processing file: {}", p, e);
-            }
-          });
+          .forEach(
+              p -> {
+                try {
+                  final IBaseResource resource = jsonParser.parseResource(Files.readString(p));
+                  final String xmlFileName = p.getFileName().toString().replace(".json", ".xml");
+                  Files.writeString(
+                      Path.of(XML_BUNDLES_DIR, xmlFileName),
+                      xmlParser.encodeResourceToString(resource));
+                } catch (final IOException e) {
+                  log.error("Error processing file: {}", p, e);
+                }
+              });
     }
   }
 }
-

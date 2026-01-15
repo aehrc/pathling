@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.security;
 
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -27,9 +26,9 @@ import java.lang.annotation.Target;
 
 /**
  * Identifies methods that require certain granted authority to be executed.
- * <p>
- * Used by {@link SecurityAspect} to enforce resource access authorization. When multiple operation
- * names are specified, access is granted if the user has permission for ANY of the listed
+ *
+ * <p>Used by {@link SecurityAspect} to enforce resource access authorization. When multiple
+ * operation names are specified, access is granted if the user has permission for ANY of the listed
  * operations.
  */
 @Target({ElementType.METHOD})

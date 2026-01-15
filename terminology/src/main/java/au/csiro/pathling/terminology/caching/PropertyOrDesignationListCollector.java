@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,15 +30,16 @@ import java.util.stream.Collector;
 
 /**
  * A collector that collects a stream of items into a {@link PropertyOrDesignationList}.
- * <p>
- * This is the same as {@link java.util.stream.Collectors#toList()} except that it returns an
+ *
+ * <p>This is the same as {@link java.util.stream.Collectors#toList()} except that it returns an
  * {@link PropertyOrDesignationList} instead of a generic {@link java.util.List}.
- * <p>
- * We need this because the list implementation needs to be constrained to ensure that it is
+ *
+ * <p>We need this because the list implementation needs to be constrained to ensure that it is
  * serializable for persistent caching purposes.
  */
-public class PropertyOrDesignationListCollector implements
-    Collector<PropertyOrDesignation, PropertyOrDesignationList, PropertyOrDesignationList> {
+public class PropertyOrDesignationListCollector
+    implements Collector<
+        PropertyOrDesignation, PropertyOrDesignationList, PropertyOrDesignationList> {
 
   @Override
   public Supplier<PropertyOrDesignationList> supplier() {
@@ -67,5 +68,4 @@ public class PropertyOrDesignationListCollector implements
   public Set<Characteristics> characteristics() {
     return Collections.unmodifiableSet(EnumSet.of(Characteristics.IDENTITY_FINISH));
   }
-
 }

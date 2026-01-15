@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,23 +29,20 @@ import org.apache.spark.sql.types.DataTypes;
 /**
  * Spark UDF to convert a Decimal type to a valid Decimal literal string with the optionally
  * provided scale.
- * <p>
- * If the scale is less than the number of decimal places in the Decimal struct, the function floors
- * the decimal value.
- * <p>
- * If the scale is negative, the function returns null.
+ *
+ * <p>If the scale is less than the number of decimal places in the Decimal struct, the function
+ * floors the decimal value.
+ *
+ * <p>If the scale is negative, the function returns null.
  *
  * @author Piotr Szul
  */
 public class DecimalToLiteral implements SqlFunction2<BigDecimal, Integer, String> {
 
-  /**
-   * The name of this function when used within SQL.
-   */
+  /** The name of this function when used within SQL. */
   public static final String FUNCTION_NAME = "decimal_to_literal";
 
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   @Override
   public String getName() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,14 +47,11 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class UpdateProvider implements IResourceProvider {
 
-  @Nonnull
-  private final UpdateExecutor updateExecutor;
+  @Nonnull private final UpdateExecutor updateExecutor;
 
-  @Nonnull
-  private final Class<? extends IBaseResource> resourceClass;
+  @Nonnull private final Class<? extends IBaseResource> resourceClass;
 
-  @Nonnull
-  private final String resourceTypeCode;
+  @Nonnull private final String resourceTypeCode;
 
   /**
    * Constructs a new UpdateProvider for a specific resource type.
@@ -63,7 +60,8 @@ public class UpdateProvider implements IResourceProvider {
    * @param fhirContext the FHIR context for resource definitions
    * @param resourceClass the class of the resource type this provider handles
    */
-  public UpdateProvider(@Nonnull final UpdateExecutor updateExecutor,
+  public UpdateProvider(
+      @Nonnull final UpdateExecutor updateExecutor,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
     this.updateExecutor = updateExecutor;
@@ -87,8 +85,8 @@ public class UpdateProvider implements IResourceProvider {
   @Update
   @OperationAccess("update")
   @SuppressWarnings("UnusedReturnValue")
-  public MethodOutcome update(@Nullable @IdParam final IdType id,
-      @Nullable @ResourceParam final IBaseResource resource) {
+  public MethodOutcome update(
+      @Nullable @IdParam final IdType id, @Nullable @ResourceParam final IBaseResource resource) {
     checkUserInput(id != null && !id.isEmpty(), "ID must be supplied");
     checkUserInput(resource != null, "Resource must be supplied");
 
@@ -103,5 +101,4 @@ public class UpdateProvider implements IResourceProvider {
     outcome.setResource(preparedResource);
     return outcome;
   }
-
 }

@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -15,31 +15,31 @@
 
 import os
 
-from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import lit
 from pyspark.sql.types import (
-    StructType,
+    ArrayType,
+    BooleanType,
+    IntegerType,
+    Row,
     StringType,
     StructField,
-    BooleanType,
-    Row,
-    ArrayType,
-    IntegerType,
+    StructType,
 )
 from pytest import fixture
 
 from pathling.coding import Coding
 from pathling.functions import SNOMED_URI, to_snomed_coding
 from pathling.udfs import (
-    member_of,
-    subsumes,
-    subsumed_by,
-    translate,
-    display,
-    PropertyType,
     Equivalence,
-    property_of,
+    PropertyType,
     designation,
+    display,
+    member_of,
+    property_of,
+    subsumed_by,
+    subsumes,
+    translate,
 )
 
 PROJECT_DIR = os.path.abspath(

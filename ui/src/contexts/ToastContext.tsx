@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * Context for managing toast notifications using Radix UI Toast.
  * Provides a global showToast function that can be called from anywhere.
@@ -5,6 +22,9 @@
  * @author John Grimes
  */
 
+import { Cross2Icon } from "@radix-ui/react-icons";
+import * as Toast from "@radix-ui/react-toast";
+import { IconButton, Text } from "@radix-ui/themes";
 import {
   createContext,
   use,
@@ -14,9 +34,6 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import * as Toast from "@radix-ui/react-toast";
-import { Cross2Icon } from "@radix-ui/react-icons";
-import { IconButton, Text } from "@radix-ui/themes";
 import "./ToastContext.css";
 
 interface ToastData {
@@ -34,11 +51,23 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 // Module-level reference for error handlers to access showToast without hooks.
 let globalShowToast: ((title: string, description?: string) => void) | null = null;
 
+/**
+ * Returns the global showToast function for use in non-React contexts.
+ *
+ * @returns The showToast function or null if provider not mounted.
+ */
 export function getGlobalShowToast() {
   return globalShowToast;
 }
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+/**
+ * Provider component for toast notifications.
+ *
+ * @param root0 - The component props.
+ * @param root0.children - The child components to render.
+ * @returns The provider component wrapping children.
+ */
+export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [toasts, setToasts] = useState<ToastData[]>([]);
   const toastIdCounter = useRef(0);
 
@@ -94,6 +123,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Hook for accessing the toast context.
+ *
+ * @returns The toast context value.
+ * @throws Error if used outside of a ToastProvider.
+ */
 export function useToast(): ToastContextValue {
   const context = use(ToastContext);
   if (!context) {

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,21 +32,15 @@ import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
-/**
- * A collection representing a choice element in FHIR.
- */
+/** A collection representing a choice element in FHIR. */
 @Value
 @EqualsAndHashCode(callSuper = false)
 public class ChoiceElementCollection extends MixedCollection {
 
-  /**
-   * The definition of this choice element.
-   */
-  @Nonnull
-  ChoiceDefinition choiceDefinition;
+  /** The definition of this choice element. */
+  @Nonnull ChoiceDefinition choiceDefinition;
 
-  @Nonnull
-  Collection parent;
+  @Nonnull Collection parent;
 
   /**
    * Creates a new ChoiceElementCollection.
@@ -54,8 +48,8 @@ public class ChoiceElementCollection extends MixedCollection {
    * @param choiceDefinition the definition of this choice element
    * @param parent the parent collection
    */
-  public ChoiceElementCollection(@Nonnull final ChoiceDefinition choiceDefinition,
-      @Nonnull final Collection parent) {
+  public ChoiceElementCollection(
+      @Nonnull final ChoiceDefinition choiceDefinition, @Nonnull final Collection parent) {
     super("choice element '" + choiceDefinition.getName() + "' (do you need to use ofType?)");
     this.choiceDefinition = choiceDefinition;
     this.parent = parent;
@@ -67,7 +61,7 @@ public class ChoiceElementCollection extends MixedCollection {
    *
    * @param type The type of element to return
    * @return A new collection representing just the elements of this collection with the specified
-   * type
+   *     type
    */
   @Nonnull
   @Override
@@ -92,18 +86,20 @@ public class ChoiceElementCollection extends MixedCollection {
     // find the list of FHIRDefinedTypes that match this FhirPathType
     final List<FHIRDefinedType> fhirPathTypes = fhirpathType.getFhirTypes();
     // find the element definitions that match the FHIRDefinedTypes in this choice element
-    final ElementDefinition[] selectedTypes = fhirPathTypes.stream()
-        .map(FHIRDefinedType::toCode)
-        .flatMap(ft -> choiceDefinition.getChildByType(ft).stream())
-        .toArray(ElementDefinition[]::new);
+    final ElementDefinition[] selectedTypes =
+        fhirPathTypes.stream()
+            .map(FHIRDefinedType::toCode)
+            .flatMap(ft -> choiceDefinition.getChildByType(ft).stream())
+            .toArray(ElementDefinition[]::new);
 
     if (selectedTypes.length <= 1) {
       // delegate to the single choice mapping
-      // this will take care of Decimal case (creation of DecimalCollection and DecimalRepresentation)
+      // this will take care of Decimal case (creation of DecimalCollection and
+      // DecimalRepresentation)
       return resolveElement(Arrays.stream(selectedTypes).findFirst());
     } else {
-      return Collection.build(parent.getColumn().traverseChoice(selectedTypes),
-          fhirpathType.getDefaultFhirType());
+      return Collection.build(
+          parent.getColumn().traverseChoice(selectedTypes), fhirpathType.getDefaultFhirType());
     }
   }
 
@@ -111,15 +107,13 @@ public class ChoiceElementCollection extends MixedCollection {
   private Collection resolveElement(@Nonnull final Optional<ElementDefinition> elementDefinition) {
     // This method resolves the element definition to a collection.
     // It is used to traverse the choice element.
-    return elementDefinition
-        .map(parent::traverseElement)
-        .orElse(EmptyCollection.getInstance());
+    return elementDefinition.map(parent::traverseElement).orElse(EmptyCollection.getInstance());
   }
 
   /**
    * {@inheritDoc}
-   * <p>
-   * This implementation delegates to parent collection.
+   *
+   * <p>This implementation delegates to parent collection.
    */
   @Nonnull
   @Override

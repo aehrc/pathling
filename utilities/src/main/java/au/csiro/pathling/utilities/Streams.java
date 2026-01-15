@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
  */
 
 package au.csiro.pathling.utilities;
-
 
 import jakarta.annotation.Nonnull;
 import java.util.Iterator;
@@ -42,8 +41,6 @@ public class Streams {
   @Nonnull
   public static <T> Stream<T> streamOf(@Nonnull final Iterator<T> iterator) {
     final Iterable<T> iterable = () -> iterator;
-    return StreamSupport
-        .stream(iterable.spliterator(), false);
+    return StreamSupport.stream(iterable.spliterator(), false);
   }
-
 }

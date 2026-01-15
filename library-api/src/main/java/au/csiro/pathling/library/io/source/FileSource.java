@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,8 +65,8 @@ public abstract class FileSource extends DatasetSource {
   @Nonnull protected final DataFrameReader reader;
 
   /**
-   * A function that transforms a {@link Dataset<Row>} containing raw source data of a specified
-   * resource type into a {@link Dataset<Row>} containing the imported data.
+   * A function that transforms a Dataset containing raw source data of a specified resource type
+   * into a Dataset containing the imported data.
    */
   @Nonnull protected final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer;
 
@@ -97,8 +97,8 @@ public abstract class FileSource extends DatasetSource {
    *     use the default naming convention
    * @param extension the file extension that this source expects for its source files
    * @param reader a {@link DataFrameReader} that can be used to read the source files
-   * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
-   *     of a specified resource type into a {@link Dataset<Row>} containing the imported data
+   * @param transformer a function that transforms a Dataset containing raw source data of a
+   *     specified resource type into a Dataset containing the imported data
    * @param additionalResourceTypeFilter filter to filter out specific resource types if desired
    */
   protected FileSource(
@@ -142,8 +142,8 @@ public abstract class FileSource extends DatasetSource {
    *     values are collections of file paths containing data for that resource type
    * @param extension the file extension that this source expects for its source files
    * @param reader a {@link DataFrameReader} that can be used to read the source files
-   * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
-   *     of a specified resource type into a {@link Dataset<Row>} containing the imported data
+   * @param transformer a function that transforms a Dataset containing raw source data of a
+   *     specified resource type into a Dataset containing the imported data
    * @param additionalResourceTypeFilter filter to filter out specific resource types if desired
    */
   protected FileSource(

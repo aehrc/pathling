@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,13 +25,14 @@ import java.util.List;
 /**
  * Represents a SMART Bulk Data Import manifest request body.
  *
+ * @param inputFormat the format of the input data
+ * @param inputSource the source of the input data
+ * @param input the list of input items
+ * @param mode the import mode
  * @author John Grimes
  */
 public record ImportManifest(
     @Nonnull @JsonProperty("inputFormat") String inputFormat,
     @Nullable @JsonProperty("inputSource") String inputSource,
     @Nonnull @JsonProperty("input") List<ImportManifestInput> input,
-    @Nullable @JsonProperty("mode") String mode
-) {
-
-}
+    @Nullable @JsonProperty("mode") String mode) {}

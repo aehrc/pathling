@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,17 +21,12 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.Data;
 
-/**
- * Represents configuration relating to asynchronous processing.
- */
+/** Represents configuration relating to asynchronous processing. */
 @Data
 public class AsyncConfiguration {
 
-  /**
-   * Enables asynchronous process of requests.
-   */
-  @NotNull
-  private boolean enabled;
+  /** Enables asynchronous process of requests. */
+  @NotNull private boolean enabled;
 
   /**
    * List of headers from exclude from the {@link HttpServerCachingConfiguration#getVary()} list for
@@ -39,6 +34,5 @@ public class AsyncConfiguration {
    * headers like 'Accept' or 'Accept-Encoding' which do not influence in any way the final result
    * of the async request.
    */
-  @NotNull
-  private List<String> varyHeadersExcludedFromCacheKey;
+  @NotNull private List<String> varyHeadersExcludedFromCacheKey;
 }

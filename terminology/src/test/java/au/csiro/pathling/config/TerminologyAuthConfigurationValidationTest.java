@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,7 +63,7 @@ class TerminologyAuthConfigurationValidationTest {
             .enabled(true)
             .tokenEndpoint("https://auth.example.com/token")
             .clientId("my-client")
-            .privateKeyJWK("{\"kty\":\"RSA\",\"n\":\"test\"}")
+            .privateKeyJwk("{\"kty\":\"RSA\",\"n\":\"test\"}")
             .build();
 
     assertTrue(validator.isValid(config, null));
@@ -117,7 +117,7 @@ class TerminologyAuthConfigurationValidationTest {
             .tokenEndpoint("https://auth.example.com/token")
             .clientId("my-client")
             .clientSecret("my-secret")
-            .privateKeyJWK("{\"kty\":\"RSA\"}")
+            .privateKeyJwk("{\"kty\":\"RSA\"}")
             .build();
 
     assertTrue(validator.isValid(config, null));

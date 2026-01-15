@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,17 +47,13 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class ReadProviderFactoryTest {
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
   private ReadProviderFactory readProviderFactory;
 
@@ -65,8 +61,8 @@ class ReadProviderFactoryTest {
   void setUp() {
     // Create a minimal data source for testing factory creation.
     final List<IBaseResource> resources = new ArrayList<>();
-    final CustomObjectDataSource dataSource = new CustomObjectDataSource(sparkSession,
-        pathlingContext, fhirEncoders, resources);
+    final CustomObjectDataSource dataSource =
+        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
 
     readProviderFactory = new ReadProviderFactory(fhirContext, dataSource, fhirEncoders);
   }
@@ -98,14 +94,15 @@ class ReadProviderFactoryTest {
   @Test
   void createReadProvidersForDifferentTypesAreDistinct() {
     // When: creating ReadProviders for different resource types.
-    final ReadProvider patientProvider = readProviderFactory.createReadProvider(
-        ResourceType.PATIENT);
-    final ReadProvider observationProvider = readProviderFactory.createReadProvider(
-        ResourceType.OBSERVATION);
+    final ReadProvider patientProvider =
+        readProviderFactory.createReadProvider(ResourceType.PATIENT);
+    final ReadProvider observationProvider =
+        readProviderFactory.createReadProvider(ResourceType.OBSERVATION);
 
     // Then: the providers should be distinct instances with different resource types.
     assertThat(patientProvider).isNotSameAs(observationProvider);
-    assertThat(patientProvider.getResourceType()).isNotEqualTo(observationProvider.getResourceType());
+    assertThat(patientProvider.getResourceType())
+        .isNotEqualTo(observationProvider.getResourceType());
   }
 
   // -------------------------------------------------------------------------
@@ -145,5 +142,4 @@ class ReadProviderFactoryTest {
     assertThat(provider).isNotNull();
     assertThat(provider.getResourceType()).isNotNull();
   }
-
 }

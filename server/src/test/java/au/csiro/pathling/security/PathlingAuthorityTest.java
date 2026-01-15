@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
  */
 
 package au.csiro.pathling.security;
-
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -39,14 +38,16 @@ class PathlingAuthorityTest {
   }
 
   @SuppressWarnings("SameParameterValue")
-  static void assertFailsValidation(@Nonnull final String authority,
-      @Nonnull final String message) {
-    assertThrows(IllegalArgumentException.class, () -> PathlingAuthority.fromAuthority(authority),
-        message);
+  static void assertFailsValidation(
+      @Nonnull final String authority, @Nonnull final String message) {
+    assertThrows(
+        IllegalArgumentException.class, () -> PathlingAuthority.fromAuthority(authority), message);
   }
 
   static void assertFailsValidation(@Nonnull final String authority) {
-    assertThrows(IllegalArgumentException.class, () -> PathlingAuthority.fromAuthority(authority),
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> PathlingAuthority.fromAuthority(authority),
         "Authority is not recognized: " + authority);
   }
 
@@ -85,8 +86,8 @@ class PathlingAuthorityTest {
   @Test
   void testResourceAccessSubsumedBy() {
     final PathlingAuthority patientRead = PathlingAuthority.fromAuthority("pathling:read:Patient");
-    final PathlingAuthority conditionWrite = PathlingAuthority
-        .fromAuthority("pathling:write:Condition");
+    final PathlingAuthority conditionWrite =
+        PathlingAuthority.fromAuthority("pathling:write:Condition");
 
     // positive cases
     assertTrue(patientRead.subsumedBy(auth("pathling:read:Patient")));
@@ -124,21 +125,17 @@ class PathlingAuthorityTest {
 
     // Negative cases
     assertFalse(search.subsumedByAny(Collections.emptyList()));
-    assertFalse(search.subsumedByAny(Arrays.asList(
-        auth("pathling:import"),
-        auth("pathling:aggregate")
-    )));
+    assertFalse(
+        search.subsumedByAny(Arrays.asList(auth("pathling:import"), auth("pathling:aggregate"))));
 
-    assertTrue(search.subsumedByAny(Arrays.asList(
-        auth("pathling:import"),
-        auth("pathling:search")
-    )));
+    assertTrue(
+        search.subsumedByAny(Arrays.asList(auth("pathling:import"), auth("pathling:search"))));
   }
 
   @Test
   void testResourceAccess() {
-    final PathlingAuthority authority = PathlingAuthority
-        .resourceAccess(ResourceAccess.AccessType.READ, ResourceType.PATIENT);
+    final PathlingAuthority authority =
+        PathlingAuthority.resourceAccess(ResourceAccess.AccessType.READ, ResourceType.PATIENT);
     assertEquals("pathling:read:Patient", authority.getAuthority());
     assertTrue(authority.getAction().isPresent());
     assertEquals("read", authority.getAction().get());
@@ -153,5 +150,4 @@ class PathlingAuthorityTest {
     assertTrue(authority.getAction().isPresent());
     assertEquals("aggregate", authority.getAction().get());
   }
-
 }

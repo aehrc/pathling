@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,7 +63,6 @@ class ImportOperationIT {
   @TempDir private static Path ndjsonDir;
 
   private String patientFileUrl;
-  private String observationFileUrl;
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
@@ -106,7 +105,6 @@ class ImportOperationIT {
         """;
     final Path observationFile = ndjsonDir.resolve("Observation.ndjson");
     Files.writeString(observationFile, observationNdjson, StandardCharsets.UTF_8);
-    observationFileUrl = observationFile.toUri().toString();
 
     log.info("Created NDJSON test files in: {}", ndjsonDir);
   }

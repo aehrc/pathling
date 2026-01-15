@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -80,9 +80,9 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
 
   protected SystemExportProvider exportProvider;
 
-  @MockBean protected ServletRequestDetails requestDetails;
+  @MockBean private ServletRequestDetails requestDetails;
 
-  @MockBean protected JobRegistry jobRegistry;
+  @MockBean private JobRegistry jobRegistry;
 
   @Autowired protected RequestTagFactory requestTagFactory;
 

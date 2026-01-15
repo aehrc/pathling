@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * Form for configuring and starting a bulk export job.
  *
@@ -5,25 +22,15 @@
  */
 
 import { PlayIcon } from "@radix-ui/react-icons";
-import {
-  Box,
-  Button,
-  Card,
-  CheckboxCards,
-  Flex,
-  Heading,
-  ScrollArea,
-  Select,
-  Text,
-  TextField,
-} from "@radix-ui/themes";
+import { Box, Button, Card, Flex, Heading, Select, Text, TextField } from "@radix-ui/themes";
 import { useState } from "react";
+
+import { ResourceTypePicker } from "./ResourceTypePicker";
+
 import type { ExportLevel, ExportRequest } from "../../types/export";
 
 interface ExportFormProps {
   onSubmit: (request: ExportRequest) => void;
-  isSubmitting: boolean;
-  disabled: boolean;
   resourceTypes: string[];
 }
 
@@ -34,7 +41,15 @@ const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
   { value: "group", label: "Data for patients in group" },
 ];
 
-export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: ExportFormProps) {
+/**
+ * Form for configuring and starting a bulk data export.
+ *
+ * @param root0 - The component props.
+ * @param root0.onSubmit - Callback when export is submitted.
+ * @param root0.resourceTypes - Available resource types for selection.
+ * @returns The export form component.
+ */
+export function ExportForm({ onSubmit, resourceTypes }: Readonly<ExportFormProps>) {
   const [level, setLevel] = useState<ExportLevel>("system");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [since, setSince] = useState("");
@@ -54,10 +69,6 @@ export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
       groupId: level === "group" ? groupId : undefined,
     };
     onSubmit(request);
-  };
-
-  const clearAllTypes = () => {
-    setSelectedTypes([]);
   };
 
   return (
@@ -107,44 +118,11 @@ export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
           </Box>
         )}
 
-        <Box>
-          <Flex justify="between" align="center" mb="2">
-            <Flex gap="2" align="baseline">
-              <Text as="label" size="2" weight="medium">
-                Resource types
-              </Text>
-              <Text size="1" color="gray">
-                (leave empty to export all)
-              </Text>
-            </Flex>
-            <Text size="1" color="blue" style={{ cursor: "pointer" }} onClick={clearAllTypes}>
-              Clear
-            </Text>
-          </Flex>
-          <ScrollArea
-            style={{
-              maxHeight: 200,
-              border: "1px solid var(--gray-5)",
-              borderRadius: "var(--radius-2)",
-            }}
-          >
-            <Box p="2">
-              <CheckboxCards.Root
-                size="1"
-                value={selectedTypes}
-                onValueChange={setSelectedTypes}
-                gap="2"
-                style={{ display: "flex", flexWrap: "wrap" }}
-              >
-                {resourceTypes.map((type) => (
-                  <CheckboxCards.Item key={type} value={type}>
-                    <Text size="1">{type}</Text>
-                  </CheckboxCards.Item>
-                ))}
-              </CheckboxCards.Root>
-            </Box>
-          </ScrollArea>
-        </Box>
+        <ResourceTypePicker
+          resourceTypes={resourceTypes}
+          selectedTypes={selectedTypes}
+          onSelectedTypesChange={setSelectedTypes}
+        />
 
         <Flex gap="4">
           <Box style={{ flex: 1 }}>
@@ -192,15 +170,10 @@ export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
         <Button
           size="3"
           onClick={handleSubmit}
-          disabled={
-            disabled ||
-            isSubmitting ||
-            (level === "patient" && !patientId) ||
-            (level === "group" && !groupId)
-          }
+          disabled={(level === "patient" && !patientId) || (level === "group" && !groupId)}
         >
           <PlayIcon />
-          {isSubmitting ? "Starting export..." : "Start export"}
+          Start export
         </Button>
       </Flex>
     </Card>

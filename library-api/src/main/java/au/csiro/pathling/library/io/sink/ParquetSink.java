@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,25 +35,18 @@ import org.apache.spark.sql.Row;
  */
 final class ParquetSink implements DataSink {
 
-  /**
-   * The path to write the Parquet files to.
-   */
-  @Nonnull
-  private final String path;
+  /** The path to write the Parquet files to. */
+  @Nonnull private final String path;
+
+  /** The save mode to use when writing data. */
+  @Nonnull private final SaveMode saveMode;
+
+  /** A function that maps resource type to file name. */
+  @Nonnull private final UnaryOperator<String> fileNameMapper;
 
   /**
-   * The save mode to use when writing data.
-   */
-  @Nonnull
-  private final SaveMode saveMode;
-
-  /**
-   * A function that maps resource type to file name.
-   */
-  @Nonnull
-  private final UnaryOperator<String> fileNameMapper;
-
-  /**
+   * Constructs a ParquetSink with a custom file name mapper.
+   *
    * @param path the path to write the Parquet files to
    * @param saveMode the {@link SaveMode} to use
    * @param fileNameMapper a function that maps resource type to file name
@@ -61,14 +54,15 @@ final class ParquetSink implements DataSink {
   ParquetSink(
       @Nonnull final String path,
       @Nonnull final SaveMode saveMode,
-      @Nonnull final UnaryOperator<String> fileNameMapper
-  ) {
+      @Nonnull final UnaryOperator<String> fileNameMapper) {
     this.path = path;
     this.saveMode = saveMode;
     this.fileNameMapper = fileNameMapper;
   }
 
   /**
+   * Constructs a ParquetSink with default file naming.
+   *
    * @param path the path to write the Parquet files to
    * @param saveMode the {@link SaveMode} to use
    */
@@ -83,8 +77,7 @@ final class ParquetSink implements DataSink {
     final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
-      final String fileName = String.join(".", fileNameMapper.apply(resourceType),
-          "parquet");
+      final String fileName = String.join(".", fileNameMapper.apply(resourceType), "parquet");
       final String tablePath = safelyJoinPaths(path, fileName);
 
       fileInfos.add(new FileInformation(resourceType, tablePath));
@@ -92,15 +85,19 @@ final class ParquetSink implements DataSink {
       switch (saveMode) {
         case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
             writeDataset(dataset, tablePath, saveMode);
-        case MERGE -> throw new UnsupportedOperationException(
-            "Merge operation is not supported for Parquet - use Delta if merging is required");
+        case MERGE ->
+            throw new UnsupportedOperationException(
+                "Merge operation is not supported for Parquet - use Delta if merging is required");
+        default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
     }
     return new WriteDetails(fileInfos);
   }
 
-  void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tablePath, @Nonnull final SaveMode saveMode) {
+  void writeDataset(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String tablePath,
+      @Nonnull final SaveMode saveMode) {
     final var writer = dataset.write();
 
     // Apply save mode if it has a Spark equivalent
@@ -108,5 +105,4 @@ final class ParquetSink implements DataSink {
 
     writer.parquet(tablePath);
   }
-
 }

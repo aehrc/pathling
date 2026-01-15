@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,32 +29,19 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import lombok.Value;
 
-/**
- * Immutable key to look up a matching encoders instance by configuration.
- */
+/** Immutable key to look up a matching encoders instance by configuration. */
 @Value
 public class FhirEncodersKey {
 
-  /**
-   * The FHIR version.
-   */
-  @Nonnull
-  FhirVersionEnum fhirVersion;
+  /** The FHIR version. */
+  @Nonnull FhirVersionEnum fhirVersion;
 
-  /**
-   * The maximum nesting level for recursive types.
-   */
+  /** The maximum nesting level for recursive types. */
   int maxNestingLevel;
 
-  /**
-   * The set of open types to encode.
-   */
-  @Nonnull
-  Set<String> openTypes;
+  /** The set of open types to encode. */
+  @Nonnull Set<String> openTypes;
 
-  /**
-   * Whether extensions are enabled.
-   */
+  /** Whether extensions are enabled. */
   boolean enableExtensions;
-
 }

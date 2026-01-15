@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -17,16 +17,17 @@ import os
 from tempfile import TemporaryDirectory
 
 from flask import Response
-from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, Row
 from pytest import fixture
+
+from pathling.datasource import DataSource
 
 
 @fixture(scope="function", autouse=True)
 def func_temp_dir(temp_dir):
     """
     Fixture to create a temporary directory for each test function.
-    :param temp_dir: 
+    :param temp_dir:
     :return: existing temporary directory for each test function.
     """
     temp_ndjson_dir = TemporaryDirectory(dir=temp_dir, prefix="function")
@@ -88,8 +89,10 @@ def bulk_server(mock_server, ndjson_test_data_dir):
         return dict(
             transactionTime="1970-01-01T00:00:00.000Z",
             output=[
-                dict(type=resource, url=mock_server.url(f"/download/{resource}"), count=1) for
-                resource in ["Patient", "Condition"]
+                dict(
+                    type=resource, url=mock_server.url(f"/download/{resource}"), count=1
+                )
+                for resource in ["Patient", "Condition"]
             ],
         )
 
@@ -232,9 +235,7 @@ def test_datasource_tables_schema(ndjson_test_data_dir, pathling_ctx):
 def test_datasource_bulk_with_temp_dir(pathling_ctx, bulk_server):
     # !!! this directory cannot exist for the datasource to work
     with bulk_server.run():
-        data_source = pathling_ctx.read.bulk(
-            fhir_endpoint_url=bulk_server.url("/fhir")
-        )
+        data_source = pathling_ctx.read.bulk(fhir_endpoint_url=bulk_server.url("/fhir"))
         result = ndjson_query(data_source)
         assert result.columns == list(ResultRow)
         assert result.collect() == [
@@ -248,7 +249,7 @@ def test_datasource_bulk_with_existing_dir(pathling_ctx, bulk_server, func_temp_
         data_source = pathling_ctx.read.bulk(
             fhir_endpoint_url=bulk_server.url("/fhir"),
             output_dir=func_temp_dir,
-            overwrite=True  # default anyway, but explicit for clarity
+            overwrite=True,  # default anyway, but explicit for clarity
         )
         result = ndjson_query(data_source)
         assert result.columns == list(ResultRow)
@@ -258,29 +259,23 @@ def test_datasource_bulk_with_existing_dir(pathling_ctx, bulk_server, func_temp_
 
 
 def ndjson_query(data_source: DataSource) -> DataFrame:
-    return data_source.view(
-        resource='Condition',
-        select=[
-            {
-                'column': [
-                    {'path': 'id', 'name': 'id'}
-                ]
-            }
-        ]
-    ).groupby().count()
+    return (
+        data_source.view(
+            resource="Condition", select=[{"column": [{"path": "id", "name": "id"}]}]
+        )
+        .groupby()
+        .count()
+    )
 
 
 def bundles_query(data_source: DataSource) -> DataFrame:
-    return data_source.view(
-        resource='Patient',
-        select=[
-            {
-                'column': [
-                    {'path': 'id', 'name': 'id'}
-                ]
-            }
-        ]
-    ).groupby().count()
+    return (
+        data_source.view(
+            resource="Patient", select=[{"column": [{"path": "id", "name": "id"}]}]
+        )
+        .groupby()
+        .count()
+    )
 
 
 def parquet_query(data_source: DataSource) -> DataFrame:
@@ -294,16 +289,93 @@ def delta_query(data_source: DataSource) -> DataFrame:
 def test_datasource_resource_types(ndjson_test_data_dir, pathling_ctx):
     """Test that resource_types() returns a list of strings."""
     data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
-    
+
     # Call the resource_types method.
     resource_types = data_source.resource_types()
-    
+
     # Verify it returns a list.
     assert isinstance(resource_types, list)
-    
+
     # Verify the list contains strings.
     assert all(isinstance(rt, str) for rt in resource_types)
-    
+
     # Verify expected resource types are present.
     assert "Patient" in resource_types
     assert "Condition" in resource_types
+
+
+# Tests for WriteDetails return value from write operations.
+
+
+def test_ndjson_write_returns_details(
+    ndjson_test_data_dir, func_temp_dir, pathling_ctx
+):
+    """Verify that ndjson write returns WriteDetails with file information."""
+    result = pathling_ctx.read.ndjson(ndjson_test_data_dir).write.ndjson(func_temp_dir)
+
+    # Verify result is a WriteDetails object with file_infos.
+    assert result is not None
+    assert hasattr(result, "file_infos")
+    assert len(result.file_infos) > 0
+
+    # Verify each file_info has the expected attributes.
+    for file_info in result.file_infos:
+        assert hasattr(file_info, "fhir_resource_type")
+        assert hasattr(file_info, "absolute_url")
+        assert file_info.fhir_resource_type is not None
+        assert file_info.absolute_url is not None
+
+    # Verify that expected resource types are present.
+    resource_types = {fi.fhir_resource_type for fi in result.file_infos}
+    assert "Patient" in resource_types
+    assert "Condition" in resource_types
+
+
+def test_parquet_write_returns_details(
+    parquet_test_data_dir, func_temp_dir, pathling_ctx
+):
+    """Verify that parquet write returns WriteDetails with file information."""
+    result = pathling_ctx.read.parquet(parquet_test_data_dir).write.parquet(
+        func_temp_dir
+    )
+
+    # Verify result is a WriteDetails object with file_infos.
+    assert result is not None
+    assert hasattr(result, "file_infos")
+    assert len(result.file_infos) > 0
+
+    # Verify each file_info has the expected attributes.
+    for file_info in result.file_infos:
+        assert hasattr(file_info, "fhir_resource_type")
+        assert hasattr(file_info, "absolute_url")
+
+
+def test_delta_write_returns_details(delta_test_data_dir, func_temp_dir, pathling_ctx):
+    """Verify that delta write returns WriteDetails with file information."""
+    result = pathling_ctx.read.delta(delta_test_data_dir).write.delta(func_temp_dir)
+
+    # Verify result is a WriteDetails object with file_infos.
+    assert result is not None
+    assert hasattr(result, "file_infos")
+    assert len(result.file_infos) > 0
+
+    # Verify each file_info has the expected attributes.
+    for file_info in result.file_infos:
+        assert hasattr(file_info, "fhir_resource_type")
+        assert hasattr(file_info, "absolute_url")
+
+
+def test_tables_write_returns_details(ndjson_test_data_dir, pathling_ctx):
+    """Verify that tables write returns WriteDetails with file information."""
+    # Re-use the existing "test" schema to avoid conflicts.
+    result = pathling_ctx.read.ndjson(ndjson_test_data_dir).write.tables(schema="test")
+
+    # Verify result is a WriteDetails object with file_infos.
+    assert result is not None
+    assert hasattr(result, "file_infos")
+    assert len(result.file_infos) > 0
+
+    # Verify each file_info has the expected attributes.
+    for file_info in result.file_infos:
+        assert hasattr(file_info, "fhir_resource_type")
+        assert hasattr(file_info, "absolute_url")

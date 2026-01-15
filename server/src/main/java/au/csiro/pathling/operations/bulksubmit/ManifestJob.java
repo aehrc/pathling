@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,8 +25,8 @@ import java.util.List;
 
 /**
  * Represents a single manifest import job within a bulk submission.
- * <p>
- * Each manifest submitted to the bulk submit operation creates a ManifestJob that tracks the
+ *
+ * <p>Each manifest submitted to the bulk submit operation creates a ManifestJob that tracks the
  * processing state of that specific manifest independently from other manifests in the same
  * submission.
  *
@@ -55,8 +55,7 @@ public record ManifestJob(
     @Nullable String completedAt,
     @Nullable String errorMessage,
     @Nullable String errorFileName,
-    @Nullable List<DownloadedFile> downloadedFiles
-) {
+    @Nullable List<DownloadedFile> downloadedFiles) {
 
   private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
 
@@ -84,8 +83,7 @@ public record ManifestJob(
       @Nonnull final String manifestJobId,
       @Nonnull final String manifestUrl,
       @Nullable final String fhirBaseUrl,
-      @Nullable final String oauthMetadataUrl
-  ) {
+      @Nullable final String oauthMetadataUrl) {
     return new ManifestJob(
         manifestJobId,
         manifestUrl,
@@ -97,8 +95,7 @@ public record ManifestJob(
         null,
         null,
         null,
-        null
-    );
+        null);
   }
 
   /**
@@ -109,9 +106,7 @@ public record ManifestJob(
    */
   @Nonnull
   public ManifestJob withState(@Nonnull final ManifestJobState newState) {
-    final String newCompletedAt = newState.isTerminal()
-                                  ? now()
-                                  : this.completedAt;
+    final String newCompletedAt = newState.isTerminal() ? now() : this.completedAt;
     return new ManifestJob(
         manifestJobId,
         manifestUrl,
@@ -123,8 +118,7 @@ public record ManifestJob(
         newCompletedAt,
         errorMessage,
         errorFileName,
-        downloadedFiles
-    );
+        downloadedFiles);
   }
 
   /**
@@ -146,8 +140,7 @@ public record ManifestJob(
         completedAt,
         errorMessage,
         errorFileName,
-        downloadedFiles
-    );
+        downloadedFiles);
   }
 
   /**
@@ -159,9 +152,7 @@ public record ManifestJob(
    */
   @Nonnull
   public ManifestJob withError(
-      @Nonnull final String errorMessage,
-      @Nullable final String errorFileName
-  ) {
+      @Nonnull final String errorMessage, @Nullable final String errorFileName) {
     return new ManifestJob(
         manifestJobId,
         manifestUrl,
@@ -173,8 +164,7 @@ public record ManifestJob(
         now(),
         errorMessage,
         errorFileName,
-        downloadedFiles
-    );
+        downloadedFiles);
   }
 
   /**
@@ -196,8 +186,7 @@ public record ManifestJob(
         completedAt,
         errorMessage,
         errorFileName,
-        downloadedFiles
-    );
+        downloadedFiles);
   }
 
   /**
@@ -208,5 +197,4 @@ public record ManifestJob(
   public boolean isTerminal() {
     return state.isTerminal();
   }
-
 }

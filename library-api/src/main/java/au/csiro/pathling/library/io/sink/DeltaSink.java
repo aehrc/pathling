@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,6 +50,8 @@ final class DeltaSink implements DataSink {
   @Nonnull private final UnaryOperator<String> fileNameMapper;
 
   /**
+   * Constructs a DeltaSink with a custom file name mapper.
+   *
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
@@ -67,6 +69,8 @@ final class DeltaSink implements DataSink {
   }
 
   /**
+   * Constructs a DeltaSink with default file naming.
+   *
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
@@ -104,6 +108,7 @@ final class DeltaSink implements DataSink {
             writeDataset(dataset, tablePath, SaveMode.ERROR_IF_EXISTS);
           }
         }
+        default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
     }
     return new WriteDetails(fileInfos);

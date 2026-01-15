@@ -1,0 +1,24 @@
+# This workflow packages and releases the Pathling cache Helm chart.
+
+name: Release Helm chart (cache)
+
+on:
+  push:
+    tags:
+      - "helm-cache-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Chart version to release (must match Chart.yaml)"
+        required: true
+
+jobs:
+  release:
+    uses: ./.github/workflows/helm-release.yml
+    with:
+      chart-path: deployment/cache/chart
+      chart-name: pathling-cache
+      tag-prefix: helm-cache-v
+      version: ${{ inputs.version }}
+    permissions:
+      contents: write

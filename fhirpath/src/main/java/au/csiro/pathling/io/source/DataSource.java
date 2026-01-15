@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,9 +41,10 @@ public interface DataSource {
   Dataset<Row> read(@Nullable final String resourceCode);
 
   /**
+   * Gets the resource types available through this data source.
+   *
    * @return the set of resources that are available through this data source
    */
   @Nonnull
   Set<String> getResourceTypes();
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,17 +54,13 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class ReadProviderTest {
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
   private CustomObjectDataSource dataSource;
   private ReadProvider readProvider;
@@ -76,8 +72,7 @@ class ReadProviderTest {
     resources.add(createPatient("patient-1", "Smith", "John", AdministrativeGender.MALE));
     resources.add(createPatient("patient-2", "Jones", "Jane", AdministrativeGender.FEMALE));
 
-    dataSource = new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders,
-        resources);
+    dataSource = new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
 
     final ReadExecutor readExecutor = new ReadExecutor(dataSource, fhirEncoders);
     readProvider = new ReadProvider(readExecutor, fhirContext, Patient.class);
@@ -191,13 +186,15 @@ class ReadProviderTest {
   // -------------------------------------------------------------------------
 
   @Nonnull
-  private Patient createPatient(@Nonnull final String id, @Nonnull final String family,
-      @Nonnull final String given, @Nonnull final AdministrativeGender gender) {
+  private Patient createPatient(
+      @Nonnull final String id,
+      @Nonnull final String family,
+      @Nonnull final String given,
+      @Nonnull final AdministrativeGender gender) {
     final Patient patient = new Patient();
     patient.setId(id);
     patient.addName(new HumanName().setFamily(family).addGiven(given));
     patient.setGender(gender);
     return patient;
   }
-
 }

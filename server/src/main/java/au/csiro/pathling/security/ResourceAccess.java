@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
  */
 
 package au.csiro.pathling.security;
-
 
 import jakarta.annotation.Nonnull;
 import java.lang.annotation.Documented;
@@ -45,26 +44,18 @@ public @interface ResourceAccess {
    */
   AccessType value();
 
-  /**
-   * Types of access.
-   */
+  /** Types of access. */
   @Getter
   enum AccessType {
-    /**
-     * Read access.
-     */
+    /** Read access. */
     READ("read"),
-    /**
-     * Write access (does not subsume read access).
-     */
+    /** Write access (does not subsume read access). */
     WRITE("write");
 
-    @Nonnull
-    private final String code;
+    @Nonnull private final String code;
 
     AccessType(@Nonnull final String code) {
       this.code = code;
     }
-
   }
 }

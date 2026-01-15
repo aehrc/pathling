@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,21 +37,18 @@ import org.hl7.fhir.r4.model.Bundle;
  */
 class ResourceParser {
 
-  @Nonnull
-  private final IParser parser;
+  @Nonnull private final IParser parser;
 
-  @Nonnull
-  private final FhirConversionSupport conversionSupport;
+  @Nonnull private final FhirConversionSupport conversionSupport;
 
-  private ResourceParser(@Nonnull final IParser parser,
-      @Nonnull final FhirConversionSupport conversionSupport) {
+  private ResourceParser(
+      @Nonnull final IParser parser, @Nonnull final FhirConversionSupport conversionSupport) {
     this.parser = parser;
     this.conversionSupport = conversionSupport;
     // setup parser
     this.parser.setPrettyPrint(false);
     this.parser.setOverrideResourceIdWithBundleEntryFullUrl(false);
   }
-
 
   /**
    * Parses the given resource string into a FHIR resource.
@@ -63,8 +60,8 @@ class ResourceParser {
   public IBaseResource parse(@Nonnull final String resourceString) {
     final IBaseResource resource = parser.parseResource(resourceString);
     return (resource instanceof final IBaseBundle bundle)
-           ? conversionSupport.resolveReferences(bundle)
-           : resource;
+        ? conversionSupport.resolveReferences(bundle)
+        : resource;
   }
 
   /**
@@ -86,15 +83,16 @@ class ResourceParser {
    * @return a new FHIR parser
    */
   @Nonnull
-  public static ResourceParser build(@Nonnull final FhirVersionEnum fhirVersion,
-      @Nonnull final String mimeType) {
+  public static ResourceParser build(
+      @Nonnull final FhirVersionEnum fhirVersion, @Nonnull final String mimeType) {
     final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
     final FhirConversionSupport conversionSupport = FhirConversionSupport.supportFor(fhirVersion);
     return switch (mimeType) {
       case FHIR_JSON -> new ResourceParser(fhirContext.newJsonParser(), conversionSupport);
       case FHIR_XML -> new ResourceParser(fhirContext.newXmlParser(), conversionSupport);
-      default -> throw new IllegalArgumentException(
-          "Cannot create FHIR parser for mime type: " + mimeType);
+      default ->
+          throw new IllegalArgumentException(
+              "Cannot create FHIR parser for mime type: " + mimeType);
     };
   }
 }

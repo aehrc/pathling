@@ -11,27 +11,61 @@ yet, please [get into contact](https://pathling.csiro.au/#contact) with us
 or [create an issue](https://github.com/aehrc/pathling/issues/new) to help us
 understand your use case.
 
-## Server
+## FHIRPath functionality
 
-We have temporarily removed the server feature from Pathling while we redesign
-it. The new Pathling server will focus on the following features.
+We are continually working to expand the set of FHIRPath functions and
+operators that Pathling supports. Upcoming additions include:
 
-### Bulk Data Access Export API
+### Functions
 
-We are working on an implementation of the Export operation within the FHIR
-Bulk Data Access implementation guide. This will allow you to use Pathling as a
-way of providing bulk export functionality over your FHIR data. When used with
-our existing bulk client and Kafka features, you will be able to synchronise the
-Pathling server with another FHIR server and use it to provide bulk export
-services.
+- **Filtering and projection**: `select`, `repeat`
+  ([#2388](https://github.com/aehrc/pathling/issues/2388))
+- **Combining**: `union`, `combine`
+  ([#2384](https://github.com/aehrc/pathling/issues/2384))
+- **Subsetting**: `single`, `tail`, `take`, `skip`, `last`, `exclude`,
+  `intersect` ([#2378](https://github.com/aehrc/pathling/issues/2378))
+- **Existence**: `all`, `subsetOf`, `supersetOf`, `isDistinct`, `distinct`,
+  `count`, `allTrue`, `allFalse`, `anyTrue`, `anyFalse`
+  ([#2385](https://github.com/aehrc/pathling/issues/2385))
+- **String manipulation**: `indexOf`, `substring`, `startsWith`, `endsWith`,
+  `contains`, `upper`, `lower`, `replace`, `matches`, `replaceMatches`,
+  `length`, `split`, `toChars`, `trim`, `encode`, `decode`, `escape`, `unescape`
+  ([#2380](https://github.com/aehrc/pathling/issues/2380))
+- **Math**: `abs`, `ceiling`, `floor`, `exp`, `ln`, `log`, `power`, `round`,
+  `sqrt`, `truncate` ([#2381](https://github.com/aehrc/pathling/issues/2381))
+- **Date and time**: `timeOfDay`, `now`, `today`
+  ([#2396](https://github.com/aehrc/pathling/issues/2396))
+- **Tree navigation**: `descendants`, `children`
+  ([#2382](https://github.com/aehrc/pathling/issues/2382))
+- **Reflection**: `type`, `trace`
+  ([#2395](https://github.com/aehrc/pathling/issues/2395))
+- **Conditional**: `iif`
+  ([#2392](https://github.com/aehrc/pathling/issues/2392))
+- **Aggregate**: `aggregate`
+  ([#2390](https://github.com/aehrc/pathling/issues/2390))
+- **FHIR-specific**: `hasValue`
+  ([#2430](https://github.com/aehrc/pathling/issues/2430))
 
-### SQL on FHIR API
+### Operators
 
-We are working on implementing the draft API within the SQL on FHIR
-implementation guide. This will allow for the execution of view definitions
-through the server API, and the use of views to construct bespoke exports. It
-will also allow for the discovery and management of view definitions through the
-FHIR REST API.
+- **Math**: `*`, `/`, `+`, `-`, `&`, `div`, `mod`
+  ([#2399](https://github.com/aehrc/pathling/issues/2399))
+- **Equivalence**: `~`, `!~`
+  ([#2394](https://github.com/aehrc/pathling/issues/2394))
+
+### Other enhancements
+
+- **Long type**: Support for the Long FHIRPath type and FHIR `integer64`
+  ([#2484](https://github.com/aehrc/pathling/issues/2484))
+- **$index keyword**: Index access within functions with expression parameters
+  ([#2389](https://github.com/aehrc/pathling/issues/2389))
+- **Tick quoted identifiers**: Support for `` `identifier` `` syntax
+  ([#2153](https://github.com/aehrc/pathling/issues/2153))
+- **Factory API**: Support for the FHIR FHIRPath factory API
+  ([#2425](https://github.com/aehrc/pathling/issues/2425))
+- **Terminology Service API**: The `%terminologies` object for terminology
+  operations (`expand`, `lookup`, `validateVS`, `validateCS`, `subsumes`,
+  `translate`) ([#2426](https://github.com/aehrc/pathling/issues/2426))
 
 ## Parquet on FHIR
 

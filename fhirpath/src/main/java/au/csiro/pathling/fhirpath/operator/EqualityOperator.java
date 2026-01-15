@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,10 +40,11 @@ import org.apache.spark.sql.Column;
  */
 public class EqualityOperator extends SameTypeBinaryOperator {
 
-  @Nonnull
-  private final EqualityOperation type;
+  @Nonnull private final EqualityOperation type;
 
   /**
+   * Constructs a new EqualityOperator.
+   *
    * @param type The type of operator
    */
   public EqualityOperator(@Nonnull final EqualityOperation type) {
@@ -52,8 +53,10 @@ public class EqualityOperator extends SameTypeBinaryOperator {
 
   @Override
   @Nonnull
-  protected Collection handleEquivalentTypes(@Nonnull final Collection leftCollection,
-      @Nonnull final Collection rightCollection, @Nonnull final BinaryOperatorInput input) {
+  protected Collection handleEquivalentTypes(
+      @Nonnull final Collection leftCollection,
+      @Nonnull final Collection rightCollection,
+      @Nonnull final BinaryOperatorInput input) {
 
     // currently we only support equality for FHIRPath types
     if (leftCollection.getType().isEmpty() || rightCollection.getType().isEmpty()) {
@@ -64,18 +67,18 @@ public class EqualityOperator extends SameTypeBinaryOperator {
     // We do actually use the equalTo and nonEqualTo methods here, rather than negating the
     // result of equalTo because this may be more efficient in some cases.
     final BinaryOperator<Column> elementComparator = type.bind(leftCollection.getComparator());
-    final BinaryOperator<Column> arrayComparator = type.bind(
-        leftCollection.getComparator().asArrayComparator());
+    final BinaryOperator<Column> arrayComparator =
+        type.bind(leftCollection.getComparator().asArrayComparator());
 
     final ColumnRepresentation left = leftCollection.getColumn();
     final ColumnRepresentation right = rightCollection.getColumn();
 
     final Column equalityResult =
-        when(
-            left.isEmpty().getValue().or(right.isEmpty().getValue()),
-            lit(null))
+        when(left.isEmpty().getValue().or(right.isEmpty().getValue()), lit(null))
             .when(
-                left.count().getValue().equalTo(lit(1))
+                left.count()
+                    .getValue()
+                    .equalTo(lit(1))
                     .and(right.count().getValue().equalTo(lit(1))),
                 // this works because we know both sides are singular (count == 1)
                 elementComparator.apply(left.singular().getValue(), right.singular().getValue()))
@@ -87,13 +90,16 @@ public class EqualityOperator extends SameTypeBinaryOperator {
 
   @Override
   @Nonnull
-  protected Collection handleNonEquivalentTypes(@Nonnull final Collection left,
-      @Nonnull final Collection right, @Nonnull final BinaryOperatorInput input) {
+  protected Collection handleNonEquivalentTypes(
+      @Nonnull final Collection left,
+      @Nonnull final Collection right,
+      @Nonnull final BinaryOperatorInput input) {
     // for different types it's either dynamic null if any is null or false otherwise
-    final Column equalityResult = when(
-        left.getColumn().isEmpty().getValue().or(right.getColumn().isEmpty().getValue()),
-        lit(null)
-    ).otherwise(lit(type == EqualityOperation.NOT_EQUALS));
+    final Column equalityResult =
+        when(
+                left.getColumn().isEmpty().getValue().or(right.getColumn().isEmpty().getValue()),
+                lit(null))
+            .otherwise(lit(type == EqualityOperation.NOT_EQUALS));
     return BooleanCollection.build(new DefaultRepresentation(equalityResult));
   }
 

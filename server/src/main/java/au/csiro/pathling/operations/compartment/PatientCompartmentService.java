@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,19 +47,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class PatientCompartmentService {
 
-  /**
-   * The Patient resource type code.
-   */
+  /** The Patient resource type code. */
   private static final String PATIENT_RESOURCE_TYPE = "Patient";
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  /**
-   * Cache of resource type to compartment element paths.
-   */
-  @Nonnull
-  private final Map<String, List<String>> compartmentPathCache = new ConcurrentHashMap<>();
+  /** Cache of resource type to compartment element paths. */
+  @Nonnull private final Map<String, List<String>> compartmentPathCache = new ConcurrentHashMap<>();
 
   /**
    * Constructs a new PatientCompartmentService.
@@ -106,8 +100,8 @@ public class PatientCompartmentService {
    * @return Spark Column for filtering, or null if no filter is needed
    */
   @Nonnull
-  public Column buildPatientFilter(@Nonnull final String resourceType,
-      @Nonnull final Set<String> patientIds) {
+  public Column buildPatientFilter(
+      @Nonnull final String resourceType, @Nonnull final Set<String> patientIds) {
     // Handle Patient resource specially.
     if (PATIENT_RESOURCE_TYPE.equals(resourceType)) {
       if (patientIds.isEmpty()) {
@@ -135,9 +129,8 @@ public class PatientCompartmentService {
         filter = filter.or(col(refColumn).startsWith(patientRefPrefix));
       } else {
         // Specific patients: match exact references.
-        final String[] patientRefs = patientIds.stream()
-            .map(id -> patientRefPrefix + id)
-            .toArray(String[]::new);
+        final String[] patientRefs =
+            patientIds.stream().map(id -> patientRefPrefix + id).toArray(String[]::new);
         filter = filter.or(col(refColumn).isin((Object[]) patientRefs));
       }
     }
@@ -155,27 +148,29 @@ public class PatientCompartmentService {
       final List<RuntimeSearchParam> searchParams =
           resourceDef.getSearchParamsForCompartmentName(PATIENT_RESOURCE_TYPE);
 
-      final List<String> paths = searchParams.stream()
-          .map(RuntimeSearchParam::getPath)
-          .filter(path -> path != null && !path.isEmpty())
-          // Paths may be pipe-separated (e.g., "Observation.subject | Observation.performer").
-          .flatMap(path -> Arrays.stream(path.split("\\|")))
-          .map(String::trim)
-          // Remove the resource type prefix (e.g., "Observation.subject" -> "subject").
-          .map(path -> path.startsWith(resourceType + ".")
-              ? path.substring(resourceType.length() + 1)
-              : path)
-          .filter(path -> !path.isEmpty())
-          .distinct()
-          .toList();
+      final List<String> paths =
+          searchParams.stream()
+              .map(RuntimeSearchParam::getPath)
+              .filter(path -> path != null && !path.isEmpty())
+              // Paths may be pipe-separated (e.g., "Observation.subject | Observation.performer").
+              .flatMap(path -> Arrays.stream(path.split("\\|")))
+              .map(String::trim)
+              // Remove the resource type prefix (e.g., "Observation.subject" -> "subject").
+              .map(
+                  path ->
+                      path.startsWith(resourceType + ".")
+                          ? path.substring(resourceType.length() + 1)
+                          : path)
+              .filter(path -> !path.isEmpty())
+              .distinct()
+              .toList();
 
       log.debug("Discovered Patient compartment paths for {}: {}", resourceType, paths);
       return paths;
     } catch (final Exception e) {
-      log.warn("Failed to discover Patient compartment paths for {}: {}", resourceType,
-          e.getMessage());
+      log.warn(
+          "Failed to discover Patient compartment paths for {}: {}", resourceType, e.getMessage());
       return List.of();
     }
   }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
 import { useCallback, useMemo } from "react";
+
 import {
   systemExportKickOff,
   allPatientsExportKickOff,
@@ -25,17 +24,19 @@ import {
   groupExportKickOff,
   bulkExportStatus,
   bulkExportDownload,
+  jobCancel,
 } from "../api";
 import { config } from "../config";
-import { useAuth } from "../contexts/AuthContext";
 import { useAsyncJob } from "./useAsyncJob";
+import { useAuth } from "../contexts/AuthContext";
+import { getExportOutputFiles } from "../types/export";
+
+import type { ResourceType } from "../types/api";
 import type {
   UseBulkExportFn,
   BulkExportRequest,
   ExportManifest,
 } from "../types/hooks";
-import type { ResourceType } from "../types/api";
-import { getExportOutputFiles } from "../types/export";
 
 interface KickOffResult {
   pollingUrl: string;
@@ -72,6 +73,8 @@ export const useBulkExport: UseBulkExportFn = (options) => {
         const baseOptions = {
           types: request.resourceTypes as ResourceType[] | undefined,
           since: request.since,
+          until: request.until,
+          elements: request.elements,
           accessToken,
         };
 
@@ -101,7 +104,8 @@ export const useBulkExport: UseBulkExportFn = (options) => {
         bulkExportStatus(fhirBaseUrl!, { pollingUrl, accessToken }),
       isComplete: (status: StatusResult) => status.status === "complete",
       getResult: (status: StatusResult) => status.manifest!,
-      cancel: async () => {},
+      cancel: (pollingUrl: string) =>
+        jobCancel(fhirBaseUrl!, { pollingUrl, accessToken }),
       pollingInterval: 3000,
     }),
     [fhirBaseUrl, accessToken],

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,13 +36,13 @@ import org.hl7.fhir.r4.model.Reference;
  */
 class FhirReferenceDefinition extends FhirElementDefinition implements ElementDefinition {
 
-
   private final List<Class<? extends IBaseResource>> resourceTypes;
 
-
-  protected FhirReferenceDefinition(@Nonnull final RuntimeChildChoiceDefinition childDefinition,
+  protected FhirReferenceDefinition(
+      @Nonnull final RuntimeChildChoiceDefinition childDefinition,
       @Nonnull final String elementName) {
-    super(requireNonNull(childDefinition.getChildElementDefinitionByDatatype(Reference.class)),
+    super(
+        requireNonNull(childDefinition.getChildElementDefinitionByDatatype(Reference.class)),
         childDefinition,
         elementName);
     resourceTypes = childDefinition.getResourceTypes();
@@ -59,5 +59,4 @@ class FhirReferenceDefinition extends FhirElementDefinition implements ElementDe
       @Nonnull final BaseRuntimeElementDefinition<?> elementDefinition) {
     return FHIRDefinedType.REFERENCE.toCode().equals(elementDefinition.getName());
   }
-
 }

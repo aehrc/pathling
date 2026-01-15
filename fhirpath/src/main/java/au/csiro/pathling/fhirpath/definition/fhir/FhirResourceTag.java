@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,18 +31,14 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 public class FhirResourceTag implements ResourceTag {
 
-  /**
-   * The resource code (e.g., "Patient", "Observation", "ViewDefinition").
-   */
-  @Nonnull
-  String resourceCode;
+  /** The resource code (e.g., "Patient", "Observation", "ViewDefinition"). */
+  @Nonnull String resourceCode;
 
   /**
    * The FHIR resource type enum, if this is a standard FHIR resource type. Empty for custom
    * resource types like ViewDefinition.
    */
-  @Nonnull
-  Optional<ResourceType> resourceType;
+  @Nonnull Optional<ResourceType> resourceType;
 
   /**
    * Creates a FhirResourceTag from a standard FHIR ResourceType.
@@ -81,8 +77,8 @@ public class FhirResourceTag implements ResourceTag {
    * @return a new FhirResourceTag
    */
   @Nonnull
-  public static FhirResourceTag of(@Nonnull final String resourceCode,
-      @Nonnull final Optional<ResourceType> resourceType) {
+  public static FhirResourceTag of(
+      @Nonnull final String resourceCode, @Nonnull final Optional<ResourceType> resourceType) {
     return new FhirResourceTag(resourceCode, resourceType);
   }
 

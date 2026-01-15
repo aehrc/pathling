@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
  */
 
 package au.csiro.pathling.utilities;
-
 
 import static org.apache.hadoop.shaded.org.apache.commons.io.IOUtils.closeQuietly;
 
@@ -35,9 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ResourceCloser implements Closeable {
 
-  @Nonnull
-  private final List<Closeable> resourcesToClose;
-
+  @Nonnull private final List<Closeable> resourcesToClose;
 
   /**
    * Constructs a new {@link ResourceCloser} with provided resources to close.
@@ -68,7 +65,8 @@ public class ResourceCloser implements Closeable {
     synchronized (resourcesToClose) {
       for (final Closeable closeable : resourcesToClose) {
         log.debug("Closing resource: {} in: {}", closeable, this);
-        closeQuietly(closeable,
+        closeQuietly(
+            closeable,
             ex -> log.warn("Ignoring an error while closing resource: {}", closeable, ex));
       }
     }

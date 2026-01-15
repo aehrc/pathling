@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,33 +46,23 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SearchProvider implements IResourceProvider {
 
-  /**
-   * The name of the FHIR search profile.
-   */
+  /** The name of the FHIR search profile. */
   private static final String QUERY_NAME = "fhirPath";
 
-  /**
-   * The name of the parameter which is passed to the search profile.
-   */
+  /** The name of the parameter which is passed to the search profile. */
   private static final String FILTER_PARAM = "filter";
 
-  @Nonnull
-  private final ServerConfiguration configuration;
+  @Nonnull private final ServerConfiguration configuration;
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull
-  private final DataSource dataSource;
+  @Nonnull private final DataSource dataSource;
 
-  @Nonnull
-  private final FhirEncoders fhirEncoders;
+  @Nonnull private final FhirEncoders fhirEncoders;
 
-  @Nonnull
-  private final Class<? extends IBaseResource> resourceClass;
+  @Nonnull private final Class<? extends IBaseResource> resourceClass;
 
-  @Nonnull
-  private final String resourceTypeCode;
+  @Nonnull private final String resourceTypeCode;
 
   /**
    * Constructs a new SearchProvider.
@@ -83,7 +73,8 @@ public class SearchProvider implements IResourceProvider {
    * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
    * @param resourceClass the class of the resource type to search
    */
-  public SearchProvider(@Nonnull final ServerConfiguration configuration,
+  public SearchProvider(
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
       @Nonnull final FhirEncoders fhirEncoders,
@@ -129,11 +120,9 @@ public class SearchProvider implements IResourceProvider {
   }
 
   @Nonnull
-  private IBundleProvider buildSearchExecutor(
-      @Nonnull final Optional<StringAndListParam> filters) {
-    final boolean cacheResults = configuration.getQuery().getCacheResults();
-    return new SearchExecutor(fhirContext, dataSource, fhirEncoders, resourceTypeCode, filters,
-        cacheResults);
+  private IBundleProvider buildSearchExecutor(@Nonnull final Optional<StringAndListParam> filters) {
+    final boolean cacheResults = configuration.getQuery().isCacheResults();
+    return new SearchExecutor(
+        fhirContext, dataSource, fhirEncoders, resourceTypeCode, filters, cacheResults);
   }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +37,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A QueryableDataSource wrapper that dynamically discovers new resource types created after
@@ -80,7 +79,11 @@ public class DynamicDeltaSource implements QueryableDataSource {
 
   @Override
   @Nonnull
-  public Dataset<Row> read(@Nonnull final String resourceCode) {
+  public Dataset<Row> read(@Nullable final String resourceCode) {
+    if (resourceCode == null) {
+      throw new IllegalArgumentException("Resource code must not be null");
+    }
+
     // If delegate knows about this type, use it.
     if (delegate.getResourceTypes().contains(resourceCode)) {
       return delegate.read(resourceCode);
@@ -101,8 +104,7 @@ public class DynamicDeltaSource implements QueryableDataSource {
 
     // No data found - return an empty dataset with the correct schema.
     log.debug("No data found for resource type: {}, returning empty dataset", resourceCode);
-    return QueryHelpers.createEmptyDataset(
-        spark, fhirEncoders, ResourceType.fromCode(resourceCode));
+    return QueryHelpers.createEmptyDataset(spark, fhirEncoders, resourceCode);
   }
 
   @Override

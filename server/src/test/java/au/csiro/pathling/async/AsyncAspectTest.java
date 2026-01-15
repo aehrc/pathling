@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
@@ -62,23 +62,17 @@ import org.springframework.security.oauth2.jwt.JwtClaimAccessor;
 @Slf4j
 class AsyncAspectTest {
 
-  @MockBean
-  private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+  @MockBean private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
-  @MockBean
-  private CacheableDatabase database;
+  @MockBean private CacheableDatabase database;
 
-  @MockBean
-  StageMap stageMap;
+  @MockBean private StageMap stageMap;
 
-  @MockBean
-  ProceedingJoinPoint proceedingJoinPoint;
+  @MockBean private ProceedingJoinPoint proceedingJoinPoint;
 
-  @MockBean
-  JobProvider jobProvider;
+  @MockBean private JobProvider jobProvider;
 
-  @Autowired
-  SparkSession spark;
+  @Autowired SparkSession spark;
 
   private JobRegistry jobRegistry;
   private AsyncAspect asyncAspect;
@@ -92,20 +86,20 @@ class AsyncAspectTest {
   private static final String FHIR_SERVER_BASE = "http://localhost:8080/fhir";
 
   // regular expression that matches content location header
-  private static final Pattern CONTENT_LOCATION_REGEX = Pattern.compile(
-      "([^?]+)\\?id=([\\w\\-]{36})");
+  private static final Pattern CONTENT_LOCATION_REGEX =
+      Pattern.compile("([^?]+)\\?id=([\\w\\-]{36})");
 
   @BeforeEach
   void setUp() throws Throwable {
     // Wire the asyncAspects and it's dependencies
-    final ServerConfiguration serverConfiguration = createServerConfiguration(
-        List.of("Accept", "Authorization"),
-        List.of("Accept"));
-    final RequestTagFactory requestTagFactory = new RequestTagFactory(database,
-        serverConfiguration);
+    final ServerConfiguration serverConfiguration =
+        createServerConfiguration(List.of("Accept", "Authorization"), List.of("Accept"));
+    final RequestTagFactory requestTagFactory =
+        new RequestTagFactory(database, serverConfiguration);
     jobRegistry = new JobRegistry();
-    asyncAspect = new AsyncAspect(threadPoolTaskExecutor, requestTagFactory, jobRegistry, stageMap,
-        spark, jobProvider);
+    asyncAspect =
+        new AsyncAspect(
+            threadPoolTaskExecutor, requestTagFactory, jobRegistry, stageMap, spark, jobProvider);
 
     // Initialise mock request and response
     requestDetails = new ServletRequestDetails();
@@ -115,15 +109,14 @@ class AsyncAspectTest {
     requestDetails.setCompleteUrl(FHIR_SERVER_BASE + "/Patient/$aggregate?param=value1");
     requestDetails.setOperation("$aggregate");
 
-    final Object[] args = new Object[]{requestDetails};
+    final Object[] args = new Object[] {requestDetails};
     when(proceedingJoinPoint.getArgs()).thenReturn(args);
     when(proceedingJoinPoint.proceed()).thenReturn(RESULT_RESOURCE);
   }
 
   @Nonnull
   IBaseResource executeRequest() throws Throwable {
-    return asyncAspect.maybeExecuteAsynchronously(
-        proceedingJoinPoint, ASYNC_SUPPORTED);
+    return asyncAspect.maybeExecuteAsynchronously(proceedingJoinPoint, ASYNC_SUPPORTED);
   }
 
   void setAuthenticationPrincipal(@Nonnull final Object principal) {
@@ -135,8 +128,8 @@ class AsyncAspectTest {
   String assertExecutedAsync() {
     servletRequest.removeHeader("Prefer");
     servletRequest.addHeader("Prefer", "respond-async");
-    final ProcessingNotCompletedException ex = assertThrows(ProcessingNotCompletedException.class,
-        this::executeRequest);
+    final ProcessingNotCompletedException ex =
+        assertThrows(ProcessingNotCompletedException.class, this::executeRequest);
     assertEquals(202, ex.getStatusCode());
     final String contentLocation = (String) servletResponse.getHeaderValue("Content-Location");
     assertNotNull(contentLocation);
@@ -147,7 +140,6 @@ class AsyncAspectTest {
     // return job id
     return matcher.group(2);
   }
-
 
   @Test
   void testSynchronousRequestReturnsExpectedResponse() throws Throwable {
@@ -160,8 +152,8 @@ class AsyncAspectTest {
   void testAsyncRequestsSchedulesNewJob() {
     // setup thread pool executor to return a mock future
     final Future<IBaseResource> mockFuture = mock(Future.class);
-    when(threadPoolTaskExecutor.submit(ArgumentMatchers.<Callable<IBaseResource>>any())).thenReturn(
-        mockFuture);
+    when(threadPoolTaskExecutor.submit(ArgumentMatchers.<Callable<IBaseResource>>any()))
+        .thenReturn(mockFuture);
 
     // setup authentication principal
     final JwtClaimAccessor mockJwtPrincipal = mock(JwtClaimAccessor.class);
@@ -260,29 +252,36 @@ class AsyncAspectTest {
     final AtomicReference<String> jobIdDuringExecution = new AtomicReference<>();
 
     // Modify the ProceedingJoinPoint to capture AsyncJobContext state during execution.
-    when(proceedingJoinPoint.proceed()).thenAnswer(invocation -> {
-      jobDuringExecution.set(AsyncJobContext.getCurrentJob());
-      if (jobDuringExecution.get().isPresent()) {
-        jobIdDuringExecution.set(jobDuringExecution.get().get().getId());
-      }
-      return RESULT_RESOURCE;
-    });
+    when(proceedingJoinPoint.proceed())
+        .thenAnswer(
+            invocation -> {
+              jobDuringExecution.set(AsyncJobContext.getCurrentJob());
+              if (jobDuringExecution.get().isPresent()) {
+                jobIdDuringExecution.set(jobDuringExecution.get().get().getId());
+              }
+              return RESULT_RESOURCE;
+            });
 
     // Set up the StageMap mock to return a non-null keySet for cleanup.
-    when(stageMap.keySet()).thenReturn(new java.util.concurrent.ConcurrentHashMap<Integer, String>().keySet());
+    when(stageMap.keySet())
+        .thenReturn(new java.util.concurrent.ConcurrentHashMap<Integer, String>().keySet());
     when(stageMap.entrySet()).thenReturn(java.util.Collections.emptySet());
 
     // Execute the captured callable.
     capturedCallable.call();
 
     // Then: The AsyncJobContext should have had the job set during execution.
-    assertTrue(jobDuringExecution.get().isPresent(),
+    assertTrue(
+        jobDuringExecution.get().isPresent(),
         "AsyncJobContext should have the job set during async execution");
-    assertEquals(jobId, jobIdDuringExecution.get(),
+    assertEquals(
+        jobId,
+        jobIdDuringExecution.get(),
         "Job ID in AsyncJobContext should match the created job ID");
 
     // And: After execution, the context should be cleared.
-    assertTrue(AsyncJobContext.getCurrentJob().isEmpty(),
+    assertTrue(
+        AsyncJobContext.getCurrentJob().isEmpty(),
         "AsyncJobContext should be cleared after async execution");
   }
 }

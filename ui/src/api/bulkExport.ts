@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +13,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
+
+import { buildHeaders, buildUrl, checkResponse, resolveUrl } from "./utils";
 
 import type {
   AllPatientsExportKickOffOptions,
@@ -28,10 +28,12 @@ import type {
   PatientExportKickOffOptions,
   SystemExportKickOffOptions,
 } from "../types/api";
-import { buildHeaders, buildUrl, checkResponse, resolveUrl } from "./utils";
 
 /**
  * Builds query parameters for bulk export operations.
+ *
+ * @param options - Export options containing optional filters.
+ * @returns Record of query parameter key-value pairs.
  */
 function buildExportParams(
   options: SystemExportKickOffOptions | AllPatientsExportKickOffOptions,
@@ -46,11 +48,24 @@ function buildExportParams(
     params._since = options.since;
   }
 
+  if (options.until) {
+    params._until = options.until;
+  }
+
+  if (options.elements) {
+    params._elements = options.elements;
+  }
+
   return params;
 }
 
 /**
  * Kicks off an export and returns the polling URL.
+ *
+ * @param baseUrl - The FHIR server base URL.
+ * @param path - The export endpoint path.
+ * @param options - Export options including filters and auth token.
+ * @returns The kick-off result with polling URL.
  */
 async function kickOffExport(
   baseUrl: string,
@@ -222,7 +237,7 @@ export async function bulkExportStatus(
 /**
  * Downloads an exported file from a bulk export operation.
  *
- * @param baseUrl - The FHIR server base URL (unused but included for consistency).
+ * @param _baseUrl - The FHIR server base URL (unused but included for consistency).
  * @param options - Download options including file URL.
  * @returns A ReadableStream of the file contents.
  * @throws {UnauthorizedError} When the request receives a 401 response.

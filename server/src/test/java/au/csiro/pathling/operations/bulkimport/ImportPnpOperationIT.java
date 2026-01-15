@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,6 +74,8 @@ class ImportPnpOperationIT {
 
   @TempDir private static Path warehouseDir;
 
+  @TempDir private static Path pnpDownloadDir;
+
   @Autowired private TestDataSetup testDataSetup;
 
   @Autowired private FhirContext fhirContext;
@@ -109,6 +111,8 @@ class ImportPnpOperationIT {
     registry.add(
         "pathling.import.pnp.tokenEndpoint",
         () -> "http://localhost:" + wireMockServer.port() + "/oauth/token");
+    registry.add(
+        "pathling.import.pnp.downloadLocation", () -> pnpDownloadDir.toAbsolutePath().toString());
   }
 
   @BeforeEach
@@ -348,8 +352,7 @@ class ImportPnpOperationIT {
 
     final String contentLocation =
         result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
-    assertThat(contentLocation).isNotNull();
-    assertThat(contentLocation).contains("$job");
+    assertThat(contentLocation).isNotNull().contains("$job");
 
     // Poll the job status until completion.
     await()
@@ -429,15 +432,14 @@ class ImportPnpOperationIT {
         .atMost(30, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
         .untilAsserted(
-            () -> {
-              webTestClient
-                  .get()
-                  .uri(contentLocation)
-                  .header("Accept", "application/fhir+json")
-                  .exchange()
-                  .expectStatus()
-                  .isOk();
-            });
+            () ->
+                webTestClient
+                    .get()
+                    .uri(contentLocation)
+                    .header("Accept", "application/fhir+json")
+                    .exchange()
+                    .expectStatus()
+                    .isOk());
 
     log.info("Import-pnp job completed successfully");
   }
@@ -498,14 +500,13 @@ class ImportPnpOperationIT {
         .atMost(10, TimeUnit.SECONDS)
         .pollInterval(500, TimeUnit.MILLISECONDS)
         .untilAsserted(
-            () -> {
-              webTestClient
-                  .get()
-                  .uri(contentLocation)
-                  .header("Accept", "application/fhir+json")
-                  .exchange()
-                  .expectStatus()
-                  .value(status -> assertThat(status).isIn(200, 202, 400, 500));
-            });
+            () ->
+                webTestClient
+                    .get()
+                    .uri(contentLocation)
+                    .header("Accept", "application/fhir+json")
+                    .exchange()
+                    .expectStatus()
+                    .value(status -> assertThat(status).isIn(200, 202, 400, 500)));
   }
 }

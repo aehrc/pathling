@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,16 +29,13 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import org.hl7.fhir.r4.model.Base;
 
-/**
- * A utility class for traversing FHIR resources.
- */
+/** A utility class for traversing FHIR resources. */
 public class FhirTraversal {
 
-  private FhirTraversal() {
-  }
+  private FhirTraversal() {}
 
-  private static void processChildrenRecursive(@Nonnull final Base object,
-      @Nonnull final Consumer<Base> processor) {
+  private static void processChildrenRecursive(
+      @Nonnull final Base object, @Nonnull final Consumer<Base> processor) {
     object.children().stream()
         .flatMap(p -> p.getValues().stream())
         .filter(Objects::nonNull)
@@ -51,8 +48,8 @@ public class FhirTraversal {
    * @param object a FHIR object
    * @param processor the consumer to apply to all non-empty FHIR elements
    */
-  public static void processRecursive(@Nonnull final Base object,
-      @Nonnull final Consumer<Base> processor) {
+  public static void processRecursive(
+      @Nonnull final Base object, @Nonnull final Consumer<Base> processor) {
     processor.accept(object);
     processChildrenRecursive(object, processor);
   }

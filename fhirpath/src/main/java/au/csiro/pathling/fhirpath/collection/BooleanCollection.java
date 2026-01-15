@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,8 +34,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class BooleanCollection extends Collection implements StringCoercible,
-    Materializable {
+public class BooleanCollection extends Collection implements StringCoercible, Materializable {
 
   /**
    * Creates a new BooleanCollection.
@@ -46,7 +45,8 @@ public class BooleanCollection extends Collection implements StringCoercible,
    * @param definition the node definition
    * @param extensionMapColumn the extension map column
    */
-  protected BooleanCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  protected BooleanCollection(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
@@ -62,10 +62,15 @@ public class BooleanCollection extends Collection implements StringCoercible,
    * @return A new instance of {@link BooleanCollection}
    */
   @Nonnull
-  public static BooleanCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static BooleanCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new BooleanCollection(columnRepresentation, Optional.of(FhirPathType.BOOLEAN),
-        Optional.of(FHIRDefinedType.BOOLEAN), definition, Optional.empty());
+    return new BooleanCollection(
+        columnRepresentation,
+        Optional.of(FhirPathType.BOOLEAN),
+        Optional.of(FHIRDefinedType.BOOLEAN),
+        definition,
+        Optional.empty());
   }
 
   /**
@@ -92,9 +97,9 @@ public class BooleanCollection extends Collection implements StringCoercible,
 
   /**
    * Returns a new instance based upon a literal represented by a {@link BooleanType}.
-   * <p>
-   * This is required for the reflection-based instantiation of collections used in
-   * {@link au.csiro.pathling.projection.ProjectionContext#of}.
+   *
+   * <p>This is required for the reflection-based instantiation of collections used in {@link
+   * au.csiro.pathling.projection.ProjectionContext#of}.
    *
    * @param value The value to use
    * @return A new instance of {@link BooleanCollection}
@@ -125,12 +130,12 @@ public class BooleanCollection extends Collection implements StringCoercible,
   public static BooleanCollection empty() {
     return build(DefaultRepresentation.empty());
   }
-  
+
   /**
    * {@inheritDoc}
-   * <p>
-   * This implementation returns true, as BooleanCollection can be converted to any other collection
-   * type.
+   *
+   * <p>This implementation returns true, as BooleanCollection can be converted to any other
+   * collection type.
    */
   @Override
   @Nonnull
@@ -140,8 +145,8 @@ public class BooleanCollection extends Collection implements StringCoercible,
 
   /**
    * {@inheritDoc}
-   * <p>
-   * This implementation returns itself as it is already a BooleanCollection.
+   *
+   * <p>This implementation returns itself as it is already a BooleanCollection.
    */
   @Override
   @Nonnull
@@ -151,13 +156,12 @@ public class BooleanCollection extends Collection implements StringCoercible,
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Special case for Boolean collection to go with the specialized `asBooleanPath()`.
+   *
+   * <p>Special case for Boolean collection to go with the specialized `asBooleanPath()`.
    */
   @Override
   @Nonnull
   public BooleanCollection asBooleanSingleton() {
     return (BooleanCollection) this.asSingular();
   }
-
 }

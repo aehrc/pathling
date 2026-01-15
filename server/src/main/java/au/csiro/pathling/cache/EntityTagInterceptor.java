@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,24 +46,24 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class EntityTagInterceptor {
 
-  @Nonnull
-  private final ServerConfiguration configuration;
+  @Nonnull private final ServerConfiguration configuration;
 
-  @Nonnull
-  private final CacheableDatabase database;
+  @Nonnull private final CacheableDatabase database;
 
-  @Nonnull
-  private final ConformanceProvider conformanceProvider;
+  @Nonnull private final ConformanceProvider conformanceProvider;
 
   public static final String DEFAULT_ETAG = "0";
   private static final Pattern ETAG_HEADER_PATTERN = Pattern.compile("^W/\"([^\"]+)\"$");
 
   /**
+   * Creates a new EntityTagInterceptor.
+   *
    * @param configuration configuration controlling the behaviour of the interceptor
-   * @param database {@link Database} for use in retrieving cache keys
+   * @param database {@link CacheableDatabase} for use in retrieving cache keys
    * @param conformanceProvider for determining the cacheability of conformance statement requests
    */
-  public EntityTagInterceptor(@Nonnull final ServerConfiguration configuration,
+  public EntityTagInterceptor(
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final CacheableDatabase database,
       @Nonnull final ConformanceProvider conformanceProvider) {
     this.configuration = configuration;
@@ -81,7 +81,8 @@ public class EntityTagInterceptor {
    */
   @Hook(value = Pointcut.SERVER_INCOMING_REQUEST_POST_PROCESSED, order = 2)
   @SuppressWarnings("unused")
-  public void checkIncomingTag(@Nullable final HttpServletRequest request,
+  public void checkIncomingTag(
+      @Nullable final HttpServletRequest request,
       @Nullable final RequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
     requireNonNull(request);
@@ -95,14 +96,12 @@ public class EntityTagInterceptor {
       // Check the incoming request for an If-None-Match header.
       final String tagHeader = parseEtagValue(request.getHeader("If-None-Match"));
 
-      // If the request is for the conformance statement, we use the conformance provider to 
-      // determine whether it is fresh or not. The freshness of all other requests is determined by 
+      // If the request is for the conformance statement, we use the conformance provider to
+      // determine whether it is fresh or not. The freshness of all other requests is determined by
       // the database.
       final boolean conformance =
           requestDetails.getOperation() != null && requestDetails.getOperation().equals("metadata");
-      final Cacheable cacheable = conformance
-                                  ? conformanceProvider
-                                  : database;
+      final Cacheable cacheable = conformance ? conformanceProvider : database;
 
       final boolean tagMatches = cacheable.cacheKeyMatches(tagHeader);
       if (tagMatches) {
@@ -110,13 +109,12 @@ public class EntityTagInterceptor {
         log.debug("Entity tag validation succeeded, processing not required");
         throw new NotModifiedException("Supplied entity tag matches");
       } else {
-        // If there is no matching condition, we add an ETag to the response, along with headers 
+        // If there is no matching condition, we add an ETag to the response, along with headers
         // indicating that the response is cacheable.
-        final String cacheControlValues = String.join(",",
-            configuration.getHttpCaching().getCacheableControl());
-        final String etag = cacheable.getCacheKey()
-            .map(EntityTagInterceptor::quoteEtagValue)
-            .orElse(DEFAULT_ETAG);
+        final String cacheControlValues =
+            String.join(",", configuration.getHttpCaching().getCacheableControl());
+        final String etag =
+            cacheable.getCacheKey().map(EntityTagInterceptor::quoteEtagValue).orElse(DEFAULT_ETAG);
         response.setHeader("ETag", etag);
         response.setHeader("Cache-Control", cacheControlValues);
       }
@@ -128,9 +126,10 @@ public class EntityTagInterceptor {
    *
    * @param response a {@link HttpServletResponse} upon which to set caching headers
    * @param configuration the {@link ServerConfiguration} for the server, which controls which
-   * header values are used
+   *     header values are used
    */
-  public static void makeRequestNonCacheable(@Nullable final HttpServletResponse response,
+  public static void makeRequestNonCacheable(
+      @Nullable final HttpServletResponse response,
       @Nonnull final ServerConfiguration configuration) {
     if (response == null) {
       return;
@@ -140,8 +139,8 @@ public class EntityTagInterceptor {
     response.setHeader("ETag", quoteEtagValue(DEFAULT_ETAG));
 
     // The Cache-Control header is set to indicate that the response should not be cached.
-    final String cacheControlValues = String.join(",",
-        configuration.getHttpCaching().getUncacheableControl());
+    final String cacheControlValues =
+        String.join(",", configuration.getHttpCaching().getUncacheableControl());
     response.addHeader("Cache-Control", cacheControlValues);
   }
 
@@ -170,9 +169,6 @@ public class EntityTagInterceptor {
       return DEFAULT_ETAG;
     }
     final String match = matcher.group(1);
-    return match == null
-           ? DEFAULT_ETAG
-           : match;
+    return match == null ? DEFAULT_ETAG : match;
   }
-
 }

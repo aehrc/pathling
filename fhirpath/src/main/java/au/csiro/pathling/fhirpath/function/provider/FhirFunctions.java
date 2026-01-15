@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,15 +34,14 @@ import jakarta.annotation.Nonnull;
  * @author Piotr Szul
  * @author John Grimes
  * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">FHIR specification - Additional
- * functions</a>
+ *     functions</a>
  */
 public class FhirFunctions {
 
   private static final String URL_ELEMENT_NAME = "url";
   private static final String EXTENSION_ELEMENT_NAME = "extension";
 
-  private FhirFunctions() {
-  }
+  private FhirFunctions() {}
 
   /**
    * Will filter the input collection for items named "extension" with the given url. This is a
@@ -56,22 +55,29 @@ public class FhirFunctions {
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
-  public static Collection extension(@Nonnull final Collection input,
-      @Nonnull final StringCollection url) {
+  public static Collection extension(
+      @Nonnull final Collection input, @Nonnull final StringCollection url) {
     // Traverse to the "extension" child element.
-    return input.traverse(EXTENSION_ELEMENT_NAME).map(extensionCollection ->
-        // Filter the "extension" collection for items with the specified URL.
-        FilteringAndProjectionFunctions.where(extensionCollection,
-            // Traverse to the "url" child element of the extension.
-            c -> c.traverse(URL_ELEMENT_NAME)
-                .filter(StringCollection.class::isInstance)
-                // Use the comparison operation to check if the URL matches the input URL.
-                .map(urlCollection ->
-                    urlCollection.getElementEquality(EQUALS).apply(url))
-                // If the URL is present, build a BooleanCollection from the result.
-                .map(BooleanCollection::build)
-                // If the URL is not present, return a false Boolean literal.
-                .orElse(BooleanCollection.fromValue(false)))
-    ).orElse(EmptyCollection.getInstance());
+    return input
+        .traverse(EXTENSION_ELEMENT_NAME)
+        .map(
+            extensionCollection ->
+                // Filter the "extension" collection for items with the specified URL.
+                FilteringAndProjectionFunctions.where(
+                    extensionCollection,
+                    // Traverse to the "url" child element of the extension.
+                    c ->
+                        c.traverse(URL_ELEMENT_NAME)
+                            .filter(StringCollection.class::isInstance)
+                            // Use the comparison operation to check if the URL matches the input
+                            // URL.
+                            .map(
+                                urlCollection ->
+                                    urlCollection.getElementEquality(EQUALS).apply(url))
+                            // If the URL is present, build a BooleanCollection from the result.
+                            .map(BooleanCollection::build)
+                            // If the URL is not present, return a false Boolean literal.
+                            .orElse(BooleanCollection.fromValue(false))))
+        .orElse(EmptyCollection.getInstance());
   }
 }

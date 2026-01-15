@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,17 +21,11 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Data;
 
-/**
- * Represents configuration that controls the behaviour of Apache Spark.
- */
+/** Represents configuration that controls the behaviour of Apache Spark. */
 @Data
 @Builder
 public class SparkConfiguration {
 
-  /**
-   * The name that Pathling will be identified as within the Spark cluster.
-   */
-  @NotBlank
-  @Builder.Default
-  private String appName = "Pathling";
+  /** The name that Pathling will be identified as within the Spark cluster. */
+  @NotBlank @Builder.Default private String appName = "Pathling";
 }

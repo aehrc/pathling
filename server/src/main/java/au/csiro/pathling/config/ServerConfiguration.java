@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -15,6 +32,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /**
+ * Configuration properties for the Pathling server.
+ *
  * @author Felix Naumann
  */
 @ConfigurationProperties(prefix = "pathling")
@@ -65,15 +84,15 @@ public class ServerConfiguration {
   @Valid
   @NotNull
   @JsonProperty("import")
-  private ImportConfiguration import_;
+  private ImportConfiguration importConfig;
 
   @Nullable
   public ImportConfiguration getImport() {
-    return import_;
+    return importConfig;
   }
 
   public void setImport(@Nonnull final ImportConfiguration newImport) {
-    this.import_ = newImport;
+    this.importConfig = newImport;
   }
 
   @Valid
@@ -91,6 +110,9 @@ public class ServerConfiguration {
 
   /** Configuration for enabling/disabling individual server operations. */
   @Valid @NotNull private OperationConfiguration operations = new OperationConfiguration();
+
+  /** Configuration for the admin UI. */
+  @Valid @NotNull private AdminUiConfiguration adminUi = new AdminUiConfiguration();
 
   /** Logs the server configuration on startup. */
   @PostConstruct

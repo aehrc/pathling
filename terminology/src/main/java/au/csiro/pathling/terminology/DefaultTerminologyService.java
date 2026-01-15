@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,49 +54,54 @@ public class DefaultTerminologyService extends BaseTerminologyService {
    * @param terminologyClient the terminology client to use for requests
    * @param resourcesToClose additional resources to close when this service is closed
    */
-  public DefaultTerminologyService(@Nonnull final TerminologyClient terminologyClient,
+  public DefaultTerminologyService(
+      @Nonnull final TerminologyClient terminologyClient,
       @Nonnull final Closeable... resourcesToClose) {
     super(terminologyClient, resourcesToClose);
   }
 
   @Override
   public boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
-    final ValidateCodeParameters parameters = new ValidateCodeParameters(valueSetUrl,
-        ImmutableCoding.of(coding));
+    final ValidateCodeParameters parameters =
+        new ValidateCodeParameters(valueSetUrl, ImmutableCoding.of(coding));
     final ValidateCodeExecutor executor = new ValidateCodeExecutor(terminologyClient, parameters);
     return execute(executor);
   }
 
   @Nonnull
   @Override
-  public List<Translation> translate(@Nonnull final Coding coding,
-      @Nonnull final String conceptMapUrl, final boolean reverse, @Nullable final String target) {
-    final TranslateParameters parameters = new TranslateParameters(ImmutableCoding.of(coding),
-        conceptMapUrl, reverse, target);
+  public List<Translation> translate(
+      @Nonnull final Coding coding,
+      @Nonnull final String conceptMapUrl,
+      final boolean reverse,
+      @Nullable final String target) {
+    final TranslateParameters parameters =
+        new TranslateParameters(ImmutableCoding.of(coding), conceptMapUrl, reverse, target);
     final TranslateExecutor executor = new TranslateExecutor(terminologyClient, parameters);
     return requireNonNull(execute(executor));
   }
 
   @Nonnull
   @Override
-  public ConceptSubsumptionOutcome subsumes(@Nonnull final Coding codingA,
-      @Nonnull final Coding codingB) {
-    final SubsumesParameters parameters = new SubsumesParameters(
-        ImmutableCoding.of(codingA), ImmutableCoding.of(codingB));
+  public ConceptSubsumptionOutcome subsumes(
+      @Nonnull final Coding codingA, @Nonnull final Coding codingB) {
+    final SubsumesParameters parameters =
+        new SubsumesParameters(ImmutableCoding.of(codingA), ImmutableCoding.of(codingB));
     final SubsumesExecutor executor = new SubsumesExecutor(terminologyClient, parameters);
     return requireNonNull(execute(executor));
   }
 
   @Nonnull
   @Override
-  public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String property, @Nullable final String acceptLanguage) {
-    final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property,
-        acceptLanguage);
+  public List<PropertyOrDesignation> lookup(
+      @Nonnull final Coding coding,
+      @Nullable final String property,
+      @Nullable final String acceptLanguage) {
+    final LookupParameters parameters =
+        new LookupParameters(ImmutableCoding.of(coding), property, acceptLanguage);
     final LookupExecutor executor = new LookupExecutor(terminologyClient, parameters);
     return requireNonNull(execute(executor));
   }
-
 
   @Nonnull
   private static <S, R> R execute(@Nonnull final TerminologyOperation<S, R> operation) {
@@ -116,5 +121,4 @@ public class DefaultTerminologyService extends BaseTerminologyService {
       return handleError(e, fallback);
     }
   }
-
 }

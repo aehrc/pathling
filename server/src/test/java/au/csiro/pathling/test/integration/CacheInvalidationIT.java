@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,14 +52,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @ActiveProfiles({"integration-test"})
 class CacheInvalidationIT {
 
-  @LocalServerPort
-  int port;
+  @LocalServerPort int port;
 
-  @Autowired
-  WebTestClient webTestClient;
+  @Autowired WebTestClient webTestClient;
 
-  @TempDir
-  private static Path warehouseDir;
+  @TempDir private static Path warehouseDir;
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
@@ -69,10 +66,12 @@ class CacheInvalidationIT {
 
   @BeforeEach
   void setup() {
-    webTestClient = webTestClient.mutate()
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
-        .responseTimeout(java.time.Duration.ofSeconds(60))
-        .build();
+    webTestClient =
+        webTestClient
+            .mutate()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .responseTimeout(java.time.Duration.ofSeconds(60))
+            .build();
   }
 
   @AfterEach
@@ -88,23 +87,30 @@ class CacheInvalidationIT {
     final String searchUri = "http://localhost:" + port + "/fhir/Patient";
     final AtomicReference<String> originalEtag = new AtomicReference<>();
 
-    webTestClient.get()
+    webTestClient
+        .get()
         .uri(searchUri)
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().isOk()
-        .expectHeader().exists("ETag")
-        .expectHeader().value("ETag", etag -> {
-          log.info("Original ETag: {}", etag);
-          originalEtag.set(etag);
-        });
+        .expectStatus()
+        .isOk()
+        .expectHeader()
+        .exists("ETag")
+        .expectHeader()
+        .value(
+            "ETag",
+            etag -> {
+              log.info("Original ETag: {}", etag);
+              originalEtag.set(etag);
+            });
 
     assertThat(originalEtag.get()).isNotNull();
 
     // Step 2: Update a Patient resource.
     final String resourceId = "121503c8-9564-4b48-9086-a22df717948e";
     final String updateUri = "http://localhost:" + port + "/fhir/Patient/" + resourceId;
-    final String patientJson = """
+    final String patientJson =
+        """
         {
           "resourceType": "Patient",
           "id": "%s",
@@ -115,15 +121,18 @@ class CacheInvalidationIT {
             }
           ]
         }
-        """.formatted(resourceId);
+        """
+            .formatted(resourceId);
 
-    webTestClient.put()
+    webTestClient
+        .put()
         .uri(updateUri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(patientJson)
         .exchange()
-        .expectStatus().isOk();
+        .expectStatus()
+        .isOk();
 
     log.info("Updated Patient resource");
 
@@ -132,23 +141,28 @@ class CacheInvalidationIT {
     Awaitility.await()
         .atMost(10, TimeUnit.SECONDS)
         .pollInterval(500, TimeUnit.MILLISECONDS)
-        .untilAsserted(() -> {
-          final AtomicReference<String> newEtag = new AtomicReference<>();
-          webTestClient.get()
-              .uri(searchUri)
-              .header("Accept", "application/fhir+json")
-              .exchange()
-              .expectStatus().isOk()
-              .expectHeader().exists("ETag")
-              .expectHeader().value("ETag", etag -> {
-                log.info("New ETag: {}", etag);
-                newEtag.set(etag);
-              });
+        .untilAsserted(
+            () -> {
+              final AtomicReference<String> newEtag = new AtomicReference<>();
+              webTestClient
+                  .get()
+                  .uri(searchUri)
+                  .header("Accept", "application/fhir+json")
+                  .exchange()
+                  .expectStatus()
+                  .isOk()
+                  .expectHeader()
+                  .exists("ETag")
+                  .expectHeader()
+                  .value(
+                      "ETag",
+                      etag -> {
+                        log.info("New ETag: {}", etag);
+                        newEtag.set(etag);
+                      });
 
-          assertThat(newEtag.get())
-              .isNotNull()
-              .isNotEqualTo(originalEtag.get());
-        });
+              assertThat(newEtag.get()).isNotNull().isNotEqualTo(originalEtag.get());
+            });
   }
 
   @Test
@@ -159,22 +173,29 @@ class CacheInvalidationIT {
     final String searchUri = "http://localhost:" + port + "/fhir/Patient";
     final AtomicReference<String> originalEtag = new AtomicReference<>();
 
-    webTestClient.get()
+    webTestClient
+        .get()
         .uri(searchUri)
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().isOk()
-        .expectHeader().exists("ETag")
-        .expectHeader().value("ETag", etag -> {
-          log.info("Original ETag: {}", etag);
-          originalEtag.set(etag);
-        });
+        .expectStatus()
+        .isOk()
+        .expectHeader()
+        .exists("ETag")
+        .expectHeader()
+        .value(
+            "ETag",
+            etag -> {
+              log.info("Original ETag: {}", etag);
+              originalEtag.set(etag);
+            });
 
     assertThat(originalEtag.get()).isNotNull();
 
     // Step 2: Create a new Patient resource.
     final String createUri = "http://localhost:" + port + "/fhir/Patient";
-    final String patientJson = """
+    final String patientJson =
+        """
         {
           "resourceType": "Patient",
           "name": [
@@ -186,13 +207,15 @@ class CacheInvalidationIT {
         }
         """;
 
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(createUri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(patientJson)
         .exchange()
-        .expectStatus().isCreated();
+        .expectStatus()
+        .isCreated();
 
     log.info("Created new Patient resource");
 
@@ -200,23 +223,28 @@ class CacheInvalidationIT {
     Awaitility.await()
         .atMost(10, TimeUnit.SECONDS)
         .pollInterval(500, TimeUnit.MILLISECONDS)
-        .untilAsserted(() -> {
-          final AtomicReference<String> newEtag = new AtomicReference<>();
-          webTestClient.get()
-              .uri(searchUri)
-              .header("Accept", "application/fhir+json")
-              .exchange()
-              .expectStatus().isOk()
-              .expectHeader().exists("ETag")
-              .expectHeader().value("ETag", etag -> {
-                log.info("New ETag: {}", etag);
-                newEtag.set(etag);
-              });
+        .untilAsserted(
+            () -> {
+              final AtomicReference<String> newEtag = new AtomicReference<>();
+              webTestClient
+                  .get()
+                  .uri(searchUri)
+                  .header("Accept", "application/fhir+json")
+                  .exchange()
+                  .expectStatus()
+                  .isOk()
+                  .expectHeader()
+                  .exists("ETag")
+                  .expectHeader()
+                  .value(
+                      "ETag",
+                      etag -> {
+                        log.info("New ETag: {}", etag);
+                        newEtag.set(etag);
+                      });
 
-          assertThat(newEtag.get())
-              .isNotNull()
-              .isNotEqualTo(originalEtag.get());
-        });
+              assertThat(newEtag.get()).isNotNull().isNotEqualTo(originalEtag.get());
+            });
   }
 
   @Test
@@ -225,7 +253,8 @@ class CacheInvalidationIT {
 
     // Step 1: Create a patient to delete.
     final String baseUri = "http://localhost:" + port + "/fhir/Patient";
-    final String createBody = """
+    final String createBody =
+        """
         {
           "resourceType": "Patient",
           "name": [{"family": "ToDelete"}]
@@ -233,46 +262,60 @@ class CacheInvalidationIT {
         """;
 
     final AtomicReference<String> resourceId = new AtomicReference<>();
-    webTestClient.post()
+    webTestClient
+        .post()
         .uri(baseUri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .bodyValue(createBody)
         .exchange()
-        .expectStatus().isCreated()
-        .expectHeader().exists("Location")
-        .expectHeader().value("Location", location -> {
-          final String id = location.substring(location.lastIndexOf("/") + 1);
-          log.info("Created patient with ID: {}", id);
-          resourceId.set(id);
-        });
+        .expectStatus()
+        .isCreated()
+        .expectHeader()
+        .exists("Location")
+        .expectHeader()
+        .value(
+            "Location",
+            location -> {
+              final String id = location.substring(location.lastIndexOf("/") + 1);
+              log.info("Created patient with ID: {}", id);
+              resourceId.set(id);
+            });
 
     assertThat(resourceId.get()).isNotNull();
 
     // Step 2: Make a search request and capture the ETag.
     final AtomicReference<String> originalEtag = new AtomicReference<>();
 
-    webTestClient.get()
+    webTestClient
+        .get()
         .uri(baseUri)
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().isOk()
-        .expectHeader().exists("ETag")
-        .expectHeader().value("ETag", etag -> {
-          log.info("Original ETag: {}", etag);
-          originalEtag.set(etag);
-        });
+        .expectStatus()
+        .isOk()
+        .expectHeader()
+        .exists("ETag")
+        .expectHeader()
+        .value(
+            "ETag",
+            etag -> {
+              log.info("Original ETag: {}", etag);
+              originalEtag.set(etag);
+            });
 
     assertThat(originalEtag.get()).isNotNull();
 
     // Step 3: Delete the Patient resource.
     final String deleteUri = baseUri + "/" + resourceId.get();
 
-    webTestClient.delete()
+    webTestClient
+        .delete()
         .uri(deleteUri)
         .header("Accept", "application/fhir+json")
         .exchange()
-        .expectStatus().isNoContent();
+        .expectStatus()
+        .isNoContent();
 
     log.info("Deleted Patient resource");
 
@@ -280,23 +323,27 @@ class CacheInvalidationIT {
     Awaitility.await()
         .atMost(10, TimeUnit.SECONDS)
         .pollInterval(500, TimeUnit.MILLISECONDS)
-        .untilAsserted(() -> {
-          final AtomicReference<String> newEtag = new AtomicReference<>();
-          webTestClient.get()
-              .uri(baseUri)
-              .header("Accept", "application/fhir+json")
-              .exchange()
-              .expectStatus().isOk()
-              .expectHeader().exists("ETag")
-              .expectHeader().value("ETag", etag -> {
-                log.info("New ETag: {}", etag);
-                newEtag.set(etag);
-              });
+        .untilAsserted(
+            () -> {
+              final AtomicReference<String> newEtag = new AtomicReference<>();
+              webTestClient
+                  .get()
+                  .uri(baseUri)
+                  .header("Accept", "application/fhir+json")
+                  .exchange()
+                  .expectStatus()
+                  .isOk()
+                  .expectHeader()
+                  .exists("ETag")
+                  .expectHeader()
+                  .value(
+                      "ETag",
+                      etag -> {
+                        log.info("New ETag: {}", etag);
+                        newEtag.set(etag);
+                      });
 
-          assertThat(newEtag.get())
-              .isNotNull()
-              .isNotEqualTo(originalEtag.get());
-        });
+              assertThat(newEtag.get()).isNotNull().isNotEqualTo(originalEtag.get());
+            });
   }
-
 }

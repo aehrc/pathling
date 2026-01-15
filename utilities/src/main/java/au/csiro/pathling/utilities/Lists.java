@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,8 +28,7 @@ import java.util.Optional;
  */
 public abstract class Lists {
 
-  private Lists() {
-  }
+  private Lists() {}
 
   /**
    * Returns an optional of given list for non-empty list, or empty optional otherwise.
@@ -40,8 +39,6 @@ public abstract class Lists {
    */
   @Nonnull
   public static <T> Optional<List<T>> optionalOf(@Nonnull final List<T> list) {
-    return list.isEmpty()
-           ? Optional.empty()
-           : Optional.of(list);
+    return list.isEmpty() ? Optional.empty() : Optional.of(list);
   }
 }

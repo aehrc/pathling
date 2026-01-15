@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,19 +21,15 @@ import au.csiro.pathling.fhirpath.definition.ResourceTag;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
 
-/**
- * The default implementation of a resource tag.
- */
+/** The default implementation of a resource tag. */
 @Value(staticConstructor = "of")
 public class DefaultResourceTag implements ResourceTag {
 
-  @Nonnull
-  String code;
+  @Nonnull String code;
 
   @Override
   @Nonnull
   public String toCode() {
     return code;
   }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,11 +39,14 @@ import org.infinispan.manager.EmbeddedCacheManager;
 public class InMemoryCachingTerminologyService extends CachingTerminologyService {
 
   /**
+   * Creates a new in-memory caching terminology service.
+   *
    * @param terminologyClient the terminology client to use for requests
    * @param configuration the caching configuration
    * @param resourcesToClose additional resources to close when this service is closed
    */
-  public InMemoryCachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
+  public InMemoryCachingTerminologyService(
+      @Nonnull final TerminologyClient terminologyClient,
       @Nonnull final HttpClientCachingConfiguration configuration,
       @Nonnull final Closeable... resourcesToClose) {
     super(terminologyClient, configuration, resourcesToClose);
@@ -52,24 +55,23 @@ public class InMemoryCachingTerminologyService extends CachingTerminologyService
   @Override
   protected EmbeddedCacheManager buildCacheManager() {
     final GlobalConfigurationBuilder globalConfigBuilder = new GlobalConfigurationBuilder();
-    globalConfigBuilder.metrics()
-        .gauges(false)
-        .histograms(false);
+    globalConfigBuilder.metrics().gauges(false).histograms(false);
     return new DefaultCacheManager(globalConfigBuilder.build());
   }
 
   @Override
   protected <T extends Serializable> Cache<Integer, TerminologyResult<T>> buildCache(
-      @Nonnull final EmbeddedCacheManager cacheManager, @Nonnull final String cacheName,
+      @Nonnull final EmbeddedCacheManager cacheManager,
+      @Nonnull final String cacheName,
       @Nonnull final Class<T> valueType) {
-    final Configuration cacheConfig = new ConfigurationBuilder()
-        .memory()
-        .maxCount(configuration.getMaxEntries())
-        .whenFull(EvictionStrategy.REMOVE)
-        .build();
+    final Configuration cacheConfig =
+        new ConfigurationBuilder()
+            .memory()
+            .maxCount(configuration.getMaxEntries())
+            .whenFull(EvictionStrategy.REMOVE)
+            .build();
 
     cacheManager.defineConfiguration(cacheName, cacheConfig);
     return cacheManager.getCache(cacheName);
   }
-
 }

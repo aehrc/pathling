@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,18 +13,18 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
 import { useCallback, useMemo, useRef } from "react";
+
 import { bulkSubmit, bulkSubmitStatus, bulkSubmitDownload } from "../api";
 import { config } from "../config";
-import { useAuth } from "../contexts/AuthContext";
 import { useAsyncJob } from "./useAsyncJob";
+import { useAuth } from "../contexts/AuthContext";
+
 import type {
   UseBulkSubmitFn,
-  BulkSubmitRequest,
+  BulkSubmitRequestUnion,
   BulkSubmitManifest,
 } from "../types/hooks";
 
@@ -59,22 +59,27 @@ export const useBulkSubmit: UseBulkSubmitFn = (options) => {
   );
 
   const buildOptions = useCallback(
-    (request: BulkSubmitRequest) => {
+    (request: BulkSubmitRequestUnion) => {
       submissionIdRef.current = request.submissionId;
       return {
-        kickOff: () =>
-          bulkSubmit(fhirBaseUrl!, {
-            submitter: request.submitter,
-            submissionId: request.submissionId,
-            submissionStatus: "in-progress",
-            manifestUrl: request.manifestUrl,
-            fhirBaseUrl: request.fhirBaseUrl,
-            replacesManifestUrl: request.replacesManifestUrl,
-            oauthMetadataUrl: request.oauthMetadataUrl,
-            metadata: request.metadata,
-            fileRequestHeaders: request.fileRequestHeaders,
-            accessToken,
-          }),
+        kickOff:
+          request.mode === "monitor"
+            ? // Monitor mode: no API call, just return the submission ID to start polling.
+              async () => ({ submissionId: request.submissionId })
+            : // Submit mode: call the bulkSubmit API.
+              () =>
+                bulkSubmit(fhirBaseUrl!, {
+                  submitter: request.submitter,
+                  submissionId: request.submissionId,
+                  submissionStatus: "in-progress",
+                  manifestUrl: request.manifestUrl,
+                  fhirBaseUrl: request.fhirBaseUrl,
+                  replacesManifestUrl: request.replacesManifestUrl,
+                  oauthMetadataUrl: request.oauthMetadataUrl,
+                  metadata: request.metadata,
+                  fileRequestHeaders: request.fileRequestHeaders,
+                  accessToken,
+                }),
         getJobId: (result: KickOffResult) => result.submissionId,
         checkStatus: () =>
           bulkSubmitStatus(fhirBaseUrl!, {
@@ -89,11 +94,13 @@ export const useBulkSubmit: UseBulkSubmitFn = (options) => {
         getResult: (status: StatusResult) => status.manifest!,
         cancel: async () => {
           // Cancel by submitting with aborted status.
+          const manifestUrl =
+            request.mode === "submit" ? request.manifestUrl : undefined;
           await bulkSubmit(fhirBaseUrl!, {
             submitter: request.submitter,
             submissionId: request.submissionId,
             submissionStatus: "aborted",
-            manifestUrl: request.manifestUrl,
+            manifestUrl,
             accessToken,
           });
         },
@@ -104,7 +111,7 @@ export const useBulkSubmit: UseBulkSubmitFn = (options) => {
   );
 
   const job = useAsyncJob<
-    BulkSubmitRequest,
+    BulkSubmitRequestUnion,
     KickOffResult,
     StatusResult,
     BulkSubmitManifest

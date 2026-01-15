@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,21 +33,19 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 
-
 /**
  * @see <a
- * href="https://docs.spring.io/spring-security/site/docs/5.2.x/reference/html/test.html">Spring
- * Security - Testing</a>
+ *     href="https://docs.spring.io/spring-security/site/docs/5.2.x/reference/html/test.html">Spring
+ *     Security - Testing</a>
  * @see <a
- * href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
- * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
+ *     href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
+ *     Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
 @TestPropertySource(properties = {"pathling.auth.enabled=false"})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class SecurityDisabledOperationsTest extends SecurityTestForOperations<ExportRequest> {
 
-  @TempDir
-  private static Path tempDir;
+  @TempDir private static Path tempDir;
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
@@ -67,16 +65,15 @@ class SecurityDisabledOperationsTest extends SecurityTestForOperations<ExportReq
 
   @Test
   void testPassIfExportWithTypeWithNoAuth() {
-    assertThatNoException().isThrownBy(
-        () -> performExport(ADMIN_USER, List.of("Patient", "Encounter"), false));
+    assertThatNoException()
+        .isThrownBy(() -> performExport(ADMIN_USER, List.of("Patient", "Encounter"), false));
   }
 
   @Order(Order.DEFAULT + 100)
   @Test
   void testPassExportResultIfExportResultWithNoAuth() {
     performExport();
-    assertThatNoException().isThrownBy(
-        () -> performExportResult(job.getId(), "Patient.00000.ndjson", null));
+    assertThatNoException()
+        .isThrownBy(() -> performExportResult(job.getId(), "Patient.00000.ndjson", null));
   }
-
 }

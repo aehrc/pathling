@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,32 +28,40 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
   @FhirPathTest
   public Stream<DynamicTest> testCodingMembership() {
     return builder()
-        .withSubject(sb -> sb
-            .coding("noCoding", null)
-            .coding("oneCoding", "http://loinc.org|8867-4||'Heart rate'")
-            .codingArray("manyCoding",
-                "http://loinc.org|8480-6||'Systolic blood pressure'",
-                "http://loinc.org|8867-4||'Heart rate'",
-                "http://loinc.org|8462-4||'Diastolic blood pressure'")
-        )
+        .withSubject(
+            sb ->
+                sb.coding("noCoding", null)
+                    .coding("oneCoding", "http://loinc.org|8867-4||'Heart rate'")
+                    .codingArray(
+                        "manyCoding",
+                        "http://loinc.org|8480-6||'Systolic blood pressure'",
+                        "http://loinc.org|8867-4||'Heart rate'",
+                        "http://loinc.org|8462-4||'Diastolic blood pressure'"))
         .group("Coding type")
-        .testTrue("http://loinc.org|8480-6||'Systolic blood pressure' in manyCoding",
+        .testTrue(
+            "http://loinc.org|8480-6||'Systolic blood pressure' in manyCoding",
             "In for existing coding in many")
-        .testTrue("manyCoding contains http://loinc.org|8867-4||'Heart rate'",
+        .testTrue(
+            "manyCoding contains http://loinc.org|8867-4||'Heart rate'",
             "Contains for existing coding in many")
-        .testFalse("http://loinc.org|9999-9||'Non-existent code' in manyCoding",
+        .testFalse(
+            "http://loinc.org|9999-9||'Non-existent code' in manyCoding",
             "In for non-existing coding in many")
-        .testFalse("manyCoding contains http://loinc.org|9999-9||'Non-existent code'",
+        .testFalse(
+            "manyCoding contains http://loinc.org|9999-9||'Non-existent code'",
             "Contains non-existing coding in many")
         .testEmpty("{} in manyCoding", "In for empty literal in many Coding")
         .testEmpty("manyCoding contains {}", "Contains empty literal in many Coding")
-        .testTrue("http://loinc.org|8867-4||'Heart rate' in oneCoding",
-            "In for existing coding in one")
-        .testTrue("oneCoding contains http://loinc.org|8867-4||'Heart rate'",
+        .testTrue(
+            "http://loinc.org|8867-4||'Heart rate' in oneCoding", "In for existing coding in one")
+        .testTrue(
+            "oneCoding contains http://loinc.org|8867-4||'Heart rate'",
             "Contains for existing coding in one")
-        .testFalse("http://loinc.org|9999-9||'Non-existent code' in oneCoding",
+        .testFalse(
+            "http://loinc.org|9999-9||'Non-existent code' in oneCoding",
             "In for non-existing coding in one")
-        .testFalse("oneCoding contains http://loinc.org|9999-9||'Non-existent code'",
+        .testFalse(
+            "oneCoding contains http://loinc.org|9999-9||'Non-existent code'",
             "Contains non-existing coding in one")
         .testEmpty("{} in oneCoding", "In for empty literal in one Coding")
         .testEmpty("oneCoding contains {}", "Contains empty literal in one Coding")
@@ -67,10 +75,7 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
   @FhirPathTest
   public Stream<DynamicTest> testIntegerMembership() {
     return builder()
-        .withSubject(sb -> sb
-            .integer("oneInt", 1)
-            .integerArray("manyInt", 1, 2, 3)
-        )
+        .withSubject(sb -> sb.integer("oneInt", 1).integerArray("manyInt", 1, 2, 3))
         .group("Integer type")
         .testTrue("2 in manyInt", "In for existing Integer in many")
         .testTrue("manyInt contains 2", "Contains for existing Integer in many")
@@ -90,10 +95,9 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
   @FhirPathTest
   public Stream<DynamicTest> testStringMembership() {
     return builder()
-        .withSubject(sb -> sb
-            .string("oneString", "test")
-            .stringArray("manyString", "test1", "test2", "test3")
-        )
+        .withSubject(
+            sb ->
+                sb.string("oneString", "test").stringArray("manyString", "test1", "test2", "test3"))
         .group("String type")
         .testTrue("'test2' in manyString", "In for existing String in many")
         .testTrue("manyString contains 'test2'", "Contains for existing String in many")
@@ -113,10 +117,7 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
   @FhirPathTest
   public Stream<DynamicTest> testBooleanMembership() {
     return builder()
-        .withSubject(sb -> sb
-            .bool("oneBoolean", true)
-            .boolArray("manyBoolean", true, false, true)
-        )
+        .withSubject(sb -> sb.bool("oneBoolean", true).boolArray("manyBoolean", true, false, true))
         .group("Boolean type")
         .testTrue("true in manyBoolean", "In for existing Boolean in many")
         .testTrue("manyBoolean contains false", "Contains for existing Boolean in many")
@@ -134,10 +135,7 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
   @FhirPathTest
   public Stream<DynamicTest> testDecimalMembership() {
     return builder()
-        .withSubject(sb -> sb
-            .decimal("oneDecimal", 1.5)
-            .decimalArray("manyDecimal", 1.5, 2.5, 3.5)
-        )
+        .withSubject(sb -> sb.decimal("oneDecimal", 1.5).decimalArray("manyDecimal", 1.5, 2.5, 3.5))
         .group("Decimal type")
         .testTrue("2.5 in manyDecimal", "In for existing Decimal in many")
         .testTrue("manyDecimal contains 2.5", "Contains for existing Decimal in many")
@@ -157,10 +155,13 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
   @FhirPathTest
   public Stream<DynamicTest> complexTypeMembership() {
     return builder()
-        .withSubject(sb -> sb
-            .element("name", b -> b.fhirType(FHIRDefinedType.HUMANNAME).string("family", "Smith"))
-        )
-        .testError("Unsupported equality for complex types", "name in name",
+        .withSubject(
+            sb ->
+                sb.element(
+                    "name", b -> b.fhirType(FHIRDefinedType.HUMANNAME).string("family", "Smith")))
+        .testError(
+            "Unsupported equality for complex types",
+            "name in name",
             "In with comparable complex type")
         .build();
   }
@@ -168,38 +169,35 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
   @FhirPathTest
   public Stream<DynamicTest> testCrossTypeMembership() {
     return builder()
-        .withSubject(sb -> sb
-            .string("oneString", "test")
-            .boolArray("manyBoolean", true, false, true)
-            .boolArray("twoBooleans", true, false)
-            .stringArray("manyString", "test1", "test2", "test3")
-            .codingArray("manyCoding",
-                "http://loinc.org|8480-6||'Systolic blood pressure'",
-                "http://loinc.org|8867-4||'Heart rate'",
-                "http://loinc.org|8462-4||'Diastolic blood pressure'")
-            .element("name", b -> b.fhirType(FHIRDefinedType.HUMANNAME).string("family", "Smith"))
-        )
+        .withSubject(
+            sb ->
+                sb.string("oneString", "test")
+                    .boolArray("manyBoolean", true, false, true)
+                    .boolArray("twoBooleans", true, false)
+                    .stringArray("manyString", "test1", "test2", "test3")
+                    .codingArray(
+                        "manyCoding",
+                        "http://loinc.org|8480-6||'Systolic blood pressure'",
+                        "http://loinc.org|8867-4||'Heart rate'",
+                        "http://loinc.org|8462-4||'Diastolic blood pressure'")
+                    .element(
+                        "name",
+                        b -> b.fhirType(FHIRDefinedType.HUMANNAME).string("family", "Smith")))
         .group("Cross type membership")
         .testFalse("10 in oneString", "Integer in String one")
         .testFalse("'true' in manyBoolean", "String in boolean one")
-        .testFalse("'http://loinc.org|8480-6||\\'Systolic blood pressure\\'' in manyCoding",
+        .testFalse(
+            "'http://loinc.org|8480-6||\\'Systolic blood pressure\\'' in manyCoding",
             "String in Coding many")
-        .testFalse(
-            "name contains true",
-            "Contains with not comparable collection")
-        .testFalse(
-            "1 in name",
-            "In with not comparable collection")
-        .testFalse(
-            "true contains name",
-            "Contains with not comparable element")
-        .testFalse(
-            "name in 10",
-            "In with not comparable element")
+        .testFalse("name contains true", "Contains with not comparable collection")
+        .testFalse("1 in name", "In with not comparable collection")
+        .testFalse("true contains name", "Contains with not comparable element")
+        .testFalse("name in 10", "In with not comparable element")
         .group("Test illegal membership operations")
-        .testError("twoBooleans in manyBoolean",
-            "Left operand to in operator must be single-valued")
-        .testError("manyBoolean contains manyString",
+        .testError(
+            "twoBooleans in manyBoolean", "Left operand to in operator must be single-valued")
+        .testError(
+            "manyBoolean contains manyString",
             "Left operand to contains operator must be single-valued")
         .build();
   }

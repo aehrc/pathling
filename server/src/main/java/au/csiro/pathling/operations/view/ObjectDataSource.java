@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,8 +42,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  */
 public class ObjectDataSource implements DataSource {
 
-  @Nonnull
-  private final Map<String, Dataset<Row>> data = new HashMap<>();
+  @Nonnull private final Map<String, Dataset<Row>> data = new HashMap<>();
 
   /**
    * Creates a new ObjectDataSource from a list of FHIR resources.
@@ -52,15 +51,18 @@ public class ObjectDataSource implements DataSource {
    * @param encoders the FHIR encoders
    * @param resources the list of FHIR resources
    */
-  public ObjectDataSource(@Nonnull final SparkSession spark, @Nonnull final FhirEncoders encoders,
+  public ObjectDataSource(
+      @Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders encoders,
       @Nonnull final List<IBaseResource> resources) {
-    final Map<String, List<IBaseResource>> groupedResources = resources.stream()
-        .collect(groupingBy(IBase::fhirType));
-    groupedResources.forEach((resourceType, resourceList) -> {
-      final ExpressionEncoder<IBaseResource> encoder = encoders.of(resourceType);
-      final Dataset<Row> dataset = spark.createDataset(resourceList, encoder).toDF();
-      data.put(resourceType, dataset);
-    });
+    final Map<String, List<IBaseResource>> groupedResources =
+        resources.stream().collect(groupingBy(IBase::fhirType));
+    groupedResources.forEach(
+        (resourceType, resourceList) -> {
+          final ExpressionEncoder<IBaseResource> encoder = encoders.of(resourceType);
+          final Dataset<Row> dataset = spark.createDataset(resourceList, encoder).toDF();
+          data.put(resourceType, dataset);
+        });
   }
 
   @Nonnull
@@ -74,5 +76,4 @@ public class ObjectDataSource implements DataSource {
   public Set<String> getResourceTypes() {
     return data.keySet();
   }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,26 +19,16 @@ package au.csiro.pathling.config;
 
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
 import lombok.Data;
 
-import java.util.List;
-
-/**
- * Represents configuration specific to import functionality.
- */
+/** Represents configuration specific to import functionality. */
 @Data
 public class ImportConfiguration {
 
-  /**
-   * A set of URL prefixes which are allowable for use within the import operation.
-   */
-  @NotNull
-  private List<String> allowableSources;
+  /** A set of URL prefixes which are allowable for use within the import operation. */
+  @NotNull private List<String> allowableSources;
 
-  /**
-   * Configuration for ping and pull import operations.
-   */
-  @Nullable
-  private PnpConfiguration pnp;
-
+  /** Configuration for ping and pull import operations. */
+  @Nullable private PnpConfiguration pnp;
 }

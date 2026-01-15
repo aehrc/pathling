@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * E2E tests for the SQL on FHIR page.
  *
@@ -5,6 +22,7 @@
  */
 
 import { expect, test } from "@playwright/test";
+
 import {
   mockCapabilityStatement,
   mockCapabilityStatementWithAuth,
@@ -15,56 +33,117 @@ import {
   mockViewRunNdjson,
 } from "./fixtures/fhirData";
 
+import type { Page } from "@playwright/test";
+
+// =============================================================================
+// Composable mock helpers
+// =============================================================================
+
 /**
- * Sets up API mocks for standard functionality tests.
- * Mocks capabilities without auth, ViewDefinition search, and view run.
+ * Sets up metadata endpoint mock.
+ *
+ * @param page - The Playwright page object.
+ * @param capabilities - The CapabilityStatement to return.
  */
-async function setupStandardMocks(page: import("@playwright/test").Page) {
-  // Mock the metadata endpoint.
+async function mockMetadata(
+  page: Page,
+  capabilities: object = mockCapabilityStatement,
+) {
   await page.route("**/metadata", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/fhir+json",
-      body: JSON.stringify(mockCapabilityStatement),
+      body: JSON.stringify(capabilities),
     });
   });
+}
 
-  // Mock ViewDefinition search endpoint.
+/**
+ * Sets up ViewDefinition search and single-resource mocks.
+ *
+ * @param page - The Playwright page object.
+ * @param bundle - The Bundle to return for ViewDefinition searches.
+ */
+async function mockViewDefinitions(
+  page: Page,
+  bundle: object = mockViewDefinitionBundle,
+) {
   await page.route("**/ViewDefinition?*", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/fhir+json",
-      body: JSON.stringify(mockViewDefinitionBundle),
+      body: JSON.stringify(bundle),
     });
   });
-
-  // Also match ViewDefinition without query params.
   await page.route(/\/ViewDefinition$/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/fhir+json",
-      body: JSON.stringify(mockViewDefinitionBundle),
+      body: JSON.stringify(bundle),
     });
   });
+}
 
-  // Mock view run endpoints (both stored and inline).
-  await page.route("**/ViewDefinition/$run", async (route) => {
-    // POST request for inline view run.
-    await route.fulfill({
-      status: 200,
-      contentType: "application/x-ndjson",
-      body: mockViewRunNdjson,
-    });
-  });
+/**
+ * Sets up view run endpoint mock with custom response.
+ *
+ * @param page - The Playwright page object.
+ * @param response - The response configuration.
+ * @param response.status - HTTP status code (defaults to 200).
+ * @param response.body - Response body (string or object).
+ * @param response.delayMs - Optional delay before responding.
+ */
+async function mockViewRun(
+  page: Page,
+  response: { status?: number; body: string | object; delayMs?: number },
+) {
+  const { status = 200, body, delayMs } = response;
+  const bodyStr = typeof body === "string" ? body : JSON.stringify(body);
+  const contentType =
+    status === 200 ? "application/x-ndjson" : "application/fhir+json";
 
   await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-    // GET request for stored view run.
-    await route.fulfill({
-      status: 200,
-      contentType: "application/x-ndjson",
-      body: mockViewRunNdjson,
-    });
+    if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    await route.fulfill({ status, contentType, body: bodyStr });
   });
+
+  await page.route("**/ViewDefinition/$run", async (route) => {
+    if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    await route.fulfill({ status, contentType, body: bodyStr });
+  });
+}
+
+// =============================================================================
+// Composite setup helpers
+// =============================================================================
+
+/**
+ * Sets up API mocks for standard functionality tests.
+ * Mocks capabilities without auth, ViewDefinition search, and view run.
+ *
+ * @param page - The Playwright page object.
+ */
+async function setupStandardMocks(page: Page) {
+  await mockMetadata(page);
+  await mockViewDefinitions(page);
+  await mockViewRun(page, { body: mockViewRunNdjson });
+}
+
+/**
+ * Sets up mocks with delayed view run response to observe in-progress states.
+ *
+ * @param page - The Playwright page object.
+ * @param options - Configuration options for the mock.
+ * @param options.delayMs - Delay in milliseconds before responding.
+ */
+async function setupDelayedViewRunMocks(
+  page: Page,
+  options: { delayMs?: number } = {},
+) {
+  const { delayMs = 2000 } = options;
+  await mockMetadata(page);
+  await mockViewDefinitions(page);
+  await mockViewRun(page, { body: mockViewRunNdjson, delayMs });
 }
 
 test.describe("SQL on FHIR page", () => {
@@ -97,14 +176,17 @@ test.describe("SQL on FHIR page", () => {
       ).toHaveAttribute("aria-selected", "true");
     });
 
-    test("shows initial results placeholder", async ({ page }) => {
+    test("shows no query cards initially", async ({ page }) => {
       await setupStandardMocks(page);
       await page.goto("/admin/sql-on-fhir");
 
-      // Verify the results placeholder is shown.
+      // Verify no query cards are displayed before executing a query.
       await expect(
-        page.getByText("Execute a view definition to view results"),
-      ).toBeVisible();
+        page.getByText("Executing view definition..."),
+      ).not.toBeVisible();
+      await expect(
+        page.getByRole("columnheader", { name: "patient_id" }),
+      ).not.toBeVisible();
     });
   });
 
@@ -112,14 +194,7 @@ test.describe("SQL on FHIR page", () => {
     test("shows login prompt when auth required but not authenticated", async ({
       page,
     }) => {
-      // Mock capabilities with auth required.
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatementWithAuth),
-        });
-      });
+      await mockMetadata(page, mockCapabilityStatementWithAuth);
 
       await page.goto("/admin/sql-on-fhir");
 
@@ -212,29 +287,8 @@ test.describe("SQL on FHIR page", () => {
 
     test("shows message when no definitions available", async ({ page }) => {
       // Mock with empty ViewDefinition bundle.
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
-      await page.route("**/ViewDefinition?*", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockEmptyViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition$/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockEmptyViewDefinitionBundle),
-        });
-      });
+      await mockMetadata(page);
+      await mockViewDefinitions(page, mockEmptyViewDefinitionBundle);
 
       await page.goto("/admin/sql-on-fhir");
 
@@ -318,39 +372,7 @@ test.describe("SQL on FHIR page", () => {
   test.describe("Results display", () => {
     test("shows loading state during execution", async ({ page }) => {
       // Set up a delayed response to observe loading state.
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
-      await page.route("**/ViewDefinition?*", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition$/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-        // Delay the response.
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        await route.fulfill({
-          status: 200,
-          contentType: "application/x-ndjson",
-          body: mockViewRunNdjson,
-        });
-      });
+      await setupDelayedViewRunMocks(page, { delayMs: 1000 });
 
       await page.goto("/admin/sql-on-fhir");
 
@@ -361,9 +383,9 @@ test.describe("SQL on FHIR page", () => {
       // Click execute.
       await page.getByRole("button", { name: "Execute" }).click();
 
-      // Verify loading state is shown.
+      // Verify loading state is shown in the query card.
       await expect(
-        page.getByRole("button", { name: "Executing..." }),
+        page.getByText("Executing view definition..."),
       ).toBeVisible();
     });
 
@@ -405,37 +427,9 @@ test.describe("SQL on FHIR page", () => {
     });
 
     test("shows empty results message when no rows", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
-      await page.route("**/ViewDefinition?*", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition$/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/x-ndjson",
-          body: mockEmptyViewRunNdjson,
-        });
-      });
+      await mockMetadata(page);
+      await mockViewDefinitions(page);
+      await mockViewRun(page, { body: mockEmptyViewRunNdjson });
 
       await page.goto("/admin/sql-on-fhir");
 
@@ -449,42 +443,14 @@ test.describe("SQL on FHIR page", () => {
     });
 
     test("displays error message on execution failure", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
+      const errorOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [{ severity: "error", diagnostics: "Invalid view definition" }],
+      };
 
-      await page.route("**/ViewDefinition?*", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition$/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockViewDefinitionBundle),
-        });
-      });
-
-      await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-        await route.fulfill({
-          status: 400,
-          contentType: "application/fhir+json",
-          body: JSON.stringify({
-            resourceType: "OperationOutcome",
-            issue: [
-              { severity: "error", diagnostics: "Invalid view definition" },
-            ],
-          }),
-        });
-      });
+      await mockMetadata(page);
+      await mockViewDefinitions(page);
+      await mockViewRun(page, { status: 400, body: errorOutcome });
 
       await page.goto("/admin/sql-on-fhir");
 
@@ -577,6 +543,210 @@ test.describe("SQL on FHIR page", () => {
       await expect(
         page.getByRole("button", { name: "Download" }),
       ).toBeVisible();
+    });
+  });
+
+  test.describe("Multiple queries", () => {
+    test("form remains enabled after starting query", async ({ page }) => {
+      await setupDelayedViewRunMocks(page, { delayMs: 5000 });
+      await page.goto("/admin/sql-on-fhir");
+
+      // Select and execute a view definition.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Wait for query card to appear with loading state.
+      await expect(page.getByText("Executing view definition...")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify form is still enabled (Execute button is clickable).
+      await expect(page.getByRole("button", { name: "Execute" })).toBeEnabled();
+    });
+
+    test("starting second query creates additional result card", async ({
+      page,
+    }) => {
+      await setupDelayedViewRunMocks(page, { delayMs: 5000 });
+      await page.goto("/admin/sql-on-fhir");
+
+      // Start first query.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Wait for first query card to appear.
+      await expect(page.getByText("Executing view definition...")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Start second query.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Observation Vitals" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Verify both query cards are visible (2 cards with loading state).
+      const loadingCards = page.getByText("Executing view definition...");
+      await expect(loadingCards).toHaveCount(2);
+    });
+
+    test("query card displays timestamp", async ({ page }) => {
+      await setupStandardMocks(page);
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute a query.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Wait for query to complete.
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify timestamp is displayed (matches time format like "10:30:45").
+      await expect(page.getByText(/\d{1,2}:\d{2}:\d{2}/)).toBeVisible();
+    });
+
+    test("most recent query appears first", async ({ page }) => {
+      await setupDelayedViewRunMocks(page, { delayMs: 5000 });
+      await page.goto("/admin/sql-on-fhir");
+
+      // Start first query (stored view definition).
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Wait for first query card to appear.
+      await expect(
+        page.getByText("Run stored view definition").first(),
+      ).toBeVisible({ timeout: 10000 });
+
+      // Switch to custom JSON tab and start second query.
+      await page.getByRole("tab", { name: "Provide JSON" }).click();
+      const jsonInput = page.locator("textarea").last();
+      await jsonInput.fill(
+        JSON.stringify({
+          resourceType: "ViewDefinition",
+          name: "Test View",
+          resource: "Patient",
+          status: "active",
+          select: [{ column: [{ path: "id", name: "id" }] }],
+        }),
+      );
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Verify Provide JSON card appears before Select view definition card.
+      // Use nth(2) to skip the tab and its nested text, getting the card labels.
+      const provideJsonBox = await page
+        .getByText("Run provided view definition")
+        .boundingBox();
+      const selectViewBox = await page
+        .getByText("Run stored view definition")
+        .boundingBox();
+      expect(provideJsonBox!.y).toBeLessThan(selectViewBox!.y);
+    });
+  });
+
+  test.describe("Close button", () => {
+    test("close button visible when query is complete", async ({ page }) => {
+      await setupStandardMocks(page);
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute a query.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Wait for query to complete.
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify close button is visible.
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+    });
+
+    test("clicking close button removes completed query card", async ({
+      page,
+    }) => {
+      await setupStandardMocks(page);
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute a query.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Wait for query to complete.
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Click close button.
+      await page.getByRole("button", { name: "Close" }).click();
+
+      // Verify the query card is removed.
+      await expect(page.getByRole("cell", { name: "Smith" })).not.toBeVisible();
+    });
+
+    test("close button visible when query errors", async ({ page }) => {
+      const errorOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [{ severity: "error", diagnostics: "Query failed" }],
+      };
+
+      await mockMetadata(page);
+      await mockViewDefinitions(page);
+      await mockViewRun(page, { status: 500, body: errorOutcome });
+
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute a query.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Wait for error to appear.
+      await expect(page.getByText(/View run failed/)).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Verify close button is visible.
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+    });
+
+    test("clicking close button removes errored query card", async ({
+      page,
+    }) => {
+      const errorOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [{ severity: "error", diagnostics: "Query failed" }],
+      };
+
+      await mockMetadata(page);
+      await mockViewDefinitions(page);
+      await mockViewRun(page, { status: 500, body: errorOutcome });
+
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute a query.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Wait for error and close button.
+      await expect(page.getByText(/View run failed/)).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+
+      // Click close button.
+      await page.getByRole("button", { name: "Close" }).click();
+
+      // Verify the query card is removed.
+      await expect(page.getByText(/View run failed/)).not.toBeVisible();
     });
   });
 });

@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.cache;
 
 import static java.util.Objects.requireNonNull;
@@ -133,7 +150,19 @@ public class CacheableDatabase implements Cacheable {
             .filter(path -> path.matches("^[^.]+\\.parquet$"))
             // Filter out anything that is not a Delta table.
             .filter(path -> DeltaTable.isDeltaTable(spark, path))
-            .map(path -> DeltaTable.forPath(spark, path))
+            // Safely attempt to open the table, handling race conditions where the table may
+            // become inaccessible between the isDeltaTable check and forPath call.
+            .map(
+                path -> {
+                  try {
+                    return Optional.of(DeltaTable.forPath(spark, path));
+                  } catch (final Exception e) {
+                    log.debug("Table became inaccessible during scan: {}", path);
+                    return Optional.<DeltaTable>empty();
+                  }
+                })
+            .filter(Optional::isPresent)
+            .map(Optional::get)
             // Get the latest history entry for each Delta table.
             .map(CacheableDatabase::latestUpdateToTable)
             // Filter out any tables which don't have history rows.
@@ -166,6 +195,8 @@ public class CacheableDatabase implements Cacheable {
   }
 
   /**
+   * Converts an S3 URL to an S3A URL.
+   *
    * @param s3Url The S3 URL that should be converted
    * @return A S3A URL
    */

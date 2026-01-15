@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,19 +33,17 @@ import org.junit.jupiter.api.Test;
 
 class DisplayUdfTest extends AbstractTerminologyTestBase {
 
-
   private static final String DISPLAY_NAME_A = "Test Display Name A";
   private static final String DISPLAY_NAME_B = "Test Display Name B";
 
   private DisplayUdf displayUdf;
   private TerminologyService terminologyService;
 
-
   @BeforeEach
   void setUp() {
     terminologyService = mock(TerminologyService.class);
-    final TerminologyServiceFactory terminologyServiceFactory = mock(
-        TerminologyServiceFactory.class);
+    final TerminologyServiceFactory terminologyServiceFactory =
+        mock(TerminologyServiceFactory.class);
     when(terminologyServiceFactory.build()).thenReturn(terminologyService);
     displayUdf = new DisplayUdf(terminologyServiceFactory);
   }
@@ -63,7 +61,6 @@ class DisplayUdfTest extends AbstractTerminologyTestBase {
     assertNull(displayUdf.call(encode(INVALID_CODING_2), null));
     verifyNoMoreInteractions(terminologyService);
   }
-
 
   @Test
   void testGetsDisplayName() {

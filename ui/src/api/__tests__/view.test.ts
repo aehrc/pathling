@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +13,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ViewDefinition } from "../../types/api";
+
 import { UnauthorizedError } from "../../types/errors";
 import {
   viewExportDownload,
@@ -26,6 +24,8 @@ import {
   viewRun,
   viewRunStored,
 } from "../view";
+
+import type { ViewDefinition } from "../../types/api";
 
 const mockFetch = vi.fn();
 
@@ -288,7 +288,7 @@ describe("viewExportKickOff", () => {
     });
   });
 
-  it("returns job ID from Content-Location header", async () => {
+  it("returns polling URL from Content-Location header", async () => {
     const headers = new Headers();
     headers.set(
       "Content-Location",
@@ -303,7 +303,9 @@ describe("viewExportKickOff", () => {
       views: [{ viewDefinition: sampleViewDefinition }],
     });
 
-    expect(result.jobId).toBe("view-export-123");
+    expect(result.pollingUrl).toBe(
+      "https://example.com/$job?id=view-export-123",
+    );
   });
 
   it("throws error when Content-Location header missing", async () => {

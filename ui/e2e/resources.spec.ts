@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * E2E tests for the Resources page.
  *
@@ -5,6 +22,7 @@
  */
 
 import { expect, test } from "@playwright/test";
+
 import {
   mockCapabilityStatement,
   mockCapabilityStatementWithAuth,
@@ -15,6 +33,8 @@ import {
 /**
  * Sets up API mocks for standard functionality tests.
  * Mocks capabilities without auth and provides patient search results.
+ *
+ * @param page - The Playwright page object.
  */
 async function setupStandardMocks(page: import("@playwright/test").Page) {
   // Mock the metadata endpoint (matches any host).
@@ -391,6 +411,9 @@ test.describe("Resources page", () => {
     /**
      * Helper to get the delete button for the first resource card.
      * The delete button is the 2nd button (index 1) within the card.
+     *
+     * @param page - The Playwright page object.
+     * @returns The delete button locator.
      */
     function getDeleteButton(page: import("@playwright/test").Page) {
       const firstCard = page.getByText("patient-123").locator("../../..");
@@ -522,22 +545,20 @@ test.describe("Resources page", () => {
       await page.route(
         /\/(Patient|Observation|Condition)(\?|\/|$)/,
         async (route) => {
-          if (route.request().method() === "DELETE") {
-            await route.fulfill({
-              status: 500,
-              contentType: "application/fhir+json",
-              body: JSON.stringify({
-                resourceType: "OperationOutcome",
-                issue: [{ severity: "error", diagnostics: "Internal error" }],
-              }),
-            });
-          } else {
-            await route.fulfill({
-              status: 200,
-              contentType: "application/fhir+json",
-              body: JSON.stringify(mockPatientBundle),
-            });
-          }
+          await (route.request().method() === "DELETE"
+            ? route.fulfill({
+                status: 500,
+                contentType: "application/fhir+json",
+                body: JSON.stringify({
+                  resourceType: "OperationOutcome",
+                  issue: [{ severity: "error", diagnostics: "Internal error" }],
+                }),
+              })
+            : route.fulfill({
+                status: 200,
+                contentType: "application/fhir+json",
+                body: JSON.stringify(mockPatientBundle),
+              }));
         },
       );
 

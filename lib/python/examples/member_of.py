@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -17,9 +17,9 @@ import os
 
 from pathling import (
     PathlingContext,
-    to_snomed_coding,
-    to_ecl_value_set,
     member_of,
+    to_ecl_value_set,
+    to_snomed_coding,
 )
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -34,7 +34,7 @@ pc = PathlingContext.create(
 pc.spark.sparkContext.setLogLevel("DEBUG")
 
 csv = pc.spark.read.options(header=True).csv(
-    f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
+    f"file://{os.path.join(HERE, 'data/csv/conditions.csv')}"
 )
 
 VIRAL_INFECTION_ECL = """

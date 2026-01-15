@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * Card component for displaying a single FHIR resource.
  *
@@ -16,9 +33,11 @@ import {
   Text,
   Tooltip,
 } from "@radix-ui/themes";
-import type { Resource } from "fhir/r4";
 import { useState } from "react";
+
 import { useClipboard } from "../../hooks";
+
+import type { Resource } from "fhir/r4";
 
 interface ResourceCardProps {
   resource: Resource;
@@ -28,6 +47,9 @@ interface ResourceCardProps {
 
 /**
  * Extracts a human-readable summary from a FHIR resource based on its type.
+ *
+ * @param resource - The FHIR resource to summarise.
+ * @returns A human-readable summary string or null if not available.
  */
 function getResourceSummary(resource: Resource): string | null {
   const r = resource as unknown as Record<string, unknown>;
@@ -105,6 +127,15 @@ function getResourceSummary(resource: Resource): string | null {
   return null;
 }
 
+/**
+ * Displays a single FHIR resource with expandable JSON view.
+ *
+ * @param root0 - The component props.
+ * @param root0.resource - The FHIR resource to display.
+ * @param root0.fhirBaseUrl - Base URL of the FHIR server.
+ * @param root0.onDelete - Callback when delete is requested.
+ * @returns The resource card component.
+ */
 export function ResourceCard({ resource, fhirBaseUrl, onDelete }: ResourceCardProps) {
   const [expanded, setExpanded] = useState(false);
   const summary = getResourceSummary(resource);

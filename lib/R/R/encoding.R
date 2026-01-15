@@ -27,7 +27,7 @@ library(purrr)
 #' @param column The column in which the resources to encode are stored. If set to NULL, the input
 #'   DataFrame is assumed to have one column of type string.
 #' @return A Spark DataFrame containing the given type of resources encoded into Spark columns.
-#' 
+#'
 #' @family encoding functions
 #'
 #' @importFrom rlang `%||%`
@@ -36,14 +36,17 @@ library(purrr)
 #' @export
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
-#' json_resources_df <- pathling_spark(pc) %>% 
-#'      sparklyr::spark_read_text(path=system.file('extdata','ndjson', 'Condition.ndjson', 
-#'              package='pathling'))
-#' pc %>% pathling_encode(json_resources_df, 'Condition')
+#' json_resources_df <- pathling_spark(pc) %>%
+#'   sparklyr::spark_read_text(path = system.file("extdata", "ndjson", "Condition.ndjson",
+#'     package = "pathling"
+#'   ))
+#' pc %>% pathling_encode(json_resources_df, "Condition")
 #' pathling_disconnect(pc)
 pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
-  sdf_register(j_invoke(pc, "encode", spark_dataframe(df), resource_name,
-                        input_type %||% MimeType$FHIR_JSON, column))
+  sdf_register(j_invoke(
+    pc, "encode", spark_dataframe(df), resource_name,
+    input_type %||% MimeType$FHIR_JSON, column
+  ))
 }
 
 #' Encode FHIR Bundles to a dataframe
@@ -61,20 +64,25 @@ pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = N
 #' @return A Spark DataFrame containing the given type of resources encoded into Spark columns.
 #'
 #' @family encoding functions
-#' 
+#'
 #' @importFrom rlang `%||%`
 #' @importFrom sparklyr sdf_register spark_dataframe j_invoke
-#' 
+#'
 #' @export
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
-#' json_resources_df <- pathling_spark(pc) %>% 
-#'      sparklyr::spark_read_text(path=system.file('extdata','bundle-xml', package='pathling'), 
-#'          whole = TRUE)
-#' pc %>% pathling_encode_bundle(json_resources_df, 'Condition',
-#'      input_type = MimeType$FHIR_XML, column = 'contents')
+#' json_resources_df <- pathling_spark(pc) %>%
+#'   sparklyr::spark_read_text(
+#'     path = system.file("extdata", "bundle-xml", package = "pathling"),
+#'     whole = TRUE
+#'   )
+#' pc %>% pathling_encode_bundle(json_resources_df, "Condition",
+#'   input_type = MimeType$FHIR_XML, column = "contents"
+#' )
 #' pathling_disconnect(pc)
 pathling_encode_bundle <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
-  sdf_register(j_invoke(pc, "encodeBundle", spark_dataframe(df), resource_name,
-                        input_type %||% MimeType$FHIR_JSON, column))
+  sdf_register(j_invoke(
+    pc, "encodeBundle", spark_dataframe(df), resource_name,
+    input_type %||% MimeType$FHIR_JSON, column
+  ))
 }

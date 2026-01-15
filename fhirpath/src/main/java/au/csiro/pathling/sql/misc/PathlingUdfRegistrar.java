@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,16 +16,14 @@
  */
 package au.csiro.pathling.sql.misc;
 
-import au.csiro.pathling.sql.udf.AbstractUDFRegistrar;
+import au.csiro.pathling.sql.udf.AbstractUdfRegistrar;
 import jakarta.annotation.Nonnull;
 
-/**
- * Registration of miscellaneous UDFs.
- */
-public class PathlingUdfRegistrar extends AbstractUDFRegistrar {
+/** Registration of miscellaneous UDFs. */
+public class PathlingUdfRegistrar extends AbstractUdfRegistrar {
 
   @Override
-  protected void registerUDFs(@Nonnull final UDFRegistrar udfRegistrar) {
+  protected void registerUdfs(@Nonnull final UdfRegistrar udfRegistrar) {
     udfRegistrar
         .register(new CodingToLiteral())
         .register(new DecimalToLiteral())

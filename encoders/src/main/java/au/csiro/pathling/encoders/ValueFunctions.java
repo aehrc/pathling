@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,12 +55,10 @@ public class ValueFunctions {
    */
   @Nonnull
   private static UnaryOperator<Expression> liftToExpression(
-      @Nonnull UnaryOperator<Column> columExpression) {
+      @Nonnull final UnaryOperator<Column> columExpression) {
     // This needs to be used rather than ExpressionUtils.expression()
     // to correctly unwrap the underlying expression.
-    return e -> ColumnConversions$.MODULE$.toRichColumn(
-            columExpression.apply(column(e)))
-        .expr();
+    return e -> ColumnConversions$.MODULE$.toRichColumn(columExpression.apply(column(e))).expr();
   }
 
   /**
@@ -81,8 +79,7 @@ public class ValueFunctions {
         new UnresolvedIfArray(
             expression(value),
             liftToExpression(arrayExpression)::apply,
-            liftToExpression(elseExpression)::apply
-        ));
+            liftToExpression(elseExpression)::apply));
   }
 
   /**
@@ -103,8 +100,7 @@ public class ValueFunctions {
         new UnresolvedIfArray2(
             expression(value),
             liftToExpression(arrayExpression)::apply,
-            liftToExpression(elseExpression)::apply
-        ));
+            liftToExpression(elseExpression)::apply));
   }
 
   /**
@@ -121,18 +117,17 @@ public class ValueFunctions {
   }
 
   /**
-   * Returns SQL NULL when a struct field doesn't exist in the schema, instead of throwing an
-   * error.
-   * <p>
-   * This function is essential for handling optional fields in nested structures where a field may
-   * not be present in all instances of a struct type. When the specified field is missing from the
-   * struct schema, this returns null rather than causing a FIELD_NOT_FOUND analysis error.
-   * <p>
-   * <strong>Important:</strong> This only handles fields that don't exist in the schema. If a
-   * field
-   * exists but has a null value, that null value is returned normally.
-   * <p>
-   * <strong>Typical usage:</strong>
+   * Returns SQL NULL when a struct field doesn't exist in the schema, instead of throwing an error.
+   *
+   * <p>This function is essential for handling optional fields in nested structures where a field
+   * may not be present in all instances of a struct type. When the specified field is missing from
+   * the struct schema, this returns null rather than causing a FIELD_NOT_FOUND analysis error.
+   *
+   * <p><strong>Important:</strong> This only handles fields that don't exist in the schema. If a
+   * field exists but has a null value, that null value is returned normally.
+   *
+   * <p><strong>Typical usage:</strong>
+   *
    * <pre>{@code
    * // Safe access to optional field that may not exist in all structs
    * dataset.withColumn("email", nullIfMissingField(col("person").getField("email")))
@@ -140,7 +135,7 @@ public class ValueFunctions {
    *
    * @param value The column expression that may reference a non-existent field
    * @return A column that resolves to null if the field is not found in the schema, or the field's
-   * value (including null) if the field exists
+   *     value (including null) if the field exists
    * @see org.apache.spark.sql.Column#getField(String)
    */
   @Nonnull
@@ -150,47 +145,43 @@ public class ValueFunctions {
     return column(nullOrExpr);
   }
 
-
   /**
    * Performs a recursive tree traversal with value extraction at each level.
-   * <p>
-   * This method implements a depth-first traversal of nested structures, applying a sequence of
+   *
+   * <p>This method implements a depth-first traversal of nested structures, applying a sequence of
    * traversal operations recursively and extracting values at each level. The result is a flattened
    * array containing all extracted values from the tree traversal.
-   * </p>
-   * <p>
-   * The traversal process works as follows:
+   *
+   * <p>The traversal process works as follows:
+   *
    * <ol>
-   *   <li>Apply the extractor to the current value to get the result for this level</li>
-   *   <li>For each traversal operation, apply it to the current value to get child values</li>
-   *   <li>Recursively apply the same process to each child value</li>
-   *   <li>Concatenate all results into a single array</li>
+   *   <li>Apply the extractor to the current value to get the result for this level
+   *   <li>For each traversal operation, apply it to the current value to get child values
+   *   <li>Recursively apply the same process to each child value
+   *   <li>Concatenate all results into a single array
    * </ol>
-   * </p>
-   * <p>
-   * This is particularly useful for traversing self-referential FHIR structures like
-   * QuestionnaireResponse.item, where items can contain nested items through multiple paths
-   * (e.g., item.item and item.answer.item). The method handles missing fields gracefully
-   * by returning empty arrays when fields are not found.
-   * </p>
-   * <p>
-   * <strong>Depth Limiting:</strong> The {@code maxDepth} parameter controls recursion depth
-   * to prevent infinite loops in self-referential structures. Critically, the depth counter
-   * only increments when traversing to a node of the same type as its parent. This allows
-   * finite paths through different types to traverse deeper than {@code maxDepth} while still
-   * preventing infinite recursion in truly self-referential cases. For example, traversing
-   * through alternating types (Item → Answer → Item) will not count against the depth limit,
-   * but traversing with an identity function (Item → Item) will be limited.
-   * </p>
-   * <p>
-   * <strong>Important Requirements:</strong>
+   *
+   * <p>This is particularly useful for traversing self-referential FHIR structures like
+   * QuestionnaireResponse.item, where items can contain nested items through multiple paths (e.g.,
+   * item.item and item.answer.item). The method handles missing fields gracefully by returning
+   * empty arrays when fields are not found.
+   *
+   * <p><strong>Depth Limiting:</strong> The {@code maxDepth} parameter controls recursion depth to
+   * prevent infinite loops in self-referential structures. Critically, the depth counter only
+   * increments when traversing to a node of the same type as its parent. This allows finite paths
+   * through different types to traverse deeper than {@code maxDepth} while still preventing
+   * infinite recursion in truly self-referential cases. For example, traversing through alternating
+   * types (Item → Answer → Item) will not count against the depth limit, but traversing with an
+   * identity function (Item → Item) will be limited.
+   *
+   * <p><strong>Important Requirements:</strong>
+   *
    * <ul>
-   *   <li>The {@code extractor} function must return an array type. If you need to extract
-   *       a scalar value, wrap it in an array (e.g., {@code c -> functions.array(c.getField("id"))}).</li>
-   *   <li>The array type returned by the {@code extractor} must be consistent across all
-   *       traversed nodes. Mixing different array element types will result in a type mismatch error.</li>
+   *   <li>The {@code extractor} function must return an array type. If you need to extract a scalar
+   *       value, wrap it in an array (e.g., {@code c -> functions.array(c.getField("id"))}).
+   *   <li>The array type returned by the {@code extractor} must be consistent across all traversed
+   *       nodes. Mixing different array element types will result in a type mismatch error.
    * </ul>
-   * </p>
    *
    * @param value The starting value column to traverse
    * @param extractor An extraction operation to apply at each node that must return an array type
@@ -199,30 +190,28 @@ public class ValueFunctions {
    * @return A Column containing an array of all extracted values from the tree traversal
    */
   @Nonnull
-  public static Column transformTree(@Nonnull final Column value,
+  public static Column transformTree(
+      @Nonnull final Column value,
       @Nonnull final UnaryOperator<Column> extractor,
       @Nonnull final List<UnaryOperator<Column>> traversals,
-      int maxDepth
-  ) {
+      final int maxDepth) {
 
-    final List<Function1<Expression, Expression>> x = traversals.stream()
-        .map(ValueFunctions::liftToExpression)
-        .map(FunctionConverters::asScalaFromUnaryOperator)
-        .toList();
+    final List<Function1<Expression, Expression>> x =
+        traversals.stream()
+            .map(ValueFunctions::liftToExpression)
+            .map(FunctionConverters::asScalaFromUnaryOperator)
+            .toList();
 
     final Seq<Function1<Expression, Expression>> scalaSeq = CollectionConverters.asScala(x).toSeq();
-    return column(new UnresolvedTransformTree(
-        expression(value),
-        liftToExpression(extractor)::apply,
-        scalaSeq,
-        maxDepth
-    ));
+    return column(
+        new UnresolvedTransformTree(
+            expression(value), liftToExpression(extractor)::apply, scalaSeq, maxDepth));
   }
 
   /**
    * Removes all fields starting with '_' (underscore) from struct values.
-   * <p>
-   * This function is used to clean up internal/synthetic fields from FHIR resources before
+   *
+   * <p>This function is used to clean up internal/synthetic fields from FHIR resources before
    * presenting them to users. Fields that don't start with underscore are preserved. Non-struct
    * values are not affected by this function.
    *

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,35 +55,25 @@ import org.springframework.context.annotation.Import;
  *
  * @author John Grimes
  */
-@Import({
-    FhirServerTestConfiguration.class,
-    PatientCompartmentService.class
-})
+@Import({FhirServerTestConfiguration.class, PatientCompartmentService.class})
 @SpringBootUnitTest
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 @Execution(ExecutionMode.CONCURRENT)
 class ViewDefinitionExportExecutorTest {
 
-  @Autowired
-  private SparkSession sparkSession;
+  @Autowired private SparkSession sparkSession;
 
-  @Autowired
-  private PathlingContext pathlingContext;
+  @Autowired private PathlingContext pathlingContext;
 
-  @Autowired
-  private FhirContext fhirContext;
+  @Autowired private FhirContext fhirContext;
 
-  @Autowired
-  private FhirEncoders fhirEncoders;
+  @Autowired private FhirEncoders fhirEncoders;
 
-  @Autowired
-  private ServerConfiguration serverConfiguration;
+  @Autowired private ServerConfiguration serverConfiguration;
 
-  @Autowired
-  private PatientCompartmentService patientCompartmentService;
+  @Autowired private PatientCompartmentService patientCompartmentService;
 
-  @TempDir
-  private Path tempDir;
+  @TempDir private Path tempDir;
 
   private Path uniqueTempDir;
 
@@ -107,16 +97,16 @@ class ViewDefinitionExportExecutorTest {
 
     final FhirView view = createSimplePatientView();
     final ViewInput viewInput = new ViewInput("patients", view);
-    final ViewDefinitionExportRequest request = new ViewDefinitionExportRequest(
-        "http://example.org/$viewdefinition-export",
-        "http://example.org/fhir",
-        List.of(viewInput),
-        null,
-        ViewExportFormat.NDJSON,
-        true,
-        Collections.emptySet(),
-        null
-    );
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput),
+            null,
+            ViewExportFormat.NDJSON,
+            true,
+            Collections.emptySet(),
+            null);
 
     final List<ViewExportOutput> outputs = executor.execute(request, UUID.randomUUID().toString());
 
@@ -138,16 +128,16 @@ class ViewDefinitionExportExecutorTest {
 
     final FhirView view = createSimplePatientView();
     final ViewInput viewInput = new ViewInput("patients", view);
-    final ViewDefinitionExportRequest request = new ViewDefinitionExportRequest(
-        "http://example.org/$viewdefinition-export",
-        "http://example.org/fhir",
-        List.of(viewInput),
-        null,
-        ViewExportFormat.CSV,
-        true,
-        Collections.emptySet(),
-        null
-    );
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput),
+            null,
+            ViewExportFormat.CSV,
+            true,
+            Collections.emptySet(),
+            null);
 
     final List<ViewExportOutput> outputs = executor.execute(request, UUID.randomUUID().toString());
 
@@ -169,16 +159,16 @@ class ViewDefinitionExportExecutorTest {
 
     final FhirView view = createSimplePatientView();
     final ViewInput viewInput = new ViewInput("patients", view);
-    final ViewDefinitionExportRequest request = new ViewDefinitionExportRequest(
-        "http://example.org/$viewdefinition-export",
-        "http://example.org/fhir",
-        List.of(viewInput),
-        null,
-        ViewExportFormat.PARQUET,
-        true,
-        Collections.emptySet(),
-        null
-    );
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput),
+            null,
+            ViewExportFormat.PARQUET,
+            true,
+            Collections.emptySet(),
+            null);
 
     final List<ViewExportOutput> outputs = executor.execute(request, UUID.randomUUID().toString());
 
@@ -202,16 +192,16 @@ class ViewDefinitionExportExecutorTest {
     final FhirView view2 = createSimplePatientView();
     final ViewInput viewInput1 = new ViewInput("patients_a", view1);
     final ViewInput viewInput2 = new ViewInput("patients_b", view2);
-    final ViewDefinitionExportRequest request = new ViewDefinitionExportRequest(
-        "http://example.org/$viewdefinition-export",
-        "http://example.org/fhir",
-        List.of(viewInput1, viewInput2),
-        null,
-        ViewExportFormat.NDJSON,
-        true,
-        Collections.emptySet(),
-        null
-    );
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput1, viewInput2),
+            null,
+            ViewExportFormat.NDJSON,
+            true,
+            Collections.emptySet(),
+            null);
 
     final List<ViewExportOutput> outputs = executor.execute(request, UUID.randomUUID().toString());
 
@@ -234,16 +224,16 @@ class ViewDefinitionExportExecutorTest {
     // Both views have the same name.
     final ViewInput viewInput1 = new ViewInput("patients", view1);
     final ViewInput viewInput2 = new ViewInput("patients", view2);
-    final ViewDefinitionExportRequest request = new ViewDefinitionExportRequest(
-        "http://example.org/$viewdefinition-export",
-        "http://example.org/fhir",
-        List.of(viewInput1, viewInput2),
-        null,
-        ViewExportFormat.NDJSON,
-        true,
-        Collections.emptySet(),
-        null
-    );
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput1, viewInput2),
+            null,
+            ViewExportFormat.NDJSON,
+            true,
+            Collections.emptySet(),
+            null);
 
     final List<ViewExportOutput> outputs = executor.execute(request, UUID.randomUUID().toString());
 
@@ -267,16 +257,16 @@ class ViewDefinitionExportExecutorTest {
     invalidView.setSelect(Collections.emptyList());
 
     final ViewInput viewInput = new ViewInput("invalid", invalidView);
-    final ViewDefinitionExportRequest request = new ViewDefinitionExportRequest(
-        "http://example.org/$viewdefinition-export",
-        "http://example.org/fhir",
-        List.of(viewInput),
-        null,
-        ViewExportFormat.NDJSON,
-        true,
-        Collections.emptySet(),
-        null
-    );
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput),
+            null,
+            ViewExportFormat.NDJSON,
+            true,
+            Collections.emptySet(),
+            null);
 
     assertThatThrownBy(() -> executor.execute(request, UUID.randomUUID().toString()))
         .isInstanceOf(InvalidRequestException.class);
@@ -287,16 +277,15 @@ class ViewDefinitionExportExecutorTest {
   // -------------------------------------------------------------------------
 
   private ViewDefinitionExportExecutor createExecutor(final IBaseResource... resources) {
-    final QueryableDataSource dataSource = new CustomObjectDataSource(
-        sparkSession, pathlingContext, fhirEncoders, List.of(resources));
+    final QueryableDataSource dataSource =
+        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(resources));
     return new ViewDefinitionExportExecutor(
         dataSource,
         fhirContext,
         sparkSession,
         "file://" + uniqueTempDir.toAbsolutePath(),
         serverConfiguration,
-        patientCompartmentService
-    );
+        patientCompartmentService);
   }
 
   private Patient createPatient(final String id, final String familyName) {
@@ -308,10 +297,9 @@ class ViewDefinitionExportExecutorTest {
 
   private FhirView createSimplePatientView() {
     return FhirView.ofResource("Patient")
-        .select(FhirView.columns(
-            FhirView.column("id", "id"),
-            FhirView.column("family_name", "name.first().family")))
+        .select(
+            FhirView.columns(
+                FhirView.column("id", "id"), FhirView.column("family_name", "name.first().family")))
         .build();
   }
-
 }

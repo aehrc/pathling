@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,8 +44,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitStringLiteral(
-      @Nullable final StringLiteralContext ctx) {
+  public FhirPath visitStringLiteral(@Nullable final StringLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     return Literals.stringLiteral(requireNonNull(fhirPath));
   }
@@ -58,11 +57,9 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitDateTimeLiteral(
-      @Nullable final DateTimeLiteralContext ctx) {
+  public FhirPath visitDateTimeLiteral(@Nullable final DateTimeLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     return Literals.dateTimeLiteral(requireNonNull(fhirPath));
-
   }
 
   @Override
@@ -74,15 +71,13 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitNumberLiteral(
-      @Nullable final NumberLiteralContext ctx) {
+  public FhirPath visitNumberLiteral(@Nullable final NumberLiteralContext ctx) {
     return Literals.numericLiteral(requireNonNull(requireNonNull(ctx).getText()));
   }
 
   @Override
   @Nonnull
-  public FhirPath visitBooleanLiteral(
-      @Nullable final BooleanLiteralContext ctx) {
+  public FhirPath visitBooleanLiteral(@Nullable final BooleanLiteralContext ctx) {
     return Literals.booleanLiteral(requireNonNull(requireNonNull(ctx).getText()));
   }
 
@@ -94,24 +89,21 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitQuantityLiteral(
-      @Nullable final QuantityLiteralContext ctx) {
+  public FhirPath visitQuantityLiteral(@Nullable final QuantityLiteralContext ctx) {
     requireNonNull(ctx);
     @Nullable final String number = ctx.quantity().NUMBER().getText();
     requireNonNull(number);
     @Nullable final TerminalNode ucumUnit = ctx.quantity().unit().STRING();
     return (ucumUnit == null)
-           ? Literals.quantityLiteral(requireNonNull(number),
-        requireNonNull(ctx.quantity().unit().getText()), false)
-           : Literals.quantityLiteral(requireNonNull(number), requireNonNull(ucumUnit.getText()),
-               true);
+        ? Literals.quantityLiteral(
+            requireNonNull(number), requireNonNull(ctx.quantity().unit().getText()), false)
+        : Literals.quantityLiteral(
+            requireNonNull(number), requireNonNull(ucumUnit.getText()), true);
   }
 
   @Override
   @Nonnull
-  public FhirPath visitCodingLiteral(
-      @Nullable final CodingLiteralContext ctx) {
+  public FhirPath visitCodingLiteral(@Nullable final CodingLiteralContext ctx) {
     return Literals.codingLiteral(requireNonNull(requireNonNull(ctx).getText()));
   }
-
 }

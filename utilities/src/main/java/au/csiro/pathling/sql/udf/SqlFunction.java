@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,10 +33,9 @@ public interface SqlFunction {
   String getName();
 
   /**
-   * Gets the return type of the UDF
+   * Gets the return type of the UDF.
    *
    * @return the SQL type returned by the UDF.
    */
   DataType getReturnType();
-
 }

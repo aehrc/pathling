@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,26 +27,25 @@ import org.apache.spark.sql.types.DataType;
 
 /**
  * Spark UDF to parse a FHIRPath quantity literal string to a Quantity struct.
- * <p>
- * Parses strings matching the FHIRPath quantity literal format:
+ *
+ * <p>Parses strings matching the FHIRPath quantity literal format:
+ *
  * <ul>
  *   <li>UCUM units: {@code "value 'unit'"} (e.g., {@code "10 'mg'"}, {@code "1.5 'kg'"})
  *   <li>Calendar duration units: {@code "value unit"} (e.g., {@code "4 days"}, {@code "1 year"})
  * </ul>
- * Returns null if the string cannot be parsed as a valid quantity.
+ *
+ * <p>Returns null if the string cannot be parsed as a valid quantity.
  *
  * @see FhirPathQuantity#parse(String)
  * @see QuantityEncoding#encode(FhirPathQuantity)
  */
 public class StringToQuantity implements SqlFunction1<String, Row> {
 
-  /**
-   * The name of this function when used within SQL.
-   */
+  /** The name of this function when used within SQL. */
   public static final String FUNCTION_NAME = "string_to_quantity";
 
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   @Override
   public String getName() {

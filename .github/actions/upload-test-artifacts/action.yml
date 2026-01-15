@@ -1,0 +1,89 @@
+# Uploads test reports, coverage, and build artifacts.
+#
+# Author: John Grimes
+
+name: Upload Test Artifacts
+description: Uploads test reports, coverage reports, and optionally JARs and language packages.
+
+inputs:
+  name-prefix:
+    description: Prefix for artifact names (e.g., "server-").
+    required: false
+    default: ""
+  path-prefix:
+    description: Path prefix for finding files (e.g., "server/").
+    required: false
+    default: ""
+  include-jars:
+    description: Include built JAR files.
+    required: false
+    default: "false"
+  include-python:
+    description: Include Python wheel.
+    required: false
+    default: "false"
+  include-r:
+    description: Include R package.
+    required: false
+    default: "false"
+  include-site:
+    description: Include documentation site.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Save test reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.name-prefix }}surefire-reports
+        path: ${{ inputs.path-prefix }}**/surefire-reports/
+
+    - name: Save coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.name-prefix }}coverage-reports
+        path: |
+          ${{ inputs.path-prefix }}**/jacoco.exec
+          ${{ inputs.path-prefix }}**/jacoco.xml
+          ${{ inputs.path-prefix }}**/target/site/jacoco
+          ${{ inputs.path-prefix }}**/target/site/jacoco-aggregate
+          ${{ inputs.path-prefix }}lib/python/**/coverage.xml
+
+    - name: Save built JARs
+      if: inputs.include-jars == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: jars
+        path: |
+          utilities/target/utilities-*.jar
+          encoders/target/encoders-*.jar
+          terminology/target/terminology-*.jar
+          fhirpath/target/fhirpath-*.jar
+          library-api/target/library-api-*.jar
+          library-runtime/target/library-runtime-*.jar
+          lib/python/target/python-*.jar
+          lib/R/target/r-*.jar
+        if-no-files-found: error
+
+    - name: Save Python wheel
+      if: inputs.include-python == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-wheel
+        path: lib/python/target/py-dist/pathling-*.whl
+
+    - name: Save R package
+      if: inputs.include-r == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: r-package
+        path: lib/R/target/pathling_*.tar.gz
+
+    - name: Save site
+      if: inputs.include-site == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: site
+        path: site/target/site/

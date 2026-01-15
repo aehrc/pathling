@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +25,8 @@ import org.apache.spark.sql.SparkSession;
 
 public class ViewFromDatabaseApp {
 
-  public static final String VIEW_JSON = """
+  public static final String VIEW_JSON =
+      """
           {
             "resource": "Patient",
             "select": [
@@ -81,23 +82,22 @@ public class ViewFromDatabaseApp {
 
   public static void main(final String[] args) {
 
-    final SparkSession spark = SparkSession.builder()
-        .appName(ViewFromDatabaseApp.class.getName())
-        .master("local[*]")
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config("spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-        .getOrCreate();
+    final SparkSession spark =
+        SparkSession.builder()
+            .appName(ViewFromDatabaseApp.class.getName())
+            .master("local[*]")
+            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+            .config(
+                "spark.sql.catalog.spark_catalog",
+                "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+            .getOrCreate();
 
     final PathlingContext ptc = PathlingContext.create(spark);
 
-    final QueryableDataSource data = ptc.read()
-        .delta("fhirpath/src/test/resources/test-data/parquet");
+    final QueryableDataSource data =
+        ptc.read().delta("fhirpath/src/test/resources/test-data/parquet");
 
-    final Dataset<Row> viewResults = data.view("Patient")
-        .json(VIEW_JSON)
-        .execute()
-        .limit(5);
+    final Dataset<Row> viewResults = data.view("Patient").json(VIEW_JSON).execute().limit(5);
 
     viewResults.show(5);
   }

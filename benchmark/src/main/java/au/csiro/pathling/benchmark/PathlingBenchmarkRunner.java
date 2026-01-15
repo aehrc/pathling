@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,9 +28,14 @@ import org.openjdk.jmh.runner.options.CommandLineOptions;
  */
 public class PathlingBenchmarkRunner {
 
+  /**
+   * Entry point for running the benchmarks.
+   *
+   * @param args command line arguments to pass to JMH
+   * @throws Exception if an error occurs while running the benchmarks
+   */
   public static void main(final String[] args) throws Exception {
     final CommandLineOptions options = new CommandLineOptions(args);
     new Runner(options).run();
   }
-
 }

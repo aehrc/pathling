@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,10 +37,11 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 public class PathlingJwtDecoderFactory implements JwtDecoderFactory<ServerConfiguration> {
 
-  @Nonnull
-  private final PathlingJwtDecoderBuilder builder;
+  @Nonnull private final PathlingJwtDecoderBuilder builder;
 
   /**
+   * Creates a new PathlingJwtDecoderFactory.
+   *
    * @param builder a builder that can create a {@link JwtDecoder}
    */
   public PathlingJwtDecoderFactory(@Nonnull final PathlingJwtDecoderBuilder builder) {
@@ -54,14 +55,16 @@ public class PathlingJwtDecoderFactory implements JwtDecoderFactory<ServerConfig
   }
 
   /**
+   * Creates a JwtDecoder bean for Spring Security.
+   *
    * @param configuration that controls the behaviour of the decoder factory
    * @param factory a factory that can create a {@link JwtDecoder}
    * @return a shiny new {@link JwtDecoder}
    */
   @Bean
-  public static JwtDecoder pathlingJwtDecoder(@Nullable final ServerConfiguration configuration,
+  public static JwtDecoder pathlingJwtDecoder(
+      @Nullable final ServerConfiguration configuration,
       @Nonnull final PathlingJwtDecoderFactory factory) {
     return factory.createDecoder(configuration);
   }
-
 }

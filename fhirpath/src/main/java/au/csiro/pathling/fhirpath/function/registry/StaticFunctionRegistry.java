@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,31 +38,32 @@ import com.google.common.collect.ImmutableMap.Builder;
  */
 public class StaticFunctionRegistry extends InMemoryFunctionRegistry {
 
-
   private static final StaticFunctionRegistry INSTANCE = new StaticFunctionRegistry();
 
   /**
    * Constructs a new instance of the registry, populating it with the standard set of functions.
    */
   public StaticFunctionRegistry() {
-    super(new Builder<String, NamedFunction>()
-        .putAll(MethodDefinedFunction.mapOf(BooleanLogicFunctions.class))
-        .putAll(MethodDefinedFunction.mapOf(ConversionFunctions.class))
-        .putAll(MethodDefinedFunction.mapOf(ExistenceFunctions.class))
-        .putAll(MethodDefinedFunction.mapOf(FhirFunctions.class))
-        .putAll(MethodDefinedFunction.mapOf(FilteringAndProjectionFunctions.class))
-        .putAll(MethodDefinedFunction.mapOf(JoinKeyFunctions.class))
-        .putAll(MethodDefinedFunction.mapOf(StringFunctions.class))
-        .putAll(MethodDefinedFunction.mapOf(SubsettingFunctions.class))
-        .putAll(MethodDefinedFunction.mapOf(TerminologyFunctions.class))
-        .build());
+    super(
+        new Builder<String, NamedFunction>()
+            .putAll(MethodDefinedFunction.mapOf(BooleanLogicFunctions.class))
+            .putAll(MethodDefinedFunction.mapOf(ConversionFunctions.class))
+            .putAll(MethodDefinedFunction.mapOf(ExistenceFunctions.class))
+            .putAll(MethodDefinedFunction.mapOf(FhirFunctions.class))
+            .putAll(MethodDefinedFunction.mapOf(FilteringAndProjectionFunctions.class))
+            .putAll(MethodDefinedFunction.mapOf(JoinKeyFunctions.class))
+            .putAll(MethodDefinedFunction.mapOf(StringFunctions.class))
+            .putAll(MethodDefinedFunction.mapOf(SubsettingFunctions.class))
+            .putAll(MethodDefinedFunction.mapOf(TerminologyFunctions.class))
+            .build());
   }
 
   /**
+   * Gets the singleton instance of the registry.
+   *
    * @return The singleton instance of the registry
    */
   public static StaticFunctionRegistry getInstance() {
     return INSTANCE;
   }
-
 }

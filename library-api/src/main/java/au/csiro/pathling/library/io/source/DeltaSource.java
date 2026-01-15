@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,14 +40,16 @@ public class DeltaSource extends FileSource {
    * @param path the path to the Delta table directory
    */
   public DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
-    super(context, path,
+    super(
+        context,
+        path,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
         FileSource::resourceNameWithQualifierMapper,
         // Delta tables store data in parquet format internally, so we use the parquet extension.
         "parquet",
         context.getSpark().read().format("delta"),
-        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData,
         resourceType -> true);
@@ -59,11 +61,14 @@ public class DeltaSource extends FileSource {
    *
    * @param context the PathlingContext to use
    * @param files a map where keys are resource type names and values are collections of Delta table
-   * paths
+   *     paths
    */
-  public DeltaSource(@Nonnull final PathlingContext context,
+  public DeltaSource(
+      @Nonnull final PathlingContext context,
       @Nonnull final Map<String, Collection<String>> files) {
-    super(context, files,
+    super(
+        context,
+        files,
         // Delta tables store data in parquet format internally, so we use the parquet extension.
         "parquet",
         context.getSpark().read().format("delta"),
@@ -72,5 +77,4 @@ public class DeltaSource extends FileSource {
         (sourceData, resourceType) -> sourceData,
         resourceType -> true);
   }
-
 }

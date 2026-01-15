@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,23 +37,27 @@ public interface Numeric {
 
   /**
    * Get a function that can take two Numeric paths and return a {@link Collection} that contains
-   * the result of a math operation. The type of operation is controlled by supplying a
-   * {@link MathOperation}.
+   * the result of a math operation. The type of operation is controlled by supplying a {@link
+   * MathOperation}.
    *
    * @param operation The {@link MathOperation} type to retrieve a result for
-   * @return A {@link Function} that takes a Numeric as its parameter, and returns a
-   * {@link Collection}.
+   * @return A {@link Function} that takes a Numeric as its parameter, and returns a {@link
+   *     Collection}.
    */
   @Nonnull
   Function<Numeric, Collection> getMathOperation(@Nonnull MathOperation operation);
 
   /**
+   * Gets the column representation for this numeric value.
+   *
    * @return a {@link Column} within the dataset containing the values of the nodes
    */
   @Nonnull
   ColumnRepresentation getColumn();
 
   /**
+   * Gets the numeric value column for use in math operations.
+   *
    * @return a {@link Column} that provides a value that can me used in math operations
    */
   @Nonnull
@@ -69,7 +73,6 @@ public interface Numeric {
   @Nonnull
   Optional<FhirPathType> getType();
 
-
   /**
    * The FHIR type of the result of this Numeric, if known.
    *
@@ -78,45 +81,29 @@ public interface Numeric {
   @Nonnull
   Optional<FHIRDefinedType> getFhirType();
 
-
-  /**
-   * Represents a type of math operator.
-   */
+  /** Represents a type of math operator. */
   enum MathOperation {
-    /**
-     * Addition operator.
-     */
+    /** Addition operator. */
     ADDITION("+", Column::plus),
-    /**
-     * Subtraction operator.
-     */
+    /** Subtraction operator. */
     SUBTRACTION("-", Column::minus),
-    /**
-     * Multiplication operator.
-     */
+    /** Multiplication operator. */
     MULTIPLICATION("*", Column::multiply),
-    /**
-     * Division operator.
-     */
+    /** Division operator. */
     DIVISION("/", functions::try_divide),
-    /**
-     * Modulus operator.
-     */
+    /** Modulus operator. */
     MODULUS("mod", functions::try_mod);
 
-    @Nonnull
-    private final String fhirPath;
+    @Nonnull private final String fhirPath;
 
     /**
      * A Spark function that can be used to execute this type of math operation for simple types.
      * Complex types such as Quantity will implement their own math operation functions.
      */
-    @Nonnull
-    @Getter
-    private final BinaryOperator<Column> sparkFunction;
+    @Nonnull @Getter private final BinaryOperator<Column> sparkFunction;
 
-    MathOperation(@Nonnull final String fhirPath,
-        @Nonnull final BinaryOperator<Column> sparkFunction) {
+    MathOperation(
+        @Nonnull final String fhirPath, @Nonnull final BinaryOperator<Column> sparkFunction) {
       this.fhirPath = fhirPath;
       this.sparkFunction = sparkFunction;
     }
@@ -125,7 +112,6 @@ public interface Numeric {
     public String toString() {
       return fhirPath;
     }
-
   }
 
   /**
@@ -147,5 +133,4 @@ public interface Numeric {
   static Collection defaultNegate(@Nonnull final Collection numericalCollection) {
     return numericalCollection.map(ColumnRepresentation::negate);
   }
-
 }

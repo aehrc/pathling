@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * E2E tests for authentication flows.
  * Tests login prompts, OAuth initiation, callback handling, and error states.
@@ -6,6 +23,7 @@
  */
 
 import { expect, type Page, test } from "@playwright/test";
+
 import {
   mockCapabilityStatement,
   mockCapabilityStatementWithAuth,
@@ -15,6 +33,8 @@ import {
 /**
  * Sets up mocks for a server that requires authentication.
  * Mocks the metadata endpoint to indicate SMART-on-FHIR is required.
+ *
+ * @param page - The Playwright page object.
  */
 async function setupAuthRequiredMocks(page: Page) {
   await page.route("**/metadata", async (route) => {
@@ -36,6 +56,8 @@ async function setupAuthRequiredMocks(page: Page) {
 
 /**
  * Sets up mocks for a server that does not require authentication.
+ *
+ * @param page - The Playwright page object.
  */
 async function setupNoAuthMocks(page: Page) {
   await page.route("**/metadata", async (route) => {
@@ -66,15 +88,17 @@ test.describe("Authentication", () => {
       ).toBeVisible();
     });
 
-    test("login button initiates OAuth flow", async ({ page }) => {
+    test("login button initiates OAuth flow with correct client ID", async ({
+      page,
+    }) => {
       await setupAuthRequiredMocks(page);
 
-      // Track navigation attempts to the OAuth authorization endpoint.
-      let oauthRedirectAttempted = false;
+      // Track navigation attempts to the OAuth authorisation endpoint.
+      let authorizeUrl: URL | null = null;
 
       // Intercept navigation to OAuth endpoint.
       await page.route("**/authorize**", async (route) => {
-        oauthRedirectAttempted = true;
+        authorizeUrl = new URL(route.request().url());
         await route.abort();
       });
 
@@ -83,13 +107,18 @@ test.describe("Authentication", () => {
       // Click the login button.
       await page.getByRole("button", { name: /Login to/ }).click();
 
-      // Verify OAuth redirect was attempted.
+      // Verify OAuth redirect was attempted with correct client ID from SMART config.
       await expect
-        .poll(() => oauthRedirectAttempted, {
+        .poll(() => authorizeUrl !== null, {
           timeout: 5000,
           message: "Expected OAuth redirect to be attempted",
         })
         .toBe(true);
+
+      // Verify the client_id matches the admin_ui_client_id from SMART configuration.
+      expect(authorizeUrl!.searchParams.get("client_id")).toBe(
+        "test-client-id",
+      );
     });
 
     test("login prompt appears on all protected pages", async ({ page }) => {
@@ -160,10 +189,11 @@ test.describe("Authentication", () => {
         sessionStorage.setItem("SMART_KEY", JSON.stringify(stateKey));
 
         // fhirclient stores actual state under the state key.
+        // Note: Uses the admin_ui_client_id from the mock SMART configuration.
         sessionStorage.setItem(
           stateKey,
           JSON.stringify({
-            clientId: "pathling-export-ui",
+            clientId: "test-client-id",
             scope: "openid profile user/*.read",
             redirectUri: window.location.origin + "/admin/callback",
             serverUrl: window.location.origin + "/fhir",

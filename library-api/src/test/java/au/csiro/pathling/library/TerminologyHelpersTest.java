@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,17 +44,16 @@ class TerminologyHelpersTest {
 
   @Test
   void toCoding() {
-    final List<Row> rows = List.of(
-        RowFactory.create("36470004")
-    );
-    final StructField codeField = new StructField("code", DataTypes.StringType, true,
-        new MetadataBuilder().build());
-    final Dataset<Row> dataset = spark.createDataFrame(rows,
-        new StructType(List.of(codeField).toArray(new StructField[]{})));
+    final List<Row> rows = List.of(RowFactory.create("36470004"));
+    final StructField codeField =
+        new StructField("code", DataTypes.StringType, true, new MetadataBuilder().build());
+    final Dataset<Row> dataset =
+        spark.createDataFrame(
+            rows, new StructType(List.of(codeField).toArray(new StructField[] {})));
 
     final Column codeColumn = dataset.col("code");
-    final Column codingColumn = TerminologyHelpers.toCoding(codeColumn, "http://snomed.info/sct",
-        null);
+    final Column codingColumn =
+        TerminologyHelpers.toCoding(codeColumn, "http://snomed.info/sct", null);
 
     final Dataset<Row> result = dataset.select(codingColumn);
     final List<Row> resultRows = result.collectAsList();
@@ -70,32 +69,25 @@ class TerminologyHelpersTest {
 
   @Test
   void toEclValueSet() {
-    final String ecl = "("
-        + " (^929360071000036103|Medicinal product unit of use refset| : "
-        + "  {"
-        + "   700000111000036105|Strength reference set| >= #10000,"
-        + "   177631000036102|has unit| = 700000881000036108|microgram/each|,"
-        + "   700000081000036101|has intended active ingredient| = 1978011000036103|codeine|"
-        + "  },"
-        + "  {"
-        + "   700000111000036105|Strength reference set| >= #250,"
-        + "   177631000036102|has unit| = 700000801000036102|mg/each|,"
-        + "   700000081000036101|has intended active ingredient| = 2442011000036104|paracetamol|"
-        + "  },"
-        + "  30523011000036108|has manufactured dose form| = 154011000036109|tablet|"
-        + " )"
-        + ")";
-    final String expected = "http://snomed.info/sct?fhir_vs=ecl/%28%20%28%5E929360071000036103%7CMe"
-        + "dicinal%20product%20unit%20of%20use%20refset%7C%20%3A%20%20%20%7B%20%20%2070000011100003"
-        + "6105%7CStrength%20reference%20set%7C%20%3E%3D%20%2310000%2C%20%20%20177631000036102%7Cha"
-        + "s%20unit%7C%20%3D%20700000881000036108%7Cmicrogram%2Feach%7C%2C%20%20%207000000810000361"
-        + "01%7Chas%20intended%20active%20ingredient%7C%20%3D%201978011000036103%7Ccodeine%7C%20%20"
-        + "%7D%2C%20%20%7B%20%20%20700000111000036105%7CStrength%20reference%20set%7C%20%3E%3D%20%2"
-        + "3250%2C%20%20%20177631000036102%7Chas%20unit%7C%20%3D%20700000801000036102%7Cmg%2Feach%7"
-        + "C%2C%20%20%20700000081000036101%7Chas%20intended%20active%20ingredient%7C%20%3D%20244201"
-        + "1000036104%7Cparacetamol%7C%20%20%7D%2C%20%2030523011000036108%7Chas%20manufactured%20do"
-        + "se%20form%7C%20%3D%20154011000036109%7Ctablet%7C%20%29%29";
+    final String ecl =
+        "( (^929360071000036103|Medicinal product unit of use refset| :   {  "
+            + " 700000111000036105|Strength reference set| >= #10000,   177631000036102|has unit| ="
+            + " 700000881000036108|microgram/each|,   700000081000036101|has intended active"
+            + " ingredient| = 1978011000036103|codeine|  },  {   700000111000036105|Strength"
+            + " reference set| >= #250,   177631000036102|has unit| = 700000801000036102|mg/each|, "
+            + "  700000081000036101|has intended active ingredient| = 2442011000036104|paracetamol|"
+            + "  },  30523011000036108|has manufactured dose form| = 154011000036109|tablet| ))";
+    final String expected =
+        "http://snomed.info/sct?fhir_vs=ecl/%28%20%28%5E929360071000036103%7CMe"
+            + "dicinal%20product%20unit%20of%20use%20refset%7C%20%3A%20%20%20%7B%20%20%2070000011100003"
+            + "6105%7CStrength%20reference%20set%7C%20%3E%3D%20%2310000%2C%20%20%20177631000036102%7Cha"
+            + "s%20unit%7C%20%3D%20700000881000036108%7Cmicrogram%2Feach%7C%2C%20%20%207000000810000361"
+            + "01%7Chas%20intended%20active%20ingredient%7C%20%3D%201978011000036103%7Ccodeine%7C%20%20"
+            + "%7D%2C%20%20%7B%20%20%20700000111000036105%7CStrength%20reference%20set%7C%20%3E%3D%20%2"
+            + "3250%2C%20%20%20177631000036102%7Chas%20unit%7C%20%3D%20700000801000036102%7Cmg%2Feach%7"
+            + "C%2C%20%20%20700000081000036101%7Chas%20intended%20active%20ingredient%7C%20%3D%20244201"
+            + "1000036104%7Cparacetamol%7C%20%20%7D%2C%20%2030523011000036108%7Chas%20manufactured%20do"
+            + "se%20form%7C%20%3D%20154011000036109%7Ctablet%7C%20%29%29";
     assertEquals(expected, TerminologyHelpers.toEclValueSet(ecl));
   }
-
 }

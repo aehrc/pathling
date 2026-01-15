@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,17 +28,11 @@ import org.apache.spark.sql.Row;
 @SuppressWarnings({"unchecked"})
 public abstract class QueryBuilder {
 
-  /**
-   * The resource type that this query is built for.
-   */
-  @Nonnull
-  protected final String subjectResource;
+  /** The resource type that this query is built for. */
+  @Nonnull protected final String subjectResource;
 
-  /**
-   * The dispatcher that will be used to execute the query.
-   */
-  @Nonnull
-  protected final QueryDispatcher dispatcher;
+  /** The dispatcher that will be used to execute the query. */
+  @Nonnull protected final QueryDispatcher dispatcher;
 
   /**
    * Constructs a QueryBuilder with the specified dispatcher and subject resource.
@@ -46,8 +40,8 @@ public abstract class QueryBuilder {
    * @param dispatcher the dispatcher to use for executing queries
    * @param subjectResource the resource type that this query is built for
    */
-  protected QueryBuilder(@Nonnull final QueryDispatcher dispatcher,
-      @Nonnull final String subjectResource) {
+  protected QueryBuilder(
+      @Nonnull final QueryDispatcher dispatcher, @Nonnull final String subjectResource) {
     this.dispatcher = dispatcher;
     this.subjectResource = subjectResource;
   }
@@ -59,5 +53,4 @@ public abstract class QueryBuilder {
    */
   @Nonnull
   public abstract Dataset<Row> execute();
-
 }

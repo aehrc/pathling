@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,12 +37,13 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class AccessRules {
 
-  @Nonnull
-  private final List<String> allowableSources;
+  @Nonnull private final List<String> allowableSources;
 
   /**
+   * Creates a new AccessRules instance.
+   *
    * @param configuration a {@link ServerConfiguration} object which controls the behaviour of the
-   * AccessRules
+   *     AccessRules
    */
   public AccessRules(@Nonnull final ServerConfiguration configuration) {
 
@@ -51,10 +52,11 @@ public class AccessRules {
       this.allowableSources = List.of();
     } else {
       final List<String> sources = importConfiguration.getAllowableSources();
-      this.allowableSources = sources.stream()
-          .filter(StringUtils::isNotBlank)
-          .map(CacheableDatabase::convertS3ToS3aUrl)
-          .toList();
+      this.allowableSources =
+          sources.stream()
+              .filter(StringUtils::isNotBlank)
+              .map(CacheableDatabase::convertS3ToS3aUrl)
+              .toList();
       if (allowableSources.size() < sources.size()) {
         log.warn(
             "Some empty or blank allowable sources have been ignored in import configuration.");
@@ -85,5 +87,4 @@ public class AccessRules {
   private boolean canImportFrom(@Nonnull final String url) {
     return allowableSources.stream().anyMatch(url::startsWith);
   }
-
 }

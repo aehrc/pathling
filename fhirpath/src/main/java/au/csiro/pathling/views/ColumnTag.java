@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,8 +26,8 @@ import lombok.NoArgsConstructor;
  * Additional metadata describing a column.
  *
  * @see <a
- * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#type-hinting-with-tags">Type
- * Hinting with Tags</a>
+ *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#type-hinting-with-tags">Type
+ *     Hinting with Tags</a>
  */
 @Data
 @AllArgsConstructor(staticName = "of")
@@ -36,21 +36,15 @@ public class ColumnTag {
 
   /**
    * Tag for ANSI SQL type hinting.
-   * <p>
-   * This tag is used to provide a hint about the SQL type of the column, which can be useful for
+   *
+   * <p>This tag is used to provide a hint about the SQL type of the column, which can be useful for
    * database-specific optimizations or type handling.
    */
   public static final String ANSI_TYPE_TAG = "ansi/type";
 
-  /**
-   * Name of tag.
-   */
-  @NotNull
-  String name;
+  /** Name of tag. */
+  @NotNull String name;
 
-  /**
-   * Value of tag.
-   */
-  @NotNull
-  String value;
+  /** Value of tag. */
+  @NotNull String value;
 }

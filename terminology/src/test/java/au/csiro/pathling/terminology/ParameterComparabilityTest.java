@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,38 +29,44 @@ class ParameterComparabilityTest {
 
   @Test
   void validateCode() {
-    final ValidateCodeParameters parameters1 = new ValidateCodeParameters(
-        "http://snomed.info/sct?fhir_vs",
-        ImmutableCoding.of("http://snomed.info/sct", "1032491000168100",
-            "Atomoxetine (GxP) 100 mg capsule, 28"));
+    final ValidateCodeParameters parameters1 =
+        new ValidateCodeParameters(
+            "http://snomed.info/sct?fhir_vs",
+            ImmutableCoding.of(
+                "http://snomed.info/sct",
+                "1032491000168100",
+                "Atomoxetine (GxP) 100 mg capsule, 28"));
 
     // These parameters have a different display in the coding.
-    final ValidateCodeParameters parameters2 = new ValidateCodeParameters(
-        "http://snomed.info/sct?fhir_vs",
-        ImmutableCoding.of("http://snomed.info/sct", "1032491000168100",
-            "Atomoxetine"));
+    final ValidateCodeParameters parameters2 =
+        new ValidateCodeParameters(
+            "http://snomed.info/sct?fhir_vs",
+            ImmutableCoding.of("http://snomed.info/sct", "1032491000168100", "Atomoxetine"));
 
     // These parameters have a different version in the coding.
-    final Coding coding3 = new Coding("http://snomed.info/sct", "1032491000168100",
-        "Atomoxetine (GxP) 100 mg capsule, 28");
+    final Coding coding3 =
+        new Coding(
+            "http://snomed.info/sct", "1032491000168100", "Atomoxetine (GxP) 100 mg capsule, 28");
     coding3.setVersion("http://snomed.info/sct/32506021000036107/version/20220930");
-    final ValidateCodeParameters parameters3 = new ValidateCodeParameters(
-        "http://snomed.info/sct?fhir_vs",
-        ImmutableCoding.of(coding3));
+    final ValidateCodeParameters parameters3 =
+        new ValidateCodeParameters("http://snomed.info/sct?fhir_vs", ImmutableCoding.of(coding3));
 
     // These parameters have a different user selected in the coding.
-    final Coding coding4 = new Coding("http://snomed.info/sct", "1032491000168100",
-        "Atomoxetine (GxP) 100 mg capsule, 28");
+    final Coding coding4 =
+        new Coding(
+            "http://snomed.info/sct", "1032491000168100", "Atomoxetine (GxP) 100 mg capsule, 28");
     coding3.setUserSelected(true);
-    final ValidateCodeParameters parameters4 = new ValidateCodeParameters(
-        "http://snomed.info/sct?fhir_vs",
-        ImmutableCoding.of(coding4));
+    final ValidateCodeParameters parameters4 =
+        new ValidateCodeParameters("http://snomed.info/sct?fhir_vs", ImmutableCoding.of(coding4));
 
     // These parameters have a different value set URL.
-    final ValidateCodeParameters parameters5 = new ValidateCodeParameters(
-        "http://aehrc.csiro.au/some-other-value-set",
-        ImmutableCoding.of("http://snomed.info/sct", "1032491000168100",
-            "Atomoxetine (GxP) 100 mg capsule, 28"));
+    final ValidateCodeParameters parameters5 =
+        new ValidateCodeParameters(
+            "http://aehrc.csiro.au/some-other-value-set",
+            ImmutableCoding.of(
+                "http://snomed.info/sct",
+                "1032491000168100",
+                "Atomoxetine (GxP) 100 mg capsule, 28"));
 
     assertEquals(parameters1, parameters2);
     assertEquals(parameters1.hashCode(), parameters2.hashCode());
@@ -74,5 +80,4 @@ class ParameterComparabilityTest {
     assertNotEquals(parameters1, parameters5);
     assertNotEquals(parameters1.hashCode(), parameters5.hashCode());
   }
-
 }

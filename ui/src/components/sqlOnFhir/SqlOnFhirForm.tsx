@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * Form for executing ViewDefinitions.
  *
@@ -21,8 +38,10 @@ import {
   Tooltip,
 } from "@radix-ui/themes";
 import { useState } from "react";
+
 import { useClipboard } from "../../hooks";
 import { useViewDefinitions } from "../../hooks/useViewDefinitions";
+
 import type { ViewRunRequest } from "../../types/hooks";
 import type { CreateViewDefinitionResult } from "../../types/sqlOnFhir";
 
@@ -48,6 +67,17 @@ const EXAMPLE_VIEW_DEFINITION = `{
   ]
 }`;
 
+/**
+ * Form for selecting and executing ViewDefinitions.
+ *
+ * @param root0 - The component props.
+ * @param root0.onExecute - Callback when view is executed.
+ * @param root0.onSaveToServer - Callback to save view definition to server.
+ * @param root0.isExecuting - Whether execution is in progress.
+ * @param root0.isSaving - Whether save is in progress.
+ * @param root0.disabled - Whether the form is disabled.
+ * @returns The SQL on FHIR form component.
+ */
 export function SqlOnFhirForm({
   onExecute,
   onSaveToServer,
@@ -167,13 +197,13 @@ export function SqlOnFhirForm({
                       </Tooltip>
                       <TextArea
                         readOnly
-                        size="2"
-                        rows={8}
+                        size="1"
+                        rows={16}
                         value={
                           viewDefinitions.find((vd) => vd.id === selectedViewDefinitionId)?.json ??
                           ""
                         }
-                        style={{ fontFamily: "monospace", fontSize: "12px" }}
+                        style={{ fontFamily: "monospace" }}
                       />
                     </Box>
                   ) : (
@@ -192,9 +222,9 @@ export function SqlOnFhirForm({
                   </Text>
                 </Box>
                 <TextArea
-                  size="2"
+                  size="1"
                   resize="vertical"
-                  rows={12}
+                  rows={16}
                   placeholder={EXAMPLE_VIEW_DEFINITION}
                   value={customJson}
                   onChange={(e) => setCustomJson(e.target.value)}

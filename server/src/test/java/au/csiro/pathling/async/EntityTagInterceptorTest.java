@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,8 +66,8 @@ class EntityTagInterceptorTest {
     response = mock(HttpServletResponse.class);
     final ServerConfiguration configuration = mock(ServerConfiguration.class);
     final HttpServerCachingConfiguration httpCaching = mock(HttpServerCachingConfiguration.class);
-    when(httpCaching.getVary()).thenReturn(
-        List.of("Accept", "Accept-Encoding", "Prefer", "Authorization"));
+    when(httpCaching.getVary())
+        .thenReturn(List.of("Accept", "Accept-Encoding", "Prefer", "Authorization"));
     when(httpCaching.getCacheableControl()).thenReturn(List.of("must-revalidate", "max-age=1"));
     when(configuration.getHttpCaching()).thenReturn(httpCaching);
     interceptor = new EntityTagInterceptor(configuration, database, conformanceProvider);
@@ -89,7 +89,8 @@ class EntityTagInterceptorTest {
     setupCacheableRequest("GET", TAG, "$aggregate");
     when(database.cacheKeyMatches(eq(TAG))).thenReturn(true);
 
-    assertThrows(NotModifiedException.class,
+    assertThrows(
+        NotModifiedException.class,
         () -> interceptor.checkIncomingTag(request, requestDetails, response));
 
     verifyCacheableResponseHeaders();
@@ -111,7 +112,8 @@ class EntityTagInterceptorTest {
     setupCacheableRequest("GET", TAG, "metadata");
     when(conformanceProvider.cacheKeyMatches(eq(TAG))).thenReturn(true);
 
-    assertThrows(NotModifiedException.class,
+    assertThrows(
+        NotModifiedException.class,
         () -> interceptor.checkIncomingTag(request, requestDetails, response));
 
     verifyCacheableResponseHeaders();
@@ -160,8 +162,8 @@ class EntityTagInterceptorTest {
     verifyNoInteractions(response);
   }
 
-  void setupCacheableRequest(@Nonnull final String method, @Nullable final String tag,
-      @Nullable final String operation) {
+  void setupCacheableRequest(
+      @Nonnull final String method, @Nullable final String tag, @Nullable final String operation) {
     when(request.getMethod()).thenReturn(method);
     when(request.getHeader(eq("If-None-Match"))).thenReturn("W/\"" + tag + "\"");
     when(requestDetails.getOperation()).thenReturn(operation);
@@ -176,5 +178,4 @@ class EntityTagInterceptorTest {
   void verifyCacheableResponseHeaders() {
     verify(response).addHeader(eq("Vary"), eq("Accept,Accept-Encoding,Prefer,Authorization"));
   }
-
 }

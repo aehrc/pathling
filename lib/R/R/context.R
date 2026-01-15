@@ -15,7 +15,7 @@
 
 
 #' Terminology cache storage type
-#' 
+#'
 #' The type of storage to use for the terminology cache.
 #'
 #' The following values are supported:
@@ -23,15 +23,15 @@
 #'   \item \code{MEMORY} - Use an in-memory cache
 #'   \item \code{DISK} - Use a disk-based cache
 #' }
-#' 
+#'
 #' @export
 StorageType <- list(
-    MEMORY = "memory",
-    DISK = "disk"
+  MEMORY = "memory",
+  DISK = "disk"
 )
 
 #' Create or retrieve the Pathling context
-#' 
+#'
 #' Creates a Pathling context with the given configuration options.
 #'
 #' If no Spark session is provided and there is not one already present in this process, a new
@@ -40,9 +40,9 @@ StorageType <- list(
 #' If a SparkSession is not provided, and one is already running within the current process, it
 #' will be reused.
 #'
-#' It is assumed that the Pathling library API JAR is already on the classpath. If you are running 
+#' It is assumed that the Pathling library API JAR is already on the classpath. If you are running
 #' your own cluster, make sure it is on the list of packages.
-#' 
+#'
 #' @param spark A pre-configured SparkSession instance, use this if you need to control the way
 #'   that the session is set up
 #' @param max_nesting_level Controls the maximum depth of nested element data that is encoded
@@ -88,61 +88,59 @@ StorageType <- list(
 #' @return A Pathling context instance initialized with the specified configuration
 #'
 #' @importFrom sparklyr j_invoke_static j_invoke
-#' 
+#'
 #' @family context lifecycle functions
 #'
 #' @export
-#' 
+#'
 #' @examples \dontrun{
 #' # Create PathlingContext for an existing Spark connecton.
 #' pc <- pathling_connect(spark = sc)
-#' 
+#'
 #' # Create PathlingContext with a new Spark connection.
 #' pc <- pathling_connect()
 #' spark <- pathling_spark(pc)
 #' }
 pathling_connect <- function(
-    spark = NULL,
-    max_nesting_level = 3,
-    enable_extensions = FALSE,
-    enabled_open_types = c(
-        "boolean", "code", "date", "dateTime", "decimal", "integer",
-        "string", "Coding", "CodeableConcept", "Address", "Identifier", "Reference"
-    ),
-    enable_terminology = TRUE,
-    terminology_server_url = "https://tx.ontoserver.csiro.au/fhir",
-    terminology_verbose_request_logging = FALSE,
-    terminology_socket_timeout = 60000,
-    max_connections_total = 32,
-    max_connections_per_route = 16,
-    terminology_retry_enabled = TRUE,
-    terminology_retry_count = 2,
-    enable_cache = TRUE,
-    cache_max_entries = 200000,
-    cache_storage_type = StorageType$MEMORY,
-    cache_storage_path = NULL,
-    cache_default_expiry = 600,
-    cache_override_expiry = NULL,
-    token_endpoint = NULL,
-    enable_auth = FALSE,
-    client_id = NULL,
-    client_secret = NULL,
-    scope = NULL,
-    token_expiry_tolerance = 120,
-    accept_language = NULL,
-    explain_queries = FALSE,
-    max_unbound_traversal_depth = 10
+  spark = NULL,
+  max_nesting_level = 3,
+  enable_extensions = FALSE,
+  enabled_open_types = c(
+    "boolean", "code", "date", "dateTime", "decimal", "integer",
+    "string", "Coding", "CodeableConcept", "Address", "Identifier", "Reference"
+  ),
+  enable_terminology = TRUE,
+  terminology_server_url = "https://tx.ontoserver.csiro.au/fhir",
+  terminology_verbose_request_logging = FALSE,
+  terminology_socket_timeout = 60000,
+  max_connections_total = 32,
+  max_connections_per_route = 16,
+  terminology_retry_enabled = TRUE,
+  terminology_retry_count = 2,
+  enable_cache = TRUE,
+  cache_max_entries = 200000,
+  cache_storage_type = StorageType$MEMORY,
+  cache_storage_path = NULL,
+  cache_default_expiry = 600,
+  cache_override_expiry = NULL,
+  token_endpoint = NULL,
+  enable_auth = FALSE,
+  client_id = NULL,
+  client_secret = NULL,
+  scope = NULL,
+  token_expiry_tolerance = 120,
+  accept_language = NULL,
+  explain_queries = FALSE,
+  max_unbound_traversal_depth = 10
 ) {
-
-
   spark_info <- pathling_spark_info()
 
 
   new_spark_connection <- function() {
     sparklyr::spark_connect(master = "local[*]", config = list("sparklyr.shell.conf" = c(
-        "spark.sql.mapKeyDedupPolicy=LAST_WIN",
-        "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
-        "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
+      "spark.sql.mapKeyDedupPolicy=LAST_WIN",
+      "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
+      "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
     )), version = spark_info$spark_version)
   }
 
@@ -153,87 +151,90 @@ pathling_connect <- function(
   }
 
   encoders_config <- spark %>%
-      j_invoke_static(
-          "au.csiro.pathling.config.EncodingConfiguration", "builder") %>%
-      j_invoke("maxNestingLevel", as.integer(max_nesting_level)) %>%
-      j_invoke("enableExtensions", as.logical(enable_extensions)) %>%
-      j_invoke("openTypes", spark %>% j_to_set(enabled_open_types)) %>%
-      j_invoke("build")
+    j_invoke_static(
+      "au.csiro.pathling.config.EncodingConfiguration", "builder"
+    ) %>%
+    j_invoke("maxNestingLevel", as.integer(max_nesting_level)) %>%
+    j_invoke("enableExtensions", as.logical(enable_extensions)) %>%
+    j_invoke("openTypes", spark %>% j_to_set(enabled_open_types)) %>%
+    j_invoke("build")
 
   client_config <- j_invoke_static(
-      spark, "au.csiro.pathling.config.HttpClientConfiguration", "builder"
+    spark, "au.csiro.pathling.config.HttpClientConfiguration", "builder"
   ) %>%
-      j_invoke("socketTimeout", as.integer(terminology_socket_timeout)) %>%
-      j_invoke("maxConnectionsTotal", as.integer(max_connections_total)) %>%
-      j_invoke("maxConnectionsPerRoute", as.integer(max_connections_per_route)) %>%
-      j_invoke("retryEnabled", as.logical(terminology_retry_enabled)) %>%
-      j_invoke("retryCount", as.integer(terminology_retry_count)) %>%
-      j_invoke("build")
+    j_invoke("socketTimeout", as.integer(terminology_socket_timeout)) %>%
+    j_invoke("maxConnectionsTotal", as.integer(max_connections_total)) %>%
+    j_invoke("maxConnectionsPerRoute", as.integer(max_connections_per_route)) %>%
+    j_invoke("retryEnabled", as.logical(terminology_retry_enabled)) %>%
+    j_invoke("retryCount", as.integer(terminology_retry_count)) %>%
+    j_invoke("build")
 
   cache_storage_type_enum <- j_invoke_static(
-      spark, "au.csiro.pathling.config.HttpClientCachingStorageType", "fromCode",
-      as.character(cache_storage_type)
+    spark, "au.csiro.pathling.config.HttpClientCachingStorageType", "fromCode",
+    as.character(cache_storage_type)
   )
 
   cache_config <- j_invoke_static(
-      spark, "au.csiro.pathling.config.HttpClientCachingConfiguration", "builder"
+    spark, "au.csiro.pathling.config.HttpClientCachingConfiguration", "builder"
   ) %>%
-      j_invoke("enabled", as.logical(enable_cache)) %>%
-      j_invoke("maxEntries", as.integer(cache_max_entries)) %>%
-      j_invoke("storageType", cache_storage_type_enum) %>%
-      j_invoke("storagePath", cache_storage_path) %>%
-      j_invoke("defaultExpiry", as.integer(cache_default_expiry)) %>%
-      j_invoke("overrideExpiry", cache_override_expiry) %>%
-      j_invoke("build")
+    j_invoke("enabled", as.logical(enable_cache)) %>%
+    j_invoke("maxEntries", as.integer(cache_max_entries)) %>%
+    j_invoke("storageType", cache_storage_type_enum) %>%
+    j_invoke("storagePath", cache_storage_path) %>%
+    j_invoke("defaultExpiry", as.integer(cache_default_expiry)) %>%
+    j_invoke("overrideExpiry", cache_override_expiry) %>%
+    j_invoke("build")
 
   auth_config <- j_invoke_static(
-      spark, "au.csiro.pathling.config.TerminologyAuthConfiguration", "builder"
+    spark, "au.csiro.pathling.config.TerminologyAuthConfiguration", "builder"
   ) %>%
-      j_invoke("enabled", as.logical(enable_auth)) %>%
-      j_invoke("tokenEndpoint", token_endpoint) %>%
-      j_invoke("clientId", client_id) %>%
-      j_invoke("clientSecret", client_secret) %>%
-      j_invoke("scope", scope) %>%
-      j_invoke("tokenExpiryTolerance", as.integer(token_expiry_tolerance)) %>%
-      j_invoke("build")
+    j_invoke("enabled", as.logical(enable_auth)) %>%
+    j_invoke("tokenEndpoint", token_endpoint) %>%
+    j_invoke("clientId", client_id) %>%
+    j_invoke("clientSecret", client_secret) %>%
+    j_invoke("scope", scope) %>%
+    j_invoke("tokenExpiryTolerance", as.integer(token_expiry_tolerance)) %>%
+    j_invoke("build")
 
   terminology_config <- j_invoke_static(
-      spark, "au.csiro.pathling.config.TerminologyConfiguration", "builder"
+    spark, "au.csiro.pathling.config.TerminologyConfiguration", "builder"
   ) %>%
-      j_invoke("enabled", as.logical(enable_terminology)) %>%
-      j_invoke("serverUrl", terminology_server_url) %>%
-      j_invoke("verboseLogging", as.logical(terminology_verbose_request_logging)) %>%
-      j_invoke("client", client_config) %>%
-      j_invoke("cache", cache_config) %>%
-      j_invoke("authentication", auth_config) %>%
-      j_invoke("acceptLanguage", accept_language) %>%
-      j_invoke("build")
+    j_invoke("enabled", as.logical(enable_terminology)) %>%
+    j_invoke("serverUrl", terminology_server_url) %>%
+    j_invoke("verboseLogging", as.logical(terminology_verbose_request_logging)) %>%
+    j_invoke("client", client_config) %>%
+    j_invoke("cache", cache_config) %>%
+    j_invoke("authentication", auth_config) %>%
+    j_invoke("acceptLanguage", accept_language) %>%
+    j_invoke("build")
 
   query_config <- j_invoke_static(
-      spark, "au.csiro.pathling.config.QueryConfiguration", "builder"
+    spark, "au.csiro.pathling.config.QueryConfiguration", "builder"
   ) %>%
-      j_invoke("explainQueries", as.logical(explain_queries)) %>%
-      j_invoke("maxUnboundTraversalDepth", as.integer(max_unbound_traversal_depth)) %>%
-      j_invoke("build")
+    j_invoke("explainQueries", as.logical(explain_queries)) %>%
+    j_invoke("maxUnboundTraversalDepth", as.integer(max_unbound_traversal_depth)) %>%
+    j_invoke("build")
 
-  j_invoke_static(spark, "au.csiro.pathling.library.PathlingContext", "builder",
-                  sparklyr::spark_session(spark)) %>%
-      j_invoke("encodingConfiguration", encoders_config) %>%
-      j_invoke("terminologyConfiguration", terminology_config) %>%
-      j_invoke("queryConfiguration", query_config) %>%
-      j_invoke("build")
+  j_invoke_static(
+    spark, "au.csiro.pathling.library.PathlingContext", "builder",
+    sparklyr::spark_session(spark)
+  ) %>%
+    j_invoke("encodingConfiguration", encoders_config) %>%
+    j_invoke("terminologyConfiguration", terminology_config) %>%
+    j_invoke("queryConfiguration", query_config) %>%
+    j_invoke("build")
 }
 
 #' Get the Spark session
-#' 
+#'
 #' Returns the Spark connection associated with a Pathling context.
 #'
 #' @param pc The PathlingContext object.
-#' 
+#'
 #' @return The Spark connection associated with this Pathling context.
-#' 
+#'
 #' @family context lifecycle functions
-#' 
+#'
 #' @export
 pathling_spark <- function(pc) {
   sparklyr::spark_connection(pc)
@@ -242,11 +243,11 @@ pathling_spark <- function(pc) {
 #' Disconnect from the Spark session
 #'
 #' Disconnects the Spark connection associated with a Pathling context.
-#' 
+#'
 #' @param pc The PathlingContext object.
-#' 
+#'
 #' @return No return value, called for side effects only.
-#' 
+#'
 #' @family context lifecycle functions
 #'
 #' @export
@@ -256,11 +257,11 @@ pathling_disconnect <- function(pc) {
 }
 
 #' Disconnect all Spark connections
-#' 
+#'
 #' @return No return value, called for side effects only.
-#' 
+#'
 #' @family context lifecycle functions
-#' 
+#'
 #' @export
 pathling_disconnect_all <- function() {
   sparklyr::spark_disconnect_all()

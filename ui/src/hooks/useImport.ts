@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,17 +13,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
 import { useCallback, useMemo } from "react";
+
 import { importKickOff, jobStatus, jobCancel } from "../api";
 import { config } from "../config";
-import { useAuth } from "../contexts/AuthContext";
 import { useAsyncJob } from "./useAsyncJob";
-import type { UseImportFn, ImportJobRequest } from "../types/hooks";
+import { useAuth } from "../contexts/AuthContext";
+
 import type { ResourceType } from "../types/api";
+import type { UseImportFn, ImportJobRequest } from "../types/hooks";
 
 /**
  * Execute a standard import operation with polling.
@@ -57,13 +57,13 @@ export const useImport: UseImportFn = (options) => {
           mode: request.saveMode,
           accessToken,
         }),
-      getJobId: (result: { jobId: string }) => result.jobId,
-      checkStatus: (jobId: string) =>
-        jobStatus(fhirBaseUrl!, { jobId, accessToken }),
+      getJobId: (result: { pollingUrl: string }) => result.pollingUrl,
+      checkStatus: (pollingUrl: string) =>
+        jobStatus(fhirBaseUrl!, { pollingUrl, accessToken }),
       isComplete: (status: { status: string }) => status.status === "complete",
       getResult: () => undefined,
-      cancel: (jobId: string) =>
-        jobCancel(fhirBaseUrl!, { jobId, accessToken }),
+      cancel: (pollingUrl: string) =>
+        jobCancel(fhirBaseUrl!, { pollingUrl, accessToken }),
       pollingInterval: 3000,
     }),
     [fhirBaseUrl, accessToken],

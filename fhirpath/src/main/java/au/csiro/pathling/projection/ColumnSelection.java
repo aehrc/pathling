@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +32,7 @@ import org.apache.spark.sql.Column;
 /**
  * Creates a projection from the requested columns.
  *
+ * @param columns the list of requested columns for the projection
  * @author John Grimes
  * @author Piotr Szul
  */
@@ -53,9 +54,8 @@ public record ColumnSelection(@Nonnull List<RequestedColumn> columns) implements
     }
 
     // Collect the columns into an array, using the getValue method to get aliased columns
-    final Column[] collectedColumns = projectedColumns.stream()
-        .map(ProjectedColumn::getValue)
-        .toArray(Column[]::new);
+    final Column[] collectedColumns =
+        projectedColumns.stream().map(ProjectedColumn::getValue).toArray(Column[]::new);
 
     // Create a new column that is an array of structs, where each struct has a field for each
     // requested column.
@@ -73,8 +73,8 @@ public record ColumnSelection(@Nonnull List<RequestedColumn> columns) implements
    */
   private @Nonnull Iterator<Collection> getCollectionIterator(
       final @Nonnull ProjectionContext context) {
-    final Stream<Collection> collections = columns.stream()
-        .map(col -> context.evalExpression(col.path()));
+    final Stream<Collection> collections =
+        columns.stream().map(col -> context.evalExpression(col.path()));
     return collections.iterator();
   }
 
@@ -86,11 +86,8 @@ public record ColumnSelection(@Nonnull List<RequestedColumn> columns) implements
   @Nonnull
   @Override
   public String toExpression() {
-    return "columns[" +
-        columns.stream()
-            .map(RequestedColumn::toExpression)
-            .collect(Collectors.joining(", ")) +
-        "]";
+    return "columns["
+        + columns.stream().map(RequestedColumn::toExpression).collect(Collectors.joining(", "))
+        + "]";
   }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,25 +28,25 @@ import org.junit.jupiter.api.Test;
 
 class DefaultDefinitionContextTest {
 
-
   @Test
   void testDefinitions() {
 
-    final ResourceDefinition rs = DefaultResourceDefinition.of(
-        DefaultResourceTag.of("Test"),
-        DefaultPrimitiveDefinition.single("name", FHIRDefinedType.STRING),
-        DefaultPrimitiveDefinition.single("age", FHIRDefinedType.INTEGER),
-        DefaultCompositeDefinition.backbone("address", List.of(
-            DefaultPrimitiveDefinition.single("street", FHIRDefinedType.STRING),
-            DefaultPrimitiveDefinition.single("city", FHIRDefinedType.STRING),
-            DefaultPrimitiveDefinition.single("zip", FHIRDefinedType.STRING)
-        ), 1)
-    );
+    final ResourceDefinition rs =
+        DefaultResourceDefinition.of(
+            DefaultResourceTag.of("Test"),
+            DefaultPrimitiveDefinition.single("name", FHIRDefinedType.STRING),
+            DefaultPrimitiveDefinition.single("age", FHIRDefinedType.INTEGER),
+            DefaultCompositeDefinition.backbone(
+                "address",
+                List.of(
+                    DefaultPrimitiveDefinition.single("street", FHIRDefinedType.STRING),
+                    DefaultPrimitiveDefinition.single("city", FHIRDefinedType.STRING),
+                    DefaultPrimitiveDefinition.single("zip", FHIRDefinedType.STRING)),
+                1));
 
     assertEquals(
         Optional.of(DefaultPrimitiveDefinition.single("age", FHIRDefinedType.INTEGER)),
-        rs.getChildElement("age")
-    );
+        rs.getChildElement("age"));
 
     final DefinitionContext ctx = DefaultDefinitionContext.of(rs);
     assertEquals(rs, ctx.findResourceDefinition("Test"));

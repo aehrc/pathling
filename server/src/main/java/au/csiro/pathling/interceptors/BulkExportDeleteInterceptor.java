@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.interceptors;
 
 import au.csiro.pathling.async.JobProvider;
@@ -18,18 +35,31 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 public class BulkExportDeleteInterceptor {
 
-
   private final JobProvider jobProvider;
 
-  public BulkExportDeleteInterceptor(JobProvider jobProvider) {
+  /**
+   * Creates a new BulkExportDeleteInterceptor.
+   *
+   * @param jobProvider the job provider for managing async jobs
+   */
+  public BulkExportDeleteInterceptor(final JobProvider jobProvider) {
     this.jobProvider = jobProvider;
   }
 
+  /**
+   * Intercepts DELETE requests to the $job endpoint and delegates to the job provider.
+   *
+   * @param request the HTTP servlet request
+   * @param response the HTTP servlet response
+   * @param requestDetails the HAPI request details
+   * @return true to continue processing, false if the request was handled
+   */
+  @SuppressWarnings("unused")
   @Hook(Pointcut.SERVER_INCOMING_REQUEST_POST_PROCESSED)
   public boolean interceptJobDeletion(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      ServletRequestDetails requestDetails) {
+      final HttpServletRequest request,
+      final HttpServletResponse response,
+      final ServletRequestDetails requestDetails) {
     if (!request.getMethod().equals("DELETE") || !request.getPathInfo().matches(".*/\\$job$")) {
       return true;
     }

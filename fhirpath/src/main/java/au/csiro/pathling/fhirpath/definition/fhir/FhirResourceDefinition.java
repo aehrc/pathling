@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,15 +32,11 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author John Grimes
  */
 @Getter
-class FhirResourceDefinition extends
-    BaseFhirNodeDefinition<RuntimeResourceDefinition> implements
-    ResourceDefinition {
+class FhirResourceDefinition extends BaseFhirNodeDefinition<RuntimeResourceDefinition>
+    implements ResourceDefinition {
 
-  /**
-   * The resource tag containing the resource code and optional ResourceType enum.
-   */
-  @Nonnull
-  private final FhirResourceTag resourceTag;
+  /** The resource tag containing the resource code and optional ResourceType enum. */
+  @Nonnull private final FhirResourceTag resourceTag;
 
   @Override
   @Nonnull
@@ -55,7 +51,8 @@ class FhirResourceDefinition extends
    * @param resourceType the optional ResourceType enum (empty for custom types)
    * @param definition the HAPI RuntimeResourceDefinition
    */
-  public FhirResourceDefinition(@Nonnull final String resourceCode,
+  public FhirResourceDefinition(
+      @Nonnull final String resourceCode,
       @Nonnull final Optional<ResourceType> resourceType,
       @Nonnull final RuntimeResourceDefinition definition) {
     super(definition);
@@ -68,7 +65,8 @@ class FhirResourceDefinition extends
    * @param resourceType the ResourceType that describes this resource
    * @param definition the HAPI RuntimeResourceDefinition for this resource
    */
-  public FhirResourceDefinition(@Nonnull final ResourceType resourceType,
+  public FhirResourceDefinition(
+      @Nonnull final ResourceType resourceType,
       @Nonnull final RuntimeResourceDefinition definition) {
     super(definition);
     this.resourceTag = FhirResourceTag.of(resourceType);

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,8 +60,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests for reading from and writing to various data sources and sinks.
- * <p>
- * This test suite validates the functionality of the Pathling library's data I/O operations,
+ *
+ * <p>This test suite validates the functionality of the Pathling library's data I/O operations,
  * including reading from and writing to NDJSON, Parquet, Delta, bundles, datasets, and catalog
  * tables. Tests cover various save modes (overwrite, append, ignore, merge, error) and format
  * options to ensure data integrity and proper error handling across all supported data sources.
@@ -72,16 +72,14 @@ import org.junit.jupiter.params.provider.ValueSource;
 @Slf4j
 class DataSourcesTest {
 
-  static final Path TEST_DATA_PATH = Path.of(
-      "src/test/resources/test-data").toAbsolutePath().normalize();
+  static final Path TEST_DATA_PATH =
+      Path.of("src/test/resources/test-data").toAbsolutePath().normalize();
 
   static PathlingContext pathlingContext;
   static SparkSession spark;
   static Path temporaryDirectory;
 
-  /**
-   * Set up Spark.
-   */
+  /** Set up Spark. */
   @BeforeAll
   static void setupContext() throws IOException {
     // Create a temporary directory that we can use to write data to.
@@ -91,47 +89,54 @@ class DataSourcesTest {
     // Create a Spark session, with Hive support and a warehouse in the temp directory.
     final Path warehouseLocation = temporaryDirectory.resolve("spark-warehouse");
     final Path metastoreLocation = temporaryDirectory.resolve("metastore_db");
-    spark = TestHelpers.sparkBuilder()
-        .config("spark.sql.catalogImplementation", "hive")
-        .config("spark.sql.warehouse.dir", warehouseLocation.toString())
-        .config("javax.jdo.option.ConnectionURL",
-            "jdbc:derby:" + metastoreLocation + ";create=true")
-        .config("spark.ui.enabled", "false")
-        .getOrCreate();
+    spark =
+        TestHelpers.sparkBuilder()
+            .config("spark.sql.catalogImplementation", "hive")
+            .config("spark.sql.warehouse.dir", warehouseLocation.toString())
+            .config(
+                "javax.jdo.option.ConnectionURL",
+                "jdbc:derby:" + metastoreLocation + ";create=true")
+            .config("spark.ui.enabled", "false")
+            .getOrCreate();
 
     // Create the test schema.
     spark.sql("CREATE DATABASE IF NOT EXISTS test");
 
     // Create a mock terminology service factory.
-    final TerminologyServiceFactory terminologyServiceFactory = mock(
-        TerminologyServiceFactory.class, withSettings().serializable());
+    final TerminologyServiceFactory terminologyServiceFactory =
+        mock(TerminologyServiceFactory.class, withSettings().serializable());
 
     // Create the Pathling context.
-    pathlingContext = PathlingContext.createInternal(spark, FhirEncoders.forR4().getOrCreate(),
-        terminologyServiceFactory);
+    pathlingContext =
+        PathlingContext.createInternal(
+            spark, FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
   }
 
-  /**
-   * Clean up catalog after each test.
-   */
+  /** Clean up catalog after each test. */
   @AfterEach
   void cleanupCatalog() {
     // Drop all tables in the default schema.
-    spark.sql("SHOW TABLES").collectAsList().forEach(row -> {
-      final String tableName = row.getAs("tableName");
-      spark.sql("DROP TABLE IF EXISTS " + tableName);
-    });
+    spark
+        .sql("SHOW TABLES")
+        .collectAsList()
+        .forEach(
+            row -> {
+              final String tableName = row.getAs("tableName");
+              spark.sql("DROP TABLE IF EXISTS " + tableName);
+            });
 
     // Drop all tables in the test schema.
-    spark.sql("SHOW TABLES IN test").collectAsList().forEach(row -> {
-      final String tableName = row.getAs("tableName");
-      spark.sql("DROP TABLE IF EXISTS test." + tableName);
-    });
+    spark
+        .sql("SHOW TABLES IN test")
+        .collectAsList()
+        .forEach(
+            row -> {
+              final String tableName = row.getAs("tableName");
+              spark.sql("DROP TABLE IF EXISTS test." + tableName);
+            });
   }
 
-  /**
-   * Tear down Spark.
-   */
+  /** Tear down Spark. */
   @AfterAll
   static void tearDownAll() throws IOException {
     spark.stop();
@@ -142,8 +147,8 @@ class DataSourcesTest {
   @Test
   void ndjsonReadWrite() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Query the data.
     queryNdjsonData(data);
@@ -152,8 +157,8 @@ class DataSourcesTest {
     data.write().saveMode("error").ndjson(temporaryDirectory.resolve("ndjson").toString());
 
     // Read the data back in.
-    final QueryableDataSource newData = pathlingContext.read()
-        .ndjson(temporaryDirectory.resolve("ndjson").toString());
+    final QueryableDataSource newData =
+        pathlingContext.read().ndjson(temporaryDirectory.resolve("ndjson").toString());
 
     // Query the data.
     queryNdjsonData(newData);
@@ -163,16 +168,17 @@ class DataSourcesTest {
   @ValueSource(strings = {"overwrite", "append", "ignore"})
   void ndjsonWriteWithSaveModes(final String saveMode) {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to a temporary location with the specified save mode.
-    data.write().saveMode(saveMode)
+    data.write()
+        .saveMode(saveMode)
         .ndjson(temporaryDirectory.resolve("ndjson-" + saveMode).toString());
 
     // Read the data back in.
-    final QueryableDataSource newData = pathlingContext.read()
-        .ndjson(temporaryDirectory.resolve("ndjson-" + saveMode).toString());
+    final QueryableDataSource newData =
+        pathlingContext.read().ndjson(temporaryDirectory.resolve("ndjson-" + saveMode).toString());
 
     // Query the data.
     queryNdjsonData(newData);
@@ -181,8 +187,8 @@ class DataSourcesTest {
   @Test
   void ndjsonWithExtension() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("jsonl").toString(), "jsonl");
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("jsonl").toString(), "jsonl");
 
     // Query the data.
     queryNdjsonData(data);
@@ -191,8 +197,8 @@ class DataSourcesTest {
   @Test
   void ndjsonReadQualified() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson-qualified").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson-qualified").toString());
 
     // Query the data.
     queryNdjsonData(data);
@@ -200,25 +206,30 @@ class DataSourcesTest {
 
   @Test
   void ndjsonReadWriteCustom() {
-    final Function<String, Set<String>> readMapper = baseName -> Collections.singleton(
-        baseName.replaceFirst("Custom", ""));
+    final Function<String, Set<String>> readMapper =
+        baseName -> Collections.singleton(baseName.replaceFirst("Custom", ""));
 
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson-custom").toString(), "ndjson",
-            readMapper);
+    final QueryableDataSource data =
+        pathlingContext
+            .read()
+            .ndjson(TEST_DATA_PATH.resolve("ndjson-custom").toString(), "ndjson", readMapper);
 
     // Query the data.
     queryNdjsonData(data);
 
     // Write the data back out to a temporary location.
-    data.write().saveMode("error").ndjson(temporaryDirectory.resolve("ndjson-custom").toString(),
-        baseName -> baseName.replaceFirst("Custom", ""));
+    data.write()
+        .saveMode("error")
+        .ndjson(
+            temporaryDirectory.resolve("ndjson-custom").toString(),
+            baseName -> baseName.replaceFirst("Custom", ""));
 
     // Read the data back in.
-    final QueryableDataSource newData = pathlingContext.read()
-        .ndjson(temporaryDirectory.resolve("ndjson-custom").toString(), "ndjson",
-            readMapper);
+    final QueryableDataSource newData =
+        pathlingContext
+            .read()
+            .ndjson(temporaryDirectory.resolve("ndjson-custom").toString(), "ndjson", readMapper);
 
     // Query the data.
     queryNdjsonData(newData);
@@ -227,8 +238,8 @@ class DataSourcesTest {
   @Test
   void ndjsonWithExtract() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Query the data.
     extractNdjsonData(data);
@@ -250,8 +261,8 @@ class DataSourcesTest {
     // by integration tests like ndjsonReadWrite(). Here we focus on constructor delegation.
 
     // Test 1: Constructor with path and extension
-    final QueryableDataSource source1 = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString(), "ndjson");
+    final QueryableDataSource source1 =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString(), "ndjson");
     assertEquals(2, source1.getResourceTypes().size());
     assertTrue(source1.getResourceTypes().contains("Patient"));
     assertTrue(source1.getResourceTypes().contains("Condition"));
@@ -261,14 +272,14 @@ class DataSourcesTest {
     final Map<String, Collection<String>> filesMap = new java.util.HashMap<>();
     filesMap.put("Patient", Collections.singletonList(patientFile.toString()));
 
-    final QueryableDataSource source2a = new au.csiro.pathling.library.io.source.NdjsonSource(
-        pathlingContext, filesMap);
+    final QueryableDataSource source2a =
+        new au.csiro.pathling.library.io.source.NdjsonSource(pathlingContext, filesMap);
     assertEquals(1, source2a.getResourceTypes().size());
     assertTrue(source2a.getResourceTypes().contains("Patient"));
 
     // Test 2b: Constructor with explicit file map (3-arg) - verifies custom extension delegation
-    final QueryableDataSource source2b = new au.csiro.pathling.library.io.source.NdjsonSource(
-        pathlingContext, filesMap, "ndjson");
+    final QueryableDataSource source2b =
+        new au.csiro.pathling.library.io.source.NdjsonSource(pathlingContext, filesMap, "ndjson");
     assertEquals(1, source2b.getResourceTypes().size());
     assertTrue(source2b.getResourceTypes().contains("Patient"));
     // Verify that data can actually be read, confirming the reader.format("text") and
@@ -277,15 +288,18 @@ class DataSourcesTest {
     assertTrue(patientData.schema().fieldNames().length > 0);
 
     // Test 3: Constructor with custom file name mapper - verifies Function delegation
-    final Function<String, Set<String>> mapper = baseName -> {
-      // Custom mapper that only recognizes Patient files.
-      if (baseName.contains("Patient")) {
-        return Collections.singleton("Patient");
-      }
-      return Collections.emptySet();
-    };
-    final QueryableDataSource source3 = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString(), "ndjson", mapper);
+    final Function<String, Set<String>> mapper =
+        baseName -> {
+          // Custom mapper that only recognizes Patient files.
+          if (baseName.contains("Patient")) {
+            return Collections.singleton("Patient");
+          }
+          return Collections.emptySet();
+        };
+    final QueryableDataSource source3 =
+        pathlingContext
+            .read()
+            .ndjson(TEST_DATA_PATH.resolve("ndjson").toString(), "ndjson", mapper);
     assertEquals(1, source3.getResourceTypes().size());
     assertTrue(source3.getResourceTypes().contains("Patient"));
     // Verify encoding by checking we can read the data.
@@ -293,16 +307,21 @@ class DataSourcesTest {
     assertTrue(patientData3.schema().fieldNames().length > 0);
 
     // All constructors produce sources that successfully read and encode NDJSON as FHIR resources,
-    // confirming they passed the correct parameters (format("text"), FHIR_JSON encoding) to FileSource.
+    // confirming they passed the correct parameters (format("text"), FHIR_JSON encoding) to
+    // FileSource.
   }
 
   // Bundles Tests
   @Test
   void bundlesRead() {
     // Read the test bundles.
-    final QueryableDataSource data = pathlingContext.read()
-        .bundles(TEST_DATA_PATH.resolve("bundles").toString(),
-            Set.of("Patient", "Condition"), PathlingContext.FHIR_JSON);
+    final QueryableDataSource data =
+        pathlingContext
+            .read()
+            .bundles(
+                TEST_DATA_PATH.resolve("bundles").toString(),
+                Set.of("Patient", "Condition"),
+                PathlingContext.FHIR_JSON);
 
     // Query the data.
     queryBundlesData(data);
@@ -312,15 +331,24 @@ class DataSourcesTest {
   @Test
   void datasetsRead() {
     // Create the test datasets from Delta source data, using the Spark API.
-    final Dataset<Row> condition = spark.read().format("delta")
-        .load(TEST_DATA_PATH.resolve("delta").resolve("Condition.parquet").toString());
-    final Dataset<Row> patient = spark.read().format("delta")
-        .load(TEST_DATA_PATH.resolve("delta").resolve("Patient.parquet").toString());
+    final Dataset<Row> condition =
+        spark
+            .read()
+            .format("delta")
+            .load(TEST_DATA_PATH.resolve("delta").resolve("Condition.parquet").toString());
+    final Dataset<Row> patient =
+        spark
+            .read()
+            .format("delta")
+            .load(TEST_DATA_PATH.resolve("delta").resolve("Patient.parquet").toString());
 
     // Create a dataset source from the datasets.
-    final QueryableDataSource data = pathlingContext.read().datasets()
-        .dataset("Condition", condition)
-        .dataset("Patient", patient);
+    final QueryableDataSource data =
+        pathlingContext
+            .read()
+            .datasets()
+            .dataset("Condition", condition)
+            .dataset("Patient", patient);
 
     // Query the data.
     queryDeltaData(data);
@@ -330,8 +358,8 @@ class DataSourcesTest {
   @Test
   void parquetReadWrite() {
     // Read the test Parquet data.
-    final QueryableDataSource data = pathlingContext.read()
-        .parquet(TEST_DATA_PATH.resolve("parquet").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().parquet(TEST_DATA_PATH.resolve("parquet").toString());
 
     // Query the data.
     queryParquetData(data);
@@ -340,8 +368,8 @@ class DataSourcesTest {
     data.write().saveMode("error").parquet(temporaryDirectory.resolve("parquet").toString());
 
     // Read the data back in.
-    final QueryableDataSource newData = pathlingContext.read()
-        .parquet(temporaryDirectory.resolve("parquet").toString());
+    final QueryableDataSource newData =
+        pathlingContext.read().parquet(temporaryDirectory.resolve("parquet").toString());
 
     // Query the data.
     queryParquetData(newData);
@@ -351,16 +379,19 @@ class DataSourcesTest {
   @ValueSource(strings = {"overwrite", "append", "ignore"})
   void parquetWriteWithSaveModes(final String saveMode) {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data to Parquet with the specified save mode.
-    data.write().saveMode(saveMode)
+    data.write()
+        .saveMode(saveMode)
         .parquet(temporaryDirectory.resolve("parquet-" + saveMode).toString());
 
     // Read the Parquet data back in.
-    final QueryableDataSource newData = pathlingContext.read()
-        .parquet(temporaryDirectory.resolve("parquet-" + saveMode).toString());
+    final QueryableDataSource newData =
+        pathlingContext
+            .read()
+            .parquet(temporaryDirectory.resolve("parquet-" + saveMode).toString());
 
     // Query the data.
     queryNdjsonData(newData);
@@ -368,23 +399,30 @@ class DataSourcesTest {
 
   @Test
   void parquetReadWriteCustom() {
-    final Function<String, Set<String>> readMapper = baseName -> Collections.singleton(
-        baseName.replaceFirst("Custom", ""));
+    final Function<String, Set<String>> readMapper =
+        baseName -> Collections.singleton(baseName.replaceFirst("Custom", ""));
 
     // Read the test Parquet data with custom filename mapping.
-    final QueryableDataSource data = pathlingContext.read()
-        .parquet(TEST_DATA_PATH.resolve("parquet-custom").toString(), readMapper);
+    final QueryableDataSource data =
+        pathlingContext
+            .read()
+            .parquet(TEST_DATA_PATH.resolve("parquet-custom").toString(), readMapper);
 
     // Query the data.
     queryParquetData(data);
 
     // Write the data back out to a temporary location.
-    data.write().saveMode("error").parquet(temporaryDirectory.resolve("parquet-custom").toString(),
-        baseName -> baseName.replaceFirst("Custom", ""));
+    data.write()
+        .saveMode("error")
+        .parquet(
+            temporaryDirectory.resolve("parquet-custom").toString(),
+            baseName -> baseName.replaceFirst("Custom", ""));
 
     // Read the data back in.
-    final QueryableDataSource newData = pathlingContext.read()
-        .parquet(temporaryDirectory.resolve("parquet-custom").toString(), readMapper);
+    final QueryableDataSource newData =
+        pathlingContext
+            .read()
+            .parquet(temporaryDirectory.resolve("parquet-custom").toString(), readMapper);
 
     // Query the data.
     queryParquetData(newData);
@@ -399,8 +437,8 @@ class DataSourcesTest {
     // by checking observable effects rather than using mocks.
 
     // Test 1: Constructor with path only - uses default filter
-    final QueryableDataSource source1 = pathlingContext.read()
-        .parquet(TEST_DATA_PATH.resolve("parquet").toString());
+    final QueryableDataSource source1 =
+        pathlingContext.read().parquet(TEST_DATA_PATH.resolve("parquet").toString());
     assertEquals(2, source1.getResourceTypes().size());
     assertTrue(source1.getResourceTypes().contains("Patient"));
     assertTrue(source1.getResourceTypes().contains("Condition"));
@@ -408,21 +446,24 @@ class DataSourcesTest {
     // Test 2: Constructor with path and resource type filter
     final Predicate<org.hl7.fhir.r4.model.Enumerations.ResourceType> filter =
         resourceType -> resourceType == org.hl7.fhir.r4.model.Enumerations.ResourceType.PATIENT;
-    final QueryableDataSource source2 = new au.csiro.pathling.library.io.source.ParquetSource(
-        pathlingContext, TEST_DATA_PATH.resolve("parquet").toString(), filter);
+    final QueryableDataSource source2 =
+        new au.csiro.pathling.library.io.source.ParquetSource(
+            pathlingContext, TEST_DATA_PATH.resolve("parquet").toString(), filter);
     // Filter is applied during FileSource initialization
     assertEquals(1, source2.getResourceTypes().size());
     assertTrue(source2.getResourceTypes().contains("Patient"));
 
     // Test 3: Constructor with path and custom file name mapper
-    final Function<String, Set<String>> mapper = baseName -> {
-      if (baseName.contains("Patient")) {
-        return Collections.singleton("Patient");
-      }
-      return Collections.emptySet();
-    };
-    final QueryableDataSource source3 = new au.csiro.pathling.library.io.source.ParquetSource(
-        pathlingContext, TEST_DATA_PATH.resolve("parquet").toString(), mapper);
+    final Function<String, Set<String>> mapper =
+        baseName -> {
+          if (baseName.contains("Patient")) {
+            return Collections.singleton("Patient");
+          }
+          return Collections.emptySet();
+        };
+    final QueryableDataSource source3 =
+        new au.csiro.pathling.library.io.source.ParquetSource(
+            pathlingContext, TEST_DATA_PATH.resolve("parquet").toString(), mapper);
     assertEquals(1, source3.getResourceTypes().size());
     assertTrue(source3.getResourceTypes().contains("Patient"));
 
@@ -433,8 +474,9 @@ class DataSourcesTest {
 
     final Predicate<org.hl7.fhir.r4.model.Enumerations.ResourceType> filterForTest4 =
         resourceType -> true;
-    final QueryableDataSource source4 = new au.csiro.pathling.library.io.source.ParquetSource(
-        pathlingContext, filesMap, filterForTest4);
+    final QueryableDataSource source4 =
+        new au.csiro.pathling.library.io.source.ParquetSource(
+            pathlingContext, filesMap, filterForTest4);
     assertEquals(1, source4.getResourceTypes().size());
     assertTrue(source4.getResourceTypes().contains("Patient"));
     // Verify data can be read (confirms parquet format reader and no-op transformer)
@@ -444,21 +486,23 @@ class DataSourcesTest {
     // Test 5: Constructor with explicit file map and file name mapper
     final Function<String, Set<String>> mapperForTest5 =
         baseName -> Collections.singleton("Patient");
-    final QueryableDataSource source5 = new au.csiro.pathling.library.io.source.ParquetSource(
-        pathlingContext, filesMap, mapperForTest5);
+    final QueryableDataSource source5 =
+        new au.csiro.pathling.library.io.source.ParquetSource(
+            pathlingContext, filesMap, mapperForTest5);
     assertEquals(1, source5.getResourceTypes().size());
     assertTrue(source5.getResourceTypes().contains("Patient"));
 
     // All constructors produce sources that successfully read Parquet data without transformation,
-    // confirming they passed the correct parameters (parquet format, identity transformer) to FileSource.
+    // confirming they passed the correct parameters (parquet format, identity transformer) to
+    // FileSource.
   }
 
   // Delta Tests
   @Test
   void deltaReadWrite() {
     // Read the test Delta data.
-    final QueryableDataSource data = pathlingContext.read()
-        .delta(TEST_DATA_PATH.resolve("delta").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().delta(TEST_DATA_PATH.resolve("delta").toString());
 
     // Query the data.
     queryDeltaData(data);
@@ -467,8 +511,8 @@ class DataSourcesTest {
     data.write().delta(temporaryDirectory.resolve("delta").toString());
 
     // Read the data back in.
-    final QueryableDataSource newData = pathlingContext.read()
-        .delta(temporaryDirectory.resolve("delta").toString());
+    final QueryableDataSource newData =
+        pathlingContext.read().delta(temporaryDirectory.resolve("delta").toString());
 
     // Query the data.
     queryDeltaData(newData);
@@ -478,16 +522,17 @@ class DataSourcesTest {
   @ValueSource(strings = {"overwrite", "append", "ignore"})
   void deltaWriteWithSaveModes(final String saveMode) {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data to Delta with the specified save mode.
-    data.write().saveMode(saveMode)
+    data.write()
+        .saveMode(saveMode)
         .delta(temporaryDirectory.resolve("delta-" + saveMode).toString());
 
     // Read the Delta data back in.
-    final QueryableDataSource newData = pathlingContext.read()
-        .delta(temporaryDirectory.resolve("delta-" + saveMode).toString());
+    final QueryableDataSource newData =
+        pathlingContext.read().delta(temporaryDirectory.resolve("delta-" + saveMode).toString());
 
     // Query the data.
     queryNdjsonData(newData);
@@ -523,8 +568,8 @@ class DataSourcesTest {
   @Test
   void deltaWriteOverwriteExisting() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data to Delta initially.
     final String deltaPath = temporaryDirectory.resolve("delta-overwrite-test").toString();
@@ -548,8 +593,8 @@ class DataSourcesTest {
   @Test
   void deltaConstructorDelegation() {
     // Test 1: Constructor with path
-    final QueryableDataSource source1 = pathlingContext.read()
-        .delta(TEST_DATA_PATH.resolve("delta").toString());
+    final QueryableDataSource source1 =
+        pathlingContext.read().delta(TEST_DATA_PATH.resolve("delta").toString());
     assertEquals(2, source1.getResourceTypes().size());
     assertTrue(source1.getResourceTypes().contains("Patient"));
     assertTrue(source1.getResourceTypes().contains("Condition"));
@@ -560,8 +605,8 @@ class DataSourcesTest {
     final Map<String, Collection<String>> filesMap = new java.util.HashMap<>();
     filesMap.put("Patient", Collections.singletonList(patientFile.toString()));
 
-    final QueryableDataSource source2 = new au.csiro.pathling.library.io.source.DeltaSource(
-        pathlingContext, filesMap);
+    final QueryableDataSource source2 =
+        new au.csiro.pathling.library.io.source.DeltaSource(pathlingContext, filesMap);
     assertEquals(1, source2.getResourceTypes().size());
     assertTrue(source2.getResourceTypes().contains("Patient"));
 
@@ -575,8 +620,8 @@ class DataSourcesTest {
   @Test
   void tablesReadWrite() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Query the data.
     queryNdjsonData(data);
@@ -594,8 +639,8 @@ class DataSourcesTest {
   @Test
   void tablesWriteWithOverwrite() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to tables.
     data.write().saveMode("overwrite").tables("test");
@@ -611,8 +656,8 @@ class DataSourcesTest {
   @ValueSource(strings = {"append", "ignore"})
   void tablesWriteWithSaveModes(final String saveMode) {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data to catalog tables with the specified save mode.
     data.write().saveMode(saveMode).tables();
@@ -627,8 +672,8 @@ class DataSourcesTest {
   @Test
   void tablesWriteWithMerge() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to tables using merge (creates new tables since none exist).
     data.write().saveMode("merge").tables("test", "delta");
@@ -652,8 +697,8 @@ class DataSourcesTest {
   @Test
   void tablesWriteWithParquetFormat() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data to catalog tables using Parquet format.
     data.write().saveMode("overwrite").tables("test", "parquet");
@@ -668,8 +713,8 @@ class DataSourcesTest {
   @Test
   void tablesWriteWithDeltaFormat() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to tables using delta format and overwrite mode.
     data.write().saveMode("overwrite").tables("test", "delta");
@@ -684,32 +729,33 @@ class DataSourcesTest {
   @Test
   void catalogSourceWithMap() {
     // Read the test NDJSON data and write to tables.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     data.write().saveMode("overwrite").tables("test");
 
     // Read from catalog and apply a map operation.
     // This covers line 166 (map method) and line 109 (universal operator application).
     final QueryableDataSource catalogSource = pathlingContext.read().tables("test");
-    final QueryableDataSource mappedSource = catalogSource.map(
-        (resourceType, dataset) -> {
-          // Add a new column to verify the map operation was applied.
-          return dataset.withColumn("mapped", org.apache.spark.sql.functions.lit(true));
-        });
+    final QueryableDataSource mappedSource =
+        catalogSource.map(
+            (resourceType, dataset) -> {
+              // Add a new column to verify the map operation was applied.
+              return dataset.withColumn("mapped", org.apache.spark.sql.functions.lit(true));
+            });
 
     // Verify the mapped dataset has the new column.
     final Dataset<Row> patientData = mappedSource.read("Patient");
     assertTrue(patientData.schema().fieldNames().length > 0);
-    final java.util.List<String> columnNames = java.util.Arrays.asList(
-        patientData.schema().fieldNames());
+    final java.util.List<String> columnNames =
+        java.util.Arrays.asList(patientData.schema().fieldNames());
     assertTrue(columnNames.contains("mapped"));
   }
 
   @Test
   void catalogSourceWithCache() {
     // Read the test NDJSON data and write to tables.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     data.write().saveMode("overwrite").tables("test");
 
     // Read from catalog and apply cache.
@@ -729,15 +775,15 @@ class DataSourcesTest {
   @Test
   void catalogSourceWithFilterByResourceType() {
     // Read the test NDJSON data and write to tables.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     data.write().saveMode("overwrite").tables("test");
 
     // Read from catalog and apply resource type filter.
     // This covers line 173 (filterByResourceType method) and line 106 (filter exclusion).
     final QueryableDataSource catalogSource = pathlingContext.read().tables("test");
-    final QueryableDataSource filteredSource = catalogSource.filterByResourceType(
-        resourceType -> resourceType.equals("Patient"));
+    final QueryableDataSource filteredSource =
+        catalogSource.filterByResourceType(resourceType -> resourceType.equals("Patient"));
 
     // Verify Patient data can be read.
     final Dataset<Row> patientData = filteredSource.read("Patient");
@@ -750,7 +796,8 @@ class DataSourcesTest {
 
   @Test
   void catalogSourceWithNonExistentSchema() {
-    // Attempting to read from a non-existent schema should throw an exception when getting resource types.
+    // Attempting to read from a non-existent schema should throw an exception when getting resource
+    // types.
     // This covers line 156 (AnalysisException handling).
     final QueryableDataSource source = pathlingContext.read().tables("nonexistent_schema_12345");
     // The exception is thrown when we try to list tables from the non-existent schema.
@@ -760,8 +807,8 @@ class DataSourcesTest {
   @Test
   void catalogSourceWithTransformation() {
     // Read the test NDJSON data and write to tables.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     data.write().saveMode("overwrite").tables("test");
 
     // Create a CatalogSource with a transformation operator using the public constructor.
@@ -775,14 +822,13 @@ class DataSourcesTest {
             java.util.Optional.of("test"),
             java.util.Optional.of(transformation),
             java.util.Optional.empty(),
-            java.util.Optional.empty()
-        );
+            java.util.Optional.empty());
 
     // Read data and verify the transformation was applied.
     final Dataset<Row> patientData = catalogSource.read("Patient");
     assertTrue(patientData.schema().fieldNames().length > 0);
-    final java.util.List<String> columnNames = java.util.Arrays.asList(
-        patientData.schema().fieldNames());
+    final java.util.List<String> columnNames =
+        java.util.Arrays.asList(patientData.schema().fieldNames());
     assertTrue(columnNames.contains("transformed"));
   }
 
@@ -802,8 +848,8 @@ class DataSourcesTest {
     final DataSourceBuilder builder = pathlingContext.read();
 
     // Attempting to read from an invalid URI should throw a RuntimeException.
-    final RuntimeException exception = assertThrows(RuntimeException.class,
-        () -> builder.ndjson("file:\\\\non-existent"));
+    final RuntimeException exception =
+        assertThrows(RuntimeException.class, () -> builder.ndjson("file:\\\\non-existent"));
 
     // The cause should be a URISyntaxException.
     assertInstanceOf(URISyntaxException.class, exception.getCause());
@@ -822,8 +868,7 @@ class DataSourcesTest {
     Files.copy(sourceFile, qualifiedFile);
 
     // Read the data using the default file name mapper
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(qualifierTestDir.toString());
+    final QueryableDataSource data = pathlingContext.read().ndjson(qualifierTestDir.toString());
 
     // Verify the resource type was correctly identified (qualifier removed)
     assertEquals(1, data.getResourceTypes().size());
@@ -849,8 +894,7 @@ class DataSourcesTest {
     Files.copy(sourceFile, file2);
 
     // Read the data
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(multiFileTestDir.toString());
+    final QueryableDataSource data = pathlingContext.read().ndjson(multiFileTestDir.toString());
 
     // Verify the resource type was identified
     assertEquals(1, data.getResourceTypes().size());
@@ -868,22 +912,21 @@ class DataSourcesTest {
     // This covers line 215 (IOException handling)
     // Use a path with invalid scheme to trigger filesystem error
     final DataSourceBuilder read = pathlingContext.read();
-    assertThrows(PersistenceError.class,
-        () -> read.ndjson("invalidscheme://invalid/path"));
+    assertThrows(PersistenceError.class, () -> read.ndjson("invalidscheme://invalid/path"));
   }
 
   @Test
   void ndjsonWriteWithMergeShouldFail() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder dataSinkBuilder = data.write();
     final String destinationPath = temporaryDirectory.resolve("ndjson-merge-fail").toString();
     final DataSinkBuilder builder = dataSinkBuilder.saveMode("merge");
 
     // Attempting to write NDJSON data using merge mode should throw UnsupportedOperationException.
-    final UnsupportedOperationException exception = assertThrows(
-        UnsupportedOperationException.class, () -> builder.ndjson(destinationPath));
+    final UnsupportedOperationException exception =
+        assertThrows(UnsupportedOperationException.class, () -> builder.ndjson(destinationPath));
 
     // Verify the error message.
     assertEquals("Merge operation is not supported for NDJSON", exception.getMessage());
@@ -892,18 +935,19 @@ class DataSourcesTest {
   @Test
   void parquetWriteWithMergeShouldFail() {
     // Read the test NDJSON data.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder dataSinkBuilder = data.write();
     final String destinationPath = temporaryDirectory.resolve("parquet-merge-fail").toString();
     final DataSinkBuilder builder = dataSinkBuilder.saveMode("merge");
 
     // Attempting to write Parquet data using merge mode should throw UnsupportedOperationException.
-    final UnsupportedOperationException exception = assertThrows(
-        UnsupportedOperationException.class, () -> builder.parquet(destinationPath));
+    final UnsupportedOperationException exception =
+        assertThrows(UnsupportedOperationException.class, () -> builder.parquet(destinationPath));
 
     // Verify the error message.
-    assertEquals("Merge operation is not supported for Parquet - use Delta if merging is required",
+    assertEquals(
+        "Merge operation is not supported for Parquet - use Delta if merging is required",
         exception.getMessage());
   }
 
@@ -911,8 +955,8 @@ class DataSourcesTest {
   @Test
   void ndjsonSourceCache() {
     // Create an NDJSON source directly to test the cache method.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Apply cache to the source - this tests that cache() works without errors.
     data.cache();
@@ -924,8 +968,8 @@ class DataSourcesTest {
   @Test
   void ndjsonSourceMap() {
     // Create an NDJSON source to test the map method.
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Apply a transformation that adds a column to all datasets.
     data.map(dataset -> dataset.withColumn("test_column", functions.lit("test_value")));
@@ -939,15 +983,19 @@ class DataSourcesTest {
 
   @Test
   void ndjsonSourceFilterByResourceType() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    assumeTrue(data.getResourceTypes().contains("Patient"),
-        "Attempting to filter by 'Patient' but this resource type is not present in the test data setup.");
-    assumeTrue(data.getResourceTypes().contains("Condition"),
-        "Attempting to filter by 'Condition' but this resource type is not present in the test data setup.");
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    assumeTrue(
+        data.getResourceTypes().contains("Patient"),
+        "Attempting to filter by 'Patient' but this resource type is not present in the test data"
+            + " setup.");
+    assumeTrue(
+        data.getResourceTypes().contains("Condition"),
+        "Attempting to filter by 'Condition' but this resource type is not present in the test data"
+            + " setup.");
 
-    final QueryableDataSource filteredData = data.filterByResourceType(
-        resourceType -> resourceType.equals("Patient"));
+    final QueryableDataSource filteredData =
+        data.filterByResourceType(resourceType -> resourceType.equals("Patient"));
     assertEquals(1, filteredData.getResourceTypes().size());
     assertTrue(filteredData.getResourceTypes().contains("Patient"));
   }
@@ -955,8 +1003,8 @@ class DataSourcesTest {
   @Test
   void parquetSourceCache() {
     // Create a Parquet source to test the cache method.
-    final QueryableDataSource data = pathlingContext.read()
-        .parquet(TEST_DATA_PATH.resolve("parquet").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().parquet(TEST_DATA_PATH.resolve("parquet").toString());
 
     // Apply cache to the source - this tests that cache() works without errors.
     data.cache();
@@ -968,8 +1016,8 @@ class DataSourcesTest {
   @Test
   void parquetSourceMap() {
     // Create a Parquet source to test the map method.
-    final QueryableDataSource data = pathlingContext.read()
-        .parquet(TEST_DATA_PATH.resolve("parquet").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().parquet(TEST_DATA_PATH.resolve("parquet").toString());
 
     // Apply a transformation that adds a column to all datasets.
     data.map(dataset -> dataset.withColumn("test_column", functions.lit("test_value")));
@@ -983,20 +1031,25 @@ class DataSourcesTest {
 
   @Test
   void parquetFilterByResourceType() {
-    final QueryableDataSource data = pathlingContext.read()
-        .parquet(TEST_DATA_PATH.resolve("parquet").toString());
-    assumeTrue(data.getResourceTypes().contains("Patient"),
-        "Attempting to filter by 'Patient' but this resource type is not present in the test data setup.");
-    assumeTrue(data.getResourceTypes().contains("Condition"),
-        "Attempting to filter by 'Condition' but this resource type is not present in the test data setup.");
+    final QueryableDataSource data =
+        pathlingContext.read().parquet(TEST_DATA_PATH.resolve("parquet").toString());
+    assumeTrue(
+        data.getResourceTypes().contains("Patient"),
+        "Attempting to filter by 'Patient' but this resource type is not present in the test data"
+            + " setup.");
+    assumeTrue(
+        data.getResourceTypes().contains("Condition"),
+        "Attempting to filter by 'Condition' but this resource type is not present in the test data"
+            + " setup.");
 
-    final QueryableDataSource filteredData = data.filterByResourceType(
-        resourceType -> resourceType.equals("Patient"));
+    final QueryableDataSource filteredData =
+        data.filterByResourceType(resourceType -> resourceType.equals("Patient"));
     assertEquals(1, filteredData.getResourceTypes().size());
     assertTrue(filteredData.getResourceTypes().contains("Patient"));
   }
 
-  private static final String PATIENT_VIEW_JSON = """
+  private static final String PATIENT_VIEW_JSON =
+      """
         {
         "resource": "Patient",
         "select": [
@@ -1017,8 +1070,8 @@ class DataSourcesTest {
       }
       """;
 
-
-  private static final String CONDITION_VIEW_JSON = """
+  private static final String CONDITION_VIEW_JSON =
+      """
         {
         "resource": "Condition",
         "select": [
@@ -1043,17 +1096,13 @@ class DataSourcesTest {
     assertTrue(data.getResourceTypes().contains("Patient"));
     assertTrue(data.getResourceTypes().contains("Condition"));
 
-    final Dataset<Row> patientCount = data.view("Patient")
-        .json(PATIENT_VIEW_JSON)
-        .execute()
-        .agg(functions.count("id"));
+    final Dataset<Row> patientCount =
+        data.view("Patient").json(PATIENT_VIEW_JSON).execute().agg(functions.count("id"));
 
     DatasetAssert.of(patientCount).hasRows(RowFactory.create(5));
 
-    final Dataset<Row> conditionCount = data.view("Condition")
-        .json(CONDITION_VIEW_JSON)
-        .execute()
-        .agg(functions.count("id"));
+    final Dataset<Row> conditionCount =
+        data.view("Condition").json(CONDITION_VIEW_JSON).execute().agg(functions.count("id"));
     DatasetAssert.of(conditionCount).hasRows(RowFactory.create(71));
   }
 
@@ -1062,17 +1111,13 @@ class DataSourcesTest {
     assertTrue(data.getResourceTypes().contains("Patient"));
     assertTrue(data.getResourceTypes().contains("Condition"));
 
-    final Dataset<Row> patientCount = data.view("Patient")
-        .json(PATIENT_VIEW_JSON)
-        .execute()
-        .agg(functions.count("id"));
+    final Dataset<Row> patientCount =
+        data.view("Patient").json(PATIENT_VIEW_JSON).execute().agg(functions.count("id"));
 
     DatasetAssert.of(patientCount).hasRows(RowFactory.create(4));
 
-    final Dataset<Row> conditionCount = data.view("Condition")
-        .json(CONDITION_VIEW_JSON)
-        .execute()
-        .agg(functions.count("id"));
+    final Dataset<Row> conditionCount =
+        data.view("Condition").json(CONDITION_VIEW_JSON).execute().agg(functions.count("id"));
 
     DatasetAssert.of(conditionCount).hasRows(RowFactory.create(246));
   }
@@ -1085,7 +1130,8 @@ class DataSourcesTest {
     queryNdjsonData(dataSource);
   }
 
-  private static final String EXTRACT_VIEW_JSON = """
+  private static final String EXTRACT_VIEW_JSON =
+      """
       {
         "resource": "Patient",
         "select": [
@@ -1115,10 +1161,8 @@ class DataSourcesTest {
       """;
 
   private static void extractNdjsonData(@Nonnull final QueryableDataSource dataSource) {
-    final Dataset<Row> patient = dataSource.view("Patient")
-        .json(EXTRACT_VIEW_JSON)
-        .execute()
-        .limit(1);
+    final Dataset<Row> patient =
+        dataSource.view("Patient").json(EXTRACT_VIEW_JSON).execute().limit(1);
     DatasetAssert.of(patient)
         .hasRows(RowFactory.create("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "02138"));
   }
@@ -1127,32 +1171,33 @@ class DataSourcesTest {
   @Test
   void ndjsonWithNullPathShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.ndjson(null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.ndjson(null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void ndjsonWithNullExtensionShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.ndjson("path", null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.ndjson("path", null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void ndjsonWithNullPathAndExtensionShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.ndjson(null, "extension"));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.ndjson(null, "extension"));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void ndjsonWithNullFileNameMapperShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.ndjson("path", "extension", null));
+    final IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class, () -> builder.ndjson("path", "extension", null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
@@ -1160,16 +1205,20 @@ class DataSourcesTest {
   void bundlesWithNullPathShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final Set<String> resources = Set.of("Patient");
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.bundles(null, resources, "application/fhir+json"));
+    final IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> builder.bundles(null, resources, "application/fhir+json"));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void bundlesWithNullResourceTypesShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.bundles("path", null, "application/fhir+json"));
+    final IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> builder.bundles("path", null, "application/fhir+json"));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
@@ -1177,130 +1226,130 @@ class DataSourcesTest {
   void bundlesWithNullMimeTypeShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final Set<String> resources = Set.of("Patient");
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.bundles("path", resources, null));
+    final IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class, () -> builder.bundles("path", resources, null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void parquetWithNullPathShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.parquet(null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.parquet(null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void parquetWithNullFileNameMapperShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.parquet("path", null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.parquet("path", null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void deltaWithNullPathShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.delta(null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.delta(null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void tablesWithNullSchemaShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.tables(null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.tables(null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void bulkWithNullClientShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.bulk(null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.bulk(null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   // Null Parameter Validation Tests for DataSinkBuilder
   @Test
   void sinkNdjsonWithNullPathShouldThrowIllegalArgumentException() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.ndjson(null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.ndjson(null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void sinkNdjsonWithNullFileNameMapperShouldThrowIllegalArgumentException() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.ndjson("path", null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.ndjson("path", null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void sinkParquetWithNullPathShouldThrowIllegalArgumentException() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.parquet(null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.parquet(null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void sinkParquetWithNullFileNameMapperShouldThrowIllegalArgumentException() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.parquet("path", null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.parquet("path", null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void sinkDeltaWithNullPathShouldThrowIllegalArgumentException() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.delta(null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.delta(null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void sinkDeltaWithNullFileNameMapperShouldThrowIllegalArgumentException() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.delta("path", null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.delta("path", null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void sinkTablesWithNullSchemaShouldThrowIllegalArgumentException() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.tables(null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.tables(null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
   @Test
   void sinkTablesWithNullFormatShouldThrowIllegalArgumentException() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.tables("schema", null));
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> builder.tables("schema", null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
-
 }

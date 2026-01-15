@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,8 +26,7 @@ import java.util.Optional;
  * A resolver for HL7 FHIR ValueSets.
  *
  * @author John Grimes
- * @see <a href="https://build.fhir.org/fhirpath.html#vars">FHIR-specific environment
- * variables</a>
+ * @see <a href="https://build.fhir.org/fhirpath.html#vars">FHIR-specific environment variables</a>
  */
 public class Hl7ValueSetResolver implements EnvironmentVariableResolver {
 
@@ -43,5 +42,4 @@ public class Hl7ValueSetResolver implements EnvironmentVariableResolver {
       return Optional.empty();
     }
   }
-
 }

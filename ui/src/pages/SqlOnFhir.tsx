@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * Page for executing SQL on FHIR ViewDefinitions.
  *
@@ -5,106 +22,67 @@
  */
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
-import { useCallback, useState } from "react";
-import { read } from "../api";
+import { useState } from "react";
+
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { SqlOnFhirForm } from "../components/sqlOnFhir/SqlOnFhirForm";
-import { SqlOnFhirResultTable } from "../components/sqlOnFhir/SqlOnFhirResultTable";
+import { ViewCard } from "../components/sqlOnFhir/ViewCard";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import {
-  useDownloadFile,
-  useSaveViewDefinition,
-  useServerCapabilities,
-  useViewExport,
-  useViewRun,
-} from "../hooks";
-import type { ViewDefinition, ViewExportOutputFormat, ViewRunRequest } from "../types/hooks";
-import type { ViewExportManifest } from "../types/viewExport";
+import { useSaveViewDefinition, useServerCapabilities } from "../hooks";
 
+import type { ViewRunRequest } from "../types/hooks";
+import type { ViewJob } from "../types/viewJob";
+
+/**
+ * Page component for executing SQL on FHIR ViewDefinitions.
+ *
+ * @returns The SQL on FHIR page component.
+ */
 export function SqlOnFhir() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, client } = useAuth();
-  const accessToken = client?.state.tokenResponse?.access_token;
+  const { isAuthenticated } = useAuth();
+
+  // Track all view query jobs.
+  const [queries, setQueries] = useState<ViewJob[]>([]);
+
+  // Track error messages for display.
+  const [, setError] = useState<string | null>(null);
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  // View run hook for executing ViewDefinitions. 401 errors handled globally.
-  const viewRun = useViewRun();
-
-  // Track download errors separately since they're not from viewRun.
-  const [downloadError, setDownloadError] = useState<Error | null>(null);
-  const handleDownload = useDownloadFile(setDownloadError);
-
-  // View export hook. 401 errors handled globally.
-  const viewExport = useViewExport({
-    onError: setDownloadError,
-  });
-
-  // Derive isRunning from status.
-  const isExportRunning = viewExport.status === "pending" || viewExport.status === "in-progress";
-
-  const handleExecute = useCallback(
-    (request: ViewRunRequest) => {
-      setDownloadError(null);
-      viewExport.reset();
-      viewRun.execute(request);
-    },
-    [viewExport, viewRun],
-  );
-
   // Mutation for saving a ViewDefinition to the server. 401 errors handled globally.
   const { mutateAsync: saveViewDefinition, isPending: isSaving } = useSaveViewDefinition();
 
-  const handleExport = useCallback(
-    async (format: ViewExportOutputFormat) => {
-      if (!viewRun.lastRequest || !fhirBaseUrl) return;
+  /**
+   * Handles execution of a ViewDefinition query.
+   *
+   * @param request - The view run request configuration.
+   */
+  const handleExecute = (request: ViewRunRequest) => {
+    const newQuery: ViewJob = {
+      id: crypto.randomUUID(),
+      mode: request.mode,
+      viewDefinitionId: request.viewDefinitionId,
+      viewDefinitionJson: request.viewDefinitionJson,
+      limit: request.limit,
+      createdAt: new Date(),
+    };
+    // Prepend new queries so most recent appears first.
+    setQueries((prev) => [newQuery, ...prev]);
+  };
 
-      // Get or build the view definition.
-      let viewDefinition: ViewDefinition;
-      if (viewRun.lastRequest.mode === "stored" && viewRun.lastRequest.viewDefinitionId) {
-        // Fetch the stored view definition.
-        const resource = await read(fhirBaseUrl, {
-          resourceType: "ViewDefinition",
-          id: viewRun.lastRequest.viewDefinitionId,
-          accessToken,
-        });
-        viewDefinition = resource as ViewDefinition;
-      } else if (viewRun.lastRequest.mode === "inline" && viewRun.lastRequest.viewDefinitionJson) {
-        viewDefinition = JSON.parse(viewRun.lastRequest.viewDefinitionJson);
-      } else {
-        throw new Error("No view definition available");
-      }
-
-      viewExport.startWith({
-        views: [{ viewDefinition }],
-        format,
-        header: true,
-      });
-    },
-    [viewRun.lastRequest, fhirBaseUrl, accessToken, viewExport],
-  );
-
-  const handleCancelExport = () => void viewExport.cancel();
-
-  // Build export job structure for the result table.
-  const exportJob =
-    isExportRunning || viewExport.result
-      ? {
-          id: "current-export",
-          type: "view-export" as const,
-          pollUrl: null,
-          status: isExportRunning ? ("in_progress" as const) : ("completed" as const),
-          progress: viewExport.progress ?? null,
-          error: viewExport.error ?? null,
-          request: { format: viewExport.request?.format ?? "ndjson" },
-          manifest: viewExport.result as ViewExportManifest | null,
-          createdAt: new Date(),
-        }
-      : null;
+  /**
+   * Handles closing/removing a query card.
+   *
+   * @param id - The ID of the query to close.
+   */
+  const handleCloseQuery = (id: string) => {
+    setQueries((prev) => prev.filter((query) => query.id !== id));
+  };
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
@@ -124,9 +102,6 @@ export function SqlOnFhir() {
     return <LoginRequired />;
   }
 
-  // Combine viewRun and download errors for display.
-  const displayError = viewRun.error ?? downloadError;
-
   return (
     <>
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
@@ -134,26 +109,23 @@ export function SqlOnFhir() {
           <SqlOnFhirForm
             onExecute={handleExecute}
             onSaveToServer={saveViewDefinition}
-            isExecuting={viewRun.isPending}
+            isExecuting={false}
             isSaving={isSaving}
           />
         </Box>
 
-        <Box style={{ flex: 1, overflowX: "auto" }}>
-          <SqlOnFhirResultTable
-            rows={viewRun.result?.rows}
-            columns={viewRun.result?.columns}
-            isLoading={viewRun.isPending}
-            error={displayError}
-            hasExecuted={viewRun.status !== "idle"}
-            onExport={handleExport}
-            exportJob={exportJob}
-            onDownload={handleDownload}
-            onCancelExport={handleCancelExport}
-            isExporting={isExportRunning}
-          />
-        </Box>
+        <Flex direction="column" gap="3" style={{ flex: 1, overflow: "hidden" }}>
+          {queries.map((job) => (
+            <ViewCard
+              key={job.id}
+              job={job}
+              onError={(message) => setError(message)}
+              onClose={() => handleCloseQuery(job.id)}
+            />
+          ))}
+        </Flex>
       </Flex>
+
       <SessionExpiredDialog />
     </>
   );

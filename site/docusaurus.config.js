@@ -30,6 +30,7 @@ const config = {
     mermaid: true,
   },
   themes: ["@docusaurus/theme-mermaid"],
+  plugins: [require.resolve("./src/plugins/staticHomePage.js")],
   url: "https://pathling.csiro.au",
   baseUrl: "/",
   onBrokenLinks: "warn",
@@ -53,11 +54,12 @@ const config = {
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
           editUrl: "https://github.com/aehrc/pathling/tree/main/site/",
+          routeBasePath: "docs",
           lastVersion: "current",
           versions: {
             current: {
               label: "9.1.0",
-              path: "/",
+              path: "",
             },
             "7.2.0": {
               label: "7.2.0",
@@ -70,7 +72,18 @@ const config = {
         theme: {
           customCss: require.resolve("./src/css/custom.css"),
         },
+        blog: {
+          showReadingTime: true,
+          blogTitle: "Blog",
+          blogDescription: "News and updates from the Pathling project",
+          routeBasePath: "blog",
+          editUrl: "https://github.com/aehrc/pathling/tree/main/site/",
+        },
         sitemap: {},
+        pages: {
+          // Exclude index files so static/index.html can be served at root.
+          exclude: ["**/index.{js,jsx,ts,tsx,md,mdx}"],
+        },
       }),
     ],
   ],
@@ -130,6 +143,11 @@ const config = {
           {
             label: "Roadmap",
             to: "/roadmap",
+          },
+          {
+            to: "/blog",
+            label: "Blog",
+            position: "left",
           },
           {
             type: "docsVersionDropdown",

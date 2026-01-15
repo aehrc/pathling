@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,16 +23,17 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
  * Represents a bulk submission throughout its lifecycle.
- * <p>
- * A submission can contain multiple manifest jobs, each representing a manifest URL submitted via
- * an in-progress request. All manifest jobs within a submission share the same submitter and
+ *
+ * <p>A submission can contain multiple manifest jobs, each representing a manifest URL submitted
+ * via an in-progress request. All manifest jobs within a submission share the same submitter and
  * submission ID.
- * <p>
- * Timestamps are stored as ISO-8601 strings for JSON serialisation compatibility with the shaded
+ *
+ * <p>Timestamps are stored as ISO-8601 strings for JSON serialisation compatibility with the shaded
  * Jackson library.
  *
  * @param submissionId The unique identifier for this submission.
@@ -56,8 +57,7 @@ public record Submission(
     @Nullable String completedAt,
     @Nullable String ownerId,
     @Nullable SubmissionMetadata metadata,
-    @Nullable String errorMessage
-) {
+    @Nullable String errorMessage) {
 
   private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
 
@@ -83,8 +83,7 @@ public record Submission(
   public static Submission createPending(
       @Nonnull final String submissionId,
       @Nonnull final SubmitterIdentifier submitter,
-      @Nonnull final Optional<String> ownerId
-  ) {
+      @Nonnull final Optional<String> ownerId) {
     return new Submission(
         submissionId,
         submitter,
@@ -94,8 +93,7 @@ public record Submission(
         null,
         ownerId.orElse(null),
         null,
-        null
-    );
+        null);
   }
 
   /**
@@ -106,11 +104,12 @@ public record Submission(
    */
   @Nonnull
   public Submission withState(@Nonnull final SubmissionState newState) {
-    final String newCompletedAt = (newState == SubmissionState.COMPLETED
-        || newState == SubmissionState.COMPLETED_WITH_ERRORS
-        || newState == SubmissionState.ABORTED)
-                                  ? now()
-                                  : this.completedAt;
+    final String newCompletedAt =
+        (newState == SubmissionState.COMPLETED
+                || newState == SubmissionState.COMPLETED_WITH_ERRORS
+                || newState == SubmissionState.ABORTED)
+            ? now()
+            : this.completedAt;
     return new Submission(
         submissionId,
         submitter,
@@ -120,8 +119,7 @@ public record Submission(
         newCompletedAt,
         ownerId,
         metadata,
-        errorMessage
-    );
+        errorMessage);
   }
 
   /**
@@ -143,8 +141,7 @@ public record Submission(
         completedAt,
         ownerId,
         metadata,
-        errorMessage
-    );
+        errorMessage);
   }
 
   /**
@@ -156,9 +153,7 @@ public record Submission(
    */
   @Nonnull
   public Submission withUpdatedManifestJob(
-      @Nonnull final String manifestJobId,
-      @Nonnull final ManifestJob updatedJob
-  ) {
+      @Nonnull final String manifestJobId, @Nonnull final ManifestJob updatedJob) {
     final List<ManifestJob> newManifestJobs = new ArrayList<>();
     for (final ManifestJob job : this.manifestJobs) {
       if (job.manifestJobId().equals(manifestJobId)) {
@@ -176,8 +171,7 @@ public record Submission(
         completedAt,
         ownerId,
         metadata,
-        errorMessage
-    );
+        errorMessage);
   }
 
   /**
@@ -197,8 +191,7 @@ public record Submission(
         completedAt,
         ownerId,
         metadata,
-        errorMessage
-    );
+        errorMessage);
   }
 
   /**
@@ -218,8 +211,7 @@ public record Submission(
         now(),
         ownerId,
         metadata,
-        errorMessage
-    );
+        errorMessage);
   }
 
   /**
@@ -237,8 +229,7 @@ public record Submission(
    * @return true if any job has failed, false otherwise.
    */
   public boolean hasFailedJobs() {
-    return manifestJobs.stream()
-        .anyMatch(job -> job.state() == ManifestJobState.FAILED);
+    return manifestJobs.stream().anyMatch(job -> job.state() == ManifestJobState.FAILED);
   }
 
   /**
@@ -249,9 +240,11 @@ public record Submission(
    */
   public boolean allDownloadsComplete() {
     return manifestJobs.stream()
-        .allMatch(job -> job.state() == ManifestJobState.DOWNLOADED
-            || job.state() == ManifestJobState.COMPLETED
-            || job.state() == ManifestJobState.FAILED);
+        .allMatch(
+            job ->
+                job.state() == ManifestJobState.DOWNLOADED
+                    || job.state() == ManifestJobState.COMPLETED
+                    || job.state() == ManifestJobState.FAILED);
   }
 
   /**
@@ -260,8 +253,8 @@ public record Submission(
    * @return true if all jobs are downloaded and ready, false otherwise.
    */
   public boolean allJobsReadyForImport() {
-    return !manifestJobs.isEmpty() && manifestJobs.stream()
-        .allMatch(job -> job.state() == ManifestJobState.DOWNLOADED);
+    return !manifestJobs.isEmpty()
+        && manifestJobs.stream().allMatch(job -> job.state() == ManifestJobState.DOWNLOADED);
   }
 
   /**
@@ -271,10 +264,7 @@ public record Submission(
    */
   @Nonnull
   public List<String> getAllJobIds() {
-    return manifestJobs.stream()
-        .map(ManifestJob::jobId)
-        .filter(jobId -> jobId != null)
-        .toList();
+    return manifestJobs.stream().map(ManifestJob::jobId).filter(Objects::nonNull).toList();
   }
 
   /**
@@ -298,9 +288,7 @@ public record Submission(
    */
   @Nonnull
   public Optional<ManifestJob> findManifestJobByUrl(@Nonnull final String manifestUrl) {
-    return manifestJobs.stream()
-        .filter(job -> job.manifestUrl().equals(manifestUrl))
-        .findFirst();
+    return manifestJobs.stream().filter(job -> job.manifestUrl().equals(manifestUrl)).findFirst();
   }
 
   /**
@@ -311,9 +299,8 @@ public record Submission(
    */
   @Nonnull
   public Submission withoutManifestJob(@Nonnull final String manifestJobId) {
-    final List<ManifestJob> newManifestJobs = manifestJobs.stream()
-        .filter(job -> !job.manifestJobId().equals(manifestJobId))
-        .toList();
+    final List<ManifestJob> newManifestJobs =
+        manifestJobs.stream().filter(job -> !job.manifestJobId().equals(manifestJobId)).toList();
     return new Submission(
         submissionId,
         submitter,
@@ -323,8 +310,7 @@ public record Submission(
         completedAt,
         ownerId,
         metadata,
-        errorMessage
-    );
+        errorMessage);
   }
 
   /**
@@ -336,5 +322,4 @@ public record Submission(
   public String getKey() {
     return submitter.toKey() + "/" + submissionId;
   }
-
 }

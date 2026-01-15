@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,15 +24,13 @@ import org.apache.spark.sql.UDFRegistration;
 
 /**
  * A base Spark configurer that registers user-defined functions (UDFs) in Spark sessions.
- * <p>
- * This abstract class provides a standardised way to register SQL functions with Spark sessions.
- * Subclasses should implement the {@link #registerUDFs(UDFRegistrar)} method to define which
+ *
+ * <p>This abstract class provides a standardised way to register SQL functions with Spark sessions.
+ * Subclasses should implement the {@link #registerUdfs(UdfRegistrar)} method to define which
  * functions to register.
- * </p>
- * <p>
- * The class implements the {@link SparkConfigurer} interface, allowing it to be used as part of
+ *
+ * <p>The class implements the {@link SparkConfigurer} interface, allowing it to be used as part of
  * the Spark session configuration process.
- * </p>
  *
  * @author Piotr Szul
  * @author John Grimes
@@ -40,16 +38,15 @@ import org.apache.spark.sql.UDFRegistration;
  * @see SqlFunction1
  * @see SqlFunction2
  */
-public abstract class AbstractUDFRegistrar implements SparkConfigurer {
+public abstract class AbstractUdfRegistrar implements SparkConfigurer {
 
   /**
    * A helper class for registering user-defined functions with a Spark session.
-   * <p>
-   * This class provides convenient methods for registering different types of SQL functions
-   * and maintains a fluent interface for chaining multiple registrations.
-   * </p>
+   *
+   * <p>This class provides convenient methods for registering different types of SQL functions and
+   * maintains a fluent interface for chaining multiple registrations.
    */
-  protected static class UDFRegistrar {
+  protected static class UdfRegistrar {
 
     private final UDFRegistration udfRegistration;
 
@@ -58,7 +55,7 @@ public abstract class AbstractUDFRegistrar implements SparkConfigurer {
      *
      * @param spark the Spark session to register functions with
      */
-    public UDFRegistrar(@Nonnull final SparkSession spark) {
+    public UdfRegistrar(@Nonnull final SparkSession spark) {
       this.udfRegistration = spark.udf();
     }
 
@@ -68,7 +65,7 @@ public abstract class AbstractUDFRegistrar implements SparkConfigurer {
      * @param udf1 the function to register
      * @return this registrar for method chaining
      */
-    public UDFRegistrar register(@Nonnull final SqlFunction1<?, ?> udf1) {
+    public UdfRegistrar register(@Nonnull final SqlFunction1<?, ?> udf1) {
       udfRegistration.register(udf1.getName(), udf1, udf1.getReturnType());
       return this;
     }
@@ -79,26 +76,24 @@ public abstract class AbstractUDFRegistrar implements SparkConfigurer {
      * @param udf2 the function to register
      * @return this registrar for method chaining
      */
-    public UDFRegistrar register(@Nonnull final SqlFunction2<?, ?, ?> udf2) {
+    public UdfRegistrar register(@Nonnull final SqlFunction2<?, ?, ?> udf2) {
       udfRegistration.register(udf2.getName(), udf2, udf2.getReturnType());
       return this;
     }
-
   }
 
   /**
    * Configures the Spark session by registering user-defined functions.
-   * <p>
-   * This method is called as part of the Spark session configuration process and delegates
-   * to the abstract {@link #registerUDFs(UDFRegistrar)} method to perform the actual
-   * function registration.
-   * </p>
+   *
+   * <p>This method is called as part of the Spark session configuration process and delegates to
+   * the abstract {@link #registerUdfs(UdfRegistrar)} method to perform the actual function
+   * registration.
    *
    * @param spark the Spark session to configure
    */
   @Override
   public void configure(@Nonnull final SparkSession spark) {
-    registerUDFs(new UDFRegistrar(spark));
+    registerUdfs(new UdfRegistrar(spark));
   }
 
   /**
@@ -106,5 +101,5 @@ public abstract class AbstractUDFRegistrar implements SparkConfigurer {
    *
    * @param udfRegistrar the helper to use to register the UDFs.
    */
-  protected abstract void registerUDFs(@Nonnull final UDFRegistrar udfRegistrar);
+  protected abstract void registerUdfs(@Nonnull final UdfRegistrar udfRegistrar);
 }

@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * Form for configuring and starting an import job.
  *
@@ -17,9 +34,11 @@ import {
   TextField,
 } from "@radix-ui/themes";
 import { useRef, useState } from "react";
-import type { ImportFormat, ImportRequest, SaveMode } from "../../types/import";
-import { IMPORT_FORMATS } from "../../types/import";
+
 import { SaveModeField } from "./SaveModeField";
+import { IMPORT_FORMATS } from "../../types/import";
+
+import type { ImportFormat, ImportRequest, SaveMode } from "../../types/import";
 
 interface ImportInputWithId {
   id: number;
@@ -34,6 +53,16 @@ interface ImportFormProps {
   resourceTypes: string[];
 }
 
+/**
+ * Form for configuring and starting a bulk data import.
+ *
+ * @param root0 - The component props.
+ * @param root0.onSubmit - Callback when import is submitted.
+ * @param root0.isSubmitting - Whether an import is in progress.
+ * @param root0.disabled - Whether the form is disabled.
+ * @param root0.resourceTypes - Available resource types for selection.
+ * @returns The import form component.
+ */
 export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: ImportFormProps) {
   const idCounter = useRef(1);
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");

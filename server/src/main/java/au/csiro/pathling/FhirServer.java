@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
@@ -11,6 +28,7 @@ import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import au.csiro.pathling.interceptors.BulkExportDeleteInterceptor;
+import au.csiro.pathling.interceptors.OidcDiscoveryFetcher;
 import au.csiro.pathling.interceptors.ParametersToJsonInterceptor;
 import au.csiro.pathling.interceptors.SmartConfigurationInterceptor;
 import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
@@ -61,6 +79,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import scala.jdk.javaapi.CollectionConverters;
 
 /**
+ * The main FHIR server servlet that handles all FHIR REST interactions.
+ *
  * @author Felix Naumann
  */
 @WebServlet(urlPatterns = "/fhir/*")
@@ -89,6 +109,9 @@ public class FhirServer extends RestfulServer {
   private static final int DEFAULT_PAGE_SIZE = 100;
   private static final int MAX_PAGE_SIZE = Integer.MAX_VALUE;
   private static final int SEARCH_MAP_SIZE = 10;
+
+  /** The resource type code for ViewDefinition resources from the SQL on FHIR specification. */
+  public static final String VIEW_DEFINITION = "ViewDefinition";
 
   @Nonnull private final transient ServerConfiguration configuration;
 
@@ -280,7 +303,7 @@ public class FhirServer extends RestfulServer {
           registerProvider(searchProviderFactory.createSearchProvider(resourceType));
         }
         // ViewDefinition search.
-        registerProvider(searchProviderFactory.createSearchProvider("ViewDefinition"));
+        registerProvider(searchProviderFactory.createSearchProvider(VIEW_DEFINITION));
       }
 
       // Register update providers for all supported resource types.
@@ -289,7 +312,7 @@ public class FhirServer extends RestfulServer {
           registerProvider(updateProviderFactory.createUpdateProvider(resourceType));
         }
         // ViewDefinition update.
-        registerProvider(updateProviderFactory.createUpdateProvider("ViewDefinition"));
+        registerProvider(updateProviderFactory.createUpdateProvider(VIEW_DEFINITION));
       }
 
       // Register create providers for all supported resource types.
@@ -298,7 +321,7 @@ public class FhirServer extends RestfulServer {
           registerProvider(createProviderFactory.createCreateProvider(resourceType));
         }
         // ViewDefinition create.
-        registerProvider(createProviderFactory.createCreateProvider("ViewDefinition"));
+        registerProvider(createProviderFactory.createCreateProvider(VIEW_DEFINITION));
       }
 
       // Register read providers for all supported resource types.
@@ -307,7 +330,7 @@ public class FhirServer extends RestfulServer {
           registerProvider(readProviderFactory.createReadProvider(resourceType));
         }
         // ViewDefinition read.
-        registerProvider(readProviderFactory.createReadProvider("ViewDefinition"));
+        registerProvider(readProviderFactory.createReadProvider(VIEW_DEFINITION));
       }
 
       // Register delete providers for all supported resource types.
@@ -316,7 +339,7 @@ public class FhirServer extends RestfulServer {
           registerProvider(deleteProviderFactory.createDeleteProvider(resourceType));
         }
         // ViewDefinition delete.
-        registerProvider(deleteProviderFactory.createDeleteProvider("ViewDefinition"));
+        registerProvider(deleteProviderFactory.createDeleteProvider(VIEW_DEFINITION));
       }
 
       // Register batch provider.
@@ -444,8 +467,16 @@ public class FhirServer extends RestfulServer {
   private void configureAuthorization() {
     if (configuration.getAuth().isEnabled()) {
       final String issuer = checkPresent(configuration.getAuth().getIssuer());
+      final OidcDiscoveryFetcher oidcDiscoveryFetcher = new OidcDiscoveryFetcher(issuer);
       final SmartConfigurationInterceptor smartConfigurationInterceptor =
-          new SmartConfigurationInterceptor(issuer, checkPresent(oidcConfiguration));
+          new SmartConfigurationInterceptor(
+              issuer,
+              checkPresent(oidcConfiguration),
+              oidcDiscoveryFetcher,
+              configuration.getAdminUi().getClientId(),
+              configuration.getAuth().getCapabilities(),
+              configuration.getAuth().getGrantTypesSupported(),
+              configuration.getAuth().getCodeChallengeMethodsSupported());
       registerInterceptor(smartConfigurationInterceptor);
     }
   }
@@ -481,6 +512,8 @@ public class FhirServer extends RestfulServer {
   }
 
   /**
+   * Returns the set of resource types currently supported by this server.
+   *
    * @return The set of resource types currently supported by this server.
    */
   @Nonnull
@@ -492,6 +525,8 @@ public class FhirServer extends RestfulServer {
   }
 
   /**
+   * Returns the set of resource types not supported by this server.
+   *
    * @return The set of resource types currently UN-supported by this server.
    */
   @Nonnull
@@ -518,6 +553,6 @@ public class FhirServer extends RestfulServer {
    * @return true if the resource code is a supported custom type, false otherwise
    */
   public static boolean isCustomResourceType(@Nonnull final String resourceCode) {
-    return "ViewDefinition".equals(resourceCode);
+    return VIEW_DEFINITION.equals(resourceCode);
   }
 }

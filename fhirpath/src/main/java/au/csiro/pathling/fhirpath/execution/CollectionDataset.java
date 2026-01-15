@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,53 +28,48 @@ import org.apache.spark.sql.Row;
 
 /**
  * A wrapper class that pairs a Spark Dataset with a FHIRPath Collection.
- * <p>
- * This class is used during FHIRPath evaluation to maintain the association between:
+ *
+ * <p>This class is used during FHIRPath evaluation to maintain the association between:
+ *
  * <ul>
- *   <li>The Spark Dataset containing the actual data</li>
- *   <li>The FHIRPath Collection that provides the logical representation and operations</li>
+ *   <li>The Spark Dataset containing the actual data
+ *   <li>The FHIRPath Collection that provides the logical representation and operations
  * </ul>
- * <p>
- * CollectionDataset enables operations that require both the dataset structure and the
- * collection's logical representation, such as converting to canonical form or extracting
- * specific columns for output.
+ *
+ * <p>CollectionDataset enables operations that require both the dataset structure and the
+ * collection's logical representation, such as converting to canonical form or extracting specific
+ * columns for output.
  */
 @Value(staticConstructor = "of")
 public class CollectionDataset {
 
-  /**
-   * Column name for the resource identifier.
-   */
+  /** Column name for the resource identifier. */
   public static final String ID_COLUMN = "id";
 
-  /**
-   * Column name for the expression result value.
-   */
+  /** Column name for the expression result value. */
   public static final String VALUE_COLUMN = "value";
 
   /**
    * The Spark Dataset containing the actual data.
-   * <p>
-   * This dataset typically includes an "id" column for resource identification and additional
+   *
+   * <p>This dataset typically includes an "id" column for resource identification and additional
    * columns containing the data being processed.
    */
-  @Nonnull
-  Dataset<Row> dataset;
+  @Nonnull Dataset<Row> dataset;
 
   /**
    * The FHIRPath Collection providing the logical representation of the data.
-   * <p>
-   * This collection contains the column representation and type information needed to interpret and
-   * manipulate the data in the dataset.
+   *
+   * <p>This collection contains the column representation and type information needed to interpret
+   * and manipulate the data in the dataset.
    */
-  @Nonnull
-  Collection value;
+  @Nonnull Collection value;
 
   /**
    * Gets the Spark SQL Column that represents the value in this collection.
-   * <p>
-   * This method delegates to the underlying Collection to get its column value, which is used for
-   * operations on the dataset.
+   *
+   * <p>This method delegates to the underlying Collection to get its column value, which is used
+   * for operations on the dataset.
    *
    * @return The Spark SQL Column representing the value
    */
@@ -85,11 +80,12 @@ public class CollectionDataset {
 
   /**
    * Converts this CollectionDataset to a simplified dataset with just id and value columns.
-   * <p>
-   * This method is useful for creating a standardized output format with:
+   *
+   * <p>This method is useful for creating a standardized output format with:
+   *
    * <ul>
-   *   <li>An "id" column identifying the resource</li>
-   *   <li>A "value" column containing the result of the FHIRPath expression</li>
+   *   <li>An "id" column identifying the resource
+   *   <li>A "value" column containing the result of the FHIRPath expression
    * </ul>
    *
    * @return A new Dataset with id and value columns
@@ -97,20 +93,18 @@ public class CollectionDataset {
   @Nonnull
   public Dataset<Row> toIdValueDataset() {
     return dataset.select(
-        dataset.col(ID_COLUMN).alias(ID_COLUMN),
-        getValueColumn().alias(VALUE_COLUMN)
-    );
+        dataset.col(ID_COLUMN).alias(ID_COLUMN), getValueColumn().alias(VALUE_COLUMN));
   }
 
   /**
-   * Converts this CollectionDataset to a dataset with id and external value columns. 
-   * <p>
-   * This method is useful for creating an output format that includes:
+   * Converts this CollectionDataset to a dataset with id and external value columns.
+   *
+   * <p>This method is useful for creating an output format that includes:
+   *
    * <ul>
-   *   <li>An "id" column identifying the resource</li>
-   *   <li>A "value" column containing the external representation of the FHIRPath
-   *   expression result</li>
-   *   </ul>
+   *   <li>An "id" column identifying the resource
+   *   <li>A "value" column containing the external representation of the FHIRPath expression result
+   * </ul>
    *
    * @return A new Dataset with id and external value columns
    */
@@ -118,18 +112,18 @@ public class CollectionDataset {
   public Dataset<Row> toIdExternalValueDataset() {
     return dataset.select(
         dataset.col(ID_COLUMN).alias(ID_COLUMN),
-        ((Materializable) getValue()).toExternalValue().alias(VALUE_COLUMN)
-    );
+        ((Materializable) getValue()).toExternalValue().alias(VALUE_COLUMN));
   }
 
   /**
    * Converts this CollectionDataset to its canonical form.
-   * <p>
-   * The canonical form standardizes the representation of values, which is useful for operations
+   *
+   * <p>The canonical form standardizes the representation of values, which is useful for operations
    * like comparison and sorting. This method:
+   *
    * <ul>
-   *   <li>Keeps the same dataset structure</li>
-   *   <li>Maps the collection to use canonical column representations</li>
+   *   <li>Keeps the same dataset structure
+   *   <li>Maps the collection to use canonical column representations
    * </ul>
    *
    * @return A new CollectionDataset with the collection in canonical form

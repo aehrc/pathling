@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,4 @@ import org.apache.spark.sql.api.java.UDF3;
  * @param <T3> the type of the third argument.
  * @param <R> the type of the result.
  */
-public interface SqlFunction3<T1, T2, T3, R> extends SqlFunction, UDF3<T1, T2, T3, R> {
-
-}
+public interface SqlFunction3<T1, T2, T3, R> extends SqlFunction, UDF3<T1, T2, T3, R> {}

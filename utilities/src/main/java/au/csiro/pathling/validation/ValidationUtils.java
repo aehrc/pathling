@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,21 +30,21 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
 
-/**
- * Utility classes to facilitate JRS-380 based validation
- */
+/** Utility classes to facilitate JRS-380 based validation. */
 public final class ValidationUtils {
 
   private ValidationUtils() {
     // utility class
   }
 
-  // We use the ParameterMessageInterpolator rather than the default one which depends on EL implementation
+  // We use the ParameterMessageInterpolator rather than the default one which depends on EL
+  // implementation
   // for message interpolation as it causes library conflicts in Databricks environments.
-  private static final ValidatorFactory DEFAULT_VALIDATION_FACTORY = Validation.byDefaultProvider()
-      .configure()
-      .messageInterpolator(new ParameterMessageInterpolator())
-      .buildValidatorFactory();
+  private static final ValidatorFactory DEFAULT_VALIDATION_FACTORY =
+      Validation.byDefaultProvider()
+          .configure()
+          .messageInterpolator(new ParameterMessageInterpolator())
+          .buildValidatorFactory();
 
   /**
    * Validates a bean annotated with JSR-380 constraints using the default validation factory.
@@ -69,7 +69,6 @@ public final class ValidationUtils {
    * @return the valid bean.
    * @throws ConstraintViolationException if any constraints are violated.
    */
-
   @SuppressWarnings("UnusedReturnValue")
   @Nonnull
   public static <T> T ensureValid(@Nonnull final T bean, @Nonnull final String message)
@@ -90,10 +89,12 @@ public final class ValidationUtils {
    */
   public static void failValidation(
       @Nonnull final Set<? extends ConstraintViolation<?>> constraintViolations,
-      @Nullable final String messageTitle) throws ConstraintViolationException {
-    final String exceptionMessage = nonNull(messageTitle)
-                                    ? messageTitle + ": " + formatViolations(constraintViolations)
-                                    : formatViolations(constraintViolations);
+      @Nullable final String messageTitle)
+      throws ConstraintViolationException {
+    final String exceptionMessage =
+        nonNull(messageTitle)
+            ? messageTitle + ": " + formatViolations(constraintViolations)
+            : formatViolations(constraintViolations);
     throw new ConstraintViolationException(exceptionMessage, constraintViolations);
   }
 
@@ -107,11 +108,8 @@ public final class ValidationUtils {
   public static String formatViolations(
       @Nonnull final Set<? extends ConstraintViolation<?>> constraintViolations) {
     return constraintViolations.stream()
-        .map(cv -> cv == null
-                   ? "null"
-                   : cv.getPropertyPath() + ": " + cv.getMessage())
+        .map(cv -> cv == null ? "null" : cv.getPropertyPath() + ": " + cv.getMessage())
         .sorted()
         .collect(Collectors.joining(", "));
   }
-
 }

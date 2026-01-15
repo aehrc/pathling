@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,8 +37,7 @@ import org.jetbrains.annotations.Contract;
 @RequiredArgsConstructor
 public class FhirPathModelBuilder {
 
-  @Getter
-  private final Map<String, Object> model = new HashMap<>();
+  @Getter private final Map<String, Object> model = new HashMap<>();
 
   public FhirPathModelBuilder fhirType(@Nonnull final FHIRDefinedType fhirType) {
     model.put(YamlSupport.FHIR_TYPE_ANNOTATION, fhirType.toCode());
@@ -49,7 +48,6 @@ public class FhirPathModelBuilder {
     model.put(YamlSupport.CHOICE_ANNOTATION, name);
     return this;
   }
-
 
   public FhirPathModelBuilder string(@Nonnull final String name, @Nullable final String value) {
     model.put(name, value);
@@ -76,8 +74,8 @@ public class FhirPathModelBuilder {
     return this;
   }
 
-  public FhirPathModelBuilder integerArray(@Nonnull final String name,
-      @Nonnull final int... values) {
+  public FhirPathModelBuilder integerArray(
+      @Nonnull final String name, @Nonnull final int... values) {
     final List<Integer> list = new ArrayList<>();
     for (final int value : values) {
       list.add(value);
@@ -96,8 +94,8 @@ public class FhirPathModelBuilder {
     return this;
   }
 
-  public FhirPathModelBuilder decimalArray(@Nonnull final String name,
-      @Nonnull final double... values) {
+  public FhirPathModelBuilder decimalArray(
+      @Nonnull final String name, @Nonnull final double... values) {
     final List<Double> list = new ArrayList<>();
     for (final double value : values) {
       list.add(value);
@@ -138,14 +136,11 @@ public class FhirPathModelBuilder {
   }
 
   @Nonnull
-  public FhirPathModelBuilder timeArray(@Nonnull final String name,
-      @Nonnull final String... values) {
-    model.put(name, Stream.of(values)
-        .map(FhirTypedLiteral::toTime)
-        .toList());
+  public FhirPathModelBuilder timeArray(
+      @Nonnull final String name, @Nonnull final String... values) {
+    model.put(name, Stream.of(values).map(FhirTypedLiteral::toTime).toList());
     return this;
   }
-
 
   @Nonnull
   public FhirPathModelBuilder date(@Nonnull final String name, @Nullable final String value) {
@@ -160,11 +155,9 @@ public class FhirPathModelBuilder {
   }
 
   @Nonnull
-  public FhirPathModelBuilder dateArray(@Nonnull final String name,
-      @Nonnull final String... values) {
-    model.put(name, Stream.of(values)
-        .map(FhirTypedLiteral::toDate)
-        .toList());
+  public FhirPathModelBuilder dateArray(
+      @Nonnull final String name, @Nonnull final String... values) {
+    model.put(name, Stream.of(values).map(FhirTypedLiteral::toDate).toList());
     return this;
   }
 
@@ -181,11 +174,9 @@ public class FhirPathModelBuilder {
   }
 
   @Nonnull
-  public FhirPathModelBuilder dateTimeArray(@Nonnull final String name,
-      @Nonnull final String... values) {
-    model.put(name, Stream.of(values)
-        .map(FhirTypedLiteral::toDateTime)
-        .toList());
+  public FhirPathModelBuilder dateTimeArray(
+      @Nonnull final String name, @Nonnull final String... values) {
+    model.put(name, Stream.of(values).map(FhirTypedLiteral::toDateTime).toList());
     return this;
   }
 
@@ -202,16 +193,14 @@ public class FhirPathModelBuilder {
   }
 
   @Nonnull
-  public FhirPathModelBuilder codingArray(@Nonnull final String name,
-      @Nonnull final String... values) {
-    model.put(name, Stream.of(values)
-        .map(FhirTypedLiteral::toCoding)
-        .toList());
+  public FhirPathModelBuilder codingArray(
+      @Nonnull final String name, @Nonnull final String... values) {
+    model.put(name, Stream.of(values).map(FhirTypedLiteral::toCoding).toList());
     return this;
   }
 
-  public FhirPathModelBuilder element(final String name,
-      @Nonnull final Consumer<FhirPathModelBuilder> builderConsumer) {
+  public FhirPathModelBuilder element(
+      final String name, @Nonnull final Consumer<FhirPathModelBuilder> builderConsumer) {
     final FhirPathModelBuilder builder = new FhirPathModelBuilder();
     builderConsumer.accept(builder);
     model.put(name, builder.model);
@@ -225,8 +214,8 @@ public class FhirPathModelBuilder {
 
   @Contract("_, _ -> this")
   @SafeVarargs
-  public final FhirPathModelBuilder elementArray(final String name,
-      @Nonnull final Consumer<FhirPathModelBuilder>... builders) {
+  public final FhirPathModelBuilder elementArray(
+      final String name, @Nonnull final Consumer<FhirPathModelBuilder>... builders) {
     final List<Map<String, Object>> list = new ArrayList<>();
     for (final Consumer<FhirPathModelBuilder> builderConsumer : builders) {
       final FhirPathModelBuilder builder = new FhirPathModelBuilder();

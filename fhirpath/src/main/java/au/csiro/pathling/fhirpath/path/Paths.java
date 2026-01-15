@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,14 +46,17 @@ public final class Paths {
 
   /**
    * Gets the `$this` path.
-   * <p>
-   * `$this`   is now represented by the nullPath(). The implication is that  `$this`  will only
+   *
+   * <p>`$this` is now represented by the nullPath(). The implication is that `$this` will only
    * appear in fhir paths is explicitly needed. In all cases when $this is followed another path
    * element it is stripped.
-   * <p>
-   * For example:
+   *
+   * <p>For example:
+   *
    * <pre>`where($this.name = 'foo')` is converted to `where(name = 'foo')`</pre>
-   * but:
+   *
+   * <p>but:
+   *
    * <pre>`where($this = 'foo')` remains `where($this = 'foo')`</pre>
    *
    * @return the `$this` path
@@ -71,11 +74,10 @@ public final class Paths {
 
     @Nonnull
     @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+    public Collection apply(
+        @Nonnull final Collection input, @Nonnull final EvaluationContext context) {
       return context.resolveVariable(name);
     }
-
 
     @Nonnull
     @Override
@@ -94,17 +96,17 @@ public final class Paths {
   public record EvalOperator(
       @Nonnull FhirPath leftPath,
       @Nonnull FhirPath rightPath,
-      @Nonnull FhirPathBinaryOperator operator
-  ) implements FhirPath {
+      @Nonnull FhirPathBinaryOperator operator)
+      implements FhirPath {
 
     @Nonnull
     @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      return operator.invoke(new BinaryOperatorInput(context, leftPath.apply(input, context),
-          rightPath.apply(input, context)));
+    public Collection apply(
+        @Nonnull final Collection input, @Nonnull final EvaluationContext context) {
+      return operator.invoke(
+          new BinaryOperatorInput(
+              context, leftPath.apply(input, context), rightPath.apply(input, context)));
     }
-
 
     @Nonnull
     @Override
@@ -131,15 +133,15 @@ public final class Paths {
     @Nonnull
     private String argToExpression(@Nonnull final FhirPath arg) {
       if (arg instanceof final EvalOperator opArg) {
-        return BinaryOperatorType.comparePrecedence(operator.getOperatorName(),
-            opArg.operator.getOperatorName()) >= 0
-               ? arg.toExpression()
-               : arg.toTermExpression();
+        return BinaryOperatorType.comparePrecedence(
+                    operator.getOperatorName(), opArg.operator.getOperatorName())
+                >= 0
+            ? arg.toExpression()
+            : arg.toTermExpression();
       } else {
         return arg.toExpression();
       }
     }
-
   }
 
   /**
@@ -148,15 +150,13 @@ public final class Paths {
    * @param path the operand path
    * @param operator the unary operator to apply
    */
-  public record EvalUnaryOperator(
-      @Nonnull FhirPath path,
-      @Nonnull UnaryOperator operator
-  ) implements FhirPath {
+  public record EvalUnaryOperator(@Nonnull FhirPath path, @Nonnull UnaryOperator operator)
+      implements FhirPath {
 
     @Nonnull
     @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+    public Collection apply(
+        @Nonnull final Collection input, @Nonnull final EvaluationContext context) {
       return operator.invoke(new UnaryOperator.UnaryOperatorInput(path.apply(input, context)));
     }
 
@@ -171,9 +171,7 @@ public final class Paths {
     public Stream<FhirPath> children() {
       return Stream.of(path);
     }
-
   }
-
 
   /**
    * Represents a function evaluation in FHIRPath expressions.
@@ -181,14 +179,12 @@ public final class Paths {
    * @param functionIdentifier the identifier of the function to evaluate
    * @param arguments the list of arguments to the function
    */
-  public record EvalFunction(
-      @Nonnull String functionIdentifier,
-      @Nonnull List<FhirPath> arguments
-  ) implements FhirPath {
+  public record EvalFunction(@Nonnull String functionIdentifier, @Nonnull List<FhirPath> arguments)
+      implements FhirPath {
 
     @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+    public Collection apply(
+        @Nonnull final Collection input, @Nonnull final EvaluationContext context) {
       final NamedFunction function;
       try {
         function = context.resolveFunction(functionIdentifier);
@@ -199,20 +195,19 @@ public final class Paths {
       return function.invoke(functionInput);
     }
 
-
     @Nonnull
     @Override
     public String toExpression() {
-      return functionIdentifier + "(" + arguments.stream().map(FhirPath::toExpression)
-          .collect(Collectors.joining(",")) + ")";
+      return functionIdentifier
+          + "("
+          + arguments.stream().map(FhirPath::toExpression).collect(Collectors.joining(","))
+          + ")";
     }
-
 
     @Override
     public Stream<FhirPath> children() {
       return arguments.stream();
     }
-
   }
 
   /**
@@ -223,8 +218,8 @@ public final class Paths {
   public record Traversal(@Nonnull String propertyName) implements FhirPath {
 
     @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+    public Collection apply(
+        @Nonnull final Collection input, @Nonnull final EvaluationContext context) {
       return input.traverse(propertyName).orElse(EmptyCollection.getInstance());
     }
 
@@ -253,9 +248,10 @@ public final class Paths {
     }
 
     @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      return context.resolveResource(resourceCode)
+    public Collection apply(
+        @Nonnull final Collection input, @Nonnull final EvaluationContext context) {
+      return context
+          .resolveResource(resourceCode)
           .map(Collection.class::cast)
           .orElseGet(() -> new Traversal(resourceCode).apply(input, context));
     }
@@ -266,5 +262,4 @@ public final class Paths {
       return resourceCode;
     }
   }
-
 }

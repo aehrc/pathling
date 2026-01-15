@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,25 +34,18 @@ import java.util.function.UnaryOperator;
  */
 public class DataSinkBuilder {
 
-  /**
-   * The Pathling context to use for writing data.
-   */
-  @Nonnull
-  private final PathlingContext context;
+  /** The Pathling context to use for writing data. */
+  @Nonnull private final PathlingContext context;
+
+  /** The data source containing the data to write. */
+  @Nonnull private final DataSource source;
+
+  /** The save mode to use when writing data. */
+  @Nonnull private SaveMode saveMode = SaveMode.ERROR_IF_EXISTS;
 
   /**
-   * The data source containing the data to write.
-   */
-  @Nonnull
-  private final DataSource source;
-
-  /**
-   * The save mode to use when writing data.
-   */
-  @Nonnull
-  private SaveMode saveMode = SaveMode.ERROR_IF_EXISTS;
-
-  /**
+   * Constructs a new DataSinkBuilder with the specified context and data source.
+   *
    * @param context the Pathling context to use for writing data
    * @param source the data source containing the data to write
    */
@@ -78,7 +71,6 @@ public class DataSinkBuilder {
    * "ndjson" extension.
    *
    * @param path the directory to write the files to
-   * 
    * @return Details about the performed operation.
    */
   public WriteDetails ndjson(@Nullable final String path) {
@@ -91,13 +83,13 @@ public class DataSinkBuilder {
    *
    * @param path the directory to write the files to
    * @param fileNameMapper a function that maps a resource type to a file name
-   * 
    * @return Details about the performed operation.
    */
-  public WriteDetails ndjson(@Nullable final String path,
-      @Nullable final UnaryOperator<String> fileNameMapper) {
-    return new NdjsonSink(context, checkArgumentNotNull(path), saveMode,
-        checkArgumentNotNull(fileNameMapper)).write(source);
+  public WriteDetails ndjson(
+      @Nullable final String path, @Nullable final UnaryOperator<String> fileNameMapper) {
+    return new NdjsonSink(
+            context, checkArgumentNotNull(path), saveMode, checkArgumentNotNull(fileNameMapper))
+        .write(source);
   }
 
   /**
@@ -119,10 +111,11 @@ public class DataSinkBuilder {
    * @param fileNameMapper a function that maps a resource type to a file name
    * @return Details about the performed operation.
    */
-  public WriteDetails parquet(@Nullable final String path,
-      @Nullable final UnaryOperator<String> fileNameMapper) {
-    return new ParquetSink(checkArgumentNotNull(path), saveMode,
-        checkArgumentNotNull(fileNameMapper)).write(source);
+  public WriteDetails parquet(
+      @Nullable final String path, @Nullable final UnaryOperator<String> fileNameMapper) {
+    return new ParquetSink(
+            checkArgumentNotNull(path), saveMode, checkArgumentNotNull(fileNameMapper))
+        .write(source);
   }
 
   /**
@@ -142,12 +135,12 @@ public class DataSinkBuilder {
    * @param fileNameMapper a function that maps a resource type to a file name
    * @return Details about the performed operation.
    */
-  public WriteDetails delta(@Nullable final String path,
-      @Nullable final UnaryOperator<String> fileNameMapper) {
-    return new DeltaSink(context, checkArgumentNotNull(path), saveMode,
-        checkArgumentNotNull(fileNameMapper)).write(source);
+  public WriteDetails delta(
+      @Nullable final String path, @Nullable final UnaryOperator<String> fileNameMapper) {
+    return new DeltaSink(
+            context, checkArgumentNotNull(path), saveMode, checkArgumentNotNull(fileNameMapper))
+        .write(source);
   }
-
 
   /**
    * Writes the data in the data source to tables within the Spark catalog, named according to the
@@ -158,7 +151,6 @@ public class DataSinkBuilder {
   public WriteDetails tables() {
     return new CatalogSink(context, saveMode).write(source);
   }
-
 
   /**
    * Writes the data in the data source to tables within the Spark catalog, named according to the
@@ -180,9 +172,8 @@ public class DataSinkBuilder {
    * @return Details about the performed operation.
    */
   public WriteDetails tables(@Nullable final String schema, @Nullable final String format) {
-    return new CatalogSink(context, saveMode, checkArgumentNotNull(schema),
-        checkArgumentNotNull(format)).write(source);
+    return new CatalogSink(
+            context, saveMode, checkArgumentNotNull(schema), checkArgumentNotNull(format))
+        .write(source);
   }
-
-
 }

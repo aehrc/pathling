@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
 import type { Bundle, Identifier, Parameters, Resource } from "fhir/r4";
@@ -85,6 +83,8 @@ export type DeleteFn = (options: DeleteOptions) => Promise<void>;
 export interface BulkExportBaseOptions extends AuthOptions {
   types?: ResourceType[];
   since?: string;
+  until?: string;
+  elements?: string;
 }
 
 export type SystemExportKickOffOptions = BulkExportBaseOptions;
@@ -164,7 +164,7 @@ export interface ImportKickOffOptions extends AuthOptions {
 }
 
 export interface ImportResult {
-  jobId: string;
+  pollingUrl: string;
 }
 
 export type ImportKickOffFn = (
@@ -315,7 +315,7 @@ export interface ViewExportKickOffOptions extends AuthOptions {
 }
 
 export interface ViewExportResult {
-  jobId: string;
+  pollingUrl: string;
 }
 
 export interface ViewExportDownloadOptions extends AuthOptions {
@@ -335,7 +335,7 @@ export type ViewExportDownloadFn = (
 // =============================================================================
 
 export interface JobStatusOptions extends AuthOptions {
-  jobId: string;
+  pollingUrl: string;
 }
 
 export interface JobStatusResult {
@@ -345,7 +345,7 @@ export interface JobStatusResult {
 }
 
 export interface JobCancelOptions extends AuthOptions {
-  jobId: string;
+  pollingUrl: string;
 }
 
 export type JobStatusFn = (

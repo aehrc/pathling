@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,18 +44,30 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value(staticConstructor = "of")
 public class FhirDefinitionContext implements DefinitionContext {
 
-  @Nonnull
-  FhirContext fhirContext;
-
+  @Nonnull FhirContext fhirContext;
 
   @Override
   @Nonnull
   public ResourceDefinition findResourceDefinition(@Nonnull final String resourceCode) {
     // Try to resolve to a standard ResourceType, but allow custom types (like ViewDefinition).
     final Optional<ResourceType> resourceType = tryGetResourceType(resourceCode);
-    final RuntimeResourceDefinition hapiDefinition = fhirContext.getResourceDefinition(
-        resourceCode);
+    final RuntimeResourceDefinition hapiDefinition =
+        fhirContext.getResourceDefinition(resourceCode);
     return new FhirResourceDefinition(resourceCode, resourceType, requireNonNull(hapiDefinition));
+  }
+
+  /**
+   * Finds the resource definition for the given {@link ResourceType}.
+   *
+   * @param resourceType the FHIR resource type to find the definition for
+   * @return the corresponding {@link ResourceDefinition} for the resource type
+   */
+  @Nonnull
+  public ResourceDefinition findResourceDefinition(@Nonnull final ResourceType resourceType) {
+    final String resourceCode = resourceType.toCode();
+    final RuntimeResourceDefinition hapiDefinition =
+        fhirContext.getResourceDefinition(resourceCode);
+    return new FhirResourceDefinition(resourceType, requireNonNull(hapiDefinition));
   }
 
   /**
@@ -75,22 +87,10 @@ public class FhirDefinitionContext implements DefinitionContext {
   }
 
   /**
-   * Finds the resource definition for the given {@link ResourceType}.
+   * Builds an ElementDefinition from a HAPI child definition.
    *
-   * @param resourceType the FHIR resource type to find the definition for
-   * @return the corresponding {@link ResourceDefinition} for the resource type
-   */
-  @Nonnull
-  public ResourceDefinition findResourceDefinition(@Nonnull final ResourceType resourceType) {
-    final String resourceCode = resourceType.toCode();
-    final RuntimeResourceDefinition hapiDefinition = fhirContext.getResourceDefinition(
-        resourceCode);
-    return new FhirResourceDefinition(resourceType, requireNonNull(hapiDefinition));
-  }
-
-
-  /**
    * @param childDefinition A HAPI {@link BaseRuntimeChildDefinition} that describes this element
+   * @param elementName the name of the element
    * @return A shiny new ElementDefinition
    */
   @Nonnull
@@ -98,10 +98,9 @@ public class FhirDefinitionContext implements DefinitionContext {
       @Nonnull final BaseRuntimeChildDefinition childDefinition,
       @Nonnull final String elementName) {
 
-    if (isChildChoiceDefinition(childDefinition) && childDefinition.getElementName()
-        .equals(elementName)) {
-      return Optional.of(
-          new FhirChoiceDefinition((RuntimeChildChoiceDefinition) childDefinition));
+    if (isChildChoiceDefinition(childDefinition)
+        && childDefinition.getElementName().equals(elementName)) {
+      return Optional.of(new FhirChoiceDefinition((RuntimeChildChoiceDefinition) childDefinition));
     } else {
       return buildElement(childDefinition, elementName).map(e -> e);
     }
@@ -113,23 +112,21 @@ public class FhirDefinitionContext implements DefinitionContext {
       @Nonnull final String elementName) {
 
     if (childDefinition.getValidChildNames().contains(elementName)) {
-      final BaseRuntimeElementDefinition<?> elementDefinition = childDefinition.getChildByName(
-          elementName);
+      final BaseRuntimeElementDefinition<?> elementDefinition =
+          childDefinition.getChildByName(elementName);
       if (childDefinition instanceof final RuntimeChildResourceDefinition rctd) {
         return Optional.of(new FhirReferenceDefinition(rctd));
-      } else if (isChildChoiceDefinition(childDefinition) && isReferenceDefinition(
-          elementDefinition)) {
+      } else if (isChildChoiceDefinition(childDefinition)
+          && isReferenceDefinition(elementDefinition)) {
         return Optional.of(
-            new FhirReferenceDefinition((RuntimeChildChoiceDefinition) childDefinition,
-                elementName));
+            new FhirReferenceDefinition(
+                (RuntimeChildChoiceDefinition) childDefinition, elementName));
       } else if (nonNull(elementDefinition)) {
         return Optional.of(new FhirElementDefinition(childDefinition, elementName));
       }
     }
     return Optional.empty();
-    
   }
-
 
   static boolean isChildChoiceDefinition(
       @Nonnull final BaseRuntimeChildDefinition childDefinition) {

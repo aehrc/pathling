@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,26 +36,30 @@ import org.springframework.beans.factory.annotation.Autowired;
 @SpringBootUnitTest
 class SqlFunctionsTest {
 
-  @Autowired
-  private SparkSession spark;
+  @Autowired private SparkSession spark;
 
   @Test
   void testPruneAnnotations() {
     // Create a schema with both regular and synthetic fields
-    final StructType structSchema = new StructType()
-        .add("id", DataTypes.StringType)
-        .add("name", DataTypes.StringType)
-        .add("_type", DataTypes.StringType)
-        .add("_version", DataTypes.StringType)
-        .add("value_scale", DataTypes.IntegerType);
+    final StructType structSchema =
+        new StructType()
+            .add("id", DataTypes.StringType)
+            .add("name", DataTypes.StringType)
+            .add("_type", DataTypes.StringType)
+            .add("_version", DataTypes.StringType)
+            .add("value_scale", DataTypes.IntegerType);
 
     // Create a dataset with a struct column and primitive columns
-    final Dataset<Row> dataset = spark.range(0)
-        .toDF().select(
-            ValueFunctions.pruneAnnotations(functions.lit(null).cast(structSchema)).alias("pruned"));
+    final Dataset<Row> dataset =
+        spark
+            .range(0)
+            .toDF()
+            .select(
+                ValueFunctions.pruneAnnotations(functions.lit(null).cast(structSchema))
+                    .alias("pruned"));
 
     final StructType prunedSchema = (StructType) dataset.schema().apply(0).dataType();
-    final String[] expectedFieldNames = new String[]{"id", "name"};
+    final String[] expectedFieldNames = new String[] {"id", "name"};
     assertArrayEquals(expectedFieldNames, prunedSchema.fieldNames());
     for (int i = 0; i < expectedFieldNames.length; i++) {
       assertEquals(structSchema.apply(i), prunedSchema.apply(i));
@@ -65,23 +69,25 @@ class SqlFunctionsTest {
   @Test
   void testPruneAnnotationsSimpleTypes() {
     // Test that simple types are not affected by prune_annotations
-    final Dataset<Row> dataset = spark.range(1).toDF("id")
-        .select(
-            functions.col("id"),
-            functions.lit("test string").as("string_val"),
-            functions.lit(42).as("int_val"),
-            functions.lit(3.14).as("double_val"),
-            functions.lit(true).as("bool_val")
-        );
+    final Dataset<Row> dataset =
+        spark
+            .range(1)
+            .toDF("id")
+            .select(
+                functions.col("id"),
+                functions.lit("test string").as("string_val"),
+                functions.lit(42).as("int_val"),
+                functions.lit(3.14).as("double_val"),
+                functions.lit(true).as("bool_val"));
 
     // Apply prune_annotations to all columns
-    final Dataset<Row> result = dataset.select(
-        ValueFunctions.pruneAnnotations(functions.col("id")).as("pruned_id"),
-        ValueFunctions.pruneAnnotations(functions.col("string_val")).as("pruned_string"),
-        ValueFunctions.pruneAnnotations(functions.col("int_val")).as("pruned_int"),
-        ValueFunctions.pruneAnnotations(functions.col("double_val")).as("pruned_double"),
-        ValueFunctions.pruneAnnotations(functions.col("bool_val")).as("pruned_bool")
-    );
+    final Dataset<Row> result =
+        dataset.select(
+            ValueFunctions.pruneAnnotations(functions.col("id")).as("pruned_id"),
+            ValueFunctions.pruneAnnotations(functions.col("string_val")).as("pruned_string"),
+            ValueFunctions.pruneAnnotations(functions.col("int_val")).as("pruned_int"),
+            ValueFunctions.pruneAnnotations(functions.col("double_val")).as("pruned_double"),
+            ValueFunctions.pruneAnnotations(functions.col("bool_val")).as("pruned_bool"));
 
     // Verify that the values are unchanged
     final Row row = result.first();
@@ -99,18 +105,19 @@ class SqlFunctionsTest {
     assertEquals(DataTypes.BooleanType, result.schema().apply("pruned_bool").dataType());
   }
 
-
   @Test
   void testToFhirInstant() {
-    final Dataset<Row> result = spark.range(1).toDF()
-        .select(
-            SqlFunctions.toFhirInstant(
-                    functions.lit("2023-01-01T12:34:56.789Z").cast(DataTypes.TimestampType))
-                .as("instant_utc"),
-            SqlFunctions.toFhirInstant(
-                    functions.lit("2023-01-01T12:34:56.7+10:00").cast(DataTypes.TimestampType))
-                .as("instant_plus_10")
-        );
+    final Dataset<Row> result =
+        spark
+            .range(1)
+            .toDF()
+            .select(
+                SqlFunctions.toFhirInstant(
+                        functions.lit("2023-01-01T12:34:56.789Z").cast(DataTypes.TimestampType))
+                    .as("instant_utc"),
+                SqlFunctions.toFhirInstant(
+                        functions.lit("2023-01-01T12:34:56.7+10:00").cast(DataTypes.TimestampType))
+                    .as("instant_plus_10"));
     final Row resultRow = result.first();
 
     assertEquals("2023-01-01T12:34:56.789Z", resultRow.getString(0));
@@ -120,8 +127,8 @@ class SqlFunctionsTest {
   @Test
   void testToFhirInstantNull() {
     // Dataset with null timestamp
-    final Dataset<Row> result = spark.range(1).toDF()
-        .select(SqlFunctions.toFhirInstant(functions.lit(null)).as("instant"));
+    final Dataset<Row> result =
+        spark.range(1).toDF().select(SqlFunctions.toFhirInstant(functions.lit(null)).as("instant"));
     assertNull(result.first().get(0));
   }
 }

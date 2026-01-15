@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,8 +71,7 @@ class FhirTraversalTest {
     patient.setIdElement(id);
     patient.addName(name1).addName(name2);
     FhirTraversal.processRecursive(patient, this::collectObject);
-    assertEquals(Set.of(familyName1, familyName2, name1, name2, id, patient),
-        collection);
+    assertEquals(Set.of(familyName1, familyName2, name1, name2, id, patient), collection);
   }
 
   @Test
@@ -81,7 +80,8 @@ class FhirTraversalTest {
     id.addExtension(EXTENSION_1).addExtension(EXTENSION_2);
     final Resource patient = new Patient().setIdElement(id);
     FhirTraversal.processRecursive(patient, this::collectObject);
-    assertEquals(Set.of(URI_1, STRING_1, EXTENSION_1, URI_2, STRING_2, EXTENSION_2, id, patient),
+    assertEquals(
+        Set.of(URI_1, STRING_1, EXTENSION_1, URI_2, STRING_2, EXTENSION_2, id, patient),
         collection);
   }
 
@@ -92,7 +92,8 @@ class FhirTraversalTest {
     patient.setIdElement(id);
     patient.addExtension(EXTENSION_1).addExtension(EXTENSION_2);
     FhirTraversal.processRecursive(patient, this::collectObject);
-    assertEquals(Set.of(URI_1, STRING_1, EXTENSION_1, URI_2, STRING_2, EXTENSION_2, id, patient),
+    assertEquals(
+        Set.of(URI_1, STRING_1, EXTENSION_1, URI_2, STRING_2, EXTENSION_2, id, patient),
         collection);
   }
 
@@ -109,9 +110,17 @@ class FhirTraversalTest {
 
     FhirTraversal.processRecursive(patient, this::collectObject);
     assertEquals(
-        Set.of(URI_1, STRING_1, EXTENSION_1, URI_2, STRING_2, EXTENSION_2, id, name1, familyName1,
+        Set.of(
+            URI_1,
+            STRING_1,
+            EXTENSION_1,
+            URI_2,
+            STRING_2,
+            EXTENSION_2,
+            id,
+            name1,
+            familyName1,
             patient),
         collection);
   }
-
 }

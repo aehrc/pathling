@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,17 +24,16 @@ import org.junit.jupiter.api.Test;
 
 class ConversionFactorTest {
 
-
   @Test
   void testInverseProducesExactResult() {
-    assertEquals(BigDecimal.ONE,
-        ConversionFactor.inverseOf(new BigDecimal(12)).apply(new BigDecimal(12)));
+    assertEquals(
+        BigDecimal.ONE, ConversionFactor.inverseOf(new BigDecimal(12)).apply(new BigDecimal(12)));
   }
-
 
   @Test
   void testFractionProducesExactResult() {
-    assertEquals(new BigDecimal(4),
+    assertEquals(
+        new BigDecimal(4),
         ConversionFactor.ofFraction(new BigDecimal(2), new BigDecimal(3)).apply(new BigDecimal(6)));
   }
 }

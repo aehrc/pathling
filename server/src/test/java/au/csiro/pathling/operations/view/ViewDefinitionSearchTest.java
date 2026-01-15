@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -176,6 +176,7 @@ class ViewDefinitionSearchTest {
     assertThat(result.size()).isEqualTo(3);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources)
+        .isNotEmpty()
         .allSatisfy(
             r -> {
               final ViewDefinitionResource view = (ViewDefinitionResource) r;
@@ -217,6 +218,7 @@ class ViewDefinitionSearchTest {
     assertThat(result.size()).isEqualTo(4);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources)
+        .isNotEmpty()
         .allSatisfy(
             r -> {
               final ViewDefinitionResource view = (ViewDefinitionResource) r;
@@ -258,6 +260,7 @@ class ViewDefinitionSearchTest {
     assertThat(result.size()).isEqualTo(3);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources)
+        .isNotEmpty()
         .allSatisfy(
             r -> {
               final ViewDefinitionResource view = (ViewDefinitionResource) r;
@@ -293,7 +296,7 @@ class ViewDefinitionSearchTest {
             .map(r -> ((ViewDefinitionResource) r).getIdElement().getIdPart())
             .toList();
 
-    assertThat(firstPageIds).doesNotContainAnyElementsOf(secondPageIds);
+    assertThat(firstPageIds).isNotEmpty().doesNotContainAnyElementsOf(secondPageIds);
   }
 
   // -------------------------------------------------------------------------

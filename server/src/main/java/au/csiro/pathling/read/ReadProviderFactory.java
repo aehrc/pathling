@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,14 +33,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReadProviderFactory {
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull
-  private final DataSource dataSource;
+  @Nonnull private final DataSource dataSource;
 
-  @Nonnull
-  private final FhirEncoders fhirEncoders;
+  @Nonnull private final FhirEncoders fhirEncoders;
 
   /**
    * Constructs a new ReadProviderFactory.
@@ -49,7 +46,8 @@ public class ReadProviderFactory {
    * @param dataSource the data source containing the resources to read
    * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
    */
-  public ReadProviderFactory(@Nonnull final FhirContext fhirContext,
+  public ReadProviderFactory(
+      @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
       @Nonnull final FhirEncoders fhirEncoders) {
     this.fhirContext = fhirContext;
@@ -65,8 +63,8 @@ public class ReadProviderFactory {
    */
   @Nonnull
   public ReadProvider createReadProvider(@Nonnull final ResourceType resourceType) {
-    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
-        .getResourceDefinition(resourceType.name()).getImplementingClass();
+    final Class<? extends IBaseResource> resourceTypeClass =
+        fhirContext.getResourceDefinition(resourceType.name()).getImplementingClass();
 
     final ReadExecutor readExecutor = new ReadExecutor(dataSource, fhirEncoders);
     return new ReadProvider(readExecutor, fhirContext, resourceTypeClass);
@@ -81,11 +79,10 @@ public class ReadProviderFactory {
    */
   @Nonnull
   public ReadProvider createReadProvider(@Nonnull final String resourceTypeCode) {
-    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
-        .getResourceDefinition(resourceTypeCode).getImplementingClass();
+    final Class<? extends IBaseResource> resourceTypeClass =
+        fhirContext.getResourceDefinition(resourceTypeCode).getImplementingClass();
 
     final ReadExecutor readExecutor = new ReadExecutor(dataSource, fhirEncoders);
     return new ReadProvider(readExecutor, fhirContext, resourceTypeClass);
   }
-
 }

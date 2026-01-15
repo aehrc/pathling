@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,14 +27,12 @@ import lombok.Value;
 @Value(staticConstructor = "of")
 class AnyPredicate implements Predicate<TestCase> {
 
-  @Nonnull
-  String substring;
+  @Nonnull String substring;
 
   @Override
   public boolean test(final TestCase testCase) {
-    return Stream.of(
-        Stream.of(testCase.expression()),
-        Stream.ofNullable(testCase.description())
-    ).flatMap(Function.identity()).anyMatch(s -> s.contains(substring));
+    return Stream.of(Stream.of(testCase.expression()), Stream.ofNullable(testCase.description()))
+        .flatMap(Function.identity())
+        .anyMatch(s -> s.contains(substring));
   }
 }

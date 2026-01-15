@@ -1,3 +1,20 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.operations.bulkexport;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,15 +47,15 @@ class ExportOperationDownloadTest {
 
   private static final String TEST_JOB_ID = "95d25c62-2b5a-4eb8-9904-88d8a9c00f2b";
   private static final String TEST_FILENAME = "test-file.ndjson";
-  private static final String TEST_CONTENT = """
+  private static final String TEST_CONTENT =
+      """
       {"resourceType":"Patient","id":"1","active":true}
       {"resourceType":"Patient","id":"2","active":false}
       """;
 
   private ExportResultProvider exportResultProvider;
 
-  @TempDir
-  private Path tempDir;
+  @TempDir private Path tempDir;
 
   @SuppressWarnings("unused")
   @Autowired
@@ -48,8 +65,7 @@ class ExportOperationDownloadTest {
   @Autowired
   private JobRegistry jobRegistry;
 
-  @Autowired
-  private ExportResultRegistry exportResultRegistry;
+  @Autowired private ExportResultRegistry exportResultRegistry;
 
   @BeforeEach
   void setup() throws IOException {
@@ -66,13 +82,17 @@ class ExportOperationDownloadTest {
 
     // Create additional test files
     final Path anotherFile = jobDir.resolve("patients.ndjson");
-    Files.writeString(anotherFile, """
+    Files.writeString(
+        anotherFile,
+        """
         {"resourceType":"Patient","id":"patient1","name":[{"family":"Doe","given":["John"]}]}
         {"resourceType":"Patient","id":"patient2","name":[{"family":"Smith","given":["Jane"]}]}
         """);
 
     final Path observationsFile = jobDir.resolve("observations.ndjson");
-    Files.writeString(observationsFile, """
+    Files.writeString(
+        observationsFile,
+        """
         {"resourceType":"Observation","id":"obs1","status":"final"}
         {"resourceType":"Observation","id":"obs2","status":"preliminary"}
         """);
@@ -92,17 +112,16 @@ class ExportOperationDownloadTest {
 
     // Get the resource and read its content
     final String actualContent = response.getContentAsString();
-    assertThat(actualContent)
-        .isNotEmpty()
-        .isEqualTo(TEST_CONTENT);
+    assertThat(actualContent).isNotEmpty().isEqualTo(TEST_CONTENT);
   }
 
   @Test
   void testNothingIsServedIfJobIsUnknown() {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     assertThatCode(
-        () -> exportResultProvider.result("96f7f71b-f37e-4f1c-8cb4-0571e4b7f37b", TEST_FILENAME,
-            response))
+            () ->
+                exportResultProvider.result(
+                    "96f7f71b-f37e-4f1c-8cb4-0571e4b7f37b", TEST_FILENAME, response))
         .isExactlyInstanceOf(ResourceNotFoundError.class)
         .hasMessage("Unknown job id.");
   }

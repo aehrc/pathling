@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,34 +13,28 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
-import type { Parameters } from "fhir/r4";
+import { buildHeaders, buildUrl, checkResponse } from "./utils";
+
 import type {
   ImportKickOffOptions,
   ImportResult,
   ImportPnpKickOffOptions,
 } from "../types/api";
-import {
-  buildHeaders,
-  buildUrl,
-  checkResponse,
-  extractJobIdFromUrl,
-} from "./utils";
+import type { Parameters } from "fhir/r4";
 
 /**
  * Kicks off a bulk import operation.
  *
  * @param baseUrl - The FHIR server base URL.
  * @param options - Import options including input files, format, and mode.
- * @returns The job ID for tracking the import operation.
+ * @returns The polling URL for tracking the import operation.
  * @throws {UnauthorizedError} When the request receives a 401 response.
  * @throws {Error} For other non-successful responses.
  *
  * @example
- * const { jobId } = await importKickOff("https://example.com/fhir", {
+ * const { pollingUrl } = await importKickOff("https://example.com/fhir", {
  *   input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
  *   inputFormat: "application/fhir+ndjson",
  *   mode: "overwrite",
@@ -84,12 +78,14 @@ export async function importKickOff(
     throw new Error("Import kick-off failed: No Content-Location header");
   }
 
-  const jobId = extractJobIdFromUrl(contentLocation);
-  return { jobId };
+  return { pollingUrl: contentLocation };
 }
 
 /**
  * Builds a FHIR Parameters resource for the import-pnp operation.
+ *
+ * @param options - Import PnP options including export URL and settings.
+ * @returns The constructed FHIR Parameters resource.
  */
 function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
   const parameters: Parameters = {
@@ -126,12 +122,12 @@ function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
  *
  * @param baseUrl - The FHIR server base URL.
  * @param options - Import options including export URL and optional settings.
- * @returns The job ID for tracking the import operation.
+ * @returns The polling URL for tracking the import operation.
  * @throws {UnauthorizedError} When the request receives a 401 response.
  * @throws {Error} For other non-successful responses.
  *
  * @example
- * const { jobId } = await importPnpKickOff("https://example.com/fhir", {
+ * const { pollingUrl } = await importPnpKickOff("https://example.com/fhir", {
  *   exportUrl: "https://source.com/$export",
  *   exportType: "dynamic",
  *   saveMode: "merge",
@@ -171,6 +167,5 @@ export async function importPnpKickOff(
     throw new Error("Import PnP kick-off failed: No Content-Location header");
   }
 
-  const jobId = extractJobIdFromUrl(contentLocation);
-  return { jobId };
+  return { pollingUrl: contentLocation };
 }

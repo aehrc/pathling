@@ -88,7 +88,7 @@
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
     <pathling.derbyVersion>10.16.1.1</pathling.derbyVersion>
     <pathling.bulkExportVersion>1.0.4-SNAPSHOT</pathling.bulkExportVersion>
-    <pathling.fhirAuthVersion>1.0.0-SNAPSHOT</pathling.fhirAuthVersion>
+    <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
   </properties>
 
   <modules>
@@ -588,6 +588,43 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>compile</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>compile</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>spotbugs-check</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
     <pluginManagement>
       <plugins>
@@ -878,6 +915,60 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-resources-plugin</artifactId>
           <version>3.3.1</version>
+        </plugin>
+        <plugin>
+          <groupId>com.diffplug.spotless</groupId>
+          <artifactId>spotless-maven-plugin</artifactId>
+          <version>2.44.5</version>
+          <configuration>
+            <java>
+              <googleJavaFormat>
+                <version>1.27.0</version>
+                <style>GOOGLE</style>
+                <reflowLongStrings>true</reflowLongStrings>
+                <formatJavadoc>true</formatJavadoc>
+              </googleJavaFormat>
+            </java>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>3.6.0</version>
+          <configuration>
+            <configLocation>config/checkstyle/checkstyle.xml</configLocation>
+            <suppressionsLocation>config/checkstyle/suppressions.xml</suppressionsLocation>
+            <includeTestSourceDirectory>false</includeTestSourceDirectory>
+            <consoleOutput>true</consoleOutput>
+            <failsOnError>true</failsOnError>
+            <failOnViolation>true</failOnViolation>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>com.puppycrawl.tools</groupId>
+              <artifactId>checkstyle</artifactId>
+              <version>10.21.4</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>com.github.spotbugs</groupId>
+          <artifactId>spotbugs-maven-plugin</artifactId>
+          <version>4.9.3.0</version>
+          <configuration>
+            <effort>Max</effort>
+            <threshold>Medium</threshold>
+            <failOnError>true</failOnError>
+            <includeTests>false</includeTests>
+            <excludeFilterFile>config/spotbugs/exclude-filter.xml</excludeFilterFile>
+            <plugins>
+              <plugin>
+                <groupId>com.h3xstream.findsecbugs</groupId>
+                <artifactId>findsecbugs-plugin</artifactId>
+                <version>1.13.0</version>
+              </plugin>
+            </plugins>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>

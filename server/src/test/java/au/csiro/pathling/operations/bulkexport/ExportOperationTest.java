@@ -1,12 +1,29 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.operations.bulkexport;
 
 import static au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import static au.csiro.pathling.operations.bulkexport.ExportOutputFormat.NDJSON;
-import static au.csiro.pathling.util.ExportOperationUtil.fi;
+import static au.csiro.pathling.util.ExportOperationUtil.fileInfo;
 import static au.csiro.pathling.util.ExportOperationUtil.req;
 import static au.csiro.pathling.util.ExportOperationUtil.res;
 import static au.csiro.pathling.util.ExportOperationUtil.resolveTempDirIn;
-import static au.csiro.pathling.util.ExportOperationUtil.write_details;
+import static au.csiro.pathling.util.ExportOperationUtil.writeDetails;
 import static au.csiro.pathling.util.TestConstants.RESOLVE_PATIENT;
 import static au.csiro.pathling.util.TestConstants.WAREHOUSE_PLACEHOLDER;
 import static org.assertj.core.api.Assertions.LIST;
@@ -28,7 +45,6 @@ import au.csiro.pathling.util.MockUtil;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nullable;
-import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -357,8 +373,9 @@ class ExportOperationTest {
   @ParameterizedTest
   @MethodSource("provideOutputMappings")
   void testOutputModelMapping(
-      final ExportResponse exportResponse, final String expectedRequest, final int expectedOutputs)
-      throws IOException {
+      final ExportResponse exportResponse,
+      final String expectedRequest,
+      final int expectedOutputs) {
     final Parameters actualParameters =
         resolveTempDirIn(exportResponse, Paths.get("test"), UUID.randomUUID()).toOutput();
 
@@ -399,7 +416,7 @@ class ExportOperationTest {
 
     final var req1 = req(base, NDJSON, now, List.of("Patient"));
     final var res1 =
-        res(req1, write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
+        res(req1, writeDetails(fileInfo("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
 
     return Stream.of(arguments(res1, res1.getKickOffRequestUrl(), 1));
   }

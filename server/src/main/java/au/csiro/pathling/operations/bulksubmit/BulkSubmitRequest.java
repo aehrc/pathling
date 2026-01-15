@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,22 +47,15 @@ public record BulkSubmitRequest(
     @Nullable String replacesManifestUrl,
     @Nullable String oauthMetadataUrl,
     @Nullable SubmissionMetadata metadata,
-    @Nonnull List<FileRequestHeader> fileRequestHeaders
-) {
+    @Nonnull List<FileRequestHeader> fileRequestHeaders) {
 
-  /**
-   * Submission status indicating the submission is still in progress.
-   */
+  /** Submission status indicating the submission is still in progress. */
   public static final String STATUS_IN_PROGRESS = "in-progress";
 
-  /**
-   * Submission status indicating the submission is complete and ready for processing.
-   */
+  /** Submission status indicating the submission is complete and ready for processing. */
   public static final String STATUS_COMPLETE = "complete";
 
-  /**
-   * Submission status indicating the submission has been aborted.
-   */
+  /** Submission status indicating the submission has been aborted. */
   public static final String STATUS_ABORTED = "aborted";
 
   /**
@@ -91,5 +84,4 @@ public record BulkSubmitRequest(
   public boolean isAborted() {
     return STATUS_ABORTED.equals(submissionStatus);
   }
-
 }

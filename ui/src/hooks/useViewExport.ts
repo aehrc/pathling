@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,20 +13,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Author: John Grimes
  */
 
 import { useCallback, useMemo, useRef } from "react";
+
 import {
   viewExportKickOff,
   viewExportDownload,
   jobStatus,
   jobCancel,
+  extractJobIdFromUrl,
 } from "../api";
 import { config } from "../config";
-import { useAuth } from "../contexts/AuthContext";
 import { useAsyncJob } from "./useAsyncJob";
+import { useAuth } from "../contexts/AuthContext";
+
 import type {
   UseViewExportFn,
   UseViewExportResult,
@@ -43,7 +44,7 @@ export const useViewExport: UseViewExportFn = (options) => {
   const { fhirBaseUrl } = config;
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
-  const jobIdRef = useRef<string | undefined>(undefined);
+  const pollingUrlRef = useRef<string | undefined>(undefined);
 
   const callbacks = useMemo(
     () => ({
@@ -63,17 +64,17 @@ export const useViewExport: UseViewExportFn = (options) => {
           header: request.header,
           accessToken,
         }),
-      getJobId: (result: { jobId: string }) => {
-        jobIdRef.current = result.jobId;
-        return result.jobId;
+      getJobId: (result: { pollingUrl: string }) => {
+        pollingUrlRef.current = result.pollingUrl;
+        return result.pollingUrl;
       },
-      checkStatus: (jobId: string) =>
-        jobStatus(fhirBaseUrl!, { jobId, accessToken }),
+      checkStatus: (pollingUrl: string) =>
+        jobStatus(fhirBaseUrl!, { pollingUrl, accessToken }),
       isComplete: (status: { status: string }) => status.status === "complete",
       getResult: (status: { result?: unknown }) =>
         status.result as UseViewExportResult["result"],
-      cancel: (jobId: string) =>
-        jobCancel(fhirBaseUrl!, { jobId, accessToken }),
+      cancel: (pollingUrl: string) =>
+        jobCancel(fhirBaseUrl!, { pollingUrl, accessToken }),
       pollingInterval: 3000,
     }),
     [fhirBaseUrl, accessToken],
@@ -83,9 +84,10 @@ export const useViewExport: UseViewExportFn = (options) => {
 
   const download = useCallback(
     async (fileName: string) => {
-      if (!jobIdRef.current) throw new Error("No job ID available");
+      if (!pollingUrlRef.current) throw new Error("No polling URL available");
+      const jobId = extractJobIdFromUrl(pollingUrlRef.current);
       return viewExportDownload(fhirBaseUrl!, {
-        jobId: jobIdRef.current,
+        jobId,
         fileName,
         accessToken,
       });
