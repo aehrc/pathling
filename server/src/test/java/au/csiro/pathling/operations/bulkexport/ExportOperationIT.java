@@ -54,6 +54,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Resource;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -132,6 +133,13 @@ class ExportOperationIT {
     if (jobsDir.toFile().exists()) {
       FileUtils.cleanDirectory(jobsDir.toFile());
     }
+  }
+
+  @AfterAll
+  static void cleanupAll() throws IOException {
+    // Clean the entire temp directory before JUnit's @TempDir cleanup runs.
+    // This ensures Spark/Delta file handles don't prevent directory deletion.
+    FileUtils.cleanDirectory(warehouseDir.toFile());
   }
 
   @Test
