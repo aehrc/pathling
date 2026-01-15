@@ -107,7 +107,7 @@ public class DatasetSource extends AbstractSource {
   @Override
   public @NotNull QueryableDataSource filterByResourceType(
       @NotNull final Predicate<String> resourceTypePredicate) {
-    Map<String, Dataset<Row>> filteredMap =
+    final Map<String, Dataset<Row>> filteredMap =
         resourceMap.entrySet().stream()
             .filter(entry -> resourceTypePredicate.test(entry.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));

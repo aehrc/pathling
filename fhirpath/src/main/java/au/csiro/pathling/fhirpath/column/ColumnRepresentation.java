@@ -64,7 +64,7 @@ public abstract class ColumnRepresentation {
    * @return the column at the specified index
    */
   @Nonnull
-  public static Column getAt(@Nonnull final Column arrayColumn, int index) {
+  public static Column getAt(@Nonnull final Column arrayColumn, final int index) {
     return functions.get(arrayColumn, lit(index));
   }
 

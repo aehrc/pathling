@@ -104,18 +104,14 @@ public class ExportOperationValidator {
       @Nullable final String outputFormat,
       @Nullable final InstantType since,
       @Nullable final InstantType until,
-      @Nullable List<String> type,
-      @Nullable List<String> elements) {
+      @Nullable final List<String> type,
+      @Nullable final List<String> elements) {
     final boolean lenient =
         requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName()).stream()
             .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
 
-    if (type == null) {
-      type = new ArrayList<>();
-    }
-    if (elements == null) {
-      elements = new ArrayList<>();
-    }
+    final List<String> typeList = type != null ? type : new ArrayList<>();
+    final List<String> elementsList = elements != null ? elements : new ArrayList<>();
 
     final ExportRequest exportRequest =
         createExportRequest(
@@ -125,8 +121,8 @@ public class ExportOperationValidator {
             outputFormat,
             since,
             until,
-            type,
-            elements);
+            typeList,
+            elementsList);
     final List<OperationOutcome.OperationOutcomeIssueComponent> issues =
         Stream.of(
                 OperationValidation.validateAcceptHeader(requestDetails, lenient),
@@ -157,18 +153,14 @@ public class ExportOperationValidator {
       @Nullable final String outputFormat,
       @Nullable final InstantType since,
       @Nullable final InstantType until,
-      @Nullable List<String> type,
-      @Nullable List<String> elements) {
+      @Nullable final List<String> type,
+      @Nullable final List<String> elements) {
     final boolean lenient =
         requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName()).stream()
             .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
 
-    if (type == null) {
-      type = new ArrayList<>();
-    }
-    if (elements == null) {
-      elements = new ArrayList<>();
-    }
+    final List<String> typeList = type != null ? type : new ArrayList<>();
+    final List<String> elementsList = elements != null ? elements : new ArrayList<>();
 
     final ExportRequest exportRequest =
         createPatientExportRequest(
@@ -178,8 +170,8 @@ public class ExportOperationValidator {
             outputFormat,
             since,
             until,
-            type,
-            elements,
+            typeList,
+            elementsList,
             exportLevel,
             patientIds);
 
@@ -206,7 +198,8 @@ public class ExportOperationValidator {
     if (!lenient) {
       final String firstUnsupported = unsupportedParams.iterator().next();
       throw new InvalidRequestException(
-          "The query parameter '%s' is not supported. Either remove the query parameter or add %s: %s header."
+          ("The query parameter '%s' is not supported. Either remove the query parameter or add "
+                  + "%s: %s header.")
               .formatted(
                   firstUnsupported,
                   FhirServer.PREFER_LENIENT_HEADER.headerName(),
@@ -221,7 +214,8 @@ public class ExportOperationValidator {
                       .setDetails(
                           new CodeableConcept()
                               .setText(
-                                  "The query parameter '%s' is not supported. Ignoring because lenient handling is enabled."
+                                  ("The query parameter '%s' is not supported. Ignoring because "
+                                          + "lenient handling is enabled.")
                                       .formatted(param))))
           .toList();
     }

@@ -45,7 +45,7 @@ public class FileController {
    */
   public FileController(
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          String databasePath) {
+          final String databasePath) {
     this.databasePath = databasePath;
   }
 
@@ -58,9 +58,9 @@ public class FileController {
    */
   @GetMapping("/jobs/{jobId}/{filename}")
   public ResponseEntity<Resource> serveFile(
-      @PathVariable("jobId") String jobId, @PathVariable("filename") String filename) {
+      @PathVariable("jobId") final String jobId, @PathVariable("filename") final String filename) {
 
-    Path requestedFilePath =
+    final Path requestedFilePath =
         new Path(
             URI.create(databasePath).getPath()
                 + Path.SEPARATOR
@@ -69,7 +69,7 @@ public class FileController {
                 + jobId
                 + Path.SEPARATOR
                 + filename);
-    Resource resource = new FileSystemResource(requestedFilePath.toString());
+    final Resource resource = new FileSystemResource(requestedFilePath.toString());
 
     if (!resource.exists() || !resource.isFile()) {
       return ResponseEntity.notFound().build();

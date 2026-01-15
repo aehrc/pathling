@@ -39,7 +39,7 @@ public record Header(String headerName, List<String> acceptedHeaderValues) {
    * @return The preferred header value.
    */
   public String preferred() {
-    return acceptedHeaderValues().get(0);
+    return acceptedHeaderValues().getFirst();
   }
 
   /**
@@ -48,11 +48,11 @@ public record Header(String headerName, List<String> acceptedHeaderValues) {
    * @param headerValue The header value to test.
    * @return True if valid, false otherwise.
    */
-  public boolean validValue(String headerValue) {
+  public boolean validValue(final String headerValue) {
     if (headerValue == null) {
       return false;
     }
-    List<String> values = Arrays.stream(headerValue.split(",")).map(String::trim).toList();
+    final List<String> values = Arrays.stream(headerValue.split(",")).map(String::trim).toList();
     // Accept wildcard */* which means the client accepts any content type.
     if (values.contains("*/*")) {
       return true;
@@ -67,7 +67,7 @@ public record Header(String headerName, List<String> acceptedHeaderValues) {
    * @param headerValues The header values to test.
    * @return True if at least one header value valid, false otherwise.
    */
-  public boolean validValue(Collection<String> headerValues) {
+  public boolean validValue(final Collection<String> headerValues) {
     return headerValues != null && headerValues.stream().anyMatch(this::validValue);
   }
 
@@ -79,7 +79,7 @@ public record Header(String headerName, List<String> acceptedHeaderValues) {
    *     header values.
    * @return True if at least one header value valid, false otherwise.
    */
-  public boolean validValue(ServletRequestDetails request) {
+  public boolean validValue(final ServletRequestDetails request) {
     Objects.requireNonNull(request);
     return validValue(request.getHeaders(headerName()));
   }

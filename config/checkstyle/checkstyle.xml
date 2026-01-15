@@ -151,6 +151,14 @@
       <property name="exceptionVariableName" value="expected"/>
     </module>
 
+    <!-- Variables. -->
+    <module name="FinalLocalVariable">
+      <property name="validateEnhancedForLoopVariable" value="true"/>
+      <property name="tokens" value="VARIABLE_DEF"/>
+    </module>
+    <module name="FinalParameters"/>
+    <module name="UnusedLocalVariable"/>
+
     <!-- Javadoc. -->
     <module name="NonEmptyAtclauseDescription"/>
     <module name="InvalidJavadocPosition"/>

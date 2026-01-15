@@ -55,7 +55,7 @@ public class ValueFunctions {
    */
   @Nonnull
   private static UnaryOperator<Expression> liftToExpression(
-      @Nonnull UnaryOperator<Column> columExpression) {
+      @Nonnull final UnaryOperator<Column> columExpression) {
     // This needs to be used rather than ExpressionUtils.expression()
     // to correctly unwrap the underlying expression.
     return e -> ColumnConversions$.MODULE$.toRichColumn(columExpression.apply(column(e))).expr();
@@ -194,7 +194,7 @@ public class ValueFunctions {
       @Nonnull final Column value,
       @Nonnull final UnaryOperator<Column> extractor,
       @Nonnull final List<UnaryOperator<Column>> traversals,
-      int maxDepth) {
+      final int maxDepth) {
 
     final List<Function1<Expression, Expression>> x =
         traversals.stream()

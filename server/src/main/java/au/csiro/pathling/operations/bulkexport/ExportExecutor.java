@@ -237,57 +237,55 @@ public class ExportExecutor {
 
   @Nonnull
   private static QueryableDataSource addSubsettedTag(
-      @Nonnull QueryableDataSource mapped, @Nonnull final Column subsettedTagArray) {
-    mapped =
-        mapped.map(
-            rowDataset ->
-                rowDataset.withColumn(
-                    "meta",
-                    struct(
-                        coalesce(col("meta.id"), lit(null).cast(DataTypes.StringType)).as("id"),
-                        coalesce(col("meta.versionId"), lit(null).cast(DataTypes.StringType))
-                            .as("versionId"),
-                        coalesce(
-                                col("meta.versionId_versioned"),
-                                lit(null).cast(DataTypes.StringType))
-                            .as("versionId_versioned"),
-                        coalesce(col("meta.lastUpdated"), lit(null).cast(DataTypes.TimestampType))
-                            .as("lastUpdated"),
-                        coalesce(col("meta.source"), lit(null).cast(DataTypes.StringType))
-                            .as("source"),
-                        coalesce(
-                                col("meta.profile"),
-                                lit(null).cast(DataTypes.createArrayType(DataTypes.StringType)))
-                            .as("profile"),
-                        coalesce(
-                                col("meta.security"),
-                                lit(null)
-                                    .cast(
-                                        DataTypes.createArrayType(
-                                            DataTypes.createStructType(
-                                                new StructField[] {
-                                                  DataTypes.createStructField(
-                                                      "id", DataTypes.StringType, true),
-                                                  DataTypes.createStructField(
-                                                      "system", DataTypes.StringType, true),
-                                                  DataTypes.createStructField(
-                                                      "version", DataTypes.StringType, true),
-                                                  DataTypes.createStructField(
-                                                      "code", DataTypes.StringType, true),
-                                                  DataTypes.createStructField(
-                                                      "display", DataTypes.StringType, true),
-                                                  DataTypes.createStructField(
-                                                      "userSelected", DataTypes.BooleanType, true),
-                                                  DataTypes.createStructField(
-                                                      "_fid", DataTypes.IntegerType, true)
-                                                }))))
-                            .as("security"),
-                        // Always combine existing tags with the new SUBSETTED tag
-                        array_union(coalesce(col("meta.tag"), array()), subsettedTagArray)
-                            .as("tag"),
-                        coalesce(col("meta._fid"), lit(null).cast(DataTypes.IntegerType))
-                            .as("_fid"))));
-    return mapped;
+      @Nonnull final QueryableDataSource mapped, @Nonnull final Column subsettedTagArray) {
+    return mapped.map(
+        rowDataset ->
+            rowDataset.withColumn(
+                "meta",
+                struct(
+                    coalesce(col("meta.id"), lit(null).cast(DataTypes.StringType)).as("id"),
+                    coalesce(col("meta.versionId"), lit(null).cast(DataTypes.StringType))
+                        .as("versionId"),
+                    coalesce(
+                            col("meta.versionId_versioned"),
+                            lit(null).cast(DataTypes.StringType))
+                        .as("versionId_versioned"),
+                    coalesce(col("meta.lastUpdated"), lit(null).cast(DataTypes.TimestampType))
+                        .as("lastUpdated"),
+                    coalesce(col("meta.source"), lit(null).cast(DataTypes.StringType))
+                        .as("source"),
+                    coalesce(
+                            col("meta.profile"),
+                            lit(null).cast(DataTypes.createArrayType(DataTypes.StringType)))
+                        .as("profile"),
+                    coalesce(
+                            col("meta.security"),
+                            lit(null)
+                                .cast(
+                                    DataTypes.createArrayType(
+                                        DataTypes.createStructType(
+                                            new StructField[] {
+                                              DataTypes.createStructField(
+                                                  "id", DataTypes.StringType, true),
+                                              DataTypes.createStructField(
+                                                  "system", DataTypes.StringType, true),
+                                              DataTypes.createStructField(
+                                                  "version", DataTypes.StringType, true),
+                                              DataTypes.createStructField(
+                                                  "code", DataTypes.StringType, true),
+                                              DataTypes.createStructField(
+                                                  "display", DataTypes.StringType, true),
+                                              DataTypes.createStructField(
+                                                  "userSelected", DataTypes.BooleanType, true),
+                                              DataTypes.createStructField(
+                                                  "_fid", DataTypes.IntegerType, true)
+                                            }))))
+                        .as("security"),
+                    // Always combine existing tags with the new SUBSETTED tag
+                    array_union(coalesce(col("meta.tag"), array()), subsettedTagArray)
+                        .as("tag"),
+                    coalesce(col("meta._fid"), lit(null).cast(DataTypes.IntegerType))
+                        .as("_fid"))));
   }
 
   @Nonnull
@@ -305,7 +303,7 @@ public class ExportExecutor {
 
   @Nonnull
   private QueryableDataSource applyElementsParams(
-      @Nonnull final ExportRequest exportRequest, @Nonnull QueryableDataSource mapped) {
+      @Nonnull final ExportRequest exportRequest, @Nonnull final QueryableDataSource mapped) {
     final Map<String, Set<String>> localElements =
         exportRequest.elements().stream()
             .filter(fhirElement -> fhirElement.resourceTypeCode() != null)
@@ -338,7 +336,7 @@ public class ExportExecutor {
                           rowDataset.select(
                               columnsWithNullification(rowDataset, allElementsForThisResourceType));
                     }));
-    mapped =
+    QueryableDataSource result =
         mapped.map(
             (resourceType, rowDataset) ->
                 localGlobalCombined
@@ -347,8 +345,8 @@ public class ExportExecutor {
 
     // Apply global elements to all other resource types that don't have specific elements
     if (!globalElements.isEmpty()) {
-      mapped =
-          mapped.map(
+      result =
+          result.map(
               (resourceType, dataset) -> {
                 // Only apply if this resource type wasn't already handled by bulkMap
                 if (!localGlobalCombined.containsKey(resourceType)) {
@@ -357,35 +355,33 @@ public class ExportExecutor {
                 return dataset;
               });
     }
-    return mapped;
+    return result;
   }
 
   @Nonnull
   private static QueryableDataSource applyUntilDateFilter(
-      @Nonnull final ExportRequest exportRequest, @Nonnull QueryableDataSource mapped) {
+      @Nonnull final ExportRequest exportRequest, @Nonnull final QueryableDataSource mapped) {
     if (exportRequest.until() != null) {
-      mapped =
-          mapped.map(
-              rowDataset ->
-                  rowDataset.filter(
-                      "meta.lastUpdated IS NULL OR meta.lastUpdated <= '"
-                          + exportRequest.until().getValueAsString()
-                          + "'"));
+      return mapped.map(
+          rowDataset ->
+              rowDataset.filter(
+                  "meta.lastUpdated IS NULL OR meta.lastUpdated <= '"
+                      + exportRequest.until().getValueAsString()
+                      + "'"));
     }
     return mapped;
   }
 
   @Nonnull
   private static QueryableDataSource applySinceDateFilter(
-      @Nonnull final ExportRequest exportRequest, @Nonnull QueryableDataSource mapped) {
+      @Nonnull final ExportRequest exportRequest, @Nonnull final QueryableDataSource mapped) {
     if (exportRequest.since() != null) {
-      mapped =
-          mapped.map(
-              rowDataset ->
-                  rowDataset.filter(
-                      "meta.lastUpdated IS NULL OR meta.lastUpdated >= '"
-                          + exportRequest.since().getValueAsString()
-                          + "'"));
+      return mapped.map(
+          rowDataset ->
+              rowDataset.filter(
+                  "meta.lastUpdated IS NULL OR meta.lastUpdated >= '"
+                      + exportRequest.since().getValueAsString()
+                      + "'"));
     }
     return mapped;
   }

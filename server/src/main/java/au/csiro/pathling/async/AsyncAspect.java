@@ -28,15 +28,12 @@ import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
@@ -74,8 +71,6 @@ public class AsyncAspect {
 
   @Nonnull private final RequestTagFactory requestTagFactory;
 
-  @Nonnull private final Map<RequestTag, Job<?>> requestTagToJob = new ConcurrentHashMap<>();
-
   @Nonnull private final StageMap stageMap;
 
   @Nonnull private final SparkSession spark;
@@ -97,7 +92,7 @@ public class AsyncAspect {
       @Nonnull final JobRegistry jobRegistry,
       @Nonnull final StageMap stageMap,
       @Nonnull final SparkSession spark,
-      JobProvider jobProvider) {
+      final JobProvider jobProvider) {
     this.executor = executor;
     this.requestTagFactory = requestTagFactory;
     this.jobRegistry = jobRegistry;
@@ -114,14 +109,14 @@ public class AsyncAspect {
     final ServletRequestDetails requestDetails = getServletRequestDetails(args);
 
     // Run some validation in sync before (and let validation modify headers if desired)
-    Object target = joinPoint.getTarget();
+    final Object target = joinPoint.getTarget();
     PreAsyncValidationResult<?> result = null;
-    if (target instanceof PreAsyncValidation<?> preAsyncValidation) {
+    if (target instanceof final PreAsyncValidation<?> preAsyncValidation) {
       try {
         result =
             preAsyncValidation.preAsyncValidate(
                 requestDetails, Arrays.copyOf(args, args.length - 1));
-      } catch (InvalidRequestException preValidationException) {
+      } catch (final InvalidRequestException preValidationException) {
         throw ErrorHandlingInterceptor.convertError(preValidationException);
       }
     }
@@ -144,7 +139,7 @@ public class AsyncAspect {
   private void processRequestAsynchronously(
       @Nonnull final ProceedingJoinPoint joinPoint,
       @Nonnull final ServletRequestDetails requestDetails,
-      @Nonnull PreAsyncValidationResult<?> preAsyncValidationResult,
+      @Nonnull final PreAsyncValidationResult<?> preAsyncValidationResult,
       @Nonnull final SparkSession spark) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -213,7 +208,7 @@ public class AsyncAspect {
                           cleanUpAfterJob(spark, jobId);
                         }
                       });
-              Optional<String> ownerId = getCurrentUserId(authentication);
+              final Optional<String> ownerId = getCurrentUserId(authentication);
               final Job<IBaseResource> newJob = new Job<>(jobId, operation, result, ownerId);
               newJob.setPreAsyncValidationResult(preAsyncValidationResult.result());
               return newJob;
@@ -221,19 +216,6 @@ public class AsyncAspect {
     final HttpServletResponse response = requestDetails.getServletResponse();
     response.setHeader(
         "Content-Location", requestDetails.getFhirServerBase() + "/$job?id=" + job.getId());
-  }
-
-  @Nonnull
-  private HttpServletRequest getRequest(@Nonnull final Object[] args) {
-    return (HttpServletRequest)
-        Arrays.stream(args)
-            .filter(ServletRequestDetails.class::isInstance)
-            .findFirst()
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        "Method annotated with @AsyncSupported must include a HttpServletRequest"
-                            + " parameter"));
   }
 
   @Nonnull
@@ -264,13 +246,13 @@ public class AsyncAspect {
 
   @Nonnull
   private static Throwable unwrapFromProxy(@Nonnull final Throwable ex) {
-    return ex instanceof UndeclaredThrowableException undeclaredThrowableException
+    return ex instanceof final UndeclaredThrowableException undeclaredThrowableException
         ? undeclaredThrowableException.getUndeclaredThrowable()
         : ex;
   }
 
   @Nonnull
-  private static OperationOutcome buildOperationOutcome(PreAsyncValidationResult<?> result) {
+  private static OperationOutcome buildOperationOutcome(final PreAsyncValidationResult<?> result) {
     final OperationOutcome opOutcome = new OperationOutcome();
     final OperationOutcomeIssueComponent issue = new OperationOutcomeIssueComponent();
     issue.setCode(IssueType.INFORMATIONAL);

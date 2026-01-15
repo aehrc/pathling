@@ -44,11 +44,11 @@ public class ParamUtil {
    * @return the collection of extracted values
    */
   public static <T> Collection<T> extractManyFromParameters(
-      Collection<ParametersParameterComponent> parts,
-      String partName,
-      Class<T> typeClazz,
-      boolean lenient,
-      RuntimeException onError) {
+      final Collection<ParametersParameterComponent> parts,
+      final String partName,
+      final Class<T> typeClazz,
+      final boolean lenient,
+      final RuntimeException onError) {
     return extractManyFromParameters(parts, partName, typeClazz, false, null, lenient, onError);
   }
 
@@ -64,11 +64,11 @@ public class ParamUtil {
    * @return the collection of extracted values, or default if not found
    */
   public static <T extends Type> Collection<T> extractManyFromParameters(
-      Collection<ParametersParameterComponent> parts,
-      String partName,
-      Class<T> typeClazz,
-      @Nullable Collection<T> defaultValue,
-      boolean lenient) {
+      final Collection<ParametersParameterComponent> parts,
+      final String partName,
+      final Class<T> typeClazz,
+      @Nullable final Collection<T> defaultValue,
+      final boolean lenient) {
     return extractManyFromParameters(parts, partName, typeClazz, true, defaultValue, lenient, null);
   }
 
@@ -86,14 +86,14 @@ public class ParamUtil {
    * @return the collection of extracted values
    */
   public static <T> Collection<T> extractManyFromParameters(
-      Collection<ParametersParameterComponent> parts,
-      String partName,
-      Class<T> typeClazz,
-      boolean useDefaultValueOnEmpty,
-      @Nullable Collection<T> defaultValue,
-      boolean lenient,
-      RuntimeException onError) {
-    Collection<T> types =
+      final Collection<ParametersParameterComponent> parts,
+      final String partName,
+      final Class<T> typeClazz,
+      final boolean useDefaultValueOnEmpty,
+      @Nullable final Collection<T> defaultValue,
+      final boolean lenient,
+      final RuntimeException onError) {
+    final Collection<T> types =
         parts.stream()
             .filter(param -> partName.equals(param.getName()))
             .map(typeClazz::cast)
@@ -121,12 +121,12 @@ public class ParamUtil {
    * @return the mapped result
    */
   public static <T, R> R extractFromPart(
-      Collection<ParametersParameterComponent> parts,
-      String partName,
-      Class<? extends T> clazz,
-      Function<T, R> mapper,
-      boolean lenient,
-      RuntimeException onError) {
+      final Collection<ParametersParameterComponent> parts,
+      final String partName,
+      final Class<? extends T> clazz,
+      final Function<T, R> mapper,
+      final boolean lenient,
+      final RuntimeException onError) {
     return extractFromPart(parts, partName, clazz, mapper, false, null, lenient, onError);
   }
 
@@ -145,13 +145,13 @@ public class ParamUtil {
    * @return the mapped result, or default if not found
    */
   public static <T, R> R extractFromPart(
-      Collection<ParametersParameterComponent> parts,
-      String partName,
-      Class<? extends T> typeClazz,
-      Function<T, R> mapper,
-      boolean useDefaultValue,
-      @Nullable R defaultValue,
-      boolean lenient) {
+      final Collection<ParametersParameterComponent> parts,
+      final String partName,
+      final Class<? extends T> typeClazz,
+      final Function<T, R> mapper,
+      final boolean useDefaultValue,
+      @Nullable final R defaultValue,
+      final boolean lenient) {
     return extractFromPart(
         parts, partName, typeClazz, mapper, useDefaultValue, defaultValue, lenient, null);
   }

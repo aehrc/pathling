@@ -42,7 +42,7 @@ public class BulkExportDeleteInterceptor {
    *
    * @param jobProvider the job provider for managing async jobs
    */
-  public BulkExportDeleteInterceptor(JobProvider jobProvider) {
+  public BulkExportDeleteInterceptor(final JobProvider jobProvider) {
     this.jobProvider = jobProvider;
   }
 
@@ -54,11 +54,12 @@ public class BulkExportDeleteInterceptor {
    * @param requestDetails the HAPI request details
    * @return true to continue processing, false if the request was handled
    */
+  @SuppressWarnings("unused")
   @Hook(Pointcut.SERVER_INCOMING_REQUEST_POST_PROCESSED)
   public boolean interceptJobDeletion(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      ServletRequestDetails requestDetails) {
+      final HttpServletRequest request,
+      final HttpServletResponse response,
+      final ServletRequestDetails requestDetails) {
     if (!request.getMethod().equals("DELETE") || !request.getPathInfo().matches(".*/\\$job$")) {
       return true;
     }

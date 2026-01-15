@@ -82,7 +82,7 @@ public class JobProvider {
   /**
    * Creates a new JobProvider.
    *
-   * @param configuration a {@link ServerConfiguration} for determining if authorization is enabled
+   * @param configuration a {@link ServerConfiguration} for determining if authorisation is enabled
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    * @param sparkSession the Spark session for file system operations
    * @param databasePath the path to the database for job file storage
@@ -90,9 +90,9 @@ public class JobProvider {
   public JobProvider(
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final JobRegistry jobRegistry,
-      SparkSession sparkSession,
+      final SparkSession sparkSession,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          String databasePath) {
+          final String databasePath) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
     this.sparkSession = sparkSession;
@@ -104,7 +104,7 @@ public class JobProvider {
    *
    * @param jobId the ID of the job to delete
    */
-  public void deleteJob(String jobId) {
+  public void deleteJob(final String jobId) {
     final Job<?> job = getJob(jobId);
     handleJobDeleteRequest(job);
   }
@@ -140,7 +140,7 @@ public class JobProvider {
     return handleJobGetRequest(request, response, job);
   }
 
-  private @NotNull Job<?> getJob(@Nullable String id) {
+  private @NotNull Job<?> getJob(@Nullable final String id) {
     // Validate that the ID looks reasonable.
     if (id == null || !ID_PATTERN.matcher(id).matches()) {
       throw new ResourceNotFoundError("Job ID not found");
@@ -155,15 +155,18 @@ public class JobProvider {
     return job;
   }
 
-  private void handleJobDeleteRequest(Job<?> job) {
+  private void handleJobDeleteRequest(final Job<?> job) {
     /*
     Two possible situations:
       - The initial kick-off request is still ongoing -> cancel it and delete the partial files
-      - The initial kick-off request is complete (and the client may have already downloaded the files)
-        -> interpret delete request from client as "do no longer need them". Depending on the caching setup,
-        these files may or may not be deleted. Either way return a success status code
+      - The initial kick-off request is complete (and the client may have already downloaded the
+        files)
+        -> interpret delete request from client as "do no longer need them". Depending on the
+           caching setup, these files may or may not be deleted. Either way return a success status
+           code
 
-      handle if a delete request was initiated and another delete request is being called before the old one finishes
+      handle if a delete request was initiated and another delete request is being called before the
+      old one finishes
       -> just return success as well but don't schedule a new deletion internally OR return a 404
      */
     if (job.isMarkedAsDeleted()) {
@@ -177,10 +180,10 @@ public class JobProvider {
     }
     try {
       deleteJobFiles(job.getId());
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new InternalErrorException("Failed to delete files associated with the job.", e);
     } finally {
-      boolean removed = jobRegistry.remove(job);
+      final boolean removed = jobRegistry.remove(job);
       if (removed) {
         log.debug("Removed job {} from registry.", job.getId());
       } else {
@@ -199,12 +202,12 @@ public class JobProvider {
    * @param jobId the ID of the job whose files should be deleted
    * @throws IOException if file deletion fails
    */
-  public void deleteJobFiles(String jobId) throws IOException {
-    Configuration hadoopConfig = sparkSession.sparkContext().hadoopConfiguration();
-    FileSystem fs = FileSystem.get(hadoopConfig);
-    Path jobDirToDel = new Path(databasePath, jobId);
+  public void deleteJobFiles(final String jobId) throws IOException {
+    final Configuration hadoopConfig = sparkSession.sparkContext().hadoopConfiguration();
+    final FileSystem fs = FileSystem.get(hadoopConfig);
+    final Path jobDirToDel = new Path(databasePath, jobId);
     log.debug("Deleting dir {}", jobDirToDel);
-    boolean deleted = fs.delete(jobDirToDel, true);
+    final boolean deleted = fs.delete(jobDirToDel, true);
     if (!deleted) {
       log.warn("Failed to delete dir {}", jobDirToDel);
     }
@@ -212,9 +215,9 @@ public class JobProvider {
   }
 
   private IBaseResource handleJobGetRequest(
-      @NotNull HttpServletRequest request,
-      @Nullable HttpServletResponse response,
-      @NotNull Job<?> job) {
+      @NotNull final HttpServletRequest request,
+      @Nullable final HttpServletResponse response,
+      @NotNull final Job<?> job) {
     if (job.getResult().isCancelled()) {
       throw handleCancelledJob();
     }
@@ -327,7 +330,7 @@ public class JobProvider {
   }
 
   private static IBaseOperationOutcome buildDeletionOutcome() {
-    OperationOutcome operationOutcome = new OperationOutcome();
+    final OperationOutcome operationOutcome = new OperationOutcome();
     operationOutcome
         .addIssue()
         .setCode(IssueType.INFORMATIONAL)
