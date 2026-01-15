@@ -90,16 +90,18 @@ const config = {
 
   plugins: [
     [
-      "docusaurus-plugin-llms",
+      "@signalwire/docusaurus-plugin-llms-txt",
       {
-        generateLLMsTxt: true,
-        generateLLMsFullTxt: false,
-        generateMarkdownFiles: true,
-        title: "Pathling",
-        description:
+        siteTitle: "Pathling",
+        siteDescription:
           "Tools for FHIR analytics, built on Apache Spark. " +
           "Includes Python, R, Scala and Java libraries, plus a FHIR server.",
-        excludeImports: true,
+        depth: 2,
+        content: {
+          includeBlog: false,
+          includePages: true,
+          enableLlmsFullTxt: false,
+        },
       },
     ],
   ],
