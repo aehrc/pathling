@@ -103,6 +103,7 @@ const config = {
           includeBlog: false,
           includePages: true,
           enableLlmsFullTxt: false,
+          excludeRoutes: ["/docs/7.2.0/**"],
         },
       },
     ],
