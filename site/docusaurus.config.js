@@ -33,7 +33,6 @@ const config = {
     },
   },
   themes: ["@docusaurus/theme-mermaid"],
-  plugins: [require.resolve("./src/plugins/staticHomePage.js")],
   url: "https://pathling.csiro.au",
   baseUrl: "/",
   onBrokenLinks: "warn",
@@ -91,6 +90,7 @@ const config = {
   ],
 
   plugins: [
+    require.resolve("./src/plugins/staticHomePage.js"),
     [
       "@signalwire/docusaurus-plugin-llms-txt",
       {
