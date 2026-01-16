@@ -124,32 +124,32 @@ export function ExportOptions({
         </Text>
       </Box>
 
+      {!hideOutputFormat && (
+        <Box>
+          <Text as="label" size="2" weight="medium" mb="1">
+            Output format
+          </Text>
+          <Select.Root
+            value={values.outputFormat}
+            onValueChange={(value) => updateOption("outputFormat", value)}
+          >
+            <Select.Trigger style={{ width: "100%" }} placeholder="Default (NDJSON)" />
+            <Select.Content>
+              {OUTPUT_FORMATS.map((format) => (
+                <Select.Item key={format.value} value={format.value}>
+                  {format.label}
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Root>
+          <Text size="1" color="gray" mt="1">
+            Output format for the export data.
+          </Text>
+        </Box>
+      )}
+
       {showExtendedOptions && (
         <>
-          {!hideOutputFormat && (
-            <Box>
-              <Text as="label" size="2" weight="medium" mb="1">
-                Output format
-              </Text>
-              <Select.Root
-                value={values.outputFormat}
-                onValueChange={(value) => updateOption("outputFormat", value)}
-              >
-                <Select.Trigger style={{ width: "100%" }} placeholder="Default (NDJSON)" />
-                <Select.Content>
-                  {OUTPUT_FORMATS.map((format) => (
-                    <Select.Item key={format.value} value={format.value}>
-                      {format.label}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-              <Text size="1" color="gray" mt="1">
-                Output format for the export data.
-              </Text>
-            </Box>
-          )}
-
           <Box>
             <Text as="label" size="2" weight="medium" mb="1">
               Type filters (optional)

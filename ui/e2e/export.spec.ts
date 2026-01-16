@@ -234,7 +234,7 @@ test.describe("Export page", () => {
       await page.goto("/admin/export");
 
       // Open the export level dropdown.
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").first().click();
 
       // Verify all export level options are available.
       await expect(
@@ -263,7 +263,7 @@ test.describe("Export page", () => {
       ).not.toBeVisible();
 
       // Select Patient Instance export level.
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").first().click();
       await page
         .getByRole("option", { name: "Data for single patient" })
         .click();
@@ -281,7 +281,7 @@ test.describe("Export page", () => {
       await expect(page.getByPlaceholder("e.g., group-456")).not.toBeVisible();
 
       // Select Group export level.
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").first().click();
       await page
         .getByRole("option", { name: "Data for patients in group" })
         .click();
@@ -325,7 +325,7 @@ test.describe("Export page", () => {
       await page.goto("/admin/export");
 
       // Select Patient Instance export level.
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").first().click();
       await page
         .getByRole("option", { name: "Data for single patient" })
         .click();
@@ -351,7 +351,7 @@ test.describe("Export page", () => {
       await page.goto("/admin/export");
 
       // Select Group export level.
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").first().click();
       await page
         .getByRole("option", { name: "Data for patients in group" })
         .click();
@@ -395,7 +395,7 @@ test.describe("Export page", () => {
       await page.goto("/admin/export");
 
       // Select Patient Type export level.
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").first().click();
       await page.getByRole("option", { name: "All patient data" }).click();
 
       // Start export.
@@ -412,7 +412,7 @@ test.describe("Export page", () => {
       await page.goto("/admin/export");
 
       // Select Patient Instance export level.
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").first().click();
       await page
         .getByRole("option", { name: "Data for single patient" })
         .click();
@@ -432,7 +432,7 @@ test.describe("Export page", () => {
       await page.goto("/admin/export");
 
       // Select Group export level.
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").first().click();
       await page
         .getByRole("option", { name: "Data for patients in group" })
         .click();
@@ -826,7 +826,7 @@ test.describe("Export page", () => {
       });
 
       // Select different export level for second export (while first is still running).
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").first().click();
       await page.getByRole("option", { name: "All patient data" }).click();
 
       // Start second export immediately (don't wait for first to complete).
@@ -859,7 +859,7 @@ test.describe("Export page", () => {
       await page.getByLabel("Observation").click({ force: true });
 
       // Select different export level for second export.
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").first().click();
       await page.getByRole("option", { name: "All patient data" }).click();
 
       // Start second export immediately (while first is still running).
@@ -899,7 +899,7 @@ test.describe("Export page", () => {
       });
 
       // Select different export level for second export.
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").first().click();
       await page.getByRole("option", { name: "All patient data" }).click();
 
       // Start second export.

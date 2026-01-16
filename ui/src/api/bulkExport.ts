@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 import { buildHeaders, buildUrl, checkResponse, resolveUrl } from "./utils";
 
 import type { AuthOptions, ResourceType } from "./rest";
@@ -30,6 +29,7 @@ export interface BulkExportBaseOptions extends AuthOptions {
   since?: string;
   until?: string;
   elements?: string;
+  outputFormat?: string;
 }
 
 export type SystemExportKickOffOptions = BulkExportBaseOptions;
@@ -111,6 +111,10 @@ function buildExportParams(
 
   if (options.elements) {
     params._elements = options.elements;
+  }
+
+  if (options.outputFormat) {
+    params._outputFormat = options.outputFormat;
   }
 
   return params;

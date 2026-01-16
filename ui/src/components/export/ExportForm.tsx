@@ -66,6 +66,7 @@ export function ExportForm({ onSubmit, resourceTypes }: Readonly<ExportFormProps
       elements: exportOptions.elements || undefined,
       patientId: level === "patient" ? patientId : undefined,
       groupId: level === "group" ? groupId : undefined,
+      outputFormat: exportOptions.outputFormat || undefined,
     };
     onSubmit(request);
   };

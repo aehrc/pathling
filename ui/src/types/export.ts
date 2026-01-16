@@ -33,6 +33,7 @@ export interface ExportRequest {
   elements?: string;
   patientId?: string;
   groupId?: string;
+  outputFormat?: string;
 }
 
 /**

@@ -58,9 +58,7 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptionsValues = {
  * Output format options for bulk export.
  */
 export const OUTPUT_FORMATS: { value: string; label: string }[] = [
-  {
-    value: "application/fhir+ndjson",
-    label: "NDJSON (application/fhir+ndjson)",
-  },
-  { value: "application/fhir+json", label: "JSON (application/fhir+json)" },
+  { value: "application/fhir+ndjson", label: "NDJSON" },
+  { value: "application/x-pathling-parquet", label: "Parquet" },
+  { value: "application/x-pathling-delta+parquet", label: "Delta" },
 ];

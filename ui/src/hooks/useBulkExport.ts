@@ -125,6 +125,7 @@ export const useBulkExport: UseBulkExportFn = (options) => {
           since: request.since,
           until: request.until,
           elements: request.elements,
+          outputFormat: request.outputFormat,
           accessToken,
         };
 

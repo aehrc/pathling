@@ -107,6 +107,7 @@ export function ExportCard({ request, createdAt, onError, onClose }: Readonly<Ex
         elements: request.elements,
         patientId: request.patientId,
         groupId: request.groupId,
+        outputFormat: request.outputFormat,
       });
     }
   }, [request, startWith]);
