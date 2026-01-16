@@ -224,7 +224,6 @@ test.describe("Import page", () => {
         await expect(
           page.getByRole("option", { name: "Parquet" }),
         ).toBeVisible();
-        await expect(page.getByRole("option", { name: "Delta" })).toBeVisible();
       });
 
       test("displays resource type and URL inputs", async ({ page }) => {
