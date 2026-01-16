@@ -28,8 +28,7 @@ export type SaveMode = "overwrite" | "merge" | "append" | "ignore" | "error";
 // MIME types for import formats.
 export type ImportFormat =
   | "application/fhir+ndjson"
-  | "application/x-pathling-parquet"
-  | "application/x-pathling-delta+parquet";
+  | "application/x-pathling-parquet";
 
 export interface ImportInput {
   type: string;
@@ -56,7 +55,6 @@ export interface ImportManifest {
 export const IMPORT_FORMATS: { value: ImportFormat; label: string }[] = [
   { value: "application/fhir+ndjson", label: "NDJSON" },
   { value: "application/x-pathling-parquet", label: "Parquet" },
-  { value: "application/x-pathling-delta+parquet", label: "Delta" },
 ];
 
 // Save mode options for import forms.

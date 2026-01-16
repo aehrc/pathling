@@ -47,8 +47,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
 /**
- * Unit tests for ImportExecutor. Tests import from various source formats (NDJSON, Delta, Parquet)
- * with all imports writing to Delta format in the warehouse.
+ * Unit tests for ImportExecutor. Tests import from various source formats (NDJSON and Parquet) with
+ * all imports writing to Delta format in the warehouse.
  *
  * @author Felix Naumann
  * @author John Grimes

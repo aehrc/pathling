@@ -154,11 +154,10 @@ download the result files.
 The `$import` operation loads FHIR data from external sources into the server.
 Supported formats include:
 
-| Format     | MIME type                              |
-| ---------- | -------------------------------------- |
-| NDJSON     | `application/fhir+ndjson`              |
-| Parquet    | `application/x-pathling-parquet`       |
-| Delta Lake | `application/x-pathling-delta+parquet` |
+| Format  | MIME type                        |
+| ------- | -------------------------------- |
+| NDJSON  | `application/fhir+ndjson`        |
+| Parquet | `application/x-pathling-parquet` |
 
 Data can be loaded from Amazon S3 (`s3a://`), HDFS, or the local filesystem.
 

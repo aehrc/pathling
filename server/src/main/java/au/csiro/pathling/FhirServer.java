@@ -110,9 +110,7 @@ public class FhirServer extends RestfulServer {
               "application/ndjson",
               "ndjson",
               "application/x-pathling-parquet",
-              "parquet",
-              "application/x-pathling-delta+parquet",
-              "delta"));
+              "parquet"));
 
   private static final int DEFAULT_PAGE_SIZE = 100;
   private static final int MAX_PAGE_SIZE = Integer.MAX_VALUE;

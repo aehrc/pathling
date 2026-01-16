@@ -6,7 +6,7 @@
   "kind": "operation",
   "experimental": false,
   "publisher": "Australian e-Health Research Centre, CSIRO",
-  "description": "This operation allows bulk data to be imported into the server from NDJSON, Parquet, or Delta format files, and is aligned with the SMART Bulk Data Import proposal.",
+  "description": "This operation allows bulk data to be imported into the server from NDJSON or Parquet format files, and is aligned with the SMART Bulk Data Import proposal.",
   "affectsState": true,
   "code": "import",
   "system": true,
@@ -55,7 +55,7 @@
       "use": "in",
       "min": 0,
       "max": "1",
-      "documentation": "The MIME type of the input files. Supported values are 'application/fhir+ndjson' (default), 'application/x-pathling-parquet', and 'application/x-pathling-delta+parquet'.",
+      "documentation": "The MIME type of the input files. Supported values are 'application/fhir+ndjson' (default) and 'application/x-pathling-parquet'.",
       "type": "code"
     },
     {

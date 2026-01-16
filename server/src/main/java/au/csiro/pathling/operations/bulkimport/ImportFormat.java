@@ -34,14 +34,7 @@ public enum ImportFormat {
    * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
    *     Specification</a>
    */
-  PARQUET("application/x-pathling-parquet"),
-  /**
-   * Delta Lake format.
-   *
-   * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
-   *     Specification</a>
-   */
-  DELTA("application/x-pathling-delta+parquet");
+  PARQUET("application/x-pathling-parquet");
 
   private final String code;
 
