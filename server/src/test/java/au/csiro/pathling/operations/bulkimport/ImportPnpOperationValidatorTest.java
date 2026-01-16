@@ -30,9 +30,12 @@ import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.MockUtil;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import java.time.Instant;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UrlType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -327,5 +330,313 @@ class ImportPnpOperationValidatorTest {
         validator.validateParametersRequest(mockRequest, params);
 
     assertThat(result.result().importFormat()).isEqualTo(ImportFormat.DELTA);
+  }
+
+  // ========================================
+  // Bulk Data Export Passthrough Parameters
+  // ========================================
+
+  /** Tests that _type parameter with a single value is extracted correctly. */
+  @Test
+  void extractsSingleTypeParameter() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+    params.addParameter().setName("_type").setValue(new StringType("Patient"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().types()).containsExactly("Patient");
+  }
+
+  /** Tests that _type parameter with multiple values is extracted correctly. */
+  @Test
+  void extractsMultipleTypeParameters() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+    params.addParameter().setName("_type").setValue(new StringType("Patient"));
+    params.addParameter().setName("_type").setValue(new StringType("Observation"));
+    params.addParameter().setName("_type").setValue(new StringType("Condition"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().types()).containsExactly("Patient", "Observation", "Condition");
+  }
+
+  /** Tests that _type defaults to an empty list when not provided. */
+  @Test
+  void defaultsTypeToEmptyList() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().types()).isEmpty();
+  }
+
+  /** Tests that _since parameter is extracted correctly. */
+  @Test
+  void extractsSinceParameter() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+    final Instant sinceTime = Instant.parse("2024-01-15T10:30:00Z");
+    params
+        .addParameter()
+        .setName("_since")
+        .setValue(new InstantType(java.util.Date.from(sinceTime)));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().since()).isPresent();
+    assertThat(result.result().since().get()).isEqualTo(sinceTime);
+  }
+
+  /** Tests that _since defaults to empty when not provided. */
+  @Test
+  void defaultsSinceToEmpty() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().since()).isEmpty();
+  }
+
+  /** Tests that _until parameter is extracted correctly. */
+  @Test
+  void extractsUntilParameter() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+    final Instant untilTime = Instant.parse("2024-06-30T23:59:59Z");
+    params
+        .addParameter()
+        .setName("_until")
+        .setValue(new InstantType(java.util.Date.from(untilTime)));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().until()).isPresent();
+    assertThat(result.result().until().get()).isEqualTo(untilTime);
+  }
+
+  /** Tests that _until defaults to empty when not provided. */
+  @Test
+  void defaultsUntilToEmpty() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().until()).isEmpty();
+  }
+
+  /** Tests that _outputFormat parameter is extracted correctly. */
+  @Test
+  void extractsOutputFormatParameter() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+    params.addParameter().setName("_outputFormat").setValue(new StringType("application/ndjson"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().outputFormat()).isPresent();
+    assertThat(result.result().outputFormat().get()).isEqualTo("application/ndjson");
+  }
+
+  /** Tests that _outputFormat defaults to empty when not provided. */
+  @Test
+  void defaultsOutputFormatToEmpty() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().outputFormat()).isEmpty();
+  }
+
+  /** Tests that _elements parameter with multiple values is extracted correctly. */
+  @Test
+  void extractsElementsParameters() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+    params.addParameter().setName("_elements").setValue(new StringType("id"));
+    params.addParameter().setName("_elements").setValue(new StringType("name"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().elements()).containsExactly("id", "name");
+  }
+
+  /** Tests that _elements defaults to an empty list when not provided. */
+  @Test
+  void defaultsElementsToEmptyList() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().elements()).isEmpty();
+  }
+
+  /** Tests that _typeFilter parameter with multiple values is extracted correctly. */
+  @Test
+  void extractsTypeFilterParameters() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+    params.addParameter().setName("_typeFilter").setValue(new StringType("Patient?active=true"));
+    params
+        .addParameter()
+        .setName("_typeFilter")
+        .setValue(new StringType("Observation?status=final"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().typeFilters())
+        .containsExactly("Patient?active=true", "Observation?status=final");
+  }
+
+  /** Tests that _typeFilter defaults to an empty list when not provided. */
+  @Test
+  void defaultsTypeFiltersToEmptyList() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().typeFilters()).isEmpty();
+  }
+
+  /** Tests that includeAssociatedData parameter with multiple values is extracted correctly. */
+  @Test
+  void extractsIncludeAssociatedDataParameters() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+    params
+        .addParameter()
+        .setName("includeAssociatedData")
+        .setValue(new CodeType("LatestProvenanceResources"));
+    params
+        .addParameter()
+        .setName("includeAssociatedData")
+        .setValue(new CodeType("RelevantProvenanceResources"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().includeAssociatedData())
+        .containsExactly("LatestProvenanceResources", "RelevantProvenanceResources");
+  }
+
+  /** Tests that includeAssociatedData defaults to an empty list when not provided. */
+  @Test
+  void defaultsIncludeAssociatedDataToEmptyList() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().includeAssociatedData()).isEmpty();
+  }
+
+  /** Tests that all export parameters are extracted together correctly. */
+  @Test
+  void extractsAllExportParametersTogether() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+    params.addParameter().setName("_type").setValue(new StringType("Patient"));
+    params.addParameter().setName("_type").setValue(new StringType("Observation"));
+    final Instant sinceTime = Instant.parse("2024-01-01T00:00:00Z");
+    params
+        .addParameter()
+        .setName("_since")
+        .setValue(new InstantType(java.util.Date.from(sinceTime)));
+    final Instant untilTime = Instant.parse("2024-12-31T23:59:59Z");
+    params
+        .addParameter()
+        .setName("_until")
+        .setValue(new InstantType(java.util.Date.from(untilTime)));
+    params
+        .addParameter()
+        .setName("_outputFormat")
+        .setValue(new StringType("application/fhir+ndjson"));
+    params.addParameter().setName("_elements").setValue(new StringType("id"));
+    params.addParameter().setName("_typeFilter").setValue(new StringType("Patient?active=true"));
+    params
+        .addParameter()
+        .setName("includeAssociatedData")
+        .setValue(new CodeType("LatestProvenanceResources"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    final ImportPnpRequest request = result.result();
+    assertThat(request.types()).containsExactly("Patient", "Observation");
+    assertThat(request.since()).contains(sinceTime);
+    assertThat(request.until()).contains(untilTime);
+    assertThat(request.outputFormat()).contains("application/fhir+ndjson");
+    assertThat(request.elements()).containsExactly("id");
+    assertThat(request.typeFilters()).containsExactly("Patient?active=true");
+    assertThat(request.includeAssociatedData()).containsExactly("LatestProvenanceResources");
   }
 }

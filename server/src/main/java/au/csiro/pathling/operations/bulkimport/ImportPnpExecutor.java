@@ -217,6 +217,23 @@ public class ImportPnpExecutor {
       clientBuilder.withAuthConfig(authConfig);
     }
 
+    // Pass through Bulk Data Export parameters if provided.
+    if (!pnpRequest.types().isEmpty()) {
+      clientBuilder.withTypes(pnpRequest.types());
+    }
+    pnpRequest.since().ifPresent(since -> clientBuilder.withSince(since));
+    pnpRequest.until().ifPresent(until -> clientBuilder.withUntil(until));
+    pnpRequest.outputFormat().ifPresent(format -> clientBuilder.withOutputFormat(format));
+    if (!pnpRequest.elements().isEmpty()) {
+      clientBuilder.withElements(pnpRequest.elements());
+    }
+    if (!pnpRequest.typeFilters().isEmpty()) {
+      clientBuilder.withTypeFilters(pnpRequest.typeFilters());
+    }
+    if (!pnpRequest.includeAssociatedData().isEmpty()) {
+      clientBuilder.withIncludeAssociatedData(pnpRequest.includeAssociatedData());
+    }
+
     final BulkExportClient client = clientBuilder.build();
 
     // Execute the export and wait for completion.

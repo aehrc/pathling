@@ -165,13 +165,28 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
   public String computeCacheKeyComponent(@Nonnull final ImportPnpRequest request) {
     // Build a deterministic cache key from request parameters.
     // Exclude originalRequest as it's already captured in the request URL.
-    return "exportUrl="
-        + request.exportUrl()
-        + "|exportType="
-        + request.exportType()
-        + "|saveMode="
-        + request.saveMode()
-        + "|format="
-        + request.importFormat();
+    final StringBuilder key = new StringBuilder();
+    key.append("exportUrl=").append(request.exportUrl());
+    key.append("|exportType=").append(request.exportType());
+    key.append("|saveMode=").append(request.saveMode());
+    key.append("|format=").append(request.importFormat());
+    // Include Bulk Data Export passthrough parameters in the cache key.
+    if (!request.types().isEmpty()) {
+      key.append("|types=").append(String.join(",", request.types()));
+    }
+    request.since().ifPresent(since -> key.append("|since=").append(since));
+    request.until().ifPresent(until -> key.append("|until=").append(until));
+    request.outputFormat().ifPresent(format -> key.append("|outputFormat=").append(format));
+    if (!request.elements().isEmpty()) {
+      key.append("|elements=").append(String.join(",", request.elements()));
+    }
+    if (!request.typeFilters().isEmpty()) {
+      key.append("|typeFilters=").append(String.join(",", request.typeFilters()));
+    }
+    if (!request.includeAssociatedData().isEmpty()) {
+      key.append("|includeAssociatedData=")
+          .append(String.join(",", request.includeAssociatedData()));
+    }
+    return key.toString();
   }
 }

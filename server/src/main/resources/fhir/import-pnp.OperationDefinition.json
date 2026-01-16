@@ -44,6 +44,62 @@
       "max": "1",
       "documentation": "The MIME type of the input files. Supported values are 'application/fhir+ndjson' (default), 'application/x-pathling-parquet', and 'application/x-pathling-delta+parquet'.",
       "type": "code"
+    },
+    {
+      "name": "_type",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "Resource types to include in the export. When omitted, all supported resource types are exported. This parameter is passed through to the remote bulk export endpoint.",
+      "type": "string"
+    },
+    {
+      "name": "_since",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Export resources that were modified after this timestamp. This parameter is passed through to the remote bulk export endpoint.",
+      "type": "instant"
+    },
+    {
+      "name": "_until",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Export resources that were modified before this timestamp. This parameter is passed through to the remote bulk export endpoint.",
+      "type": "instant"
+    },
+    {
+      "name": "_outputFormat",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "The output format for the export. Default is 'application/fhir+ndjson'. This parameter is passed through to the remote bulk export endpoint.",
+      "type": "string"
+    },
+    {
+      "name": "_elements",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "Elements to include in the export output. This experimental parameter is passed through to the remote bulk export endpoint.",
+      "type": "string"
+    },
+    {
+      "name": "_typeFilter",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "FHIR search queries to filter resources during export (e.g., 'Patient?active=true'). This parameter is passed through to the remote bulk export endpoint.",
+      "type": "string"
+    },
+    {
+      "name": "includeAssociatedData",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "Pre-defined sets of associated data to include in the export (e.g., 'LatestProvenanceResources'). This experimental parameter is passed through to the remote bulk export endpoint.",
+      "type": "code"
     }
   ]
 }

@@ -19,6 +19,9 @@ package au.csiro.pathling.operations.bulkimport;
 
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Represents a ping and pull bulk data import request, aligned with the SMART Bulk Data Import
@@ -31,6 +34,13 @@ import jakarta.annotation.Nonnull;
  *     pre-generated manifest.
  * @param saveMode The save mode to use throughout the entire import operation.
  * @param importFormat The expected input format (NDJSON, Parquet, or Delta).
+ * @param types Resource types to include in the export (_type parameter).
+ * @param since Export resources modified after this time (_since parameter).
+ * @param until Export resources modified before this time (_until parameter).
+ * @param outputFormat MIME type for export output (_outputFormat parameter).
+ * @param elements Elements to include in the export (_elements parameter).
+ * @param typeFilters FHIR search queries to filter resources (_typeFilter parameter).
+ * @param includeAssociatedData Associated data to include (includeAssociatedData parameter).
  * @author John Grimes
  */
 public record ImportPnpRequest(
@@ -38,4 +48,11 @@ public record ImportPnpRequest(
     @Nonnull String exportUrl,
     @Nonnull String exportType,
     @Nonnull SaveMode saveMode,
-    @Nonnull ImportFormat importFormat) {}
+    @Nonnull ImportFormat importFormat,
+    @Nonnull List<String> types,
+    @Nonnull Optional<Instant> since,
+    @Nonnull Optional<Instant> until,
+    @Nonnull Optional<String> outputFormat,
+    @Nonnull List<String> elements,
+    @Nonnull List<String> typeFilters,
+    @Nonnull List<String> includeAssociatedData) {}

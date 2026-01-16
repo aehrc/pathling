@@ -26,14 +26,18 @@ import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.operations.OperationValidation;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UrlType;
 import org.springframework.stereotype.Component;
 
@@ -145,9 +149,30 @@ public class ImportPnpOperationValidator {
                 Optional.of(new InvalidUserInputError("Unknown format.")))
             .orElseThrow();
 
+    // Extract Bulk Data Export passthrough parameters.
+    final List<String> types = extractStringList(parameters.getParameter(), "_type");
+    final Optional<Instant> since = extractInstant(parameters.getParameter(), "_since");
+    final Optional<Instant> until = extractInstant(parameters.getParameter(), "_until");
+    final Optional<String> outputFormat = extractString(parameters.getParameter(), "_outputFormat");
+    final List<String> elements = extractStringList(parameters.getParameter(), "_elements");
+    final List<String> typeFilters = extractStringList(parameters.getParameter(), "_typeFilter");
+    final List<String> includeAssociatedData =
+        extractCodeList(parameters.getParameter(), "includeAssociatedData");
+
     final ImportPnpRequest importPnpRequest =
         new ImportPnpRequest(
-            requestDetails.getCompleteUrl(), exportUrl, exportType, saveMode, importFormat);
+            requestDetails.getCompleteUrl(),
+            exportUrl,
+            exportType,
+            saveMode,
+            importFormat,
+            types,
+            since,
+            until,
+            outputFormat,
+            elements,
+            typeFilters,
+            includeAssociatedData);
 
     final List<OperationOutcome.OperationOutcomeIssueComponent> issues =
         Stream.of(
@@ -174,5 +199,73 @@ public class ImportPnpOperationValidator {
     } catch (final IllegalArgumentException e) {
       throw new InvalidUserInputError(e.getMessage());
     }
+  }
+
+  /**
+   * Extracts a list of string values from multiple parameters with the same name.
+   *
+   * @param parts the parameter parts to search
+   * @param paramName the name of the parameter
+   * @return the list of string values, or empty list if not found
+   */
+  @Nonnull
+  private List<String> extractStringList(
+      @Nonnull final List<ParametersParameterComponent> parts, @Nonnull final String paramName) {
+    return parts.stream()
+        .filter(param -> paramName.equals(param.getName()))
+        .filter(param -> param.getValue() instanceof StringType)
+        .map(param -> ((StringType) param.getValue()).getValue())
+        .toList();
+  }
+
+  /**
+   * Extracts a list of code values from multiple parameters with the same name.
+   *
+   * @param parts the parameter parts to search
+   * @param paramName the name of the parameter
+   * @return the list of code values, or empty list if not found
+   */
+  @Nonnull
+  private List<String> extractCodeList(
+      @Nonnull final List<ParametersParameterComponent> parts, @Nonnull final String paramName) {
+    return parts.stream()
+        .filter(param -> paramName.equals(param.getName()))
+        .filter(param -> param.getValue() instanceof CodeType)
+        .map(param -> ((CodeType) param.getValue()).getCode())
+        .toList();
+  }
+
+  /**
+   * Extracts an optional instant value from a parameter.
+   *
+   * @param parts the parameter parts to search
+   * @param paramName the name of the parameter
+   * @return the instant value wrapped in Optional, or empty if not found
+   */
+  @Nonnull
+  private Optional<Instant> extractInstant(
+      @Nonnull final List<ParametersParameterComponent> parts, @Nonnull final String paramName) {
+    return parts.stream()
+        .filter(param -> paramName.equals(param.getName()))
+        .filter(param -> param.getValue() instanceof InstantType)
+        .map(param -> ((InstantType) param.getValue()).getValue().toInstant())
+        .findFirst();
+  }
+
+  /**
+   * Extracts an optional string value from a parameter.
+   *
+   * @param parts the parameter parts to search
+   * @param paramName the name of the parameter
+   * @return the string value wrapped in Optional, or empty if not found
+   */
+  @Nonnull
+  private Optional<String> extractString(
+      @Nonnull final List<ParametersParameterComponent> parts, @Nonnull final String paramName) {
+    return parts.stream()
+        .filter(param -> paramName.equals(param.getName()))
+        .filter(param -> param.getValue() instanceof StringType)
+        .map(param -> ((StringType) param.getValue()).getValue())
+        .findFirst();
   }
 }
