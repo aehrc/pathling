@@ -511,7 +511,7 @@ public class ResolveFunctionDslTest extends FhirPathDslTestBase {
                                 .string(
                                     "display",
                                     "invalid-empty") // Empty reference and type - should not
-                                                     // resolve
+                        // resolve
                         ))
         .group("Resolve collections - all same type")
         .testTrue(
@@ -708,7 +708,8 @@ public class ResolveFunctionDslTest extends FhirPathDslTestBase {
         .group("Complex HAPI resource - combining resolve() with other operators")
         .testEquals(
             List.of("actor-p1", "actor-pr1", "actor-p2"),
-            "Appointment.participant.actor.where(resolve() is Patient or resolve() is Practitioner).display",
+            "Appointment.participant.actor.where(resolve() is Patient or resolve() is"
+                + " Practitioner).display",
             "Can combine type checks with or")
         .testEquals(
             List.of("actor-loc1"),
