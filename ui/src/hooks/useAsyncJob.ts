@@ -19,7 +19,7 @@ import { useState, useCallback, useRef } from "react";
 
 import { executeAsyncJob, parseProgressHeader } from "../api";
 
-import type { AsyncJobExecutorOptions } from "../types/api";
+import type { AsyncJobExecutorOptions } from "../api";
 
 /**
  * Status of an async job operation.

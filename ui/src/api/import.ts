@@ -15,14 +15,66 @@
  * limitations under the License.
  */
 
+
 import { buildHeaders, buildUrl, checkResponse } from "./utils";
 
-import type {
-  ImportKickOffOptions,
-  ImportResult,
-  ImportPnpKickOffOptions,
-} from "../types/api";
+import type { AuthOptions, ResourceType } from "./rest";
 import type { Parameters } from "fhir/r4";
+
+// =============================================================================
+// Import Types
+// =============================================================================
+
+export type ImportFormat =
+  | "application/fhir+ndjson"
+  | "application/x-pathling-parquet"
+  | "application/x-pathling-delta+parquet";
+
+export type ImportMode = "overwrite" | "merge" | "append" | "ignore" | "error";
+
+export interface ImportInput {
+  type: ResourceType;
+  url: string;
+}
+
+export interface ImportKickOffOptions extends AuthOptions {
+  input: ImportInput[];
+  inputFormat: ImportFormat;
+  mode: ImportMode;
+}
+
+export interface ImportResult {
+  pollingUrl: string;
+}
+
+export type ImportKickOffFn = (
+  options: ImportKickOffOptions,
+) => Promise<ImportResult>;
+
+// =============================================================================
+// Import Ping-and-Pull Types
+// =============================================================================
+
+export type ExportType = "dynamic" | "static";
+export type SaveMode = "overwrite" | "merge" | "append" | "ignore" | "error";
+
+export interface ImportPnpKickOffOptions extends AuthOptions {
+  exportUrl: string;
+  exportType?: ExportType;
+  saveMode?: SaveMode;
+  inputFormat?: ImportFormat;
+  // Bulk export passthrough parameters.
+  types?: string[];
+  since?: string;
+  until?: string;
+  elements?: string;
+  typeFilters?: string[];
+  includeAssociatedData?: string[];
+}
+
+export type ImportPnpKickOffFn = (
+  options: ImportPnpKickOffOptions,
+) => Promise<ImportResult>;
 
 /**
  * Kicks off a bulk import operation.

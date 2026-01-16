@@ -17,11 +17,30 @@
 
 import { buildHeaders, checkResponse, resolveUrl } from "./utils";
 
-import type {
-  JobCancelOptions,
-  JobStatusOptions,
-  JobStatusResult,
-} from "../types/api";
+import type { AuthOptions } from "./rest";
+
+// =============================================================================
+// Job Types
+// =============================================================================
+
+export interface JobStatusOptions extends AuthOptions {
+  pollingUrl: string;
+}
+
+export interface JobStatusResult {
+  status: "in-progress" | "complete";
+  progress?: string;
+  result?: unknown;
+}
+
+export interface JobCancelOptions extends AuthOptions {
+  pollingUrl: string;
+}
+
+export type JobStatusFn = (
+  options: JobStatusOptions,
+) => Promise<JobStatusResult>;
+export type JobCancelFn = (options: JobCancelOptions) => Promise<void>;
 
 /**
  * Checks the status of an async job.

@@ -23,7 +23,7 @@ import { useAsyncJob } from "./useAsyncJob";
 import { useAuth } from "../contexts/AuthContext";
 
 import type { AsyncJobOptions, UseAsyncJobResult } from "./useAsyncJob";
-import type { ResourceType } from "../types/api";
+import type { ResourceType } from "../api";
 import type { ImportFormat, SaveMode } from "../types/import";
 
 /**

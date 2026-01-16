@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+
 import {
   buildHeaders,
   buildUrl,
@@ -22,15 +23,73 @@ import {
   extractJobIdFromUrl,
 } from "./utils";
 
-import type {
-  BulkSubmitOptions,
-  BulkSubmitResult,
-  BulkSubmitStatusOptions,
-  BulkSubmitStatusResult,
-  BulkSubmitDownloadOptions,
-  BulkSubmitManifest,
-} from "../types/api";
-import type { Parameters, ParametersParameter } from "fhir/r4";
+import type { AuthOptions } from "./rest";
+import type { Identifier, Parameters, ParametersParameter } from "fhir/r4";
+
+// =============================================================================
+// Bulk Submit Types
+// =============================================================================
+
+export type SubmissionStatus = "in-progress" | "complete" | "aborted";
+
+export interface BulkSubmitOptions extends AuthOptions {
+  submitter: Identifier;
+  submissionId: string;
+  submissionStatus: SubmissionStatus;
+  /** Manifest URL. Required unless submissionStatus is "aborted". */
+  manifestUrl?: string;
+  fhirBaseUrl?: string;
+  replacesManifestUrl?: string;
+  oauthMetadataUrl?: string;
+  metadata?: Record<string, string>;
+  fileRequestHeaders?: Record<string, string>;
+}
+
+export interface BulkSubmitResult {
+  submissionId: string;
+  status: string;
+}
+
+export interface BulkSubmitStatusOptions extends AuthOptions {
+  submitter: Identifier;
+  submissionId: string;
+}
+
+export interface BulkSubmitStatusResult {
+  status: "in-progress" | "completed" | "completed-with-errors" | "aborted";
+  progress?: string;
+  jobId?: string;
+  manifest?: BulkSubmitManifest;
+}
+
+export interface BulkSubmitManifest {
+  transactionTime: string;
+  request: string;
+  requiresAccessToken: boolean;
+  output: BulkSubmitManifestFile[];
+  error: BulkSubmitManifestFile[];
+}
+
+export interface BulkSubmitManifestFile {
+  type: string;
+  url: string;
+  manifestUrl?: string;
+}
+
+export interface BulkSubmitDownloadOptions extends AuthOptions {
+  submissionId: string;
+  fileName: string;
+}
+
+export type BulkSubmitFn = (
+  options: BulkSubmitOptions,
+) => Promise<BulkSubmitResult>;
+export type BulkSubmitStatusFn = (
+  options: BulkSubmitStatusOptions,
+) => Promise<BulkSubmitStatusResult>;
+export type BulkSubmitDownloadFn = (
+  options: BulkSubmitDownloadOptions,
+) => Promise<ReadableStream>;
 
 /**
  * Builds FHIR Parameters resource for bulk submit request.

@@ -17,15 +17,58 @@
 
 import { buildHeaders, buildUrl, checkResponse } from "./utils";
 
-import type {
-  SearchOptions,
-  SearchResult,
-  ReadOptions,
-  CreateOptions,
-  UpdateOptions,
-  DeleteOptions,
-} from "../types/api";
 import type { Bundle, Resource } from "fhir/r4";
+
+// =============================================================================
+// Common Types
+// =============================================================================
+
+export type ResourceType = Resource["resourceType"] | "ViewDefinition";
+
+export interface AuthOptions {
+  accessToken?: string;
+}
+
+// =============================================================================
+// REST API Types
+// =============================================================================
+
+export interface SearchOptions extends AuthOptions {
+  resourceType: ResourceType;
+  count?: number;
+  filters?: string[];
+  /** Generic URL parameters for search queries. */
+  params?: Record<string, string | string[]>;
+}
+
+export type SearchResult = Bundle;
+
+export interface ReadOptions extends AuthOptions {
+  resourceType: ResourceType;
+  id: string;
+}
+
+export interface CreateOptions extends AuthOptions {
+  resourceType: ResourceType;
+  resource: Resource;
+}
+
+export interface UpdateOptions extends AuthOptions {
+  resourceType: ResourceType;
+  id: string;
+  resource: Resource;
+}
+
+export interface DeleteOptions extends AuthOptions {
+  resourceType: ResourceType;
+  id: string;
+}
+
+export type SearchFn = (options: SearchOptions) => Promise<SearchResult>;
+export type ReadFn = (options: ReadOptions) => Promise<Resource>;
+export type CreateFn = (options: CreateOptions) => Promise<Resource>;
+export type UpdateFn = (options: UpdateOptions) => Promise<Resource>;
+export type DeleteFn = (options: DeleteOptions) => Promise<void>;
 
 /**
  * Searches for FHIR resources of a given type.

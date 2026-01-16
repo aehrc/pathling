@@ -15,7 +15,43 @@
  * limitations under the License.
  */
 
-import type { AsyncJobExecutorOptions, AsyncJobHandle } from "../types/api";
+// =============================================================================
+// Async Job Executor Types
+// =============================================================================
+
+/**
+ * Options for executing an async job with polling.
+ */
+export interface AsyncJobExecutorOptions<
+  TKickOffResult,
+  TStatusResult,
+  TFinalResult,
+> {
+  kickOff: () => Promise<TKickOffResult>;
+  getJobId: (kickOffResult: TKickOffResult) => string;
+  checkStatus: (jobId: string) => Promise<TStatusResult>;
+  isComplete: (statusResult: TStatusResult) => boolean;
+  getResult: (statusResult: TStatusResult) => TFinalResult;
+  cancel: (jobId: string) => Promise<void>;
+  pollingInterval?: number;
+  onProgress?: (statusResult: TStatusResult) => void;
+}
+
+/**
+ * A handle for controlling a running async job.
+ */
+export interface AsyncJobHandle<TFinalResult> {
+  result: Promise<TFinalResult>;
+  cancel: () => Promise<void>;
+}
+
+/**
+ * Executes an async job with polling, handling the kick-off, status checking,
+ * and cancellation. Returns a handle with the result promise and a cancel function.
+ */
+export type AsyncJobExecutorFn = <TKickOffResult, TStatusResult, TFinalResult>(
+  options: AsyncJobExecutorOptions<TKickOffResult, TStatusResult, TFinalResult>,
+) => AsyncJobHandle<TFinalResult>;
 
 /**
  * Default polling interval in milliseconds.

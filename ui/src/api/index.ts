@@ -17,6 +17,7 @@
 
 // Async job execution.
 export { executeAsyncJob } from "./asyncJob";
+export type { AsyncJobExecutorOptions, AsyncJobHandle } from "./asyncJob";
 
 // Bulk export operations.
 export {
@@ -39,6 +40,7 @@ export { jobStatus, jobCancel } from "./job";
 
 // FHIR REST operations.
 export { search, read, create, update, deleteResource } from "./rest";
+export type { AuthOptions, ResourceType } from "./rest";
 
 // Utility functions.
 export {
@@ -55,3 +57,4 @@ export {
   viewExportKickOff,
   viewExportDownload,
 } from "./view";
+export type { ViewDefinition } from "./view";

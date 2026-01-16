@@ -15,19 +15,76 @@
  * limitations under the License.
  */
 
+
 import { buildHeaders, buildUrl, checkResponse, resolveUrl } from "./utils";
 
-import type {
-  AllPatientsExportKickOffOptions,
-  BulkExportDownloadOptions,
-  BulkExportKickOffResult,
-  BulkExportStatusOptions,
-  BulkExportStatusResult,
-  ExportManifest,
-  GroupExportKickOffOptions,
-  PatientExportKickOffOptions,
-  SystemExportKickOffOptions,
-} from "../types/api";
+import type { AuthOptions, ResourceType } from "./rest";
+import type { Parameters } from "fhir/r4";
+
+// =============================================================================
+// Bulk Export Types
+// =============================================================================
+
+export interface BulkExportBaseOptions extends AuthOptions {
+  types?: ResourceType[];
+  since?: string;
+  until?: string;
+  elements?: string;
+}
+
+export type SystemExportKickOffOptions = BulkExportBaseOptions;
+
+export type AllPatientsExportKickOffOptions = BulkExportBaseOptions;
+
+export interface PatientExportKickOffOptions extends BulkExportBaseOptions {
+  patientId: string;
+}
+
+export interface GroupExportKickOffOptions extends BulkExportBaseOptions {
+  groupId: string;
+}
+
+export interface BulkExportKickOffResult {
+  pollingUrl: string;
+}
+
+export interface BulkExportStatusOptions extends AuthOptions {
+  pollingUrl: string;
+}
+
+export interface BulkExportStatusResult {
+  status: "in-progress" | "complete";
+  progress?: string;
+  manifest?: ExportManifest;
+}
+
+/**
+ * Export manifest is a FHIR Parameters resource containing export results.
+ */
+export type ExportManifest = Parameters;
+
+export interface BulkExportDownloadOptions extends AuthOptions {
+  fileUrl: string;
+}
+
+export type SystemExportKickOffFn = (
+  options: SystemExportKickOffOptions,
+) => Promise<BulkExportKickOffResult>;
+export type AllPatientsExportKickOffFn = (
+  options: AllPatientsExportKickOffOptions,
+) => Promise<BulkExportKickOffResult>;
+export type PatientExportKickOffFn = (
+  options: PatientExportKickOffOptions,
+) => Promise<BulkExportKickOffResult>;
+export type GroupExportKickOffFn = (
+  options: GroupExportKickOffOptions,
+) => Promise<BulkExportKickOffResult>;
+export type BulkExportStatusFn = (
+  options: BulkExportStatusOptions,
+) => Promise<BulkExportStatusResult>;
+export type BulkExportDownloadFn = (
+  options: BulkExportDownloadOptions,
+) => Promise<ReadableStream>;
 
 /**
  * Builds query parameters for bulk export operations.

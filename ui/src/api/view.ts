@@ -15,16 +15,87 @@
  * limitations under the License.
  */
 
+
 import { buildHeaders, buildUrl, checkResponse } from "./utils";
 
-import type {
-  ViewExportDownloadOptions,
-  ViewExportKickOffOptions,
-  ViewExportResult,
-  ViewRunOptions,
-  ViewRunStoredOptions,
-} from "../types/api";
+import type { AuthOptions, ResourceType } from "./rest";
 import type { Parameters, ParametersParameter } from "fhir/r4";
+
+// =============================================================================
+// View Run Types
+// =============================================================================
+
+export type ViewOutputFormat = "ndjson" | "csv";
+
+export interface ViewDefinition {
+  resourceType: "ViewDefinition";
+  name?: string;
+  resource: ResourceType;
+  status: string;
+  select: unknown[];
+  where?: unknown[];
+}
+
+export interface ViewRunOptions extends AuthOptions {
+  viewDefinition: ViewDefinition;
+  format?: ViewOutputFormat;
+  limit?: number;
+  header?: boolean;
+  patientIds?: string[];
+  groupIds?: string[];
+  since?: string;
+}
+
+export interface ViewRunStoredOptions extends AuthOptions {
+  viewDefinitionId: string;
+  format?: ViewOutputFormat;
+  limit?: number;
+  header?: boolean;
+  patientIds?: string[];
+  groupIds?: string[];
+  since?: string;
+}
+
+export type ViewRunFn = (options: ViewRunOptions) => Promise<ReadableStream>;
+export type ViewRunStoredFn = (
+  options: ViewRunStoredOptions,
+) => Promise<ReadableStream>;
+
+// =============================================================================
+// View Export Types
+// =============================================================================
+
+export type ViewExportFormat = "ndjson" | "csv" | "parquet";
+
+export interface ViewExportInput {
+  name?: string;
+  viewDefinition: ViewDefinition;
+}
+
+export interface ViewExportKickOffOptions extends AuthOptions {
+  views: ViewExportInput[];
+  format?: ViewExportFormat;
+  header?: boolean;
+  patientIds?: string[];
+  groupIds?: string[];
+  since?: string;
+}
+
+export interface ViewExportResult {
+  pollingUrl: string;
+}
+
+export interface ViewExportDownloadOptions extends AuthOptions {
+  jobId: string;
+  fileName: string;
+}
+
+export type ViewExportKickOffFn = (
+  options: ViewExportKickOffOptions,
+) => Promise<ViewExportResult>;
+export type ViewExportDownloadFn = (
+  options: ViewExportDownloadOptions,
+) => Promise<ReadableStream>;
 
 /**
  * Runs a ViewDefinition and returns the results as a stream.

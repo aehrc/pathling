@@ -29,7 +29,7 @@ import { useAsyncJob } from "./useAsyncJob";
 import { useAuth } from "../contexts/AuthContext";
 
 import type { AsyncJobOptions, UseAsyncJobResult } from "./useAsyncJob";
-import type { ViewDefinition } from "../types/api";
+import type { ViewDefinition } from "../api";
 import type { ViewExportManifest } from "../types/viewExport";
 
 /**

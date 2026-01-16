@@ -32,7 +32,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { getExportOutputFiles } from "../types/export";
 
 import type { AsyncJobOptions, UseAsyncJobResult } from "./useAsyncJob";
-import type { ResourceType } from "../types/api";
+import type { ResourceType } from "../api";
 import type { Parameters } from "fhir/r4";
 
 /**

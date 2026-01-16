@@ -25,7 +25,7 @@ import {
   viewRunStored,
 } from "../view";
 
-import type { ViewDefinition } from "../../types/api";
+import type { ViewDefinition } from "../view";
 
 const mockFetch = vi.fn();
 
