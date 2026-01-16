@@ -18,6 +18,8 @@
 package au.csiro.pathling.operations.bulkexport;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import lombok.Getter;
 import org.jetbrains.annotations.Contract;
 
 /**
@@ -26,9 +28,51 @@ import org.jetbrains.annotations.Contract;
  * @author Felix Naumann
  * @author John Grimes
  */
+@Getter
 public enum ExportOutputFormat {
   /** Newline-delimited JSON format. */
-  NDJSON;
+  NDJSON("application/fhir+ndjson"),
+  /**
+   * Parquet format.
+   *
+   * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
+   *     Specification</a>
+   */
+  PARQUET("application/x-pathling-parquet"),
+  /**
+   * Delta Lake format.
+   *
+   * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
+   *     Specification</a>
+   */
+  DELTA("application/x-pathling-delta+parquet");
+
+  private final String mimeType;
+
+  ExportOutputFormat(final String mimeType) {
+    this.mimeType = mimeType;
+  }
+
+  /**
+   * Parses a format parameter string and returns the corresponding ExportOutputFormat.
+   *
+   * @param param the format parameter string (e.g., "application/fhir+ndjson", "parquet", "delta")
+   * @return the corresponding ExportOutputFormat, or null if the format is invalid. Returns NDJSON
+   *     if param is null.
+   */
+  @Nullable
+  @Contract(pure = true)
+  public static ExportOutputFormat fromParam(@Nullable final String param) {
+    if (param == null) {
+      return NDJSON;
+    }
+    return switch (param.toLowerCase()) {
+      case "application/fhir+ndjson", "application/ndjson", "ndjson" -> NDJSON;
+      case "application/x-pathling-parquet", "parquet" -> PARQUET;
+      case "application/x-pathling-delta+parquet", "delta" -> DELTA;
+      default -> null;
+    };
+  }
 
   /**
    * Converts the export output format to its parameter string representation.
@@ -41,6 +85,8 @@ public enum ExportOutputFormat {
   public static String asParam(@Nonnull final ExportOutputFormat exportOutputFormat) {
     return switch (exportOutputFormat) {
       case NDJSON -> "ndjson";
+      case PARQUET -> "parquet";
+      case DELTA -> "delta";
     };
   }
 }

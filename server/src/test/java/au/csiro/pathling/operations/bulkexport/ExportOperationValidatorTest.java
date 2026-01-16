@@ -243,6 +243,61 @@ class ExportOperationValidatorTest {
   }
 
   @Test
+  @DisplayName("validateRequest should accept parquet output format")
+  void validateRequest_shouldAcceptParquetOutputFormat() {
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ExportRequest> result =
+                  validator.validateRequest(
+                      requestDetails, "application/x-pathling-parquet", null, null, null, null);
+              assertThat(result.result().outputFormat()).isEqualTo(ExportOutputFormat.PARQUET);
+            });
+  }
+
+  @Test
+  @DisplayName("validateRequest should accept parquet shorthand format")
+  void validateRequest_shouldAcceptParquetShorthandFormat() {
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ExportRequest> result =
+                  validator.validateRequest(requestDetails, "parquet", null, null, null, null);
+              assertThat(result.result().outputFormat()).isEqualTo(ExportOutputFormat.PARQUET);
+            });
+  }
+
+  @Test
+  @DisplayName("validateRequest should accept delta output format")
+  void validateRequest_shouldAcceptDeltaOutputFormat() {
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ExportRequest> result =
+                  validator.validateRequest(
+                      requestDetails,
+                      "application/x-pathling-delta+parquet",
+                      null,
+                      null,
+                      null,
+                      null);
+              assertThat(result.result().outputFormat()).isEqualTo(ExportOutputFormat.DELTA);
+            });
+  }
+
+  @Test
+  @DisplayName("validateRequest should accept delta shorthand format")
+  void validateRequest_shouldAcceptDeltaShorthandFormat() {
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ExportRequest> result =
+                  validator.validateRequest(requestDetails, "delta", null, null, null, null);
+              assertThat(result.result().outputFormat()).isEqualTo(ExportOutputFormat.DELTA);
+            });
+  }
+
+  @Test
   @DisplayName("validateRequest should reject unsupported query parameters in strict mode")
   void validateRequest_shouldRejectUnsupportedQueryParams() {
     when(requestDetails.getParameters())

@@ -6,7 +6,7 @@
   "kind": "operation",
   "experimental": false,
   "publisher": "Australian e-Health Research Centre, CSIRO",
-  "description": "This operation allows data to be exported from the Pathling server in NDJSON format. The operation follows the FHIR Bulk Data Access specification for system-level export, supporting asynchronous export of FHIR resources.",
+  "description": "This operation allows data to be exported from the Pathling server in NDJSON, Parquet, or Delta Lake format. The operation follows the FHIR Bulk Data Access specification for system-level export, supporting asynchronous export of FHIR resources.",
   "affectsState": false,
   "code": "export",
   "system": true,
@@ -18,7 +18,7 @@
       "use": "in",
       "min": 0,
       "max": "1",
-      "documentation": "The format for the requested export files. Pathling supports Newline Delimited JSON format only. Accepted values are 'application/fhir+ndjson', 'application/ndjson', and 'ndjson'. Defaults to 'application/fhir+ndjson' if not specified.",
+      "documentation": "The format for the requested export files. Pathling supports NDJSON, Parquet, and Delta Lake formats. Accepted values for NDJSON are 'application/fhir+ndjson', 'application/ndjson', and 'ndjson'. Accepted values for Parquet are 'application/x-pathling-parquet' and 'parquet'. Accepted values for Delta Lake are 'application/x-pathling-delta+parquet' and 'delta'. Defaults to NDJSON if not specified.",
       "type": "string"
     },
     {

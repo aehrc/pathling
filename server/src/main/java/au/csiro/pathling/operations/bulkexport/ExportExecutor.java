@@ -220,10 +220,14 @@ public class ExportExecutor {
         log.debug("Created dir {}", jobDirPath);
       }
 
+      final DataSinkBuilder sinkBuilder =
+          new DataSinkBuilder(pathlingContext, mapped).saveMode("overwrite");
       final WriteDetails writeDetails =
-          new DataSinkBuilder(pathlingContext, mapped)
-              .saveMode("overwrite")
-              .ndjson(jobDirPath.toString());
+          switch (exportRequest.outputFormat()) {
+            case NDJSON -> sinkBuilder.ndjson(jobDirPath.toString());
+            case PARQUET -> sinkBuilder.parquet(jobDirPath.toString());
+            case DELTA -> sinkBuilder.delta(jobDirPath.toString());
+          };
       return new ExportResponse(
           exportRequest.originalRequest(),
           exportRequest.serverBaseUrl(),

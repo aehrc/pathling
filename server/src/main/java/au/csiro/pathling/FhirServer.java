@@ -104,7 +104,15 @@ public class FhirServer extends RestfulServer {
   /** The _outputFormat parameter for specifying output format. */
   public static final Header OUTPUT_FORMAT =
       new Header(
-          "_outputFormat", List.of("application/fhir+ndjson", "application/ndjson", "ndjson"));
+          "_outputFormat",
+          List.of(
+              "application/fhir+ndjson",
+              "application/ndjson",
+              "ndjson",
+              "application/x-pathling-parquet",
+              "parquet",
+              "application/x-pathling-delta+parquet",
+              "delta"));
 
   private static final int DEFAULT_PAGE_SIZE = 100;
   private static final int MAX_PAGE_SIZE = Integer.MAX_VALUE;
