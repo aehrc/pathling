@@ -32,7 +32,7 @@ import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useSaveViewDefinition, useServerCapabilities } from "../hooks";
 
-import type { ViewRunRequest } from "../types/hooks";
+import type { ViewRunRequest } from "../hooks";
 import type { ViewJob } from "../types/viewJob";
 
 /**

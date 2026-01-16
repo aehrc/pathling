@@ -21,7 +21,41 @@ import { deleteResource } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 
-import type { UseDeleteFn, UseDeleteVariables } from "../types/hooks";
+import type { UseMutationResult } from "@tanstack/react-query";
+
+/**
+ * Options for useDelete hook.
+ */
+export interface UseDeleteOptions {
+  /** Callback on successful deletion. */
+  onSuccess?: () => void;
+  /** Callback on error. */
+  onError?: (error: Error) => void;
+}
+
+/**
+ * Variables for useDelete mutation.
+ */
+export interface UseDeleteVariables {
+  /** The FHIR resource type. */
+  resourceType: string;
+  /** The resource ID. */
+  id: string;
+}
+
+/**
+ * Result of useDelete hook.
+ */
+export type UseDeleteResult = UseMutationResult<
+  void,
+  Error,
+  UseDeleteVariables
+>;
+
+/**
+ * Delete a FHIR resource.
+ */
+export type UseDeleteFn = (options?: UseDeleteOptions) => UseDeleteResult;
 
 /**
  * Delete a FHIR resource.

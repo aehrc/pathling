@@ -30,8 +30,8 @@ import { useBulkExport, useDownloadFile } from "../../hooks";
 import { getExportOutputFiles } from "../../types/export";
 import { formatDateTime } from "../../utils";
 
+import type { BulkExportType } from "../../hooks/useBulkExport";
 import type { ExportRequest } from "../../types/export";
-import type { BulkExportType } from "../../types/hooks";
 
 interface ExportCardProps {
   request: ExportRequest;

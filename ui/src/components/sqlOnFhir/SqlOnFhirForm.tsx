@@ -42,7 +42,7 @@ import { useState } from "react";
 import { useClipboard } from "../../hooks";
 import { useViewDefinitions } from "../../hooks/useViewDefinitions";
 
-import type { ViewRunRequest } from "../../types/hooks";
+import type { ViewRunRequest } from "../../hooks";
 import type { CreateViewDefinitionResult } from "../../types/sqlOnFhir";
 
 interface SqlOnFhirFormProps {

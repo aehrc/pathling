@@ -22,7 +22,50 @@ import { config } from "../config";
 import { useAsyncJob } from "./useAsyncJob";
 import { useAuth } from "../contexts/AuthContext";
 
-import type { UseImportPnpFn, ImportPnpJobRequest } from "../types/hooks";
+import type { AsyncJobOptions, UseAsyncJobResult } from "./useAsyncJob";
+import type { ImportFormat, SaveMode } from "../types/import";
+
+/**
+ * Request parameters for passthrough (PnP) import operations.
+ */
+export interface ImportPnpJobRequest {
+  /** Export URL to import from. */
+  exportUrl: string;
+  /** Save mode for the import operation. */
+  saveMode: SaveMode;
+  /** Input format for the import data. */
+  inputFormat: ImportFormat;
+  // Bulk export passthrough parameters.
+  /** Resource types to include in the export. */
+  types?: string[];
+  /** Export resources modified after this timestamp. */
+  since?: string;
+  /** Export resources modified before this timestamp. */
+  until?: string;
+  /** Elements to include in the export output. */
+  elements?: string;
+  /** FHIR search queries to filter resources during export. */
+  typeFilters?: string[];
+  /** Pre-defined sets of associated data to include. */
+  includeAssociatedData?: string[];
+}
+
+/**
+ * Options for useImportPnp hook (callbacks only).
+ */
+export type UseImportPnpOptions = AsyncJobOptions;
+
+/**
+ * Result of useImportPnp hook.
+ */
+export type UseImportPnpResult = UseAsyncJobResult<ImportPnpJobRequest, void>;
+
+/**
+ * Execute a passthrough (PnP) import operation with polling.
+ */
+export type UseImportPnpFn = (
+  options?: UseImportPnpOptions,
+) => UseImportPnpResult;
 
 /**
  * Execute a passthrough (PnP) import operation with polling.

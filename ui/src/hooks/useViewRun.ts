@@ -27,11 +27,82 @@ import {
   extractColumns,
 } from "../utils/ndjson";
 
-import type {
-  UseViewRunFn,
-  ViewRunRequest,
-  ViewDefinitionResult,
-} from "../types/hooks";
+/**
+ * A ViewDefinition resource.
+ */
+export interface ViewDefinition {
+  resourceType: "ViewDefinition";
+  id?: string;
+  name?: string;
+  resource: string;
+  status: string;
+  select: Array<{
+    column?: Array<{ path: string; name: string }>;
+    forEach?: string;
+    forEachOrNull?: string;
+    select?: unknown[];
+  }>;
+  where?: Array<{ path: string }>;
+}
+
+/**
+ * Request to execute a ViewDefinition.
+ */
+export interface ViewRunRequest {
+  /** Execution mode: stored (by ID) or inline (by JSON). */
+  mode: "stored" | "inline";
+  /** ID of a stored ViewDefinition (required when mode is "stored"). */
+  viewDefinitionId?: string;
+  /** JSON string of the ViewDefinition (required when mode is "inline"). */
+  viewDefinitionJson?: string;
+  /** Maximum rows to return. Defaults to 10. */
+  limit?: number;
+}
+
+/**
+ * Result of executing a ViewDefinition.
+ */
+export interface ViewDefinitionResult {
+  /** Column names extracted from the first result row. */
+  columns: string[];
+  /** Array of result rows. */
+  rows: Record<string, unknown>[];
+}
+
+/**
+ * Options for useViewRun hook.
+ */
+export interface UseViewRunOptions {
+  /** Callback on successful execution. */
+  onSuccess?: (result: ViewDefinitionResult) => void;
+  /** Callback on error. */
+  onError?: (error: Error) => void;
+}
+
+/**
+ * Result of useViewRun hook.
+ */
+export interface UseViewRunResult {
+  /** Current status of the mutation. */
+  status: "idle" | "pending" | "success" | "error";
+  /** The execution result when successful. */
+  result: ViewDefinitionResult | undefined;
+  /** Error object when failed. */
+  error: Error | null;
+  /** The request that produced the current result. */
+  lastRequest: ViewRunRequest | undefined;
+  /** Execute a ViewDefinition. */
+  execute: (request: ViewRunRequest) => void;
+  /** Reset all state. */
+  reset: () => void;
+  /** Whether execution is in progress. */
+  isPending: boolean;
+}
+
+/**
+ * Execute a ViewDefinition and return parsed results.
+ */
+export type UseViewRunFn = (options?: UseViewRunOptions) => UseViewRunResult;
 
 /**
  * Execute a ViewDefinition and return parsed results.

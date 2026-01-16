@@ -21,8 +21,30 @@ import { read } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 
-import type { UseReadFn } from "../types/hooks";
+import type { UseQueryResult } from "@tanstack/react-query";
 import type { Resource } from "fhir/r4";
+
+/**
+ * Options for useRead hook.
+ */
+export interface UseReadOptions {
+  /** The FHIR resource type. */
+  resourceType: string;
+  /** The resource ID. */
+  id: string;
+  /** Whether to enable the query. */
+  enabled?: boolean;
+}
+
+/**
+ * Result of useRead hook.
+ */
+export type UseReadResult = UseQueryResult<Resource, Error>;
+
+/**
+ * Read a single FHIR resource by type and ID.
+ */
+export type UseReadFn = (options: UseReadOptions) => UseReadResult;
 
 /**
  * Read a single FHIR resource by type and ID.

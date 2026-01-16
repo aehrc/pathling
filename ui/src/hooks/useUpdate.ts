@@ -21,8 +21,40 @@ import { update } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 
-import type { UseUpdateFn, UseUpdateVariables } from "../types/hooks";
+import type { UseMutationResult } from "@tanstack/react-query";
 import type { Resource } from "fhir/r4";
+
+/**
+ * Options for useUpdate hook.
+ */
+export interface UseUpdateOptions {
+  /** Callback on successful update. */
+  onSuccess?: (resource: Resource) => void;
+  /** Callback on error. */
+  onError?: (error: Error) => void;
+}
+
+/**
+ * Variables for useUpdate mutation.
+ */
+export interface UseUpdateVariables {
+  /** The resource to update (must include id). */
+  resource: Resource;
+}
+
+/**
+ * Result of useUpdate hook.
+ */
+export type UseUpdateResult = UseMutationResult<
+  Resource,
+  Error,
+  UseUpdateVariables
+>;
+
+/**
+ * Update an existing FHIR resource.
+ */
+export type UseUpdateFn = (options?: UseUpdateOptions) => UseUpdateResult;
 
 /**
  * Update an existing FHIR resource.

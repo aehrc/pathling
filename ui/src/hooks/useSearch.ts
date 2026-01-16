@@ -21,8 +21,30 @@ import { search } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 
-import type { UseSearchFn } from "../types/hooks";
+import type { UseQueryResult } from "@tanstack/react-query";
 import type { Bundle } from "fhir/r4";
+
+/**
+ * Options for useSearch hook.
+ */
+export interface UseSearchOptions {
+  /** The FHIR resource type to search. */
+  resourceType: string;
+  /** Optional search parameters. */
+  params?: Record<string, string | string[]>;
+  /** Whether to enable the query. */
+  enabled?: boolean;
+}
+
+/**
+ * Result of useSearch hook.
+ */
+export type UseSearchResult = UseQueryResult<Bundle, Error>;
+
+/**
+ * Search for FHIR resources.
+ */
+export type UseSearchFn = (options: UseSearchOptions) => UseSearchResult;
 
 /**
  * Search for FHIR resources.

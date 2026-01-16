@@ -21,11 +21,40 @@ import { search } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 
-import type {
-  UseViewDefinitionsFn,
-  ViewDefinitionSummary,
-} from "../types/hooks";
+import type { UseQueryResult } from "@tanstack/react-query";
 import type { Bundle } from "fhir/r4";
+
+/**
+ * Summary of a stored ViewDefinition.
+ */
+export interface ViewDefinitionSummary {
+  id: string;
+  name: string;
+  json: string;
+}
+
+/**
+ * Options for useViewDefinitions hook.
+ */
+export interface UseViewDefinitionsOptions {
+  /** Whether to enable the query. */
+  enabled?: boolean;
+}
+
+/**
+ * Result of useViewDefinitions hook.
+ */
+export type UseViewDefinitionsResult = UseQueryResult<
+  ViewDefinitionSummary[],
+  Error
+>;
+
+/**
+ * Fetch available ViewDefinitions from the server.
+ */
+export type UseViewDefinitionsFn = (
+  options?: UseViewDefinitionsOptions,
+) => UseViewDefinitionsResult;
 
 /**
  * Fetch available ViewDefinitions from the server.

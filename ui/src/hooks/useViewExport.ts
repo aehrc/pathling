@@ -28,11 +28,50 @@ import { config } from "../config";
 import { useAsyncJob } from "./useAsyncJob";
 import { useAuth } from "../contexts/AuthContext";
 
-import type {
-  UseViewExportFn,
-  UseViewExportResult,
-  ViewExportRequest,
-} from "../types/hooks";
+import type { AsyncJobOptions, UseAsyncJobResult } from "./useAsyncJob";
+import type { ViewDefinition } from "../types/api";
+import type { ViewExportManifest } from "../types/viewExport";
+
+/**
+ * Output format for asynchronous view export operations.
+ */
+export type ViewExportOutputFormat = "ndjson" | "csv" | "parquet";
+
+/**
+ * Request parameters for view export operations.
+ */
+export interface ViewExportRequest {
+  /** Views to export. */
+  views: Array<{
+    viewDefinition: ViewDefinition;
+    name?: string;
+  }>;
+  /** Output format. */
+  format?: ViewExportOutputFormat;
+  /** Whether to include header row (CSV only). */
+  header?: boolean;
+}
+
+/**
+ * Options for useViewExport hook (callbacks only).
+ */
+export type UseViewExportOptions = AsyncJobOptions;
+
+/**
+ * Result of useViewExport hook.
+ */
+export interface UseViewExportResult
+  extends UseAsyncJobResult<ViewExportRequest, ViewExportManifest> {
+  /** Function to download a file from the manifest. */
+  download: (fileName: string) => Promise<ReadableStream>;
+}
+
+/**
+ * Execute a view export operation with polling.
+ */
+export type UseViewExportFn = (
+  options?: UseViewExportOptions,
+) => UseViewExportResult;
 
 /**
  * Execute a view export operation with polling.

@@ -20,12 +20,41 @@ import { useState, useCallback, useRef } from "react";
 import { executeAsyncJob, parseProgressHeader } from "../api";
 
 import type { AsyncJobExecutorOptions } from "../types/api";
-import type { AsyncJobStatus } from "../types/hooks";
 
+/**
+ * Status of an async job operation.
+ */
+export type AsyncJobStatus =
+  | "idle"
+  | "pending"
+  | "in-progress"
+  | "complete"
+  | "error"
+  | "cancelled";
+
+/**
+ * Options for starting an async job.
+ */
+export interface AsyncJobOptions {
+  /** Callback when progress updates. */
+  onProgress?: (progress: number) => void;
+  /** Callback when job completes. */
+  onComplete?: () => void;
+  /** Callback when job fails. */
+  onError?: (error: Error) => void;
+}
+
+/**
+ * Result of an async job hook.
+ */
 export interface UseAsyncJobResult<TRequest, TResult> {
+  /** Current status of the job. */
   status: AsyncJobStatus;
+  /** Progress percentage (0-100) when available. */
   progress?: number;
+  /** The final result when status is "complete". */
   result?: TResult;
+  /** Error object when status is "error". */
   error?: Error;
   /** The request that produced the current result/error. */
   request?: TRequest;
@@ -33,6 +62,7 @@ export interface UseAsyncJobResult<TRequest, TResult> {
   startWith: (request: TRequest) => void;
   /** Reset all state back to idle. */
   reset: () => void;
+  /** Function to cancel the job. */
   cancel: () => Promise<void>;
 }
 

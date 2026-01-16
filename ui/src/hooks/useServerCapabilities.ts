@@ -17,13 +17,54 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import type {
-  UseServerCapabilitiesFn,
-  ServerCapabilities,
-  ResourceCapability,
-  OperationCapability,
-} from "../types/hooks";
+import type { UseQueryResult } from "@tanstack/react-query";
 import type { CapabilityStatement } from "fhir/r4";
+
+/**
+ * Resource capability from server.
+ */
+export interface ResourceCapability {
+  type: string;
+  operations: string[];
+}
+
+/**
+ * Operation capability from server.
+ */
+export interface OperationCapability {
+  name: string;
+  definition?: string;
+}
+
+/**
+ * Server capabilities.
+ */
+export interface ServerCapabilities {
+  authRequired: boolean;
+  serverName?: string;
+  serverVersion?: string;
+  fhirVersion?: string;
+  publisher?: string;
+  description?: string;
+  resources?: ResourceCapability[];
+  resourceTypes: string[];
+  operations?: OperationCapability[];
+}
+
+/**
+ * Result of useServerCapabilities hook.
+ */
+export type UseServerCapabilitiesResult = UseQueryResult<
+  ServerCapabilities,
+  Error
+>;
+
+/**
+ * Fetch server capabilities from the CapabilityStatement.
+ */
+export type UseServerCapabilitiesFn = (
+  fhirBaseUrl: string | null | undefined,
+) => UseServerCapabilitiesResult;
 
 const SMART_SERVICE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/restful-security-service";

@@ -25,6 +25,7 @@ export { useDelete } from "./useDelete";
 // Async job operations.
 export { useAsyncJob } from "./useAsyncJob";
 export { useBulkExport } from "./useBulkExport";
+export type { BulkExportType } from "./useBulkExport";
 export { useImport } from "./useImport";
 export { useImportPnp } from "./useImportPnp";
 export { useBulkSubmit } from "./useBulkSubmit";
@@ -33,10 +34,20 @@ export { useBulkSubmit } from "./useBulkSubmit";
  */
 export { useBulkSubmit as useBulkSubmitMonitor } from "./useBulkSubmit";
 export { useViewExport } from "./useViewExport";
+export type { ViewExportOutputFormat } from "./useViewExport";
 
 // View operations.
 export { useViewRun } from "./useViewRun";
+export type {
+  ViewDefinition,
+  ViewRunRequest,
+  ViewDefinitionResult,
+  UseViewRunOptions,
+  UseViewRunResult,
+  UseViewRunFn,
+} from "./useViewRun";
 export { useViewDefinitions } from "./useViewDefinitions";
+export type { ViewDefinitionSummary } from "./useViewDefinitions";
 export { useSaveViewDefinition } from "./useSaveViewDefinition";
 
 // Other operations.

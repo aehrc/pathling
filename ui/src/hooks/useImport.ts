@@ -22,8 +22,38 @@ import { config } from "../config";
 import { useAsyncJob } from "./useAsyncJob";
 import { useAuth } from "../contexts/AuthContext";
 
+import type { AsyncJobOptions, UseAsyncJobResult } from "./useAsyncJob";
 import type { ResourceType } from "../types/api";
-import type { UseImportFn, ImportJobRequest } from "../types/hooks";
+import type { ImportFormat, SaveMode } from "../types/import";
+
+/**
+ * Request parameters for standard import operations.
+ */
+export interface ImportJobRequest {
+  /** Source URLs to import from. */
+  sources: string[];
+  /** Resource types to import (optional filter). */
+  resourceTypes?: string[];
+  /** Save mode for the import operation. */
+  saveMode: SaveMode;
+  /** Input format for the import data. */
+  inputFormat: ImportFormat;
+}
+
+/**
+ * Options for useImport hook (callbacks only).
+ */
+export type UseImportOptions = AsyncJobOptions;
+
+/**
+ * Result of useImport hook.
+ */
+export type UseImportResult = UseAsyncJobResult<ImportJobRequest, void>;
+
+/**
+ * Execute a standard import operation with polling.
+ */
+export type UseImportFn = (options?: UseImportOptions) => UseImportResult;
 
 /**
  * Execute a standard import operation with polling.

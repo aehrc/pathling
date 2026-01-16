@@ -34,7 +34,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useDownloadFile, useViewExport, useViewRun } from "../../hooks";
 import { formatDateTime } from "../../utils";
 
-import type { ViewDefinition, ViewExportOutputFormat } from "../../types/hooks";
+import type { ViewExportOutputFormat } from "../../hooks";
+import type { ViewDefinition } from "../../types/api";
 import type { ViewExportJob } from "../../types/job";
 import type { ViewExportManifest } from "../../types/viewExport";
 import type { ViewJob } from "../../types/viewJob";

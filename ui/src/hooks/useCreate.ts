@@ -21,8 +21,40 @@ import { create } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 
-import type { UseCreateFn, UseCreateVariables } from "../types/hooks";
+import type { UseMutationResult } from "@tanstack/react-query";
 import type { Resource } from "fhir/r4";
+
+/**
+ * Options for useCreate hook.
+ */
+export interface UseCreateOptions {
+  /** Callback on successful creation. */
+  onSuccess?: (resource: Resource) => void;
+  /** Callback on error. */
+  onError?: (error: Error) => void;
+}
+
+/**
+ * Variables for useCreate mutation.
+ */
+export interface UseCreateVariables {
+  /** The resource to create. */
+  resource: Resource;
+}
+
+/**
+ * Result of useCreate hook.
+ */
+export type UseCreateResult = UseMutationResult<
+  Resource,
+  Error,
+  UseCreateVariables
+>;
+
+/**
+ * Create a new FHIR resource.
+ */
+export type UseCreateFn = (options?: UseCreateOptions) => UseCreateResult;
 
 /**
  * Create a new FHIR resource.

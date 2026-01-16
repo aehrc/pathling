@@ -22,11 +22,134 @@ import { config } from "../config";
 import { useAsyncJob } from "./useAsyncJob";
 import { useAuth } from "../contexts/AuthContext";
 
-import type {
-  UseBulkSubmitFn,
-  BulkSubmitRequestUnion,
-  BulkSubmitManifest,
-} from "../types/hooks";
+import type { AsyncJobOptions, UseAsyncJobResult } from "./useAsyncJob";
+
+// ============================================================================
+// Bulk Submit Types
+// ============================================================================
+
+/**
+ * Submitter identifier for bulk submit.
+ */
+export interface SubmitterIdentifier {
+  system: string;
+  value: string;
+}
+
+/**
+ * Base request parameters for bulk submit operations (submit mode).
+ */
+export interface BulkSubmitRequestBase {
+  /** Unique submission ID. */
+  submissionId: string;
+  /** Submitter identifier. */
+  submitter: SubmitterIdentifier;
+  /** URL of the manifest file. */
+  manifestUrl: string;
+  /** Optional FHIR base URL for the source. */
+  fhirBaseUrl?: string;
+  /** URL of manifest being replaced (for updates). */
+  replacesManifestUrl?: string;
+  /** OAuth metadata URL for source authentication. */
+  oauthMetadataUrl?: string;
+  /** Additional metadata key-value pairs. */
+  metadata?: Record<string, string>;
+  /** Headers to include when fetching files. */
+  fileRequestHeaders?: Record<string, string>;
+}
+
+/**
+ * Request parameters for bulk submit operations (submit mode).
+ */
+export interface BulkSubmitRequest extends BulkSubmitRequestBase {
+  /** Operation mode: submit a new submission. */
+  mode: "submit";
+}
+
+/**
+ * Request parameters for monitoring an existing bulk submit operation.
+ */
+export interface BulkSubmitMonitorRequest {
+  /** Operation mode: monitor an existing submission. */
+  mode: "monitor";
+  /** Unique submission ID to monitor. */
+  submissionId: string;
+  /** Submitter identifier. */
+  submitter: SubmitterIdentifier;
+}
+
+/**
+ * Unified request type for bulk submit operations.
+ * Use mode: 'submit' to create a new submission.
+ * Use mode: 'monitor' to monitor an existing submission.
+ */
+export type BulkSubmitRequestUnion =
+  | BulkSubmitRequest
+  | BulkSubmitMonitorRequest;
+
+/**
+ * Options for useBulkSubmit hook (callbacks only).
+ */
+export type UseBulkSubmitOptions = AsyncJobOptions;
+
+/**
+ * Bulk submit manifest entry.
+ */
+export interface BulkSubmitManifestEntry {
+  type: string;
+  url: string;
+  count?: number;
+}
+
+/**
+ * Complete bulk submit manifest.
+ */
+export interface BulkSubmitManifest {
+  transactionTime: string;
+  request: string;
+  output: BulkSubmitManifestEntry[];
+  error?: BulkSubmitManifestEntry[];
+}
+
+/**
+ * Result of useBulkSubmit hook.
+ */
+export interface UseBulkSubmitResult
+  extends UseAsyncJobResult<BulkSubmitRequestUnion, BulkSubmitManifest> {
+  /** Function to download a file from the manifest. */
+  download: (fileName: string) => Promise<ReadableStream>;
+}
+
+/**
+ * Options for useBulkSubmitMonitor hook (callbacks only).
+ */
+export type UseBulkSubmitMonitorOptions = AsyncJobOptions;
+
+/**
+ * Result of useBulkSubmitMonitor hook.
+ */
+export interface UseBulkSubmitMonitorResult
+  extends UseAsyncJobResult<BulkSubmitMonitorRequest, BulkSubmitManifest> {
+  /** Function to download a file from the manifest. */
+  download: (fileName: string) => Promise<ReadableStream>;
+}
+
+/**
+ * Execute a bulk submit operation with polling.
+ */
+export type UseBulkSubmitFn = (
+  options?: UseBulkSubmitOptions,
+) => UseBulkSubmitResult;
+
+/**
+ * Monitor an existing bulk submit operation with polling.
+ * @deprecated Use useBulkSubmit with mode: 'monitor' instead.
+ */
+export type UseBulkSubmitMonitorFn = UseBulkSubmitFn;
+
+// ============================================================================
+// Internal Types
+// ============================================================================
 
 interface KickOffResult {
   submissionId: string;

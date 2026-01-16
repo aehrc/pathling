@@ -52,6 +52,9 @@ export default defineConfig([
       unicorn,
     },
     rules: {
+      // TypeScript rules.
+      "@typescript-eslint/no-unused-vars": "error",
+
       // React hooks rules.
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",

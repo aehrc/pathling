@@ -31,12 +31,62 @@ import { useAsyncJob } from "./useAsyncJob";
 import { useAuth } from "../contexts/AuthContext";
 import { getExportOutputFiles } from "../types/export";
 
+import type { AsyncJobOptions, UseAsyncJobResult } from "./useAsyncJob";
 import type { ResourceType } from "../types/api";
-import type {
-  UseBulkExportFn,
-  BulkExportRequest,
-  ExportManifest,
-} from "../types/hooks";
+import type { Parameters } from "fhir/r4";
+
+/**
+ * Export type for bulk export operations.
+ */
+export type BulkExportType = "system" | "all-patients" | "patient" | "group";
+
+/**
+ * Request parameters for bulk export operations.
+ */
+export interface BulkExportRequest {
+  /** Type of export operation. */
+  type: BulkExportType;
+  /** Patient ID (required for "patient" type). */
+  patientId?: string;
+  /** Group ID (required for "group" type). */
+  groupId?: string;
+  /** Resource types to export (optional filter). */
+  resourceTypes?: string[];
+  /** Export since date (optional). */
+  since?: string;
+  /** Export until date (optional). */
+  until?: string;
+  /** Comma-separated list of element names to include (optional). */
+  elements?: string;
+  /** Output format. */
+  outputFormat?: string;
+}
+
+/**
+ * Options for useBulkExport hook (callbacks only).
+ */
+export type UseBulkExportOptions = AsyncJobOptions;
+
+/**
+ * Export manifest is a FHIR Parameters resource containing export results.
+ */
+export type ExportManifest = Parameters;
+
+/**
+ * Result of useBulkExport hook.
+ */
+export interface UseBulkExportResult
+  extends UseAsyncJobResult<BulkExportRequest, ExportManifest> {
+  /** Function to download a file from the manifest. */
+  download: (fileName: string) => Promise<ReadableStream>;
+}
+
+/**
+ * Execute a bulk export operation with polling.
+ */
+export type UseBulkExportFn = (
+  options?: UseBulkExportOptions,
+) => UseBulkExportResult;
 
 interface KickOffResult {
   pollingUrl: string;

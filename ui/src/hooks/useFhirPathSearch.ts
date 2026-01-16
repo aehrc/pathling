@@ -21,8 +21,47 @@ import { search } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 
-import type { UseFhirPathSearchFn } from "../types/hooks";
 import type { Bundle, Resource } from "fhir/r4";
+
+/**
+ * Options for useFhirPathSearch hook.
+ * This is a specialised search that uses FHIRPath filter expressions.
+ */
+export interface UseFhirPathSearchOptions {
+  /** The FHIR resource type to search. */
+  resourceType: string;
+  /** FHIRPath filter expressions. */
+  filters: string[];
+  /** Whether to enable the query. */
+  enabled?: boolean;
+}
+
+/**
+ * Result of useFhirPathSearch hook.
+ */
+export interface UseFhirPathSearchResult {
+  /** The matching resources. */
+  resources: Resource[];
+  /** Total count from server (may be undefined). */
+  total?: number;
+  /** The raw bundle response. */
+  bundle?: Bundle;
+  /** Loading state. */
+  isLoading: boolean;
+  /** Error state. */
+  isError: boolean;
+  /** Error object if failed. */
+  error: Error | null;
+  /** Refetch function. */
+  refetch: () => void;
+}
+
+/**
+ * Search for resources using FHIRPath filter expressions.
+ */
+export type UseFhirPathSearchFn = (
+  options: UseFhirPathSearchOptions,
+) => UseFhirPathSearchResult;
 
 /**
  * Search for resources using FHIRPath filter expressions.

@@ -15,16 +15,43 @@
  * limitations under the License.
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  type UseMutationResult,
+} from "@tanstack/react-query";
 
 import { create } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 
-import type {
-  UseSaveViewDefinitionFn,
-  ViewDefinitionSummary,
-} from "../types/hooks";
+import type { ViewDefinitionSummary } from "./useViewDefinitions";
+
+/**
+ * Options for useSaveViewDefinition hook.
+ */
+export interface UseSaveViewDefinitionOptions {
+  /** Callback on successful save. */
+  onSuccess?: (result: { id: string; name: string }) => void;
+  /** Callback on error. */
+  onError?: (error: Error) => void;
+}
+
+/**
+ * Result of useSaveViewDefinition hook.
+ */
+export type UseSaveViewDefinitionResult = UseMutationResult<
+  { id: string; name: string },
+  Error,
+  string
+>;
+
+/**
+ * Save a ViewDefinition to the server.
+ */
+export type UseSaveViewDefinitionFn = (
+  options?: UseSaveViewDefinitionOptions,
+) => UseSaveViewDefinitionResult;
 
 /**
  * Save a ViewDefinition to the server.
