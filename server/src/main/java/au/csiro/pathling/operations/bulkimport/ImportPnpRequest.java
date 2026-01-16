@@ -37,7 +37,6 @@ import java.util.Optional;
  * @param types Resource types to include in the export (_type parameter).
  * @param since Export resources modified after this time (_since parameter).
  * @param until Export resources modified before this time (_until parameter).
- * @param outputFormat MIME type for export output (_outputFormat parameter).
  * @param elements Elements to include in the export (_elements parameter).
  * @param typeFilters FHIR search queries to filter resources (_typeFilter parameter).
  * @param includeAssociatedData Associated data to include (includeAssociatedData parameter).
@@ -52,7 +51,6 @@ public record ImportPnpRequest(
     @Nonnull List<String> types,
     @Nonnull Optional<Instant> since,
     @Nonnull Optional<Instant> until,
-    @Nonnull Optional<String> outputFormat,
     @Nonnull List<String> elements,
     @Nonnull List<String> typeFilters,
     @Nonnull List<String> includeAssociatedData) {}

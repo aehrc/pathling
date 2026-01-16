@@ -89,7 +89,6 @@ export function ImportPnpForm({
       types: exportOptions.types.length > 0 ? exportOptions.types : undefined,
       since: exportOptions.since || undefined,
       until: exportOptions.until || undefined,
-      outputFormat: exportOptions.outputFormat || undefined,
       elements: exportOptions.elements || undefined,
       typeFilters: splitCommaSeparated(exportOptions.typeFilters),
       includeAssociatedData: splitCommaSeparated(exportOptions.includeAssociatedData),
@@ -160,6 +159,7 @@ export function ImportPnpForm({
                 values={exportOptions}
                 onChange={setExportOptions}
                 showExtendedOptions
+                hideOutputFormat
               />
             </Box>
           </Collapsible.Content>

@@ -70,14 +70,6 @@
       "type": "instant"
     },
     {
-      "name": "_outputFormat",
-      "use": "in",
-      "min": 0,
-      "max": "1",
-      "documentation": "The output format for the export. Default is 'application/fhir+ndjson'. This parameter is passed through to the remote bulk export endpoint.",
-      "type": "string"
-    },
-    {
       "name": "_elements",
       "use": "in",
       "min": 0,

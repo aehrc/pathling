@@ -455,38 +455,6 @@ class ImportPnpOperationValidatorTest {
     assertThat(result.result().until()).isEmpty();
   }
 
-  /** Tests that _outputFormat parameter is extracted correctly. */
-  @Test
-  void extractsOutputFormatParameter() {
-    final Parameters params = new Parameters();
-    params
-        .addParameter()
-        .setName("exportUrl")
-        .setValue(new UrlType("https://example.org/fhir/$export"));
-    params.addParameter().setName("_outputFormat").setValue(new StringType("application/ndjson"));
-
-    final PreAsyncValidationResult<ImportPnpRequest> result =
-        validator.validateParametersRequest(mockRequest, params);
-
-    assertThat(result.result().outputFormat()).isPresent();
-    assertThat(result.result().outputFormat().get()).isEqualTo("application/ndjson");
-  }
-
-  /** Tests that _outputFormat defaults to empty when not provided. */
-  @Test
-  void defaultsOutputFormatToEmpty() {
-    final Parameters params = new Parameters();
-    params
-        .addParameter()
-        .setName("exportUrl")
-        .setValue(new UrlType("https://example.org/fhir/$export"));
-
-    final PreAsyncValidationResult<ImportPnpRequest> result =
-        validator.validateParametersRequest(mockRequest, params);
-
-    assertThat(result.result().outputFormat()).isEmpty();
-  }
-
   /** Tests that _elements parameter with multiple values is extracted correctly. */
   @Test
   void extractsElementsParameters() {
@@ -649,10 +617,6 @@ class ImportPnpOperationValidatorTest {
         .addParameter()
         .setName("_until")
         .setValue(new InstantType(java.util.Date.from(untilTime)));
-    params
-        .addParameter()
-        .setName("_outputFormat")
-        .setValue(new StringType("application/fhir+ndjson"));
     params.addParameter().setName("_elements").setValue(new StringType("id"));
     params.addParameter().setName("_typeFilter").setValue(new StringType("Patient?active=true"));
     params
@@ -667,7 +631,6 @@ class ImportPnpOperationValidatorTest {
     assertThat(request.types()).containsExactly("Patient", "Observation");
     assertThat(request.since()).contains(sinceTime);
     assertThat(request.until()).contains(untilTime);
-    assertThat(request.outputFormat()).contains("application/fhir+ndjson");
     assertThat(request.elements()).containsExactly("id");
     assertThat(request.typeFilters()).containsExactly("Patient?active=true");
     assertThat(request.includeAssociatedData()).containsExactly("LatestProvenanceResources");

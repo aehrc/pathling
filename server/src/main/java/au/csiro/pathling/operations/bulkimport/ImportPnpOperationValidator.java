@@ -145,7 +145,6 @@ public class ImportPnpOperationValidator {
     final List<String> types = extractStringList(parameters.getParameter(), "_type");
     final Optional<Instant> since = extractInstant(parameters.getParameter(), "_since");
     final Optional<Instant> until = extractInstant(parameters.getParameter(), "_until");
-    final Optional<String> outputFormat = extractString(parameters.getParameter(), "_outputFormat");
     final List<String> elements = extractStringList(parameters.getParameter(), "_elements");
     final List<String> typeFilters = extractStringList(parameters.getParameter(), "_typeFilter");
     final List<String> includeAssociatedData =
@@ -161,7 +160,6 @@ public class ImportPnpOperationValidator {
             types,
             since,
             until,
-            outputFormat,
             elements,
             typeFilters,
             includeAssociatedData);
@@ -241,23 +239,6 @@ public class ImportPnpOperationValidator {
         .filter(param -> paramName.equals(param.getName()))
         .filter(param -> param.getValue() instanceof InstantType)
         .map(param -> ((InstantType) param.getValue()).getValue().toInstant())
-        .findFirst();
-  }
-
-  /**
-   * Extracts an optional string value from a parameter.
-   *
-   * @param parts the parameter parts to search
-   * @param paramName the name of the parameter
-   * @return the string value wrapped in Optional, or empty if not found
-   */
-  @Nonnull
-  private Optional<String> extractString(
-      @Nonnull final List<ParametersParameterComponent> parts, @Nonnull final String paramName) {
-    return parts.stream()
-        .filter(param -> paramName.equals(param.getName()))
-        .filter(param -> param.getValue() instanceof StringType)
-        .map(param -> ((StringType) param.getValue()).getValue())
         .findFirst();
   }
 }

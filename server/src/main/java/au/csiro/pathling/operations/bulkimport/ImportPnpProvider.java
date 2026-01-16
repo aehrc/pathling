@@ -176,7 +176,6 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
     }
     request.since().ifPresent(since -> key.append("|since=").append(since));
     request.until().ifPresent(until -> key.append("|until=").append(until));
-    request.outputFormat().ifPresent(format -> key.append("|outputFormat=").append(format));
     if (!request.elements().isEmpty()) {
       key.append("|elements=").append(String.join(",", request.elements()));
     }

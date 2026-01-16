@@ -234,10 +234,8 @@ export type ExportManifest = Parameters;
 /**
  * Result of useBulkExport hook.
  */
-export interface UseBulkExportResult extends AsyncJobResult<
-  BulkExportRequest,
-  ExportManifest
-> {
+export interface UseBulkExportResult
+  extends AsyncJobResult<BulkExportRequest, ExportManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -287,8 +285,6 @@ export interface ImportPnpJobRequest {
   since?: string;
   /** Export resources modified before this timestamp. */
   until?: string;
-  /** Output format for the export. */
-  outputFormat?: string;
   /** Elements to include in the export output. */
   elements?: string;
   /** FHIR search queries to filter resources during export. */
@@ -385,10 +381,8 @@ export interface BulkSubmitManifest {
 /**
  * Result of useBulkSubmit hook.
  */
-export interface UseBulkSubmitResult extends AsyncJobResult<
-  BulkSubmitRequestUnion,
-  BulkSubmitManifest
-> {
+export interface UseBulkSubmitResult
+  extends AsyncJobResult<BulkSubmitRequestUnion, BulkSubmitManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -413,10 +407,8 @@ export type UseBulkSubmitMonitorOptions = AsyncJobOptions;
 /**
  * Result of useBulkSubmitMonitor hook.
  */
-export interface UseBulkSubmitMonitorResult extends AsyncJobResult<
-  BulkSubmitMonitorRequest,
-  BulkSubmitManifest
-> {
+export interface UseBulkSubmitMonitorResult
+  extends AsyncJobResult<BulkSubmitMonitorRequest, BulkSubmitManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -525,10 +517,8 @@ export type UseViewExportOptions = AsyncJobOptions;
 /**
  * Result of useViewExport hook.
  */
-export interface UseViewExportResult extends AsyncJobResult<
-  ViewExportRequest,
-  ViewExportManifest
-> {
+export interface UseViewExportResult
+  extends AsyncJobResult<ViewExportRequest, ViewExportManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }

@@ -37,6 +37,8 @@ interface ExportOptionsProps {
   onChange: (values: ExportOptionsValues) => void;
   /** Whether to show extended options (outputFormat, typeFilters, includeAssociatedData). */
   showExtendedOptions?: boolean;
+  /** Whether to hide the outputFormat field. */
+  hideOutputFormat?: boolean;
 }
 
 /**
@@ -48,6 +50,7 @@ interface ExportOptionsProps {
  * @param props.values - Current export options values.
  * @param props.onChange - Callback when any option value changes.
  * @param props.showExtendedOptions - Whether to show extended options.
+ * @param props.hideOutputFormat - Whether to hide the outputFormat field.
  * @returns The export options component.
  */
 export function ExportOptions({
@@ -55,6 +58,7 @@ export function ExportOptions({
   values,
   onChange,
   showExtendedOptions = false,
+  hideOutputFormat = false,
 }: Readonly<ExportOptionsProps>) {
   /**
    * Updates a single option value.
@@ -122,27 +126,29 @@ export function ExportOptions({
 
       {showExtendedOptions && (
         <>
-          <Box>
-            <Text as="label" size="2" weight="medium" mb="1">
-              Output format
-            </Text>
-            <Select.Root
-              value={values.outputFormat}
-              onValueChange={(value) => updateOption("outputFormat", value)}
-            >
-              <Select.Trigger style={{ width: "100%" }} placeholder="Default (NDJSON)" />
-              <Select.Content>
-                {OUTPUT_FORMATS.map((format) => (
-                  <Select.Item key={format.value} value={format.value}>
-                    {format.label}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Root>
-            <Text size="1" color="gray" mt="1">
-              Output format for the export data.
-            </Text>
-          </Box>
+          {!hideOutputFormat && (
+            <Box>
+              <Text as="label" size="2" weight="medium" mb="1">
+                Output format
+              </Text>
+              <Select.Root
+                value={values.outputFormat}
+                onValueChange={(value) => updateOption("outputFormat", value)}
+              >
+                <Select.Trigger style={{ width: "100%" }} placeholder="Default (NDJSON)" />
+                <Select.Content>
+                  {OUTPUT_FORMATS.map((format) => (
+                    <Select.Item key={format.value} value={format.value}>
+                      {format.label}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+              <Text size="1" color="gray" mt="1">
+                Output format for the export data.
+              </Text>
+            </Box>
+          )}
 
           <Box>
             <Text as="label" size="2" weight="medium" mb="1">

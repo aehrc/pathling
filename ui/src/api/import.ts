@@ -129,13 +129,6 @@ function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
     parameters.parameter!.push({ name: "_until", valueInstant: options.until });
   }
 
-  if (options.outputFormat) {
-    parameters.parameter!.push({
-      name: "_outputFormat",
-      valueString: options.outputFormat,
-    });
-  }
-
   if (options.elements) {
     parameters.parameter!.push({
       name: "_elements",

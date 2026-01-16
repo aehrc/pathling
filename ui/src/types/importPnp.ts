@@ -35,7 +35,6 @@ export interface ImportPnpRequest {
   types?: string[];
   since?: string;
   until?: string;
-  outputFormat?: string;
   elements?: string;
   typeFilters?: string[];
   includeAssociatedData?: string[];

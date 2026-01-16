@@ -223,7 +223,8 @@ public class ImportPnpExecutor {
     }
     pnpRequest.since().ifPresent(since -> clientBuilder.withSince(since));
     pnpRequest.until().ifPresent(until -> clientBuilder.withUntil(until));
-    pnpRequest.outputFormat().ifPresent(format -> clientBuilder.withOutputFormat(format));
+    // Use the input format as the output format for the export operation.
+    clientBuilder.withOutputFormat(pnpRequest.importFormat().getCode());
     if (!pnpRequest.elements().isEmpty()) {
       clientBuilder.withElements(pnpRequest.elements());
     }
