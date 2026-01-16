@@ -29,6 +29,7 @@ import {
   mockJobStatusComplete,
   mockJobStatusInProgress,
 } from "./fixtures/fhirData";
+import { mockMetadata, createOperationOutcome } from "./helpers/mockHelpers";
 
 const TEST_JOB_ID = "test-job-123";
 
@@ -39,14 +40,7 @@ const TEST_JOB_ID = "test-job-123";
  * @param page - The Playwright page object.
  */
 async function setupStandardMocks(page: import("@playwright/test").Page) {
-  // Mock the metadata endpoint.
-  await page.route("**/metadata", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/fhir+json",
-      body: JSON.stringify(mockCapabilityStatement),
-    });
-  });
+  await mockMetadata(page);
 
   // Mock the import-pnp kick-off endpoint (register first so it matches before $import).
   await page.route("**/$import-pnp", async (route) => {
@@ -104,13 +98,7 @@ async function setupDelayedJobMocks(
   const { pollCount = 2, progress = "50/100" } = options;
   let pollAttempts = 0;
 
-  await page.route("**/metadata", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/fhir+json",
-      body: JSON.stringify(mockCapabilityStatement),
-    });
-  });
+  await mockMetadata(page);
 
   // Mock the import-pnp kick-off endpoint (register first so it matches before $import).
   await page.route("**/$import-pnp", async (route) => {
@@ -209,13 +197,7 @@ test.describe("Import page", () => {
     test("shows login prompt when auth required but not authenticated", async ({
       page,
     }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatementWithAuth),
-        });
-      });
+      await mockMetadata(page, mockCapabilityStatementWithAuth);
 
       await page.goto("/admin/import");
 
@@ -405,22 +387,12 @@ test.describe("Import page", () => {
       });
 
       test("shows error message on failure", async ({ page }) => {
-        await page.route("**/metadata", async (route) => {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/fhir+json",
-            body: JSON.stringify(mockCapabilityStatement),
-          });
-        });
-
+        await mockMetadata(page);
         await page.route("**/$import", async (route) => {
           await route.fulfill({
             status: 400,
             contentType: "application/fhir+json",
-            body: JSON.stringify({
-              resourceType: "OperationOutcome",
-              issue: [{ severity: "error", diagnostics: "Invalid source URL" }],
-            }),
+            body: createOperationOutcome("Invalid source URL"),
           });
         });
 
@@ -441,14 +413,7 @@ test.describe("Import page", () => {
       test("cancels running import", async ({ page }) => {
         let cancelRequestUrl: string | null = null;
 
-        await page.route("**/metadata", async (route) => {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/fhir+json",
-            body: JSON.stringify(mockCapabilityStatement),
-          });
-        });
-
+        await mockMetadata(page);
         await page.route("**/$import", async (route) => {
           await route.fulfill({
             status: 202,
@@ -498,14 +463,7 @@ test.describe("Import page", () => {
       test("shows cancelled status indicator when import is cancelled", async ({
         page,
       }) => {
-        await page.route("**/metadata", async (route) => {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/fhir+json",
-            body: JSON.stringify(mockCapabilityStatement),
-          });
-        });
-
+        await mockMetadata(page);
         await page.route("**/$import", async (route) => {
           await route.fulfill({
             status: 202,
@@ -550,14 +508,7 @@ test.describe("Import page", () => {
       test("close button visible when import is cancelled", async ({
         page,
       }) => {
-        await page.route("**/metadata", async (route) => {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/fhir+json",
-            body: JSON.stringify(mockCapabilityStatement),
-          });
-        });
-
+        await mockMetadata(page);
         await page.route("**/$import", async (route) => {
           await route.fulfill({
             status: 202,
@@ -602,14 +553,7 @@ test.describe("Import page", () => {
       test("clicking close button removes cancelled import card", async ({
         page,
       }) => {
-        await page.route("**/metadata", async (route) => {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/fhir+json",
-            body: JSON.stringify(mockCapabilityStatement),
-          });
-        });
-
+        await mockMetadata(page);
         await page.route("**/$import", async (route) => {
           await route.fulfill({
             status: 202,
@@ -964,22 +908,12 @@ test.describe("Import page", () => {
     });
 
     test("close button visible when import errors", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route("**/$import", async (route) => {
         await route.fulfill({
           status: 500,
           contentType: "application/fhir+json",
-          body: JSON.stringify({
-            resourceType: "OperationOutcome",
-            issue: [{ severity: "error", diagnostics: "Import failed" }],
-          }),
+          body: createOperationOutcome("Import failed"),
         });
       });
 
@@ -1001,22 +935,12 @@ test.describe("Import page", () => {
     test("clicking close button removes errored import card", async ({
       page,
     }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route("**/$import", async (route) => {
         await route.fulfill({
           status: 500,
           contentType: "application/fhir+json",
-          body: JSON.stringify({
-            resourceType: "OperationOutcome",
-            issue: [{ severity: "error", diagnostics: "Import failed" }],
-          }),
+          body: createOperationOutcome("Import failed"),
         });
       });
 
@@ -1043,14 +967,7 @@ test.describe("Import page", () => {
   test.describe("Tab behaviour", () => {
     test("tabs remain enabled during import", async ({ page }) => {
       // Set up mocks that keep the job running.
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route("**/$import", async (route) => {
         await route.fulfill({
           status: 202,

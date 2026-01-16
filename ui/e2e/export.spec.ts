@@ -28,6 +28,7 @@ import {
   mockCapabilityStatementWithAuth,
   mockExportManifest,
 } from "./fixtures/fhirData";
+import { mockMetadata, createOperationOutcome } from "./helpers/mockHelpers";
 
 const TEST_JOB_ID = "export-job-123";
 
@@ -38,14 +39,7 @@ const TEST_JOB_ID = "export-job-123";
  * @param page - The Playwright page object.
  */
 async function setupStandardMocks(page: import("@playwright/test").Page) {
-  // Mock the metadata endpoint.
-  await page.route("**/metadata", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/fhir+json",
-      body: JSON.stringify(mockCapabilityStatement),
-    });
-  });
+  await mockMetadata(page);
 
   // Mock all export kick-off endpoints with a single route.
   // Matches /$export, /Patient/$export, /Patient/{id}/$export, /Group/{id}/$export.
@@ -101,13 +95,7 @@ async function setupDelayedJobMocks(
   const { pollCount = 2, progress = "50/100" } = options;
   let pollAttempts = 0;
 
-  await page.route("**/metadata", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/fhir+json",
-      body: JSON.stringify(mockCapabilityStatement),
-    });
-  });
+  await mockMetadata(page);
 
   // Mock all export kick-off endpoints with a single route.
   await page.route("**/$export*", async (route) => {
@@ -178,7 +166,7 @@ test.describe("Export page", () => {
     test("shows loading state while checking capabilities", async ({
       page,
     }) => {
-      // Set up a delayed metadata response.
+      // Set up a delayed metadata response - need delay, so can't use shared helper.
       await page.route("**/metadata", async (route) => {
         await new Promise((resolve) => setTimeout(resolve, 500));
         await route.fulfill({
@@ -211,13 +199,7 @@ test.describe("Export page", () => {
     test("shows login prompt when auth required but not authenticated", async ({
       page,
     }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatementWithAuth),
-        });
-      });
+      await mockMetadata(page, mockCapabilityStatementWithAuth);
 
       await page.goto("/admin/export");
 
@@ -547,13 +529,7 @@ test.describe("Export page", () => {
     test("cancelling stops the export", async ({ page }) => {
       let cancelRequestUrl: string | null = null;
 
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
+      await mockMetadata(page);
 
       // Mock system export kick-off.
       await page.route("**/$export*", async (route) => {
@@ -608,14 +584,7 @@ test.describe("Export page", () => {
     test("shows cancelled status indicator when export is cancelled", async ({
       page,
     }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route("**/$export*", async (route) => {
         await route.fulfill({
           status: 202,
@@ -656,14 +625,7 @@ test.describe("Export page", () => {
     });
 
     test("close button visible when export is cancelled", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route("**/$export*", async (route) => {
         await route.fulfill({
           status: 202,
@@ -706,14 +668,7 @@ test.describe("Export page", () => {
     test("clicking close button removes cancelled export card", async ({
       page,
     }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route("**/$export*", async (route) => {
         await route.fulfill({
           status: 202,
@@ -937,24 +892,12 @@ test.describe("Export page", () => {
 
   test.describe("Error handling", () => {
     test("displays error message on kick-off failure", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route("**/$export*", async (route) => {
         await route.fulfill({
           status: 400,
           contentType: "application/fhir+json",
-          body: JSON.stringify({
-            resourceType: "OperationOutcome",
-            issue: [
-              { severity: "error", diagnostics: "Invalid export request" },
-            ],
-          }),
+          body: createOperationOutcome("Invalid export request"),
         });
       });
 
@@ -968,14 +911,7 @@ test.describe("Export page", () => {
     });
 
     test("displays error message on polling failure", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route("**/$export*", async (route) => {
         await route.fulfill({
           status: 202,
@@ -986,15 +922,11 @@ test.describe("Export page", () => {
           body: "",
         });
       });
-
       await page.route("**/$job*", async (route) => {
         await route.fulfill({
           status: 500,
           contentType: "application/fhir+json",
-          body: JSON.stringify({
-            resourceType: "OperationOutcome",
-            issue: [{ severity: "error", diagnostics: "Export job failed" }],
-          }),
+          body: createOperationOutcome("Export job failed"),
         });
       });
 
@@ -1008,22 +940,12 @@ test.describe("Export page", () => {
     });
 
     test("close button visible when export errors", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route("**/$export*", async (route) => {
         await route.fulfill({
           status: 500,
           contentType: "application/fhir+json",
-          body: JSON.stringify({
-            resourceType: "OperationOutcome",
-            issue: [{ severity: "error", diagnostics: "Export failed" }],
-          }),
+          body: createOperationOutcome("Export failed"),
         });
       });
 
@@ -1042,22 +964,12 @@ test.describe("Export page", () => {
     test("clicking close button removes errored export card", async ({
       page,
     }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route("**/$export*", async (route) => {
         await route.fulfill({
           status: 500,
           contentType: "application/fhir+json",
-          body: JSON.stringify({
-            resourceType: "OperationOutcome",
-            issue: [{ severity: "error", diagnostics: "Export failed" }],
-          }),
+          body: createOperationOutcome("Export failed"),
         });
       });
 
@@ -1082,13 +994,7 @@ test.describe("Export page", () => {
     test("passes _since parameter to server", async ({ page }) => {
       let exportUrl: string | null = null;
 
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
+      await mockMetadata(page);
 
       // Intercept export request to capture URL.
       await page.route("**/$export*", async (route) => {
@@ -1135,13 +1041,7 @@ test.describe("Export page", () => {
     test("passes _until parameter to server", async ({ page }) => {
       let exportUrl: string | null = null;
 
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
+      await mockMetadata(page);
 
       // Intercept export request to capture URL.
       await page.route("**/$export*", async (route) => {
@@ -1188,13 +1088,7 @@ test.describe("Export page", () => {
     test("passes _elements parameter to server", async ({ page }) => {
       let exportUrl: string | null = null;
 
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
+      await mockMetadata(page);
 
       // Intercept export request to capture URL.
       await page.route("**/$export*", async (route) => {
@@ -1238,13 +1132,7 @@ test.describe("Export page", () => {
     test("passes all parameters together to server", async ({ page }) => {
       let exportUrl: string | null = null;
 
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
+      await mockMetadata(page);
 
       // Intercept export request to capture URL.
       await page.route("**/$export*", async (route) => {

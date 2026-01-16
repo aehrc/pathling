@@ -24,11 +24,11 @@
 import { expect, test } from "@playwright/test";
 
 import {
-  mockCapabilityStatement,
   mockCapabilityStatementWithAuth,
   mockEmptyBundle,
   mockPatientBundle,
 } from "./fixtures/fhirData";
+import { mockMetadata, createOperationOutcome } from "./helpers/mockHelpers";
 
 /**
  * Sets up API mocks for standard functionality tests.
@@ -37,14 +37,7 @@ import {
  * @param page - The Playwright page object.
  */
 async function setupStandardMocks(page: import("@playwright/test").Page) {
-  // Mock the metadata endpoint (matches any host).
-  await page.route("**/metadata", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/fhir+json",
-      body: JSON.stringify(mockCapabilityStatement),
-    });
-  });
+  await mockMetadata(page);
 
   // Mock resource search and delete endpoints (matches any resource type).
   await page.route(
@@ -110,14 +103,7 @@ test.describe("Resources page", () => {
     test("shows login prompt when auth required but not authenticated", async ({
       page,
     }) => {
-      // Mock capabilities with auth required.
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatementWithAuth),
-        });
-      });
+      await mockMetadata(page, mockCapabilityStatementWithAuth);
 
       await page.goto("/admin/resources");
 
@@ -143,13 +129,7 @@ test.describe("Resources page", () => {
 
     test("shows loading state during search", async ({ page }) => {
       // Set up a delayed response to observe loading state.
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
+      await mockMetadata(page);
 
       await page.route(
         /\/(Patient|Observation|Condition)(\?|\/|$)/,
@@ -185,14 +165,7 @@ test.describe("Resources page", () => {
     });
 
     test("displays empty results message", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route(
         /\/(Patient|Observation|Condition)(\?|\/|$)/,
         async (route) => {
@@ -214,24 +187,14 @@ test.describe("Resources page", () => {
     });
 
     test("displays error message on search failure", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route(
         /\/(Patient|Observation|Condition)(\?|\/|$)/,
         async (route) => {
           await route.fulfill({
             status: 400,
             contentType: "application/fhir+json",
-            body: JSON.stringify({
-              resourceType: "OperationOutcome",
-              issue: [{ severity: "error", diagnostics: "Invalid filter" }],
-            }),
+            body: createOperationOutcome("Invalid filter"),
           });
         },
       );
@@ -474,14 +437,7 @@ test.describe("Resources page", () => {
     test("confirming deletes resource", async ({ page }) => {
       let deleteRequested = false;
 
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route(
         /\/(Patient|Observation|Condition)(\?|\/|$)/,
         async (route) => {
@@ -534,14 +490,7 @@ test.describe("Resources page", () => {
     });
 
     test("shows error toast on delete failure", async ({ page }) => {
-      await page.route("**/metadata", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify(mockCapabilityStatement),
-        });
-      });
-
+      await mockMetadata(page);
       await page.route(
         /\/(Patient|Observation|Condition)(\?|\/|$)/,
         async (route) => {
@@ -549,10 +498,7 @@ test.describe("Resources page", () => {
             ? route.fulfill({
                 status: 500,
                 contentType: "application/fhir+json",
-                body: JSON.stringify({
-                  resourceType: "OperationOutcome",
-                  issue: [{ severity: "error", diagnostics: "Internal error" }],
-                }),
+                body: createOperationOutcome("Internal error"),
               })
             : route.fulfill({
                 status: 200,

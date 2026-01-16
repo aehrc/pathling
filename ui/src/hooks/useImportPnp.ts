@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 
 import { importPnpKickOff, jobStatus, jobCancel } from "../api";
 import { config } from "../config";
 import { useAsyncJob } from "./useAsyncJob";
+import { useAsyncJobCallbacks } from "./useAsyncJobCallbacks";
 import { useAuth } from "../contexts/AuthContext";
 
 import type { AsyncJobOptions, UseAsyncJobResult } from "./useAsyncJob";
@@ -78,14 +79,7 @@ export const useImportPnp: UseImportPnpFn = (options) => {
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
 
-  const callbacks = useMemo(
-    () => ({
-      onProgress: options?.onProgress,
-      onComplete: options?.onComplete,
-      onError: options?.onError,
-    }),
-    [options?.onProgress, options?.onComplete, options?.onError],
-  );
+  const callbacks = useAsyncJobCallbacks(options);
 
   const buildOptions = useCallback(
     (request: ImportPnpJobRequest) => ({

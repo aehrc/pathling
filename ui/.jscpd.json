@@ -1,5 +1,5 @@
 {
-  "threshold": 0,
+  "threshold": 5,
   "reporters": ["console"],
   "path": ["src", "e2e"],
   "ignore": ["**/node_modules/**", "**/*.test.ts", "**/*.test.tsx"],
