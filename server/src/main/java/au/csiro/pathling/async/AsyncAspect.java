@@ -74,7 +74,10 @@ public class AsyncAspect {
   @Nonnull private final StageMap stageMap;
 
   @Nonnull private final SparkSession spark;
-  private final JobProvider jobProvider;
+
+  @Nonnull private final JobProvider jobProvider;
+
+  @Nonnull private final ServerInstanceId serverInstanceId;
 
   /**
    * Creates a new AsyncAspect.
@@ -85,6 +88,7 @@ public class AsyncAspect {
    * @param stageMap the {@link StageMap} used to map stages to job IDs
    * @param spark used for updating the Spark Context with job identity
    * @param jobProvider the provider for job management
+   * @param serverInstanceId used to generate instance-specific ETags for async responses
    */
   public AsyncAspect(
       @Nonnull final ThreadPoolTaskExecutor executor,
@@ -92,13 +96,15 @@ public class AsyncAspect {
       @Nonnull final JobRegistry jobRegistry,
       @Nonnull final StageMap stageMap,
       @Nonnull final SparkSession spark,
-      final JobProvider jobProvider) {
+      @Nonnull final JobProvider jobProvider,
+      @Nonnull final ServerInstanceId serverInstanceId) {
     this.executor = executor;
     this.requestTagFactory = requestTagFactory;
     this.jobRegistry = jobRegistry;
     this.stageMap = stageMap;
     this.spark = spark;
     this.jobProvider = jobProvider;
+    this.serverInstanceId = serverInstanceId;
   }
 
   @Around("@annotation(asyncSupported)")
@@ -216,6 +222,10 @@ public class AsyncAspect {
     final HttpServletResponse response = requestDetails.getServletResponse();
     response.setHeader(
         "Content-Location", requestDetails.getFhirServerBase() + "/$job?id=" + job.getId());
+    // Set an instance-specific ETag to ensure cached 202 responses are invalidated after a server
+    // restart. This prevents clients from polling stale job IDs that no longer exist.
+    final String asyncEtag = "W/\"async-" + serverInstanceId.getId() + "-" + job.getId() + "\"";
+    response.setHeader("ETag", asyncEtag);
   }
 
   @Nonnull

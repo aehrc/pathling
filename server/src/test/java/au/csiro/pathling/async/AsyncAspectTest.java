@@ -76,6 +76,7 @@ class AsyncAspectTest {
 
   private JobRegistry jobRegistry;
   private AsyncAspect asyncAspect;
+  private ServerInstanceId serverInstanceId;
 
   private final MockHttpServletRequest servletRequest = new MockHttpServletRequest();
   private final MockHttpServletResponse servletResponse = new MockHttpServletResponse();
@@ -97,9 +98,16 @@ class AsyncAspectTest {
     final RequestTagFactory requestTagFactory =
         new RequestTagFactory(database, serverConfiguration);
     jobRegistry = new JobRegistry();
+    serverInstanceId = new ServerInstanceId();
     asyncAspect =
         new AsyncAspect(
-            threadPoolTaskExecutor, requestTagFactory, jobRegistry, stageMap, spark, jobProvider);
+            threadPoolTaskExecutor,
+            requestTagFactory,
+            jobRegistry,
+            stageMap,
+            spark,
+            jobProvider,
+            serverInstanceId);
 
     // Initialise mock request and response
     requestDetails = new ServletRequestDetails();
@@ -283,5 +291,19 @@ class AsyncAspectTest {
     assertTrue(
         AsyncJobContext.getCurrentJob().isEmpty(),
         "AsyncJobContext should be cleared after async execution");
+  }
+
+  @Test
+  void asyncResponseSetsInstanceSpecificEtag() {
+    // Async responses should set an ETag that includes the server instance ID and job ID.
+    // This ensures cached 202 responses are invalidated after a server restart.
+    final String jobId = assertExecutedAsync();
+
+    // Verify the ETag header is set with the expected format.
+    final String etag = servletResponse.getHeader("ETag");
+    assertNotNull(etag, "ETag header should be set on async response");
+    assertTrue(etag.startsWith("W/\"async-"), "ETag should have async prefix");
+    assertTrue(etag.contains(serverInstanceId.getId()), "ETag should contain server instance ID");
+    assertTrue(etag.contains(jobId), "ETag should contain job ID");
   }
 }

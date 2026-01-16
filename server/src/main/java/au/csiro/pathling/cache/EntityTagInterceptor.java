@@ -19,6 +19,7 @@ package au.csiro.pathling.cache;
 
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.async.ServerInstanceId;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import ca.uhn.fhir.interceptor.api.Hook;
@@ -46,11 +47,15 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class EntityTagInterceptor {
 
+  private static final String ASYNC_ETAG_PREFIX = "async-";
+
   @Nonnull private final ServerConfiguration configuration;
 
   @Nonnull private final CacheableDatabase database;
 
   @Nonnull private final ConformanceProvider conformanceProvider;
+
+  @Nonnull private final ServerInstanceId serverInstanceId;
 
   public static final String DEFAULT_ETAG = "0";
   private static final Pattern ETAG_HEADER_PATTERN = Pattern.compile("^W/\"([^\"]+)\"$");
@@ -61,14 +66,17 @@ public class EntityTagInterceptor {
    * @param configuration configuration controlling the behaviour of the interceptor
    * @param database {@link CacheableDatabase} for use in retrieving cache keys
    * @param conformanceProvider for determining the cacheability of conformance statement requests
+   * @param serverInstanceId for validating async ETags against the current server instance
    */
   public EntityTagInterceptor(
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final CacheableDatabase database,
-      @Nonnull final ConformanceProvider conformanceProvider) {
+      @Nonnull final ConformanceProvider conformanceProvider,
+      @Nonnull final ServerInstanceId serverInstanceId) {
     this.configuration = configuration;
     this.database = database;
     this.conformanceProvider = conformanceProvider;
+    this.serverInstanceId = serverInstanceId;
   }
 
   /**
@@ -96,6 +104,15 @@ public class EntityTagInterceptor {
       // Check the incoming request for an If-None-Match header.
       final String tagHeader = parseEtagValue(request.getHeader("If-None-Match"));
 
+      // Check if this is an async ETag from a different server instance. If so, we skip the 304
+      // logic and let the request proceed to create a new job. This handles the case where a
+      // cached 202 response from a previous server instance is being validated.
+      if (isStaleAsyncEtag(tagHeader)) {
+        log.debug("Async ETag from different server instance, skipping 304 validation");
+        setMissResponseHeaders(response);
+        return;
+      }
+
       // If the request is for the conformance statement, we use the conformance provider to
       // determine whether it is fresh or not. The freshness of all other requests is determined by
       // the database.
@@ -111,14 +128,39 @@ public class EntityTagInterceptor {
       } else {
         // If there is no matching condition, we add an ETag to the response, along with headers
         // indicating that the response is cacheable.
-        final String cacheControlValues =
-            String.join(",", configuration.getHttpCaching().getCacheableControl());
         final String etag =
             cacheable.getCacheKey().map(EntityTagInterceptor::quoteEtagValue).orElse(DEFAULT_ETAG);
         response.setHeader("ETag", etag);
-        response.setHeader("Cache-Control", cacheControlValues);
+        setMissResponseHeaders(response);
       }
     }
+  }
+
+  /**
+   * Checks if the given ETag is an async ETag from a different server instance. Async ETags have
+   * the format "async-{instanceId}-{jobId}".
+   *
+   * @param tagHeader the ETag value to check
+   * @return true if this is an async ETag from a different server instance
+   */
+  private boolean isStaleAsyncEtag(@Nonnull final String tagHeader) {
+    if (!tagHeader.startsWith(ASYNC_ETAG_PREFIX)) {
+      return false;
+    }
+    // Extract the instance ID from the async ETag.
+    final String afterPrefix = tagHeader.substring(ASYNC_ETAG_PREFIX.length());
+    final int dashIndex = afterPrefix.indexOf('-');
+    if (dashIndex == -1) {
+      return false;
+    }
+    final String etagInstanceId = afterPrefix.substring(0, dashIndex);
+    return !etagInstanceId.equals(serverInstanceId.getId());
+  }
+
+  private void setMissResponseHeaders(@Nonnull final HttpServletResponse response) {
+    final String cacheControlValues =
+        String.join(",", configuration.getHttpCaching().getCacheableControl());
+    response.setHeader("Cache-Control", cacheControlValues);
   }
 
   /**
