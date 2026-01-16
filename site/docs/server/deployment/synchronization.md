@@ -45,12 +45,12 @@ authentication:
 
 ```yaml
 pathling:
-  import:
-    pnp:
-      clientId: pathling-client
-      tokenEndpoint: https://source-server.example.com/auth/token
-      privateKeyJwk: '{"kty":"RSA","n":"...","e":"AQAB","d":"...","p":"...","q":"...","dp":"...","dq":"...","qi":"..."}'
-      scope: system/*.read
+    import:
+        pnp:
+            clientId: pathling-client
+            tokenEndpoint: https://source-server.example.com/auth/token
+            privateKeyJwk: '{"kty":"RSA","n":"...","e":"AQAB","d":"...","p":"...","q":"...","dp":"...","dq":"...","qi":"..."}'
+            scope: system/*.read
 ```
 
 ## Sync script
@@ -66,42 +66,46 @@ PATHLING_URL="${PATHLING_URL:-http://localhost:8080/fhir}"
 SOURCE_EXPORT_URL="${SOURCE_EXPORT_URL:-https://source-server.example.com/fhir/\$export}"
 SAVE_MODE="${SAVE_MODE:-merge}"
 TIMEOUT="${TIMEOUT:-7200}"
+# Optional: comma-separated list of resource types (e.g., "Patient,Observation")
+RESOURCE_TYPES="${RESOURCE_TYPES:-}"
+# Optional: ISO timestamp for incremental sync (e.g., "2025-01-01T00:00:00Z")
+SINCE="${SINCE:-}"
+
+# Build parameters array
+PARAMS="[{\"name\": \"exportUrl\", \"valueUrl\": \"$SOURCE_EXPORT_URL\"}"
+PARAMS="$PARAMS,{\"name\": \"saveMode\", \"valueCode\": \"$SAVE_MODE\"}"
+
+# Add resource type filters
+if [ -n "$RESOURCE_TYPES" ]; then
+  IFS=',' read -ra TYPES <<< "$RESOURCE_TYPES"
+  for TYPE in "${TYPES[@]}"; do
+    PARAMS="$PARAMS,{\"name\": \"_type\", \"valueString\": \"$TYPE\"}"
+  done
+fi
+
+# Add timestamp filter for incremental sync
+if [ -n "$SINCE" ]; then
+  PARAMS="$PARAMS,{\"name\": \"_since\", \"valueInstant\": \"$SINCE\"}"
+fi
+
+PARAMS="$PARAMS]"
+REQUEST_BODY="{\"resourceType\": \"Parameters\", \"parameter\": $PARAMS}"
 
 # Kick off the import
 echo "Starting import from: $SOURCE_EXPORT_URL"
-RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$PATHLING_URL/\$import-pnp" \
+[ -n "$RESOURCE_TYPES" ] && echo "Resource types: $RESOURCE_TYPES"
+[ -n "$SINCE" ] && echo "Since: $SINCE"
+
+STATUS_URL=$(curl -s -D - -X POST "$PATHLING_URL/\$import-pnp" \
   -H "Content-Type: application/fhir+json" \
   -H "Accept: application/fhir+json" \
   -H "Prefer: respond-async" \
-  -d "{
-    \"resourceType\": \"Parameters\",
-    \"parameter\": [
-      {\"name\": \"exportUrl\", \"valueUrl\": \"$SOURCE_EXPORT_URL\"},
-      {\"name\": \"saveMode\", \"valueCode\": \"$SAVE_MODE\"}
-    ]
-  }")
+  -d "$REQUEST_BODY" | grep -i "Content-Location" | cut -d' ' -f2 | tr -d '\r')
 
-HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-BODY=$(echo "$RESPONSE" | sed '$d')
-
-if [ "$HTTP_CODE" != "202" ]; then
-  echo "Failed to start import: HTTP $HTTP_CODE"
-  echo "$BODY"
+if [ -z "$STATUS_URL" ]; then
+  echo "Failed to start import: no Content-Location header"
   exit 1
 fi
-
-# Extract status URL from Content-Location header
-STATUS_URL=$(curl -s -I -X POST "$PATHLING_URL/\$import-pnp" \
-  -H "Content-Type: application/fhir+json" \
-  -H "Accept: application/fhir+json" \
-  -H "Prefer: respond-async" \
-  -d "{
-    \"resourceType\": \"Parameters\",
-    \"parameter\": [
-      {\"name\": \"exportUrl\", \"valueUrl\": \"$SOURCE_EXPORT_URL\"},
-      {\"name\": \"saveMode\", \"valueCode\": \"$SAVE_MODE\"}
-    ]
-  }" | grep -i "Content-Location" | cut -d' ' -f2 | tr -d '\r')
 
 echo "Polling status: $STATUS_URL"
 
@@ -175,55 +179,74 @@ to run the sync on a schedule.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: pathling-sync
+    name: pathling-sync
 spec:
-  schedule: "0 2 * * *"  # Daily at 2 AM
-  concurrencyPolicy: Forbid
-  jobTemplate:
-    spec:
-      template:
+    schedule: "0 2 * * *" # Daily at 2 AM
+    concurrencyPolicy: Forbid
+    jobTemplate:
         spec:
-          containers:
-            - name: sync
-              image: curlimages/curl:latest
-              env:
-                - name: PATHLING_URL
-                  value: "http://pathling:8080/fhir"
-                - name: SOURCE_EXPORT_URL
-                  value: "https://source-server.example.com/fhir/$export"
-                - name: SAVE_MODE
-                  value: "merge"
-              command:
-                - /bin/sh
-                - -c
-                - |
-                  # Kick off import
-                  STATUS_URL=$(curl -s -D - -X POST "$PATHLING_URL/\$import-pnp" \
-                    -H "Content-Type: application/fhir+json" \
-                    -H "Accept: application/fhir+json" \
-                    -H "Prefer: respond-async" \
-                    -d "{
-                      \"resourceType\": \"Parameters\",
-                      \"parameter\": [
-                        {\"name\": \"exportUrl\", \"valueUrl\": \"$SOURCE_EXPORT_URL\"},
-                        {\"name\": \"saveMode\", \"valueCode\": \"$SAVE_MODE\"}
-                      ]
-                    }" | grep -i "Content-Location" | cut -d' ' -f2 | tr -d '\r')
+            template:
+                spec:
+                    containers:
+                        - name: sync
+                          image: curlimages/curl:latest
+                          env:
+                              - name: PATHLING_URL
+                                value: "http://pathling:8080/fhir"
+                              - name: SOURCE_EXPORT_URL
+                                value: "https://source-server.example.com/fhir/$export"
+                              - name: SAVE_MODE
+                                value: "merge"
+                              # Optional: comma-separated resource types
+                              - name: RESOURCE_TYPES
+                                value: ""
+                              # Optional: ISO timestamp for incremental sync
+                              - name: SINCE
+                                value: ""
+                          command:
+                              - /bin/sh
+                              - -c
+                              - |
+                                  # Build parameters
+                                  PARAMS="[{\"name\": \"exportUrl\", \"valueUrl\": \"$SOURCE_EXPORT_URL\"}"
+                                  PARAMS="$PARAMS,{\"name\": \"saveMode\", \"valueCode\": \"$SAVE_MODE\"}"
 
-                  echo "Polling: $STATUS_URL"
+                                  # Add resource type filters
+                                  if [ -n "$RESOURCE_TYPES" ]; then
+                                    for TYPE in $(echo "$RESOURCE_TYPES" | tr ',' ' '); do
+                                      PARAMS="$PARAMS,{\"name\": \"_type\", \"valueString\": \"$TYPE\"}"
+                                    done
+                                  fi
 
-                  # Poll until complete (timeout 2 hours)
-                  for i in $(seq 1 240); do
-                    CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STATUS_URL")
-                    if [ "$CODE" = "200" ]; then
-                      echo "Complete"
-                      exit 0
-                    fi
-                    sleep 30
-                  done
-                  echo "Timeout"
-                  exit 1
-          restartPolicy: OnFailure
+                                  # Add timestamp filter
+                                  if [ -n "$SINCE" ]; then
+                                    PARAMS="$PARAMS,{\"name\": \"_since\", \"valueInstant\": \"$SINCE\"}"
+                                  fi
+
+                                  PARAMS="$PARAMS]"
+
+                                  # Kick off import
+                                  STATUS_URL=$(curl -s -D - -X POST "$PATHLING_URL/\$import-pnp" \
+                                    -H "Content-Type: application/fhir+json" \
+                                    -H "Accept: application/fhir+json" \
+                                    -H "Prefer: respond-async" \
+                                    -d "{\"resourceType\": \"Parameters\", \"parameter\": $PARAMS}" \
+                                    | grep -i "Content-Location" | cut -d' ' -f2 | tr -d '\r')
+
+                                  echo "Polling: $STATUS_URL"
+
+                                  # Poll until complete (timeout 2 hours)
+                                  for i in $(seq 1 240); do
+                                    CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STATUS_URL")
+                                    if [ "$CODE" = "200" ]; then
+                                      echo "Complete"
+                                      exit 0
+                                    fi
+                                    sleep 30
+                                  done
+                                  echo "Timeout"
+                                  exit 1
+                    restartPolicy: OnFailure
 ```
 
 ## Considerations
@@ -233,8 +256,7 @@ spec:
 Choose the appropriate save mode for your use case:
 
 - **`merge`** — Best for incremental sync. Updates existing resources and adds
-  new ones. Use with `_since` parameter on the export URL for efficient
-  incremental updates.
+  new ones. Use with `_since` parameter for efficient incremental updates.
 - **`overwrite`** — Best for full replacement. Deletes all existing data of each
   type before importing. Ensures exact mirror of source system.
 
@@ -251,13 +273,26 @@ For most analytics use cases, daily or hourly sync is sufficient.
 
 ### Incremental sync
 
-For large datasets, use incremental sync to reduce load:
+For large datasets, use incremental sync to reduce load. The `$import-pnp`
+operation supports passing bulk export parameters directly, including `_since`
+for timestamp filtering and `_type` for resource type filtering.
+
+Set the `SINCE` environment variable to export only resources modified after a
+specific timestamp:
 
 ```bash
-SOURCE_EXPORT_URL="https://source-server.example.com/fhir/\$export?_since=2025-01-01T00:00:00Z"
+SINCE="2025-01-01T00:00:00Z" ./sync.sh
+```
+
+You can also filter by resource type using the `RESOURCE_TYPES` variable:
+
+```bash
+RESOURCE_TYPES="Patient,Observation,Condition" SINCE="2025-01-01T00:00:00Z" ./sync.sh
 ```
 
 Track the last successful sync time and use it for the next `_since` parameter.
+The `transactionTime` in the import response provides a good value to use for
+subsequent syncs.
 
 ### Error handling
 

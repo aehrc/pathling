@@ -57,6 +57,9 @@ The operation requires the asynchronous request pattern. Include the
 
 ### Example request
 
+This example imports Patient and Observation resources modified after a specific
+timestamp, using merge mode for incremental updates:
+
 ```json
 {
     "resourceType": "Parameters",
@@ -66,16 +69,22 @@ The operation requires the asynchronous request pattern. Include the
             "valueUrl": "https://source-server.example.com/fhir/$export"
         },
         {
-            "name": "exportType",
+            "name": "mode",
             "valueCoding": {
-                "code": "dynamic"
+                "code": "merge"
             }
         },
         {
-            "name": "mode",
-            "valueCoding": {
-                "code": "overwrite"
-            }
+            "name": "_type",
+            "valueString": "Patient"
+        },
+        {
+            "name": "_type",
+            "valueString": "Observation"
+        },
+        {
+            "name": "_since",
+            "valueInstant": "2025-01-01T00:00:00Z"
         }
     ]
 }
@@ -83,17 +92,33 @@ The operation requires the asynchronous request pattern. Include the
 
 ## Parameters
 
-| Name          | Cardinality | Type   | Description                                                                                                                     |
-|---------------|-------------|--------|---------------------------------------------------------------------------------------------------------------------------------|
-| `exportUrl`   | 1..1        | url    | The URL of the bulk export endpoint to import from. Can include query parameters (e.g., `$export?_type=Patient`).               |
+| Name          | Cardinality | Type   | Description                                                                                                                    |
+| ------------- | ----------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `exportUrl`   | 1..1        | url    | The URL of the bulk export endpoint to import from. Can include query parameters (e.g., `$export?_type=Patient`).              |
 | `exportType`  | 0..1        | Coding | The type of export: `dynamic` (default) includes data as of export completion, `static` includes data as of export initiation. |
 | `mode`        | 0..1        | Coding | Controls how data is merged with existing resources. See [Save modes](#save-modes). Defaults to `overwrite`.                   |
 | `inputFormat` | 0..1        | Coding | The format of source files. Defaults to `application/fhir+ndjson`. See [Supported formats](./import#supported-formats).        |
 
+### Bulk export parameters
+
+These parameters are passed through to the remote bulk export endpoint, allowing
+you to filter the exported data without embedding query parameters in the export
+URL.
+
+| Name                    | Cardinality | Type    | Description                                                                        |
+| ----------------------- | ----------- | ------- | ---------------------------------------------------------------------------------- |
+| `_type`                 | 0..\*       | string  | Resource types to include. Repeat for multiple types.                              |
+| `_since`                | 0..1        | instant | Export resources modified after this timestamp.                                    |
+| `_until`                | 0..1        | instant | Export resources modified before this timestamp.                                   |
+| `_outputFormat`         | 0..1        | string  | Output format for the export. Defaults to `application/fhir+ndjson`.               |
+| `_elements`             | 0..\*       | string  | Elements to include in output. Experimental; support varies by server.             |
+| `_typeFilter`           | 0..\*       | string  | FHIR search queries to filter resources (e.g., `Patient?active=true`).             |
+| `includeAssociatedData` | 0..\*       | code    | Associated data sets to include (e.g., `LatestProvenanceResources`). Experimental. |
+
 ### Save modes
 
 | Mode        | Description                                                       |
-|-------------|-------------------------------------------------------------------|
+| ----------- | ----------------------------------------------------------------- |
 | `overwrite` | Delete and replace all existing resources of each type (default)  |
 | `merge`     | Match resources by ID; update existing resources and add new ones |
 | `append`    | Add new resources without modifying existing ones                 |
@@ -175,15 +200,30 @@ PATHLING_URL = "https://pathling.example.com/fhir"
 SOURCE_EXPORT_URL = "https://source-server.example.com/fhir/$export"
 
 
-def kick_off_import(export_url, mode="overwrite"):
-    """Initiate a ping and pull import."""
-    params = {
-        "resourceType": "Parameters",
-        "parameter": [
-            {"name": "exportUrl", "valueUrl": export_url},
-            {"name": "mode", "valueCoding": {"code": mode}}
-        ]
-    }
+def kick_off_import(export_url, mode="overwrite", types=None, since=None):
+    """Initiate a ping and pull import.
+
+    Args:
+        export_url: The bulk export endpoint URL.
+        mode: Save mode (overwrite, merge, append, ignore, error).
+        types: Optional list of resource types to include.
+        since: Optional ISO timestamp for incremental export.
+    """
+    parameters = [
+        {"name": "exportUrl", "valueUrl": export_url},
+        {"name": "mode", "valueCoding": {"code": mode}}
+    ]
+
+    # Add resource type filters.
+    if types:
+        for resource_type in types:
+            parameters.append({"name": "_type", "valueString": resource_type})
+
+    # Add timestamp filter for incremental sync.
+    if since:
+        parameters.append({"name": "_since", "valueInstant": since})
+
+    params = {"resourceType": "Parameters", "parameter": parameters}
 
     headers = {
         "Content-Type": "application/fhir+json",
@@ -234,7 +274,13 @@ def main():
     """Execute the ping and pull import."""
     print(f"Starting import from: {SOURCE_EXPORT_URL}")
 
-    status_url = kick_off_import(SOURCE_EXPORT_URL, mode="merge")
+    # Import only Patient and Observation resources modified since 2025-01-01.
+    status_url = kick_off_import(
+        SOURCE_EXPORT_URL,
+        mode="merge",
+        types=["Patient", "Observation"],
+        since="2025-01-01T00:00:00Z"
+    )
     result = poll_status(status_url)
 
     print("Result:")
