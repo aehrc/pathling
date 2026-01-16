@@ -6,6 +6,8 @@
     </encoder>
   </appender>
   <logger level="INFO" name="au.csiro"/>
+  <!-- Suppress HAPI FHIR interceptor exception logging (e.g. NotModifiedException for 304 responses). -->
+  <logger level="OFF" name="ca.uhn.fhir.interceptor.executor.BaseInterceptorService"/>
   <logger level="ERROR" name="org.apache.hadoop.metrics2"/>
   <logger level="ERROR" name="org.apache.spark.sql.execution.CacheManager"/>
   <logger level="ERROR" name="org.apache.spark.sql.catalyst.util.SparkStringUtils"/>
