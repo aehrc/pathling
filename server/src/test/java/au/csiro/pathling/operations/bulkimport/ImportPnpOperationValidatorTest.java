@@ -22,9 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
-import au.csiro.pathling.config.ImportConfiguration;
-import au.csiro.pathling.config.PnpConfiguration;
-import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -58,12 +55,7 @@ class ImportPnpOperationValidatorTest {
 
     @Bean
     public ImportPnpOperationValidator importPnpOperationValidator() {
-      final ServerConfiguration serverConfig = new ServerConfiguration();
-      final ImportConfiguration importConfig = new ImportConfiguration();
-      final PnpConfiguration pnpConfig = new PnpConfiguration();
-      importConfig.setPnp(pnpConfig);
-      serverConfig.setImport(importConfig);
-      return new ImportPnpOperationValidator(serverConfig);
+      return new ImportPnpOperationValidator();
     }
   }
 
@@ -548,31 +540,24 @@ class ImportPnpOperationValidatorTest {
   // Unauthenticated Configuration
   // ========================================
 
-  /** Tests that validation passes when no authentication is configured (unauthenticated source). */
+  /**
+   * Tests that validation passes without requiring any PnP configuration. This enables the
+   * operation to be used against unauthenticated FHIR servers without explicit configuration.
+   */
   @Test
-  void acceptsUnauthenticatedConfiguration() {
-    // Create a validator with no authentication credentials configured.
-    final ServerConfiguration serverConfig = new ServerConfiguration();
-    final ImportConfiguration importConfig = new ImportConfiguration();
-    final PnpConfiguration pnpConfig = new PnpConfiguration();
-    // No clientId, clientSecret, or privateKeyJwk set - unauthenticated.
-    importConfig.setPnp(pnpConfig);
-    serverConfig.setImport(importConfig);
-    final ImportPnpOperationValidator unauthenticatedValidator =
-        new ImportPnpOperationValidator(serverConfig);
-
+  void validatesWithoutPnpConfiguration() {
     final Parameters params = new Parameters();
     params
         .addParameter()
         .setName("exportUrl")
         .setValue(new UrlType("https://public-fhir-server.org/$export"));
 
-    // Should succeed without requiring authentication credentials.
+    // Should succeed without any PnP configuration required.
     assertThatNoException()
         .isThrownBy(
             () -> {
               final PreAsyncValidationResult<ImportPnpRequest> result =
-                  unauthenticatedValidator.validateParametersRequest(mockRequest, params);
+                  validator.validateParametersRequest(mockRequest, params);
               assertThat(result.result()).isNotNull();
               assertThat(result.result().exportUrl())
                   .isEqualTo("https://public-fhir-server.org/$export");

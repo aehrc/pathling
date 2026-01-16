@@ -86,10 +86,11 @@ public class ImportPnpExecutor {
     Path tempDir = null;
     try {
       // Create directory for downloaded files with job ID for uniqueness.
-      final PnpConfiguration pnpConfig =
+      // Use default configuration if not explicitly configured.
+      PnpConfiguration pnpConfig =
           serverConfiguration.getImport() != null ? serverConfiguration.getImport().getPnp() : null;
       if (pnpConfig == null) {
-        throw new InvalidUserInputError("PnP configuration is missing");
+        pnpConfig = new PnpConfiguration();
       }
 
       final String downloadLocation =

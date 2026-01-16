@@ -267,13 +267,9 @@ class ImportPnpOperationIT {
         .is4xxClientError();
   }
 
-  @Test
-  void testMissingPnpConfigurationReturnsError() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
-
-    // This test would need a separate profile without PnP config, so we'll skip it for now.
-    // In a real scenario, you'd create a test profile without the PnP configuration.
-  }
+  // Note: Missing PnP configuration no longer causes an error. The operation now uses sensible
+  // defaults when no configuration is provided, enabling use against unauthenticated FHIR servers
+  // without requiring any explicit configuration.
 
   @Test
   void testMissingExportUrlReturnsError() {
