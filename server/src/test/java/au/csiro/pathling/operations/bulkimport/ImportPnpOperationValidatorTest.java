@@ -312,24 +312,6 @@ class ImportPnpOperationValidatorTest {
     assertThat(result.result().importFormat()).isEqualTo(ImportFormat.PARQUET);
   }
 
-  @Test
-  void acceptsDeltaFormat() {
-    final Parameters params = new Parameters();
-    params
-        .addParameter()
-        .setName("exportUrl")
-        .setValue(new UrlType("https://example.org/fhir/$export"));
-    params
-        .addParameter()
-        .setName("inputFormat")
-        .setValue(new CodeType("application/x-pathling-delta+parquet"));
-
-    final PreAsyncValidationResult<ImportPnpRequest> result =
-        validator.validateParametersRequest(mockRequest, params);
-
-    assertThat(result.result().importFormat()).isEqualTo(ImportFormat.DELTA);
-  }
-
   // ========================================
   // Bulk Data Export Passthrough Parameters
   // ========================================

@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 import { buildHeaders, buildUrl, checkResponse } from "./utils";
 
 import type { AuthOptions, ResourceType } from "./rest";
@@ -27,8 +26,7 @@ import type { Parameters } from "fhir/r4";
 
 export type ImportFormat =
   | "application/fhir+ndjson"
-  | "application/x-pathling-parquet"
-  | "application/x-pathling-delta+parquet";
+  | "application/x-pathling-parquet";
 
 export type ImportMode = "overwrite" | "merge" | "append" | "ignore" | "error";
 

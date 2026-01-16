@@ -24,7 +24,6 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.sink.WriteDetails;
-import au.csiro.pathling.library.io.source.DeltaSource;
 import au.csiro.pathling.library.io.source.NdjsonSource;
 import au.csiro.pathling.library.io.source.ParquetSource;
 import au.csiro.pathling.security.PathlingAuthority;
@@ -132,7 +131,6 @@ public class ImportExecutor {
     final DataSource dataSource =
         switch (request.importFormat()) {
           case NDJSON -> new NdjsonSource(pathlingContext, resourcesWithAuthority, "ndjson");
-          case DELTA -> new DeltaSource(pathlingContext, resourcesWithAuthority);
           case PARQUET ->
               new ParquetSource(
                   pathlingContext,

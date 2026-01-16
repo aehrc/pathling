@@ -181,8 +181,7 @@ class ImportOperationValidatorTest {
     return Stream.of(
         arguments(minimalValidParams(), ImportFormat.NDJSON),
         arguments(paramsWithFormat("application/fhir+ndjson"), ImportFormat.NDJSON),
-        arguments(paramsWithFormat("application/x-pathling-parquet"), ImportFormat.PARQUET),
-        arguments(paramsWithFormat("application/x-pathling-delta+parquet"), ImportFormat.DELTA));
+        arguments(paramsWithFormat("application/x-pathling-parquet"), ImportFormat.PARQUET));
   }
 
   // ========================================
@@ -261,8 +260,7 @@ class ImportOperationValidatorTest {
   private static Stream<Arguments> provide_mimeTypes() {
     return Stream.of(
         arguments("application/fhir+ndjson", ImportFormat.NDJSON),
-        arguments("application/x-pathling-parquet", ImportFormat.PARQUET),
-        arguments("application/x-pathling-delta+parquet", ImportFormat.DELTA));
+        arguments("application/x-pathling-parquet", ImportFormat.PARQUET));
   }
 
   // ========================================

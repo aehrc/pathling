@@ -14,11 +14,10 @@ allowing for large data sets to be imported efficiently.
 
 The following source formats are supported:
 
-| Format  | MIME type                              | Description                                                                                                  |
-| ------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| NDJSON  | `application/fhir+ndjson`              | [FHIR Newline Delimited JSON](https://hl7.org/fhir/R4/nd-json.html) format                                   |
-| Parquet | `application/x-pathling-parquet`       | [Apache Parquet](https://parquet.apache.org/) conforming to the [Pathling schema](../../libraries/io/schema) |
-| Delta   | `application/x-pathling-delta+parquet` | [Delta Lake](https://delta.io/) conforming to the [Pathling schema](../../libraries/io/schema)               |
+| Format  | MIME type                        | Description                                                                                                  |
+| ------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| NDJSON  | `application/fhir+ndjson`        | [FHIR Newline Delimited JSON](https://hl7.org/fhir/R4/nd-json.html) format                                   |
+| Parquet | `application/x-pathling-parquet` | [Apache Parquet](https://parquet.apache.org/) conforming to the [Pathling schema](../../libraries/io/schema) |
 
 ## Supported URL schemes
 
