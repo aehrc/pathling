@@ -114,6 +114,50 @@ function buildPnpParameters(options: ImportPnpKickOffOptions): Parameters {
     });
   }
 
+  // Bulk export passthrough parameters.
+  if (options.types?.length) {
+    for (const type of options.types) {
+      parameters.parameter!.push({ name: "_type", valueString: type });
+    }
+  }
+
+  if (options.since) {
+    parameters.parameter!.push({ name: "_since", valueInstant: options.since });
+  }
+
+  if (options.until) {
+    parameters.parameter!.push({ name: "_until", valueInstant: options.until });
+  }
+
+  if (options.outputFormat) {
+    parameters.parameter!.push({
+      name: "_outputFormat",
+      valueString: options.outputFormat,
+    });
+  }
+
+  if (options.elements) {
+    parameters.parameter!.push({
+      name: "_elements",
+      valueString: options.elements,
+    });
+  }
+
+  if (options.typeFilters?.length) {
+    for (const filter of options.typeFilters) {
+      parameters.parameter!.push({ name: "_typeFilter", valueString: filter });
+    }
+  }
+
+  if (options.includeAssociatedData?.length) {
+    for (const data of options.includeAssociatedData) {
+      parameters.parameter!.push({
+        name: "includeAssociatedData",
+        valueCode: data,
+      });
+    }
+  }
+
   return parameters;
 }
 

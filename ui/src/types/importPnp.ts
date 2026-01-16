@@ -31,6 +31,14 @@ export interface ImportPnpRequest {
   exportType: ExportType;
   saveMode: SaveMode;
   inputFormat: ImportFormat;
+  // Bulk export passthrough parameters.
+  types?: string[];
+  since?: string;
+  until?: string;
+  outputFormat?: string;
+  elements?: string;
+  typeFilters?: string[];
+  includeAssociatedData?: string[];
 }
 
 // Export type options for the form.

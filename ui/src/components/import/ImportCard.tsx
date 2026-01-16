@@ -113,6 +113,14 @@ export function ImportCard({ job, onError, onClose }: Readonly<ImportCardProps>)
           exportUrl: request.exportUrl,
           saveMode: request.saveMode,
           inputFormat: request.inputFormat,
+          // Bulk export passthrough parameters.
+          types: request.types,
+          since: request.since,
+          until: request.until,
+          outputFormat: request.outputFormat,
+          elements: request.elements,
+          typeFilters: request.typeFilters,
+          includeAssociatedData: request.includeAssociatedData,
         });
       }
     }

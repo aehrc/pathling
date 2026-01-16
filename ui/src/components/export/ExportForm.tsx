@@ -25,9 +25,11 @@ import { PlayIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Heading, Select, Text, TextField } from "@radix-ui/themes";
 import { useState } from "react";
 
-import { ResourceTypePicker } from "./ResourceTypePicker";
+import { ExportOptions } from "./ExportOptions";
+import { DEFAULT_EXPORT_OPTIONS } from "../../types/exportOptions";
 
 import type { ExportLevel, ExportRequest } from "../../types/export";
+import type { ExportOptionsValues } from "../../types/exportOptions";
 
 interface ExportFormProps {
   onSubmit: (request: ExportRequest) => void;
@@ -51,20 +53,17 @@ const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
  */
 export function ExportForm({ onSubmit, resourceTypes }: Readonly<ExportFormProps>) {
   const [level, setLevel] = useState<ExportLevel>("system");
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [since, setSince] = useState("");
-  const [until, setUntil] = useState("");
-  const [elements, setElements] = useState("");
+  const [exportOptions, setExportOptions] = useState<ExportOptionsValues>(DEFAULT_EXPORT_OPTIONS);
   const [patientId, setPatientId] = useState("");
   const [groupId, setGroupId] = useState("");
 
   const handleSubmit = () => {
     const request: ExportRequest = {
       level,
-      resourceTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
-      since: since || undefined,
-      until: until || undefined,
-      elements: elements || undefined,
+      resourceTypes: exportOptions.types.length > 0 ? exportOptions.types : undefined,
+      since: exportOptions.since || undefined,
+      until: exportOptions.until || undefined,
+      elements: exportOptions.elements || undefined,
       patientId: level === "patient" ? patientId : undefined,
       groupId: level === "group" ? groupId : undefined,
     };
@@ -118,54 +117,11 @@ export function ExportForm({ onSubmit, resourceTypes }: Readonly<ExportFormProps
           </Box>
         )}
 
-        <ResourceTypePicker
+        <ExportOptions
           resourceTypes={resourceTypes}
-          selectedTypes={selectedTypes}
-          onSelectedTypesChange={setSelectedTypes}
+          values={exportOptions}
+          onChange={setExportOptions}
         />
-
-        <Flex gap="4">
-          <Box style={{ flex: 1 }}>
-            <Text as="label" size="2" weight="medium" mb="1">
-              Since
-            </Text>
-            <TextField.Root
-              type="datetime-local"
-              value={since}
-              onChange={(e) => setSince(e.target.value)}
-            />
-            <Text size="1" color="gray" mt="1">
-              Only resources updated after this time.
-            </Text>
-          </Box>
-          <Box style={{ flex: 1 }}>
-            <Text as="label" size="2" weight="medium" mb="1">
-              Until
-            </Text>
-            <TextField.Root
-              type="datetime-local"
-              value={until}
-              onChange={(e) => setUntil(e.target.value)}
-            />
-            <Text size="1" color="gray" mt="1">
-              Only resources updated before this time.
-            </Text>
-          </Box>
-        </Flex>
-
-        <Box>
-          <Text as="label" size="2" weight="medium" mb="1">
-            Elements (optional)
-          </Text>
-          <TextField.Root
-            placeholder="e.g., id,meta,name"
-            value={elements}
-            onChange={(e) => setElements(e.target.value)}
-          />
-          <Text size="1" color="gray" mt="1">
-            Comma-separated list of element names to include.
-          </Text>
-        </Box>
 
         <Button
           size="3"

@@ -280,6 +280,21 @@ export interface ImportPnpJobRequest {
   saveMode: SaveMode;
   /** Input format for the import data. */
   inputFormat: ImportFormat;
+  // Bulk export passthrough parameters.
+  /** Resource types to include in the export. */
+  types?: string[];
+  /** Export resources modified after this timestamp. */
+  since?: string;
+  /** Export resources modified before this timestamp. */
+  until?: string;
+  /** Output format for the export. */
+  outputFormat?: string;
+  /** Elements to include in the export output. */
+  elements?: string;
+  /** FHIR search queries to filter resources during export. */
+  typeFilters?: string[];
+  /** Pre-defined sets of associated data to include. */
+  includeAssociatedData?: string[];
 }
 
 /**

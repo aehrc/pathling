@@ -133,7 +133,12 @@ export function Import() {
             </Tabs.Content>
 
             <Tabs.Content value="fhir-server">
-              <ImportPnpForm onSubmit={handlePnpImport} isSubmitting={false} disabled={false} />
+              <ImportPnpForm
+                onSubmit={handlePnpImport}
+                isSubmitting={false}
+                disabled={false}
+                resourceTypes={capabilities?.resourceTypes ?? []}
+              />
             </Tabs.Content>
           </Box>
         </Tabs.Root>

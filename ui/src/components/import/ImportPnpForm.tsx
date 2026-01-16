@@ -21,13 +21,17 @@
  * @author John Grimes
  */
 
-import { UploadIcon } from "@radix-ui/react-icons";
+import * as Collapsible from "@radix-ui/react-collapsible";
+import { ChevronDownIcon, ChevronRightIcon, UploadIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Heading, Select, Text, TextField } from "@radix-ui/themes";
 import { useState } from "react";
 
 import { SaveModeField } from "./SaveModeField";
+import { DEFAULT_EXPORT_OPTIONS } from "../../types/exportOptions";
 import { IMPORT_FORMATS } from "../../types/import";
+import { ExportOptions } from "../export/ExportOptions";
 
+import type { ExportOptionsValues } from "../../types/exportOptions";
 import type { ImportFormat, SaveMode } from "../../types/import";
 import type { ExportType, ImportPnpRequest } from "../../types/importPnp";
 
@@ -35,6 +39,21 @@ interface ImportPnpFormProps {
   onSubmit: (request: ImportPnpRequest) => void;
   isSubmitting: boolean;
   disabled: boolean;
+  resourceTypes: string[];
+}
+
+/**
+ * Splits a comma-separated string into an array of trimmed non-empty strings.
+ *
+ * @param value - The comma-separated string to split.
+ * @returns Array of trimmed strings, or undefined if empty.
+ */
+function splitCommaSeparated(value: string): string[] | undefined {
+  const parts = value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts : undefined;
 }
 
 /**
@@ -44,12 +63,20 @@ interface ImportPnpFormProps {
  * @param root0.onSubmit - Callback when import is submitted.
  * @param root0.isSubmitting - Whether an import is in progress.
  * @param root0.disabled - Whether the form is disabled.
+ * @param root0.resourceTypes - Available resource types for selection.
  * @returns The import PnP form component.
  */
-export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFormProps) {
+export function ImportPnpForm({
+  onSubmit,
+  isSubmitting,
+  disabled,
+  resourceTypes,
+}: Readonly<ImportPnpFormProps>) {
   const [exportUrl, setExportUrl] = useState("");
   const [saveMode, setSaveMode] = useState<SaveMode>("overwrite");
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");
+  const [exportOptions, setExportOptions] = useState<ExportOptionsValues>(DEFAULT_EXPORT_OPTIONS);
+  const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
   const exportType: ExportType = "dynamic";
 
   const handleSubmit = () => {
@@ -58,6 +85,14 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
       exportType,
       saveMode,
       inputFormat,
+      // Export passthrough options.
+      types: exportOptions.types.length > 0 ? exportOptions.types : undefined,
+      since: exportOptions.since || undefined,
+      until: exportOptions.until || undefined,
+      outputFormat: exportOptions.outputFormat || undefined,
+      elements: exportOptions.elements || undefined,
+      typeFilters: splitCommaSeparated(exportOptions.typeFilters),
+      includeAssociatedData: splitCommaSeparated(exportOptions.includeAssociatedData),
     };
     onSubmit(request);
   };
@@ -107,6 +142,28 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
         </Box>
 
         <SaveModeField value={saveMode} onChange={setSaveMode} />
+
+        <Collapsible.Root open={exportOptionsOpen} onOpenChange={setExportOptionsOpen}>
+          <Collapsible.Trigger asChild>
+            <Flex align="center" gap="2" style={{ cursor: "pointer" }} py="2">
+              {exportOptionsOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
+              <Text size="2" weight="medium">
+                Export options
+              </Text>
+            </Flex>
+          </Collapsible.Trigger>
+
+          <Collapsible.Content>
+            <Box pt="2">
+              <ExportOptions
+                resourceTypes={resourceTypes}
+                values={exportOptions}
+                onChange={setExportOptions}
+                showExtendedOptions
+              />
+            </Box>
+          </Collapsible.Content>
+        </Collapsible.Root>
 
         <Button size="3" onClick={handleSubmit} disabled={disabled || isSubmitting || !isValid}>
           <UploadIcon />
