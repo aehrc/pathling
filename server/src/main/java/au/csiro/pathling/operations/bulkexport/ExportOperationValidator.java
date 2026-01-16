@@ -246,7 +246,8 @@ public class ExportOperationValidator {
     if (outputFormat == null) {
       log.debug("No _outputFormat specified, defaulting to ndjson.");
     }
-    if (outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
+    final ExportOutputFormat resolvedFormat = ExportOutputFormat.fromParam(outputFormat);
+    if (resolvedFormat == null) {
       throw new InvalidRequestException(
           "Unknown '%s' value '%s'. Only %s are allowed."
               .formatted(
@@ -275,7 +276,7 @@ public class ExportOperationValidator {
     return new ExportRequest(
         originalRequest,
         serverBaseUrl,
-        ExportOutputFormat.NDJSON,
+        resolvedFormat,
         since,
         until,
         resourceFilter,
@@ -314,7 +315,8 @@ public class ExportOperationValidator {
     if (outputFormat == null) {
       log.debug("No _outputFormat specified for patient export, defaulting to ndjson.");
     }
-    if (outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
+    final ExportOutputFormat resolvedFormat = ExportOutputFormat.fromParam(outputFormat);
+    if (resolvedFormat == null) {
       throw new InvalidRequestException(
           "Unknown '%s' value '%s'. Only %s are allowed."
               .formatted(
@@ -347,7 +349,7 @@ public class ExportOperationValidator {
     return new ExportRequest(
         originalRequest,
         serverBaseUrl,
-        ExportOutputFormat.NDJSON,
+        resolvedFormat,
         since,
         until,
         resourceFilter,

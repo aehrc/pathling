@@ -537,4 +537,146 @@ class ExportOperationExecutorTest {
     final UUID uuid = UUID.randomUUID();
     return new TestExportResponse(uuid, exportExecutor.execute(exportRequest, uuid.toString()));
   }
+
+  // Tests for Parquet and Delta output formats.
+
+  @Test
+  void testExportWithParquetFormatWritesParquetFiles() throws IOException {
+    final Patient patient = new Patient();
+    patient.setId("test-id");
+    patient.addIdentifier().setValue("test-identifier");
+
+    exportExecutor = createExecutor(patient);
+
+    // Create a request with Parquet output format.
+    final ExportRequest req =
+        new ExportRequest(
+            BASE + "_outputFormat=parquet",
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.PARQUET,
+            null,
+            null,
+            List.of(),
+            List.of(),
+            false,
+            ExportRequest.ExportLevel.SYSTEM,
+            Set.of());
+
+    final TestExportResponse response = execute(req);
+
+    // Verify that the response contains file information.
+    assertThat(response.exportResponse().getWriteDetails().fileInfos()).isNotEmpty();
+
+    // Verify that Parquet files were written by checking for .parquet extension in the output URL.
+    final String outputUrl = response.getWriteDetails().fileInfos().getFirst().absoluteUrl();
+    final Path outputPath = Path.of(URI.create(outputUrl));
+    final File outputDir = outputPath.getParent().toFile();
+
+    // Parquet output should create .parquet files in the directory.
+    final File[] parquetFiles =
+        outputDir.listFiles(
+            (dir, name) -> name.endsWith(".parquet") || name.endsWith(".snappy.parquet"));
+    assertThat(parquetFiles).isNotNull();
+    assertThat(parquetFiles.length).isGreaterThan(0);
+  }
+
+  @Test
+  void testExportWithDeltaFormatWritesDeltaFiles() throws IOException {
+    final Patient patient = new Patient();
+    patient.setId("test-id");
+    patient.addIdentifier().setValue("test-identifier");
+
+    exportExecutor = createExecutor(patient);
+
+    // Create a request with Delta output format.
+    final ExportRequest req =
+        new ExportRequest(
+            BASE + "_outputFormat=delta",
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.DELTA,
+            null,
+            null,
+            List.of(),
+            List.of(),
+            false,
+            ExportRequest.ExportLevel.SYSTEM,
+            Set.of());
+
+    final TestExportResponse response = execute(req);
+
+    // Verify that the response contains file information.
+    assertThat(response.exportResponse().getWriteDetails().fileInfos()).isNotEmpty();
+
+    // Verify that Delta files were written by checking for _delta_log directory.
+    // For Delta, the outputUrl points to the Delta table directory (e.g., Patient.parquet),
+    // and the _delta_log is inside that directory.
+    final String outputUrl = response.getWriteDetails().fileInfos().getFirst().absoluteUrl();
+    final Path outputPath = Path.of(URI.create(outputUrl));
+    final File deltaTableDir = outputPath.toFile();
+
+    // Delta output should create a _delta_log directory inside the Delta table directory.
+    final File deltaLogDir = new File(deltaTableDir, "_delta_log");
+    assertThat(deltaLogDir.exists()).isTrue();
+    assertThat(deltaLogDir.isDirectory()).isTrue();
+  }
+
+  @Test
+  void testExportWithParquetFormatHasCorrectOutputFormat() {
+    final Patient patient = new Patient();
+    patient.setId("test-id");
+
+    exportExecutor = createExecutor(patient);
+
+    // Create a request with Parquet output format.
+    final ExportRequest req =
+        new ExportRequest(
+            BASE + "_outputFormat=parquet",
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.PARQUET,
+            null,
+            null,
+            List.of("Patient"),
+            List.of(),
+            false,
+            ExportRequest.ExportLevel.SYSTEM,
+            Set.of());
+
+    final TestExportResponse response = execute(req);
+
+    // Verify that file information is present and file type is correct.
+    assertThat(response.exportResponse().getWriteDetails().fileInfos()).hasSize(1);
+    assertThat(
+            response.exportResponse().getWriteDetails().fileInfos().getFirst().fhirResourceType())
+        .isEqualTo("Patient");
+  }
+
+  @Test
+  void testExportWithDeltaFormatHasCorrectOutputFormat() {
+    final Patient patient = new Patient();
+    patient.setId("test-id");
+
+    exportExecutor = createExecutor(patient);
+
+    // Create a request with Delta output format.
+    final ExportRequest req =
+        new ExportRequest(
+            BASE + "_outputFormat=delta",
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.DELTA,
+            null,
+            null,
+            List.of("Patient"),
+            List.of(),
+            false,
+            ExportRequest.ExportLevel.SYSTEM,
+            Set.of());
+
+    final TestExportResponse response = execute(req);
+
+    // Verify that file information is present and file type is correct.
+    assertThat(response.exportResponse().getWriteDetails().fileInfos()).hasSize(1);
+    assertThat(
+            response.exportResponse().getWriteDetails().fileInfos().getFirst().fhirResourceType())
+        .isEqualTo("Patient");
+  }
 }
