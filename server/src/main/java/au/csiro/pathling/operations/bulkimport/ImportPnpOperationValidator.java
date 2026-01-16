@@ -81,14 +81,6 @@ public class ImportPnpOperationValidator {
           "Ping and pull import is not configured. Please configure pathling.import.pnp settings.");
     }
 
-    // Validate that at least one authentication method is configured.
-    if ((pnpConfig.getPrivateKeyJwk() == null || pnpConfig.getPrivateKeyJwk().isBlank())
-        && (pnpConfig.getClientSecret() == null || pnpConfig.getClientSecret().isBlank())) {
-      throw new InvalidUserInputError(
-          "Ping and pull authentication is not configured. Please provide either privateKeyJwk or"
-              + " clientSecret.");
-    }
-
     // Extract exportUrl parameter (required).
     final String exportUrl =
         ParamUtil.extractFromPart(

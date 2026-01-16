@@ -61,8 +61,6 @@ class ImportPnpOperationValidatorTest {
       final ServerConfiguration serverConfig = new ServerConfiguration();
       final ImportConfiguration importConfig = new ImportConfiguration();
       final PnpConfiguration pnpConfig = new PnpConfiguration();
-      // Configure with a client secret so that authentication validation passes.
-      pnpConfig.setClientSecret("test-secret");
       importConfig.setPnp(pnpConfig);
       serverConfig.setImport(importConfig);
       return new ImportPnpOperationValidator(serverConfig);
@@ -594,6 +592,41 @@ class ImportPnpOperationValidatorTest {
         validator.validateParametersRequest(mockRequest, params);
 
     assertThat(result.result().includeAssociatedData()).isEmpty();
+  }
+
+  // ========================================
+  // Unauthenticated Configuration
+  // ========================================
+
+  /** Tests that validation passes when no authentication is configured (unauthenticated source). */
+  @Test
+  void acceptsUnauthenticatedConfiguration() {
+    // Create a validator with no authentication credentials configured.
+    final ServerConfiguration serverConfig = new ServerConfiguration();
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    // No clientId, clientSecret, or privateKeyJwk set - unauthenticated.
+    importConfig.setPnp(pnpConfig);
+    serverConfig.setImport(importConfig);
+    final ImportPnpOperationValidator unauthenticatedValidator =
+        new ImportPnpOperationValidator(serverConfig);
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://public-fhir-server.org/$export"));
+
+    // Should succeed without requiring authentication credentials.
+    assertThatNoException()
+        .isThrownBy(
+            () -> {
+              final PreAsyncValidationResult<ImportPnpRequest> result =
+                  unauthenticatedValidator.validateParametersRequest(mockRequest, params);
+              assertThat(result.result()).isNotNull();
+              assertThat(result.result().exportUrl())
+                  .isEqualTo("https://public-fhir-server.org/$export");
+            });
   }
 
   /** Tests that all export parameters are extracted together correctly. */
