@@ -517,10 +517,10 @@ test.describe("Resources page", () => {
         .getByRole("button", { name: "Delete" })
         .click();
 
-      // Verify error toast appears in the notifications region.
-      const notifications = page.getByRole("region", { name: "Notifications" });
+      // Verify error toast appears. Use locator directly since the modal dialog
+      // marks content outside it as aria-hidden.
       await expect(
-        notifications.getByText("Delete failed", { exact: true }),
+        page.locator("li").filter({ hasText: "Delete failed" }),
       ).toBeVisible();
     });
   });

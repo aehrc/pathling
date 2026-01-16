@@ -83,12 +83,10 @@ export function DeleteConfirmationDialog({
               Cancel
             </Button>
           </AlertDialog.Cancel>
-          <AlertDialog.Action>
-            <Button color="red" onClick={onConfirm} disabled={isDeleting}>
-              {isDeleting ? <Spinner /> : <TrashIcon />}
-              Delete
-            </Button>
-          </AlertDialog.Action>
+          <Button color="red" onClick={onConfirm} disabled={isDeleting}>
+            {isDeleting ? <Spinner /> : <TrashIcon />}
+            Delete
+          </Button>
         </Flex>
       </AlertDialog.Content>
     </AlertDialog.Root>
