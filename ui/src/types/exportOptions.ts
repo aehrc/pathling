@@ -60,5 +60,4 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptionsValues = {
 export const OUTPUT_FORMATS: { value: string; label: string }[] = [
   { value: "application/fhir+ndjson", label: "NDJSON" },
   { value: "application/x-pathling-parquet", label: "Parquet" },
-  { value: "application/x-pathling-delta+parquet", label: "Delta" },
 ];

@@ -38,14 +38,7 @@ public enum ExportOutputFormat {
    * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
    *     Specification</a>
    */
-  PARQUET("application/x-pathling-parquet"),
-  /**
-   * Delta Lake format.
-   *
-   * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
-   *     Specification</a>
-   */
-  DELTA("application/x-pathling-delta+parquet");
+  PARQUET("application/x-pathling-parquet");
 
   private final String mimeType;
 
@@ -56,7 +49,7 @@ public enum ExportOutputFormat {
   /**
    * Parses a format parameter string and returns the corresponding ExportOutputFormat.
    *
-   * @param param the format parameter string (e.g., "application/fhir+ndjson", "parquet", "delta")
+   * @param param the format parameter string (e.g., "application/fhir+ndjson", "parquet")
    * @return the corresponding ExportOutputFormat, or null if the format is invalid. Returns NDJSON
    *     if param is null.
    */
@@ -69,7 +62,6 @@ public enum ExportOutputFormat {
     return switch (param.toLowerCase()) {
       case "application/fhir+ndjson", "application/ndjson", "ndjson" -> NDJSON;
       case "application/x-pathling-parquet", "parquet" -> PARQUET;
-      case "application/x-pathling-delta+parquet", "delta" -> DELTA;
       default -> null;
     };
   }
@@ -86,7 +78,6 @@ public enum ExportOutputFormat {
     return switch (exportOutputFormat) {
       case NDJSON -> "ndjson";
       case PARQUET -> "parquet";
-      case DELTA -> "delta";
     };
   }
 }

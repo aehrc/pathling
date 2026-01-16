@@ -226,7 +226,6 @@ public class ExportExecutor {
           switch (exportRequest.outputFormat()) {
             case NDJSON -> sinkBuilder.ndjson(jobDirPath.toString());
             case PARQUET -> sinkBuilder.parquet(jobDirPath.toString());
-            case DELTA -> sinkBuilder.delta(jobDirPath.toString());
           };
       return new ExportResponse(
           exportRequest.originalRequest(),

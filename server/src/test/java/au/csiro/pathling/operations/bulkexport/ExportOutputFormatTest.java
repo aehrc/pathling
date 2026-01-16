@@ -65,21 +65,6 @@ class ExportOutputFormatTest {
     assertThat(ExportOutputFormat.fromParam(param)).isEqualTo(ExportOutputFormat.PARQUET);
   }
 
-  // Tests for fromParam() method - Delta variations.
-
-  @ParameterizedTest
-  @DisplayName("fromParam should return DELTA for all valid Delta MIME type variants")
-  @ValueSource(
-      strings = {
-        "application/x-pathling-delta+parquet",
-        "delta",
-        "APPLICATION/X-PATHLING-DELTA+PARQUET",
-        "DELTA"
-      })
-  void fromParam_shouldReturnDeltaForValidDeltaMimeTypes(final String param) {
-    assertThat(ExportOutputFormat.fromParam(param)).isEqualTo(ExportOutputFormat.DELTA);
-  }
-
   // Tests for fromParam() method - null and invalid inputs.
 
   @ParameterizedTest
@@ -91,7 +76,16 @@ class ExportOutputFormatTest {
 
   @ParameterizedTest
   @DisplayName("fromParam should return null for invalid format strings")
-  @ValueSource(strings = {"application/xml", "application/json", "csv", "xml", "invalid"})
+  @ValueSource(
+      strings = {
+        "application/xml",
+        "application/json",
+        "csv",
+        "xml",
+        "invalid",
+        "delta",
+        "application/x-pathling-delta+parquet"
+      })
   void fromParam_shouldReturnNullForInvalidFormats(final String param) {
     assertThat(ExportOutputFormat.fromParam(param)).isNull();
   }
@@ -100,7 +94,7 @@ class ExportOutputFormatTest {
 
   @ParameterizedTest
   @DisplayName("asParam should return correct string representation for each format")
-  @CsvSource({"NDJSON,ndjson", "PARQUET,parquet", "DELTA,delta"})
+  @CsvSource({"NDJSON,ndjson", "PARQUET,parquet"})
   void asParam_shouldReturnCorrectStringRepresentation(
       final ExportOutputFormat format, final String expected) {
     assertThat(ExportOutputFormat.asParam(format)).isEqualTo(expected);
@@ -119,12 +113,5 @@ class ExportOutputFormatTest {
   void getMimeType_shouldReturnCorrectMimeTypeForParquet() {
     assertThat(ExportOutputFormat.PARQUET.getMimeType())
         .isEqualTo("application/x-pathling-parquet");
-  }
-
-  @Test
-  @DisplayName("getMimeType should return correct MIME type for DELTA")
-  void getMimeType_shouldReturnCorrectMimeTypeForDelta() {
-    assertThat(ExportOutputFormat.DELTA.getMimeType())
-        .isEqualTo("application/x-pathling-delta+parquet");
   }
 }

@@ -20,9 +20,12 @@ package au.csiro.pathling.library.io.sink;
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.FileSystemPersistence;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
@@ -34,6 +37,9 @@ import org.apache.spark.sql.Row;
  * @author John Grimes
  */
 final class ParquetSink implements DataSink {
+
+  /** The Pathling context to use. */
+  @Nonnull private final PathlingContext context;
 
   /** The path to write the Parquet files to. */
   @Nonnull private final String path;
@@ -47,14 +53,17 @@ final class ParquetSink implements DataSink {
   /**
    * Constructs a ParquetSink with a custom file name mapper.
    *
+   * @param context the {@link PathlingContext} to use
    * @param path the path to write the Parquet files to
    * @param saveMode the {@link SaveMode} to use
    * @param fileNameMapper a function that maps resource type to file name
    */
   ParquetSink(
+      @Nonnull final PathlingContext context,
       @Nonnull final String path,
       @Nonnull final SaveMode saveMode,
       @Nonnull final UnaryOperator<String> fileNameMapper) {
+    this.context = context;
     this.path = path;
     this.saveMode = saveMode;
     this.fileNameMapper = fileNameMapper;
@@ -63,12 +72,16 @@ final class ParquetSink implements DataSink {
   /**
    * Constructs a ParquetSink with default file naming.
    *
+   * @param context the {@link PathlingContext} to use
    * @param path the path to write the Parquet files to
    * @param saveMode the {@link SaveMode} to use
    */
-  ParquetSink(@Nonnull final String path, @Nonnull final SaveMode saveMode) {
+  ParquetSink(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
+      @Nonnull final SaveMode saveMode) {
     // By default, name the files using the resource type alone.
-    this(path, saveMode, UnaryOperator.identity());
+    this(context, path, saveMode, UnaryOperator.identity());
   }
 
   @Override
@@ -80,8 +93,6 @@ final class ParquetSink implements DataSink {
       final String fileName = String.join(".", fileNameMapper.apply(resourceType), "parquet");
       final String tablePath = safelyJoinPaths(path, fileName);
 
-      fileInfos.add(new FileInformation(resourceType, tablePath));
-
       switch (saveMode) {
         case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
             writeDataset(dataset, tablePath, saveMode);
@@ -90,6 +101,14 @@ final class ParquetSink implements DataSink {
                 "Merge operation is not supported for Parquet - use Delta if merging is required");
         default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
+
+      // Remove the partitioned directory and replace it with the renamed partitioned files.
+      // Files follow the pattern {resourceType}.{partId}.parquet, e.g. Patient.00000.parquet.
+      final Collection<String> renamed =
+          FileSystemPersistence.renamePartitionedFiles(
+              context.getSpark(), tablePath, tablePath, "parquet");
+      renamed.forEach(
+          renamedFilename -> fileInfos.add(new FileInformation(resourceType, renamedFilename)));
     }
     return new WriteDetails(fileInfos);
   }

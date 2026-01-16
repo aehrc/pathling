@@ -100,7 +100,7 @@ public class DataSinkBuilder {
    * @return Details about the performed operation.
    */
   public WriteDetails parquet(@Nullable final String path) {
-    return new ParquetSink(checkArgumentNotNull(path), saveMode).write(source);
+    return new ParquetSink(context, checkArgumentNotNull(path), saveMode).write(source);
   }
 
   /**
@@ -114,7 +114,7 @@ public class DataSinkBuilder {
   public WriteDetails parquet(
       @Nullable final String path, @Nullable final UnaryOperator<String> fileNameMapper) {
     return new ParquetSink(
-            checkArgumentNotNull(path), saveMode, checkArgumentNotNull(fileNameMapper))
+            context, checkArgumentNotNull(path), saveMode, checkArgumentNotNull(fileNameMapper))
         .write(source);
   }
 

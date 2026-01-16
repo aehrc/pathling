@@ -268,33 +268,24 @@ class ExportOperationValidatorTest {
   }
 
   @Test
-  @DisplayName("validateRequest should accept delta output format")
-  void validateRequest_shouldAcceptDeltaOutputFormat() {
-    assertThatNoException()
-        .isThrownBy(
-            () -> {
-              final PreAsyncValidationResult<ExportRequest> result =
-                  validator.validateRequest(
-                      requestDetails,
-                      "application/x-pathling-delta+parquet",
-                      null,
-                      null,
-                      null,
-                      null);
-              assertThat(result.result().outputFormat()).isEqualTo(ExportOutputFormat.DELTA);
-            });
+  @DisplayName("validateRequest should reject delta output format")
+  void validateRequest_shouldRejectDeltaOutputFormat() {
+    // Delta is no longer supported for bulk export because it requires directory structure
+    // that cannot be flattened for download.
+    assertThatThrownBy(
+            () ->
+                validator.validateRequest(
+                    requestDetails, "application/x-pathling-delta+parquet", null, null, null, null))
+        .isInstanceOf(InvalidRequestException.class);
   }
 
   @Test
-  @DisplayName("validateRequest should accept delta shorthand format")
-  void validateRequest_shouldAcceptDeltaShorthandFormat() {
-    assertThatNoException()
-        .isThrownBy(
-            () -> {
-              final PreAsyncValidationResult<ExportRequest> result =
-                  validator.validateRequest(requestDetails, "delta", null, null, null, null);
-              assertThat(result.result().outputFormat()).isEqualTo(ExportOutputFormat.DELTA);
-            });
+  @DisplayName("validateRequest should reject delta shorthand format")
+  void validateRequest_shouldRejectDeltaShorthandFormat() {
+    // Delta is no longer supported for bulk export.
+    assertThatThrownBy(
+            () -> validator.validateRequest(requestDetails, "delta", null, null, null, null))
+        .isInstanceOf(InvalidRequestException.class);
   }
 
   @Test

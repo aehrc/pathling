@@ -18,6 +18,7 @@
 package au.csiro.pathling.library.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -373,6 +374,36 @@ class DataSourcesTest {
 
     // Query the data.
     queryParquetData(newData);
+  }
+
+  @Test
+  void parquetWriteCreatesIndividualFiles() throws IOException {
+    // This test verifies that ParquetSink flattens partitioned directories into individual files.
+    // This is important for bulk export, where the download endpoint expects files, not
+    // directories.
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Write the data to Parquet.
+    final Path parquetDir = temporaryDirectory.resolve("parquet-flat");
+    data.write().saveMode("error").parquet(parquetDir.toString());
+
+    // Verify that individual Parquet files exist (not directories).
+    // Files should follow the pattern {resourceType}.{partId}.parquet.
+    final boolean hasPatientFiles =
+        Files.list(parquetDir)
+            .anyMatch(p -> p.getFileName().toString().matches("Patient\\.\\d+\\.parquet"));
+    final boolean hasConditionFiles =
+        Files.list(parquetDir)
+            .anyMatch(p -> p.getFileName().toString().matches("Condition\\.\\d+\\.parquet"));
+
+    assertTrue(hasPatientFiles, "Expected Patient.*.parquet files to exist");
+    assertTrue(hasConditionFiles, "Expected Condition.*.parquet files to exist");
+
+    // Verify no directories remain (the partitioned directories should be deleted).
+    final boolean hasDirectories =
+        Files.list(parquetDir).anyMatch(p -> Files.isDirectory(p) && !p.toString().contains("_"));
+    assertFalse(hasDirectories, "Expected no resource type directories after flattening");
   }
 
   @ParameterizedTest
