@@ -44,3 +44,37 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// Mock ResizeObserver for Radix UI ScrollArea component.
+class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+window.ResizeObserver = ResizeObserverMock;
+
+// Mock PointerEvent for Radix UI Select and other pointer-based components.
+// This is necessary because jsdom does not support PointerEvent by default.
+class PointerEventMock extends Event {
+  button: number;
+  pointerType: string;
+  ctrlKey: boolean;
+
+  constructor(type: string, props?: PointerEventInit) {
+    super(type, props);
+    this.button = props?.button ?? 0;
+    this.pointerType = props?.pointerType ?? "mouse";
+    this.ctrlKey = props?.ctrlKey ?? false;
+  }
+}
+
+window.PointerEvent = PointerEventMock as unknown as typeof PointerEvent;
+
+// Mock Element.hasPointerCapture and related methods.
+Element.prototype.hasPointerCapture = vi.fn().mockReturnValue(false);
+Element.prototype.setPointerCapture = vi.fn();
+Element.prototype.releasePointerCapture = vi.fn();
+
+// Mock Element.scrollIntoView for Radix UI Select component.
+Element.prototype.scrollIntoView = vi.fn();
