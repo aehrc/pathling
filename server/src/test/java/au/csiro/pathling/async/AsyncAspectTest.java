@@ -49,28 +49,28 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.JwtClaimAccessor;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootUnitTest
-@MockBean(ExportResultRegistry.class)
+@MockitoBean(types = ExportResultRegistry.class)
 @Slf4j
 class AsyncAspectTest {
 
-  @MockBean private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+  @MockitoBean private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
-  @MockBean private CacheableDatabase database;
+  @MockitoBean private CacheableDatabase database;
 
-  @MockBean private StageMap stageMap;
+  @MockitoBean private StageMap stageMap;
 
-  @MockBean private ProceedingJoinPoint proceedingJoinPoint;
+  @MockitoBean private ProceedingJoinPoint proceedingJoinPoint;
 
-  @MockBean private JobProvider jobProvider;
+  @MockitoBean private JobProvider jobProvider;
 
   @Autowired SparkSession spark;
 

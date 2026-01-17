@@ -37,8 +37,8 @@ import org.hl7.fhir.r4.model.InstantType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
  * Tests for exporting ViewDefinition resources via the $export operation.
@@ -60,7 +60,7 @@ class ViewDefinitionExportTest {
   @Autowired private ExportOperationValidator exportOperationValidator;
 
   @SuppressWarnings("unused")
-  @MockBean
+  @MockitoBean
   private QueryableDataSource queryableDataSource;
 
   private RequestDetails mockRequest;

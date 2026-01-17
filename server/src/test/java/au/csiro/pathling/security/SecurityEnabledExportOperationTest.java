@@ -35,13 +35,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
@@ -57,9 +57,9 @@ import org.springframework.web.util.UriComponentsBuilder;
       "pathling.auth.enabled=true",
       "pathling.auth.issuer=https://pathling.acme.com/fhir"
     })
-@MockBean(OidcConfiguration.class)
-@MockBean(JwtDecoder.class)
-@MockBean(JwtAuthenticationConverter.class)
+@MockitoBean(types = OidcConfiguration.class)
+@MockitoBean(types = JwtDecoder.class)
+@MockitoBean(types = JwtAuthenticationConverter.class)
 class SecurityEnabledExportOperationTest extends SecurityTestForOperations<ExportRequest> {
 
   private static final String PATHLING_EXPORT_MSG = ERROR_MSG.apply("export");

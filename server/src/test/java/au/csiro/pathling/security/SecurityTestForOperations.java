@@ -57,7 +57,6 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -67,6 +66,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @ActiveProfiles({"unit-test"})
 @Tag("IntegrationTest")
@@ -80,13 +80,13 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
 
   protected SystemExportProvider exportProvider;
 
-  @MockBean private ServletRequestDetails requestDetails;
+  @MockitoBean private ServletRequestDetails requestDetails;
 
-  @MockBean private JobRegistry jobRegistry;
+  @MockitoBean private JobRegistry jobRegistry;
 
   @Autowired protected RequestTagFactory requestTagFactory;
 
-  @MockBean protected Job<T> job;
+  @MockitoBean protected Job<T> job;
 
   @Autowired private PathlingContext pathlingContext;
 
