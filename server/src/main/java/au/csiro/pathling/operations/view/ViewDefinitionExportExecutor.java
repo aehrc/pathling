@@ -33,13 +33,11 @@ import jakarta.validation.ConstraintViolationException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Column;
@@ -309,25 +307,9 @@ public class ViewDefinitionExportExecutor {
 
     result.write().mode(SaveMode.Overwrite).parquet(outputPath);
 
-    // List all parquet files in the output directory.
-    return listParquetFiles(outputPath);
-  }
-
-  /** Lists all Parquet files in a directory. */
-  @Nonnull
-  private List<String> listParquetFiles(@Nonnull final String directoryPath) {
-    try {
-      final FileSystem fs = FileSystemPersistence.getFileSystem(sparkSession, directoryPath);
-      final Path path = new Path(directoryPath);
-      final FileStatus[] files = fs.listStatus(path);
-
-      return Arrays.stream(files)
-          .map(FileStatus::getPath)
-          .map(Path::toString)
-          .filter(f -> f.endsWith(".parquet"))
-          .toList();
-    } catch (final IOException e) {
-      throw new InternalErrorException("Failed to list parquet files at " + directoryPath, e);
-    }
+    // Rename partitioned files to follow the numbered naming convention.
+    return new ArrayList<>(
+        FileSystemPersistence.renamePartitionedFiles(
+            sparkSession, outputPath, outputPath, "parquet"));
   }
 }

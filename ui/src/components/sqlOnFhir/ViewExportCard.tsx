@@ -134,19 +134,24 @@ export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProp
                   Output files ({outputs.length})
                 </Text>
                 <Flex direction="column" gap="1">
-                  {outputs.map((output) => (
-                    <Flex key={output.url} justify="between" align="center">
-                      <Text size="2">{getFilenameFromUrl(output.url)}</Text>
-                      <Button
-                        size="1"
-                        variant="soft"
-                        onClick={() => onDownload(output.url, getFilenameFromUrl(output.url))}
-                      >
-                        <DownloadIcon />
-                        Download
-                      </Button>
-                    </Flex>
-                  ))}
+                  {outputs
+                    .slice()
+                    .sort((a, b) =>
+                      getFilenameFromUrl(a.url).localeCompare(getFilenameFromUrl(b.url)),
+                    )
+                    .map((output) => (
+                      <Flex key={output.url} justify="between" align="center">
+                        <Text size="2">{getFilenameFromUrl(output.url)}</Text>
+                        <Button
+                          size="1"
+                          variant="soft"
+                          onClick={() => onDownload(output.url, getFilenameFromUrl(output.url))}
+                        >
+                          <DownloadIcon />
+                          Download
+                        </Button>
+                      </Flex>
+                    ))}
                 </Flex>
               </Box>
             ) : null;

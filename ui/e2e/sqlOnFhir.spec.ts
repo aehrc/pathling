@@ -544,6 +544,114 @@ test.describe("SQL on FHIR page", () => {
         page.getByRole("button", { name: "Download" }),
       ).toBeVisible();
     });
+
+    test("output files are sorted alphabetically", async ({ page }) => {
+      // Use setupStandardMocks for base setup.
+      await setupStandardMocks(page);
+
+      // Mock reading ViewDefinition by ID (needed before export starts).
+      await page.route(/\/ViewDefinition\/[^/]+$/, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockViewDefinition1),
+        });
+      });
+
+      // Mock the export kick-off endpoint.
+      await page.route(/\/\$viewdefinition-export/, async (route) => {
+        await route.fulfill({
+          status: 202,
+          headers: {
+            "Content-Location":
+              "http://localhost:3000/fhir/$job?id=test-job-456",
+            "Access-Control-Expose-Headers": "Content-Location",
+          },
+          body: "",
+        });
+      });
+
+      // Mock job status with files in non-alphabetical order.
+      await page.route(/\/\$job/, async (route) => {
+        if (route.request().method() === "GET") {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/fhir+json",
+            body: JSON.stringify({
+              resourceType: "Parameters",
+              parameter: [
+                {
+                  name: "transactionTime",
+                  valueInstant: "2025-01-01T00:00:00Z",
+                },
+                { name: "requiresAccessToken", valueBoolean: false },
+                // Files intentionally in non-alphabetical order.
+                {
+                  name: "output",
+                  part: [
+                    { name: "name", valueString: "zebra_view" },
+                    {
+                      name: "url",
+                      valueUri:
+                        "http://localhost:3000/fhir/$result?job=test-job-456&file=zebra_view.ndjson",
+                    },
+                  ],
+                },
+                {
+                  name: "output",
+                  part: [
+                    { name: "name", valueString: "alpha_view" },
+                    {
+                      name: "url",
+                      valueUri:
+                        "http://localhost:3000/fhir/$result?job=test-job-456&file=alpha_view.ndjson",
+                    },
+                  ],
+                },
+                {
+                  name: "output",
+                  part: [
+                    { name: "name", valueString: "middle_view" },
+                    {
+                      name: "url",
+                      valueUri:
+                        "http://localhost:3000/fhir/$result?job=test-job-456&file=middle_view.ndjson",
+                    },
+                  ],
+                },
+              ],
+            }),
+          });
+        } else if (route.request().method() === "DELETE") {
+          await route.fulfill({ status: 204 });
+        }
+      });
+
+      await page.goto("/admin/sql-on-fhir");
+
+      // Select and execute a view definition.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Wait for results to load.
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
+
+      // Click export button.
+      await page.getByRole("button", { name: "Export" }).click();
+
+      // Wait for export to complete.
+      await expect(page.getByText("Completed")).toBeVisible();
+
+      // Get all output file text elements and verify they appear in sorted order.
+      const fileTexts = page.locator("text=/\\w+_view\\.ndjson/");
+      const fileNames = await fileTexts.allTextContents();
+      expect(fileNames).toEqual([
+        "alpha_view.ndjson",
+        "middle_view.ndjson",
+        "zebra_view.ndjson",
+      ]);
+    });
   });
 
   test.describe("Multiple queries", () => {

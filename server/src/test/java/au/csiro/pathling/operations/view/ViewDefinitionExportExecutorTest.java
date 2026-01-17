@@ -179,6 +179,36 @@ class ViewDefinitionExportExecutorTest {
     assertThat(outputs.get(0).fileUrls().get(0)).endsWith(".parquet");
   }
 
+  @Test
+  void parquetOutputFollowsNumberedNamingConvention() {
+    // This test verifies that parquet output files follow the numbered naming convention
+    // (e.g., patients.00000.parquet) to match NDJSON and CSV output.
+    final Patient patient = createPatient("test-1", "Smith");
+    executor = createExecutor(patient);
+
+    final FhirView view = createSimplePatientView();
+    final ViewInput viewInput = new ViewInput("patients", view);
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput),
+            null,
+            ViewExportFormat.PARQUET,
+            true,
+            Collections.emptySet(),
+            null);
+
+    final List<ViewExportOutput> outputs = executor.execute(request, UUID.randomUUID().toString());
+
+    assertThat(outputs).hasSize(1);
+    assertThat(outputs.get(0).fileUrls()).isNotEmpty();
+    // Verify files follow the numbered naming convention: {viewName}.{partitionId}.parquet
+    // e.g., patients.00000.parquet
+    final String filename = outputs.get(0).fileUrls().get(0);
+    assertThat(filename).matches(".*patients\\.\\d{5}\\.parquet$");
+  }
+
   // -------------------------------------------------------------------------
   // Multiple views tests
   // -------------------------------------------------------------------------
