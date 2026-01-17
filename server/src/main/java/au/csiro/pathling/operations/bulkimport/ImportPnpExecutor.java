@@ -154,7 +154,8 @@ public class ImportPnpExecutor {
       throw new InvalidUserInputError("Failed to create temporary directory: " + e.getMessage(), e);
     } catch (final Exception e) {
       log.error("Ping and pull import failed", e);
-      throw new InvalidUserInputError("Ping and pull import failed: " + e.getMessage(), e);
+      final String errorMessage = extractRootCauseMessage(e);
+      throw new InvalidUserInputError("Ping and pull import failed: " + errorMessage, e);
     } finally {
       // Clean up temporary directory.
       if (tempDir != null) {
@@ -322,5 +323,27 @@ public class ImportPnpExecutor {
     } catch (final IOException e) {
       log.warn("Failed to clean up temporary directory: {}", tempDir, e);
     }
+  }
+
+  /**
+   * Extracts a meaningful error message from an exception, traversing the cause chain if necessary.
+   * This handles cases where exceptions are wrapped with null or blank messages (common with Spark
+   * and Delta Lake exceptions).
+   *
+   * @param e the exception to extract the message from
+   * @return the first non-blank message found in the cause chain, or the exception class name if no
+   *     message is available
+   */
+  @Nonnull
+  static String extractRootCauseMessage(@Nonnull final Throwable e) {
+    Throwable current = e;
+    while (current != null) {
+      final String message = current.getMessage();
+      if (message != null && !message.isBlank()) {
+        return message;
+      }
+      current = current.getCause();
+    }
+    return e.getClass().getSimpleName();
   }
 }
