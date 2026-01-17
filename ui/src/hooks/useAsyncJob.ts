@@ -64,6 +64,8 @@ export interface UseAsyncJobResult<TRequest, TResult> {
   reset: () => void;
   /** Function to cancel the job. */
   cancel: () => Promise<void>;
+  /** Delete job files on server without changing status. Call after job completes. */
+  deleteJob: () => Promise<void>;
 }
 
 /**
@@ -168,5 +170,23 @@ export function useAsyncJob<TRequest, TKickOffResult, TStatusResult, TResult>(
     }
   }, []);
 
-  return { status, progress, result, error, request, startWith, reset, cancel };
+  const deleteJob = useCallback(async () => {
+    // Delete job files on server without changing status.
+    // This allows cleanup of completed exports.
+    if (cancelRef.current) {
+      await cancelRef.current();
+    }
+  }, []);
+
+  return {
+    status,
+    progress,
+    result,
+    error,
+    request,
+    startWith,
+    reset,
+    cancel,
+    deleteJob,
+  };
 }

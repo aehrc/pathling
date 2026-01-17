@@ -22,8 +22,9 @@
  * @author John Grimes
  */
 
-import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
+import { Cross2Icon, DownloadIcon, ReloadIcon, TrashIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
+import { useState } from "react";
 
 import { getViewExportOutputFiles } from "../../types/viewExport";
 import { formatDateTime } from "../../utils";
@@ -35,6 +36,8 @@ interface ViewExportCardProps {
   onCancel: () => void;
   onDownload: (url: string, filename: string) => void;
   onClose?: () => void;
+  /** Optional callback to delete the export files from the server. */
+  onDelete?: () => Promise<void>;
 }
 
 const STATUS_COLORS: Record<ViewExportJob["status"], "blue" | "green" | "red" | "gray"> = {
@@ -72,13 +75,38 @@ function getFilenameFromUrl(url: string): string {
  * @param root0.onCancel - Callback to cancel the export.
  * @param root0.onDownload - Callback to download an output file.
  * @param root0.onClose - Optional callback to close/remove the card.
+ * @param root0.onDelete - Optional callback to delete export files from the server.
  * @returns The view export card component.
  */
-export function ViewExportCard({ job, onCancel, onDownload, onClose }: ViewExportCardProps) {
+export function ViewExportCard({
+  job,
+  onCancel,
+  onDownload,
+  onClose,
+  onDelete,
+}: Readonly<ViewExportCardProps>) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const isActive = job.status === "pending" || job.status === "in_progress";
   const showProgress = isActive && job.progress !== null;
+  const canDelete = job.status === "completed" && onDelete !== undefined;
   const canClose =
     job.status === "completed" || job.status === "cancelled" || job.status === "failed";
+
+  /**
+   * Handles the delete action by calling onDelete to clean up server files,
+   * then closing the card.
+   */
+  async function handleDelete() {
+    if (!onDelete) return;
+    setIsDeleting(true);
+    try {
+      await onDelete();
+    } finally {
+      setIsDeleting(false);
+      onClose?.();
+    }
+  }
 
   return (
     <Card size="1" mt="3">
@@ -103,7 +131,25 @@ export function ViewExportCard({ job, onCancel, onDownload, onClose }: ViewExpor
               Cancel
             </Button>
           )}
-          {canClose && onClose && (
+          {canDelete && onClose && (
+            <Flex gap="2">
+              <Button
+                size="1"
+                variant="soft"
+                color="red"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                <TrashIcon />
+                Delete
+              </Button>
+              <Button size="1" variant="soft" color="gray" onClick={onClose}>
+                <Cross2Icon />
+                Close
+              </Button>
+            </Flex>
+          )}
+          {canClose && !canDelete && onClose && (
             <Button size="1" variant="soft" color="gray" onClick={onClose}>
               <Cross2Icon />
               Close

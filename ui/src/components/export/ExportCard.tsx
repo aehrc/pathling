@@ -22,9 +22,9 @@
  * @author John Grimes
  */
 
-import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
+import { Cross2Icon, DownloadIcon, ReloadIcon, TrashIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useBulkExport, useDownloadFile } from "../../hooks";
 import { getExportOutputFiles } from "../../types/export";
@@ -83,8 +83,9 @@ function getFilenameFromUrl(url: string): string {
 export function ExportCard({ request, createdAt, onError, onClose }: Readonly<ExportCardProps>) {
   const handleDownloadFile = useDownloadFile((err) => onError(err.message));
   const hasStartedRef = useRef(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const { startWith, cancel, status, result, error, progress } = useBulkExport();
+  const { startWith, cancel, deleteJob, status, result, error, progress } = useBulkExport();
 
   // Extract output files from the Parameters result.
   const outputFiles = result ? getExportOutputFiles(result) : [];
@@ -92,8 +93,23 @@ export function ExportCard({ request, createdAt, onError, onClose }: Readonly<Ex
   // Derive isRunning from status.
   const isRunning = status === "pending" || status === "in-progress";
 
-  // Determine if the close button should be shown.
+  // Determine button visibility.
+  const canDelete = status === "complete";
   const canClose = status === "complete" || status === "cancelled" || status === "error";
+
+  /**
+   * Handles the delete action by calling deleteJob to clean up server files,
+   * then closing the card.
+   */
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      await deleteJob();
+    } finally {
+      setIsDeleting(false);
+      onClose?.();
+    }
+  }
 
   // Start the export immediately on mount.
   useEffect(() => {
@@ -135,7 +151,25 @@ export function ExportCard({ request, createdAt, onError, onClose }: Readonly<Ex
               Cancel
             </Button>
           )}
-          {canClose && onClose && (
+          {canDelete && onClose && (
+            <Flex gap="2">
+              <Button
+                size="1"
+                variant="soft"
+                color="red"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                <TrashIcon />
+                Delete
+              </Button>
+              <Button size="1" variant="soft" color="gray" onClick={onClose}>
+                <Cross2Icon />
+                Close
+              </Button>
+            </Flex>
+          )}
+          {canClose && !canDelete && onClose && (
             <Button size="1" variant="soft" color="gray" onClick={onClose}>
               <Cross2Icon />
               Close

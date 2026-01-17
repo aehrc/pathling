@@ -69,7 +69,7 @@ export function ViewExportCardWrapper({
     onError: (err) => onError(err.message),
   });
 
-  const { startWith, cancel, status, result, error, progress, request } = viewExport;
+  const { startWith, cancel, deleteJob, status, result, error, progress, request } = viewExport;
 
   // Start the export on mount.
   useEffect(() => {
@@ -111,6 +111,7 @@ export function ViewExportCardWrapper({
       onCancel={cancel}
       onDownload={handleDownloadError}
       onClose={onClose}
+      onDelete={deleteJob}
     />
   );
 }
