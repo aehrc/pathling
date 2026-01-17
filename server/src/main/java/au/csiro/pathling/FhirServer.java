@@ -23,7 +23,7 @@ import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.cache.EntityTagInterceptor;
 import au.csiro.pathling.config.OperationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.EncoderBuilder;
+import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.fhir.ConformanceProvider;
@@ -76,7 +76,6 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.cors.CorsConfiguration;
-import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * The main FHIR server servlet that handles all FHIR REST interactions.
@@ -116,8 +115,11 @@ public class FhirServer extends RestfulServer {
   private static final int MAX_PAGE_SIZE = Integer.MAX_VALUE;
   private static final int SEARCH_MAP_SIZE = 10;
 
-  /** The resource type code for ViewDefinition resources from the SQL on FHIR specification. */
-  public static final String VIEW_DEFINITION = "ViewDefinition";
+  /**
+   * The resource type code for ViewDefinition resources from the SQL on FHIR specification.
+   * Delegates to the centralised constant in ResourceTypes.
+   */
+  public static final String VIEW_DEFINITION = ResourceTypes.VIEW_DEFINITION;
 
   @Nonnull private final transient ServerConfiguration configuration;
 
@@ -538,7 +540,7 @@ public class FhirServer extends RestfulServer {
   @Nonnull
   public static Set<ResourceType> unsupportedResourceTypes() {
     final Set<Enumerations.ResourceType> unsupportedResourceTypes =
-        CollectionConverters.asJava(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
+        ResourceTypes.UNSUPPORTED_RESOURCES.stream()
             .map(Enumerations.ResourceType::fromCode)
             .collect(Collectors.toCollection(HashSet::new));
     unsupportedResourceTypes.add(ResourceType.NULL);
@@ -559,6 +561,6 @@ public class FhirServer extends RestfulServer {
    * @return true if the resource code is a supported custom type, false otherwise
    */
   public static boolean isCustomResourceType(@Nonnull final String resourceCode) {
-    return VIEW_DEFINITION.equals(resourceCode);
+    return ResourceTypes.isCustomResourceType(resourceCode);
   }
 }

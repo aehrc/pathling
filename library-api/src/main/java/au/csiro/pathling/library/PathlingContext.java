@@ -23,9 +23,9 @@ import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
-import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.sql.PathlingUdfConfigurer;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
@@ -50,9 +50,7 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A class designed to provide access to selected Pathling functionality from a language library
@@ -592,15 +590,7 @@ public class PathlingContext {
    * @return true if the resource type is supported, false otherwise
    */
   public boolean isResourceTypeSupported(@Nonnull final String resourceType) {
-    if (EncoderBuilder.UNSUPPORTED_RESOURCES().contains(resourceType)) {
-      return false;
-    }
-    try {
-      final ResourceType match = ResourceType.fromCode(resourceType);
-      return match != null;
-    } catch (final FHIRException e) {
-      return false;
-    }
+    return ResourceTypes.isSupported(resourceType);
   }
 
   /**
@@ -612,29 +602,7 @@ public class PathlingContext {
    */
   @Nonnull
   public Optional<String> matchSupportedResourceType(@Nonnull final String resourceTypeString) {
-    if (EncoderBuilder.UNSUPPORTED_RESOURCES().contains(resourceTypeString)) {
-      return Optional.empty();
-    }
-
-    try {
-      // Try exact match first.
-      final ResourceType exactMatch = ResourceType.fromCode(resourceTypeString);
-      if (exactMatch != null) {
-        return Optional.of(exactMatch.toCode());
-      }
-    } catch (final FHIRException ignored) {
-      // Continue to case-insensitive search
-    }
-
-    // Try case-insensitive match.
-    for (final ResourceType resourceType : ResourceType.values()) {
-      if (resourceTypeString.equalsIgnoreCase(resourceType.toCode())
-          && !EncoderBuilder.UNSUPPORTED_RESOURCES().contains(resourceType.toCode())) {
-        return Optional.ofNullable(resourceType.toCode());
-      }
-    }
-
-    return Optional.empty();
+    return ResourceTypes.matchSupportedResourceType(resourceTypeString);
   }
 
   @Nonnull

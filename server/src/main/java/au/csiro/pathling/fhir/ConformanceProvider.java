@@ -29,6 +29,7 @@ import au.csiro.pathling.PathlingServerVersion;
 import au.csiro.pathling.cache.Cacheable;
 import au.csiro.pathling.config.OperationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.context.FhirContext;
@@ -388,7 +389,7 @@ public class ConformanceProvider
     resources2.add(opDefResource);
 
     // Add ViewDefinition as a custom resource type.
-    final String viewDefCode = "ViewDefinition";
+    final String viewDefCode = ResourceTypes.VIEW_DEFINITION;
     final CapabilityStatementRestResourceComponent viewDefResource =
         new CapabilityStatementRestResourceComponent(new CodeType(viewDefCode));
     viewDefResource.setProfile(
