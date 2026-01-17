@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Common functionality for file-based sources.
@@ -74,9 +73,9 @@ public abstract class FileSource extends DatasetSource {
    * An additional filter to exclude specific resource types from being processed. This filter is
    * applied after standard resource type validation and extension checking. Use this to selectively
    * exclude resource types that should not be loaded, even if they are present in the source files
-   * and would otherwise be valid.
+   * and would otherwise be valid. The predicate receives the resource type code as a string.
    */
-  @Nonnull protected final Predicate<ResourceType> additionalResourceTypeFilter;
+  @Nonnull protected final Predicate<String> additionalResourceTypeFilter;
 
   /**
    * Path-based constructor that scans a directory to discover FHIR data files.
@@ -99,7 +98,8 @@ public abstract class FileSource extends DatasetSource {
    * @param reader a {@link DataFrameReader} that can be used to read the source files
    * @param transformer a function that transforms a Dataset containing raw source data of a
    *     specified resource type into a Dataset containing the imported data
-   * @param additionalResourceTypeFilter filter to filter out specific resource types if desired
+   * @param additionalResourceTypeFilter filter to filter out specific resource types if desired,
+   *     receives the resource type code as a string
    */
   protected FileSource(
       @Nonnull final PathlingContext context,
@@ -108,7 +108,7 @@ public abstract class FileSource extends DatasetSource {
       @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
-      @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
+      @Nonnull final Predicate<String> additionalResourceTypeFilter) {
     this(
         context,
         retrieveFilesFromPath(path, context, fileNameMapper),
@@ -144,7 +144,8 @@ public abstract class FileSource extends DatasetSource {
    * @param reader a {@link DataFrameReader} that can be used to read the source files
    * @param transformer a function that transforms a Dataset containing raw source data of a
    *     specified resource type into a Dataset containing the imported data
-   * @param additionalResourceTypeFilter filter to filter out specific resource types if desired
+   * @param additionalResourceTypeFilter filter to filter out specific resource types if desired,
+   *     receives the resource type code as a string
    */
   protected FileSource(
       @Nonnull final PathlingContext context,
@@ -152,7 +153,7 @@ public abstract class FileSource extends DatasetSource {
       @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
-      @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
+      @Nonnull final Predicate<String> additionalResourceTypeFilter) {
     super(context);
     this.extension = extension;
     this.reader = reader;
@@ -248,8 +249,8 @@ public abstract class FileSource extends DatasetSource {
         .filter(entry -> !entry.getValue().isEmpty())
         // Filter out any resource codes that are not supported.
         .filter(entry -> context.isResourceTypeSupported(entry.getKey()))
-        // Filter out any resource that should be explicitly ignored
-        .filter(entry -> additionalResourceTypeFilter.test(ResourceType.fromCode(entry.getKey())))
+        // Filter out any resource that should be explicitly ignored.
+        .filter(entry -> additionalResourceTypeFilter.test(entry.getKey()))
         .collect(
             Collectors.toMap(
                 Map.Entry::getKey,

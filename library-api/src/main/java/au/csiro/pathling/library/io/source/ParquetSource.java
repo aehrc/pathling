@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A class for making FHIR data in Parquet format available for query. It is assumed that the schema
@@ -46,7 +45,7 @@ public class ParquetSource extends FileSource {
    * @param path the path to the Parquet file or directory
    */
   public ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
-    this(context, path, (Predicate<ResourceType>) ignored -> true);
+    this(context, path, (Predicate<String>) ignored -> true);
   }
 
   /**
@@ -55,12 +54,13 @@ public class ParquetSource extends FileSource {
    *
    * @param context the PathlingContext to use
    * @param path the path to the Parquet file or directory
-   * @param additionalResourceTypeFilter predicate to filter resource types to be loaded
+   * @param additionalResourceTypeFilter predicate to filter resource types to be loaded, receives
+   *     the resource type code as a string
    */
   public ParquetSource(
       @Nonnull final PathlingContext context,
       @Nonnull final String path,
-      @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
+      @Nonnull final Predicate<String> additionalResourceTypeFilter) {
     super(
         context,
         path,
@@ -106,12 +106,13 @@ public class ParquetSource extends FileSource {
    *
    * @param context the PathlingContext to use
    * @param files a map where keys are resource type names and values are collections of file paths
-   * @param additionalResourceTypeFilter predicate to filter resource types to be loaded
+   * @param additionalResourceTypeFilter predicate to filter resource types to be loaded, receives
+   *     the resource type code as a string
    */
   public ParquetSource(
       @Nonnull final PathlingContext context,
       @Nonnull final Map<String, Collection<String>> files,
-      @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
+      @Nonnull final Predicate<String> additionalResourceTypeFilter) {
     super(
         context,
         files,

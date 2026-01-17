@@ -133,9 +133,7 @@ public class ImportExecutor {
           case NDJSON -> new NdjsonSource(pathlingContext, resourcesWithAuthority, "ndjson");
           case PARQUET ->
               new ParquetSource(
-                  pathlingContext,
-                  resourcesWithAuthority,
-                  (Predicate<ResourceType>) ignored -> true);
+                  pathlingContext, resourcesWithAuthority, (Predicate<String>) ignored -> true);
         };
 
     // Always write to Delta format regardless of source format.

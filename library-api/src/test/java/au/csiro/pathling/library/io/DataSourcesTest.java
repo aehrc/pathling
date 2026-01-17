@@ -475,8 +475,7 @@ class DataSourcesTest {
     assertTrue(source1.getResourceTypes().contains("Condition"));
 
     // Test 2: Constructor with path and resource type filter
-    final Predicate<org.hl7.fhir.r4.model.Enumerations.ResourceType> filter =
-        resourceType -> resourceType == org.hl7.fhir.r4.model.Enumerations.ResourceType.PATIENT;
+    final Predicate<String> filter = resourceType -> resourceType.equals("Patient");
     final QueryableDataSource source2 =
         new au.csiro.pathling.library.io.source.ParquetSource(
             pathlingContext, TEST_DATA_PATH.resolve("parquet").toString(), filter);
@@ -503,8 +502,7 @@ class DataSourcesTest {
     final Map<String, Collection<String>> filesMap = new java.util.HashMap<>();
     filesMap.put("Patient", Collections.singletonList(patientFile.toString()));
 
-    final Predicate<org.hl7.fhir.r4.model.Enumerations.ResourceType> filterForTest4 =
-        resourceType -> true;
+    final Predicate<String> filterForTest4 = resourceType -> true;
     final QueryableDataSource source4 =
         new au.csiro.pathling.library.io.source.ParquetSource(
             pathlingContext, filesMap, filterForTest4);
@@ -645,6 +643,35 @@ class DataSourcesTest {
     final Dataset<Row> patientData = source2.read("Patient");
     assertTrue(patientData.schema().fieldNames().length > 0);
     assertTrue(patientData.count() > 0);
+  }
+
+  @Test
+  void deltaSourceIncludesViewDefinitionInResourceTypes() throws IOException {
+    // Create a ViewDefinition Delta table in the temp directory. ViewDefinition is a custom
+    // resource type that is not in the HAPI FHIR ResourceType enum but is supported by Pathling.
+    // This test verifies that the Delta source can read ViewDefinition resources.
+    final Path deltaDir = temporaryDirectory.resolve("delta-viewdef");
+    Files.createDirectories(deltaDir);
+
+    // Create a minimal ViewDefinition parquet file. We use the Patient schema as a placeholder
+    // since we only need the file to exist with the correct name for the source to discover it.
+    final Dataset<Row> patientData =
+        spark
+            .read()
+            .format("delta")
+            .load(TEST_DATA_PATH.resolve("delta").resolve("Patient.parquet").toString());
+
+    // Write it as a ViewDefinition Delta table.
+    patientData.write().format("delta").save(deltaDir.resolve("ViewDefinition.parquet").toString());
+
+    // Read the Delta source. This should not throw an exception even though ViewDefinition
+    // is not in the HAPI FHIR ResourceType enum.
+    final QueryableDataSource source = pathlingContext.read().delta(deltaDir.toString());
+
+    // ViewDefinition should be in getResourceTypes().
+    assertTrue(
+        source.getResourceTypes().contains("ViewDefinition"),
+        "ViewDefinition should be included in getResourceTypes()");
   }
 
   // Tables (CatalogSink) Tests
