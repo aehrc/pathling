@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.config.AsyncConfiguration;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
@@ -65,6 +66,11 @@ class JobProviderSecurityTest {
     final AuthorizationConfiguration authConfig = mock(AuthorizationConfiguration.class);
     when(serverConfiguration.getAuth()).thenReturn(authConfig);
     when(authConfig.isEnabled()).thenReturn(true);
+
+    // Configure async settings for cache headers.
+    final AsyncConfiguration asyncConfig = mock(AsyncConfiguration.class);
+    when(asyncConfig.getCacheMaxAge()).thenReturn(1);
+    when(serverConfiguration.getAsync()).thenReturn(asyncConfig);
 
     // Create mock SparkSession.
     final SparkSession sparkSession = mock(SparkSession.class);

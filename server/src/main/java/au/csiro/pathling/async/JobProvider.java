@@ -21,7 +21,6 @@ import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.cache.EntityTagInterceptor;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
@@ -110,6 +109,17 @@ public class JobProvider {
   }
 
   /**
+   * Sets cache headers for async endpoint responses. These endpoints use TTL-based caching instead
+   * of ETag-based revalidation to ensure fresh responses for job status polling.
+   *
+   * @param response the HTTP response to set headers on
+   */
+  private void setAsyncCacheHeaders(@Nonnull final HttpServletResponse response) {
+    final int maxAge = configuration.getAsync().getCacheMaxAge();
+    response.setHeader("Cache-Control", "max-age=" + maxAge);
+  }
+
+  /**
    * Queries a running job for its progress, completion status and final result.
    *
    * @param id the ID of the running job
@@ -124,6 +134,11 @@ public class JobProvider {
       @jakarta.validation.constraints.NotNull final HttpServletRequest request,
       @Nullable final HttpServletResponse response) {
     log.debug("Received $job request with id: {}", id);
+
+    // Set cache headers early - applies to all responses (200, 202, 404).
+    if (response != null) {
+      setAsyncCacheHeaders(response);
+    }
 
     final Job<?> job = getJob(id);
 
@@ -296,11 +311,7 @@ public class JobProvider {
       @Nonnull final Job<?> job) {
     requireNonNull(response);
 
-    // Ensure incomplete responses are never cached.
-    if (EntityTagInterceptor.requestIsCacheable(request)) {
-      EntityTagInterceptor.makeRequestNonCacheable(response, configuration);
-    }
-
+    // Cache headers are already set by the job() method using TTL-based caching.
     setProgressHeader(response, job);
 
     throw new ProcessingNotCompletedException("Processing", buildProcessingOutcome());

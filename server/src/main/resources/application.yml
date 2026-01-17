@@ -178,6 +178,9 @@ pathling:
       - Accept
       - Accept-Encoding
 
+    # Max-age in seconds for $job and $result endpoint responses.
+    cacheMaxAge: 1
+
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.
 # Here is the full list: https://spark.apache.org/docs/latest/configuration.html

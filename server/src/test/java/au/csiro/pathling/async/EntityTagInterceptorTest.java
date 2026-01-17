@@ -219,4 +219,32 @@ class EntityTagInterceptorTest {
 
     verifyCacheableResponseHeaders();
   }
+
+  @Test
+  void jobEndpointSkipsEtagValidation() {
+    // $job requests should not use ETag-based revalidation. They use TTL-based caching instead.
+    setupCacheableRequest("GET", TAG, "$job");
+
+    // Should NOT throw NotModifiedException - let JobProvider handle caching.
+    interceptor.checkIncomingTag(request, requestDetails, response);
+
+    // Should not check database cache key for $job.
+    verify(database, org.mockito.Mockito.never())
+        .cacheKeyMatches(org.mockito.ArgumentMatchers.anyString());
+    verifyCacheableResponseHeaders();
+    verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
+  }
+
+  @Test
+  void resultEndpointSkipsEtagValidation() {
+    // $result requests should not use ETag-based revalidation. They use TTL-based caching instead.
+    setupCacheableRequest("GET", TAG, "$result");
+
+    interceptor.checkIncomingTag(request, requestDetails, response);
+
+    verify(database, org.mockito.Mockito.never())
+        .cacheKeyMatches(org.mockito.ArgumentMatchers.anyString());
+    verifyCacheableResponseHeaders();
+    verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
+  }
 }

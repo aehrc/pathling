@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import au.csiro.pathling.UnitTestDependencies;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.RequestTagFactory;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
@@ -67,9 +68,12 @@ class ExportOperationDownloadTest {
 
   @Autowired private ExportResultRegistry exportResultRegistry;
 
+  @Autowired private ServerConfiguration serverConfiguration;
+
   @BeforeEach
   void setup() throws IOException {
-    exportResultProvider = new ExportResultProvider(exportResultRegistry, "file://" + tempDir);
+    exportResultProvider =
+        new ExportResultProvider(exportResultRegistry, "file://" + tempDir, serverConfiguration);
 
     // Create the jobs directory structure
     final Path jobsDir = tempDir.resolve("jobs");

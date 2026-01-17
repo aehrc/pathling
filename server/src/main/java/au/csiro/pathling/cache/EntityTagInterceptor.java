@@ -113,6 +113,14 @@ public class EntityTagInterceptor {
         return;
       }
 
+      // Skip ETag validation for async endpoints - they use TTL-based caching instead.
+      final String operation = requestDetails.getOperation();
+      if ("$job".equals(operation) || "$result".equals(operation)) {
+        log.debug("Async endpoint {}, skipping ETag validation", operation);
+        setMissResponseHeaders(response);
+        return;
+      }
+
       // If the request is for the conformance statement, we use the conformance provider to
       // determine whether it is fresh or not. The freshness of all other requests is determined by
       // the database.

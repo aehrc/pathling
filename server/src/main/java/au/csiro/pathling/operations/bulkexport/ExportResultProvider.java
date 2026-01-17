@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.bulkexport;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.security.OperationAccess;
@@ -59,19 +60,24 @@ public class ExportResultProvider {
 
   @Nonnull private final String databasePath;
 
+  @Nonnull private final ServerConfiguration configuration;
+
   /**
    * Creates a new instance of the export result provider.
    *
    * @param exportResultRegistry the registry for tracking export results
    * @param databasePath the path to the database storage location
+   * @param configuration the server configuration for cache settings
    */
   @Autowired
   public ExportResultProvider(
       @Nonnull final ExportResultRegistry exportResultRegistry,
       @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          final String databasePath) {
+          final String databasePath,
+      @Nonnull final ServerConfiguration configuration) {
     this.exportResultRegistry = exportResultRegistry;
     this.databasePath = databasePath;
+    this.configuration = configuration;
   }
 
   /**
@@ -89,6 +95,10 @@ public class ExportResultProvider {
       @Nonnull @OperationParam(name = "file") final String file,
       @Nullable final HttpServletResponse response) {
     requireNonNull(response);
+
+    // Set cache headers for async endpoint responses using TTL-based caching.
+    final int maxAge = configuration.getAsync().getCacheMaxAge();
+    response.setHeader("Cache-Control", "max-age=" + maxAge);
 
     log.info("Retrieving export result: {}", jobId);
 

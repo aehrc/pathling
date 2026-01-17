@@ -35,4 +35,10 @@ public class AsyncConfiguration {
    * of the async request.
    */
   @NotNull private List<String> varyHeadersExcludedFromCacheKey;
+
+  /**
+   * The max-age value (in seconds) for Cache-Control headers on async endpoint responses ($job and
+   * $result). Defaults to 1 second.
+   */
+  @NotNull private int cacheMaxAge = 1;
 }
