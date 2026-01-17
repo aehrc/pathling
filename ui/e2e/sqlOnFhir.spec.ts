@@ -757,6 +757,279 @@ test.describe("SQL on FHIR page", () => {
     });
   });
 
+  test.describe("Multiple exports", () => {
+    /**
+     * Sets up mocks for export operations with configurable behaviour.
+     *
+     * @param page - The Playwright page object.
+     * @param options - Configuration options.
+     * @param options.exportDelayMs - Delay before export job completes.
+     */
+    async function setupExportMocks(
+      page: Page,
+      options: { exportDelayMs?: number } = {},
+    ) {
+      const { exportDelayMs = 0 } = options;
+
+      // Mock reading ViewDefinition by ID.
+      await page.route(/\/ViewDefinition\/[^/]+$/, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockViewDefinition1),
+        });
+      });
+
+      // Mock the export kick-off endpoint.
+      let exportCounter = 0;
+      await page.route(/\/\$viewdefinition-export/, async (route) => {
+        exportCounter++;
+        await route.fulfill({
+          status: 202,
+          headers: {
+            "Content-Location": `http://localhost:3000/fhir/$job?id=export-job-${exportCounter}`,
+            "Access-Control-Expose-Headers": "Content-Location",
+          },
+          body: "",
+        });
+      });
+
+      // Mock job status endpoint.
+      await page.route(/\/\$job/, async (route) => {
+        if (route.request().method() === "GET") {
+          if (exportDelayMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, exportDelayMs));
+          }
+          await route.fulfill({
+            status: 200,
+            contentType: "application/fhir+json",
+            body: JSON.stringify({
+              resourceType: "Parameters",
+              parameter: [
+                {
+                  name: "transactionTime",
+                  valueInstant: "2025-01-01T00:00:00Z",
+                },
+                { name: "requiresAccessToken", valueBoolean: false },
+                {
+                  name: "output",
+                  part: [
+                    { name: "name", valueString: "patient_demographics" },
+                    {
+                      name: "url",
+                      valueUri:
+                        "http://localhost:3000/fhir/$result?file=patient_demographics.ndjson",
+                    },
+                  ],
+                },
+              ],
+            }),
+          });
+        } else if (route.request().method() === "DELETE") {
+          await route.fulfill({ status: 204 });
+        }
+      });
+    }
+
+    test("clicking export multiple times creates multiple export cards", async ({
+      page,
+    }) => {
+      await setupStandardMocks(page);
+      await setupExportMocks(page);
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute a query.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // Wait for results.
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
+
+      // Click export button twice.
+      await page.getByRole("button", { name: "Export" }).click();
+      await expect(page.getByText("Completed").first()).toBeVisible();
+      await page.getByRole("button", { name: "Export" }).click();
+
+      // Verify two export cards are visible.
+      await expect(page.getByText("Completed")).toHaveCount(2);
+    });
+
+    test("most recent export appears first", async ({ page }) => {
+      await setupStandardMocks(page);
+      await setupExportMocks(page);
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute a query.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
+
+      // Start first export and wait for completion.
+      await page.getByRole("button", { name: "Export" }).click();
+      await expect(page.getByText("Completed").first()).toBeVisible();
+
+      // Start second export.
+      await page.getByRole("button", { name: "Export" }).click();
+      await expect(page.getByText("Completed")).toHaveCount(2);
+
+      // Get the timestamps of the two export cards.
+      const timestamps = await page
+        .locator("text=/\\d{1,2}:\\d{2}:\\d{2}/")
+        .allTextContents();
+      // Should have at least 2 timestamps (one for query card + one per export).
+      expect(timestamps.length).toBeGreaterThanOrEqual(2);
+    });
+
+    test("close button visible on completed export", async ({ page }) => {
+      await setupStandardMocks(page);
+      await setupExportMocks(page);
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute query and export.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
+
+      await page.getByRole("button", { name: "Export" }).click();
+      await expect(page.getByText("Completed")).toBeVisible();
+
+      // Verify close button is visible on export card (should have 2 Close buttons:
+      // one for query card, one for export card).
+      await expect(page.getByRole("button", { name: "Close" })).toHaveCount(2);
+    });
+
+    test("clicking close button removes export card", async ({ page }) => {
+      await setupStandardMocks(page);
+      await setupExportMocks(page);
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute query and export.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
+
+      await page.getByRole("button", { name: "Export" }).click();
+      await expect(page.getByText("Completed")).toBeVisible();
+
+      // Click close button on export card (the second Close button).
+      const closeButtons = page.getByRole("button", { name: "Close" });
+      await closeButtons.nth(1).click();
+
+      // Verify export card is removed but query card remains.
+      await expect(page.getByText("Completed")).not.toBeVisible();
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
+    });
+
+    test("close button visible on cancelled export", async ({ page }) => {
+      await setupStandardMocks(page);
+      await setupExportMocks(page, { exportDelayMs: 5000 });
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute query and start export.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
+
+      await page.getByRole("button", { name: "Export" }).click();
+
+      // Wait for export to start (Cancel button visible).
+      await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+
+      // Cancel the export.
+      await page.getByRole("button", { name: "Cancel" }).click();
+
+      // Verify close button appears after cancellation.
+      await expect(page.getByText("Cancelled")).toBeVisible();
+      // Should have 2 Close buttons after cancellation.
+      await expect(page.getByRole("button", { name: "Close" })).toHaveCount(2);
+    });
+
+    test("close button visible on failed export", async ({ page }) => {
+      await setupStandardMocks(page);
+
+      // Mock reading ViewDefinition by ID.
+      await page.route(/\/ViewDefinition\/[^/]+$/, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/fhir+json",
+          body: JSON.stringify(mockViewDefinition1),
+        });
+      });
+
+      // Mock export kick-off to succeed.
+      await page.route(/\/\$viewdefinition-export/, async (route) => {
+        await route.fulfill({
+          status: 202,
+          headers: {
+            "Content-Location": "http://localhost:3000/fhir/$job?id=failed-job",
+            "Access-Control-Expose-Headers": "Content-Location",
+          },
+          body: "",
+        });
+      });
+
+      // Mock job status to return error.
+      await page.route(/\/\$job/, async (route) => {
+        if (route.request().method() === "GET") {
+          await route.fulfill({
+            status: 500,
+            contentType: "application/fhir+json",
+            body: JSON.stringify({
+              resourceType: "OperationOutcome",
+              issue: [{ severity: "error", diagnostics: "Export failed" }],
+            }),
+          });
+        } else if (route.request().method() === "DELETE") {
+          await route.fulfill({ status: 204 });
+        }
+      });
+
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute query and export.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
+
+      await page.getByRole("button", { name: "Export" }).click();
+
+      // Verify error is shown and close button is visible.
+      await expect(page.getByText("Failed", { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Close" })).toHaveCount(2);
+    });
+
+    test("query card close button removes entire card including exports", async ({
+      page,
+    }) => {
+      await setupStandardMocks(page);
+      await setupExportMocks(page);
+      await page.goto("/admin/sql-on-fhir");
+
+      // Execute query and export.
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Patient Demographics" }).click();
+      await page.getByRole("button", { name: "Execute" }).click();
+      await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
+
+      await page.getByRole("button", { name: "Export" }).click();
+      await expect(page.getByText("Completed")).toBeVisible();
+
+      // Click close button on query card (the first Close button).
+      const closeButtons = page.getByRole("button", { name: "Close" });
+      await closeButtons.first().click();
+
+      // Verify entire card including exports is removed.
+      await expect(page.getByRole("cell", { name: "Smith" })).not.toBeVisible();
+      await expect(page.getByText("Completed")).not.toBeVisible();
+    });
+  });
+
   test.describe("Close button", () => {
     test("close button visible when query is complete", async ({ page }) => {
       await setupStandardMocks(page);

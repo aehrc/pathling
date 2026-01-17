@@ -18,6 +18,7 @@
 /**
  * Card component that displays and manages a single view query job.
  * Each card manages its own query lifecycle via the useViewRun hook.
+ * Supports multiple concurrent exports, each displayed in its own card.
  *
  * @author John Grimes
  */
@@ -27,23 +28,30 @@ import { Badge, Box, Button, Card, Code, Flex, Spinner, Table, Text } from "@rad
 import { useCallback, useEffect, useState } from "react";
 
 import { ExportControls } from "./ExportControls";
-import { ViewExportCard } from "./ViewExportCard";
+import { ViewExportCardWrapper } from "./ViewExportCardWrapper";
 import { read } from "../../api";
 import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
-import { useDownloadFile, useViewExport, useViewRun } from "../../hooks";
+import { useViewRun } from "../../hooks";
 import { formatDateTime } from "../../utils";
 
 import type { ViewDefinition } from "../../api";
 import type { ViewExportOutputFormat } from "../../hooks";
-import type { ViewExportJob } from "../../types/job";
-import type { ViewExportManifest } from "../../types/viewExport";
 import type { ViewJob } from "../../types/viewJob";
 
 interface ViewCardProps {
   job: ViewJob;
   onError: (message: string) => void;
   onClose?: () => void;
+}
+
+/**
+ * Represents a single export instance within a ViewCard.
+ */
+interface ViewExportInstance {
+  id: string;
+  format: ViewExportOutputFormat;
+  createdAt: Date;
 }
 
 /**
@@ -95,23 +103,19 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
   const viewRun = useViewRun();
   const { execute, status, result, error } = viewRun;
 
-  // Use the view export hook for exporting results.
-  const viewExport = useViewExport({
-    onError: (err) => onError(err.message),
-  });
+  // Track multiple exports within this card.
+  const [exports, setExports] = useState<ViewExportInstance[]>([]);
 
-  // Track download errors.
-  const [downloadError, setDownloadError] = useState<Error | null>(null);
-  const handleDownload = useDownloadFile(setDownloadError);
+  // Cache the resolved view definition to avoid refetching for each export.
+  const [cachedViewDefinition, setCachedViewDefinition] = useState<ViewDefinition | null>(null);
 
   // Derive states.
   const isRunning = status === "pending";
   const isComplete = status === "success";
   const isError = status === "error";
-  const isExportRunning = viewExport.status === "pending" || viewExport.status === "in-progress";
 
   // Determine if the close button should be shown.
-  const canClose = (isComplete || isError) && !isExportRunning;
+  const canClose = isComplete || isError;
 
   // Start the query when component mounts with idle status.
   // Using status === "idle" instead of a ref ensures the mutation starts on the
@@ -134,65 +138,45 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
     }
   }, [error, onError]);
 
-  // Handle export.
+  // Handle export by creating a new export instance.
   const handleExport = useCallback(
     async (format: ViewExportOutputFormat) => {
       if (!fhirBaseUrl) return;
 
-      // Get or build the view definition.
-      let viewDefinition: ViewDefinition;
-      if (job.mode === "stored" && job.viewDefinitionId) {
-        // Fetch the stored view definition.
-        const resource = await read(fhirBaseUrl, {
-          resourceType: "ViewDefinition",
-          id: job.viewDefinitionId,
-          accessToken,
-        });
-        viewDefinition = resource as ViewDefinition;
-      } else if (job.mode === "inline" && job.viewDefinitionJson) {
-        viewDefinition = JSON.parse(job.viewDefinitionJson);
-      } else {
-        throw new Error("No view definition available");
+      // Get or build the view definition (cache for subsequent exports).
+      let viewDefinition = cachedViewDefinition;
+      if (!viewDefinition) {
+        if (job.mode === "stored" && job.viewDefinitionId) {
+          // Fetch the stored view definition.
+          const resource = await read(fhirBaseUrl, {
+            resourceType: "ViewDefinition",
+            id: job.viewDefinitionId,
+            accessToken,
+          });
+          viewDefinition = resource as ViewDefinition;
+        } else if (job.mode === "inline" && job.viewDefinitionJson) {
+          viewDefinition = JSON.parse(job.viewDefinitionJson);
+        } else {
+          throw new Error("No view definition available");
+        }
+        setCachedViewDefinition(viewDefinition);
       }
 
-      viewExport.startWith({
-        views: [{ viewDefinition }],
+      // Create a new export instance and prepend it (most recent first).
+      const newExport: ViewExportInstance = {
+        id: crypto.randomUUID(),
         format,
-        header: true,
-      });
+        createdAt: new Date(),
+      };
+      setExports((prev) => [newExport, ...prev]);
     },
-    [job, fhirBaseUrl, accessToken, viewExport],
+    [job, fhirBaseUrl, accessToken, cachedViewDefinition],
   );
 
-  const handleCancelExport = () => void viewExport.cancel();
-
-  // Build export job structure for the ViewExportCard.
-  const exportJob: ViewExportJob | null =
-    isExportRunning || viewExport.result
-      ? {
-          id: `export-${job.id}`,
-          type: "view-export" as const,
-          pollUrl: null,
-          status: isExportRunning ? ("in_progress" as const) : ("completed" as const),
-          progress: viewExport.progress ?? null,
-          error: viewExport.error ?? null,
-          request: { format: viewExport.request?.format ?? "ndjson" },
-          manifest: viewExport.result as ViewExportManifest | null,
-          createdAt: job.createdAt,
-        }
-      : null;
-
-  // Determine if export is available.
-  const canExport =
-    isComplete &&
-    !isExportRunning &&
-    (!exportJob ||
-      exportJob.status === "completed" ||
-      exportJob.status === "failed" ||
-      exportJob.status === "cancelled");
-
-  // Combine errors for display.
-  const displayError = error ?? downloadError;
+  // Handle closing an individual export.
+  const handleCloseExport = useCallback((exportId: string) => {
+    setExports((prev) => prev.filter((e) => e.id !== exportId));
+  }, []);
 
   return (
     <Card>
@@ -231,9 +215,9 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
           </Flex>
         )}
 
-        {displayError && (
+        {error && (
           <Text size="2" color="red">
-            View run failed: {displayError.message}
+            View run failed: {error.message}
           </Text>
         )}
 
@@ -247,7 +231,7 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
           <>
             <Flex align="center" justify="between">
               <Badge color="gray">{result.rows.length} rows (first 10)</Badge>
-              <ExportControls onExport={handleExport} disabled={!canExport} />
+              <ExportControls onExport={handleExport} disabled={false} />
             </Flex>
             <Box style={{ width: "100%", overflowX: "auto" }}>
               <Table.Root size="1">
@@ -279,13 +263,18 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
               </Table.Root>
             </Box>
 
-            {exportJob && (
-              <ViewExportCard
-                job={exportJob}
-                onCancel={handleCancelExport}
-                onDownload={handleDownload}
-              />
-            )}
+            {cachedViewDefinition &&
+              exports.map((exportInstance) => (
+                <ViewExportCardWrapper
+                  key={exportInstance.id}
+                  id={exportInstance.id}
+                  viewDefinition={cachedViewDefinition}
+                  format={exportInstance.format}
+                  createdAt={exportInstance.createdAt}
+                  onClose={() => handleCloseExport(exportInstance.id)}
+                  onError={onError}
+                />
+              ))}
           </>
         )}
       </Flex>

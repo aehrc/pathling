@@ -26,6 +26,7 @@ import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 
 import { getViewExportOutputFiles } from "../../types/viewExport";
+import { formatDateTime } from "../../utils";
 
 import type { ViewExportJob } from "../../types/job";
 
@@ -33,6 +34,7 @@ interface ViewExportCardProps {
   job: ViewExportJob;
   onCancel: () => void;
   onDownload: (url: string, filename: string) => void;
+  onClose?: () => void;
 }
 
 const STATUS_COLORS: Record<ViewExportJob["status"], "blue" | "green" | "red" | "gray"> = {
@@ -69,28 +71,42 @@ function getFilenameFromUrl(url: string): string {
  * @param root0.job - The view export job to display.
  * @param root0.onCancel - Callback to cancel the export.
  * @param root0.onDownload - Callback to download an output file.
+ * @param root0.onClose - Optional callback to close/remove the card.
  * @returns The view export card component.
  */
-export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProps) {
+export function ViewExportCard({ job, onCancel, onDownload, onClose }: ViewExportCardProps) {
   const isActive = job.status === "pending" || job.status === "in_progress";
   const showProgress = isActive && job.progress !== null;
+  const canClose =
+    job.status === "completed" || job.status === "cancelled" || job.status === "failed";
 
   return (
     <Card size="1" mt="3">
       <Flex direction="column" gap="2">
-        <Flex justify="between" align="center">
-          <Flex align="center" gap="2">
-            <Text size="2" weight="medium">
-              Export
+        <Flex justify="between" align="start">
+          <Box>
+            <Flex align="center" gap="2" mb="1">
+              <Text size="2" weight="medium">
+                Export
+              </Text>
+              <Badge size="1" color={STATUS_COLORS[job.status]}>
+                {STATUS_LABELS[job.status]}
+              </Badge>
+            </Flex>
+            <Text size="1" color="gray">
+              {formatDateTime(job.createdAt)}
             </Text>
-            <Badge size="1" color={STATUS_COLORS[job.status]}>
-              {STATUS_LABELS[job.status]}
-            </Badge>
-          </Flex>
+          </Box>
           {isActive && (
             <Button size="1" variant="ghost" color="red" onClick={onCancel}>
               <Cross2Icon />
               Cancel
+            </Button>
+          )}
+          {canClose && onClose && (
+            <Button size="1" variant="soft" color="gray" onClick={onClose}>
+              <Cross2Icon />
+              Close
             </Button>
           )}
         </Flex>
