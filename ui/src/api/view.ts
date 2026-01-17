@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 import { buildHeaders, buildUrl, checkResponse } from "./utils";
 
 import type { AuthOptions, ResourceType } from "./rest";

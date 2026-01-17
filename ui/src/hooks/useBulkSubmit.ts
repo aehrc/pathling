@@ -115,8 +115,10 @@ export interface BulkSubmitManifest {
 /**
  * Result of useBulkSubmit hook.
  */
-export interface UseBulkSubmitResult
-  extends UseAsyncJobResult<BulkSubmitRequestUnion, BulkSubmitManifest> {
+export interface UseBulkSubmitResult extends UseAsyncJobResult<
+  BulkSubmitRequestUnion,
+  BulkSubmitManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -129,8 +131,10 @@ export type UseBulkSubmitMonitorOptions = AsyncJobOptions;
 /**
  * Result of useBulkSubmitMonitor hook.
  */
-export interface UseBulkSubmitMonitorResult
-  extends UseAsyncJobResult<BulkSubmitMonitorRequest, BulkSubmitManifest> {
+export interface UseBulkSubmitMonitorResult extends UseAsyncJobResult<
+  BulkSubmitMonitorRequest,
+  BulkSubmitManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }

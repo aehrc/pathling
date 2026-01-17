@@ -47,7 +47,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class EntityTagInterceptor {
 
-  private static final String ASYNC_ETAG_PREFIX = "async-";
+  private static final String ASYNC_ETAG_PREFIX = "~";
 
   @Nonnull private final ServerConfiguration configuration;
 
@@ -146,7 +146,7 @@ public class EntityTagInterceptor {
 
   /**
    * Checks if the given ETag is an async ETag from a different server instance. Async ETags have
-   * the format "async-{instanceId}-{jobId}".
+   * the format "~{instanceId}.{hash}".
    *
    * @param tagHeader the ETag value to check
    * @return true if this is an async ETag from a different server instance
@@ -157,11 +157,11 @@ public class EntityTagInterceptor {
     }
     // Extract the instance ID from the async ETag.
     final String afterPrefix = tagHeader.substring(ASYNC_ETAG_PREFIX.length());
-    final int dashIndex = afterPrefix.indexOf('-');
-    if (dashIndex == -1) {
+    final int dotIndex = afterPrefix.indexOf('.');
+    if (dotIndex == -1) {
       return false;
     }
-    final String etagInstanceId = afterPrefix.substring(0, dashIndex);
+    final String etagInstanceId = afterPrefix.substring(0, dotIndex);
     return !etagInstanceId.equals(serverInstanceId.getId());
   }
 

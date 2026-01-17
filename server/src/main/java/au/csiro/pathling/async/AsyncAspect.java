@@ -223,9 +223,29 @@ public class AsyncAspect {
     response.setHeader(
         "Content-Location", requestDetails.getFhirServerBase() + "/$job?id=" + job.getId());
     // Set an instance-specific ETag to ensure cached 202 responses are invalidated after a server
-    // restart. This prevents clients from polling stale job IDs that no longer exist.
-    final String asyncEtag = "W/\"async-" + serverInstanceId.getId() + "-" + job.getId() + "\"";
+    // restart. This prevents clients from polling stale job IDs that no longer exist. The format
+    // is compact and uses a hash of the job ID to avoid exposing the full UUID.
+    final String asyncEtag =
+        "W/\"~" + serverInstanceId.getId() + "." + hashJobId(job.getId()) + "\"";
     response.setHeader("ETag", asyncEtag);
+  }
+
+  /**
+   * Computes a truncated SHA-256 hash of the job ID for use in async ETags. The hash provides a
+   * compact representation that doesn't expose the full job UUID.
+   *
+   * @param jobId the job ID to hash
+   * @return an 8-character hexadecimal hash string
+   */
+  @Nonnull
+  private static String hashJobId(@Nonnull final String jobId) {
+    try {
+      final java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+      final byte[] hash = digest.digest(jobId.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      return String.format("%02x%02x%02x%02x", hash[0], hash[1], hash[2], hash[3]);
+    } catch (final java.security.NoSuchAlgorithmException e) {
+      throw new RuntimeException("SHA-256 not available", e);
+    }
   }
 
   @Nonnull

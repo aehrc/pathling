@@ -188,9 +188,9 @@ class EntityTagInterceptorTest {
   void asyncEtagWithMismatchedInstanceSkips304() {
     // When an async ETag from a different server instance is received, the interceptor should
     // NOT return 304, allowing the request to proceed and create a new job.
-    final String differentInstanceId = "different";
-    final String jobId = "job-123-456-789";
-    final String asyncTag = "async-" + differentInstanceId + "-" + jobId;
+    final String differentInstanceId = "diffrent1";
+    final String jobIdHash = "f8a9b2c3";
+    final String asyncTag = "~" + differentInstanceId + "." + jobIdHash;
     setupCacheableRequest("GET", asyncTag, "$export");
     when(database.cacheKeyMatches(eq(asyncTag))).thenReturn(false);
     when(database.getCacheKey()).thenReturn(Optional.of(TAG));
@@ -206,8 +206,8 @@ class EntityTagInterceptorTest {
   @Test
   void asyncEtagWithMatchingInstanceReturns304() {
     // When an async ETag from the SAME server instance is received, normal caching applies.
-    final String jobId = "job-123-456-789";
-    final String asyncTag = "async-" + CURRENT_INSTANCE_ID + "-" + jobId;
+    final String jobIdHash = "f8a9b2c3";
+    final String asyncTag = "~" + CURRENT_INSTANCE_ID + "." + jobIdHash;
     setupCacheableRequest("GET", asyncTag, "$export");
 
     // For matching instance, we check against the async tag registry.
@@ -218,6 +218,21 @@ class EntityTagInterceptorTest {
         () -> interceptor.checkIncomingTag(request, requestDetails, response));
 
     verifyCacheableResponseHeaders();
+  }
+
+  @Test
+  void malformedAsyncEtagWithoutDotSeparatorTreatedAsNormal() {
+    // An async ETag without a dot separator should be treated as a normal tag, not as an async
+    // ETag. This handles cases where the format is malformed.
+    final String malformedAsyncTag = "~abc12345f8a9b2c3"; // Missing dot separator.
+    setupCacheableRequest("GET", malformedAsyncTag, "$export");
+    when(database.cacheKeyMatches(eq(malformedAsyncTag))).thenReturn(false);
+    when(database.getCacheKey()).thenReturn(Optional.of(TAG));
+
+    // Should proceed normally without special async ETag handling.
+    interceptor.checkIncomingTag(request, requestDetails, response);
+
+    verifyMissResponseHeaders();
   }
 
   @Test

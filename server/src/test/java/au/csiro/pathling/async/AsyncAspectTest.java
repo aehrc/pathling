@@ -295,15 +295,23 @@ class AsyncAspectTest {
 
   @Test
   void asyncResponseSetsInstanceSpecificEtag() {
-    // Async responses should set an ETag that includes the server instance ID and job ID.
-    // This ensures cached 202 responses are invalidated after a server restart.
-    final String jobId = assertExecutedAsync();
+    // Async responses should set an ETag that includes the server instance ID and a hash of the
+    // job ID. This ensures cached 202 responses are invalidated after a server restart.
+    assertExecutedAsync();
 
-    // Verify the ETag header is set with the expected format.
+    // Verify the ETag header is set with the expected format: W/"~{instanceId}.{hash}".
     final String etag = servletResponse.getHeader("ETag");
     assertNotNull(etag, "ETag header should be set on async response");
-    assertTrue(etag.startsWith("W/\"async-"), "ETag should have async prefix");
+    assertTrue(etag.startsWith("W/\"~"), "ETag should have async prefix (~)");
     assertTrue(etag.contains(serverInstanceId.getId()), "ETag should contain server instance ID");
-    assertTrue(etag.contains(jobId), "ETag should contain job ID");
+    assertTrue(etag.contains("."), "ETag should contain dot separator");
+    // Verify the hash is 8 hex characters. The format after W/" is: ~{instanceId}.{hash}.
+    final String etagContent = etag.substring(3, etag.length() - 1); // Strip W/" and trailing ".
+    final String[] parts = etagContent.split("\\.");
+    assertEquals(2, parts.length, "ETag should have exactly two parts separated by dot");
+    assertTrue(parts[0].startsWith("~"), "First part should start with ~");
+    assertEquals(9, parts[0].length(), "First part should be 9 chars (~ + 8-char instance ID)");
+    assertEquals(8, parts[1].length(), "Hash should be 8 characters");
+    assertTrue(parts[1].matches("[0-9a-f]{8}"), "Hash should be 8 hex characters");
   }
 }

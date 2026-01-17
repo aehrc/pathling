@@ -76,8 +76,10 @@ export type ExportManifest = Parameters;
 /**
  * Result of useBulkExport hook.
  */
-export interface UseBulkExportResult
-  extends UseAsyncJobResult<BulkExportRequest, ExportManifest> {
+export interface UseBulkExportResult extends UseAsyncJobResult<
+  BulkExportRequest,
+  ExportManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }

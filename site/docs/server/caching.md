@@ -117,11 +117,15 @@ prevent clients from polling stale job IDs from cached 202 responses, Pathling
 includes a server instance identifier in the ETag of async responses.
 
 Each server instance generates a unique ID at startup. The 202 Accepted response
-for an async operation includes an ETag with the format:
+for an async operation includes an ETag with a compact format:
 
 ```
-W/"async-{instanceId}-{jobId}"
+W/"~{instanceId}.{hash}"
 ```
+
+The `~` prefix identifies async ETags, `{instanceId}` is the 8-character server
+instance ID, and `{hash}` is an 8-character truncated SHA-256 hash of the job
+ID. This format keeps ETags short while avoiding exposure of the full job UUID.
 
 When the server restarts:
 

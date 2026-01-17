@@ -61,8 +61,10 @@ export type UseViewExportOptions = AsyncJobOptions;
 /**
  * Result of useViewExport hook.
  */
-export interface UseViewExportResult
-  extends UseAsyncJobResult<ViewExportRequest, ViewExportManifest> {
+export interface UseViewExportResult extends UseAsyncJobResult<
+  ViewExportRequest,
+  ViewExportManifest
+> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
