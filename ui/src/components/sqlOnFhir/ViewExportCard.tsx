@@ -30,6 +30,7 @@ import { getViewExportOutputFiles } from "../../types/viewExport";
 import { formatDateTime } from "../../utils";
 
 import type { ViewExportJob } from "../../types/job";
+import type { ViewExportFormat } from "../../types/viewExport";
 
 interface ViewExportCardProps {
   job: ViewExportJob;
@@ -54,6 +55,12 @@ const STATUS_LABELS: Record<ViewExportJob["status"], string> = {
   completed: "Completed",
   failed: "Failed",
   cancelled: "Cancelled",
+};
+
+const FORMAT_LABELS: Record<ViewExportFormat, string> = {
+  ndjson: "NDJSON",
+  csv: "CSV",
+  parquet: "Parquet",
 };
 
 /**
@@ -115,7 +122,7 @@ export function ViewExportCard({
           <Box>
             <Flex align="center" gap="2" mb="1">
               <Text size="2" weight="medium">
-                Export
+                Export to {FORMAT_LABELS[job.request.format]}
               </Text>
               <Badge size="1" color={STATUS_COLORS[job.status]}>
                 {STATUS_LABELS[job.status]}

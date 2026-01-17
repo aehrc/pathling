@@ -61,6 +61,38 @@ describe("ViewExportCard", () => {
   // Create a valid FHIR Parameters manifest for completed jobs.
   const completedManifest = { resourceType: "Parameters" as const, parameter: [] };
 
+  describe("Title", () => {
+    it("displays 'Export to CSV' for CSV format", () => {
+      const job = createJob({ request: { format: "csv" } });
+
+      render(
+        <ViewExportCard job={job} onCancel={defaultOnCancel} onDownload={defaultOnDownload} />,
+      );
+
+      expect(screen.getByText("Export to CSV")).toBeInTheDocument();
+    });
+
+    it("displays 'Export to NDJSON' for NDJSON format", () => {
+      const job = createJob({ request: { format: "ndjson" } });
+
+      render(
+        <ViewExportCard job={job} onCancel={defaultOnCancel} onDownload={defaultOnDownload} />,
+      );
+
+      expect(screen.getByText("Export to NDJSON")).toBeInTheDocument();
+    });
+
+    it("displays 'Export to Parquet' for Parquet format", () => {
+      const job = createJob({ request: { format: "parquet" } });
+
+      render(
+        <ViewExportCard job={job} onCancel={defaultOnCancel} onDownload={defaultOnDownload} />,
+      );
+
+      expect(screen.getByText("Export to Parquet")).toBeInTheDocument();
+    });
+  });
+
   describe("Delete button", () => {
     it("shows both Delete and Close buttons when status is completed", () => {
       const job = createJob({
