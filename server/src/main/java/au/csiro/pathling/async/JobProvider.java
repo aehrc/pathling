@@ -135,11 +135,6 @@ public class JobProvider {
       @Nullable final HttpServletResponse response) {
     log.debug("Received $job request with id: {}", id);
 
-    // Set cache headers early - applies to all responses (200, 202, 404).
-    if (response != null) {
-      setAsyncCacheHeaders(response);
-    }
-
     final Job<?> job = getJob(id);
 
     if (configuration.getAuth().isEnabled()) {
@@ -266,9 +261,13 @@ public class JobProvider {
    * @throws InternalErrorException If the job was interrupted.
    */
   @Nonnull
-  private static IBaseResource handleCompletedJob(
+  private IBaseResource handleCompletedJob(
       @Nonnull final Job<?> job, @Nullable final HttpServletResponse response) {
     try {
+      // Completed responses use TTL-based caching with configured max-age.
+      if (response != null) {
+        setAsyncCacheHeaders(response);
+      }
       job.getResponseModification().accept(response);
       return job.getResult().get();
     } catch (final InterruptedException e) {
@@ -311,7 +310,8 @@ public class JobProvider {
       @Nonnull final Job<?> job) {
     requireNonNull(response);
 
-    // Cache headers are already set by the job() method using TTL-based caching.
+    // In-progress responses use no-cache to prevent caching of transient status.
+    response.setHeader("Cache-Control", "no-cache");
     setProgressHeader(response, job);
 
     throw new ProcessingNotCompletedException("Processing", buildProcessingOutcome());

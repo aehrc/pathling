@@ -85,8 +85,9 @@ class JobProviderTest {
   }
 
   @Test
-  void inProgressJobSetsCacheControlWithMaxAge() {
-    // In-progress job responses should also have Cache-Control: max-age=60.
+  void inProgressJobSetsCacheControlNoCache() {
+    // In-progress job responses should have Cache-Control: no-cache to prevent caching
+    // of transient status responses.
     final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
     final Job<IBaseResource> job = new Job<>(JOB_ID, "export", future, Optional.empty());
     jobRegistry.register(job);
@@ -94,7 +95,7 @@ class JobProviderTest {
     assertThatThrownBy(() -> jobProvider.job(JOB_ID, request, response))
         .isInstanceOf(ProcessingNotCompletedException.class);
 
-    assertThat(response.getHeader("Cache-Control")).isEqualTo("max-age=60");
+    assertThat(response.getHeader("Cache-Control")).isEqualTo("no-cache");
   }
 
   @Test
