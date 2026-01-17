@@ -29,7 +29,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-
 // Mock the API module.
 vi.mock("../../api", () => ({
   viewRun: vi.fn(),

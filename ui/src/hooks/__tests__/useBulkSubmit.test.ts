@@ -28,7 +28,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-
 const mockStartWith = vi.fn();
 const mockCancel = vi.fn();
 const mockDeleteJob = vi.fn();

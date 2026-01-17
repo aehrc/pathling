@@ -29,7 +29,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-
 // Mock the API module.
 vi.mock("../../api", () => ({
   search: vi.fn(),
@@ -78,9 +77,7 @@ function createWrapper() {
     },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
 
@@ -107,10 +104,9 @@ describe("useSearch", () => {
     it("returns search results on successful query", async () => {
       vi.mocked(search).mockResolvedValue(mockBundle);
 
-      const { result } = renderHook(
-        () => useSearch({ resourceType: "Patient" }),
-        { wrapper: createWrapper() },
-      );
+      const { result } = renderHook(() => useSearch({ resourceType: "Patient" }), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -195,13 +191,10 @@ describe("useSearch", () => {
     it("refetches when resourceType changes", async () => {
       vi.mocked(search).mockResolvedValue(mockBundle);
 
-      const { result, rerender } = renderHook(
-        ({ resourceType }) => useSearch({ resourceType }),
-        {
-          wrapper: createWrapper(),
-          initialProps: { resourceType: "Patient" },
-        },
-      );
+      const { result, rerender } = renderHook(({ resourceType }) => useSearch({ resourceType }), {
+        wrapper: createWrapper(),
+        initialProps: { resourceType: "Patient" },
+      });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -225,10 +218,9 @@ describe("useSearch", () => {
     it("does not fetch when enabled is false", async () => {
       vi.mocked(search).mockResolvedValue(mockBundle);
 
-      const { result } = renderHook(
-        () => useSearch({ resourceType: "Patient", enabled: false }),
-        { wrapper: createWrapper() },
-      );
+      const { result } = renderHook(() => useSearch({ resourceType: "Patient", enabled: false }), {
+        wrapper: createWrapper(),
+      });
 
       // Wait a tick to ensure the query does not run.
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -240,10 +232,9 @@ describe("useSearch", () => {
     it("fetches when enabled is true", async () => {
       vi.mocked(search).mockResolvedValue(mockBundle);
 
-      const { result } = renderHook(
-        () => useSearch({ resourceType: "Patient", enabled: true }),
-        { wrapper: createWrapper() },
-      );
+      const { result } = renderHook(() => useSearch({ resourceType: "Patient", enabled: true }), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -255,10 +246,9 @@ describe("useSearch", () => {
     it("fetches when enabled is undefined (defaults to true)", async () => {
       vi.mocked(search).mockResolvedValue(mockBundle);
 
-      const { result } = renderHook(
-        () => useSearch({ resourceType: "Patient" }),
-        { wrapper: createWrapper() },
-      );
+      const { result } = renderHook(() => useSearch({ resourceType: "Patient" }), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -271,10 +261,9 @@ describe("useSearch", () => {
       vi.mocked(config).fhirBaseUrl = undefined as unknown as string;
       vi.mocked(search).mockResolvedValue(mockBundle);
 
-      const { result } = renderHook(
-        () => useSearch({ resourceType: "Patient" }),
-        { wrapper: createWrapper() },
-      );
+      const { result } = renderHook(() => useSearch({ resourceType: "Patient" }), {
+        wrapper: createWrapper(),
+      });
 
       // Wait a tick to ensure the query does not run.
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -292,10 +281,9 @@ describe("useSearch", () => {
       const testError = new Error("Network error");
       vi.mocked(search).mockRejectedValue(testError);
 
-      const { result } = renderHook(
-        () => useSearch({ resourceType: "Patient" }),
-        { wrapper: createWrapper() },
-      );
+      const { result } = renderHook(() => useSearch({ resourceType: "Patient" }), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true);
@@ -309,10 +297,9 @@ describe("useSearch", () => {
     it("passes access token when authenticated", async () => {
       vi.mocked(search).mockResolvedValue(mockBundle);
 
-      const { result } = renderHook(
-        () => useSearch({ resourceType: "Patient" }),
-        { wrapper: createWrapper() },
-      );
+      const { result } = renderHook(() => useSearch({ resourceType: "Patient" }), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -332,10 +319,9 @@ describe("useSearch", () => {
       } as ReturnType<typeof useAuth>);
       vi.mocked(search).mockResolvedValue(mockBundle);
 
-      const { result } = renderHook(
-        () => useSearch({ resourceType: "Patient" }),
-        { wrapper: createWrapper() },
-      );
+      const { result } = renderHook(() => useSearch({ resourceType: "Patient" }), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
