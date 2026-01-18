@@ -22,11 +22,10 @@
  */
 
 import { Box, Flex, Select, Text, TextField } from "@radix-ui/themes";
-
-import { ResourceTypePicker } from "./ResourceTypePicker";
+import type { ExportOptionsValues } from "../../types/exportOptions";
 import { OUTPUT_FORMATS } from "../../types/exportOptions";
 
-import type { ExportOptionsValues } from "../../types/exportOptions";
+import { ResourceTypePicker } from "./ResourceTypePicker";
 
 interface ExportOptionsProps {
   /** Available resource types for selection. */
@@ -81,7 +80,7 @@ export function ExportOptions({
         onSelectedTypesChange={(types) => updateOption("types", types)}
       />
 
-      <Flex gap="4">
+      <Flex gap="4" wrap="wrap">
         <Box style={{ flex: 1 }}>
           <Text as="label" size="2" weight="medium" mb="1">
             Since
