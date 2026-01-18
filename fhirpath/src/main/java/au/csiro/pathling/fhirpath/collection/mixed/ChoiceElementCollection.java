@@ -121,15 +121,18 @@ public class ChoiceElementCollection extends MixedCollection {
     return parent.asBooleanSingleton();
   }
 
-  @Override
+  /**
+   * {@inheritDoc}
+   *
+   * <p>For choice elements, filter by type FIRST to resolve to a concrete collection, then enforce
+   * singularity on the resolved collection. This allows as() to work with choice elements by
+   * resolving the type before the singular check.
+   */
   @Nonnull
-  public Collection asSingular() {
-    return new ChoiceElementCollection(choiceDefinition, parent.asSingular());
-  }
-
   @Override
-  @Nonnull
-  public Collection asPlural() {
-    return new ChoiceElementCollection(choiceDefinition, parent.asPlural());
+  public Collection asType(@Nonnull final TypeSpecifier type) {
+    // For choice elements, filter by type FIRST to resolve to a concrete collection,
+    // then enforce singularity on the resolved collection.
+    return filterByType(type).asSingular();
   }
 }
