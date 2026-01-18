@@ -27,11 +27,11 @@ import { Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useEffect, useRef, useState } from "react";
 
 import { useBulkExport, useDownloadFile } from "../../hooks";
-import { getExportOutputFiles } from "../../types/export";
-import { formatDateTime } from "../../utils";
 
 import type { BulkExportType } from "../../hooks/useBulkExport";
 import type { ExportRequest } from "../../types/export";
+import { getExportOutputFiles } from "../../types/export";
+import { formatDateTime } from "../../utils";
 
 interface ExportCardProps {
   request: ExportRequest;
@@ -223,7 +223,15 @@ export function ExportCard({ request, createdAt, onError, onClose }: Readonly<Ex
                 .sort((a, b) => getFilenameFromUrl(a.url).localeCompare(getFilenameFromUrl(b.url)))
                 .map((output) => (
                   <Flex key={output.url} justify="between" align="center">
-                    <Text size="2">
+                    <Text
+                      size="2"
+                      style={{
+                        flexShrink: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        textWrap: "nowrap",
+                      }}
+                    >
                       {getFilenameFromUrl(output.url)}
                       {output.count !== undefined && (
                         <Text color="gray"> ({output.count} resources)</Text>
