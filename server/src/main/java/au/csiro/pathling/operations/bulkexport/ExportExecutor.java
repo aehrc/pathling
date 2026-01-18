@@ -167,15 +167,13 @@ public class ExportExecutor {
         dataSource.filterByResourceType(patientCompartmentService::isInPatientCompartment);
 
     // Then, apply row-level filtering based on patient compartment membership.
+    // We use filterByPatientCompartment which performs a semi-join, avoiding the need to collect
+    // all matching IDs into driver memory. This is more scalable for large datasets.
     return filtered.map(
         (resourceType, rowDataset) -> {
-          final Column patientFilter =
-              patientCompartmentService.buildPatientFilter(resourceType, patientIds);
-          log.debug(
-              "Applying patient compartment filter for resource type {}: {}",
-              resourceType,
-              patientFilter);
-          return rowDataset.filter(patientFilter);
+          log.debug("Applying patient compartment filter for resource type {}", resourceType);
+          return patientCompartmentService.filterByPatientCompartment(
+              resourceType, patientIds, rowDataset, deltaLake);
         });
   }
 
@@ -226,6 +224,7 @@ public class ExportExecutor {
           switch (exportRequest.outputFormat()) {
             case NDJSON -> sinkBuilder.ndjson(jobDirPath.toString());
             case PARQUET -> sinkBuilder.parquet(jobDirPath.toString());
+            case null -> sinkBuilder.ndjson(jobDirPath.toString());
           };
       return new ExportResponse(
           exportRequest.originalRequest(),
