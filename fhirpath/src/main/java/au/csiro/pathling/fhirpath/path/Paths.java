@@ -54,7 +54,7 @@ public final class Paths {
    *
    * <pre>`where($this.name = 'foo')` is converted to `where(name = 'foo')`</pre>
    *
-   * but:
+   * <p>but:
    *
    * <pre>`where($this = 'foo')` remains `where($this = 'foo')`</pre>
    *

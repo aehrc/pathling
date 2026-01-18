@@ -47,6 +47,8 @@ public abstract class Strings {
   }
 
   /**
+   * Removes surrounding tick quotes from a string.
+   *
    * @param value a String surrounded by tick quotes
    * @return the unquoted String
    */
