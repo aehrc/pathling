@@ -22,10 +22,12 @@
  */
 
 import { Box, Flex, Select, Text, TextField } from "@radix-ui/themes";
-import type { ExportOptionsValues } from "../../types/exportOptions";
-import { OUTPUT_FORMATS } from "../../types/exportOptions";
 
 import { ResourceTypePicker } from "./ResourceTypePicker";
+import { OUTPUT_FORMATS } from "../../types/exportOptions";
+
+import type { ExportOptionsValues } from "../../types/exportOptions";
+
 
 interface ExportOptionsProps {
   /** Available resource types for selection. */
