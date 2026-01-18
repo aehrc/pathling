@@ -26,11 +26,11 @@ import { Cross2Icon, DownloadIcon, ReloadIcon, TrashIcon } from "@radix-ui/react
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useState } from "react";
 
+import type { ViewExportJob } from "../../types/job";
+
+import type { ViewExportFormat } from "../../types/viewExport";
 import { getViewExportOutputFiles } from "../../types/viewExport";
 import { formatDateTime } from "../../utils";
-
-import type { ViewExportJob } from "../../types/job";
-import type { ViewExportFormat } from "../../types/viewExport";
 
 interface ViewExportCardProps {
   job: ViewExportJob;
@@ -118,10 +118,10 @@ export function ViewExportCard({
   return (
     <Card size="1" mt="3">
       <Flex direction="column" gap="2">
-        <Flex justify="between" align="start">
+        <Flex justify="between" align="start" gap="1" overflow="hidden" wrap="wrap" gapY="1">
           <Box>
             <Flex align="center" gap="2" mb="1">
-              <Text size="2" weight="medium">
+              <Text size="2" weight="medium" wrap="nowrap" style={{ textOverflow: "ellipsis" }}>
                 Export to {FORMAT_LABELS[job.request.format]}
               </Text>
               <Badge size="1" color={STATUS_COLORS[job.status]}>
@@ -210,7 +210,17 @@ export function ViewExportCard({
                     )
                     .map((output) => (
                       <Flex key={output.url} justify="between" align="center">
-                        <Text size="2">{getFilenameFromUrl(output.url)}</Text>
+                        <Text
+                          size="2"
+                          style={{
+                            flexShrink: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            textWrap: "nowrap",
+                          }}
+                        >
+                          {getFilenameFromUrl(output.url)}
+                        </Text>
                         <Button
                           size="1"
                           variant="soft"
