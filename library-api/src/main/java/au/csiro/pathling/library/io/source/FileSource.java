@@ -214,7 +214,6 @@ public abstract class FileSource extends DatasetSource {
                         return existing;
                       }));
 
-      log.debug("Final resource map has {} resource types: {}", result.size(), result.keySet());
       return result;
 
     } catch (final IOException e) {
@@ -242,23 +241,26 @@ public abstract class FileSource extends DatasetSource {
   @Nonnull
   private Map<String, Dataset<Row>> buildResourceMap(
       final @Nonnull Map<String, Collection<String>> files) {
-    return files.entrySet().stream()
-        // Filter out any paths that do not have the expected extension.
-        .map(entry -> Map.entry(entry.getKey(), checkExtension(entry.getValue())))
-        // Filter out resource types with no files after extension filtering.
-        .filter(entry -> !entry.getValue().isEmpty())
-        // Filter out any resource codes that are not supported.
-        .filter(entry -> context.isResourceTypeSupported(entry.getKey()))
-        // Filter out any resource that should be explicitly ignored.
-        .filter(entry -> additionalResourceTypeFilter.test(entry.getKey()))
-        .collect(
-            Collectors.toMap(
-                Map.Entry::getKey,
-                entry -> {
-                  final String[] paths = entry.getValue().toArray(new String[0]);
-                  final Dataset<Row> sourceStrings = reader.load(paths);
-                  return transformer.apply(sourceStrings, entry.getKey());
-                }));
+    final Map<String, Dataset<Row>> result =
+        files.entrySet().stream()
+            // Filter out any paths that do not have the expected extension.
+            .map(entry -> Map.entry(entry.getKey(), checkExtension(entry.getValue())))
+            // Filter out resource types with no files after extension filtering.
+            .filter(entry -> !entry.getValue().isEmpty())
+            // Filter out any resource codes that are not supported.
+            .filter(entry -> context.isResourceTypeSupported(entry.getKey()))
+            // Filter out any resource that should be explicitly ignored.
+            .filter(entry -> additionalResourceTypeFilter.test(entry.getKey()))
+            .collect(
+                Collectors.toMap(
+                    Map.Entry::getKey,
+                    entry -> {
+                      final String[] paths = entry.getValue().toArray(new String[0]);
+                      final Dataset<Row> sourceStrings = reader.load(paths);
+                      return transformer.apply(sourceStrings, entry.getKey());
+                    }));
+    log.debug("Final resource map has {} resource types: {}", result.size(), result.keySet());
+    return result;
   }
 
   /**
