@@ -26,6 +26,54 @@ import org.junit.jupiter.api.Test;
 class StringsTest {
 
   @Test
+  void testUnSingleQuote() {
+    // Removes surrounding single quotes.
+    assertEquals("hello", Strings.unSingleQuote("'hello'"));
+
+    // Removes only leading quote.
+    assertEquals("hello", Strings.unSingleQuote("'hello"));
+
+    // Removes only trailing quote.
+    assertEquals("hello", Strings.unSingleQuote("hello'"));
+
+    // Leaves string unchanged when no surrounding quotes.
+    assertEquals("hello", Strings.unSingleQuote("hello"));
+
+    // Handles empty string.
+    assertEquals("", Strings.unSingleQuote(""));
+
+    // Preserves quotes embedded in the middle.
+    assertEquals("hel'lo", Strings.unSingleQuote("'hel'lo'"));
+
+    // Handles string that is just quotes.
+    assertEquals("", Strings.unSingleQuote("''"));
+  }
+
+  @Test
+  void testUnTickQuote() {
+    // Removes surrounding tick quotes.
+    assertEquals("hello", Strings.unTickQuote("`hello`"));
+
+    // Removes only leading tick quote.
+    assertEquals("hello", Strings.unTickQuote("`hello"));
+
+    // Removes only trailing tick quote.
+    assertEquals("hello", Strings.unTickQuote("hello`"));
+
+    // Leaves string unchanged when no surrounding tick quotes.
+    assertEquals("hello", Strings.unTickQuote("hello"));
+
+    // Handles empty string.
+    assertEquals("", Strings.unTickQuote(""));
+
+    // Preserves tick quotes embedded in the middle.
+    assertEquals("hel`lo", Strings.unTickQuote("`hel`lo`"));
+
+    // Handles string that is just tick quotes.
+    assertEquals("", Strings.unTickQuote("``"));
+  }
+
+  @Test
   void testParseCsvList() {
     assertEquals(Collections.emptyList(), Strings.parseCsvList("", Integer::parseInt));
     assertEquals(Collections.emptyList(), Strings.parseCsvList(", ,, ", Integer::parseInt));

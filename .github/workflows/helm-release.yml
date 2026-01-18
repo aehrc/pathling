@@ -40,12 +40,15 @@ jobs:
 
       - name: Extract and validate version
         working-directory: ${{ inputs.chart-path }}
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_TAG_PREFIX: ${{ inputs.tag-prefix }}
         run: |
           # Get version from input or tag.
-          if [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
           else
-            VERSION="${GITHUB_REF_NAME#${{ inputs.tag-prefix }}}"
+            VERSION="${GITHUB_REF_NAME#$INPUT_TAG_PREFIX}"
           fi
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
@@ -59,9 +62,12 @@ jobs:
           echo "Releasing chart version: ${VERSION}"
 
       - name: Package chart
+        env:
+          INPUT_CHART_PATH: ${{ inputs.chart-path }}
+          INPUT_CHART_NAME: ${{ inputs.chart-name }}
         run: |
-          helm package ${{ inputs.chart-path }}
-          PACKAGE_NAME="${{ inputs.chart-name }}-${VERSION}.tgz"
+          helm package "$INPUT_CHART_PATH"
+          PACKAGE_NAME="${INPUT_CHART_NAME}-${VERSION}.tgz"
           echo "PACKAGE_NAME=${PACKAGE_NAME}" >> $GITHUB_ENV
 
           if [ ! -f "$PACKAGE_NAME" ]; then
@@ -89,9 +95,11 @@ jobs:
 
       - name: Commit and push
         working-directory: gh-pages
+        env:
+          INPUT_CHART_NAME: ${{ inputs.chart-name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add helm/
-          git commit -m "Release Helm chart ${{ inputs.chart-name }}-${VERSION}"
+          git commit -m "Release Helm chart ${INPUT_CHART_NAME}-${VERSION}"
           git push
