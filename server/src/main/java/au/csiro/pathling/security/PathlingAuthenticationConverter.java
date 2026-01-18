@@ -36,7 +36,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 @Slf4j
-public class PathlingAuthenticationConverter extends JwtAuthenticationConverter {
+public final class PathlingAuthenticationConverter extends JwtAuthenticationConverter {
 
   /** Creates a new instance. */
   public PathlingAuthenticationConverter() {

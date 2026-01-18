@@ -623,7 +623,7 @@
             <source>21</source>
             <target>21</target>
             <compilerArgs>
-              <arg>-Xlint:all,-processing</arg>
+              <arg>-Xlint:all,-processing,-this-escape</arg>
               <arg>-proc:full</arg>
             </compilerArgs>
           </configuration>

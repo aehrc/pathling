@@ -31,7 +31,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author John Grimes
  */
 @Slf4j
-public class PathlingServerVersion {
+public final class PathlingServerVersion {
 
   private static final String GIT_PROPERTIES_FILE_NAME = "pathling-server-version.properties";
   private static final String BUILD_VERSION_PROPERTY = "git.build.version";

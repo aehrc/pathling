@@ -96,14 +96,15 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
    * @param configuration The caching configuration for the HTTP client
    * @param resourcesToClose Any resources that should be closed when this service is closed
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "this-escape"})
   protected CachingTerminologyService(
       @Nonnull final TerminologyClient terminologyClient,
       @Nonnull final HttpClientCachingConfiguration configuration,
       @Nonnull final Closeable... resourcesToClose) {
     super(terminologyClient, resourcesToClose);
     this.configuration = configuration;
-    // register manager as a closeable resource
+    // The 'this' escape via registerResource() is safe because it only stores the CacheManager
+    // in an already-initialised list; no subclass methods or fields are accessed.
     cacheManager = registerResource(buildCacheManager());
     validateCodeCache = buildCache(cacheManager, VALIDATE_CODE_CACHE_NAME, Boolean.class);
     subsumesCache = buildCache(cacheManager, SUBSUMES_CACHE_NAME, ConceptSubsumptionOutcome.class);
