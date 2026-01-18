@@ -48,8 +48,11 @@ public abstract class AbstractSource implements QueryableDataSource {
    *
    * @param context the PathlingContext to use
    */
+  @SuppressWarnings("this-escape")
   protected AbstractSource(@Nonnull final PathlingContext context) {
     this.context = context;
+    // The 'this' escape is safe because buildDispatcher() only stores the reference in
+    // FhirViewExecutor; no methods are called on 'this' until after construction completes.
     dispatcher = buildDispatcher(context, this);
   }
 
