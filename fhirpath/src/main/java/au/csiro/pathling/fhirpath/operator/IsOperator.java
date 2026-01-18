@@ -54,8 +54,7 @@ public class IsOperator implements FhirPathBinaryOperator {
   @Override
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
     // This method won't be called for type operators since we override invokeWithPaths
-    throw new UnsupportedOperationException(
-        "IsOperator should be invoked via invokeWithPaths()");
+    throw new UnsupportedOperationException("IsOperator should be invoked via invokeWithPaths()");
   }
 
   @Nonnull

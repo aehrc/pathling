@@ -120,13 +120,13 @@ public class ChoiceElementCollection extends MixedCollection {
   public BooleanCollection asBooleanSingleton() {
     return parent.asBooleanSingleton();
   }
-  
+
   @Override
   @Nonnull
   public Collection asSingular() {
     return new ChoiceElementCollection(choiceDefinition, parent.asSingular());
   }
-  
+
   @Override
   @Nonnull
   public Collection asPlural() {

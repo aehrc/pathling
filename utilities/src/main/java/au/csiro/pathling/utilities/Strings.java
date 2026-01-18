@@ -46,7 +46,6 @@ public abstract class Strings {
     return value.replaceAll("^'|'$", "");
   }
 
-
   /**
    * @param value a String surrounded by tick quotes
    * @return the unquoted String
@@ -55,7 +54,7 @@ public abstract class Strings {
   public static String unTickQuote(@Nonnull final String value) {
     return value.replaceAll("^`|`$", "");
   }
-  
+
   /**
    * Generates a short random string for use as a column alias.
    *

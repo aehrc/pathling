@@ -23,7 +23,6 @@ import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.operator.FhirPathBinaryOperator;
 import au.csiro.pathling.fhirpath.operator.AsOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.CollectionOperations;
