@@ -27,7 +27,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.Value;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * The representation of the authority supporting wildcard matching and Pathling-specific scopes.
@@ -85,21 +84,8 @@ public class PathlingAuthority {
   }
 
   /**
-   * Constructs the authority required to access the resource.
-   *
-   * @param accessType the type of access required.
-   * @param resourceType the resource to access.
-   * @return the authority required for access.
-   */
-  @Nonnull
-  public static PathlingAuthority resourceAccess(
-      @Nonnull final AccessType accessType, @Nonnull final ResourceType resourceType) {
-    return resourceAccess(accessType, resourceType.toCode());
-  }
-
-  /**
-   * Constructs the authority required to access the resource using a string resource type code.
-   * This overload supports both standard FHIR resource types and custom types like ViewDefinition.
+   * Constructs the authority required to access the resource using a resource type code. This
+   * method supports both standard FHIR resource types and custom types like ViewDefinition.
    *
    * @param accessType the type of access required.
    * @param resourceTypeCode the resource type code to access.

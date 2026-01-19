@@ -38,7 +38,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -157,8 +156,7 @@ public class ImportExecutor {
       // Check per-resource-type write authority.
       for (final Entry<String, Collection<String>> entry : request.input().entrySet()) {
         SecurityAspect.checkHasAuthority(
-            PathlingAuthority.resourceAccess(
-                AccessType.WRITE, ResourceType.fromCode(entry.getKey())));
+            PathlingAuthority.resourceAccess(AccessType.WRITE, entry.getKey()));
       }
     }
 

@@ -135,7 +135,7 @@ class PathlingAuthorityTest {
   @Test
   void testResourceAccess() {
     final PathlingAuthority authority =
-        PathlingAuthority.resourceAccess(ResourceAccess.AccessType.READ, ResourceType.PATIENT);
+        PathlingAuthority.resourceAccess(ResourceAccess.AccessType.READ, "Patient");
     assertEquals("pathling:read:Patient", authority.getAuthority());
     assertTrue(authority.getAction().isPresent());
     assertEquals("read", authority.getAction().get());

@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.Method;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -77,15 +76,14 @@ class SecurityAspectTest extends SecurityTest {
   @Test
   void testResourceAccessDeniedWhenNoAuthentication() {
     assertThrowsAccessDenied(
-        () -> securityAspect.checkResourceRead(resourceAccess, ResourceType.PATIENT),
-        "Token not present");
+        () -> securityAspect.checkResourceRead(resourceAccess, "Patient"), "Token not present");
   }
 
   @Test
   @WithMockUser(username = "admin")
   void testResourceAccessDeniedWhenNotAuthorized() {
     assertThrowsAccessDenied(
-        () -> securityAspect.checkResourceRead(resourceAccess, ResourceType.PATIENT),
+        () -> securityAspect.checkResourceRead(resourceAccess, "Patient"),
         "Missing authority: 'pathling:read:Patient'",
         "pathling:read:Patient");
   }
@@ -96,6 +94,6 @@ class SecurityAspectTest extends SecurityTest {
       authorities = {"pathling:read:Patient"})
   void testResourceAccessGranted() {
     // PASS
-    securityAspect.checkResourceRead(resourceAccess, ResourceType.PATIENT);
+    securityAspect.checkResourceRead(resourceAccess, "Patient");
   }
 }

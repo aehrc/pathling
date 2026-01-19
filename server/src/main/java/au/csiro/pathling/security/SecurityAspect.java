@@ -24,7 +24,6 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
@@ -54,14 +53,15 @@ public class SecurityAspect {
    * Checks if the current user is authorised to access the resource.
    *
    * @param resourceAccess the resource access required.
-   * @param resourceType the resource type.
+   * @param resourceTypeCode the resource type code.
    * @throws AccessDeniedError if unauthorised.
    */
-  @Before("@annotation(resourceAccess) && args(resourceType,..)")
+  @Before("@annotation(resourceAccess) && args(resourceTypeCode,..)")
   public void checkResourceRead(
-      @Nonnull final ResourceAccess resourceAccess, final ResourceType resourceType) {
-    log.debug("Checking access to resource: {}, type: {}", resourceType, resourceAccess.value());
-    checkHasAuthority(PathlingAuthority.resourceAccess(resourceAccess.value(), resourceType));
+      @Nonnull final ResourceAccess resourceAccess, final String resourceTypeCode) {
+    log.debug(
+        "Checking access to resource: {}, type: {}", resourceTypeCode, resourceAccess.value());
+    checkHasAuthority(PathlingAuthority.resourceAccess(resourceAccess.value(), resourceTypeCode));
   }
 
   /**
