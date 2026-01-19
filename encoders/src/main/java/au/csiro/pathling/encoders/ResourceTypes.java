@@ -20,9 +20,11 @@
 package au.csiro.pathling.encoders;
 
 import jakarta.annotation.Nonnull;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.hl7.fhir.exceptions.FHIRException;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -47,6 +49,13 @@ public final class ResourceTypes {
    * Pathling can process.
    */
   public static final Set<String> CUSTOM_RESOURCE_TYPES = Set.of(VIEW_DEFINITION);
+
+  /**
+   * Mapping from custom resource type names to their implementing classes. This is used to register
+   * custom types with the FhirContext so that HAPI can recognise and parse them.
+   */
+  public static final Map<String, Class<? extends IBaseResource>> CUSTOM_RESOURCE_TYPE_CLASSES =
+      Map.of(VIEW_DEFINITION, ViewDefinitionResource.class);
 
   /**
    * Resource types that are not supported for encoding. These resources have complex structures

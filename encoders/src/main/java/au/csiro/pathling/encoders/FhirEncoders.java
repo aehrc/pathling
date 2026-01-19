@@ -194,11 +194,23 @@ public class FhirEncoders implements Configurable<EncodingConfiguration> {
    * Returns the FHIR context for the given version. This is effectively a cache so consuming code
    * does not need to recreate the context repeatedly.
    *
+   * <p>The context is configured with all custom resource types registered, so that HAPI can
+   * recognise and parse resources like ViewDefinition.
+   *
    * @param fhirVersion the version of FHIR to use
    * @return the FhirContext
    */
   public static FhirContext contextFor(final FhirVersionEnum fhirVersion) {
-    return FHIR_CONTEXTS.computeIfAbsent(fhirVersion, v -> new FhirContext(fhirVersion));
+    return FHIR_CONTEXTS.computeIfAbsent(
+        fhirVersion,
+        v -> {
+          final FhirContext context = new FhirContext(fhirVersion);
+          for (final Class<? extends IBaseResource> customType :
+              ResourceTypes.CUSTOM_RESOURCE_TYPE_CLASSES.values()) {
+            context.registerCustomType(customType);
+          }
+          return context;
+        });
   }
 
   /**

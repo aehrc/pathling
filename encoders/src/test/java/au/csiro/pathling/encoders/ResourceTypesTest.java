@@ -20,11 +20,13 @@
 package au.csiro.pathling.encoders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -52,6 +54,20 @@ class ResourceTypesTest {
   void unsupportedResourcesContainsExpectedTypes(final String resourceType) {
     final Set<String> unsupported = ResourceTypes.UNSUPPORTED_RESOURCES;
     assertTrue(unsupported.contains(resourceType));
+  }
+
+  @Test
+  void customResourceTypeClassesMapsTypeNamesToImplementingClasses() {
+    // The map should contain an entry for each custom resource type.
+    assertEquals(
+        ResourceTypes.CUSTOM_RESOURCE_TYPES.size(),
+        ResourceTypes.CUSTOM_RESOURCE_TYPE_CLASSES.size());
+
+    // ViewDefinition should map to ViewDefinitionResource class.
+    final Class<? extends IBaseResource> viewDefinitionClass =
+        ResourceTypes.CUSTOM_RESOURCE_TYPE_CLASSES.get(ResourceTypes.VIEW_DEFINITION);
+    assertNotNull(viewDefinitionClass);
+    assertEquals(ViewDefinitionResource.class, viewDefinitionClass);
   }
 
   // Tests for isCustomResourceType().

@@ -25,6 +25,7 @@
 package au.csiro.pathling.encoders;
 
 import static org.apache.spark.sql.functions.col;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -32,6 +33,9 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.EncodingConfiguration;
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
+import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -762,5 +766,21 @@ class FhirEncodersTest {
             .withOpenTypes(customConfig.getOpenTypes())
             .getOrCreate()
             .getConfiguration());
+  }
+
+  @Test
+  void contextForRegistersCustomResourceTypes() {
+    // The FhirContext returned by contextFor() should recognise custom resource types like
+    // ViewDefinition. This test verifies that the context has been configured to parse
+    // ViewDefinition resources without throwing a "HAPI-1684: Unknown resource name" error.
+    final FhirContext context = FhirEncoders.contextFor(FhirVersionEnum.R4);
+
+    // Getting the resource definition by name should succeed for ViewDefinition.
+    final RuntimeResourceDefinition definition =
+        assertDoesNotThrow(() -> context.getResourceDefinition("ViewDefinition"));
+
+    // The definition should be for the ViewDefinitionResource class.
+    assertNotNull(definition);
+    assertEquals(ViewDefinitionResource.class, definition.getImplementingClass());
   }
 }
