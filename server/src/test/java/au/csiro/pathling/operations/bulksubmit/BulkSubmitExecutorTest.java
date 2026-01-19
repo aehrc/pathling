@@ -39,10 +39,12 @@ import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.operations.bulkimport.ImportExecutor;
 import au.csiro.pathling.operations.bulkimport.ImportRequest;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
@@ -120,7 +122,7 @@ class BulkSubmitExecutorTest {
     jobRegistry = mock(JobRegistry.class);
     sparkSession = mock(SparkSession.class);
     sparkContext = mock(SparkContext.class);
-    fhirContext = FhirContext.forR4();
+    fhirContext = FhirEncoders.contextFor(FhirVersionEnum.R4);
     authProvider = mock(BulkSubmitAuthProvider.class);
 
     when(sparkSession.sparkContext()).thenReturn(sparkContext);

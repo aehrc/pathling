@@ -24,7 +24,9 @@ import au.csiro.pathling.PathlingServerVersion;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.OperationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.encoders.FhirEncoders;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.parser.IParser;
 import java.util.List;
 import java.util.Optional;
@@ -69,7 +71,7 @@ class ConformanceProviderTest {
     Mockito.when(version.getBuildVersion()).thenReturn(Optional.of("1.0.0"));
     Mockito.when(version.getDescriptiveVersion()).thenReturn(Optional.of("1.0.0"));
 
-    final FhirContext fhirContext = FhirContext.forR4();
+    final FhirContext fhirContext = FhirEncoders.contextFor(FhirVersionEnum.R4);
     final IParser jsonParser = fhirContext.newJsonParser();
 
     conformanceProvider =
@@ -458,7 +460,7 @@ class ConformanceProviderTest {
     Mockito.when(version.getBuildVersion()).thenReturn(Optional.of("1.0.0"));
     Mockito.when(version.getDescriptiveVersion()).thenReturn(Optional.of("1.0.0"));
 
-    final FhirContext fhirContext = FhirContext.forR4();
+    final FhirContext fhirContext = FhirEncoders.contextFor(FhirVersionEnum.R4);
     final IParser jsonParser = fhirContext.newJsonParser();
 
     return new ConformanceProvider(config, Optional.empty(), version, fhirContext, jsonParser);

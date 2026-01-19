@@ -621,8 +621,8 @@ public class PathlingContext {
   @Nonnull
   private static TerminologyServiceFactory getTerminologyServiceFactory(
       @Nonnull final TerminologyConfiguration configuration) {
-    // Pathling only supports FHIR R4, so we use the version enum directly to avoid creating a
-    // temporary FhirContext.
+    // Pathling only supports FHIR R4, so we use the version enum directly to avoid creating another
+    // FhirContext.
     return new DefaultTerminologyServiceFactory(FhirVersionEnum.R4, configuration);
   }
 }

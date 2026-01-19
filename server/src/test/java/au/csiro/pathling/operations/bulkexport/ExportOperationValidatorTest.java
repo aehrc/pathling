@@ -27,8 +27,10 @@ import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
@@ -48,7 +50,7 @@ class ExportOperationValidatorTest {
 
   @BeforeEach
   void setUp() {
-    final FhirContext fhirContext = FhirContext.forR4();
+    final FhirContext fhirContext = FhirEncoders.contextFor(FhirVersionEnum.R4);
     final ServerConfiguration serverConfiguration = new ServerConfiguration();
     // Configure auth to be disabled to avoid NPE.
     final AuthorizationConfiguration authConfig = new AuthorizationConfiguration();
