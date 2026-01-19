@@ -36,7 +36,7 @@
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
     <pathling.dockerBaseImage>amazoncorretto:21</pathling.dockerBaseImage>
     <pathling.awsSdkVersion>2.40.3</pathling.awsSdkVersion>
-    <pathling.bulkExportVersion>1.0.4-SNAPSHOT</pathling.bulkExportVersion>
+    <pathling.bulkExportVersion>1.0.4</pathling.bulkExportVersion>
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
   </properties>
 
