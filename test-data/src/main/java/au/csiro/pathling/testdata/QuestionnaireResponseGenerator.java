@@ -95,18 +95,16 @@ public class QuestionnaireResponseGenerator {
     // Create parent directories if they don't exist.
     final File outputFileObj = new File(outputFile);
     final File parentDir = outputFileObj.getParentFile();
-    if (parentDir != null && !parentDir.exists()) {
-      if (!parentDir.mkdirs()) {
-        throw new IOException("Failed to create directory: " + parentDir.getAbsolutePath());
-      }
+    if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
+      throw new IOException("Failed to create directory: " + parentDir.getAbsolutePath());
     }
 
     final FhirContext fhirContext = FhirContext.forR4();
     final String baseUrl = "https://example.org/fhir";
 
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+    try (final BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
       for (int i = 0; i < numResources; i++) {
-        final QuestionnaireResponse response = generateQuestionnaireResponse(i, baseUrl);
+        final QuestionnaireResponse response = generateQuestionnaireResponse(baseUrl);
         final String json =
             fhirContext.newJsonParser().setPrettyPrint(false).encodeResourceToString(response);
         writer.write(json);
@@ -124,12 +122,10 @@ public class QuestionnaireResponseGenerator {
   /**
    * Generates a single QuestionnaireResponse resource with nested items.
    *
-   * @param index the index of the resource being generated
    * @param baseUrl the base URL for resource references
    * @return a populated QuestionnaireResponse resource
    */
-  private static QuestionnaireResponse generateQuestionnaireResponse(
-      final int index, final String baseUrl) {
+  private static QuestionnaireResponse generateQuestionnaireResponse(final String baseUrl) {
     final QuestionnaireResponse response = new QuestionnaireResponse();
     response.setId(UUID.randomUUID().toString());
     response.setStatus(QuestionnaireResponseStatus.COMPLETED);
