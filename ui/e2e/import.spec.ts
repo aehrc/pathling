@@ -404,7 +404,7 @@ test.describe("Import page", () => {
         await page.getByRole("button", { name: "Start import" }).click();
 
         // Verify error message is displayed.
-        await expect(page.getByText("Error:")).toBeVisible();
+        await expect(page.getByText("Invalid source URL")).toBeVisible();
       });
     });
 
@@ -924,8 +924,10 @@ test.describe("Import page", () => {
         .fill("s3a://test/data.ndjson");
       await page.getByRole("button", { name: "Start import" }).click();
 
-      // Wait for error to appear.
-      await expect(page.getByText("Error:")).toBeVisible({ timeout: 10000 });
+      // Wait for error message to appear.
+      await expect(page.getByText("Import failed")).toBeVisible({
+        timeout: 10000,
+      });
 
       // Verify close button is visible.
       await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
@@ -951,15 +953,17 @@ test.describe("Import page", () => {
         .fill("s3a://test/data.ndjson");
       await page.getByRole("button", { name: "Start import" }).click();
 
-      // Wait for error and close button.
-      await expect(page.getByText("Error:")).toBeVisible({ timeout: 10000 });
+      // Wait for error message and close button.
+      await expect(page.getByText("Import failed")).toBeVisible({
+        timeout: 10000,
+      });
       await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
 
       // Click close button.
       await page.getByRole("button", { name: "Close" }).click();
 
-      // Verify the import card is removed (check for error message gone).
-      await expect(page.getByText("Error:")).not.toBeVisible();
+      // Verify the import card is removed.
+      await expect(page.getByText("Importing 1 source(s)")).not.toBeVisible();
     });
   });
 

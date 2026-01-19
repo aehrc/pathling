@@ -907,7 +907,7 @@ test.describe("Export page", () => {
       await page.getByRole("button", { name: "Start export" }).click();
 
       // Verify error message is displayed.
-      await expect(page.getByText("Error:")).toBeVisible();
+      await expect(page.getByText("Error")).toBeVisible();
     });
 
     test("displays error message on polling failure", async ({ page }) => {
@@ -936,7 +936,7 @@ test.describe("Export page", () => {
       await page.getByRole("button", { name: "Start export" }).click();
 
       // Verify error message is displayed.
-      await expect(page.getByText("Error:")).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText("Error")).toBeVisible({ timeout: 10000 });
     });
 
     test("close button visible when export errors", async ({ page }) => {
@@ -955,7 +955,7 @@ test.describe("Export page", () => {
       await page.getByRole("button", { name: "Start export" }).click();
 
       // Wait for error to appear.
-      await expect(page.getByText("Error:")).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText("Error")).toBeVisible({ timeout: 10000 });
 
       // Verify close button is visible.
       await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
@@ -979,7 +979,7 @@ test.describe("Export page", () => {
       await page.getByRole("button", { name: "Start export" }).click();
 
       // Wait for error and close button.
-      await expect(page.getByText("Error:")).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText("Error")).toBeVisible({ timeout: 10000 });
       await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
 
       // Click close button.
