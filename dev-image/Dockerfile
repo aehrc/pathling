@@ -150,8 +150,8 @@ RUN curl -fsSL "https://github.com/oras-project/oras/releases/download/v${ORAS_V
 # =============================================================================
 # Trivy (vulnerability scanner)
 # =============================================================================
-ARG TRIVY_VERSION=0.58.2
-RUN curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+RUN TRIVY_VERSION=$(curl -fsSL https://api.github.com/repos/aquasecurity/trivy/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/') \
+    && curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
     | tar -xz -C /usr/local/bin trivy
 
 # Download Trivy vulnerability databases.
