@@ -136,9 +136,7 @@ export function BulkSubmit() {
                   </Flex>
                 )}
 
-                {isError && monitor.error && (
-                  <OperationOutcomeDisplay error={monitor.error} />
-                )}
+                {isError && monitor.error && <OperationOutcomeDisplay error={monitor.error} />}
 
                 {isCancelled && (
                   <Text size="2" color="orange">

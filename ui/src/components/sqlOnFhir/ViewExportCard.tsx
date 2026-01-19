@@ -188,9 +188,7 @@ export function ViewExportCard({
           </Flex>
         )}
 
-        {job.status === "failed" && job.error && (
-          <OperationOutcomeDisplay error={job.error} />
-        )}
+        {job.status === "failed" && job.error && <OperationOutcomeDisplay error={job.error} />}
 
         {job.status === "completed" &&
           job.manifest &&

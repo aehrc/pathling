@@ -29,7 +29,6 @@ import { OperationOutcomeError } from "../../types/errors";
 
 import type { OperationOutcomeIssue } from "fhir/r4";
 
-
 interface OperationOutcomeDisplayProps {
   error: Error;
 }

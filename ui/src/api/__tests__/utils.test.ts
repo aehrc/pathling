@@ -261,9 +261,12 @@ describe("checkResponse", () => {
 
   it("throws generic Error for non-OperationOutcome JSON", async () => {
     // JSON that is not an OperationOutcome should fall back to generic error.
-    const response = new Response(JSON.stringify({ error: "Something wrong" }), {
-      status: 400,
-    });
+    const response = new Response(
+      JSON.stringify({ error: "Something wrong" }),
+      {
+        status: 400,
+      },
+    );
 
     await expect(checkResponse(response)).rejects.toThrow(Error);
     await expect(

@@ -73,9 +73,14 @@ export class OperationOutcomeError extends Error {
    * @param status - The HTTP status code from the response.
    * @param context - Optional context string for error messages (e.g., "Import kick-off").
    */
-  constructor(operationOutcome: OperationOutcome, status: number, context?: string) {
+  constructor(
+    operationOutcome: OperationOutcome,
+    status: number,
+    context?: string,
+  ) {
     const prefix = context ? `${context} failed` : "Request failed";
-    const diagnostics = operationOutcome.issue?.[0]?.diagnostics ?? "Unknown error";
+    const diagnostics =
+      operationOutcome.issue?.[0]?.diagnostics ?? "Unknown error";
     super(`${prefix}: ${status} - ${diagnostics}`);
     this.name = "OperationOutcomeError";
     this.operationOutcome = operationOutcome;
