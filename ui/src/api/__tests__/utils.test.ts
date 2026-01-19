@@ -17,7 +17,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { NotFoundError, UnauthorizedError } from "../../types/errors";
+import {
+  NotFoundError,
+  OperationOutcomeError,
+  UnauthorizedError,
+} from "../../types/errors";
 import {
   buildHeaders,
   buildUrl,
@@ -198,6 +202,106 @@ describe("checkResponse", () => {
     const response = new Response("", { status: 503 });
     await expect(checkResponse(response)).rejects.toThrow(
       "Request failed: 503 - ",
+    );
+  });
+
+  it("throws OperationOutcomeError for valid OperationOutcome response", async () => {
+    // A FHIR OperationOutcome response from the server.
+    const operationOutcome = {
+      resourceType: "OperationOutcome",
+      issue: [
+        {
+          severity: "error",
+          code: "processing",
+          diagnostics: "[DELTA_PATH_EXISTS] Cannot write to existing path",
+        },
+      ],
+    };
+    const response = new Response(JSON.stringify(operationOutcome), {
+      status: 400,
+    });
+
+    await expect(checkResponse(response, "Import kick-off")).rejects.toThrow(
+      OperationOutcomeError,
+    );
+  });
+
+  it("preserves OperationOutcome data in thrown error", async () => {
+    // Verify the OperationOutcome is accessible from the caught error.
+    const operationOutcome = {
+      resourceType: "OperationOutcome",
+      issue: [
+        {
+          severity: "error",
+          code: "processing",
+          diagnostics: "Primary error",
+        },
+        {
+          severity: "warning",
+          code: "informational",
+          diagnostics: "Secondary warning",
+        },
+      ],
+    };
+    const response = new Response(JSON.stringify(operationOutcome), {
+      status: 422,
+    });
+
+    try {
+      await checkResponse(response);
+      // Should not reach here.
+      expect.fail("Expected OperationOutcomeError to be thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(OperationOutcomeError);
+      const error = e as OperationOutcomeError;
+      expect(error.operationOutcome.issue).toHaveLength(2);
+      expect(error.status).toBe(422);
+    }
+  });
+
+  it("throws generic Error for non-OperationOutcome JSON", async () => {
+    // JSON that is not an OperationOutcome should fall back to generic error.
+    const response = new Response(JSON.stringify({ error: "Something wrong" }), {
+      status: 400,
+    });
+
+    await expect(checkResponse(response)).rejects.toThrow(Error);
+    await expect(
+      checkResponse(
+        new Response(JSON.stringify({ error: "Something wrong" }), {
+          status: 400,
+        }),
+      ),
+    ).rejects.not.toThrow(OperationOutcomeError);
+  });
+
+  it("throws generic Error for invalid JSON", async () => {
+    // Non-JSON response should fall back to generic error.
+    const response = new Response("Not valid JSON", { status: 400 });
+
+    await expect(checkResponse(response)).rejects.toThrow(
+      "Request failed: 400 - Not valid JSON",
+    );
+  });
+
+  it("includes context in OperationOutcomeError message", async () => {
+    // Context should be passed through to the OperationOutcomeError.
+    const operationOutcome = {
+      resourceType: "OperationOutcome",
+      issue: [
+        {
+          severity: "error",
+          code: "processing",
+          diagnostics: "Path already exists",
+        },
+      ],
+    };
+    const response = new Response(JSON.stringify(operationOutcome), {
+      status: 400,
+    });
+
+    await expect(checkResponse(response, "Import kick-off")).rejects.toThrow(
+      "Import kick-off failed: 400 - Path already exists",
     );
   });
 });

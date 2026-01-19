@@ -321,7 +321,9 @@ describe("ImportCard", () => {
 
       render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
 
-      expect(screen.getByText("Error: Import failed")).toBeInTheDocument();
+      // OperationOutcomeDisplay shows severity badge and message separately.
+      expect(screen.getByText("Error")).toBeInTheDocument();
+      expect(screen.getByText("Import failed")).toBeInTheDocument();
     });
 
     it("reports error to parent when import fails", async () => {

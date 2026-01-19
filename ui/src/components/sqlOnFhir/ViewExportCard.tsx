@@ -26,6 +26,7 @@ import { Cross2Icon, DownloadIcon, ReloadIcon, TrashIcon } from "@radix-ui/react
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useState } from "react";
 
+import { OperationOutcomeDisplay } from "../../components/error/OperationOutcomeDisplay";
 import { getViewExportOutputFiles } from "../../types/viewExport";
 import { formatDateTime } from "../../utils";
 
@@ -188,9 +189,7 @@ export function ViewExportCard({
         )}
 
         {job.status === "failed" && job.error && (
-          <Text size="2" color="red">
-            Error: {job.error.message}
-          </Text>
+          <OperationOutcomeDisplay error={job.error} />
         )}
 
         {job.status === "completed" &&

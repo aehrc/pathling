@@ -27,6 +27,7 @@ import { Box, Button, Card, Flex, Progress, Spinner, Text } from "@radix-ui/them
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { BulkSubmitMonitorForm } from "../components/bulkSubmit/BulkSubmitMonitorForm";
+import { OperationOutcomeDisplay } from "../components/error/OperationOutcomeDisplay";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useBulkSubmit, useServerCapabilities } from "../hooks";
@@ -136,9 +137,7 @@ export function BulkSubmit() {
                 )}
 
                 {isError && monitor.error && (
-                  <Text size="2" color="red">
-                    Error: {monitor.error.message}
-                  </Text>
+                  <OperationOutcomeDisplay error={monitor.error} />
                 )}
 
                 {isCancelled && (

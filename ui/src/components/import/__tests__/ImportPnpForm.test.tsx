@@ -31,9 +31,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen } from "../../../test/testUtils";
+import { ImportPnpForm } from "../ImportPnpForm";
 
 import type { ImportPnpRequest } from "../../../types/importPnp";
-import { ImportPnpForm } from "../ImportPnpForm";
 
 describe("ImportPnpForm", () => {
   const defaultResourceTypes = ["Patient", "Observation", "Condition"];

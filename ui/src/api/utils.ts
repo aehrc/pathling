@@ -15,7 +15,11 @@
  * limitations under the License.
  */
 
-import { NotFoundError, UnauthorizedError } from "../types/errors";
+import {
+  NotFoundError,
+  OperationOutcomeError,
+  UnauthorizedError,
+} from "../types/errors";
 
 /**
  * Options for building HTTP headers.
@@ -140,6 +144,7 @@ export function resolveUrl(baseUrl: string, url: string): string {
  * @param context - Optional context string for error messages (e.g., "Import kick-off").
  * @throws {UnauthorizedError} When response status is 401.
  * @throws {NotFoundError} When response status is 404.
+ * @throws {OperationOutcomeError} When response body is a FHIR OperationOutcome.
  * @throws {Error} For other non-successful responses with status and body.
  *
  * @example
@@ -165,6 +170,19 @@ export async function checkResponse(
 
   const errorBody = await response.text();
   const prefix = context ? `${context} failed` : "Request failed";
+
+  // Try to parse as OperationOutcome.
+  try {
+    const parsed = JSON.parse(errorBody);
+    if (parsed.resourceType === "OperationOutcome") {
+      throw new OperationOutcomeError(parsed, response.status, context);
+    }
+  } catch (e) {
+    // Re-throw if it's already our error type.
+    if (e instanceof OperationOutcomeError) throw e;
+    // Otherwise fall through to generic error.
+  }
+
   throw new Error(`${prefix}: ${response.status} - ${errorBody}`);
 }
 
