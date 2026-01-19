@@ -1,0 +1,11 @@
+# Hadolint configuration for Pathling CI runner image.
+#
+# @author John Grimes
+
+ignored:
+  # DL3008: Pin versions in apt-get install.
+  # Ignored because pinning apt package versions is impractical for CI images:
+  # - Ubuntu package versions change frequently with security updates.
+  # - Pinned versions become unavailable when packages are updated.
+  # - CI images should receive the latest security patches.
+  - DL3008
