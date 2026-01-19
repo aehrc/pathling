@@ -26,6 +26,7 @@ import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useEffect, useRef } from "react";
 
+import { OperationOutcomeDisplay } from "../../components/error/OperationOutcomeDisplay";
 import { useImport, useImportPnp } from "../../hooks";
 import { formatDateTime } from "../../utils";
 
@@ -184,11 +185,7 @@ export function ImportCard({ job, onError, onClose }: Readonly<ImportCardProps>)
           </Flex>
         )}
 
-        {error && (
-          <Text size="2" color="red">
-            Error: {error.message}
-          </Text>
-        )}
+        {error && <OperationOutcomeDisplay error={error} />}
 
         {status === "cancelled" && (
           <Text size="2" color="gray">

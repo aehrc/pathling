@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import type { OperationOutcome } from "fhir/r4";
+
 /**
  * Custom error types for API error handling.
  *
@@ -50,5 +52,33 @@ export class NotFoundError extends Error {
   constructor(message: string = "Resource not found") {
     super(message);
     this.name = "NotFoundError";
+  }
+}
+
+/**
+ * Error thrown when an API request returns a FHIR OperationOutcome.
+ * Preserves the full OperationOutcome structure for detailed error display.
+ */
+export class OperationOutcomeError extends Error {
+  /** The FHIR OperationOutcome resource from the response. */
+  readonly operationOutcome: OperationOutcome;
+
+  /** The HTTP status code from the response. */
+  readonly status: number;
+
+  /**
+   * Creates a new OperationOutcomeError instance.
+   *
+   * @param operationOutcome - The FHIR OperationOutcome resource.
+   * @param status - The HTTP status code from the response.
+   * @param context - Optional context string for error messages (e.g., "Import kick-off").
+   */
+  constructor(operationOutcome: OperationOutcome, status: number, context?: string) {
+    const prefix = context ? `${context} failed` : "Request failed";
+    const diagnostics = operationOutcome.issue?.[0]?.diagnostics ?? "Unknown error";
+    super(`${prefix}: ${status} - ${diagnostics}`);
+    this.name = "OperationOutcomeError";
+    this.operationOutcome = operationOutcome;
+    this.status = status;
   }
 }

@@ -26,6 +26,7 @@ import { Cross2Icon, DownloadIcon, ReloadIcon, TrashIcon } from "@radix-ui/react
 import { Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useEffect, useRef, useState } from "react";
 
+import { OperationOutcomeDisplay } from "../../components/error/OperationOutcomeDisplay";
 import { useBulkExport, useDownloadFile } from "../../hooks";
 import { getExportOutputFiles } from "../../types/export";
 import { formatDateTime } from "../../utils";
@@ -200,11 +201,7 @@ export function ExportCard({ request, createdAt, onError, onClose }: Readonly<Ex
           </Flex>
         )}
 
-        {error && (
-          <Text size="2" color="red">
-            Error: {error.message}
-          </Text>
-        )}
+        {error && <OperationOutcomeDisplay error={error} />}
 
         {status === "cancelled" && (
           <Text size="2" color="gray">

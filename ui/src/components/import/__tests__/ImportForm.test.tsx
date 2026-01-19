@@ -29,9 +29,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen } from "../../../test/testUtils";
+import { ImportForm } from "../ImportForm";
 
 import type { ImportRequest } from "../../../types/import";
-import { ImportForm } from "../ImportForm";
 
 describe("ImportForm", () => {
   const defaultResourceTypes = ["Patient", "Observation", "Condition"];
