@@ -108,7 +108,7 @@ public class FhirServer extends RestfulServer {
               "application/fhir+ndjson",
               "application/ndjson",
               "ndjson",
-              "application/x-pathling-parquet",
+              "application/vnd.apache.parquet",
               "parquet"));
 
   private static final int DEFAULT_PAGE_SIZE = 100;

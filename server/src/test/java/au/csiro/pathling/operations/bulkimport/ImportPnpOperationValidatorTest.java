@@ -296,7 +296,7 @@ class ImportPnpOperationValidatorTest {
     params
         .addParameter()
         .setName("inputFormat")
-        .setValue(new CodeType("application/x-pathling-parquet"));
+        .setValue(new CodeType("application/vnd.apache.parquet"));
 
     final PreAsyncValidationResult<ImportPnpRequest> result =
         validator.validateParametersRequest(mockRequest, params);

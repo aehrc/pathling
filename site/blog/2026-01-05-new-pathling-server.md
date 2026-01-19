@@ -137,7 +137,7 @@ curl -X POST 'http://localhost:8080/fhir/$viewdefinition-export' \
       },
       {
         "name": "_outputFormat",
-        "valueString": "application/x-pathling-parquet"
+        "valueString": "application/vnd.apache.parquet"
       }
     ]
   }'
@@ -157,7 +157,7 @@ Supported formats include:
 | Format  | MIME type                        |
 | ------- | -------------------------------- |
 | NDJSON  | `application/fhir+ndjson`        |
-| Parquet | `application/x-pathling-parquet` |
+| Parquet | `application/vnd.apache.parquet` |
 
 Data can be loaded from Amazon S3 (`s3a://`), HDFS, or the local filesystem.
 

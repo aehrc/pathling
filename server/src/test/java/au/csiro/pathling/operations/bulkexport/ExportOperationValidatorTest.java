@@ -250,7 +250,7 @@ class ExportOperationValidatorTest {
             () -> {
               final PreAsyncValidationResult<ExportRequest> result =
                   validator.validateRequest(
-                      requestDetails, "application/x-pathling-parquet", null, null, null, null);
+                      requestDetails, "application/vnd.apache.parquet", null, null, null, null);
               assertThat(result.result().outputFormat()).isEqualTo(ExportOutputFormat.PARQUET);
             });
   }

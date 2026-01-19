@@ -26,7 +26,7 @@ import type { Parameters } from "fhir/r4";
 
 export type ImportFormat =
   | "application/fhir+ndjson"
-  | "application/x-pathling-parquet";
+  | "application/vnd.apache.parquet";
 
 export type ImportMode = "overwrite" | "merge" | "append" | "ignore" | "error";
 

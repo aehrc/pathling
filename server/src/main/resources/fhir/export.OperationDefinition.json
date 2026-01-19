@@ -18,7 +18,7 @@
       "use": "in",
       "min": 0,
       "max": "1",
-      "documentation": "The format for the requested export files. Pathling supports NDJSON, Parquet, and Delta Lake formats. Accepted values for NDJSON are 'application/fhir+ndjson', 'application/ndjson', and 'ndjson'. Accepted values for Parquet are 'application/x-pathling-parquet' and 'parquet'. Accepted values for Delta Lake are 'application/x-pathling-delta+parquet' and 'delta'. Defaults to NDJSON if not specified.",
+      "documentation": "The format for the requested export files. Pathling supports NDJSON and Parquet formats. Accepted values for NDJSON are 'application/fhir+ndjson', 'application/ndjson', and 'ndjson'. Accepted values for Parquet are 'application/vnd.apache.parquet' and 'parquet'. Defaults to NDJSON if not specified.",
       "type": "string"
     },
     {

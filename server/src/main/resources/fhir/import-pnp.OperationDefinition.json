@@ -42,7 +42,7 @@
       "use": "in",
       "min": 0,
       "max": "1",
-      "documentation": "The MIME type of the input files. Supported values are 'application/fhir+ndjson' (default) and 'application/x-pathling-parquet'.",
+      "documentation": "The MIME type of the input files. Supported values are 'application/fhir+ndjson' (default) and 'application/vnd.apache.parquet'.",
       "type": "code"
     },
     {

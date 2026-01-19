@@ -15,9 +15,9 @@ allowing for large data sets to be imported efficiently.
 The following source formats are supported:
 
 | Format  | MIME type                        | Description                                                                                                  |
-| ------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+|---------|----------------------------------|--------------------------------------------------------------------------------------------------------------|
 | NDJSON  | `application/fhir+ndjson`        | [FHIR Newline Delimited JSON](https://hl7.org/fhir/R4/nd-json.html) format                                   |
-| Parquet | `application/x-pathling-parquet` | [Apache Parquet](https://parquet.apache.org/) conforming to the [Pathling schema](../../libraries/io/schema) |
+| Parquet | `application/vnd.apache.parquet` | [Apache Parquet](https://parquet.apache.org/) conforming to the [Pathling schema](../../libraries/io/schema) |
 
 ## Supported URL schemes
 
@@ -92,7 +92,7 @@ Send a request with `Content-Type: application/json` containing a JSON manifest:
 #### Manifest fields
 
 | Field         | Cardinality | Description                                                                     |
-| ------------- | ----------- | ------------------------------------------------------------------------------- |
+|---------------|-------------|---------------------------------------------------------------------------------|
 | `inputFormat` | 1..1        | The MIME type of the source files. See [Supported formats](#supported-formats). |
 | `input`       | 1..\*       | An array of input file specifications.                                          |
 | `input.type`  | 1..1        | The FHIR resource type contained in the file.                                   |
@@ -157,7 +157,7 @@ Parameters resource:
 #### Parameters
 
 | Name                 | Cardinality | Type   | Description                                                                  |
-| -------------------- | ----------- | ------ | ---------------------------------------------------------------------------- |
+|----------------------|-------------|--------|------------------------------------------------------------------------------|
 | `inputFormat`        | 0..1        | Coding | The format of the source files. Defaults to `application/fhir+ndjson`.       |
 | `saveMode`           | 0..1        | Coding | The import mode. See [Import modes](#import-modes). Defaults to `overwrite`. |
 | `input`              | 1..\*       | -      | Contains parts describing each input file.                                   |
@@ -167,7 +167,7 @@ Parameters resource:
 ## Import modes
 
 | Mode        | Description                                                                                                                                                    |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `overwrite` | All existing resources of the specified type are deleted and replaced with the contents of the source file. This is the default.                               |
 | `merge`     | Existing resources are matched with resources in the source file based on their ID. Existing resources are updated and new resources are added as appropriate. |
 | `append`    | Resources in the source file are added without modifying any existing resources.                                                                               |

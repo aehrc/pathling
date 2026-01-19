@@ -29,9 +29,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen } from "../../../test/testUtils";
-import { ImportForm } from "../ImportForm";
 
 import type { ImportRequest } from "../../../types/import";
+import { ImportForm } from "../ImportForm";
 
 describe("ImportForm", () => {
   const defaultResourceTypes = ["Patient", "Observation", "Condition"];
@@ -461,7 +461,7 @@ describe("ImportForm", () => {
       await user.click(screen.getByRole("button", { name: /start import/i }));
 
       const request = mockOnSubmit.mock.calls[0][0] as ImportRequest;
-      expect(request.inputFormat).toBe("application/x-pathling-parquet");
+      expect(request.inputFormat).toBe("application/vnd.apache.parquet");
     });
   });
 

@@ -31,9 +31,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen } from "../../../test/testUtils";
-import { ImportPnpForm } from "../ImportPnpForm";
 
 import type { ImportPnpRequest } from "../../../types/importPnp";
+import { ImportPnpForm } from "../ImportPnpForm";
 
 describe("ImportPnpForm", () => {
   const defaultResourceTypes = ["Patient", "Observation", "Condition"];
@@ -487,7 +487,7 @@ describe("ImportPnpForm", () => {
       await user.click(screen.getByRole("button", { name: /start import/i }));
 
       const request = mockOnSubmit.mock.calls[0][0] as ImportPnpRequest;
-      expect(request.inputFormat).toBe("application/x-pathling-parquet");
+      expect(request.inputFormat).toBe("application/vnd.apache.parquet");
     });
   });
 

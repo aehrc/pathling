@@ -17,6 +17,7 @@
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.majorVersion>1</project.majorVersion>
     <pathling.version>9.2.0-SNAPSHOT</pathling.version>
     <pathling.hapiFhirVersion>8.6.0</pathling.hapiFhirVersion>
     <pathling.springBootVersion>3.5.9</pathling.springBootVersion>
@@ -31,13 +32,12 @@
     <pathling.testDataVersion>1.0.0</pathling.testDataVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
     <pathling.jibVersion>3.4.6</pathling.jibVersion>
-
-    <project.majorVersion>1</project.majorVersion>
-
     <pathling.fhirServerDockerRepo>ghcr.io/aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
     <pathling.dockerBaseImage>amazoncorretto:21</pathling.dockerBaseImage>
     <pathling.awsSdkVersion>2.40.3</pathling.awsSdkVersion>
+    <pathling.bulkExportVersion>1.0.4-SNAPSHOT</pathling.bulkExportVersion>
+    <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
   </properties>
 
   <repositories>
@@ -339,12 +339,12 @@
     <dependency>
       <groupId>au.csiro.fhir</groupId>
       <artifactId>bulk-export</artifactId>
-      <version>1.0.4-SNAPSHOT</version>
+      <version>${pathling.bulkExportVersion}</version>
     </dependency>
     <dependency>
       <groupId>au.csiro.fhir</groupId>
       <artifactId>fhir-auth</artifactId>
-      <version>1.0.0</version>
+      <version>${pathling.fhirAuthVersion}</version>
     </dependency>
 
     <!-- CSV formatting -->
