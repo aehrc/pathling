@@ -29,6 +29,7 @@ import { OperationOutcomeError } from "../../types/errors";
 
 import type { OperationOutcomeIssue } from "fhir/r4";
 
+
 interface OperationOutcomeDisplayProps {
   error: Error;
 }
@@ -39,9 +40,7 @@ interface OperationOutcomeDisplayProps {
  * @param severity - The issue severity code.
  * @returns Human-readable label for the severity.
  */
-function getSeverityLabel(
-  severity: OperationOutcomeIssue["severity"],
-): string {
+function getSeverityLabel(severity: OperationOutcomeIssue["severity"]): string {
   switch (severity) {
     case "fatal":
       return "Fatal";
@@ -62,9 +61,7 @@ function getSeverityLabel(
  * @param severity - The issue severity code.
  * @returns Radix color name for the severity.
  */
-function getSeverityColor(
-  severity: OperationOutcomeIssue["severity"],
-): "red" | "orange" | "blue" {
+function getSeverityColor(severity: OperationOutcomeIssue["severity"]): "red" | "orange" | "blue" {
   switch (severity) {
     case "fatal":
     case "error":
@@ -95,9 +92,7 @@ function getIssueText(issue: OperationOutcomeIssue): string {
  * @param props.error - The error to display.
  * @returns The rendered error display component.
  */
-export function OperationOutcomeDisplay({
-  error,
-}: Readonly<OperationOutcomeDisplayProps>) {
+export function OperationOutcomeDisplay({ error }: Readonly<OperationOutcomeDisplayProps>) {
   // Check if this is an OperationOutcomeError with structured data.
   if (error instanceof OperationOutcomeError) {
     const { operationOutcome } = error;
@@ -113,7 +108,11 @@ export function OperationOutcomeDisplay({
               <Badge size="1" color={getSeverityColor(issue.severity)}>
                 {getSeverityLabel(issue.severity)}
               </Badge>
-              <Text size="2" color={getSeverityColor(issue.severity)}>
+              <Text
+                size="2"
+                color={getSeverityColor(issue.severity)}
+                style={{ overflowWrap: "anywhere" }}
+              >
                 {getIssueText(issue)}
               </Text>
             </Flex>
