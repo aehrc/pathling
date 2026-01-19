@@ -5,6 +5,9 @@
 name: Build runner image
 
 on:
+  schedule:
+    # Daily at 05:55 UTC to keep Trivy vulnerability databases current.
+    - cron: "55 5 * * *"
   push:
     branches:
       - main

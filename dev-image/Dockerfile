@@ -141,18 +141,28 @@ RUN curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm
     && rm /tmp/get-helm.sh
 
 # =============================================================================
+# ORAS (OCI Registry As Storage)
+# =============================================================================
+ARG ORAS_VERSION=1.2.2
+RUN curl -fsSL "https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz" \
+    | tar -xz -C /usr/local/bin oras
+
+# =============================================================================
 # Trivy (vulnerability scanner)
 # =============================================================================
 ARG TRIVY_VERSION=0.58.2
 RUN curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
     | tar -xz -C /usr/local/bin trivy
 
-# =============================================================================
-# ORAS (OCI Registry As Storage)
-# =============================================================================
-ARG ORAS_VERSION=1.2.2
-RUN curl -fsSL "https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz" \
-    | tar -xz -C /usr/local/bin oras
+# Download Trivy vulnerability databases.
+ENV TRIVY_CACHE_DIR=/root/.cache/trivy
+RUN mkdir -p ${TRIVY_CACHE_DIR}/db ${TRIVY_CACHE_DIR}/java-db \
+    && oras pull ghcr.io/aquasecurity/trivy-db:2 \
+    && tar -xzf db.tar.gz -C ${TRIVY_CACHE_DIR}/db \
+    && rm db.tar.gz \
+    && oras pull ghcr.io/aquasecurity/trivy-java-db:1 \
+    && tar -xzf javadb.tar.gz -C ${TRIVY_CACHE_DIR}/java-db \
+    && rm javadb.tar.gz
 
 # =============================================================================
 # AWS CLI v2
