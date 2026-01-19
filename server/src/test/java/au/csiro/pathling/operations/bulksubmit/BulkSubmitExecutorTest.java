@@ -160,6 +160,7 @@ class BulkSubmitExecutorTest {
 
   @Test
   @DisplayName("downloadManifestJob creates and registers job when async enabled")
+  @SuppressWarnings("unchecked")
   void downloadManifestJobCreatesAndRegistersJobWhenAsyncEnabled() {
     // Given: a submission and manifest job with async enabled.
     final Submission submission = createTestSubmission();
@@ -167,7 +168,7 @@ class BulkSubmitExecutorTest {
     setupSuccessfulManifestStubs();
 
     // Capture the job registered.
-    final ArgumentCaptor<Job> jobCaptor = ArgumentCaptor.forClass(Job.class);
+    final ArgumentCaptor<Job<?>> jobCaptor = ArgumentCaptor.forClass(Job.class);
 
     // When: calling downloadManifestJob.
     executor.downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE);

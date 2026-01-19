@@ -36,6 +36,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  * @author Felix Naumann
  */
 public class CustomObjectDataSource extends DatasetSource {
+  @SuppressWarnings("this-escape")
   public CustomObjectDataSource(
       @Nonnull final SparkSession spark,
       @Nonnull final PathlingContext pathlingContext,

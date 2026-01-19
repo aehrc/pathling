@@ -169,7 +169,7 @@ class AsyncAspectTest {
     setAuthenticationPrincipal(mockJwtPrincipal);
 
     final String jobId = assertExecutedAsync();
-    final Job newJob = jobRegistry.get(jobId);
+    final Job<?> newJob = jobRegistry.get(jobId);
     assertNotNull(newJob);
     assertEquals(jobId, newJob.getId());
     assertEquals(mockFuture, newJob.getResult());
