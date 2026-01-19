@@ -34,7 +34,7 @@ public enum ImportFormat {
    * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
    *     Specification</a>
    */
-  PARQUET("application/x-pathling-parquet");
+  PARQUET("application/vnd.apache.parquet");
 
   private final String code;
 

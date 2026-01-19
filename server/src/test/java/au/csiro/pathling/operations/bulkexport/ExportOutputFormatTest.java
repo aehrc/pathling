@@ -56,9 +56,9 @@ class ExportOutputFormatTest {
   @DisplayName("fromParam should return PARQUET for all valid Parquet MIME type variants")
   @ValueSource(
       strings = {
-        "application/x-pathling-parquet",
+        "application/vnd.apache.parquet",
         "parquet",
-        "APPLICATION/X-PATHLING-PARQUET",
+        "APPLICATION/VND.APACHE.PARQUET",
         "PARQUET"
       })
   void fromParam_shouldReturnParquetForValidParquetMimeTypes(final String param) {
@@ -112,6 +112,6 @@ class ExportOutputFormatTest {
   @DisplayName("getMimeType should return correct MIME type for PARQUET")
   void getMimeType_shouldReturnCorrectMimeTypeForParquet() {
     assertThat(ExportOutputFormat.PARQUET.getMimeType())
-        .isEqualTo("application/x-pathling-parquet");
+        .isEqualTo("application/vnd.apache.parquet");
   }
 }

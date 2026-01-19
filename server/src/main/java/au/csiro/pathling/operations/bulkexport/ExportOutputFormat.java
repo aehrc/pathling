@@ -38,7 +38,7 @@ public enum ExportOutputFormat {
    * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
    *     Specification</a>
    */
-  PARQUET("application/x-pathling-parquet");
+  PARQUET("application/vnd.apache.parquet");
 
   private final String mimeType;
 
@@ -61,7 +61,7 @@ public enum ExportOutputFormat {
     }
     return switch (param.toLowerCase()) {
       case "application/fhir+ndjson", "application/ndjson", "ndjson" -> NDJSON;
-      case "application/x-pathling-parquet", "parquet" -> PARQUET;
+      case "application/vnd.apache.parquet", "parquet" -> PARQUET;
       default -> null;
     };
   }

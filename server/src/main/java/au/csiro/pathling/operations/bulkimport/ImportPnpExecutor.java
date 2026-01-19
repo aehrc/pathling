@@ -225,8 +225,13 @@ public class ImportPnpExecutor {
     }
     pnpRequest.since().ifPresent(since -> clientBuilder.withSince(since));
     pnpRequest.until().ifPresent(until -> clientBuilder.withUntil(until));
-    // Use the input format as the output format for the export operation.
-    clientBuilder.withOutputFormat(pnpRequest.importFormat().getCode());
+    // Use the standard Parquet MIME type when requesting Parquet format, as fhir-bulk-java
+    // expects this format. For other formats, use the format's native code.
+    final String outputFormat =
+        pnpRequest.importFormat() == ImportFormat.PARQUET
+            ? "application/vnd.apache.parquet"
+            : pnpRequest.importFormat().getCode();
+    clientBuilder.withOutputFormat(outputFormat);
     if (!pnpRequest.elements().isEmpty()) {
       clientBuilder.withElements(pnpRequest.elements());
     }
