@@ -24,7 +24,6 @@ import au.csiro.pathling.async.SparkJobListener;
 import au.csiro.pathling.async.StageMap;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -108,10 +107,7 @@ public class FhirServerTestConfiguration {
   @Primary
   @Nonnull
   static FhirContext fhirContext(@Nonnull final PathlingContext pathlingContext) {
-    final FhirContext fhirContext = pathlingContext.getFhirContext();
-    // Register the ViewDefinition custom resource type for SQL on FHIR support.
-    fhirContext.registerCustomType(ViewDefinitionResource.class);
-    return fhirContext;
+    return pathlingContext.getFhirContext();
   }
 
   @Bean

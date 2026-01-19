@@ -191,14 +191,18 @@ public class FhirEncoders implements Configurable<EncodingConfiguration> {
   }
 
   /**
-   * Returns the FHIR context for the given version. This is effectively a cache so consuming code
-   * does not need to recreate the context repeatedly.
+   * Returns a cached FhirContext for the given FHIR version. This method is the canonical source
+   * for FhirContext instances within Pathling and should be used instead of creating contexts
+   * directly via {@code FhirContext.forR4()} or similar methods.
    *
-   * <p>The context is configured with all custom resource types registered, so that HAPI can
-   * recognise and parse resources like ViewDefinition.
+   * <p>The returned context is thread-safe and is pre-configured with all custom resource types
+   * registered, ensuring HAPI can recognise and parse resources like ViewDefinition.
+   *
+   * <p>Using this method instead of creating fresh FhirContext instances avoids the expensive
+   * initialisation cost that HAPI incurs when scanning and building resource definitions.
    *
    * @param fhirVersion the version of FHIR to use
-   * @return the FhirContext
+   * @return a cached, pre-configured FhirContext
    */
   public static FhirContext contextFor(final FhirVersionEnum fhirVersion) {
     return FHIR_CONTEXTS.computeIfAbsent(

@@ -19,7 +19,6 @@ package au.csiro.pathling.operations.view;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import au.csiro.pathling.encoders.ViewDefinitionResource;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -84,8 +83,6 @@ class ViewDefinitionRunProviderIT {
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
             .build();
     gson = new GsonBuilder().create();
-    // Register ViewDefinitionResource with the FhirContext so it can be serialised/parsed.
-    fhirContext.registerCustomType(ViewDefinitionResource.class);
   }
 
   @Test

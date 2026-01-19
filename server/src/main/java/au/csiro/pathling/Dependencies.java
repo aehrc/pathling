@@ -19,7 +19,6 @@ package au.csiro.pathling;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.io.DynamicDeltaSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -65,10 +64,7 @@ public class Dependencies {
   @Nonnull
   static FhirContext fhirContext(@Nonnull final PathlingContext pathlingContext) {
     log.debug("Creating R4 FHIR context");
-    final FhirContext fhirContext = pathlingContext.getFhirContext();
-    // Register the ViewDefinition custom resource type for SQL on FHIR support.
-    fhirContext.registerCustomType(ViewDefinitionResource.class);
-    return fhirContext;
+    return pathlingContext.getFhirContext();
   }
 
   @Bean

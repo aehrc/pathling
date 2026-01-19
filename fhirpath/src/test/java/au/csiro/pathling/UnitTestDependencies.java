@@ -29,6 +29,7 @@ import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
 import au.csiro.pathling.views.StrictStringTypeAdapterFactory;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.parser.IParser;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -97,7 +98,7 @@ public class UnitTestDependencies {
   @ConditionalOnMissingBean
   @Nonnull
   public static FhirContext fhirContext() {
-    return FhirContext.forR4();
+    return FhirEncoders.contextFor(FhirVersionEnum.R4);
   }
 
   @Bean

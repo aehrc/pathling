@@ -17,9 +17,11 @@
 
 package au.csiro.pathling.interceptors;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.operations.bulkimport.ImportManifest;
 import au.csiro.pathling.operations.bulkimport.ImportManifestInput;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.Filter;
@@ -84,7 +86,7 @@ public class ImportManifestInterceptor {
 
     private static final String PROCESSED_ATTR = "import.manifest.filter.processed";
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final FhirContext fhirContext = FhirContext.forR4();
+    private final FhirContext fhirContext = FhirEncoders.contextFor(FhirVersionEnum.R4);
 
     @Override
     public void doFilter(
