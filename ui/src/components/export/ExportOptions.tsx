@@ -28,7 +28,6 @@ import { OUTPUT_FORMATS } from "../../types/exportOptions";
 
 import type { ExportOptionsValues } from "../../types/exportOptions";
 
-
 interface ExportOptionsProps {
   /** Available resource types for selection. */
   resourceTypes: string[];
