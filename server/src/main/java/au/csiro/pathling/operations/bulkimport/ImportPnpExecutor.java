@@ -127,9 +127,8 @@ public class ImportPnpExecutor {
                 });
       }
 
-      // Determine file extension to filter for.
-      final String fileExtension =
-          pnpConfig.getFileExtension() != null ? pnpConfig.getFileExtension() : ".ndjson";
+      // Determine file extension from the import format.
+      final String fileExtension = "." + pnpRequest.importFormat().getExtension();
 
       // Download files using fhir-bulk-java.
       final Map<String, Collection<String>> downloadedFiles =
@@ -232,6 +231,7 @@ public class ImportPnpExecutor {
             ? "application/vnd.apache.parquet"
             : pnpRequest.importFormat().getCode();
     clientBuilder.withOutputFormat(outputFormat);
+    clientBuilder.withOutputExtension(pnpRequest.importFormat().getExtension());
     if (!pnpRequest.elements().isEmpty()) {
       clientBuilder.withElements(pnpRequest.elements());
     }

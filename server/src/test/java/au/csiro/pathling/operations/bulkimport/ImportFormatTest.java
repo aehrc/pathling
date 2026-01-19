@@ -87,4 +87,18 @@ class ImportFormatTest {
   void getCode_shouldReturnCorrectMimeTypeForParquet() {
     assertThat(ImportFormat.PARQUET.getCode()).isEqualTo("application/vnd.apache.parquet");
   }
+
+  // Tests for getExtension() method.
+
+  @Test
+  @DisplayName("getExtension should return ndjson for NDJSON format")
+  void getExtension_shouldReturnNdjsonForNdjsonFormat() {
+    assertThat(ImportFormat.NDJSON.getExtension()).isEqualTo("ndjson");
+  }
+
+  @Test
+  @DisplayName("getExtension should return parquet for PARQUET format")
+  void getExtension_shouldReturnParquetForParquetFormat() {
+    assertThat(ImportFormat.PARQUET.getExtension()).isEqualTo("parquet");
+  }
 }

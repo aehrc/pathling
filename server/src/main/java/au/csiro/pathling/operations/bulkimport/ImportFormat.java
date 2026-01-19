@@ -43,6 +43,18 @@ public enum ImportFormat {
   }
 
   /**
+   * Returns the file extension for this format, without the leading dot.
+   *
+   * @return The file extension (e.g., "ndjson" or "parquet").
+   */
+  public String getExtension() {
+    return switch (this) {
+      case NDJSON -> "ndjson";
+      case PARQUET -> "parquet";
+    };
+  }
+
+  /**
    * Resolve an ImportFormat enum from its MIME type code.
    *
    * @param code The MIME type code to resolve.
