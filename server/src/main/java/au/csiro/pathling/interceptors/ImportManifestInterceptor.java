@@ -217,8 +217,8 @@ public class ImportManifestInterceptor {
       }
 
       // Add saveMode parameter if present.
-      if (manifest.mode() != null && !manifest.mode().isBlank()) {
-        parameters.addParameter().setName("saveMode").setValue(new CodeType(manifest.mode()));
+      if (manifest.saveMode() != null && !manifest.saveMode().isBlank()) {
+        parameters.addParameter().setName("saveMode").setValue(new CodeType(manifest.saveMode()));
       }
 
       // Add input parameters.

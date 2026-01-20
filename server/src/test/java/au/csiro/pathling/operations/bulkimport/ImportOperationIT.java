@@ -201,7 +201,7 @@ class ImportOperationIT {
                   "url": "%s"
                 }
               ],
-              "mode": "overwrite"
+              "saveMode": "overwrite"
             }
             """,
             patientFileUrl);

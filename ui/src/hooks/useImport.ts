@@ -78,7 +78,7 @@ export const useImport: UseImportFn = (options) => {
             url,
           })),
           inputFormat: request.inputFormat,
-          mode: request.saveMode,
+          saveMode: request.saveMode,
           accessToken,
         }),
       getJobId: (result: { pollingUrl: string }) => result.pollingUrl,

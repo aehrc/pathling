@@ -23,11 +23,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 
 /**
  * Tests for ImportManifest and ImportManifestInput JSON serialisation/deserialisation.
  *
  * @author Felix Naumann
+ * @author John Grimes
  */
 class ImportManifestTest {
 
@@ -58,11 +61,25 @@ class ImportManifestTest {
     final String json = objectMapper.writeValueAsString(manifest);
 
     // Then
-    assertThat(json).isNotNull();
-    assertThat(json).contains("\"inputFormat\":\"application/fhir+ndjson\"");
-    assertThat(json).contains("\"inputSource\":\"https://example.org/source\"");
-    assertThat(json).contains("\"input\":");
-    assertThat(json).contains("\"mode\":\"merge\"");
+    final String expectedJson =
+        """
+        {
+          "inputFormat": "application/fhir+ndjson",
+          "inputSource": "https://example.org/source",
+          "input": [
+            {
+              "type": "Patient",
+              "url": "s3://bucket/patients.ndjson"
+            },
+            {
+              "type": "Observation",
+              "url": "s3://bucket/observations.ndjson"
+            }
+          ],
+          "saveMode": "merge"
+        }
+        """;
+    JSONAssert.assertEquals(expectedJson, json, JSONCompareMode.STRICT);
   }
 
   @Test
@@ -79,10 +96,21 @@ class ImportManifestTest {
     final String json = objectMapper.writeValueAsString(manifest);
 
     // Then
-    assertThat(json).isNotNull();
-    assertThat(json).contains("\"inputFormat\":\"application/fhir+ndjson\"");
-    assertThat(json).contains("\"inputSource\":\"https://example.org/source\"");
-    assertThat(json).contains("\"input\":");
+    final String expectedJson =
+        """
+        {
+          "inputFormat": "application/fhir+ndjson",
+          "inputSource": "https://example.org/source",
+          "input": [
+            {
+              "type": "Patient",
+              "url": "s3://bucket/patients.ndjson"
+            }
+          ],
+          "saveMode": null
+        }
+        """;
+    JSONAssert.assertEquals(expectedJson, json, JSONCompareMode.STRICT);
   }
 
   @Test
@@ -100,15 +128,21 @@ class ImportManifestTest {
     final String json = objectMapper.writeValueAsString(manifest);
 
     // Then
-    assertThat(json).isNotNull();
-    assertThat(json).contains("\"inputFormat\":\"application/fhir+ndjson\"");
-    assertThat(json).contains("\"input\":");
-    assertThat(json).contains("\"mode\":\"overwrite\"");
-    // inputSource should either be absent or null.
-    assertThat(json)
-        .satisfiesAnyOf(
-            j -> assertThat(j).doesNotContain("\"inputSource\""),
-            j -> assertThat(j).contains("\"inputSource\":null"));
+    final String expectedJson =
+        """
+        {
+          "inputFormat": "application/fhir+ndjson",
+          "inputSource": null,
+          "input": [
+            {
+              "type": "Patient",
+              "url": "s3://bucket/patients.ndjson"
+            }
+          ],
+          "saveMode": "overwrite"
+        }
+        """;
+    JSONAssert.assertEquals(expectedJson, json, JSONCompareMode.STRICT);
   }
 
   // ========================================
@@ -133,7 +167,7 @@ class ImportManifestTest {
               "url": "s3://bucket/observations.ndjson"
             }
           ],
-          "mode": "merge"
+          "saveMode": "merge"
         }
         """;
 
@@ -149,7 +183,7 @@ class ImportManifestTest {
     assertThat(manifest.input().get(0).url()).isEqualTo("s3://bucket/patients.ndjson");
     assertThat(manifest.input().get(1).type()).isEqualTo("Observation");
     assertThat(manifest.input().get(1).url()).isEqualTo("s3://bucket/observations.ndjson");
-    assertThat(manifest.mode()).isEqualTo("merge");
+    assertThat(manifest.saveMode()).isEqualTo("merge");
   }
 
   @Test
@@ -177,7 +211,7 @@ class ImportManifestTest {
     assertThat(manifest.inputFormat()).isEqualTo("application/fhir+ndjson");
     assertThat(manifest.inputSource()).isEqualTo("https://example.org/source");
     assertThat(manifest.input()).hasSize(1);
-    assertThat(manifest.mode()).isNull();
+    assertThat(manifest.saveMode()).isNull();
   }
 
   @Test
@@ -269,9 +303,14 @@ class ImportManifestTest {
     final String json = objectMapper.writeValueAsString(input);
 
     // Then
-    assertThat(json).isNotNull();
-    assertThat(json).contains("\"type\":\"Patient\"");
-    assertThat(json).contains("\"url\":\"s3://bucket/patients.ndjson\"");
+    final String expectedJson =
+        """
+        {
+          "type": "Patient",
+          "url": "s3://bucket/patients.ndjson"
+        }
+        """;
+    JSONAssert.assertEquals(expectedJson, json, JSONCompareMode.STRICT);
   }
 
   // ========================================
@@ -314,7 +353,7 @@ class ImportManifestTest {
                 new ImportManifestInput("Observation", "s3://bucket/observations.ndjson")),
             "append");
 
-    // When - serialise and deserialise
+    // When - serialise and deserialise.
     final String json = objectMapper.writeValueAsString(original);
     final ImportManifest roundtrip = objectMapper.readValue(json, ImportManifest.class);
 
@@ -324,7 +363,7 @@ class ImportManifestTest {
     assertThat(roundtrip.input()).hasSize(original.input().size());
     assertThat(roundtrip.input().get(0).type()).isEqualTo(original.input().get(0).type());
     assertThat(roundtrip.input().get(0).url()).isEqualTo(original.input().get(0).url());
-    assertThat(roundtrip.mode()).isEqualTo(original.mode());
+    assertThat(roundtrip.saveMode()).isEqualTo(original.saveMode());
   }
 
   @Test
@@ -333,7 +372,7 @@ class ImportManifestTest {
     final ImportManifestInput original =
         new ImportManifestInput("Observation", "s3://bucket/observations.ndjson");
 
-    // When - serialise and deserialise
+    // When - serialise and deserialise.
     final String json = objectMapper.writeValueAsString(original);
     final ImportManifestInput roundtrip = objectMapper.readValue(json, ImportManifestInput.class);
 

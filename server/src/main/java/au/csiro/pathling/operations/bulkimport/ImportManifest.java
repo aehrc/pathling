@@ -28,11 +28,11 @@ import java.util.List;
  * @param inputFormat the format of the input data
  * @param inputSource the source of the input data
  * @param input the list of input items
- * @param mode the import mode
+ * @param saveMode the import mode
  * @author John Grimes
  */
 public record ImportManifest(
     @Nonnull @JsonProperty("inputFormat") String inputFormat,
     @Nullable @JsonProperty("inputSource") String inputSource,
     @Nonnull @JsonProperty("input") List<ImportManifestInput> input,
-    @Nullable @JsonProperty("mode") String mode) {}
+    @Nullable @JsonProperty("saveMode") String saveMode) {}

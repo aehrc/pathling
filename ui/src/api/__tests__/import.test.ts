@@ -43,7 +43,7 @@ describe("importKickOff", () => {
     await importKickOff("https://example.com/fhir", {
       input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
       inputFormat: "application/fhir+ndjson",
-      mode: "overwrite",
+      saveMode: "overwrite",
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -75,13 +75,13 @@ describe("importKickOff", () => {
     await importKickOff("https://example.com/fhir", {
       input,
       inputFormat: "application/fhir+ndjson",
-      mode: "merge",
+      saveMode: "merge",
     });
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.input).toEqual(input);
     expect(body.inputFormat).toBe("application/fhir+ndjson");
-    expect(body.mode).toBe("merge");
+    expect(body.saveMode).toBe("merge");
   });
 
   it("includes Authorization header when access token provided", async () => {
@@ -95,7 +95,7 @@ describe("importKickOff", () => {
     await importKickOff("https://example.com/fhir", {
       input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
       inputFormat: "application/fhir+ndjson",
-      mode: "overwrite",
+      saveMode: "overwrite",
       accessToken: "test-token",
     });
 
@@ -123,7 +123,7 @@ describe("importKickOff", () => {
     const result = await importKickOff("https://example.com/fhir", {
       input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
       inputFormat: "application/fhir+ndjson",
-      mode: "overwrite",
+      saveMode: "overwrite",
     });
 
     expect(result.pollingUrl).toBe(
@@ -138,7 +138,7 @@ describe("importKickOff", () => {
       importKickOff("https://example.com/fhir", {
         input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
         inputFormat: "application/fhir+ndjson",
-        mode: "overwrite",
+        saveMode: "overwrite",
       }),
     ).rejects.toThrow("No Content-Location header");
   });
@@ -152,7 +152,7 @@ describe("importKickOff", () => {
       importKickOff("https://example.com/fhir", {
         input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
         inputFormat: "application/fhir+ndjson",
-        mode: "overwrite",
+        saveMode: "overwrite",
       }),
     ).rejects.toThrow(UnauthorizedError);
   });
@@ -164,7 +164,7 @@ describe("importKickOff", () => {
       importKickOff("https://example.com/fhir", {
         input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
         inputFormat: "application/fhir+ndjson",
-        mode: "overwrite",
+        saveMode: "overwrite",
       }),
     ).rejects.toThrow("500");
   });

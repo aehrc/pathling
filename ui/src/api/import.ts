@@ -38,7 +38,7 @@ export interface ImportInput {
 export interface ImportKickOffOptions extends AuthOptions {
   input: ImportInput[];
   inputFormat: ImportFormat;
-  mode: ImportMode;
+  saveMode: ImportMode;
 }
 
 export interface ImportResult {
@@ -87,7 +87,7 @@ export type ImportPnpKickOffFn = (
  * const { pollingUrl } = await importKickOff("https://example.com/fhir", {
  *   input: [{ type: "Patient", url: "s3://bucket/patient.ndjson" }],
  *   inputFormat: "application/fhir+ndjson",
- *   mode: "overwrite",
+ *   saveMode: "overwrite",
  *   accessToken: "token123"
  * });
  */
@@ -105,7 +105,7 @@ export async function importKickOff(
   const body = {
     input: options.input,
     inputFormat: options.inputFormat,
-    mode: options.mode,
+    saveMode: options.saveMode,
   };
 
   const response = await fetch(url, {

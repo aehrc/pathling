@@ -140,8 +140,8 @@ public class ImportOperationValidator {
     // Parse format and mode.
     final ImportFormat importFormat = parseImportFormat(manifest.inputFormat());
     final SaveMode saveMode =
-        manifest.mode() != null && !manifest.mode().isBlank()
-            ? SaveMode.fromCode(manifest.mode())
+        manifest.saveMode() != null && !manifest.saveMode().isBlank()
+            ? SaveMode.fromCode(manifest.saveMode())
             : SaveMode.OVERWRITE; // Default to OVERWRITE.
 
     final ImportRequest importRequest =
