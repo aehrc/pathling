@@ -1,0 +1,82 @@
+# This workflow builds and pushes a SNAPSHOT Docker image for the server module
+# when pushing to release/server/v* branches.
+
+name: Pre-release server
+
+on:
+  push:
+    branches:
+      - "release/server/v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  pre-release-server:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+          sonar-cache: "true"
+
+      - name: Run security scan
+        uses: aquasecurity/trivy-action@0.32.0
+        env:
+          TRIVY_SKIP_DB_UPDATE: true
+          TRIVY_SKIP_JAVA_DB_UPDATE: true
+        with:
+          scan-type: repo
+          scan-ref: .
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-results.sarif
+          skip-files: examples/**/*,**/target/**/*
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build, test, and push Docker image
+        working-directory: server
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          DOCKER_USERNAME: ${{ github.actor }}
+          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mvn --batch-mode deploy -Pdocker -Dmaven.deploy.skip \
+          -Djib.to.tags=${project.version} \
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.sarifReportPaths=../trivy-results.sarif
+        timeout-minutes: 30
+
+      - name: Save test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-surefire-reports
+          path: "server/**/surefire-reports/"
+
+      - name: Save coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage-reports
+          path: |
+            server/**/jacoco.exec
+            server/**/jacoco.xml
+            server/**/target/site/jacoco
