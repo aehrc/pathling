@@ -23,6 +23,9 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
+import au.csiro.pathling.security.SecurityAspect;
 import au.csiro.pathling.views.Column;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
@@ -154,6 +157,12 @@ public class ViewExecutionHelper {
 
     // Parse the ViewDefinition.
     final FhirView view = parseViewDefinition(viewResource);
+
+    // Check resource-level authorization if authentication is enabled.
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(
+          PathlingAuthority.resourceAccess(AccessType.READ, view.getResource()));
+    }
 
     // Determine output format: _format parameter overrides Accept header.
     final ViewOutputFormat outputFormat =

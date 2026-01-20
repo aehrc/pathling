@@ -71,6 +71,8 @@ graph TB
 | `pathling:batch`                 | Provides access to the batch operation.                                         |
 | `pathling:bulk-submit`           | Provides access to the bulk submit operation.                                   |
 | `pathling:export`                | Provides access to the export operation.                                        |
+| `pathling:view-run`              | Provides access to the $viewdefinition-run operation.                           |
+| `pathling:view-export`           | Provides access to the $viewdefinition-export operation.                        |
 
 In order to enable access to an operation, an operation authority (e.g.
 `pathling:search`) must be provided along with a `read` or `write` authority
@@ -82,6 +84,11 @@ resources must be present within the token.
 
 The import, delete, and batch operations require `write` authority for all
 resource types that are referenced within the request.
+
+The view operations (`view-run` and `view-export`) require `read` authority for
+the resource type specified in the ViewDefinition's `resource` element. For
+example, a ViewDefinition targeting `Patient` resources requires
+`pathling:read:Patient` authority in addition to the operation authority.
 
 ## SMART configuration
 

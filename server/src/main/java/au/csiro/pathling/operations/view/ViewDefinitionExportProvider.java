@@ -33,6 +33,9 @@ import au.csiro.pathling.operations.bulkexport.ExportResult;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.security.OperationAccess;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
+import au.csiro.pathling.security.SecurityAspect;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.ViewDefinitionGson;
 import ca.uhn.fhir.context.FhirContext;
@@ -249,6 +252,14 @@ public class ViewDefinitionExportProvider
     // Validate that at least one view is provided.
     if (views.isEmpty()) {
       throw new InvalidRequestException("At least one view.viewResource parameter is required.");
+    }
+
+    // Check resource-level authorization for each view if authentication is enabled.
+    if (serverConfiguration.getAuth().isEnabled()) {
+      for (final ViewInput viewInput : views) {
+        SecurityAspect.checkHasAuthority(
+            PathlingAuthority.resourceAccess(AccessType.READ, viewInput.view().getResource()));
+      }
     }
 
     // Other parameters are extracted correctly by HAPI.
