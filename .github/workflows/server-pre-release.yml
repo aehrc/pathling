@@ -30,19 +30,10 @@ jobs:
           sonar-cache: "true"
 
       - name: Run security scan
-        uses: aquasecurity/trivy-action@0.32.0
-        env:
-          TRIVY_SKIP_DB_UPDATE: true
-          TRIVY_SKIP_JAVA_DB_UPDATE: true
+        uses: ./.github/actions/trivy-scan
         with:
-          scan-type: repo
-          scan-ref: .
-          ignore-unfixed: true
-          format: sarif
-          output: trivy-results.sarif
-          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/**/*
-          exit-code: "1"
-          severity: MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: "true"
+          skip-db-update: "true"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3

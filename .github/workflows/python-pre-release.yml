@@ -32,18 +32,11 @@ jobs:
           python: "true"
 
       - name: Run security scan
-        uses: aquasecurity/trivy-action@0.32.0
-        env:
-          TRIVY_SKIP_DB_UPDATE: true
-          TRIVY_SKIP_JAVA_DB_UPDATE: true
+        uses: ./.github/actions/trivy-scan
         with:
-          scan-type: repo
-          scan-ref: .
-          ignore-unfixed: true
-          format: table
-          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock
-          exit-code: "1"
-          severity: MEDIUM,HIGH,CRITICAL
+          skip-files: "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock"
+          ignore-unfixed: "true"
+          skip-db-update: "true"
 
       - name: Run deploy goal (pre-release)
         env:

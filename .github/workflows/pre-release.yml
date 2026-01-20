@@ -78,20 +78,11 @@ jobs:
             }]
 
       - name: Run security scan
-        uses: aquasecurity/trivy-action@0.32.0
-        env:
-          # We update the database separately within the `update-trivy` workflow.
-          TRIVY_SKIP_DB_UPDATE: true
-          TRIVY_SKIP_JAVA_DB_UPDATE: true
+        uses: ./.github/actions/trivy-scan
         with:
-          scan-type: repo
-          scan-ref: .
-          ignore-unfixed: true
-          format: sarif
-          output: trivy-results.sarif
-          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock
-          exit-code: "1"
-          severity: MEDIUM,HIGH,CRITICAL
+          skip-files: "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock"
+          ignore-unfixed: "true"
+          skip-db-update: "true"
 
       - name: Run deploy goal (pre-release)
         env:

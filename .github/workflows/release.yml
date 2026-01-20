@@ -53,17 +53,9 @@ jobs:
       # Release won't be possible if there are outstanding vulnerabilities of medium severity or
       # higher as reported by Trivy.
       - name: Run security scan
-        uses: aquasecurity/trivy-action@0.32.0
+        uses: ./.github/actions/trivy-scan
         with:
-          scan-type: repo
-          severity: "MEDIUM,HIGH,CRITICAL"
-          scan-ref: .
-          format: sarif
-          output: trivy-results.sarif
-          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock
-          # Upon release, the databases will be updated and scanned to make sure nothing has crept
-          # in since the last daily update.
-          cache: false
+          skip-files: "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock"
 
       - name: Run deploy goal
         env:
