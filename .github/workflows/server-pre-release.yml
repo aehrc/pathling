@@ -32,7 +32,6 @@ jobs:
       - name: Run security scan
         uses: ./.github/actions/trivy-scan
         with:
-          ignore-unfixed: "true"
           skip-db-update: "true"
 
       - name: Log in to GHCR

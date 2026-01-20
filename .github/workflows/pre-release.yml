@@ -80,8 +80,6 @@ jobs:
       - name: Run security scan
         uses: ./.github/actions/trivy-scan
         with:
-          skip-files: "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock"
-          ignore-unfixed: "true"
           skip-db-update: "true"
 
       - name: Run deploy goal (pre-release)

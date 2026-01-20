@@ -54,8 +54,6 @@ jobs:
       # higher as reported by Trivy.
       - name: Run security scan
         uses: ./.github/actions/trivy-scan
-        with:
-          skip-files: "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock"
 
       - name: Run deploy goal
         env:

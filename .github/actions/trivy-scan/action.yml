@@ -10,7 +10,7 @@ inputs:
   skip-files:
     description: Files to skip (glob patterns).
     required: false
-    default: "examples/**/*,**/target/**/*,sql-on-fhir/**/*"
+    default: "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock"
   ignore-unfixed:
     description: Ignore unfixed vulnerabilities.
     required: false
