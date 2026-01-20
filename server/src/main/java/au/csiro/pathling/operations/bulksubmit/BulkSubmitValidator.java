@@ -81,14 +81,12 @@ public class BulkSubmitValidator {
     // Extract submitter (required).
     final SubmitterIdentifier submitter = extractSubmitter(parameters);
 
-    // TODO: Re-enable allowed submitters check after connectathon.
     // Validate submitter is allowed.
-    // if (!config.isSubmitterAllowed(submitter)) {
-    //   throw new InvalidUserInputError(
-    //       "Submitter %s|%s is not in the list of allowed submitters."
-    //           .formatted(submitter.system(), submitter.value())
-    //   );
-    // }
+    if (!config.isSubmitterAllowed(submitter)) {
+      throw new InvalidUserInputError(
+          "Submitter %s|%s is not in the list of allowed submitters."
+              .formatted(submitter.system(), submitter.value()));
+    }
 
     // Extract submissionStatus (required).
     final String submissionStatus = extractSubmissionStatus(parameters);
@@ -238,10 +236,6 @@ public class BulkSubmitValidator {
       @Nonnull final String url,
       @Nonnull final String paramName,
       @Nonnull final BulkSubmitConfiguration config) {
-    // TODO: Re-enable allowed sources check after connectathon.
-    if (true) {
-      return;
-    }
     final List<String> allowableSources = config.getAllowableSources();
     if (allowableSources.isEmpty()) {
       return;

@@ -33,7 +33,6 @@ import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -214,7 +213,6 @@ class BulkSubmitValidatorTest {
   }
 
   @Test
-  @Disabled("Allowed submitters check is temporarily disabled for connectathon")
   void unauthorisedSubmitter() {
     final Parameters params = new Parameters();
     params.addParameter().setName("submissionId").setValue(new StringType("test-id"));
@@ -230,7 +228,6 @@ class BulkSubmitValidatorTest {
   }
 
   @Test
-  @Disabled("Allowed sources check is temporarily disabled for connectathon")
   void invalidManifestUrlPrefix() {
     final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
     config.setAllowedSubmitters(

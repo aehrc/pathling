@@ -75,10 +75,6 @@ public class AccessRules {
    * @throws SecurityError if the URL is not an allowed import source
    */
   public void checkCanImportFrom(@Nonnull final String url) {
-    // TODO: Re-enable allowed sources check after connectathon.
-    if (true) {
-      return;
-    }
     if (!canImportFrom(url)) {
       throw new AccessDeniedError("URL: '" + url + "' is not an allowed source for import.");
     }
