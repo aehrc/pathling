@@ -82,8 +82,8 @@ Where expressions within a request reference multiple different resource types
 (e.g. through resource references), authority for read access to all those
 resources must be present within the token.
 
-The import, delete, and batch operations require `write` authority for all
-resource types that are referenced within the request.
+The import, delete, batch, and bulk submit operations require `write` authority
+for all resource types that are referenced within the request.
 
 The view operations (`view-run` and `view-export`) require `read` authority for
 the resource type specified in the ViewDefinition's `resource` element. For

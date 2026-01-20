@@ -28,6 +28,9 @@ import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.operations.bulkimport.ImportExecutor;
 import au.csiro.pathling.operations.bulkimport.ImportFormat;
 import au.csiro.pathling.operations.bulkimport.ImportRequest;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
+import au.csiro.pathling.security.SecurityAspect;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import ca.uhn.fhir.context.FhirContext;
@@ -52,6 +55,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -502,6 +506,9 @@ public class BulkSubmitExecutor {
         return;
       }
 
+      // Check resource-level write authority before importing.
+      checkResourceWriteAuthority(allFilePaths.keySet());
+
       executeImport(submission, allFilePaths);
       markManifestJobsCompleted(submission);
 
@@ -536,6 +543,25 @@ public class BulkSubmitExecutor {
     }
 
     return allFilePaths;
+  }
+
+  /**
+   * Checks that the current user has write authority for all specified resource types. This method
+   * is called before importing files to ensure the user is authorised to write to all resource
+   * types in the submission.
+   *
+   * @param resourceTypes the set of resource type codes to check
+   * @throws au.csiro.pathling.errors.AccessDeniedError if the user lacks write authority for any
+   *     resource type
+   */
+  public void checkResourceWriteAuthority(@Nonnull final Set<String> resourceTypes) {
+    if (serverConfiguration.getAuth() == null || !serverConfiguration.getAuth().isEnabled()) {
+      return;
+    }
+    for (final String resourceType : resourceTypes) {
+      SecurityAspect.checkHasAuthority(
+          PathlingAuthority.resourceAccess(AccessType.WRITE, resourceType));
+    }
   }
 
   /**
