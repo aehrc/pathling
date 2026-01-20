@@ -570,7 +570,7 @@
         <version>3.5.3</version>
         <configuration>
           <excludedGroups>IntegrationTest</excludedGroups>
-          <forkCount>2</forkCount>
+          <forkCount>1C</forkCount>
           <properties>
             <configurationParameters>
               junit.jupiter.execution.parallel.enabled=true
