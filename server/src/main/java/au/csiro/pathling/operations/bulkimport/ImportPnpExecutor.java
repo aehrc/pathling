@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -142,8 +143,12 @@ public class ImportPnpExecutor {
               pnpRequest.saveMode(),
               pnpRequest.importFormat());
 
-      // Execute the import using the existing ImportExecutor.
-      final ImportResponse response = importExecutor.execute(importRequest, jobId);
+      // Execute the import using the existing ImportExecutor with custom allowable sources.
+      // This bypasses the configured allowableSources validation for locally staged files,
+      // which the server downloaded and trusts.
+      final List<String> pnpAllowableSources = List.of("file://" + tempDir.toAbsolutePath() + "/");
+      final ImportResponse response =
+          importExecutor.execute(importRequest, jobId, pnpAllowableSources);
 
       log.info("Ping and pull import completed successfully");
       return response;
