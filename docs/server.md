@@ -17,5 +17,6 @@ The server is distributed as a Docker image. It supports [authentication](/docs/
 
 ## Getting started[​](#getting-started "Direct link to Getting started")
 
+* [Getting started](/docs/server/getting-started.md) - Quick start guide with Docker
 * [Configuration](/docs/server/configuration.md) - Environment variables and server settings
 * [Deployment](/docs/server/deployment/kubernetes.md) - Kubernetes and AWS deployment options

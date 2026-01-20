@@ -57,6 +57,7 @@ A FHIR R4 analytics server implementing SQL on FHIR and Bulk Data Access.
 - [Configuration](/docs/server/configuration.md): Configuration options for the Pathling server.
 - [Kubernetes](/docs/server/deployment/kubernetes.md): Instructions for deploying Pathling server on Kubernetes using Helm.
 - [Synchronization](/docs/server/deployment/synchronization.md): Keep Pathling in sync with a source FHIR server using scheduled jobs and the $import-pnp operation.
+- [Getting started](/docs/server/getting-started.md): Quick start guide for running Pathling Server with Docker.
 - [Batch](/docs/server/operations/batch.md): The batch operation allows you to perform multiple create, update, and delete operations in a single request.
 - [Bulk submit](/docs/server/operations/bulk-submit.md): The bulk submit operation allows external systems to push FHIR data to the server using a staged submission workflow.
 - [Create, read, update, and delete](/docs/server/operations/crud.md): Pathling implements the create, read, update, and delete operations from the FHIR REST API.
