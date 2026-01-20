@@ -27,6 +27,7 @@ jobs:
         uses: ./.github/actions/setup-build-tools
         with:
           java: "true"
+          bun: "true"
           sonar-cache: "true"
 
       - name: Run security scan
