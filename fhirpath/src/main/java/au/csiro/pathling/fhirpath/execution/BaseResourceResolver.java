@@ -26,8 +26,6 @@ import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import java.util.stream.Stream;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
@@ -174,12 +172,6 @@ public abstract class BaseResourceResolver implements ResourceResolver {
    */
   protected static Dataset<Row> toResourceRepresentation(@Nonnull final String resourceCode,
       @Nonnull final Dataset<Row> resourceDataset) {
-    return resourceDataset.select(
-        resourceDataset.col("id"),
-        resourceDataset.col("id_versioned").alias("key"),
-        functions.struct(
-            Stream.of(resourceDataset.columns())
-                .map(resourceDataset::col).toArray(Column[]::new)
-        ).alias(resourceCode));
+    return ResourceSchemaTransformation.wrapToEvaluationSchema(resourceCode, resourceDataset);
   }
 }

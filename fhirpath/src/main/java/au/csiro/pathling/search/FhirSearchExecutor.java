@@ -17,63 +17,34 @@
 
 package au.csiro.pathling.search;
 
-import static org.apache.spark.sql.functions.lit;
-
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators.SingleEvaluatorFactory;
-import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.search.filter.SearchFilter;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.FhirVersionEnum;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Executes FHIR search queries against a data source.
  * <p>
- * This executor translates FHIR search criteria into FHIRPath expressions to extract values from
- * resources, then builds SparkSQL filter expressions to filter the resources based on the search
- * values.
+ * This executor uses {@link ResourceFilterFactory} to create filters from FHIR search criteria,
+ * then applies those filters to resource datasets from the data source.
  *
  * @see <a href="https://hl7.org/fhir/search.html">FHIR Search</a>
+ * @see ResourceFilterFactory
+ * @see ResourceFilter
  */
 @Getter
 @RequiredArgsConstructor
 public class FhirSearchExecutor {
 
-  /**
-   * Resource path for the bundled R4 search parameters.
-   * <p>
-   * Source: <a href="https://hl7.org/fhir/R4/search-parameters.json">HL7 FHIR R4 Search
-   * Parameters</a>
-   */
-  private static final String R4_REGISTRY_RESOURCE = "/fhir/R4/search-parameters.json";
-
-  @Nonnull
-  private final FhirContext fhirContext;
-
   @Nonnull
   private final DataSource dataSource;
 
   @Nonnull
-  private final SearchParameterRegistry registry;
-
-  @Nonnull
-  private final Parser parser;
+  private final ResourceFilterFactory filterFactory;
 
   /**
    * Creates an executor with the default bundled search parameter registry for FHIR R4.
@@ -90,22 +61,8 @@ public class FhirSearchExecutor {
   public static FhirSearchExecutor withDefaultRegistry(
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource) {
-    if (fhirContext.getVersion().getVersion() != FhirVersionEnum.R4) {
-      throw new IllegalArgumentException(
-          "Default registry requires FHIR R4 context, but got: "
-              + fhirContext.getVersion().getVersion());
-    }
-    try (final InputStream is = FhirSearchExecutor.class.getResourceAsStream(
-        R4_REGISTRY_RESOURCE)) {
-      if (is == null) {
-        throw new IllegalStateException(
-            "Search parameters resource not found: " + R4_REGISTRY_RESOURCE);
-      }
-      return withRegistry(fhirContext, dataSource,
-          SearchParameterRegistry.fromInputStream(fhirContext, is));
-    } catch (final IOException e) {
-      throw new UncheckedIOException("Failed to load default search parameters", e);
-    }
+    return new FhirSearchExecutor(dataSource,
+        ResourceFilterFactory.withDefaultRegistry(fhirContext));
   }
 
   /**
@@ -121,7 +78,8 @@ public class FhirSearchExecutor {
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
       @Nonnull final SearchParameterRegistry registry) {
-    return new FhirSearchExecutor(fhirContext, dataSource, registry, new Parser());
+    return new FhirSearchExecutor(dataSource,
+        ResourceFilterFactory.withRegistry(fhirContext, registry));
   }
 
   /**
@@ -134,151 +92,11 @@ public class FhirSearchExecutor {
   @Nonnull
   public Dataset<Row> execute(@Nonnull final ResourceType resourceType,
       @Nonnull final FhirSearch search) {
-    // If there are no criteria, return all resources
-    if (search.getCriteria().isEmpty()) {
-      return dataSource.read(resourceType.toCode());
-    }
+    // Read the flat resource dataset
+    final Dataset<Row> dataset = dataSource.read(resourceType.toCode());
 
-    // Create the evaluator factory for FHIRPath evaluation
-    final FhirPathEvaluator.Factory evaluatorFactory =
-        SingleEvaluatorFactory.of(fhirContext, dataSource);
-
-    // Create the evaluator and get its initial dataset
-    // The evaluator's dataset has a specific structure where the resource is wrapped
-    // in a struct column named after the resource type (e.g., "Patient")
-    final FhirPathEvaluator evaluator = evaluatorFactory.create(resourceType);
-    final Dataset<Row> evaluatorDataset = evaluator.createInitialDataset();
-
-    // Build the combined filter expression
-    final Column filterExpression = buildFilterExpression(resourceType, search, evaluatorFactory);
-
-    // Apply the filter to the evaluator's dataset
-    final Dataset<Row> filteredDataset = evaluatorDataset.filter(filterExpression);
-
-    // Transform back to flat schema by selecting the nested struct fields
-    // The evaluator dataset has: id, key, ResourceType (struct with all fields)
-    final String resourceCode = resourceType.toCode();
-    return filteredDataset.select(resourceCode + ".*");
-  }
-
-  /**
-   * Builds a combined filter expression for all search criteria.
-   *
-   * @param resourceType the resource type
-   * @param search the search criteria
-   * @param evaluatorFactory the evaluator factory for FHIRPath evaluation
-   * @return a SparkSQL Column expression that combines all criteria with AND logic
-   */
-  @Nonnull
-  private Column buildFilterExpression(
-      @Nonnull final ResourceType resourceType,
-      @Nonnull final FhirSearch search,
-      @Nonnull final FhirPathEvaluator.Factory evaluatorFactory) {
-
-    // Combine all criteria with AND logic
-    return search.getCriteria().stream()
-        .map(criterion -> buildCriterionFilter(resourceType, criterion, evaluatorFactory))
-        .reduce(Column::and)
-        .orElse(lit(true));
-  }
-
-  /**
-   * Builds a filter expression for a single search criterion.
-   * <p>
-   * For polymorphic search parameters with multiple expressions, each expression is evaluated
-   * separately and the filter results are combined with OR logic. This handles cases like
-   * Observation.effective which can be dateTime, Period, or instant.
-   *
-   * @param resourceType the resource type
-   * @param criterion the search criterion
-   * @param evaluatorFactory the evaluator factory for FHIRPath evaluation
-   * @return a SparkSQL Column expression for this criterion
-   */
-  @Nonnull
-  private Column buildCriterionFilter(
-      @Nonnull final ResourceType resourceType,
-      @Nonnull final SearchCriterion criterion,
-      @Nonnull final FhirPathEvaluator.Factory evaluatorFactory) {
-
-    // Look up the parameter definition
-    final SearchParameterDefinition paramDef = registry
-        .getParameter(resourceType, criterion.getParameterCode())
-        .orElseThrow(() -> new UnknownSearchParameterException(
-            criterion.getParameterCode(), resourceType));
-
-    // Build filter for each expression and combine with OR
-    // For single-expression parameters, this is equivalent to the previous behavior
-    // For multi-expression (polymorphic) parameters, any matching expression satisfies the filter
-    return paramDef.expressions().stream()
-        .map(expression -> buildExpressionFilter(
-            resourceType, paramDef.type(), criterion, expression, evaluatorFactory))
-        .reduce(Column::or)
-        .orElse(lit(false));  // Should never happen - expressions list is never empty
-  }
-
-  /**
-   * Builds a filter expression for a single FHIRPath expression within a search criterion.
-   *
-   * @param resourceType the resource type
-   * @param paramType the search parameter type
-   * @param criterion the search criterion (for modifier and values)
-   * @param expression the FHIRPath expression to evaluate
-   * @param evaluatorFactory the evaluator factory
-   * @return a SparkSQL Column expression for this expression
-   */
-  @Nonnull
-  private Column buildExpressionFilter(
-      @Nonnull final ResourceType resourceType,
-      @Nonnull final SearchParameterType paramType,
-      @Nonnull final SearchCriterion criterion,
-      @Nonnull final String expression,
-      @Nonnull final FhirPathEvaluator.Factory evaluatorFactory) {
-
-    // Parse the FHIRPath expression
-    final FhirPath fhirPath = parser.parse(expression);
-
-    // Evaluate the FHIRPath to extract the value column
-    final FhirPathEvaluator evaluator = evaluatorFactory.create(resourceType);
-    final Collection result = evaluator.evaluate(fhirPath);
-    final ColumnRepresentation valueColumn = result.getColumn();
-
-    // Get FHIR type from collection - fail if not available
-    final FHIRDefinedType fhirType = result.getFhirType()
-        .orElseThrow(() -> new InvalidSearchParameterException(
-            "Cannot determine FHIR type for expression: " + expression));
-
-    // Get the appropriate filter for the parameter type, modifier, and FHIR type
-    final SearchFilter filter = getFilterForType(paramType, criterion.getModifier(), fhirType);
-
-    // Build and return the filter expression
-    return filter.buildFilter(valueColumn, criterion.getValues());
-  }
-
-  /**
-   * Gets the appropriate filter implementation for a search parameter type, modifier, and FHIR
-   * type.
-   *
-   * @param type the search parameter type
-   * @param modifier the search modifier (e.g., "not", "exact"), or null for no modifier
-   * @param fhirType the FHIR type of the element being searched
-   * @return the filter implementation
-   * @throws InvalidModifierException if the modifier is not supported for the parameter type
-   * @throws InvalidSearchParameterException if the FHIR type is not valid for the search parameter
-   * type
-   */
-  @Nonnull
-  private SearchFilter getFilterForType(@Nonnull final SearchParameterType type,
-      @Nullable final String modifier,
-      @Nonnull final FHIRDefinedType fhirType) {
-
-    // Validate FHIR type is allowed for this search parameter type
-    if (!type.isAllowedFhirType(fhirType)) {
-      throw new InvalidSearchParameterException(
-          String.format("FHIR type '%s' is not valid for search parameter type '%s'. "
-              + "Allowed types: %s", fhirType.toCode(), type, type.getAllowedFhirTypes()));
-    }
-
-    // Delegate to enum constant's createFilter() implementation
-    return type.createFilter(modifier, fhirType);
+    // Create filter from search and apply it
+    final ResourceFilter filter = filterFactory.fromSearch(resourceType, search);
+    return filter.apply(dataset);
   }
 }

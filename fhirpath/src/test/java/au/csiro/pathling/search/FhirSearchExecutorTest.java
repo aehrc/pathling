@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
 import java.math.BigDecimal;
@@ -79,7 +78,6 @@ class FhirSearchExecutorTest {
   FhirEncoders encoders;
 
   private final SearchParameterRegistry registry = new TestSearchParameterRegistry();
-  private final Parser parser = new Parser();
 
   // ========== Parameterized search tests ==========
 
@@ -529,8 +527,8 @@ class FhirSearchExecutorTest {
         .criterion(paramCode, searchValues.toArray(new String[0]))
         .build();
 
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource, registry, parser);
+    final FhirSearchExecutor executor = FhirSearchExecutor.withRegistry(
+        encoders.getContext(), dataSource, registry);
 
     final Dataset<Row> results = executor.execute(resourceType, search);
 
@@ -545,8 +543,8 @@ class FhirSearchExecutorTest {
 
     final FhirSearch search = FhirSearch.builder().build();
 
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource, registry, parser);
+    final FhirSearchExecutor executor = FhirSearchExecutor.withRegistry(
+        encoders.getContext(), dataSource, registry);
 
     final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
 
@@ -562,8 +560,8 @@ class FhirSearchExecutorTest {
         .criterion("unknown-param", "value")
         .build();
 
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource, registry, parser);
+    final FhirSearchExecutor executor = FhirSearchExecutor.withRegistry(
+        encoders.getContext(), dataSource, registry);
 
     final UnknownSearchParameterException exception = assertThrows(
         UnknownSearchParameterException.class,
@@ -581,8 +579,8 @@ class FhirSearchExecutorTest {
         .criterion("gender", "male")
         .build();
 
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource, registry, parser);
+    final FhirSearchExecutor executor = FhirSearchExecutor.withRegistry(
+        encoders.getContext(), dataSource, registry);
 
     final Dataset<Row> results = executor.execute(ResourceType.PATIENT, search);
     final Dataset<Row> original = dataSource.read("Patient");
@@ -600,8 +598,8 @@ class FhirSearchExecutorTest {
         .criterion("gender:exact", "male")
         .build();
 
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource, registry, parser);
+    final FhirSearchExecutor executor = FhirSearchExecutor.withRegistry(
+        encoders.getContext(), dataSource, registry);
 
     final InvalidModifierException exception = assertThrows(
         InvalidModifierException.class,
@@ -620,8 +618,8 @@ class FhirSearchExecutorTest {
         .criterion("family:not", "Smith")
         .build();
 
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource, registry, parser);
+    final FhirSearchExecutor executor = FhirSearchExecutor.withRegistry(
+        encoders.getContext(), dataSource, registry);
 
     final InvalidModifierException exception = assertThrows(
         InvalidModifierException.class,
@@ -640,8 +638,8 @@ class FhirSearchExecutorTest {
         .criterion("birthdate:exact", "1990-01-15")
         .build();
 
-    final FhirSearchExecutor executor = new FhirSearchExecutor(
-        encoders.getContext(), dataSource, registry, parser);
+    final FhirSearchExecutor executor = FhirSearchExecutor.withRegistry(
+        encoders.getContext(), dataSource, registry);
 
     final InvalidModifierException exception = assertThrows(
         InvalidModifierException.class,
@@ -662,7 +660,7 @@ class FhirSearchExecutorTest {
     final FhirSearchExecutor executor = FhirSearchExecutor.withDefaultRegistry(
         encoders.getContext(), dataSource);
 
-    final SearchParameterRegistry defaultRegistry = executor.getRegistry();
+    final SearchParameterRegistry defaultRegistry = executor.getFilterFactory().getRegistry();
 
     // Verify a sample of standard FHIR search parameters are loaded.
     // These are stable parameters defined in the FHIR R4 spec.
