@@ -40,6 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -281,7 +282,12 @@ public class ViewDefinitionExportExecutor {
         FileSystemPersistence.renamePartitionedFiles(sparkSession, outputPath, outputPath, "json"));
   }
 
-  /** Writes the result as CSV files. */
+  /**
+   * Writes the result as CSV files.
+   *
+   * @throws InvalidRequestException if the dataset contains data types that are not supported by
+   *     the CSV format
+   */
   @Nonnull
   private List<String> writeCsv(
       @Nonnull final Dataset<Row> result,
@@ -290,7 +296,22 @@ public class ViewDefinitionExportExecutor {
       final boolean includeHeader,
       @Nonnull final Path jobDirPath) {
 
-    result.write().mode(SaveMode.Overwrite).option("header", includeHeader).csv(outputPath);
+    try {
+      result.write().mode(SaveMode.Overwrite).option("header", includeHeader).csv(outputPath);
+    } catch (final Exception e) {
+      // Spark throws AnalysisException when it encounters unsupported data types for a datasource.
+      // We convert this to an InvalidRequestException to return a 400 status code.
+      if (e instanceof final AnalysisException ae
+          && "UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE".equals(ae.getErrorClass())) {
+        throw new InvalidRequestException(
+            "CSV export failed for view '%s': %s".formatted(viewName, e.getMessage()));
+      }
+      // Re-throw unexpected exceptions as runtime exceptions.
+      if (e instanceof RuntimeException re) {
+        throw re;
+      }
+      throw new RuntimeException(e);
+    }
 
     // Rename partitioned files to follow naming convention.
     return new ArrayList<>(

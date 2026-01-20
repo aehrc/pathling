@@ -29,6 +29,7 @@ import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.CustomObjectDataSource;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
+import au.csiro.pathling.views.Column;
 import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -146,6 +147,41 @@ class ViewDefinitionExportExecutorTest {
     assertThat(outputs.get(0).fileUrls()).isNotEmpty();
     // Verify files have correct extension.
     assertThat(outputs.get(0).fileUrls().get(0)).contains(".csv");
+  }
+
+  @Test
+  void csvExportWithArrayColumnThrowsInvalidRequestException() {
+    // CSV format does not support array columns. When a view contains a collection column, CSV
+    // export should fail with a 400 error rather than a 500 internal server error.
+    final Patient patient = createPatient("test-1", "Smith");
+    patient.addName().addGiven("John").addGiven("James");
+    executor = createExecutor(patient);
+
+    // Create a view that includes a collection column (given names as an array).
+    final FhirView view =
+        FhirView.ofResource("Patient")
+            .select(
+                FhirView.columns(
+                    FhirView.column("id", "id"),
+                    Column.collection("given_names", "name.first().given")))
+            .build();
+
+    final ViewInput viewInput = new ViewInput("patients", view);
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput),
+            null,
+            ViewExportFormat.CSV,
+            true,
+            Collections.emptySet(),
+            null);
+
+    assertThatThrownBy(() -> executor.execute(request, UUID.randomUUID().toString()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("CSV export failed")
+        .hasMessageContaining("given_names");
   }
 
   // -------------------------------------------------------------------------
