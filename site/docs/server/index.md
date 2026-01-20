@@ -68,6 +68,8 @@ Spark clustering solutions.
 
 ## Getting started
 
+- [Getting started](/docs/server/getting-started) - Quick start guide with
+  Docker
 - [Configuration](/docs/server/configuration) - Environment variables and server
   settings
 - [Deployment](/docs/server/deployment/kubernetes) - Kubernetes and AWS
