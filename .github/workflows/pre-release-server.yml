@@ -41,6 +41,8 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           skip-files: examples/**/*,**/target/**/*
+          exit-code: "1"
+          severity: MEDIUM,HIGH,CRITICAL
 
       - name: Log in to GHCR
         uses: docker/login-action@v3

@@ -90,6 +90,8 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           skip-files: examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock
+          exit-code: "1"
+          severity: MEDIUM,HIGH,CRITICAL
 
       - name: Run deploy goal (pre-release)
         env:

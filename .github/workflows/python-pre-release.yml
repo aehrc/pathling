@@ -31,6 +31,20 @@ jobs:
           java: "true"
           python: "true"
 
+      - name: Run security scan
+        uses: aquasecurity/trivy-action@0.32.0
+        env:
+          TRIVY_SKIP_DB_UPDATE: true
+          TRIVY_SKIP_JAVA_DB_UPDATE: true
+        with:
+          scan-type: repo
+          scan-ref: .
+          ignore-unfixed: true
+          format: table
+          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock
+          exit-code: "1"
+          severity: MEDIUM,HIGH,CRITICAL
+
       - name: Run deploy goal (pre-release)
         env:
           TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
