@@ -20,6 +20,8 @@ Pathling is a set of tools that make it easier to use FHIR and clinical terminol
 Pathling implements FHIRPath functionality to aid in querying and constructing views over FHIR data.
 
 - [FHIRPath](/docs/fhirpath.md): Pathling implements FHIRPath functionality to aid in querying and constructing views over FHIR data.
+- [Extension functions](/docs/fhirpath/extension-functions.md): Extension functions and data types implemented in Pathling in addition to the standard FHIRPath and FHIR specifications.
+- [FHIR-specific functions](/docs/fhirpath/fhir-functions.md): FHIR-specific functions defined in the FHIR specification as additional FHIRPath functions for use with FHIR data.
 
 ### libraries
 
