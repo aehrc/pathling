@@ -118,11 +118,11 @@ jobs:
     name: Test UI
     needs: [detect-changes, pre-release]
     if: needs.detect-changes.outputs.ui == 'true'
-    uses: ./.github/workflows/test-ui.yml
+    uses: ui-test.yml
 
   test-server:
     name: Test server
     needs: [detect-changes, pre-release]
     if: needs.detect-changes.outputs.server == 'true'
-    uses: ./.github/workflows/test-server.yml
+    uses: server-test.yml
     secrets: inherit
