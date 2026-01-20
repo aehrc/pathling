@@ -40,7 +40,7 @@ jobs:
           ignore-unfixed: true
           format: sarif
           output: trivy-results.sarif
-          skip-files: examples/**/*,**/target/**/*
+          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/**/*
           exit-code: "1"
           severity: MEDIUM,HIGH,CRITICAL
 

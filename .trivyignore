@@ -35,3 +35,17 @@ CVE-2025-68161
 
 # Nimbus JOSE JWT is provided via Spring Security OAuth2, not directly controlled.
 CVE-2025-53864
+
+# OWASP Java HTML Sanitizer XSS - transitive via HAPI FHIR. The vulnerable
+# configuration (noscript + allowTextIn("style")) is not used by HAPI's policy.
+CVE-2025-66021
+
+# Vert.x static handler cache poisoning - transitive via spark-kubernetes.
+# Pathling uses Spring Boot for web serving, not Vert.x static handlers.
+CVE-2026-1002
+
+# React Router vulnerabilities - UI uses Declarative Mode (BrowserRouter), no
+# SSR, no ScrollRestoration, no loader/action redirects.
+CVE-2026-21884
+CVE-2026-22029
+CVE-2026-22030

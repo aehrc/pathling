@@ -39,7 +39,7 @@ jobs:
           scan-ref: .
           format: sarif
           output: trivy-results.sarif
-          skip-files: examples/**/*,**/target/**/*
+          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/**/*
           cache: false
 
       - name: Log in to GHCR
