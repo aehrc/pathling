@@ -49,8 +49,7 @@ jobs:
           DOCKER_USERNAME: ${{ github.actor }}
           DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mvn --batch-mode deploy -Pdocker -Dmaven.deploy.skip \
-          '-Djib.to.tags=${project.version}' \
+          mvn --batch-mode deploy -PdockerPreRelease -Dmaven.deploy.skip \
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
