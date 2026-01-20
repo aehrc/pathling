@@ -1,7 +1,7 @@
 # This workflow builds and pushes a SNAPSHOT Docker image for the server module
 # when pushing to release/server/v* branches.
 
-name: Pre-release server
+name: Server pre-release
 
 on:
   push:
