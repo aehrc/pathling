@@ -1,5 +1,5 @@
 ---
-sidebar_position: 8
+sidebar_position: 6
 description: Pathling implements ETag-based cache validation, which enables clients to skip processing of queries when the underlying data has not changed.
 ---
 

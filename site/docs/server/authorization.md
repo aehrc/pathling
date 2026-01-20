@@ -1,5 +1,5 @@
 ---
-sidebar_position: 6
+sidebar_position: 4
 description: Pathling can perform the role of a resource server within the OpenID Connect framework.
 ---
 
@@ -57,7 +57,7 @@ graph TB
 → includes
 
 | Authority                        | Description                                                                     |
-|----------------------------------|---------------------------------------------------------------------------------|
+| -------------------------------- | ------------------------------------------------------------------------------- |
 | `pathling`                       | Provides access to all operations and resources, implies all other authorities. |
 | `pathling:read`                  | Provides read access to all resource types.                                     |
 | `pathling:read:[resource type]`  | Provides read access to only a specified resource type.                         |
