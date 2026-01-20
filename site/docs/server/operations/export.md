@@ -13,22 +13,48 @@ implementation follows the
 
 Pathling supports export at multiple levels:
 
-| Level            | Endpoint                        | Description                                          |
-|------------------|---------------------------------|------------------------------------------------------|
-| System           | `GET [base]/$export`            | Export all resources in the server                   |
-| Patient type     | `GET [base]/Patient/$export`    | Export all resources in the Patient compartment      |
-| Patient instance | `GET [base]/Patient/[id]/$export` | Export resources for a specific patient            |
-| Group            | `GET [base]/Group/[id]/$export` | Export resources for patients in a specific group    |
+| Level            | Endpoint                          | Description                                       |
+| ---------------- | --------------------------------- | ------------------------------------------------- |
+| System           | `GET [base]/$export`              | Export all resources in the server                |
+| Patient type     | `GET [base]/Patient/$export`      | Export all resources in the Patient compartment   |
+| Patient instance | `GET [base]/Patient/[id]/$export` | Export resources for a specific patient           |
+| Group            | `GET [base]/Group/[id]/$export`   | Export resources for patients in a specific group |
 
 ## Parameters
 
-| Name            | Cardinality | Type    | Description                                                                                                                                                                                                        |
-|-----------------|-------------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `_outputFormat` | 0..1        | string  | The format for exported files. Accepts `application/fhir+ndjson`, `application/ndjson`, or `ndjson`. Defaults to `application/fhir+ndjson`.                                                                       |
-| `_since`        | 0..1        | instant | Only include resources where `meta.lastUpdated` is after this time.                                                                                                                                                |
-| `_until`        | 0..1        | instant | Only include resources where `meta.lastUpdated` is before this time.                                                                                                                                               |
-| `_type`         | 0..*        | string  | Comma-delimited list of resource types to export. If omitted, all supported types are exported. Invalid types cause an error unless the `Prefer: handling=lenient` header is included.                            |
-| `_elements`     | 0..*        | string  | Comma-delimited list of elements to include. Specify as `[type].[element]` (e.g., `Patient.name`) or `[element]` for all types. Only top-level elements are supported. Mandatory elements are always included.    |
+| Name            | Cardinality | Type    | Description                                                                                                                                                                                                                     |
+| --------------- | ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_outputFormat` | 0..1        | string  | The format for exported files. Accepts `application/fhir+ndjson`, `application/ndjson`, `ndjson`, `application/vnd.apache.parquet`, or `parquet`. Defaults to `application/fhir+ndjson`. See [Output formats](#output-formats). |
+| `_since`        | 0..1        | instant | Only include resources where `meta.lastUpdated` is after this time.                                                                                                                                                             |
+| `_until`        | 0..1        | instant | Only include resources where `meta.lastUpdated` is before this time.                                                                                                                                                            |
+| `_type`         | 0..\*       | string  | Comma-delimited list of resource types to export. If omitted, all supported types are exported. Invalid types cause an error unless the `Prefer: handling=lenient` header is included.                                          |
+| `_elements`     | 0..\*       | string  | Comma-delimited list of elements to include. Specify as `[type].[element]` (e.g., `Patient.name`) or `[element]` for all types. Only top-level elements are supported. Mandatory elements are always included.                  |
+
+## Output formats
+
+Pathling supports two output formats for bulk export:
+
+### NDJSON
+
+The default format is [NDJSON](http://ndjson.org/) (Newline Delimited JSON),
+which outputs one FHIR resource per line as JSON. This format is specified by
+the FHIR Bulk Data Access specification and is widely supported by FHIR tools.
+
+Use `application/fhir+ndjson`, `application/ndjson`, or `ndjson` as the
+`_outputFormat` value.
+
+### Parquet
+
+Pathling also supports export to [Apache Parquet](https://parquet.apache.org/)
+format, which provides efficient columnar storage suitable for analytics
+workloads. Parquet files are significantly smaller than NDJSON and can be
+queried directly using tools like Apache Spark, DuckDB, or pandas.
+
+Use `application/vnd.apache.parquet` or `parquet` as the `_outputFormat` value.
+
+The Parquet output follows the
+[Pathling Parquet specification](/docs/libraries/io/schema), which defines how
+FHIR resources are represented in the Parquet schema.
 
 ## Asynchronous processing
 
@@ -49,15 +75,44 @@ sequenceDiagram
     C->>P: GET [status URL]
     P-->>C: 200 OK + manifest
     C->>P: GET $result?job=...&file=...
-    P-->>C: NDJSON file
+    P-->>C: Export file (NDJSON or Parquet)
 ```
 
 ### Kick-off request
 
+Parameters can be passed either as query parameters in a GET request or as a
+FHIR [Parameters](https://hl7.org/fhir/R4/parameters.html) resource in the body
+of a POST request.
+
+Using GET with query parameters:
+
 ```http
-GET [base]/$export HTTP/1.1
+GET [base]/$export?_type=Patient,Observation&_outputFormat=parquet HTTP/1.1
 Accept: application/fhir+json
 Prefer: respond-async
+```
+
+Using POST with a Parameters resource:
+
+```http
+POST [base]/$export HTTP/1.1
+Accept: application/fhir+json
+Content-Type: application/fhir+json
+Prefer: respond-async
+
+{
+    "resourceType": "Parameters",
+    "parameter": [
+        {
+            "name": "_type",
+            "valueString": "Patient,Observation"
+        },
+        {
+            "name": "_outputFormat",
+            "valueString": "parquet"
+        }
+    ]
+}
 ```
 
 ### Kick-off response
@@ -101,27 +156,35 @@ When the export completes, the response contains a JSON manifest:
 
 ### Manifest fields
 
-| Field                 | Description                                                        |
-|-----------------------|--------------------------------------------------------------------|
-| `transactionTime`     | The time the export was initiated                                  |
-| `request`             | The original kick-off request URL                                  |
-| `requiresAccessToken` | Whether authentication is required to download result files        |
-| `output`              | Array of exported files with resource type and download URL        |
-| `deleted`             | Array of deleted resources (not currently supported)               |
-| `error`               | Array of OperationOutcome files for any errors                     |
+| Field                 | Description                                                 |
+| --------------------- | ----------------------------------------------------------- |
+| `transactionTime`     | The time the export was initiated                           |
+| `request`             | The original kick-off request URL                           |
+| `requiresAccessToken` | Whether authentication is required to download result files |
+| `output`              | Array of exported files with resource type and download URL |
+| `deleted`             | Array of deleted resources (not currently supported)        |
+| `error`               | Array of OperationOutcome files for any errors              |
 
 ## Retrieving results
 
 Download exported files using the URLs in the manifest. Each URL points to the
 `$result` endpoint with `job` and `file` query parameters.
 
+For NDJSON exports:
+
 ```http
 GET [base]/$result?job=abc123&file=Patient.ndjson HTTP/1.1
 Accept: application/fhir+ndjson
 ```
 
-The response contains NDJSON (newline-delimited JSON) with one FHIR resource
-per line.
+For Parquet exports:
+
+```http
+GET [base]/$result?job=abc123&file=Patient.parquet HTTP/1.1
+Accept: application/vnd.apache.parquet
+```
+
+The file extension in the manifest URLs reflects the requested output format.
 
 ## Python example
 
