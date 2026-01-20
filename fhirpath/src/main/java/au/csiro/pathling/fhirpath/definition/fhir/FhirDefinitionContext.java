@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,17 +44,16 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value(staticConstructor = "of")
 public class FhirDefinitionContext implements DefinitionContext {
 
-  @Nonnull
-  FhirContext fhirContext;
-
+  @Nonnull FhirContext fhirContext;
 
   @Override
   @Nonnull
   public ResourceDefinition findResourceDefinition(@Nonnull final String resourceCode) {
-    final ResourceType resourceType = ResourceType.fromCode(resourceCode);
-    final RuntimeResourceDefinition hapiDefinition = fhirContext.getResourceDefinition(
-        resourceCode);
-    return new FhirResourceDefinition(resourceType, requireNonNull(hapiDefinition));
+    // Try to resolve to a standard ResourceType, but allow custom types (like ViewDefinition).
+    final Optional<ResourceType> resourceType = tryGetResourceType(resourceCode);
+    final RuntimeResourceDefinition hapiDefinition =
+        fhirContext.getResourceDefinition(resourceCode);
+    return new FhirResourceDefinition(resourceCode, resourceType, requireNonNull(hapiDefinition));
   }
 
   /**
@@ -66,14 +65,32 @@ public class FhirDefinitionContext implements DefinitionContext {
   @Nonnull
   public ResourceDefinition findResourceDefinition(@Nonnull final ResourceType resourceType) {
     final String resourceCode = resourceType.toCode();
-    final RuntimeResourceDefinition hapiDefinition = fhirContext.getResourceDefinition(
-        resourceCode);
+    final RuntimeResourceDefinition hapiDefinition =
+        fhirContext.getResourceDefinition(resourceCode);
     return new FhirResourceDefinition(resourceType, requireNonNull(hapiDefinition));
   }
 
+  /**
+   * Attempts to resolve a resource code to a standard FHIR ResourceType.
+   *
+   * @param resourceCode the resource code to resolve
+   * @return the ResourceType if it's a standard type, otherwise empty
+   */
+  @Nonnull
+  private static Optional<ResourceType> tryGetResourceType(@Nonnull final String resourceCode) {
+    try {
+      return Optional.of(ResourceType.fromCode(resourceCode));
+    } catch (final org.hl7.fhir.exceptions.FHIRException e) {
+      // Custom resource type not in the standard FHIR specification.
+      return Optional.empty();
+    }
+  }
 
   /**
+   * Builds an ElementDefinition from a HAPI child definition.
+   *
    * @param childDefinition A HAPI {@link BaseRuntimeChildDefinition} that describes this element
+   * @param elementName the name of the element
    * @return A shiny new ElementDefinition
    */
   @Nonnull
@@ -81,10 +98,9 @@ public class FhirDefinitionContext implements DefinitionContext {
       @Nonnull final BaseRuntimeChildDefinition childDefinition,
       @Nonnull final String elementName) {
 
-    if (isChildChoiceDefinition(childDefinition) && childDefinition.getElementName()
-        .equals(elementName)) {
-      return Optional.of(
-          new FhirChoiceDefinition((RuntimeChildChoiceDefinition) childDefinition));
+    if (isChildChoiceDefinition(childDefinition)
+        && childDefinition.getElementName().equals(elementName)) {
+      return Optional.of(new FhirChoiceDefinition((RuntimeChildChoiceDefinition) childDefinition));
     } else {
       return buildElement(childDefinition, elementName).map(e -> e);
     }
@@ -96,23 +112,21 @@ public class FhirDefinitionContext implements DefinitionContext {
       @Nonnull final String elementName) {
 
     if (childDefinition.getValidChildNames().contains(elementName)) {
-      final BaseRuntimeElementDefinition<?> elementDefinition = childDefinition.getChildByName(
-          elementName);
+      final BaseRuntimeElementDefinition<?> elementDefinition =
+          childDefinition.getChildByName(elementName);
       if (childDefinition instanceof final RuntimeChildResourceDefinition rctd) {
         return Optional.of(new FhirReferenceDefinition(rctd));
-      } else if (isChildChoiceDefinition(childDefinition) && isReferenceDefinition(
-          elementDefinition)) {
+      } else if (isChildChoiceDefinition(childDefinition)
+          && isReferenceDefinition(elementDefinition)) {
         return Optional.of(
-            new FhirReferenceDefinition((RuntimeChildChoiceDefinition) childDefinition,
-                elementName));
+            new FhirReferenceDefinition(
+                (RuntimeChildChoiceDefinition) childDefinition, elementName));
       } else if (nonNull(elementDefinition)) {
         return Optional.of(new FhirElementDefinition(childDefinition, elementName));
       }
     }
     return Optional.empty();
-    
   }
-
 
   static boolean isChildChoiceDefinition(
       @Nonnull final BaseRuntimeChildDefinition childDefinition) {

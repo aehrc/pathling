@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,14 +35,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class FhirPathTestCaseBuilder {
 
-  @Getter
-  private final FhirPathTestBuilder parent;
+  @Getter private final FhirPathTestBuilder parent;
   private final String description;
   private String expression;
   private Object result;
 
-  @Nullable
-  private String expectError = null;
+  @Nullable private String expectError = null;
 
   public FhirPathTestCaseBuilder expression(final String expression) {
     this.expression = expression;
@@ -70,9 +68,7 @@ public class FhirPathTestCaseBuilder {
     return function.apply(this);
   }
 
-
-  YamlTestExecutor build(
-      final Function<RuntimeContext, ResourceResolver> resolverFactory) {
+  YamlTestExecutor build(final Function<RuntimeContext, ResourceResolver> resolverFactory) {
     // Convert the result to the expected format
     final Object formattedResult;
     if (result instanceof Number || result instanceof Boolean || result instanceof String) {
@@ -97,14 +93,10 @@ public class FhirPathTestCaseBuilder {
             null, // context
             false, // disable
             null // variables
-        );
+            );
 
     // Create and return the YamlTestExecutor
-    return DefaultYamlTestExecutor.of(
-        testCase,
-        resolverFactory,
-        java.util.Optional.empty()
-    );
+    return DefaultYamlTestExecutor.of(testCase, resolverFactory, java.util.Optional.empty());
   }
 
   @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,8 +41,7 @@ public class YamlTestFormat {
   private static final YamlTestFormat DEFAULT = new YamlTestFormat();
   private static final Yaml YAML_PARSER = new Yaml();
 
-  @Nonnull
-  List<ExcludeSet> excludeSet = List.of();
+  @Nonnull List<ExcludeSet> excludeSet = List.of();
 
   @Nonnull
   public Stream<Predicate<TestCase>> toPredicates(
@@ -50,15 +49,15 @@ public class YamlTestFormat {
     return excludeSet.stream().flatMap(es -> es.toPredicates(disabledExclusionIds));
   }
 
-
   @Nonnull
   public Function<TestCase, Optional<ExcludeRule>> toExcluder(
       @Nonnull final Collection<String> disabledExclusionIds) {
-    final List<ExcludeRule> exclusions = excludeSet.stream()
-        .flatMap(es -> es.getExclusions(disabledExclusionIds)).toList();
-    return testCase -> exclusions.stream()
-        .filter(ex -> ex.toPredicates(ex.getTitle()).anyMatch(p -> p.test(testCase)))
-        .findFirst();
+    final List<ExcludeRule> exclusions =
+        excludeSet.stream().flatMap(es -> es.getExclusions(disabledExclusionIds)).toList();
+    return testCase ->
+        exclusions.stream()
+            .filter(ex -> ex.toPredicates(ex.getTitle()).anyMatch(p -> p.test(testCase)))
+            .findFirst();
   }
 
   @Nonnull
@@ -70,5 +69,4 @@ public class YamlTestFormat {
   public static YamlTestFormat getDefault() {
     return DEFAULT;
   }
-
 }

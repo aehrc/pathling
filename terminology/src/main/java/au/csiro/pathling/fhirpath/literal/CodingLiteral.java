@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,24 +37,22 @@ import org.hl7.fhir.r4.model.Coding;
  */
 public abstract class CodingLiteral {
 
-  private CodingLiteral() {
-  }
+  private CodingLiteral() {}
 
-  /**
-   * Special characters that require quoting within a Coding literal component.
-   */
+  /** Special characters that require quoting within a Coding literal component. */
   private static final String SPECIAL_CHARACTERS = "\\s'|\\r\\n\\t(),";
 
-  private static final String COMPONENT_REGEX = String
-      .format("('.*?(?<!\\\\)'|[^%s]*)", SPECIAL_CHARACTERS);
+  private static final String COMPONENT_REGEX =
+      String.format("('.*?(?<!\\\\)'|[^%s]*)", SPECIAL_CHARACTERS);
 
-  private static final Pattern CODING_PATTERN = Pattern
-      .compile(String
-          .format("%s\\|%s(?:\\|%s)?(?:\\|%s)?(?:\\|%s)?", COMPONENT_REGEX, COMPONENT_REGEX,
-              COMPONENT_REGEX, COMPONENT_REGEX, COMPONENT_REGEX));
+  private static final Pattern CODING_PATTERN =
+      Pattern.compile(
+          String.format(
+              "%s\\|%s(?:\\|%s)?(?:\\|%s)?(?:\\|%s)?",
+              COMPONENT_REGEX, COMPONENT_REGEX, COMPONENT_REGEX, COMPONENT_REGEX, COMPONENT_REGEX));
 
-  private static final Pattern NEEDS_QUOTING = Pattern
-      .compile(String.format("[%s]", SPECIAL_CHARACTERS));
+  private static final Pattern NEEDS_QUOTING =
+      Pattern.compile(String.format("[%s]", SPECIAL_CHARACTERS));
 
   private static final Pattern NEEDS_UNQUOTING = Pattern.compile("^'(.*)'$");
 
@@ -70,8 +68,8 @@ public abstract class CodingLiteral {
       throws IllegalArgumentException {
     final Matcher matcher = CODING_PATTERN.matcher(fhirPath);
     if (matcher.matches()) {
-      final Coding coding = new Coding(decodeComponent(matcher.group(1)),
-          decodeComponent(matcher.group(2)), null);
+      final Coding coding =
+          new Coding(decodeComponent(matcher.group(1)), decodeComponent(matcher.group(2)), null);
       if (Objects.nonNull(matcher.group(3))) {
         coding.setVersion(decodeComponent(matcher.group(3)));
       }
@@ -84,7 +82,8 @@ public abstract class CodingLiteral {
       return coding;
     } else {
       throw new IllegalArgumentException(
-          "Coding literal must be of form: <system>|<code>[|<version>][|<display>[|<userSelected>]]].");
+          "Coding literal must be of form:"
+              + " <system>|<code>[|<version>][|<display>[|<userSelected>]]].");
     }
   }
 
@@ -97,15 +96,14 @@ public abstract class CodingLiteral {
    */
   @Nonnull
   public static String toLiteral(@Nonnull final Coding coding) {
-    final String[] components = new String[]{
-        coding.getSystem(),
-        coding.getCode(),
-        coding.getVersion(),
-        coding.getDisplay(),
-        coding.hasUserSelected()
-        ? String.valueOf(coding.getUserSelected())
-        : null
-    };
+    final String[] components =
+        new String[] {
+          coding.getSystem(),
+          coding.getCode(),
+          coding.getVersion(),
+          coding.getDisplay(),
+          coding.hasUserSelected() ? String.valueOf(coding.getUserSelected()) : null
+        };
 
     // Drop the null components other than system and code from the tail.
     int nonNullHead = components.length;
@@ -114,7 +112,8 @@ public abstract class CodingLiteral {
     }
     return Arrays.stream(components)
         .limit(nonNullHead)
-        .map(CodingLiteral::encodeComponent).collect(Collectors.joining("|"));
+        .map(CodingLiteral::encodeComponent)
+        .collect(Collectors.joining("|"));
   }
 
   @Nonnull
@@ -142,5 +141,4 @@ public abstract class CodingLiteral {
       }
     }
   }
-
 }

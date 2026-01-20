@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,24 +31,21 @@ import org.apache.spark.sql.types.DataType;
 /**
  * Spark UDF to convert a Quantity from its current unitCode to a target unitCode using UCUM
  * conversions.
- * <p>
- * This UDF wraps {@link FhirPathQuantity#convertToUnit(String)} for use in Spark SQL. It decodes
+ *
+ * <p>This UDF wraps {@link FhirPathQuantity#convertToUnit(String)} for use in Spark SQL. It decodes
  * the quantity Row, delegates to the conversion logic, and encodes the result back to a Row.
- * <p>
- * Returns null if either input is null or if the conversion fails.
+ *
+ * <p>Returns null if either input is null or if the conversion fails.
  *
  * @see FhirPathQuantity#convertToUnit(String)
  * @see QuantityEncoding
  */
 public class ConvertQuantityToUnit implements SqlFunction2<Row, String, Row> {
 
-  /**
-   * The name of this function when used within SQL.
-   */
+  /** The name of this function when used within SQL. */
   public static final String FUNCTION_NAME = "convert_quantity_to_unit";
 
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   @Override
   public String getName() {

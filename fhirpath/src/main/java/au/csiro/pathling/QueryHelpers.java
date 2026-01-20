@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Common functionality for executing queries using Spark.
@@ -33,22 +32,22 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public abstract class QueryHelpers {
 
-  private QueryHelpers() {
-  }
+  private QueryHelpers() {}
 
   /**
    * Creates an empty dataset with the schema of the supplied resource type.
    *
    * @param spark a {@link SparkSession}
    * @param fhirEncoders a {@link FhirEncoders} object
-   * @param resourceType the {@link ResourceType} that will determine the shape of the empty
-   * dataset
+   * @param resourceCode the resource type code (e.g., "Patient", "ViewDefinition")
    * @return a new {@link Dataset}
    */
   @Nonnull
-  public static Dataset<Row> createEmptyDataset(@Nonnull final SparkSession spark,
-      @Nonnull final FhirEncoders fhirEncoders, @Nonnull final ResourceType resourceType) {
-    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
+  public static Dataset<Row> createEmptyDataset(
+      @Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final String resourceCode) {
+    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceCode);
     return spark.emptyDataset(encoder).toDF();
   }
 }

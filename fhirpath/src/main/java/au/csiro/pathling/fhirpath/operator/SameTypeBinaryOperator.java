@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,21 +42,22 @@ public abstract class SameTypeBinaryOperator implements FhirPathBinaryOperator {
     }
 
     // find common type for comparison and promote both sides to that type
-    // e.g. IntegerCollection and DecimalCollection -> promote IntegerCollection to DecimalCollection
+    // e.g. IntegerCollection and DecimalCollection -> promote IntegerCollection to
+    // DecimalCollection
 
     // if a common type does not exist then we have to options:
     // - either throw an error early
     // - or allow for implicit empty collections return the empty comparator,
     // which returns empty if any of the arguments is empty and trows a runtime error otherwise
 
-    final Pair<Collection, Collection> reconciledArguments = FhirPathBinaryOperator.reconcileTypes(
-        left, right);
+    final Pair<Collection, Collection> reconciledArguments =
+        FhirPathBinaryOperator.reconcileTypes(left, right);
 
     final Collection reconciledLeft = reconciledArguments.getLeft();
     final Collection reconciledRight = reconciledArguments.getRight();
     return reconciledLeft.typeEquivalentWith(reconciledRight)
-           ? handleEquivalentTypes(reconciledLeft, reconciledRight, input)
-           : handleNonEquivalentTypes(reconciledLeft, reconciledRight, input);
+        ? handleEquivalentTypes(reconciledLeft, reconciledRight, input)
+        : handleNonEquivalentTypes(reconciledLeft, reconciledRight, input);
   }
 
   /**
@@ -69,8 +70,10 @@ public abstract class SameTypeBinaryOperator implements FhirPathBinaryOperator {
    * @return A {@link Collection} object representing the resulting expression
    */
   @Nonnull
-  protected Collection handleNonEquivalentTypes(@Nonnull final Collection ignoredLeft,
-      @Nonnull final Collection ignoredRight, @Nonnull final BinaryOperatorInput input) {
+  protected Collection handleNonEquivalentTypes(
+      @Nonnull final Collection ignoredLeft,
+      @Nonnull final Collection ignoredRight,
+      @Nonnull final BinaryOperatorInput input) {
     return fail(input);
   }
 
@@ -84,8 +87,10 @@ public abstract class SameTypeBinaryOperator implements FhirPathBinaryOperator {
    * @return A {@link Collection} object representing the resulting expression
    */
   @Nonnull
-  protected abstract Collection handleEquivalentTypes(@Nonnull final Collection left,
-      @Nonnull final Collection right, @Nonnull final BinaryOperatorInput input);
+  protected abstract Collection handleEquivalentTypes(
+      @Nonnull final Collection left,
+      @Nonnull final Collection right,
+      @Nonnull final BinaryOperatorInput input);
 
   /**
    * Fails with an {@link InvalidUserInputError}, indicating that the operator is not supported for
@@ -97,8 +102,11 @@ public abstract class SameTypeBinaryOperator implements FhirPathBinaryOperator {
   @Nonnull
   protected Collection fail(@Nonnull final BinaryOperatorInput input) {
     throw new InvalidUserInputError(
-        "Operator `" + getOperatorName() + "` is not supported for: " + input.left()
-            .getDisplayExpression() + ", "
+        "Operator `"
+            + getOperatorName()
+            + "` is not supported for: "
+            + input.left().getDisplayExpression()
+            + ", "
             + input.right().getDisplayExpression());
   }
 }

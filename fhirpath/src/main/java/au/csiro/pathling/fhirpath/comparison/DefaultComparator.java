@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +29,7 @@ public class DefaultComparator implements ColumnComparator {
   private static final DefaultComparator INSTANCE = new DefaultComparator();
 
   /**
-   * Gets the singleton instance of the {@link DefaultComparator}
+   * Gets the singleton instance of the {@link DefaultComparator}.
    *
    * @return the singleton instance of {@link DefaultComparator}
    */
@@ -38,8 +38,7 @@ public class DefaultComparator implements ColumnComparator {
     return INSTANCE;
   }
 
-  protected DefaultComparator() {
-  }
+  protected DefaultComparator() {}
 
   @Nonnull
   @Override

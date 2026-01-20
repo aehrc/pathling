@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,15 +29,17 @@ import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
 import au.csiro.pathling.views.StrictStringTypeAdapterFactory;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.parser.IParser;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import io.github.fhnaumann.funcs.UCUMService;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
-import io.github.fhnaumann.funcs.UCUMService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 
@@ -69,31 +71,34 @@ public class UnitTestDependencies {
       @SuppressWarnings("unused") @Nonnull final Environment environment,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
 
-    final SparkSession spark = SparkSession.builder()
-        .master("local[1]")
-        .appName("pathling-unittest")
-        .config("spark.default.parallelism", 1)
-        .config("spark.driver.bindAddress", "localhost")
-        .config("spark.driver.host", "localhost")
-        .config("spark.sql.shuffle.partitions", 1)
-        .config("spark.sql.debug.maxToStringFields", 100)
-        .config("spark.network.timeout", "600s")
-        .config("spark.ui.enabled", false)
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config("spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-        .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
-        .getOrCreate();
+    final SparkSession spark =
+        SparkSession.builder()
+            .master("local[1]")
+            .appName("pathling-unittest")
+            .config("spark.default.parallelism", 1)
+            .config("spark.driver.bindAddress", "localhost")
+            .config("spark.driver.host", "localhost")
+            .config("spark.sql.shuffle.partitions", 1)
+            .config("spark.sql.debug.maxToStringFields", 100)
+            .config("spark.network.timeout", "600s")
+            .config("spark.ui.enabled", false)
+            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+            .config(
+                "spark.sql.catalog.spark_catalog",
+                "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+            .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
+            .getOrCreate();
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
-    PathlingUdfConfigurer.registerUDFs(spark);
+    PathlingUdfConfigurer.registerUdfs(spark);
     return spark;
   }
 
   @Bean
+  @Primary
   @ConditionalOnMissingBean
   @Nonnull
   public static FhirContext fhirContext() {
-    return FhirContext.forR4();
+    return FhirEncoders.contextFor(FhirVersionEnum.R4);
   }
 
   @Bean
@@ -107,10 +112,7 @@ public class UnitTestDependencies {
   @ConditionalOnMissingBean
   @Nonnull
   static FhirEncoders fhirEncoders() {
-    return FhirEncoders.forR4()
-        .withExtensionsEnabled(true)
-        .withAllOpenTypes()
-        .getOrCreate();
+    return FhirEncoders.forR4().withExtensionsEnabled(true).withAllOpenTypes().getOrCreate();
   }
 
   @Bean
@@ -143,5 +145,4 @@ public class UnitTestDependencies {
     builder.registerTypeAdapterFactory(new StrictStringTypeAdapterFactory());
     return builder.create();
   }
-
 }

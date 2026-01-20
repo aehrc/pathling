@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,15 +57,13 @@ public enum SaveMode {
    */
   MERGE("merge", Optional.empty());
 
-  @Nonnull
-  @Getter
-  private final String code;
+  @Nonnull @Getter private final String code;
 
-  @Nonnull
-  @Getter
-  private final Optional<org.apache.spark.sql.SaveMode> sparkSaveMode;
+  @Nonnull @Getter private final Optional<org.apache.spark.sql.SaveMode> sparkSaveMode;
 
-  SaveMode(@Nonnull final String code, @Nonnull final Optional<org.apache.spark.sql.SaveMode> sparkSaveMode) {
+  SaveMode(
+      @Nonnull final String code,
+      @Nonnull final Optional<org.apache.spark.sql.SaveMode> sparkSaveMode) {
     this.code = code;
     this.sparkSaveMode = sparkSaveMode;
   }
@@ -86,5 +84,4 @@ public enum SaveMode {
     }
     throw new IllegalArgumentException("Unknown import mode: " + code);
   }
-
 }

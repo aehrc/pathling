@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,13 +48,11 @@ public class Ucum {
 
   /**
    * A record to hold a canonical value and unit pair.
+   *
+   * @param value the canonical value
+   * @param unit the canonical unit code
    */
-  public record ValueWithUnit(
-      @Nonnull BigDecimal value,
-      @Nonnull String unit
-  ) {
-
-  }
+  public record ValueWithUnit(@Nonnull BigDecimal value, @Nonnull String unit) {}
 
   private static final UCUMService service;
 
@@ -63,9 +61,13 @@ public class Ucum {
     service = new UCUMService();
   }
 
-  private Ucum() {
-  }
+  private Ucum() {}
 
+  /**
+   * Returns the shared UCUM service instance.
+   *
+   * @return the UCUM service
+   */
   @Nonnull
   public static UCUMService service() {
     return service;
@@ -80,11 +82,11 @@ public class Ucum {
    * @param value the value to canonicalize
    * @param code the UCUM code of the value
    * @return a ValueWithUnit containing both canonical value and code, or null if canonicalization
-   * fails
+   *     fails
    */
   @Nullable
-  public static ValueWithUnit getCanonical(@Nullable final BigDecimal value,
-      @Nullable final String code) {
+  public static ValueWithUnit getCanonical(
+      @Nullable final BigDecimal value, @Nullable final String code) {
     if (value == null || code == null) {
       return null;
     }
@@ -93,16 +95,13 @@ public class Ucum {
       // We need to delegate the canonicalization to the service including both value and code.
       // This is because some UCUM conversions use multiplicative factors and some use additive
       // offsets (e.g., temperature conversions).
-      final CanonicalizerService.CanonicalizationResult result = service.canonicalize(
-          new PreciseDecimal(value.toPlainString()),
-          code
-      );
+      final CanonicalizerService.CanonicalizationResult result =
+          service.canonicalize(new PreciseDecimal(value.toPlainString()), code);
 
       // Check if the result is a Success instance.
-      if (!(result instanceof CanonicalizerService.Success(
-          PreciseDecimal magnitude,
-          CanonicalTerm canonicalTerm
-      ))) {
+      if (!(result
+          instanceof
+          CanonicalizerService.Success(PreciseDecimal magnitude, CanonicalTerm canonicalTerm))) {
         log.warn("Failed to canonicalise UCUM code '{}': {}", code, result);
         return null;
       }
@@ -121,9 +120,7 @@ public class Ucum {
       }
 
       // Handle empty canonical code by converting to NO_UNIT_CODE
-      final String adjustedCode = canonicalCode.isEmpty()
-                                  ? NO_UNIT_CODE
-                                  : canonicalCode;
+      final String adjustedCode = canonicalCode.isEmpty() ? NO_UNIT_CODE : canonicalCode;
 
       return new ValueWithUnit(magnitude.getValue(), adjustedCode);
     } catch (final Exception e) {
@@ -141,12 +138,10 @@ public class Ucum {
    */
   @UsedByReflection
   @Nullable
-  public static BigDecimal getCanonicalValue(@Nullable final BigDecimal value,
-      @Nullable final String code) {
+  public static BigDecimal getCanonicalValue(
+      @Nullable final BigDecimal value, @Nullable final String code) {
     @Nullable final ValueWithUnit canonical = getCanonical(value, code);
-    return canonical != null
-           ? canonical.value()
-           : null;
+    return canonical != null ? canonical.value() : null;
   }
 
   /**
@@ -158,12 +153,10 @@ public class Ucum {
    */
   @UsedByReflection
   @Nullable
-  public static String getCanonicalCode(@Nullable final BigDecimal value,
-      @Nullable final String code) {
+  public static String getCanonicalCode(
+      @Nullable final BigDecimal value, @Nullable final String code) {
     @Nullable final ValueWithUnit canonical = getCanonical(value, code);
-    return canonical != null
-           ? canonical.unit()
-           : null;
+    return canonical != null ? canonical.unit() : null;
   }
 
   /**
@@ -176,8 +169,10 @@ public class Ucum {
    * @return the converted value, or null if conversion is not possible
    */
   @Nullable
-  public static BigDecimal convertValue(@Nullable final BigDecimal value,
-      @Nullable final String fromCode, @Nullable final String toCode) {
+  public static BigDecimal convertValue(
+      @Nullable final BigDecimal value,
+      @Nullable final String fromCode,
+      @Nullable final String toCode) {
     if (value == null || fromCode == null || toCode == null) {
       return null;
     }
@@ -185,25 +180,29 @@ public class Ucum {
     try {
       // Use the ucumate library's convert method that handles both multiplicative and additive
       // conversions directly by taking the value as the first argument
-      final ConversionResult conversionResult = service.convert(
-          new PreciseDecimal(value.toPlainString()),
-          fromCode,
-          toCode
-      );
+      final ConversionResult conversionResult =
+          service.convert(new PreciseDecimal(value.toPlainString()), fromCode, toCode);
 
       if (!(conversionResult instanceof ConverterService.Success(var convertedValue))
           || convertedValue == null) {
-        log.warn("Failed to convert value {} from '{}' to '{}': {}",
-            value, fromCode, toCode, conversionResult);
+        log.warn(
+            "Failed to convert value {} from '{}' to '{}': {}",
+            value,
+            fromCode,
+            toCode,
+            conversionResult);
         return null;
       }
 
       return convertedValue.getValue();
     } catch (final Exception e) {
-      log.warn("Error converting value {} from '{}' to '{}': {}",
-          value, fromCode, toCode, e.getMessage());
+      log.warn(
+          "Error converting value {} from '{}' to '{}': {}",
+          value,
+          fromCode,
+          toCode,
+          e.getMessage());
       return null;
     }
   }
-
 }

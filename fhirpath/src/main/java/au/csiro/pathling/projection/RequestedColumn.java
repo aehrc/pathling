@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,8 +25,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Information about a column that has been requested to be included in a projection.
- * <p>
- * Includes the parsed {@link FhirPath}, the name of the column and whether the column has been
+ *
+ * <p>Includes the parsed {@link FhirPath}, the name of the column and whether the column has been
  * asserted to be a collection.
  *
  * @param path The parsed FHIRPath expression that defines the column.
@@ -40,19 +40,24 @@ public record RequestedColumn(
     @Nonnull String name,
     boolean collection,
     @Nonnull Optional<FHIRDefinedType> type,
-    @Nonnull Optional<DataType> sqlType
-) {
+    @Nonnull Optional<DataType> sqlType) {
 
   @Nonnull
   @Override
   public String toString() {
-    return "RequestedColumn{" +
-        "path=" + path +
-        ", name='" + name + '\'' +
-        ", collection=" + collection +
-        ", type=" + type +
-        ", sqlType=" + sqlType +
-        '}';
+    return "RequestedColumn{"
+        + "path="
+        + path
+        + ", name='"
+        + name
+        + '\''
+        + ", collection="
+        + collection
+        + ", type="
+        + type
+        + ", sqlType="
+        + sqlType
+        + '}';
   }
 
   /**
@@ -62,8 +67,6 @@ public record RequestedColumn(
    */
   @Nonnull
   public String toExpression() {
-    return (collection
-            ? "many"
-            : "one") + ": " + path.toExpression() + " as " + name;
+    return (collection ? "many" : "one") + ": " + path.toExpression() + " as " + name;
   }
 }

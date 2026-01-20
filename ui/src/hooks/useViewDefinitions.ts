@@ -1,0 +1,90 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { useQuery } from "@tanstack/react-query";
+
+import { search } from "../api";
+import { config } from "../config";
+import { useAuth } from "../contexts/AuthContext";
+
+import type { UseQueryResult } from "@tanstack/react-query";
+import type { Bundle } from "fhir/r4";
+
+/**
+ * Summary of a stored ViewDefinition.
+ */
+export interface ViewDefinitionSummary {
+  id: string;
+  name: string;
+  json: string;
+}
+
+/**
+ * Options for useViewDefinitions hook.
+ */
+export interface UseViewDefinitionsOptions {
+  /** Whether to enable the query. */
+  enabled?: boolean;
+}
+
+/**
+ * Result of useViewDefinitions hook.
+ */
+export type UseViewDefinitionsResult = UseQueryResult<
+  ViewDefinitionSummary[],
+  Error
+>;
+
+/**
+ * Fetch available ViewDefinitions from the server.
+ */
+export type UseViewDefinitionsFn = (
+  options?: UseViewDefinitionsOptions,
+) => UseViewDefinitionsResult;
+
+/**
+ * Fetch available ViewDefinitions from the server.
+ *
+ * @param options - Optional query options.
+ * @returns Query result with ViewDefinition summaries.
+ */
+export const useViewDefinitions: UseViewDefinitionsFn = (options) => {
+  const { fhirBaseUrl } = config;
+  const { client } = useAuth();
+  const accessToken = client?.state.tokenResponse?.access_token;
+
+  return useQuery<ViewDefinitionSummary[], Error>({
+    queryKey: ["viewDefinitions"],
+    queryFn: async () => {
+      const bundle: Bundle = await search(fhirBaseUrl!, {
+        resourceType: "ViewDefinition",
+        accessToken,
+      });
+      return (
+        bundle.entry?.map((e) => {
+          const resource = e.resource as { id: string; name?: string };
+          return {
+            id: resource.id,
+            name: resource.name || resource.id,
+            json: JSON.stringify(resource, null, 2),
+          };
+        }) ?? []
+      );
+    },
+    enabled: options?.enabled !== false && !!fhirBaseUrl,
+  });
+};

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,18 +38,19 @@ import org.apache.commons.lang3.tuple.Pair;
  */
 public class MathOperator implements FhirPathBinaryOperator {
 
-  private static final String NON_SINGULAR_ERROR_FORMAT = "Math operator (%s) requires the %s operand to be singular.";
+  private static final String NON_SINGULAR_ERROR_FORMAT =
+      "Math operator (%s) requires the %s operand to be singular.";
 
-  @Nonnull
-  private final MathOperation type;
+  @Nonnull private final MathOperation type;
 
   /**
+   * Constructs a new MathOperator.
+   *
    * @param type The type of math operation
    */
   public MathOperator(@Nonnull final MathOperation type) {
     this.type = type;
   }
-
 
   @Nonnull
   @Override
@@ -63,27 +64,38 @@ public class MathOperator implements FhirPathBinaryOperator {
         && rightValue instanceof QuantityCollection qty) {
       return invokeDateTime(leftValue, qty);
     }
-    final Pair<Collection, Collection> reconciledArguments = FhirPathBinaryOperator.reconcileTypes(
-        leftValue, rightValue);
+    final Pair<Collection, Collection> reconciledArguments =
+        FhirPathBinaryOperator.reconcileTypes(leftValue, rightValue);
 
-    final Collection left = reconciledArguments.getLeft()
-        .asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "left"));
-    final Collection right = reconciledArguments.getRight()
-        .asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "right"));
+    final Collection left =
+        reconciledArguments
+            .getLeft()
+            .asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "left"));
+    final Collection right =
+        reconciledArguments
+            .getRight()
+            .asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "right"));
 
     if (left instanceof QuantityCollection || right instanceof QuantityCollection) {
       throw new UnsupportedFhirPathFeatureError(
           "Quantity arithmetic operations are not yet supported");
     }
 
-    checkUserInput(left instanceof Numeric,
+    checkUserInput(
+        left instanceof Numeric,
         type + " operator does not support left operand: " + left.getDisplayExpression());
-    checkUserInput(right instanceof Numeric,
+    checkUserInput(
+        right instanceof Numeric,
         type + " operator does not support right operand: " + right.getDisplayExpression());
 
-    checkUserInput(left.isComparableTo(right),
-        "Left and right operands are not comparable: " + left.getDisplayExpression() + " "
-            + type + " " + right.getDisplayExpression());
+    checkUserInput(
+        left.isComparableTo(right),
+        "Left and right operands are not comparable: "
+            + left.getDisplayExpression()
+            + " "
+            + type
+            + " "
+            + right.getDisplayExpression());
 
     final Numeric leftNumeric = (Numeric) left;
     final Numeric rightNumeric = (Numeric) right;
@@ -91,7 +103,8 @@ public class MathOperator implements FhirPathBinaryOperator {
   }
 
   @Nonnull
-  private Collection invokeDateTime(@Nonnull final Collection ignoredLeftValue,
+  private Collection invokeDateTime(
+      @Nonnull final Collection ignoredLeftValue,
       @Nonnull final QuantityCollection ignoredRightValue) {
     throw new UnsupportedFhirPathFeatureError("Unsupported dateTime arithmetic");
   }

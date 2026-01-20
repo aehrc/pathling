@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,10 +28,11 @@ import java.util.Optional;
 /**
  * A chain of variable resolvers that can be queried in sequence.
  *
+ * @param resolvers the list of variable resolvers in the chain
  * @author John Grimes
  */
-public record VariableResolverChain(@Nonnull List<EnvironmentVariableResolver> resolvers) implements
-    EnvironmentVariableResolver {
+public record VariableResolverChain(@Nonnull List<EnvironmentVariableResolver> resolvers)
+    implements EnvironmentVariableResolver {
 
   @Override
   public Optional<Collection> get(@Nonnull final String name) {
@@ -51,8 +52,8 @@ public record VariableResolverChain(@Nonnull List<EnvironmentVariableResolver> r
    * @return A new resolver chain
    */
   @Nonnull
-  public static VariableResolverChain withDefaults(@Nonnull final ResourceCollection resource,
-      @Nonnull final Collection inputContext) {
+  public static VariableResolverChain withDefaults(
+      @Nonnull final ResourceCollection resource, @Nonnull final Collection inputContext) {
     final List<EnvironmentVariableResolver> resolvers = new ArrayList<>();
     resolvers.add(new BuiltInConstantResolver());
     resolvers.add(new ContextVariableResolver(resource, inputContext));
@@ -71,12 +72,12 @@ public record VariableResolverChain(@Nonnull List<EnvironmentVariableResolver> r
    * @return A new resolver chain
    */
   @Nonnull
-  public static VariableResolverChain withDefaults(@Nonnull final ResourceCollection resource,
+  public static VariableResolverChain withDefaults(
+      @Nonnull final ResourceCollection resource,
       @Nonnull final Collection inputContext,
       @Nonnull final Map<String, Collection> additionalVariables) {
     final VariableResolverChain chain = withDefaults(resource, inputContext);
     chain.resolvers().add(new SuppliedVariableResolver(additionalVariables));
     return chain;
   }
-
 }

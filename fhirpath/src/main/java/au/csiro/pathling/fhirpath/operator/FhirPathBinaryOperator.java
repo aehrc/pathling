@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.Pair;
@@ -37,6 +39,33 @@ public interface FhirPathBinaryOperator {
   @Nonnull
   Collection invoke(@Nonnull BinaryOperatorInput input);
 
+  /**
+   * Invokes this operator with unevaluated operand paths.
+   *
+   * <p>This method allows operators to control when and how their operands are evaluated. The
+   * default implementation evaluates both paths and delegates to {@link
+   * #invoke(BinaryOperatorInput)}.
+   *
+   * <p>Operators with special evaluation needs (e.g., type operators that need to extract type
+   * specifiers at evaluation time) can override this method.
+   *
+   * @param context the evaluation context
+   * @param input the input collection
+   * @param leftPath the unevaluated left operand path
+   * @param rightPath the unevaluated right operand path
+   * @return the result collection
+   */
+  @Nonnull
+  default Collection invokeWithPaths(
+      @Nonnull final EvaluationContext context,
+      @Nonnull final Collection input,
+      @Nonnull final FhirPath leftPath,
+      @Nonnull final FhirPath rightPath) {
+    // Default: evaluate both paths and call invoke()
+    final Collection leftValue = leftPath.apply(input, context);
+    final Collection rightValue = rightPath.apply(input, context);
+    return invoke(new BinaryOperatorInput(context, leftValue, rightValue));
+  }
 
   /**
    * Gets the name of this operator, typically the simple class name.
@@ -56,8 +85,8 @@ public interface FhirPathBinaryOperator {
    * @return A pair of collections that can be reconciled to a common type
    */
   @Nonnull
-  static Pair<Collection, Collection> reconcileTypes(@Nonnull final Collection left,
-      @Nonnull final Collection right) {
+  static Pair<Collection, Collection> reconcileTypes(
+      @Nonnull final Collection left, @Nonnull final Collection right) {
     // finds if left and right elements can be reconciled to a common type
     if (right.convertibleTo(left)) {
       return Pair.of(left, right.castAs(left));

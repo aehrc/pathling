@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,14 +59,13 @@ class UnresolvedExpressionsTest {
 
   @Test
   void testUnresolvedNullIfMissingField() {
-    final UnresolvedNullIfMissingField unresolvedNullIfMissingField = new UnresolvedNullIfMissingField(
-        stringLiteral("data1")
-    );
+    final UnresolvedNullIfMissingField unresolvedNullIfMissingField =
+        new UnresolvedNullIfMissingField(stringLiteral("data1"));
     assertUnresolvedExpression(unresolvedNullIfMissingField);
     assertEquals("data1", unresolvedNullIfMissingField.toString());
-    assertEquals(new UnresolvedNullIfMissingField(stringLiteral("data2")),
-        unresolvedNullIfMissingField.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2")))
-    );
+    assertEquals(
+        new UnresolvedNullIfMissingField(stringLiteral("data2")),
+        unresolvedNullIfMissingField.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2"))));
   }
 
   @Test
@@ -75,16 +74,13 @@ class UnresolvedExpressionsTest {
     final Function1<Expression, Expression> extractor = x -> x;
     final Function1<Expression, Expression> traversor = x -> x;
 
-    final UnresolvedTransformTree unresolvedTransformTree = new UnresolvedTransformTree(
-        stringLiteral("data1"), extractor, toIndexedSeq(traversor), 2
-    );
+    final UnresolvedTransformTree unresolvedTransformTree =
+        new UnresolvedTransformTree(stringLiteral("data1"), extractor, toIndexedSeq(traversor), 2);
     assertUnresolvedExpression(unresolvedTransformTree);
     assertEquals("data1", unresolvedTransformTree.toString());
 
     assertEquals(
-        new UnresolvedTransformTree(
-            stringLiteral("data2"), extractor, toIndexedSeq(traversor), 2),
-        unresolvedTransformTree.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2")))
-    );
+        new UnresolvedTransformTree(stringLiteral("data2"), extractor, toIndexedSeq(traversor), 2),
+        unresolvedTransformTree.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2"))));
   }
 }

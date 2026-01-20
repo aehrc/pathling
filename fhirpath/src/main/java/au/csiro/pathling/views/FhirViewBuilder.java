@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,12 +29,13 @@ import org.hl7.fhir.instance.model.api.IBase;
 
 /**
  * Builder class for creating {@link FhirView} instances.
- * <p>
- * This builder provides a fluent interface for constructing FHIR views with various components such
- * as resource types, constants, select clauses, and where conditions. The builder follows the
+ *
+ * <p>This builder provides a fluent interface for constructing FHIR views with various components
+ * such as resource types, constants, select clauses, and where conditions. The builder follows the
  * builder pattern, allowing method chaining for convenient configuration.
- * <p>
- * Usage example:
+ *
+ * <p>Usage example:
+ *
  * <pre>{@code
  * FhirView view = new FhirViewBuilder()
  *     .resource("Patient")
@@ -52,22 +53,33 @@ import org.hl7.fhir.instance.model.api.IBase;
  */
 public class FhirViewBuilder {
 
-  @Nullable
-  private String resource;
+  @Nullable private String name;
 
-  @Nonnull
-  private final List<ConstantDeclaration> constant = new ArrayList<>();
+  @Nullable private String resource;
 
-  @Nonnull
-  private final List<SelectClause> select = new ArrayList<>();
+  @Nonnull private final List<ConstantDeclaration> constant = new ArrayList<>();
 
-  @Nonnull
-  private final List<WhereClause> where = new ArrayList<>();
+  @Nonnull private final List<SelectClause> select = new ArrayList<>();
+
+  @Nonnull private final List<WhereClause> where = new ArrayList<>();
+
+  /**
+   * Sets the name for this view.
+   *
+   * <p>This is an optional field that provides a computer-friendly name for the view.
+   *
+   * @param name the name for the view
+   * @return this builder instance for method chaining
+   */
+  public FhirViewBuilder name(@Nullable final String name) {
+    this.name = name;
+    return this;
+  }
 
   /**
    * Sets the FHIR resource type for this view.
-   * <p>
-   * This is a required field that specifies which FHIR resource type the view will operate on.
+   *
+   * <p>This is a required field that specifies which FHIR resource type the view will operate on.
    * Common examples include "Patient", "Observation", "Condition", etc.
    *
    * @param resource the FHIR resource type name (e.g., "Patient", "Observation")
@@ -81,8 +93,8 @@ public class FhirViewBuilder {
 
   /**
    * Adds one or more constant declarations to the view.
-   * <p>
-   * Constants can be referenced in FHIRPath expressions using the % prefix (e.g., %myConstant).
+   *
+   * <p>Constants can be referenced in FHIRPath expressions using the % prefix (e.g., %myConstant).
    * This is useful for parameterizing queries or providing reusable values.
    *
    * @param constant one or more constant declarations to add
@@ -95,8 +107,8 @@ public class FhirViewBuilder {
 
   /**
    * Adds a constant declaration with the specified name and value.
-   * <p>
-   * This is a convenience method for creating a constant declaration inline. The constant can be
+   *
+   * <p>This is a convenience method for creating a constant declaration inline. The constant can be
    * referenced in FHIRPath expressions using %name.
    *
    * @param name the name of the constant (used with % prefix in expressions)
@@ -110,8 +122,8 @@ public class FhirViewBuilder {
 
   /**
    * Adds one or more select clauses to the view.
-   * <p>
-   * Select clauses define what data should be extracted from the FHIR resources. Each clause
+   *
+   * <p>Select clauses define what data should be extracted from the FHIR resources. Each clause
    * typically consists of a column name and a FHIRPath expression.
    *
    * @param select one or more select clauses to add
@@ -124,8 +136,8 @@ public class FhirViewBuilder {
 
   /**
    * Adds one or more where clauses to the view.
-   * <p>
-   * Where clauses define filtering conditions that resources must satisfy to be included in the
+   *
+   * <p>Where clauses define filtering conditions that resources must satisfy to be included in the
    * view results. Each clause contains a FHIRPath expression that evaluates to a boolean.
    *
    * @param where one or more where clauses to add
@@ -138,8 +150,8 @@ public class FhirViewBuilder {
 
   /**
    * Adds one or more where conditions as strings.
-   * <p>
-   * This is a convenience method for adding where clauses when you only need to specify the
+   *
+   * <p>This is a convenience method for adding where clauses when you only need to specify the
    * condition expression without a description.
    *
    * @param where one or more FHIRPath condition expressions
@@ -154,32 +166,31 @@ public class FhirViewBuilder {
 
   /**
    * Adds a where condition with an optional description.
-   * <p>
-   * The description can be used for documentation purposes or to provide context about what the
+   *
+   * <p>The description can be used for documentation purposes or to provide context about what the
    * condition is checking for.
    *
    * @param condition the FHIRPath expression that defines the filtering condition
    * @param description optional human-readable description of the condition
    * @return this builder instance for method chaining
    */
-  public FhirViewBuilder where(@Nonnull final String condition,
-      @Nullable final String description) {
+  public FhirViewBuilder where(
+      @Nonnull final String condition, @Nullable final String description) {
     this.where.add(new WhereClause(condition, description));
     return this;
   }
 
   /**
    * Builds and returns a new {@link FhirView} instance with the configured settings.
-   * <p>
-   * This method validates that all required fields are set and creates the final view object. The
-   * resource type must be set before calling this method.
+   *
+   * <p>This method validates that all required fields are set and creates the final view object.
+   * The resource type must be set before calling this method.
    *
    * @return a new FhirView instance configured with the builder's settings
    * @throws IllegalArgumentException if the resource type has not been set
    */
   public FhirView build() {
     checkArgument(resource != null, "Resource must be set");
-    return new FhirView(resource, constant, select, where);
+    return new FhirView(name, resource, constant, select, where);
   }
-
 }

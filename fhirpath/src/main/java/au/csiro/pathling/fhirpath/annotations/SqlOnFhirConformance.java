@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,29 +30,21 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE})
 public @interface SqlOnFhirConformance {
 
-  /**
-   * SQL on FHIR conformance profiles.
-   */
+  /** SQL on FHIR conformance profiles. */
   enum Profile {
-    /**
-     * Required features that must be supported.
-     */
+    /** Required features that must be supported. */
     REQUIRED,
     /**
      * Features that are required to be supported as part of the Shareable View Definition profile.
      *
      * @see <a
-     * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ShareableViewDefinition.html">Shareable
-     * View Definition</a>
+     *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ShareableViewDefinition.html">Shareable
+     *     View Definition</a>
      */
     SHARABLE,
-    /**
-     * Experimental features that are not yet stable.
-     */
+    /** Experimental features that are not yet stable. */
     EXPERIMENTAL,
-    /**
-     * Terminology-related features.
-     */
+    /** Terminology-related features. */
     TERMINOLOGY
   }
 

@@ -26,4 +26,3 @@
 #'   \item \code{DESCRIPTION} - The display name of the condition
 #' }
 "conditions"
-

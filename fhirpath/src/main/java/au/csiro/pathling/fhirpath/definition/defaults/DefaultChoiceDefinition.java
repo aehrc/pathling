@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,11 +34,8 @@ import org.apache.commons.lang3.StringUtils;
 @Value(staticConstructor = "of")
 public class DefaultChoiceDefinition implements ChoiceDefinition {
 
-  /**
-   * The base name of this choice element, without any type suffix.
-   */
-  @Nonnull
-  String name;
+  /** The base name of this choice element, without any type suffix. */
+  @Nonnull String name;
 
   /**
    * The list of possible child definitions that this choice element can contain. Each child
@@ -57,8 +54,7 @@ public class DefaultChoiceDefinition implements ChoiceDefinition {
   @Override
   @Nonnull
   public Optional<ElementDefinition> getChildByType(@Nonnull final String type) {
-    return getChildElement(name + StringUtils.capitalize(type))
-        .map(ElementDefinition.class::cast);
+    return getChildElement(name + StringUtils.capitalize(type)).map(ElementDefinition.class::cast);
   }
 
   /**
@@ -71,8 +67,6 @@ public class DefaultChoiceDefinition implements ChoiceDefinition {
   @Override
   @Nonnull
   public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
-    return choices.stream()
-        .filter(child -> child.getName().equals(name))
-        .findFirst();
+    return choices.stream().filter(child -> child.getName().equals(name)).findFirst();
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-
 @SpringBootUnitTest
 class DefaultRepresentationTest {
 
@@ -48,15 +47,16 @@ class DefaultRepresentationTest {
     }
 
     @Nonnull
-    ColumnAsserts assertEquals(@Nonnull final Object expectedValue,
-        @Nonnull final ColumnRepresentation column) {
+    ColumnAsserts assertEquals(
+        @Nonnull final Object expectedValue, @Nonnull final ColumnRepresentation column) {
       columns.add(column.getValue());
       expectedValues.add(expectedValue);
       return this;
     }
 
     @Nonnull
-    ColumnAsserts assertEquals(@Nonnull final ColumnRepresentation expectedValue,
+    ColumnAsserts assertEquals(
+        @Nonnull final ColumnRepresentation expectedValue,
         @Nonnull final ColumnRepresentation column) {
       columns.add(column.getValue());
       columns.add(expectedValue.getValue());
@@ -75,22 +75,26 @@ class DefaultRepresentationTest {
         if ("COMPARE_COLUMNS".equals(expected)) {
           final Object actual1 = result.get(columnIndex++);
           final Object actual2 = result.get(columnIndex++);
-          Assertions.assertEquals(actual1, actual2, String.format(
-              "Column comparison failed: expected columns to be equal, but got %s and %s",
-              actual1, actual2));
+          Assertions.assertEquals(
+              actual1,
+              actual2,
+              String.format(
+                  "Column comparison failed: expected columns to be equal, but got %s and %s",
+                  actual1, actual2));
           i++;
         } else {
           final Object actual = result.get(columnIndex++);
-          Assertions.assertEquals(expected, actual,
-              String.format("Assertion %d failed: expected <%s> but was <%s>", i, expected,
-                  actual));
+          Assertions.assertEquals(
+              expected,
+              actual,
+              String.format(
+                  "Assertion %d failed: expected <%s> but was <%s>", i, expected, actual));
         }
       }
     }
   }
 
-  @Autowired
-  SparkSession spark;
+  @Autowired SparkSession spark;
 
   @Nonnull
   public static DefaultRepresentation nullValue() {
@@ -101,7 +105,6 @@ class DefaultRepresentationTest {
   public static DefaultRepresentation valueOf(@Nonnull final Object value) {
     return new DefaultRepresentation(functions.lit(value));
   }
-
 
   @Nonnull
   public static DefaultRepresentation nullArray() {
@@ -116,15 +119,14 @@ class DefaultRepresentationTest {
 
   @Nonnull
   public static DefaultRepresentation arrayOf(@Nonnull final Object... values) {
-    return new DefaultRepresentation(functions.array(
-        Stream.of(values).map(v -> valueOf(v).getValue()).toArray(Column[]::new)));
+    return new DefaultRepresentation(
+        functions.array(Stream.of(values).map(v -> valueOf(v).getValue()).toArray(Column[]::new)));
   }
 
   @Nonnull
   public static DefaultRepresentation arrayOfOne(@Nonnull final Object value) {
     return new DefaultRepresentation(functions.array(valueOf(value).getValue()));
   }
-
 
   @Test
   void testSingular() {
@@ -281,7 +283,4 @@ class DefaultRepresentationTest {
         .assertEquals(true, arrayOf(false, false).anyFalse())
         .check();
   }
-
 }
-  
- 

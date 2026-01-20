@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,8 +24,8 @@ import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
 
 /**
- * Provides the functionality of the family of comparison operators within FHIRPath, i.e.
- * {@code <=}, {@code <}, {@code >}, {@code >=}.
+ * Provides the functionality of the family of comparison operators within FHIRPath, i.e. {@code
+ * <=}, {@code <}, {@code >}, {@code >=}.
  *
  * @author John Grimes
  * @author Piotr Szul
@@ -33,10 +33,11 @@ import jakarta.annotation.Nonnull;
  */
 public class ComparisonOperator extends SameTypeBinaryOperator {
 
-  @Nonnull
-  private final ComparisonOperation type;
+  @Nonnull private final ComparisonOperation type;
 
   /**
+   * Constructs a new ComparisonOperator.
+   *
    * @param type The type of operator
    */
   public ComparisonOperator(@Nonnull final ComparisonOperation type) {
@@ -45,16 +46,16 @@ public class ComparisonOperator extends SameTypeBinaryOperator {
 
   @Override
   @Nonnull
-  protected Collection handleEquivalentTypes(@Nonnull final Collection left,
-      @Nonnull final Collection right, @Nonnull final BinaryOperatorInput input) {
+  protected Collection handleEquivalentTypes(
+      @Nonnull final Collection left,
+      @Nonnull final Collection right,
+      @Nonnull final BinaryOperatorInput input) {
     if (!(left instanceof Comparable && right instanceof Comparable)) {
       return fail(input);
     }
-    final Collection leftSingular = left.asSingular(
-        "Comparison operator requires singular values");
+    final Collection leftSingular = left.asSingular("Comparison operator requires singular values");
     return BooleanCollection.build(
-        ((Comparable) leftSingular).getComparison(type)
-            .apply((Comparable) right));
+        ((Comparable) leftSingular).getComparison(type).apply((Comparable) right));
   }
 
   @Override

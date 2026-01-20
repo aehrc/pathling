@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,26 +31,17 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 
-/**
- * The implementation of the 'member_of' UDF.
- */
+/** The implementation of the 'member_of' UDF. */
 @Slf4j
-public class MemberOfUdf implements SqlFunction,
-    SqlFunction2<Object, String, Boolean> {
+public class MemberOfUdf implements SqlFunction, SqlFunction2<Object, String, Boolean> {
 
-  @Serial
-  private static final long serialVersionUID = 7605853352299165569L;
+  @Serial private static final long serialVersionUID = 7605853352299165569L;
 
-  /**
-   * The name of the member_of UDF function.
-   */
+  /** The name of the member_of UDF function. */
   public static final String FUNCTION_NAME = "member_of";
 
-  /**
-   * The terminology service factory used to create terminology services.
-   */
-  @Nonnull
-  private final TerminologyServiceFactory terminologyServiceFactory;
+  /** The terminology service factory used to create terminology services. */
+  @Nonnull private final TerminologyServiceFactory terminologyServiceFactory;
 
   /**
    * Creates a new MemberOfUdf with the specified terminology service factory.
@@ -82,7 +73,8 @@ public class MemberOfUdf implements SqlFunction,
    *
    * @param codings the codings to test for membership
    * @param url the URL of the value set to test against
-   * @return true if any coding is a member of the value set, false otherwise, null if inputs are null
+   * @return true if any coding is a member of the value set, false otherwise, null if inputs are
+   *     null
    */
   @Nullable
   protected Boolean doCall(@Nullable final Stream<Coding> codings, @Nullable final String url) {
@@ -90,7 +82,6 @@ public class MemberOfUdf implements SqlFunction,
       return null;
     }
     final TerminologyService terminologyService = terminologyServiceFactory.build();
-    return validCodings(codings)
-        .anyMatch(coding -> terminologyService.validateCode(url, coding));
+    return validCodings(codings).anyMatch(coding -> terminologyService.validateCode(url, coding));
   }
 }

@@ -1,0 +1,11 @@
+# Copyright © 2025, Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+# ABN 41 687 119 230. Licensed under the Apache License, Version 2.0.
+#
+# Author: John Grimes
+
+apiVersion: v2
+name: pathling-cache
+description: A Varnish-based frontend cache optimised for use with Pathling
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

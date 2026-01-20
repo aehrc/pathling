@@ -15,9 +15,10 @@
 
 import logging
 import os
+from tempfile import mkdtemp
+
 from pyspark.sql import SparkSession
 from pytest import fixture
-from tempfile import mkdtemp
 
 from pathling import PathlingContext
 from pathling._version import __java_version__
@@ -66,18 +67,28 @@ def test_default_configurations(spark_session):
     # Retrieve EncodingConfiguration
     encoding_config = jpc.getEncodingConfiguration()
     assert encoding_config.getMaxNestingLevel() == 3
-    assert encoding_config.isEnableExtensions() == False
+    assert not encoding_config.isEnableExtensions()
     # Default open types should match STANDARD_OPEN_TYPES
     open_types = set(encoding_config.getOpenTypes())
     expected_types = {
-        "boolean", "code", "date", "dateTime", "decimal", "integer",
-        "string", "Coding", "CodeableConcept", "Address", "Identifier", "Reference"
+        "boolean",
+        "code",
+        "date",
+        "dateTime",
+        "decimal",
+        "integer",
+        "string",
+        "Coding",
+        "CodeableConcept",
+        "Address",
+        "Identifier",
+        "Reference",
     }
     assert open_types == expected_types
 
     # Retrieve QueryConfiguration
     query_config = jpc.getQueryConfiguration()
-    assert query_config.isExplainQueries() == False
+    assert not query_config.isExplainQueries()
     assert query_config.getMaxUnboundTraversalDepth() == 10
 
 
@@ -90,7 +101,7 @@ def test_custom_configurations(spark_session):
         enable_extensions=True,
         enabled_open_types=["string", "boolean"],
         explain_queries=True,
-        max_unbound_traversal_depth=20
+        max_unbound_traversal_depth=20,
     )
 
     # Get Java PathlingContext instance
@@ -99,11 +110,11 @@ def test_custom_configurations(spark_session):
     # Retrieve EncodingConfiguration and verify custom values
     encoding_config = jpc.getEncodingConfiguration()
     assert encoding_config.getMaxNestingLevel() == 5
-    assert encoding_config.isEnableExtensions() == True
+    assert encoding_config.isEnableExtensions()
     open_types = set(encoding_config.getOpenTypes())
     assert open_types == {"string", "boolean"}
 
     # Retrieve QueryConfiguration and verify custom values
     query_config = jpc.getQueryConfiguration()
-    assert query_config.isExplainQueries() == True
+    assert query_config.isExplainQueries()
     assert query_config.getMaxUnboundTraversalDepth() == 20

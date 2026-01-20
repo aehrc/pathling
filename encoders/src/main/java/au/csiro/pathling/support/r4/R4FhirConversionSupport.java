@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,13 +38,10 @@ import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
 
-/**
- * {@link FhirConversionSupport} implementation for FHIR R4.
- */
+/** {@link FhirConversionSupport} implementation for FHIR R4. */
 public class R4FhirConversionSupport extends FhirConversionSupport {
 
-  @Serial
-  private static final long serialVersionUID = -367070946615790595L;
+  @Serial private static final long serialVersionUID = -367070946615790595L;
 
   @Override
   public String fhirType(final IBase base) {
@@ -52,14 +49,11 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
     return base.fhirType();
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   @Nonnull
   public <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(
-      @Nonnull final IBaseBundle bundle,
-      @Nonnull final Class<T> resourceClass) {
+      @Nonnull final IBaseBundle bundle, @Nonnull final Class<T> resourceClass) {
     final Bundle r4Bundle = (Bundle) bundle;
 
     return r4Bundle.getEntry().stream()
@@ -68,34 +62,31 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
         .collect(Collectors.toList());
   }
 
-  private static boolean isURNReference(@Nonnull final Reference reference) {
+  private static boolean isUrnReference(@Nonnull final Reference reference) {
     return reference.hasReference() && reference.getReference().startsWith("urn:");
   }
 
-  static void resolveURNReference(@Nonnull final Base base) {
+  static void resolveUrnReference(@Nonnull final Base base) {
     if (base instanceof final Reference reference) {
       final Resource resource = (Resource) reference.getResource();
-      if (isURNReference(reference) && resource != null && resource.hasIdElement()) {
+      if (isUrnReference(reference) && resource != null && resource.hasIdElement()) {
         reference.setReference(resource.getIdElement().getValue());
       }
     }
   }
 
-  private static void resolveURNReferences(@Nonnull final Resource resource) {
-    FhirTraversal.processRecursive(resource, R4FhirConversionSupport::resolveURNReference);
+  private static void resolveUrnReferences(@Nonnull final Resource resource) {
+    FhirTraversal.processRecursive(resource, R4FhirConversionSupport::resolveUrnReference);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Nonnull
   @Override
   public IBaseBundle resolveReferences(@Nonnull final IBaseBundle bundle) {
     final Bundle r4Bundle = (Bundle) bundle;
     r4Bundle.getEntry().stream()
         .map(Bundle.BundleEntryComponent::getResource)
-        .forEach(R4FhirConversionSupport::resolveURNReferences);
+        .forEach(R4FhirConversionSupport::resolveUrnReferences);
     return r4Bundle;
   }
-
 }

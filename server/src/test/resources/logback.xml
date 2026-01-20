@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <appender class="ch.qos.logback.core.ConsoleAppender" name="STDOUT">
+    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+      <pattern>[%level] %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+  <logger level="WARN" name="au.csiro"/>
+  <!-- Suppress HAPI FHIR interceptor exception logging (e.g. NotModifiedException for 304 responses). -->
+  <logger level="OFF" name="ca.uhn.fhir.interceptor.executor.BaseInterceptorService"/>
+  <logger level="ERROR" name="org.apache.hadoop.metrics2"/>
+  <logger level="ERROR" name="org.apache.spark.sql.execution.CacheManager"/>
+  <logger level="ERROR" name="org.apache.spark.sql.catalyst.util.SparkStringUtils"/>
+  <logger level="ERROR" name="org.apache.spark.sql.catalyst.analysis.SimpleFunctionRegistry"/>
+  <logger level="ERROR" name="org.apache.hadoop.util.NativeCodeLoader"/>
+  <logger level="WARN" name="requestLogger"/>
+  <root level="WARN">
+    <appender-ref ref="STDOUT"/>
+  </root>
+</configuration>

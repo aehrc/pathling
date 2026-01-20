@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,17 +23,14 @@ import au.csiro.pathling.utilities.ObjectHolder;
 import jakarta.annotation.Nonnull;
 import java.io.Serial;
 
-/**
- * This factory is used from the Python tests.
- */
+/** This factory is used from the Python tests. */
 @SuppressWarnings("unused")
 public class MockTerminologyServiceFactory implements TerminologyServiceFactory {
 
-  @Serial
-  private static final long serialVersionUID = 7662506865030951736L;
+  @Serial private static final long serialVersionUID = 7662506865030951736L;
 
-  private static final ObjectHolder<String, TerminologyService> service = ObjectHolder.singleton(
-      c -> new MockTerminologyService());
+  private static final ObjectHolder<String, TerminologyService> service =
+      ObjectHolder.singleton(c -> new MockTerminologyService());
 
   @Nonnull
   @Override

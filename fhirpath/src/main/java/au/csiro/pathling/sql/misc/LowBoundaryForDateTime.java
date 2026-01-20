@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,9 +27,9 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 
 /**
- * UDF that calculates the low boundary for a FHIR date/dateTime string or a Timestamp  value.
- * <p>
- * This function handles partial dates and returns the latest possible timestamp for the given
+ * UDF that calculates the low boundary for a FHIR date/dateTime string or a Timestamp value.
+ *
+ * <p>This function handles partial dates and returns the latest possible timestamp for the given
  * precision level. Timestamps are treated dates with fractional seconds precision.
  *
  * @author John Grimes
@@ -37,12 +37,9 @@ import org.apache.spark.sql.types.DataTypes;
  */
 public class LowBoundaryForDateTime implements SqlFunction1<Object, Timestamp> {
 
-  @Serial
-  private static final long serialVersionUID = -2161361690351000200L;
+  @Serial private static final long serialVersionUID = -2161361690351000200L;
 
-  /**
-   * The name of this UDF as registered in Spark.
-   */
+  /** The name of this UDF as registered in Spark. */
   public static final String FUNCTION_NAME = "low_boundary_for_date";
 
   /**
@@ -71,8 +68,7 @@ public class LowBoundaryForDateTime implements SqlFunction1<Object, Timestamp> {
    *
    * @param input the date/dateTime string or Timestamp representing the dateTime/instant.
    * @return the low boundary timestamp, or null if input is null
-   * @throws IllegalArgumentException if the date format is invalid or the input type is
-   * unsupported
+   * @throws IllegalArgumentException if the date format is invalid or the input type is unsupported
    */
   @Nullable
   @Override
@@ -88,8 +84,10 @@ public class LowBoundaryForDateTime implements SqlFunction1<Object, Timestamp> {
         throw new IllegalArgumentException("Invalid date/dateTime format: " + s, e);
       }
     } else {
-      throw new IllegalArgumentException("Unsupported input type: " + input.getClass().getName() +
-          ", expected String or Timestamp");
+      throw new IllegalArgumentException(
+          "Unsupported input type: "
+              + input.getClass().getName()
+              + ", expected String or Timestamp");
     }
   }
 }

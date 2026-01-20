@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,8 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
@@ -38,9 +40,23 @@ public class NdjsonSource extends FileSource {
    * @param context the PathlingContext to use
    * @param path the path to the NDJSON file or directory
    */
-  NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
+  public NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
     // Recognize files with the extension ".ndjson" as NDJSON files, by default.
     this(context, path, "ndjson");
+  }
+
+  /**
+   * Constructs an NdjsonSource with the specified PathlingContext and map of resource types to
+   * NDJSON files.
+   *
+   * @param context the PathlingContext to use
+   * @param files a map where keys are resource type names and values are collections of file paths
+   */
+  public NdjsonSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Collection<String>> files) {
+    // Recognize files with the extension ".ndjson" as NDJSON files, by default.
+    this(context, files, "ndjson");
   }
 
   /**
@@ -50,12 +66,34 @@ public class NdjsonSource extends FileSource {
    * @param path the path to the NDJSON file or directory
    * @param extension the file extension to recognize as NDJSON files
    */
-  NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+  public NdjsonSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
       @Nonnull final String extension) {
-    this(context, path, extension,
-        // Use the "resource name with qualifier" mapper by default, which takes the resource name
-        // from the file name and is tolerant of an optional qualifier string.
-        FileSource::resourceNameWithQualifierMapper);
+    this(context, path, extension, FileSource::resourceNameWithQualifierMapper);
+  }
+
+  /**
+   * Constructs an NdjsonSource with the specified PathlingContext, map of files, and extension.
+   *
+   * @param context the PathlingContext to use
+   * @param files a map where keys are resource type names and values are collections of file paths
+   * @param extension the file extension to recognize as NDJSON files
+   */
+  public NdjsonSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Collection<String>> files,
+      @Nonnull final String extension) {
+    super(
+        context,
+        files,
+        extension,
+        // Read each line of input separately.
+        context.getSpark().read().format("text"),
+        // Encode each line of input as a JSON FHIR resource.
+        (sourceData, resourceType) ->
+            context.encode(sourceData, resourceType, PathlingContext.FHIR_JSON),
+        resourceType -> true);
   }
 
   /**
@@ -67,15 +105,21 @@ public class NdjsonSource extends FileSource {
    * @param extension the file extension to recognize as NDJSON files
    * @param fileNameMapper a function that maps a file name to a set of resource types
    */
-  NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+  public NdjsonSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
       @Nonnull final String extension,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
-    super(context, path, fileNameMapper, extension,
+    super(
+        context,
+        path,
+        fileNameMapper,
+        extension,
         // Read each line of input separately.
         context.getSpark().read().format("text"),
         // Encode each line of input as a JSON FHIR resource.
-        (sourceData, resourceType) -> context.encode(sourceData, resourceType,
-            PathlingContext.FHIR_JSON));
+        (sourceData, resourceType) ->
+            context.encode(sourceData, resourceType, PathlingContext.FHIR_JSON),
+        resourceType -> true);
   }
-
 }

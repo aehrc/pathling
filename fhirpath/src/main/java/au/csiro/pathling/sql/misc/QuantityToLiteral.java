@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,21 +29,18 @@ import org.apache.spark.sql.types.DataTypes;
 
 /**
  * Spark UDF to convert a Quantity represented as a Row to a valid Quantity literal string.
- * <p>
- * UCUM units are quoted with single quotes, while time duration units are not quoted. For other
+ *
+ * <p>UCUM units are quoted with single quotes, while time duration units are not quoted. For other
  * systems, the function returns null.
- * <p>
- * If the quantity is null, the function returns null.
+ *
+ * <p>If the quantity is null, the function returns null.
  */
 public class QuantityToLiteral implements SqlFunction1<Row, String> {
 
-  /**
-   * The name of this function when used within SQL.
-   */
+  /** The name of this function when used within SQL. */
   public static final String FUNCTION_NAME = "quantity_to_literal";
 
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   @Override
   public String getName() {

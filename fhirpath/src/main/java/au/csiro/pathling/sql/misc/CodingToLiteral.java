@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,13 +36,10 @@ import org.hl7.fhir.r4.model.Coding;
  */
 public class CodingToLiteral implements SqlFunction1<Row, String> {
 
-  /**
-   * The name of this function when used within SQL.
-   */
+  /** The name of this function when used within SQL. */
   public static final String FUNCTION_NAME = "coding_to_literal";
 
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   @Override
   public String getName() {
@@ -63,5 +60,4 @@ public class CodingToLiteral implements SqlFunction1<Row, String> {
     final Coding coding = requireNonNull(CodingSchema.decode(row));
     return CodingLiteral.toLiteral(coding);
   }
-
 }

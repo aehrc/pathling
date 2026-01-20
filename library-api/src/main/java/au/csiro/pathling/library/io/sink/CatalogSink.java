@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,8 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
@@ -36,29 +38,13 @@ import org.apache.spark.sql.Row;
  */
 class CatalogSink implements DataSink {
 
-  @Nonnull
-  private final PathlingContext context;
+  @Nonnull private final PathlingContext context;
 
-  @Nonnull
-  private final SaveMode saveMode;
+  @Nonnull private final SaveMode saveMode;
 
-  @Nonnull
-  private final Optional<String> schema;
+  @Nonnull private final Optional<String> schema;
 
-  @Nonnull
-  private final Optional<String> format;
-
-  /**
-   * Constructs a CatalogSink with the specified PathlingContext and default import mode.
-   *
-   * @param context the PathlingContext to use
-   */
-  CatalogSink(@Nonnull final PathlingContext context) {
-    this.context = context;
-    this.saveMode = SaveMode.ERROR_IF_EXISTS; // Default import mode
-    this.schema = Optional.empty(); // Schema not specified
-    this.format = Optional.empty(); // Format not specified
-  }
+  @Nonnull private final Optional<String> format;
 
   /**
    * Constructs a CatalogSink with the specified PathlingContext and import mode.
@@ -80,7 +66,9 @@ class CatalogSink implements DataSink {
    * @param saveMode the SaveMode to use when writing data
    * @param schema the schema to qualify the table names, if any
    */
-  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
+  CatalogSink(
+      @Nonnull final PathlingContext context,
+      @Nonnull final SaveMode saveMode,
       @Nonnull final String schema) {
     this.context = context;
     this.saveMode = saveMode;
@@ -96,8 +84,11 @@ class CatalogSink implements DataSink {
    * @param schema the schema to qualify the table names, if any
    * @param format the format to use when writing data
    */
-  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
-      @Nonnull final String schema, @Nonnull final String format) {
+  CatalogSink(
+      @Nonnull final PathlingContext context,
+      @Nonnull final SaveMode saveMode,
+      @Nonnull final String schema,
+      @Nonnull final String format) {
     this.context = context;
     this.saveMode = saveMode;
     this.schema = Optional.of(schema);
@@ -105,16 +96,21 @@ class CatalogSink implements DataSink {
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  @Nonnull
+  public WriteDetails write(@Nonnull final DataSource source) {
+    final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String tableName = getTableName(resourceType);
+
+      fileInfos.add(new FileInformation(resourceType, tableName));
 
       switch (saveMode) {
         case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tableName, saveMode);
         case OVERWRITE -> {
           if (format.isPresent() && "delta".equals(format.get())) {
-            // This is to work around a bug relating to Delta tables not being able to be overwritten,
+            // This is to work around a bug relating to Delta tables not being able to be
+            // overwritten,
             // due to their inability to handle the truncate operation that Spark performs when
             // overwriting a table.
             context.getSpark().sql("DROP TABLE IF EXISTS " + tableName);
@@ -134,12 +130,16 @@ class CatalogSink implements DataSink {
             writeDataset(dataset, tableName, SaveMode.ERROR_IF_EXISTS);
           }
         }
+        default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
     }
+    return new WriteDetails(fileInfos);
   }
 
-  private void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tableName, @Nonnull final SaveMode saveMode) {
+  private void writeDataset(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String tableName,
+      @Nonnull final SaveMode saveMode) {
     final DataFrameWriter<Row> writer = dataset.write();
 
     // Apply save mode if it has a Spark equivalent.
@@ -152,14 +152,15 @@ class CatalogSink implements DataSink {
   }
 
   /**
+   * Gets the table name for the given resource type.
+   *
    * @param resourceType the resource type to get the table name for
    * @return the name of the table for the given resource type, qualified by the specified schema if
-   * one is provided
+   *     one is provided
    */
   @Nonnull
   private String getTableName(@Nonnull final String resourceType) {
-    return schema.map(s -> String.join(".", s, resourceType))
-        .orElse(resourceType);
+    return schema.map(s -> String.join(".", s, resourceType)).orElse(resourceType);
   }
 
   /**
@@ -178,5 +179,4 @@ class CatalogSink implements DataSink {
       return false;
     }
   }
-
 }

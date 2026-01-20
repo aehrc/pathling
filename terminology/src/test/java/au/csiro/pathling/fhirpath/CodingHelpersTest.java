@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Test;
 class CodingHelpersTest {
 
   @Nonnull
-  static Coding newCoding(@Nullable final String system, @Nullable final String code,
-      @Nullable final String version) {
+  static Coding newCoding(
+      @Nullable final String system, @Nullable final String code, @Nullable final String version) {
     return new Coding(system, code, null).setVersion(version);
   }
 
@@ -38,12 +38,10 @@ class CodingHelpersTest {
     return newCoding(system, code, null);
   }
 
-
   static void assertCodingEq(@Nullable final Coding left, @Nullable final Coding right) {
     assertTrue(CodingHelpers.codingEquals(left, right));
     assertTrue(CodingHelpers.codingEquals(right, left));
   }
-
 
   static void assertCodingNotEq(@Nullable final Coding left, @Nullable final Coding right) {
     assertFalse(CodingHelpers.codingEquals(left, right));

@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,13 +38,11 @@ public class FhirEncoderBuilder {
   private static final boolean DEFAULT_ENABLE_EXTENSIONS = false;
   private static final int DEFAULT_MAX_NESTING_LEVEL = 0;
 
-  @Nonnull
-  private final FhirVersionEnum fhirVersion;
+  @Nonnull private final FhirVersionEnum fhirVersion;
 
   private int maxNestingLevel;
 
-  @Nonnull
-  private Set<String> openTypes;
+  @Nonnull private Set<String> openTypes;
 
   private boolean enableExtensions;
 

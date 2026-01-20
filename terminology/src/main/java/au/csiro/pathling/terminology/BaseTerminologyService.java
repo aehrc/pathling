@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,11 +31,8 @@ import java.io.Closeable;
  */
 public abstract class BaseTerminologyService extends ResourceCloser implements TerminologyService {
 
-  /**
-   * The terminology client used to communicate with the terminology server.
-   */
-  @Nonnull
-  protected final TerminologyClient terminologyClient;
+  /** The terminology client used to communicate with the terminology server. */
+  @Nonnull protected final TerminologyClient terminologyClient;
 
   /**
    * Creates a new base terminology service with the specified terminology client and resources.
@@ -43,7 +40,8 @@ public abstract class BaseTerminologyService extends ResourceCloser implements T
    * @param terminologyClient the client for communicating with the terminology server
    * @param resourcesToClose additional resources that should be closed when this service is closed
    */
-  protected BaseTerminologyService(@Nonnull final TerminologyClient terminologyClient,
+  protected BaseTerminologyService(
+      @Nonnull final TerminologyClient terminologyClient,
       @Nonnull final Closeable... resourcesToClose) {
     super(resourcesToClose);
     this.terminologyClient = terminologyClient;
@@ -60,8 +58,8 @@ public abstract class BaseTerminologyService extends ResourceCloser implements T
    * @return the result, which may be the fallback
    */
   @Nullable
-  public static <T> T handleError(@Nonnull final BaseServerResponseException e,
-      @Nullable final T invalidInputReturnValue) {
+  public static <T> T handleError(
+      @Nonnull final BaseServerResponseException e, @Nullable final T invalidInputReturnValue) {
     if (e.getStatusCode() / 100 == 4) {
       return invalidInputReturnValue;
     } else {

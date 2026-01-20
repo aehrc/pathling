@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,14 +33,13 @@ import java.util.Optional;
  *
  * @author Piotr Szul
  * @see <a
- * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#required-additional-functions">SQL
- * on FHIR specification - Required Additional Functions</a>
+ *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#required-additional-functions">SQL
+ *     on FHIR specification - Required Additional Functions</a>
  */
 @SuppressWarnings("unused")
 public class JoinKeyFunctions {
 
-  private JoinKeyFunctions() {
-  }
+  private JoinKeyFunctions() {}
 
   /**
    * Returns a {@link Collection} of keys for the input {@link ResourceCollection}.
@@ -48,8 +47,8 @@ public class JoinKeyFunctions {
    * @param input The input {@link ResourceCollection}
    * @return A {@link Collection} of keys
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#getresourcekey--keytype">SQL
-   * on FHIR specification - getResourceKey</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#getresourcekey--keytype">SQL
+   *     on FHIR specification - getResourceKey</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.REQUIRED)
@@ -65,15 +64,14 @@ public class JoinKeyFunctions {
    * @param typeSpecifier An optional {@link TypeSpecifier} to filter the reference keys by
    * @return A {@link Collection} of keys
    * @see <a
-   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#getreferencekeyresource-type-specifier--keytype">SQL
-   * on FHIR specification - getReferenceKey</a>
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#getreferencekeyresource-type-specifier--keytype">SQL
+   *     on FHIR specification - getReferenceKey</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.REQUIRED)
   @Nonnull
-  public static Collection getReferenceKey(@Nonnull final ReferenceCollection input,
-      @Nullable final TypeSpecifier typeSpecifier) {
+  public static Collection getReferenceKey(
+      @Nonnull final ReferenceCollection input, @Nullable final TypeSpecifier typeSpecifier) {
     return input.getKeyCollection(Optional.ofNullable(typeSpecifier));
   }
-
 }

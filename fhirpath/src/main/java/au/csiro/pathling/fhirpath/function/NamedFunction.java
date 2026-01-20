@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,8 @@ import jakarta.annotation.Nonnull;
 public interface NamedFunction {
 
   /**
+   * Gets the name of this function.
+   *
    * @return the name of this function
    */
   @Nonnull
@@ -48,5 +50,4 @@ public interface NamedFunction {
   default Collection invoke(@Nonnull final FunctionInput input) {
     throw new UnsupportedOperationException("Not implemented: " + name());
   }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,16 +48,15 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
  */
 @Slf4j
 public record DefaultTerminologyServiceFactory(
-    @Nonnull FhirVersionEnum fhirVersion,
-    @Nonnull TerminologyConfiguration configuration
-) implements TerminologyServiceFactory {
+    @Nonnull FhirVersionEnum fhirVersion, @Nonnull TerminologyConfiguration configuration)
+    implements TerminologyServiceFactory {
 
-  @Serial
-  private static final long serialVersionUID = 2837933007972812597L;
+  @Serial private static final long serialVersionUID = 2837933007972812597L;
 
   @Nonnull
-  private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService> terminologyServiceHolder = ObjectHolder.singleton(
-      DefaultTerminologyServiceFactory::createService);
+  private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService>
+      terminologyServiceHolder =
+          ObjectHolder.singleton(DefaultTerminologyServiceFactory::createService);
 
   /**
    * Resets the terminology services, clearing any cached instances. This is useful for testing or
@@ -76,8 +75,8 @@ public record DefaultTerminologyServiceFactory(
 
   /**
    * Returns the terminology configuration used by this factory.
-   * <p>
-   * The configuration is stored as a record component and returned directly.
+   *
+   * <p>The configuration is stored as a record component and returned directly.
    *
    * @return the terminology configuration, never null
    */
@@ -92,25 +91,25 @@ public record DefaultTerminologyServiceFactory(
 
     final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
     final CloseableHttpClient httpClient = buildHttpClient(configuration.getClient());
-    final TerminologyClient terminologyClient = TerminologyClient.build(fhirContext, configuration,
-        httpClient);
+    final TerminologyClient terminologyClient =
+        TerminologyClient.build(fhirContext, configuration, httpClient);
     final HttpClientCachingConfiguration cacheConfig = configuration.getCache();
 
-    if (cacheConfig.isEnabled() && cacheConfig.getStorageType()
-        .equals(HttpClientCachingStorageType.DISK)) {
-      // If caching is enabled and storage type is disk, use a persistent caching terminology 
+    if (cacheConfig.isEnabled()
+        && cacheConfig.getStorageType().equals(HttpClientCachingStorageType.DISK)) {
+      // If caching is enabled and storage type is disk, use a persistent caching terminology
       // service implementation.
       log.debug("Creating PersistentCachingTerminologyService with cache config: {}", cacheConfig);
-      return new PersistentCachingTerminologyService(terminologyClient, cacheConfig, httpClient,
-          terminologyClient);
+      return new PersistentCachingTerminologyService(
+          terminologyClient, cacheConfig, httpClient, terminologyClient);
 
-    } else if (cacheConfig.isEnabled() && cacheConfig.getStorageType().equals(
-        HttpClientCachingStorageType.MEMORY)) {
+    } else if (cacheConfig.isEnabled()
+        && cacheConfig.getStorageType().equals(HttpClientCachingStorageType.MEMORY)) {
       // If caching is enabled and storage type is memory, use an in-memory caching terminology
       // service implementation.
       log.debug("Creating InMemoryCachingTerminologyService with cache config: {}", cacheConfig);
-      return new InMemoryCachingTerminologyService(terminologyClient, cacheConfig, httpClient,
-          terminologyClient);
+      return new InMemoryCachingTerminologyService(
+          terminologyClient, cacheConfig, httpClient, terminologyClient);
 
     } else {
       // If caching is disabled, use a terminology service implementation that does not cache.
@@ -122,18 +121,19 @@ public record DefaultTerminologyServiceFactory(
   private static CloseableHttpClient buildHttpClient(
       @Nonnull final HttpClientConfiguration clientConfig) {
 
-    final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+    final PoolingHttpClientConnectionManager connectionManager =
+        new PoolingHttpClientConnectionManager();
     connectionManager.setMaxTotal(clientConfig.getMaxConnectionsTotal());
     connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxConnectionsPerRoute());
 
-    final RequestConfig defaultRequestConfig = RequestConfig.custom()
-        .setSocketTimeout(clientConfig.getSocketTimeout())
-        .build();
+    final RequestConfig defaultRequestConfig =
+        RequestConfig.custom().setSocketTimeout(clientConfig.getSocketTimeout()).build();
 
-    final HttpClientBuilder clientBuilder = HttpClients.custom()
-        .setDefaultRequestConfig(defaultRequestConfig)
-        .setConnectionManager(connectionManager)
-        .setConnectionManagerShared(false);
+    final HttpClientBuilder clientBuilder =
+        HttpClients.custom()
+            .setDefaultRequestConfig(defaultRequestConfig)
+            .setConnectionManager(connectionManager)
+            .setConnectionManagerShared(false);
 
     if (clientConfig.isRetryEnabled()) {
       clientBuilder.setRetryHandler(new RequestRetryHandler(clientConfig.getRetryCount()));
@@ -141,5 +141,4 @@ public record DefaultTerminologyServiceFactory(
 
     return clientBuilder.build();
   }
-
 }

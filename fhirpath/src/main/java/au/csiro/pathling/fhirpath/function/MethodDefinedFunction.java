@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,17 +30,17 @@ import java.util.stream.Stream;
 /**
  * A {@link NamedFunction} that is defined using a static method.
  *
+ * @param name the name of the function
+ * @param method the method that implements the function
  * @author Piotr Szul
  * @author John Grimes
  */
-public record MethodDefinedFunction(String name, Method method) implements
-    NamedFunction {
+public record MethodDefinedFunction(String name, Method method) implements NamedFunction {
 
   @Override
   @Nonnull
   public Collection invoke(@Nonnull final FunctionInput functionInput) {
-    return FunctionParameterResolver.fromFunctionInput(functionInput)
-        .bind(method).invoke();
+    return FunctionParameterResolver.fromFunctionInput(functionInput).bind(method).invoke();
   }
 
   /**
@@ -64,7 +64,8 @@ public record MethodDefinedFunction(String name, Method method) implements
   public static List<NamedFunction> build(@Nonnull final Class<?> clazz) {
     return Stream.of(clazz.getDeclaredMethods())
         .filter(m -> m.getAnnotation(FhirPathFunction.class) != null)
-        .map(MethodDefinedFunction::build).collect(Collectors.toUnmodifiableList());
+        .map(MethodDefinedFunction::build)
+        .collect(Collectors.toUnmodifiableList());
   }
 
   /**
@@ -75,8 +76,7 @@ public record MethodDefinedFunction(String name, Method method) implements
    */
   @Nonnull
   public static Map<String, NamedFunction> mapOf(@Nonnull final Class<?> clazz) {
-    return build(clazz).stream().collect(Collectors.toUnmodifiableMap(NamedFunction::name,
-        Function.identity()));
+    return build(clazz).stream()
+        .collect(Collectors.toUnmodifiableMap(NamedFunction::name, Function.identity()));
   }
-
 }

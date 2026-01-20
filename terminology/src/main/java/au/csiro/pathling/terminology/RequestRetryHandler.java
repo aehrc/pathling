@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,8 +40,8 @@ public class RequestRetryHandler extends DefaultHttpRequestRetryHandler {
   }
 
   @Override
-  public boolean retryRequest(final IOException exception, final int executionCount,
-      final HttpContext context) {
+  public boolean retryRequest(
+      final IOException exception, final int executionCount, final HttpContext context) {
     log.debug("Problem issuing terminology request, retrying", exception);
     return super.retryRequest(exception, executionCount, context);
   }

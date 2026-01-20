@@ -42,110 +42,6 @@ To build and install locally, run:
 mvn clean install
 ```
 
-## Building and testing
-
-This is a multi-module Maven project with inter-module dependencies. The
-following
-sections describe how to compile and test specific modules efficiently.
-
-### Module compilation
-
-#### Single module compilation
-
-To compile just a specific module (if dependencies are already compiled):
-
-```bash
-mvn compile -pl <module-name>
-```
-
-Example:
-
-```bash
-mvn compile -pl library-api
-```
-
-#### Compile with dependencies
-
-To compile a module and all its upstream dependencies:
-
-```bash
-mvn compile -pl <module-name> -am
-```
-
-Example:
-
-```bash
-mvn compile -pl library-api -am
-```
-
-This will compile `utilities`, `encoders`, `terminology`, `fhirpath`, and
-`library-api` in the correct dependency order.
-
-#### Clean compilation
-
-For a fresh build from scratch:
-
-```bash
-mvn clean compile -pl <module-name> -am
-```
-
-To compile all modules:
-
-```bash
-mvn clean compile
-```
-
-### Running tests
-
-#### Single module testing
-
-If you are testing changes to a single module and don't need to recompile
-dependencies:
-
-```bash
-mvn test -pl <module-name> -Dtest=<TestClassName>
-```
-
-Example:
-
-```bash
-mvn test -pl library-api -Dtest=DataSourcesTest
-```
-
-#### Testing with dependency compilation
-
-If you know that code from module dependencies needs to be compiled, use the
-`-am` (also make) flag with the failIfNoSpecifiedTests parameter:
-
-```bash
-mvn test -pl <module-name> -am -Dtest=<TestClassName> -Dsurefire.failIfNoSpecifiedTests=false
-```
-
-Example:
-
-```bash
-mvn test -pl library-api -am -Dtest=DataSourcesTest -Dsurefire.failIfNoSpecifiedTests=false
-```
-
-The `-Dsurefire.failIfNoSpecifiedTests=false` parameter prevents the build from
-failing when upstream modules don't contain the specified test class.
-
-#### Test pattern matching
-
-You can also use patterns to run multiple test classes:
-
-```bash
-mvn test -pl library-api -Dtest="*DataSource*"
-```
-
-#### Full module test suite
-
-To run all tests in a specific module:
-
-```bash
-mvn test -pl <module-name>
-```
-
 ### Available modules
 
 - `utilities`
@@ -158,6 +54,13 @@ mvn test -pl <module-name>
 - `lib/R`
 - `site`
 - `benchmark`
+- `server`
+
+### Building and testing the server module
+
+The `server` module is versioned independently and has its own
+[CONTRIBUTING.md](server/CONTRIBUTING.md) with detailed build, test, and
+deployment instructions.
 
 ### Testing Python and R libraries
 
@@ -283,9 +186,9 @@ graph TD
 The "public API" of Pathling is defined as the public API of the library API
 module.
 
-Other modules are versioned independently of the library API, but should still
-follow the principles of Semantic Versioning based upon their public,
-user-facing interfaces.
+Modules outside of this core list are versioned independently of the library
+API, but should still follow the principles of Semantic Versioning based upon
+their public, user-facing interfaces.
 
 The branching strategy is very simple and is based on
 [GitHub Flow](https://guides.github.com/introduction/flow/). There are no
@@ -304,12 +207,13 @@ verified to be green within CI before merging to main. Merging to main
 automatically triggers publishing of artifacts and deployment of the software to
 production environments such as the Pathling website and sandbox instance.
 
-
 ## Commit Message Format
 
-Write commit messages that capture the **objective** of the change, not the specific implementation details that can be obtained from the diff.
+Write commit messages that capture the **objective** of the change, not the
+specific implementation details that can be obtained from the diff.
 
 **Structure**:
+
 ```
 <type>: <succinct description of the objective>
 
@@ -317,6 +221,7 @@ Write commit messages that capture the **objective** of the change, not the spec
 ```
 
 **Types**:
+
 - `fix:` - Bug fixes or resolving warnings/errors
 - `feat:` - New features or enhancements
 - `refactor:` - Code restructuring without changing behavior
@@ -325,6 +230,7 @@ Write commit messages that capture the **objective** of the change, not the spec
 - `chore:` - Build, tooling, or dependency updates
 
 **Guidelines**:
+
 - Focus on **why** the change was needed and **what problem** it solves
 - Avoid mentioning specific files, line numbers, or implementation details
 - Keep the first line concise (under 72 characters when possible)
@@ -333,6 +239,7 @@ Write commit messages that capture the **objective** of the change, not the spec
 **Examples**:
 
 Good:
+
 ```
 fix: Suppress Mockito dynamic agent loading warnings in Java 21
 
@@ -341,13 +248,13 @@ self-attaching. Updated documentation to record Maven test configuration.
 ```
 
 Poor:
+
 ```
 fix: Added -XX:+EnableDynamicAgentLoading to pom.xml line 637
 
 Changed the argLine in maven-surefire-plugin configuration.
 Updated CLAUDE.md with new section at lines 102-120.
 ```
-
 
 ## Coding conventions
 
@@ -367,40 +274,24 @@ Updated CLAUDE.md with new section at lines 102-120.
 
 ### Java
 
-- Use meaningful and descriptive names for classes, methods, and variables
-  (avoid abbreviations).
-- Follow standard Java naming conventions:
-    - Classes and interfaces: PascalCase (e.g., `MyClass`)
-    - Methods and variables: camelCase (e.g., `myVariable`, `calculateTotal`)
-    - Constants: UPPER_SNAKE_CASE (e.g., `MAX_SIZE`)
-- Keep methods short and focused on a single responsibility.
-- Avoid code duplication; extract common logic into reusable methods.
-- Always use braces `{}` for `if`, `else`, `for`, `while`, and `do` statements,
-  even for single statements.
-- Use `final` for variables, parameters, and methods that should not change.
-- Avoid using magic numbers; define constants with meaningful names.
+Java code should conform to
+the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html).
+Use [google-java-format](https://github.com/google/google-java-format) to format
+Java code.
+
+In addition to the style guide, follow these project-specific conventions:
+
 - Avoid the use of inner classes, records and enums - having each class defined
   in its own file is preferred and avoids any implicit dependencies on code
   within the enclosing scope.
-- Document public classes and methods
-  with [Javadoc comments](https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html).
-- Handle exceptions appropriately; do not use empty catch blocks.
-- Close resources (e.g., streams, connections) in a `finally` block or use
-  try-with-resources.
-- Avoid deeply nested code; refactor to improve readability.
-- Do not ignore method return values unless intentional and documented.
+- Use `final` for variables, parameters, and methods that should not change.
 - Use logging frameworks instead of `System.out` or `System.err` for output.
-- Remove unused code, imports, and variables.
 - Write unit tests for all public methods and critical logic.
 - Avoid hardcoding file paths, URLs, or credentials; use configuration files or
   environment variables.
-- Use access modifiers (`private`, `protected`, `public`) appropriately to
-  encapsulate data.
-- Do not suppress warnings without a clear justification.
 - Use nullability annotations (`jakarta.annotation.Nonnull` and
   `jakarta.annotation.Nullable`) on method parameters, return values, and class
   or record fields.
-- Do not leave unused or commented-out code in the codebase.
 - Ensure code is free of major bugs, vulnerabilities, and code smells as
   reported by SonarQube.
 

@@ -1,0 +1,330 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package au.csiro.pathling.operations.bulksubmit;
+
+import au.csiro.pathling.ParamUtil;
+import au.csiro.pathling.config.BulkSubmitConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.InvalidUserInputError;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.StringType;
+import org.springframework.stereotype.Component;
+
+/**
+ * Validates $bulk-submit operation requests.
+ *
+ * @author John Grimes
+ * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
+ */
+@Slf4j
+@Component
+public class BulkSubmitValidator {
+
+  private static final Set<String> VALID_STATUSES =
+      Set.of(
+          BulkSubmitRequest.STATUS_IN_PROGRESS,
+          BulkSubmitRequest.STATUS_COMPLETE,
+          BulkSubmitRequest.STATUS_ABORTED);
+
+  @Nonnull private final ServerConfiguration serverConfiguration;
+
+  /**
+   * Creates a new BulkSubmitValidator.
+   *
+   * @param serverConfiguration The server configuration.
+   */
+  public BulkSubmitValidator(@Nonnull final ServerConfiguration serverConfiguration) {
+    this.serverConfiguration = serverConfiguration;
+  }
+
+  /**
+   * Validates and extracts a $bulk-submit request from a FHIR Parameters resource.
+   *
+   * @param requestDetails The request details.
+   * @param parameters The FHIR Parameters resource.
+   * @return The validated BulkSubmitRequest.
+   */
+  @Nonnull
+  public BulkSubmitRequest validateAndExtract(
+      @Nonnull final RequestDetails requestDetails, @Nonnull final Parameters parameters) {
+    final BulkSubmitConfiguration config = getBulkSubmitConfig();
+
+    // Extract submissionId (required).
+    final String submissionId = extractRequiredString(parameters, "submissionId");
+
+    // Extract submitter (required).
+    final SubmitterIdentifier submitter = extractSubmitter(parameters);
+
+    // TODO: Re-enable allowed submitters check after connectathon.
+    // Validate submitter is allowed.
+    // if (!config.isSubmitterAllowed(submitter)) {
+    //   throw new InvalidUserInputError(
+    //       "Submitter %s|%s is not in the list of allowed submitters."
+    //           .formatted(submitter.system(), submitter.value())
+    //   );
+    // }
+
+    // Extract submissionStatus (required).
+    final String submissionStatus = extractSubmissionStatus(parameters);
+
+    // Extract manifestUrl (conditionally required).
+    final String manifestUrl = extractOptionalUrl(parameters, "manifestUrl");
+
+    // Extract fhirBaseUrl (conditionally required). Accept both fhirBaseUrl and FHIRBaseUrl per
+    // spec inconsistency.
+    String fhirBaseUrl = extractOptionalUrl(parameters, "fhirBaseUrl");
+    if (fhirBaseUrl == null) {
+      fhirBaseUrl = extractOptionalUrl(parameters, "FHIRBaseUrl");
+    }
+
+    // Validate conditional requirements.
+    // Per Argonaut spec, manifestUrl may be omitted when setting submissionStatus to complete or
+    // aborted. The manifest details can come from a previous in-progress request. However, if
+    // manifestUrl is provided, fhirBaseUrl must also be provided.
+    if (manifestUrl != null) {
+      if (fhirBaseUrl == null) {
+        throw new InvalidUserInputError("fhirBaseUrl is required when manifestUrl is present.");
+      }
+      validateUrl(manifestUrl, "manifestUrl", config);
+      validateUrl(fhirBaseUrl, "fhirBaseUrl", config);
+    }
+
+    // Extract replacesManifestUrl (optional).
+    final String replacesManifestUrl = extractOptionalUrl(parameters, "replacesManifestUrl");
+
+    // Extract oauthMetadataUrl (optional).
+    final String oauthMetadataUrl = extractOptionalUrl(parameters, "oauthMetadataUrl");
+
+    // Extract metadata (optional).
+    final SubmissionMetadata metadata = extractMetadata(parameters);
+
+    // Extract fileRequestHeaders (optional).
+    final List<FileRequestHeader> fileRequestHeaders = extractFileRequestHeaders(parameters);
+
+    return new BulkSubmitRequest(
+        requestDetails.getCompleteUrl(),
+        submissionId,
+        submitter,
+        submissionStatus,
+        manifestUrl,
+        fhirBaseUrl,
+        replacesManifestUrl,
+        oauthMetadataUrl,
+        metadata,
+        fileRequestHeaders);
+  }
+
+  @Nonnull
+  private BulkSubmitConfiguration getBulkSubmitConfig() {
+    final BulkSubmitConfiguration config = serverConfiguration.getBulkSubmit();
+    if (config == null) {
+      throw new InvalidUserInputError("The $bulk-submit operation is not configured.");
+    }
+    return config;
+  }
+
+  @Nonnull
+  private String extractRequiredString(
+      @Nonnull final Parameters parameters, @Nonnull final String paramName) {
+    final String value =
+        ParamUtil.extractFromPart(
+                parameters.getParameter(),
+                paramName,
+                StringType.class,
+                StringType::getValue,
+                false,
+                Optional.empty(),
+                false,
+                Optional.of(new InvalidUserInputError("Missing required parameter: " + paramName)))
+            .orElse(null);
+    if (value == null || value.isBlank()) {
+      throw new InvalidUserInputError("Missing required parameter: " + paramName);
+    }
+    return value;
+  }
+
+  @Nonnull
+  private SubmitterIdentifier extractSubmitter(@Nonnull final Parameters parameters) {
+    final Identifier identifier =
+        ParamUtil.extractFromPart(
+                parameters.getParameter(),
+                "submitter",
+                Identifier.class,
+                i -> i,
+                false,
+                Optional.empty(),
+                false,
+                Optional.of(new InvalidUserInputError("Missing required parameter: submitter")))
+            .orElse(null);
+    if (identifier == null) {
+      throw new InvalidUserInputError("Missing required parameter: submitter");
+    }
+    if (identifier.getSystem() == null || identifier.getSystem().isBlank()) {
+      throw new InvalidUserInputError("submitter.system is required.");
+    }
+    if (identifier.getValue() == null || identifier.getValue().isBlank()) {
+      throw new InvalidUserInputError("submitter.value is required.");
+    }
+    return new SubmitterIdentifier(identifier.getSystem(), identifier.getValue());
+  }
+
+  @Nonnull
+  private String extractSubmissionStatus(@Nonnull final Parameters parameters) {
+    final String status =
+        ParamUtil.extractFromPart(
+                parameters.getParameter(),
+                "submissionStatus",
+                Coding.class,
+                Coding::getCode,
+                false,
+                Optional.empty(),
+                false,
+                Optional.of(
+                    new InvalidUserInputError("Missing required parameter: submissionStatus")))
+            .orElse(null);
+    if (status == null || status.isBlank()) {
+      throw new InvalidUserInputError("Missing required parameter: submissionStatus");
+    }
+    if (!VALID_STATUSES.contains(status)) {
+      throw new InvalidUserInputError(
+          "Invalid submissionStatus: %s. Must be one of: %s.".formatted(status, VALID_STATUSES));
+    }
+    return status;
+  }
+
+  @Nullable
+  private String extractOptionalUrl(
+      @Nonnull final Parameters parameters, @Nonnull final String paramName) {
+    // Per Argonaut spec, URL parameters are string (url), not FHIR url type.
+    return ParamUtil.extractFromPart(
+            parameters.getParameter(),
+            paramName,
+            StringType.class,
+            StringType::getValue,
+            true,
+            Optional.empty(),
+            false,
+            Optional.empty())
+        .orElse(null);
+  }
+
+  private void validateUrl(
+      @Nonnull final String url,
+      @Nonnull final String paramName,
+      @Nonnull final BulkSubmitConfiguration config) {
+    // TODO: Re-enable allowed sources check after connectathon.
+    if (true) {
+      return;
+    }
+    final List<String> allowableSources = config.getAllowableSources();
+    if (allowableSources.isEmpty()) {
+      return;
+    }
+    final boolean allowed = allowableSources.stream().anyMatch(url::startsWith);
+    if (!allowed) {
+      throw new InvalidUserInputError(
+          "%s '%s' does not match any allowed source prefixes.".formatted(paramName, url));
+    }
+  }
+
+  @Nullable
+  private SubmissionMetadata extractMetadata(@Nonnull final Parameters parameters) {
+    // Metadata extraction is simplified for now - can be expanded later.
+    return null;
+  }
+
+  @Nonnull
+  private List<FileRequestHeader> extractFileRequestHeaders(@Nonnull final Parameters parameters) {
+    return parameters.getParameter().stream()
+        .filter(param -> "fileRequestHeader".equals(param.getName()))
+        .map(this::extractSingleFileRequestHeader)
+        .filter(Objects::nonNull)
+        .toList();
+  }
+
+  @Nullable
+  private FileRequestHeader extractSingleFileRequestHeader(
+      @Nonnull final ParametersParameterComponent param) {
+    final List<ParametersParameterComponent> parts = param.getPart();
+
+    final String headerName =
+        ParamUtil.extractFromPart(
+                parts,
+                "headerName",
+                StringType.class,
+                StringType::getValue,
+                true,
+                Optional.empty(),
+                false,
+                Optional.empty())
+            .orElse(null);
+
+    final String headerValue =
+        ParamUtil.extractFromPart(
+                parts,
+                "headerValue",
+                StringType.class,
+                StringType::getValue,
+                true,
+                Optional.empty(),
+                false,
+                Optional.empty())
+            .orElse(null);
+
+    if (headerName == null || headerName.isBlank() || headerValue == null) {
+      return null;
+    }
+
+    return new FileRequestHeader(headerName, headerValue);
+  }
+
+  /**
+   * Validates that the Accept header includes application/fhir+json.
+   *
+   * @param requestDetails The request details.
+   */
+  public void validateAcceptHeader(@Nonnull final RequestDetails requestDetails) {
+    final String accept = requestDetails.getHeader("Accept");
+    if (accept != null && !accept.contains("application/fhir+json")) {
+      throw new InvalidUserInputError("Accept header must include application/fhir+json");
+    }
+  }
+
+  /**
+   * Validates that the Prefer header includes respond-async.
+   *
+   * @param requestDetails The request details.
+   */
+  public void validatePreferAsyncHeader(@Nonnull final RequestDetails requestDetails) {
+    final String prefer = requestDetails.getHeader("Prefer");
+    if (prefer == null || !prefer.contains("respond-async")) {
+      throw new InvalidUserInputError("Prefer header must include respond-async");
+    }
+  }
+}

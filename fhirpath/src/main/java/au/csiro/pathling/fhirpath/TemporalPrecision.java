@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,52 +18,33 @@
 package au.csiro.pathling.fhirpath;
 
 import jakarta.annotation.Nonnull;
+import java.time.temporal.ChronoUnit;
 import lombok.Getter;
 
-import java.time.temporal.ChronoUnit;
-
-/**
- * Enumeration of supported temporal precision levels from year to millisecond.
- */
+/** Enumeration of supported temporal precision levels from year to millisecond. */
 public enum TemporalPrecision {
-  /**
-   * Year precision (e.g., 2023)
-   */
+  /** Year precision (e.g., 2023). */
   YEAR(ChronoUnit.YEARS),
 
-  /**
-   * Month precision (e.g., 2023-06)
-   */
+  /** Month precision (e.g., 2023-06). */
   MONTH(ChronoUnit.MONTHS),
 
-  /**
-   * Day precision (e.g., 2023-06-15)
-   */
+  /** Day precision (e.g., 2023-06-15). */
   DAY(ChronoUnit.DAYS),
 
-  /**
-   * Hour precision (e.g., 2023-06-15T14)
-   */
+  /** Hour precision (e.g., 2023-06-15T14). */
   HOUR(ChronoUnit.HOURS),
 
-  /**
-   * Minute precision (e.g., 2023-06-15T14:30)
-   */
+  /** Minute precision (e.g., 2023-06-15T14:30). */
   MINUTE(ChronoUnit.MINUTES),
 
-  /**
-   * Second precision (e.g., 2023-06-15T14:30:45)
-   */
+  /** Second precision (e.g., 2023-06-15T14:30:45). */
   SECOND(ChronoUnit.SECONDS),
 
-  /**
-   * Up to nanoseconds precision (e.g., 2023-06-15T14:30:45.123456789)
-   */
+  /** Up to nanoseconds precision (e.g., 2023-06-15T14:30:45.123456789). */
   FRACS(ChronoUnit.NANOS);
 
-  @Getter
-  @Nonnull
-  private final ChronoUnit chronoUnit;
+  @Getter @Nonnull private final ChronoUnit chronoUnit;
 
   TemporalPrecision(@Nonnull final ChronoUnit chronoUnit) {
     this.chronoUnit = chronoUnit;

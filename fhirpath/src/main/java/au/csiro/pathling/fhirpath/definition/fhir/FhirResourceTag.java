@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,27 +19,78 @@ package au.csiro.pathling.fhirpath.definition.fhir;
 
 import au.csiro.pathling.fhirpath.definition.ResourceTag;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Represents a FHIR resource tag.
+ * Represents a FHIR resource tag. Supports both standard FHIR resource types (which have a
+ * corresponding {@link ResourceType} enum value) and custom resource types (like ViewDefinition)
+ * that are not part of the standard FHIR specification.
  */
-@Value(staticConstructor = "of")
+@Value
 public class FhirResourceTag implements ResourceTag {
 
+  /** The resource code (e.g., "Patient", "Observation", "ViewDefinition"). */
+  @Nonnull String resourceCode;
+
+  /**
+   * The FHIR resource type enum, if this is a standard FHIR resource type. Empty for custom
+   * resource types like ViewDefinition.
+   */
+  @Nonnull Optional<ResourceType> resourceType;
+
+  /**
+   * Creates a FhirResourceTag from a standard FHIR ResourceType.
+   *
+   * @param resourceType the FHIR resource type
+   * @return a new FhirResourceTag
+   */
   @Nonnull
-  ResourceType resourceType;
+  public static FhirResourceTag of(@Nonnull final ResourceType resourceType) {
+    return new FhirResourceTag(resourceType.toCode(), Optional.of(resourceType));
+  }
+
+  /**
+   * Creates a FhirResourceTag from a resource code string. This method attempts to resolve the code
+   * to a standard ResourceType, but allows custom types that are not in the FHIR specification.
+   *
+   * @param resourceCode the resource code (e.g., "Patient", "ViewDefinition")
+   * @return a new FhirResourceTag
+   */
+  @Nonnull
+  public static FhirResourceTag of(@Nonnull final String resourceCode) {
+    try {
+      final ResourceType resourceType = ResourceType.fromCode(resourceCode);
+      return new FhirResourceTag(resourceCode, Optional.of(resourceType));
+    } catch (final org.hl7.fhir.exceptions.FHIRException e) {
+      // Custom resource type not in the standard FHIR specification.
+      return new FhirResourceTag(resourceCode, Optional.empty());
+    }
+  }
+
+  /**
+   * Creates a FhirResourceTag from a resource code and optional ResourceType.
+   *
+   * @param resourceCode the resource code
+   * @param resourceType the optional resource type
+   * @return a new FhirResourceTag
+   */
+  @Nonnull
+  public static FhirResourceTag of(
+      @Nonnull final String resourceCode, @Nonnull final Optional<ResourceType> resourceType) {
+    return new FhirResourceTag(resourceCode, resourceType);
+  }
 
   @Override
   @Nonnull
   public String toString() {
-    return resourceType.toString();
+    return resourceCode;
   }
 
   @Override
   @Nonnull
   public String toCode() {
-    return resourceType.toCode();
+    return resourceCode;
   }
 }

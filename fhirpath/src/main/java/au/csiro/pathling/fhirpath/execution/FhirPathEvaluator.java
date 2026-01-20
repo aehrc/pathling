@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,17 +37,16 @@ import lombok.Builder;
 import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Evaluates FHIRPath expressions against FHIR resources.
- * <p>
- * This class is the main entry point for FHIRPath evaluation in Pathling. It provides methods to
+ *
+ * <p>This class is the main entry point for FHIRPath evaluation in Pathling. It provides methods to
  * evaluate single expressions or multiple expressions against FHIR resources, handling the creation
  * of appropriate evaluation contexts and resource resolution.
- * <p>
- * The evaluator uses a {@link ResourceResolver} to access FHIR resources, a
- * {@link FunctionRegistry} to resolve FHIRPath functions, and can be configured with variables and
+ *
+ * <p>The evaluator uses a {@link ResourceResolver} to access FHIR resources, a {@link
+ * FunctionRegistry} to resolve FHIRPath functions, and can be configured with variables and
  * evaluation options.
  */
 @Value
@@ -57,43 +56,32 @@ public class FhirPathEvaluator {
 
   /**
    * Builder for creating {@link FhirPathEvaluator} instances with customized configuration.
-   * <p>
-   * This builder allows setting:
+   *
+   * <p>This builder allows setting:
+   *
    * <ul>
-   *   <li>A {@link ResourceResolver} for accessing FHIR resources (required)</li>
-   *   <li>A {@link FunctionRegistry} for resolving FHIRPath functions (optional)</li>
-   *   <li>A map of variables available during evaluation (optional)</li>
+   *   <li>A {@link ResourceResolver} for accessing FHIR resources (required)
+   *   <li>A {@link FunctionRegistry} for resolving FHIRPath functions (optional)
+   *   <li>A map of variables available during evaluation (optional)
    * </ul>
    */
-  public static class FhirPathEvaluatorBuilder {
+  public static class FhirPathEvaluatorBuilder {}
 
-  }
+  /** The resolver used to access FHIR resources during evaluation. */
+  @Nonnull ResourceResolver resourceResolver;
 
-  /**
-   * The resolver used to access FHIR resources during evaluation.
-   */
-  @Nonnull
-  ResourceResolver resourceResolver;
-
-  /**
-   * The registry used to resolve FHIRPath functions during evaluation.
-   */
-  @Nonnull
-  @Builder.Default
+  /** The registry used to resolve FHIRPath functions during evaluation. */
+  @Nonnull @Builder.Default
   FunctionRegistry functionRegistry = StaticFunctionRegistry.getInstance();
 
-  /**
-   * Variables available during FHIRPath evaluation.
-   */
-  @Nonnull
-  @Builder.Default
-  Map<String, Collection> variables = Map.of();
+  /** Variables available during FHIRPath evaluation. */
+  @Nonnull @Builder.Default Map<String, Collection> variables = Map.of();
 
   /**
    * Creates a builder initialized with the specified resource resolver.
-   * <p>
-   * This is a convenience method for creating a builder when you only have a resource resolver and
-   * want to use default values for other parameters.
+   *
+   * <p>This is a convenience method for creating a builder when you only have a resource resolver
+   * and want to use default values for other parameters.
    *
    * @param resourceResolver the resolver used to access FHIR resources
    * @return a builder initialized with the specified resource resolver
@@ -106,8 +94,8 @@ public class FhirPathEvaluator {
 
   /**
    * Evaluates a FHIRPath expression with the given input context.
-   * <p>
-   * This method creates an evaluation context with the specified input context and evaluates the
+   *
+   * <p>This method creates an evaluation context with the specified input context and evaluates the
    * FHIRPath expression against it. The input context is the collection that the FHIRPath
    * expression will operate on.
    *
@@ -120,19 +108,19 @@ public class FhirPathEvaluator {
     final ResourceCollection resource = createDefaultInputContext();
     final VariableResolverChain variableResolverChain =
         VariableResolverChain.withDefaults(resource, inputContext, variables);
-    final FhirPathContext fhirpathContext = FhirPathContext.of(
-        resource, inputContext, variableResolverChain);
-    final EvaluationContext evalContext = new ViewEvaluationContext(fhirpathContext,
-        functionRegistry, resourceResolver);
+    final FhirPathContext fhirpathContext =
+        FhirPathContext.of(resource, inputContext, variableResolverChain);
+    final EvaluationContext evalContext =
+        new ViewEvaluationContext(fhirpathContext, functionRegistry, resourceResolver);
     return path.apply(inputContext, evalContext);
   }
 
   /**
    * Evaluates a FHIRPath expression with the default input context.
-   * <p>
-   * This method uses the subject resource as the input context for evaluation. It's equivalent to
-   * calling {@link #evaluate(FhirPath, Collection)} with the result of
-   * {@link #createDefaultInputContext()} as the input context.
+   *
+   * <p>This method uses the subject resource as the input context for evaluation. It's equivalent
+   * to calling {@link #evaluate(FhirPath, Collection)} with the result of {@link
+   * #createDefaultInputContext()} as the input context.
    *
    * @param path the FHIRPath expression to evaluate
    * @return the result of the evaluation as a Collection
@@ -144,8 +132,8 @@ public class FhirPathEvaluator {
 
   /**
    * Creates the default input context for evaluation.
-   * <p>
-   * The default input context is the subject resource of the current evaluation context. This is
+   *
+   * <p>The default input context is the subject resource of the current evaluation context. This is
    * typically the resource type specified when creating the evaluator.
    *
    * @return the default input context as a ResourceCollection
@@ -157,9 +145,9 @@ public class FhirPathEvaluator {
 
   /**
    * Creates the initial dataset for evaluation.
-   * <p>
-   * This method returns the Spark Dataset that contains the data for the subject resource and any
-   * joined resources. It's used as the starting point for evaluating FHIRPath expressions.
+   *
+   * <p>This method returns the Spark Dataset that contains the data for the subject resource and
+   * any joined resources. It's used as the starting point for evaluating FHIRPath expressions.
    *
    * @return the initial Spark Dataset for evaluation
    */
@@ -170,64 +158,70 @@ public class FhirPathEvaluator {
 
   /**
    * Factory interface for creating FhirPathEvaluator instances.
-   * <p>
-   * This interface provides methods for creating evaluators with different configurations, allowing
-   * for dependency injection and easier testing.
+   *
+   * <p>This interface provides methods for creating evaluators with different configurations,
+   * allowing for dependency injection and easier testing.
    */
   public interface Factory {
 
     /**
      * Creates a FhirPathEvaluator with the given parameters.
-     * <p>
-     * This method creates a fully configured evaluator with the specified subject resource type,
-     * function registry, and variables.
      *
-     * @param subjectResource the subject resource type to evaluate against
+     * <p>This method creates a fully configured evaluator with the specified subject resource type,
+     * function registry, and variables. Supports both standard FHIR resource types and custom
+     * resource types (like ViewDefinition) that are registered with HAPI.
+     *
+     * @param subjectResourceCode the subject resource type code to evaluate against (e.g.,
+     *     "Patient", "ViewDefinition")
      * @param functionRegistry the registry of FHIRPath functions to use
      * @param variables the variables available during evaluation
      * @return a new FhirPathEvaluator configured with the specified parameters
      */
     @Nonnull
-    FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
+    FhirPathEvaluator create(
+        @Nonnull final String subjectResourceCode,
         @Nonnull final FunctionRegistry functionRegistry,
         @Nonnull final Map<String, Collection> variables);
 
     /**
      * Creates a FhirPathEvaluator with the given subject resource and default parameters.
-     * <p>
-     * This method creates an evaluator with the specified subject resource type and default values
-     * for the function registry (StaticFunctionRegistry) and variables (empty map).
      *
-     * @param subjectResource the subject resource type to evaluate against
+     * <p>This method creates an evaluator with the specified subject resource type code and default
+     * values for the function registry (StaticFunctionRegistry) and variables (empty map).
+     *
+     * @param subjectResourceCode the subject resource type code to evaluate against
      * @return a new FhirPathEvaluator configured with the specified subject resource and default
-     * parameters
+     *     parameters
      */
     @Nonnull
-    default FhirPathEvaluator create(@Nonnull final ResourceType subjectResource) {
-      return create(subjectResource, StaticFunctionRegistry.getInstance(), Map.of());
+    default FhirPathEvaluator create(@Nonnull final String subjectResourceCode) {
+      return create(subjectResourceCode, StaticFunctionRegistry.getInstance(), Map.of());
     }
   }
 
   /**
    * Provider interface for creating FhirPathEvaluator instances with context paths.
-   * <p>
-   * This interface is similar to Factory but allows for dynamic creation of evaluators based on
+   *
+   * <p>This interface is similar to Factory but allows for dynamic creation of evaluators based on
    * context paths that are supplied at runtime.
    */
   public interface Provider {
 
     /**
      * Creates a FhirPathEvaluator with the given parameters.
-     * <p>
-     * This method creates an evaluator that can handle context paths that are supplied dynamically
-     * at runtime through the contextPathsSupplier.
      *
-     * @param subjectResource the subject resource type to evaluate against
+     * <p>This method creates an evaluator that can handle context paths that are supplied
+     * dynamically at runtime through the contextPathsSupplier. Supports both standard FHIR resource
+     * types and custom resource types (like ViewDefinition) that are registered with HAPI.
+     *
+     * @param subjectResourceCode the subject resource type code to evaluate against (e.g.,
+     *     "Patient", "ViewDefinition")
      * @param contextPathsSupplier a supplier that provides the context paths when needed
      * @return a new FhirPathEvaluator configured with the specified parameters
      */
     @Nonnull
-    FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
+    FhirPathEvaluator create(
+        @Nonnull final String subjectResourceCode,
         @Nonnull final Supplier<List<FhirPath>> contextPathsSupplier);
   }
 }

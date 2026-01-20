@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,7 +46,8 @@ public @interface UniqueTags {
    *
    * @return the error message
    */
-  String message() default "List must not contain more than one tag with the same name from the restricted list";
+  String message() default
+      "List must not contain more than one tag with the same name from the restricted list";
 
   /**
    * The validation groups.

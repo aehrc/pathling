@@ -4,7 +4,7 @@ spark_session <- function() {
   #   #"spark.sql.warehouse.dir" = fs::dir_create_temp(),
   #   "spark.driver.memory" = "4g"
   # ))
-  # 
+  #
   # #on.exit(sparklyr::spark_disconnect(spark), add = TRUE)
   # spark
   def_spark()
@@ -24,7 +24,7 @@ json_resources_dir <- function() {
 }
 
 xml_bundles_dir <- function() {
-  encoders_test_data_dir( "bundles", "R4", "xml")
+  encoders_test_data_dir("bundles", "R4", "xml")
 }
 
 def_pathling <- function(spark_session) {
@@ -38,13 +38,13 @@ json_resources_df <- function(spark_session, json_resources_dir) {
 json_bundles_df <- function(spark_session, json_bundles_dir) {
   # sparklyr::spark_read_text() produces dataframe with two columns (path, contents)
   sparklyr::spark_read_text(spark_session, json_bundles_dir, whole = TRUE) %>%
-    select(value=contents)
+    select(value = contents)
 }
 
 xml_bundles_df <- function(spark_session, xml_bundles_dir) {
   # sparklyr::spark_read_text() produces dataframe with two columns (path, contents)
   sparklyr::spark_read_text(spark_session, xml_bundles_dir, whole = TRUE) %>%
-    select(value=contents)
+    select(value = contents)
 }
 
 test_that("encode_json_bundles", {
@@ -102,20 +102,26 @@ test_that("element_nesting", {
   pathling_1 <- pathling_connect(spark_session, max_nesting_level = 1)
 
   # default nesting level is 3
-  quest_def <- pathling_encode(pathling_def, json_resources_df, "Questionnaire") %>% head(1) %>% sdf_collect()
+  quest_def <- pathling_encode(pathling_def, json_resources_df, "Questionnaire") %>%
+    head(1) %>%
+    sdf_collect()
   expect_true("item" %in% names(quest_def))
   expect_true("item" %in% names(quest_def$item[[1]][[1]]))
   expect_true("item" %in% names(quest_def$item[[1]][[1]]$item[[1]]))
   expect_true("item" %in% names(quest_def$item[[1]][[1]]$item[[1]]$item[[1]]))
   expect_false("item" %in% names(quest_def$item[[1]][[1]]$item[[1]]$item[[1]]$item[[1]]))
-  
+
   # max nesting level set to 0
-  quest_0 <- pathling_encode(pathling_0, json_resources_df, "Questionnaire") %>% head(1)  %>% sdf_collect()
+  quest_0 <- pathling_encode(pathling_0, json_resources_df, "Questionnaire") %>%
+    head(1) %>%
+    sdf_collect()
   expect_true("item" %in% names(quest_0))
   expect_false("item" %in% names(quest_0$item[[1]][[1]]))
 
   # max nesting level set to 1
-  quest_1 <- pathling_encode(pathling_1, json_resources_df, "Questionnaire") %>% head(1) %>% sdf_collect()
+  quest_1 <- pathling_encode(pathling_1, json_resources_df, "Questionnaire") %>%
+    head(1) %>%
+    sdf_collect()
   expect_true("item" %in% names(quest_1))
   expect_true("item" %in% names(quest_1$item[[1]][[1]]))
   expect_false("item" %in% names(quest_1$item[[1]][[1]]$item[[1]]))
@@ -129,7 +135,9 @@ test_that("extension_support", {
   pathling_ext_off <- pathling_connect(spark_session, enable_extensions = FALSE)
   pathling_ext_on <- pathling_connect(spark_session, enable_extensions = TRUE)
 
-  patient_def <- pathling_encode(pathling_def, json_resources_df, "Patient") %>% head(1) %>% sdf_collect()
+  patient_def <- pathling_encode(pathling_def, json_resources_df, "Patient") %>%
+    head(1) %>%
+    sdf_collect()
   expect_false("_extension" %in% colnames(patient_def))
 
   # extensions disabled

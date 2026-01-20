@@ -1,0 +1,33 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "bulk-submit-status",
+  "title": "Pathling Bulk Submit Status Operation",
+  "status": "active",
+  "kind": "operation",
+  "experimental": true,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation allows checking the status of a bulk submission. Returns a status manifest containing information about the submission state, output files, and any errors.",
+  "affectsState": false,
+  "code": "bulk-submit-status",
+  "system": true,
+  "type": false,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "submissionId",
+      "use": "in",
+      "min": 1,
+      "max": "1",
+      "documentation": "The unique identifier of the submission to check status for.",
+      "type": "string"
+    },
+    {
+      "name": "submitter",
+      "use": "in",
+      "min": 1,
+      "max": "1",
+      "documentation": "The identifier of the submitting system that created the submission.",
+      "type": "Identifier"
+    }
+  ]
+}

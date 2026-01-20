@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ class ResourceCloserTest {
     final Closeable resource3 = mock(Closeable.class);
 
     doThrow(new IOException("Test exception")).when(resource2).close();
-    
+
     final ResourceCloser resourceCloser = new ResourceCloser(resource1, resource2);
     assertEquals(resource3, resourceCloser.registerResource(resource3));
     resourceCloser.close();

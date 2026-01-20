@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,13 +21,10 @@ import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import jakarta.annotation.Nonnull;
 import java.util.function.Function;
 
-/**
- * Interface for building resource resolvers with specific context.
- */
+/** Interface for building resource resolvers with specific context. */
 @FunctionalInterface
 public interface ResolverBuilder {
 
   @Nonnull
-  ResourceResolver create(
-      @Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory);
+  ResourceResolver create(@Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory);
 }

@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -24,7 +24,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 pc = PathlingContext.create()
 
 csv = pc.spark.read.options(header=True).csv(
-    f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
+    f"file://{os.path.join(HERE, 'data/csv/conditions.csv')}"
 )
 
 # Translate codings to Read CTV3 using the map that ships with SNOMED CT.

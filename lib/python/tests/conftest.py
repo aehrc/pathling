@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -16,18 +16,18 @@
 
 import logging
 import os
+from tempfile import TemporaryDirectory
+
 from pyspark.sql import SparkSession
 from pytest import fixture
-from tempfile import TemporaryDirectory
 
 from pathling import PathlingContext
 from pathling._version import (
-    __java_version__,
-    __scala_version__,
     __delta_version__,
     __hadoop_version__,
+    __java_version__,
+    __scala_version__,
 )
-
 from tests.mockserver import MockServer
 
 HERE = os.path.abspath(os.path.dirname(__file__))

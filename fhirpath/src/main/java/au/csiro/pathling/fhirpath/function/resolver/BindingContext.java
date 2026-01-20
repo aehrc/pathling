@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,13 +24,13 @@ import java.lang.reflect.Method;
 
 /**
  * Provides context for parameter binding operations, including error reporting.
- * <p>
- * This class helps generate consistent, informative error messages that include the function name
- * and context (input or specific argument).
+ *
+ * <p>This class helps generate consistent, informative error messages that include the function
+ * name and context (input or specific argument).
  *
  * @param method The method being bound
  * @param contextDescription Description of the current binding context (e.g., "input" or "argument
- * 0")
+ *     0")
  */
 public record BindingContext(@Nonnull Method method, @Nullable String contextDescription) {
 
@@ -64,8 +64,8 @@ public record BindingContext(@Nonnull Method method, @Nullable String contextDes
    */
   @Nonnull
   public BindingContext forArgument(final int index, @Nonnull final Class<?> parameterType) {
-    return new BindingContext(method,
-        "argument " + index + " (" + parameterType.getSimpleName() + ")");
+    return new BindingContext(
+        method, "argument " + index + " (" + parameterType.getSimpleName() + ")");
   }
 
   /**
@@ -77,9 +77,8 @@ public record BindingContext(@Nonnull Method method, @Nullable String contextDes
    * @throws InvalidUserInputError Always thrown with a formatted message
    */
   public <T> T reportError(@Nonnull final String issue) {
-    final StringBuilder message = new StringBuilder("Function '")
-        .append(method.getName())
-        .append("'");
+    final StringBuilder message =
+        new StringBuilder("Function '").append(method.getName()).append("'");
 
     if (contextDescription != null) {
       message.append(", ").append(contextDescription);

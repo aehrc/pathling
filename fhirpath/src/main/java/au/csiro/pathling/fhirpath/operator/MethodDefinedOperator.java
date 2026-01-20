@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,12 +28,15 @@ import java.util.stream.Stream;
 /**
  * A {@link FhirPathBinaryOperator} that is defined using a static method.
  *
+ * @param method the method that implements the operator
  * @author Piotr Szul
  * @author John Grimes
  */
 public record MethodDefinedOperator(Method method) implements FhirPathBinaryOperator {
 
   /**
+   * Invokes the operator with the specified input.
+   *
    * @param operatorInput the input to the operator
    * @return the result of invoking the method defined by this operator
    * @throws MethodInvocationError if the method cannot be invoked due to an error
@@ -42,8 +45,8 @@ public record MethodDefinedOperator(Method method) implements FhirPathBinaryOper
   @Nonnull
   public Collection invoke(@Nonnull final BinaryOperatorInput operatorInput) {
     // Create an array of arguments to pass to the method.
-    final Object[] invocationArgs = Stream.of(operatorInput.left(), operatorInput.right())
-        .toArray(Object[]::new);
+    final Object[] invocationArgs =
+        Stream.of(operatorInput.left(), operatorInput.right()).toArray(Object[]::new);
     try {
       // Invoke the method.
       return (Collection) method.invoke(null, invocationArgs);
@@ -73,19 +76,15 @@ public record MethodDefinedOperator(Method method) implements FhirPathBinaryOper
   public static Map<String, FhirPathBinaryOperator> mapOf(@Nonnull final Class<?> clazz) {
     return Stream.of(clazz.getDeclaredMethods())
         .filter(m -> m.getAnnotation(FhirPathOperator.class) != null)
-        .collect(Collectors.toUnmodifiableMap(
-            m -> m.getAnnotation(FhirPathOperator.class).name(),
-            MethodDefinedOperator::new));
-
+        .collect(
+            Collectors.toUnmodifiableMap(
+                m -> m.getAnnotation(FhirPathOperator.class).name(), MethodDefinedOperator::new));
   }
 
   @Override
   @Nonnull
   public String getOperatorName() {
     final FhirPathOperator annotation = method.getAnnotation(FhirPathOperator.class);
-    return annotation != null
-           ? annotation.name()
-           : method.getName();
+    return annotation != null ? annotation.name() : method.getName();
   }
-
 }

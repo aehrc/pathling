@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,7 +52,6 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Converts a {@link FhirView} to an executable Spark SQL query.
@@ -64,29 +63,28 @@ public class FhirViewExecutor {
 
   private static final String HL7_FHIR_TYPE_URI_PREFIX = "http://hl7.org/fhir/StructureDefinition/";
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull
-  private final SparkSession sparkSession;
+  @Nonnull private final SparkSession sparkSession;
 
-  @Nonnull
-  private final DataSource dataSource;
+  @Nonnull private final DataSource dataSource;
 
-  @Nonnull
-  private final Parser parser;
+  @Nonnull private final Parser parser;
 
-  @Nonnull
-  private final QueryConfiguration queryConfiguration;
+  @Nonnull private final QueryConfiguration queryConfiguration;
 
   /**
+   * Constructs a new FhirViewExecutor.
+   *
    * @param fhirContext The FHIR context to use for the execution context
    * @param sparkSession The Spark session to use for the execution context
    * @param dataset The data source to use for the execution context
    * @param queryConfiguration The query configuration to control query execution behavior
    */
-  public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset,
+  public FhirViewExecutor(
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final SparkSession sparkSession,
+      @Nonnull final DataSource dataset,
       @Nonnull final QueryConfiguration queryConfiguration) {
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
@@ -96,12 +94,16 @@ public class FhirViewExecutor {
   }
 
   /**
+   * Constructs a new FhirViewExecutor with default query configuration.
+   *
    * @param fhirContext The FHIR context to use for the execution context
    * @param sparkSession The Spark session to use for the execution context
    * @param dataset The data source to use for the execution context
    */
-  public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset) {
+  public FhirViewExecutor(
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final SparkSession sparkSession,
+      @Nonnull final DataSource dataset) {
     this(fhirContext, sparkSession, dataset, QueryConfiguration.builder().build());
   }
 
@@ -116,9 +118,8 @@ public class FhirViewExecutor {
     // Validate the view using JSR-380 validation
     ValidationUtils.ensureValid(view, "Valid SQL on FHIR view");
 
-    final ExecutionContext executionContext = new ExecutionContext(sparkSession,
-        SingleEvaluatorFactory.of(fhirContext, dataSource)
-    );
+    final ExecutionContext executionContext =
+        new ExecutionContext(sparkSession, SingleEvaluatorFactory.of(fhirContext, dataSource));
     final Projection projection = buildProjection(view);
     return projection.execute(executionContext);
   }
@@ -133,9 +134,8 @@ public class FhirViewExecutor {
   @Nonnull
   private Projection buildProjection(@Nonnull final FhirView fhirView) {
     // Convert the select clause into a list of ProjectionClause objects.
-    final List<ProjectionClause> selectionComponents = fhirView.getSelect().stream()
-        .map(this::parseSelection)
-        .toList();
+    final List<ProjectionClause> selectionComponents =
+        fhirView.getSelect().stream().map(this::parseSelection).toList();
 
     // Create a GroupingSelection object that represents all the select components.
     final ProjectionClause selection = new GroupingSelection(selectionComponents);
@@ -147,9 +147,7 @@ public class FhirViewExecutor {
     // during evaluation.
 
     // Create the Projection object that represents the view.
-    return new Projection(ResourceType.fromCode(fhirView.getResource()), fhirView.getConstant(),
-        selection,
-        where);
+    return new Projection(fhirView.getResource(), fhirView.getConstant(), selection, where);
   }
 
   /**
@@ -167,7 +165,8 @@ public class FhirViewExecutor {
     //     the parent path evaluates to an empty collection
     // (4) A "repeat" selection, which recursively traverses nested structures
 
-    if (isNull(select.getForEach()) && isNull(select.getForEachOrNull())
+    if (isNull(select.getForEach())
+        && isNull(select.getForEachOrNull())
         && isNull(select.getRepeat())) {
       // If this is a direct column selection, we use a GroupingSelection. This will produce the
       // cartesian product of the collections that are produced by the FHIRPath expressions.
@@ -175,10 +174,10 @@ public class FhirViewExecutor {
     } else if (nonNull(select.getRepeat())) {
       // If this is a "repeat" selection, we use a RepeatSelection. This will recursively traverse
       // the nested structures defined by the repeat paths, unioning all results from all levels.
-      final List<FhirPath> repeatPaths = select.getRepeat().stream()
-          .map(parser::parse)
-          .toList();
-      return new RepeatSelection(repeatPaths, wrapInGroupingIfNeeded(parseSubSelection(select)),
+      final List<FhirPath> repeatPaths = select.getRepeat().stream().map(parser::parse).toList();
+      return new RepeatSelection(
+          repeatPaths,
+          wrapInGroupingIfNeeded(parseSubSelection(select)),
           queryConfiguration.getMaxUnboundTraversalDepth());
     } else if (nonNull(select.getForEach()) && nonNull(select.getForEachOrNull())) {
       throw new IllegalStateException(
@@ -186,14 +185,18 @@ public class FhirViewExecutor {
     } else if (nonNull(select.getForEach())) {
       // If this is a "for each" selection, we use an UnnestingSelection. This will produce a row
       // for each item in the collection produced by the parent path.
-      return new UnnestingSelection(parser.parse(requireNonNull(select.getForEach())),
-          wrapInGroupingIfNeeded(parseSubSelection(select)), false);
+      return new UnnestingSelection(
+          parser.parse(requireNonNull(select.getForEach())),
+          wrapInGroupingIfNeeded(parseSubSelection(select)),
+          false);
     } else { // this implies that forEachOrNull is non-null
       // If this is a "for each or null" selection, we use an UnnestingSelection with a flag set to
       // true. This will produce a row for each item in the collection produced by the parent path,
       // or a single null row if the parent path evaluates to an empty collection.
-      return new UnnestingSelection(parser.parse(requireNonNull(select.getForEachOrNull())),
-          wrapInGroupingIfNeeded(parseSubSelection(select)), true);
+      return new UnnestingSelection(
+          parser.parse(requireNonNull(select.getForEachOrNull())),
+          wrapInGroupingIfNeeded(parseSubSelection(select)),
+          true);
     }
   }
 
@@ -212,9 +215,8 @@ public class FhirViewExecutor {
     final Stream<ProjectionClause> columnSelection;
     if (columnsPresent) {
       // If there are columns present, convert them into a list of {@link RequestedColumn} objects.
-      final List<RequestedColumn> requestedColumns = selectClause.getColumn().stream()
-          .map(this::buildRequestedColumn)
-          .toList();
+      final List<RequestedColumn> requestedColumns =
+          selectClause.getColumn().stream().map(this::buildRequestedColumn).toList();
       columnSelection = Stream.of(new ColumnSelection(requestedColumns));
     } else {
       columnSelection = Stream.empty();
@@ -222,12 +224,10 @@ public class FhirViewExecutor {
 
     final Stream<ProjectionClause> unionAll;
     if (unionPresent) {
-      // If there are unionAll clauses present, parse them into a list of {@link SelectClause} 
+      // If there are unionAll clauses present, parse them into a list of {@link SelectClause}
       // objects.
       final List<SelectClause> select = selectClause.getUnionAll();
-      unionAll = Stream.of(new UnionSelection(select.stream()
-          .map(this::parseSelection)
-          .toList()));
+      unionAll = Stream.of(new UnionSelection(select.stream().map(this::parseSelection).toList()));
     } else {
       unionAll = Stream.empty();
     }
@@ -235,22 +235,18 @@ public class FhirViewExecutor {
     // Put the column selections, sub-selects and union selections together, flatten them and make
     // them into a list.
     return Stream.of(
-            columnSelection,
-            selectClause.getSelect().stream().map(this::parseSelection),
-            unionAll
-        )
+            columnSelection, selectClause.getSelect().stream().map(this::parseSelection), unionAll)
         .flatMap(Function.identity())
         .toList();
   }
 
   /**
    * Wraps a list of projection clauses in a {@link GroupingSelection} if needed.
-   * <p>
-   * This helper method is used to adapt multiple projection clauses into a single clause, which is
-   * required by {@link UnnestingSelection} and {@link RepeatSelection}. If the list contains a
+   *
+   * <p>This helper method is used to adapt multiple projection clauses into a single clause, which
+   * is required by {@link UnnestingSelection} and {@link RepeatSelection}. If the list contains a
    * single clause, it is returned as-is. If the list contains multiple clauses, they are wrapped in
    * a {@link GroupingSelection} to produce their Cartesian product.
-   * </p>
    *
    * @param clauses the list of projection clauses to wrap
    * @return a single projection clause
@@ -274,8 +270,8 @@ public class FhirViewExecutor {
     Optional<FHIRDefinedType> type = Optional.empty();
     if (column.getType() != null) {
       // Replace the HL7 FHIR type URI prefix with an empty string to get the FHIR type.
-      final String fhirType = column.getType()
-          .replaceFirst("^" + Pattern.quote(HL7_FHIR_TYPE_URI_PREFIX), "");
+      final String fhirType =
+          column.getType().replaceFirst("^" + Pattern.quote(HL7_FHIR_TYPE_URI_PREFIX), "");
 
       // Attempt to retrieve the FHIR type.
       try {
@@ -286,8 +282,8 @@ public class FhirViewExecutor {
     }
 
     // Create a RequestedColumn object that represents the column.
-    return new RequestedColumn(path, column.getName(), column.isCollection(), type,
-        getSqlTypeHint(column));
+    return new RequestedColumn(
+        path, column.getName(), column.isCollection(), type, getSqlTypeHint(column));
   }
 
   /**
@@ -299,8 +295,7 @@ public class FhirViewExecutor {
   @Nonnull
   private Optional<DataType> getSqlTypeHint(@Nonnull final Column column) {
     // Look for the ANSI type tag in the column's tags
-    return column.getTagValue(ColumnTag.ANSI_TYPE_TAG)
-        .map(this::convertAnsiTypeToSparkType);
+    return column.getTagValue(ColumnTag.ANSI_TYPE_TAG).map(this::convertAnsiTypeToSparkType);
   }
 
   /**
@@ -314,7 +309,6 @@ public class FhirViewExecutor {
     return AnsiSqlTypeParser.parseType(ansiType);
   }
 
-
   /**
    * Parses the where clause from a FHIR view into a {@link ProjectionClause} object.
    *
@@ -323,24 +317,26 @@ public class FhirViewExecutor {
    */
   @Nonnull
   private Optional<ProjectionClause> parseWhere(@Nonnull final FhirView fhirView) {
-    final List<RequestedColumn> whereComponents = Optional.ofNullable(fhirView.getWhere())
-        // Convert the Optional to a stream.
-        .stream()
-        // Convert the stream of lists to a stream of WhereClause objects.
-        .flatMap(List::stream)
-        // Get the FHIRPath expression from each WhereClause.
-        .map(WhereClause::getExpression)
-        // Parse the FHIRPath expression.
-        .map(parser::parse)
-        // Create a PrimitiveSelection object for each FHIRPath.
-        .map(path -> new RequestedColumn(path, randomAlias(), false, Optional.empty(),
-            Optional.empty()))
-        .toList();
+    final List<RequestedColumn> whereComponents =
+        Optional.ofNullable(fhirView.getWhere())
+            // Convert the Optional to a stream.
+            .stream()
+            // Convert the stream of lists to a stream of WhereClause objects.
+            .flatMap(List::stream)
+            // Get the FHIRPath expression from each WhereClause.
+            .map(WhereClause::getExpression)
+            // Parse the FHIRPath expression.
+            .map(parser::parse)
+            // Create a PrimitiveSelection object for each FHIRPath.
+            .map(
+                path ->
+                    new RequestedColumn(
+                        path, randomAlias(), false, Optional.empty(), Optional.empty()))
+            .toList();
 
-    // If there are no where components, return an empty Optional. 
+    // If there are no where components, return an empty Optional.
     return Lists.optionalOf(whereComponents)
         // Otherwise, return a ColumnSelection object that represents all the where components.
         .map(ColumnSelection::new);
   }
-
 }

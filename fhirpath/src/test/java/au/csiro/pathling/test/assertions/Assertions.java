@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,28 +46,30 @@ public abstract class Assertions {
   }
 
   @SuppressWarnings("unused")
-  public static void assertMatches(@Nonnull final String expectedRegex,
-      @Nonnull final String actualString) {
+  public static void assertMatches(
+      @Nonnull final String expectedRegex, @Nonnull final String actualString) {
     if (!Pattern.matches(expectedRegex, actualString)) {
-      fail(String.format("'%s' does not match expected regex: `%s`", actualString, expectedRegex),
-          actualString, expectedRegex);
+      fail(
+          String.format("'%s' does not match expected regex: `%s`", actualString, expectedRegex),
+          actualString,
+          expectedRegex);
     }
   }
 
-  public static void assertDatasetAgainstTsv(@Nonnull final SparkSession spark,
-      @Nonnull final String expectedCsvPath, @Nonnull final Dataset<Row> actualDataset,
+  public static void assertDatasetAgainstTsv(
+      @Nonnull final SparkSession spark,
+      @Nonnull final String expectedCsvPath,
+      @Nonnull final Dataset<Row> actualDataset,
       final boolean header) {
     final URL url = getResourceAsUrl(expectedCsvPath);
     final String decodedUrl = URLDecoder.decode(url.toString(), StandardCharsets.UTF_8);
-    final DataFrameReader reader = spark.read()
-        .schema(actualDataset.schema())
-        .option("delimiter", "\t");
+    final DataFrameReader reader =
+        spark.read().schema(actualDataset.schema()).option("delimiter", "\t");
     if (header) {
       reader.option("header", true);
     }
     final Dataset<Row> expectedDataset = reader.csv(decodedUrl);
-    new DatasetAssert(actualDataset)
-        .hasRowsUnordered(expectedDataset);
+    new DatasetAssert(actualDataset).hasRowsUnordered(expectedDataset);
   }
 
   public static <T> T fail(final String message, final Object expected, final Object actual) {

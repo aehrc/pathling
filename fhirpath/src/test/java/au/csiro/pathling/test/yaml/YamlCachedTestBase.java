@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,10 +30,10 @@ import java.util.function.Function;
 public abstract class YamlCachedTestBase extends YamlTestBase {
 
   @Nonnull
-  private static final Map<Class<? extends YamlCachedTestBase>,
-      Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver>> CACHE =
-      Collections.synchronizedMap(new HashMap<>());
-
+  private static final Map<
+          Class<? extends YamlCachedTestBase>,
+          Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver>>
+      CACHE = Collections.synchronizedMap(new HashMap<>());
 
   private Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> getResolverCache() {
     return CACHE.computeIfAbsent(getClass(), key -> new HashMap<>());

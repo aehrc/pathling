@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,8 +51,8 @@ import org.hl7.fhir.r4.model.UuidType;
  * @author John Grimes
  */
 @SuppressWarnings("TypeMayBeWeakened")
-public class StringCollection extends Collection implements Comparable, Numeric, StringCoercible,
-    Materializable {
+public class StringCollection extends Collection
+    implements Comparable, Numeric, StringCoercible, Materializable {
 
   /**
    * Creates a new StringCollection with the specified parameters.
@@ -63,7 +63,8 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @param definition the node definition for this collection
    * @param extensionMapColumn the extension map column for this collection
    */
-  protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  protected StringCollection(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
@@ -79,10 +80,15 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @return A new instance of {@link StringCollection}
    */
   @Nonnull
-  public static StringCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static StringCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FHIRDefinedType fhirDefinedType) {
-    return new StringCollection(columnRepresentation, Optional.of(FhirPathType.STRING),
-        Optional.of(fhirDefinedType), Optional.empty(), Optional.empty());
+    return new StringCollection(
+        columnRepresentation,
+        Optional.of(FhirPathType.STRING),
+        Optional.of(fhirDefinedType),
+        Optional.empty(),
+        Optional.empty());
   }
 
   /**
@@ -95,7 +101,6 @@ public class StringCollection extends Collection implements Comparable, Numeric,
   public static StringCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return build(columnRepresentation, FHIRDefinedType.STRING);
   }
-
 
   /**
    * Returns an empty string collection.
@@ -120,9 +125,9 @@ public class StringCollection extends Collection implements Comparable, Numeric,
 
   /**
    * Returns a new instance based upon a literal represented by a {@link StringType}.
-   * <p>
-   * This is required for the reflection-based instantiation of collections used in
-   * {@link au.csiro.pathling.projection.ProjectionContext#of}.
+   *
+   * <p>This is required for the reflection-based instantiation of collections used in {@link
+   * au.csiro.pathling.projection.ProjectionContext#of}.
    *
    * @param value The value to use
    * @return A new instance of StringCollection
@@ -152,8 +157,8 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @return A new instance of {@link StringCollection}
    */
   @Nonnull
-  public static StringCollection fromValue(@Nonnull final String value,
-      @Nonnull final FHIRDefinedType fhirDefinedType) {
+  public static StringCollection fromValue(
+      @Nonnull final String value, @Nonnull final FHIRDefinedType fhirDefinedType) {
     return StringCollection.build(DefaultRepresentation.literal(value), fhirDefinedType);
   }
 
@@ -168,8 +173,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
   public static StringCollection fromValue(@Nonnull final Base64BinaryType value) {
     // special case for Base64BinaryType, as it needs to be decoded
     return StringCollection.build(
-        DefaultRepresentation.literal(value.getValue()),
-        FHIRDefinedType.BASE64BINARY);
+        DefaultRepresentation.literal(value.getValue()), FHIRDefinedType.BASE64BINARY);
   }
 
   /**
@@ -294,9 +298,12 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    */
   @Nonnull
   public String toLiteralValue() {
-    return getColumn().asStringValue()
-        .orElseThrow(() -> new IllegalStateException(
-            "Cannot convert column to literal value: " + this.getColumn()));
+    return getColumn()
+        .asStringValue()
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "Cannot convert column to literal value: " + this.getColumn()));
   }
 
   @Nonnull
@@ -316,8 +323,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
     if (operation == MathOperation.ADDITION) {
       return numeric -> mapColumn(c -> functions.concat(c, numeric.getColumn().getValue()));
     } else {
-      throw new UnsupportedFhirPathFeatureError(
-          "Operation not supported on String: " + operation);
+      throw new UnsupportedFhirPathFeatureError("Operation not supported on String: " + operation);
     }
   }
 
@@ -332,9 +338,11 @@ public class StringCollection extends Collection implements Comparable, Numeric,
     // special case to convert base64String back to Binary
     return getFhirType()
         .filter(FHIRDefinedType.BASE64BINARY::equals)
-        .map(t -> new DefaultRepresentation(getColumnValue()).transform(functions::unbase64)
-            .getValue())
+        .map(
+            t ->
+                new DefaultRepresentation(getColumnValue())
+                    .transform(functions::unbase64)
+                    .getValue())
         .orElseGet(Materializable.super::toExternalValue);
   }
-
 }

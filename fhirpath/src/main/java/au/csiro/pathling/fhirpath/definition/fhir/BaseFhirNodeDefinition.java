@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,42 +41,47 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @author Piotr Szul
  */
-abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>> implements
-    NodeDefinition {
+abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>>
+    implements NodeDefinition {
 
-  @Nonnull
-  protected final D elementDefinition;
+  @Nonnull protected final D elementDefinition;
 
-  @Nonnull
-  final Map<String, RuntimeChildChoiceDefinition> nestedChildElementsByName;
+  @Nonnull final Map<String, RuntimeChildChoiceDefinition> nestedChildElementsByName;
 
   protected BaseFhirNodeDefinition(@Nonnull final D elementDefinition) {
     this.elementDefinition = elementDefinition;
 
     // Create a stream of all the definitions of the children of this element.
     @SuppressWarnings("unchecked")
-    final Stream<BaseRuntimeChildDefinition> allChildren = Optional.of(elementDefinition)
-        // Cast to composite element definition, and if it is one then get its children.
-        .flatMap(maybeCast(BaseRuntimeElementCompositeDefinition.class)).stream()
-        .flatMap(compElementDef -> ((java.util.List<BaseRuntimeChildDefinition>) compElementDef.getChildren()).stream());
+    final Stream<BaseRuntimeChildDefinition> allChildren =
+        Optional.of(elementDefinition)
+            // Cast to composite element definition, and if it is one then get its children.
+            .flatMap(maybeCast(BaseRuntimeElementCompositeDefinition.class))
+            .stream()
+            .flatMap(
+                compElementDef ->
+                    ((java.util.List<BaseRuntimeChildDefinition>) compElementDef.getChildren())
+                        .stream());
 
-    // Create a map of all the qualified choice children by name. This is used to resolve the 
+    // Create a map of all the qualified choice children by name. This is used to resolve the
     // correct child definition when a qualified choice element is traversed.
-    nestedChildElementsByName = allChildren
-        // Filter out non-choice children, then cast to choice definitions.
-        .filter(FhirDefinitionContext::isChildChoiceDefinition)
-        .map(RuntimeChildChoiceDefinition.class::cast)
-        .flatMap(
-            // Create a stream of pairs of child names and their respective choice definitions.
-            choiceDef -> choiceDef.getValidChildNames().stream().map(n -> Pair.of(n, choiceDef)))
-        // Collect the pairs into a map.
-        .collect(Collectors.toUnmodifiableMap(Pair::getLeft, Pair::getRight));
+    nestedChildElementsByName =
+        allChildren
+            // Filter out non-choice children, then cast to choice definitions.
+            .filter(FhirDefinitionContext::isChildChoiceDefinition)
+            .map(RuntimeChildChoiceDefinition.class::cast)
+            .flatMap(
+                // Create a stream of pairs of child names and their respective choice definitions.
+                choiceDef ->
+                    choiceDef.getValidChildNames().stream().map(n -> Pair.of(n, choiceDef)))
+            // Collect the pairs into a map.
+            .collect(Collectors.toUnmodifiableMap(Pair::getLeft, Pair::getRight));
   }
 
   @Override
   @Nonnull
   public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
-    // If the child is a qualified choice element (e.g. valueString), resolve the correct child 
+    // If the child is a qualified choice element (e.g. valueString), resolve the correct child
     // definition using the pre-built map.
     final RuntimeChildChoiceDefinition choiceChild = nestedChildElementsByName.get(name);
     if (choiceChild != null) {
@@ -88,9 +93,12 @@ abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>>
         // All traversable elements are composite.
         .flatMap(maybeCast(BaseRuntimeElementCompositeDefinition.class))
         // Get the child definition by name...
-        .flatMap(compElementDef -> Optional.ofNullable(compElementDef.getChildByName(name))
-            // Or by name with a suffix "[x]" in the case of an unqualified choice (e.g. value[x]).
-            .or(() -> Optional.ofNullable(compElementDef.getChildByName(name + "[x]"))))
+        .flatMap(
+            compElementDef ->
+                Optional.ofNullable(compElementDef.getChildByName(name))
+                    // Or by name with a suffix "[x]" in the case of an unqualified choice (e.g.
+                    // value[x]).
+                    .or(() -> Optional.ofNullable(compElementDef.getChildByName(name + "[x]"))))
         // The ChildDefinition.build method is a factory method that creates the correct
         // implementation of ChildDefinition based on the type of the child.
         .flatMap(cd -> FhirDefinitionContext.build(cd, name));
@@ -109,7 +117,9 @@ abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>>
         .map(DatatypeDef::name)
         .map(FHIRDefinedType::fromCode)
         // special case for backbone elements
-        .or(() -> Optional.ofNullable(elementClass.getAnnotation(Block.class))
-            .map(t -> FHIRDefinedType.BACKBONEELEMENT));
+        .or(
+            () ->
+                Optional.ofNullable(elementClass.getAnnotation(Block.class))
+                    .map(t -> FHIRDefinedType.BACKBONEELEMENT));
   }
 }

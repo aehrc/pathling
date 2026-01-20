@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,8 +19,10 @@ package au.csiro.pathling.views;
 
 import static au.csiro.pathling.views.FhirView.forEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import au.csiro.pathling.validation.ValidationUtils;
+import com.google.gson.Gson;
 import jakarta.validation.ConstraintViolation;
 import java.util.List;
 import java.util.Set;
@@ -35,14 +37,12 @@ class FhirViewValidationTest {
 
   @Test
   void failsWithNullColumnName() {
-    final Column columnWithNoName = Column.builder()
-        .path("Patient.id")
-        .build(); // No name set, should fail validation
+    final Column columnWithNoName =
+        Column.builder().path("Patient.id").build(); // No name set, should fail validation
 
     // Create a valid FhirView with a single select clause
-    final FhirView fhirView = FhirView.ofResource("Patient")
-        .select(FhirView.columns(columnWithNoName))
-        .build();
+    final FhirView fhirView =
+        FhirView.ofResource("Patient").select(FhirView.columns(columnWithNoName)).build();
 
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
     assertEquals(1, validationResult.size());
@@ -57,19 +57,19 @@ class FhirViewValidationTest {
     final Column compatibleColumn1 = Column.single("name", "Patient.name");
     final Column compatibleColumn2 = Column.single("name", "Patient.gender");
 
-    final FhirView fhirView = FhirView.ofResource("Patient")
-        .select(
-            SelectClause.builder().column(
-                Column.single("id", "Patient.id")
-            ).unionAll(
-                FhirView.columns(compatibleColumn1),
-                FhirView.columns(compatibleColumn2)
-            ).build()
-        ).build();
+    final FhirView fhirView =
+        FhirView.ofResource("Patient")
+            .select(
+                SelectClause.builder()
+                    .column(Column.single("id", "Patient.id"))
+                    .unionAll(
+                        FhirView.columns(compatibleColumn1), FhirView.columns(compatibleColumn2))
+                    .build())
+            .build();
 
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
-    assertEquals(0, validationResult.size(),
-        "Should pass validation with compatible union columns");
+    assertEquals(
+        0, validationResult.size(), "Should pass validation with compatible union columns");
   }
 
   @Test
@@ -77,32 +77,35 @@ class FhirViewValidationTest {
     // Create a union with incompatible columns (different collection indicators)
     final Column compatibleColumn1 = Column.single("name", "Patient.name");
     final Column compatibleColumn2 = Column.single("gender", "Patient.gender");
-    final Column incompatibleColumn = Column.builder()
-        .name("name")
-        .path("Patient.name")
-        .collection(true) // This makes it incompatible with the others
-        .build();
+    final Column incompatibleColumn =
+        Column.builder()
+            .name("name")
+            .path("Patient.name")
+            .collection(true) // This makes it incompatible with the others
+            .build();
 
-    final FhirView fhirView = FhirView.ofResource("Patient")
-        .select(
-            SelectClause.builder().column(
-                Column.single("id", "Patient.id")
-            ).unionAll(
-                FhirView.columns(compatibleColumn1, compatibleColumn2),
-                FhirView.columns(compatibleColumn1, compatibleColumn2),
-                FhirView.columns(incompatibleColumn, compatibleColumn2)
-            ).build()
-        ).build();
+    final FhirView fhirView =
+        FhirView.ofResource("Patient")
+            .select(
+                SelectClause.builder()
+                    .column(Column.single("id", "Patient.id"))
+                    .unionAll(
+                        FhirView.columns(compatibleColumn1, compatibleColumn2),
+                        FhirView.columns(compatibleColumn1, compatibleColumn2),
+                        FhirView.columns(incompatibleColumn, compatibleColumn2))
+                    .build())
+            .build();
 
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
     assertEquals(1, validationResult.size());
     final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
     assertEquals(
-        "Incompatible columns found in unionAll element at index 2: "
-            + "expected [Column(name=name, path=Patient.name, description=null, collection=false, type=null, tag=[]), "
-            + "Column(name=gender, path=Patient.gender, description=null, collection=false, type=null, tag=[])] "
-            + "but found [Column(name=name, path=Patient.name, description=null, collection=true, type=null, tag=[]), "
-            + "Column(name=gender, path=Patient.gender, description=null, collection=false, type=null, tag=[])]",
+        "Incompatible columns found in unionAll element at index 2: expected [Column(name=name,"
+            + " path=Patient.name, description=null, collection=false, type=null, tag=[]),"
+            + " Column(name=gender, path=Patient.gender, description=null, collection=false,"
+            + " type=null, tag=[])] but found [Column(name=name, path=Patient.name,"
+            + " description=null, collection=true, type=null, tag=[]), Column(name=gender,"
+            + " path=Patient.gender, description=null, collection=false, type=null, tag=[])]",
         violation.getMessage());
     assertEquals(fhirView, violation.getRootBean());
   }
@@ -113,10 +116,11 @@ class FhirViewValidationTest {
     final WhereClause invalidWhereClause = new WhereClause();
     invalidWhereClause.setDescription("This has a null expression");
 
-    final FhirView fhirView = FhirView.ofResource("Patient")
-        .select(FhirView.columns(Column.single("id", "Patient.id")))
-        .where(invalidWhereClause)
-        .build();
+    final FhirView fhirView =
+        FhirView.ofResource("Patient")
+            .select(FhirView.columns(Column.single("id", "Patient.id")))
+            .where(invalidWhereClause)
+            .build();
 
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
     assertEquals(1, validationResult.size());
@@ -127,55 +131,57 @@ class FhirViewValidationTest {
 
   @Test
   void testFailsForDuplicateColumnNames() {
-    final FhirView fhirView = FhirView.ofResource("Patient")
-        .select(
-            SelectClause.builder().column(
-                Column.single("unique1", "Patient.name"),
-                Column.single("duplicate1", "Patient.name"),
-                Column.single("duplicate1", "Patient.name"),
-                Column.single("duplicate3", "Patient.name"),
-                Column.single("duplicate4", "Patient.name"),
-                Column.single("duplicate6", "Patient.name")
-            ).select(
-                FhirView.columns(
-                    Column.single("unique3", "Patient.name"),
-                    Column.single("duplicate4", "Patient.name"),
-                    Column.single("duplicate5", "Patient.name")
-                )
-            ).build(),
-            SelectClause.builder().column(
-                Column.single("unique2", "Patient.name"),
-                Column.single("duplicate2", "Patient.name"),
-                Column.single("duplicate2", "Patient.name"),
-                Column.single("duplicate3", "Patient.name"),
-                Column.single("duplicate5", "Patient.name")
-            ).unionAll(
-                FhirView.columns(
-                    Column.single("unique4", "Patient.name"),
-                    Column.single("duplicate6", "Patient.name")
-                ),
-                FhirView.columns(
-                    Column.single("unique4", "Patient.name"),
-                    Column.single("duplicate6", "Patient.name")
-                )
-            ).build()
-        ).build();
+    final FhirView fhirView =
+        FhirView.ofResource("Patient")
+            .select(
+                SelectClause.builder()
+                    .column(
+                        Column.single("unique1", "Patient.name"),
+                        Column.single("duplicate1", "Patient.name"),
+                        Column.single("duplicate1", "Patient.name"),
+                        Column.single("duplicate3", "Patient.name"),
+                        Column.single("duplicate4", "Patient.name"),
+                        Column.single("duplicate6", "Patient.name"))
+                    .select(
+                        FhirView.columns(
+                            Column.single("unique3", "Patient.name"),
+                            Column.single("duplicate4", "Patient.name"),
+                            Column.single("duplicate5", "Patient.name")))
+                    .build(),
+                SelectClause.builder()
+                    .column(
+                        Column.single("unique2", "Patient.name"),
+                        Column.single("duplicate2", "Patient.name"),
+                        Column.single("duplicate2", "Patient.name"),
+                        Column.single("duplicate3", "Patient.name"),
+                        Column.single("duplicate5", "Patient.name"))
+                    .unionAll(
+                        FhirView.columns(
+                            Column.single("unique4", "Patient.name"),
+                            Column.single("duplicate6", "Patient.name")),
+                        FhirView.columns(
+                            Column.single("unique4", "Patient.name"),
+                            Column.single("duplicate6", "Patient.name")))
+                    .build())
+            .build();
 
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
     final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
     assertEquals(
-        "Duplicate column names found: duplicate1, duplicate2, duplicate3, duplicate4, duplicate5, duplicate6",
+        "Duplicate column names found: duplicate1, duplicate2, duplicate3, duplicate4, duplicate5,"
+            + " duplicate6",
         violation.getMessage());
     assertEquals(fhirView, violation.getRootBean());
   }
 
   @Test
   void testConstantNameValidation() {
-    final FhirView fhirView = FhirView.ofResource("Patient")
-        .select(FhirView.columns(Column.single("id", "Patient.id")))
-        // Create a constant with an invalid name (contains hyphens)
-        .constant("invalid-constant-name", new StringType("test value"))
-        .build();
+    final FhirView fhirView =
+        FhirView.ofResource("Patient")
+            .select(FhirView.columns(Column.single("id", "Patient.id")))
+            // Create a constant with an invalid name (contains hyphens)
+            .constant("invalid-constant-name", new StringType("test value"))
+            .build();
 
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
     assertEquals(1, validationResult.size());
@@ -187,20 +193,20 @@ class FhirViewValidationTest {
   @Test
   void testAtMostOneNonNullForEachFields() {
     // Create a SelectClause with both forEach and forEachOrNull set
-    final SelectClause invalidSelectClause = SelectClause.builder()
-        .forEach("Patient.name")
-        .forEachOrNull("Patient.address")
-        .column(Column.single("id", "Patient.id"))
-        .build();
+    final SelectClause invalidSelectClause =
+        SelectClause.builder()
+            .forEach("Patient.name")
+            .forEachOrNull("Patient.address")
+            .column(Column.single("id", "Patient.id"))
+            .build();
 
-    final FhirView fhirView = FhirView.ofResource("Patient")
-        .select(invalidSelectClause)
-        .build();
+    final FhirView fhirView = FhirView.ofResource("Patient").select(invalidSelectClause).build();
 
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
     assertEquals(1, validationResult.size());
     final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
-    assertEquals("Only one of the fields [forEach, forEachOrNull, repeat] can be non-null",
+    assertEquals(
+        "Only one of the fields [forEach, forEachOrNull, repeat] can be non-null",
         violation.getMessage());
     assertEquals("select[0]", violation.getPropertyPath().toString());
   }
@@ -208,38 +214,40 @@ class FhirViewValidationTest {
   @Test
   void testAtMostOneNonNullWithRepeat() {
     // Create a SelectClause with both forEach and repeat set
-    final SelectClause invalidSelectClause1 = SelectClause.builder()
-        .forEach("Patient.name")
-        .repeat("item", "answer.item")
-        .column(Column.single("id", "Patient.id"))
-        .build();
+    final SelectClause invalidSelectClause1 =
+        SelectClause.builder()
+            .forEach("Patient.name")
+            .repeat("item", "answer.item")
+            .column(Column.single("id", "Patient.id"))
+            .build();
 
-    final FhirView fhirView1 = FhirView.ofResource("Patient")
-        .select(invalidSelectClause1)
-        .build();
+    final FhirView fhirView1 = FhirView.ofResource("Patient").select(invalidSelectClause1).build();
 
-    final Set<ConstraintViolation<FhirView>> validationResult1 = ValidationUtils.validate(fhirView1);
+    final Set<ConstraintViolation<FhirView>> validationResult1 =
+        ValidationUtils.validate(fhirView1);
     assertEquals(1, validationResult1.size());
     final ConstraintViolation<FhirView> violation1 = validationResult1.iterator().next();
-    assertEquals("Only one of the fields [forEach, forEachOrNull, repeat] can be non-null",
+    assertEquals(
+        "Only one of the fields [forEach, forEachOrNull, repeat] can be non-null",
         violation1.getMessage());
     assertEquals("select[0]", violation1.getPropertyPath().toString());
 
     // Create a SelectClause with both forEachOrNull and repeat set
-    final SelectClause invalidSelectClause2 = SelectClause.builder()
-        .forEachOrNull("Patient.address")
-        .repeat("item", "answer.item")
-        .column(Column.single("id", "Patient.id"))
-        .build();
+    final SelectClause invalidSelectClause2 =
+        SelectClause.builder()
+            .forEachOrNull("Patient.address")
+            .repeat("item", "answer.item")
+            .column(Column.single("id", "Patient.id"))
+            .build();
 
-    final FhirView fhirView2 = FhirView.ofResource("Patient")
-        .select(invalidSelectClause2)
-        .build();
+    final FhirView fhirView2 = FhirView.ofResource("Patient").select(invalidSelectClause2).build();
 
-    final Set<ConstraintViolation<FhirView>> validationResult2 = ValidationUtils.validate(fhirView2);
+    final Set<ConstraintViolation<FhirView>> validationResult2 =
+        ValidationUtils.validate(fhirView2);
     assertEquals(1, validationResult2.size());
     final ConstraintViolation<FhirView> violation2 = validationResult2.iterator().next();
-    assertEquals("Only one of the fields [forEach, forEachOrNull, repeat] can be non-null",
+    assertEquals(
+        "Only one of the fields [forEach, forEachOrNull, repeat] can be non-null",
         violation2.getMessage());
     assertEquals("select[0]", violation2.getPropertyPath().toString());
   }
@@ -250,15 +258,15 @@ class FhirViewValidationTest {
     final ColumnTag tag1 = ColumnTag.of(ColumnTag.ANSI_TYPE_TAG, "VARCHAR");
     final ColumnTag tag2 = ColumnTag.of(ColumnTag.ANSI_TYPE_TAG, "INTEGER");
 
-    final Column columnWithDuplicateTags = Column.builder()
-        .name("duplicateTagColumn")
-        .path("Patient.id")
-        .tag(List.of(tag1, tag2))
-        .build();
+    final Column columnWithDuplicateTags =
+        Column.builder()
+            .name("duplicateTagColumn")
+            .path("Patient.id")
+            .tag(List.of(tag1, tag2))
+            .build();
 
-    final FhirView fhirView = FhirView.ofResource("Patient")
-        .select(FhirView.columns(columnWithDuplicateTags))
-        .build();
+    final FhirView fhirView =
+        FhirView.ofResource("Patient").select(FhirView.columns(columnWithDuplicateTags)).build();
 
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
     assertEquals(1, validationResult.size());
@@ -269,8 +277,8 @@ class FhirViewValidationTest {
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("recursiveValidationTestCases")
-  void testRecursiveValidationOfColumnConstraints(final String testName, final FhirView view,
-      final String expectedPath) {
+  void testRecursiveValidationOfColumnConstraints(
+      final String testName, final FhirView view, final String expectedPath) {
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(view);
     assertEquals(1, validationResult.size());
     final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
@@ -280,29 +288,24 @@ class FhirViewValidationTest {
 
   static Stream<Arguments> recursiveValidationTestCases() {
     // Create a column with an invalid name (doesn't match pattern)
-    final Column invalidColumn = Column.builder()
-        .name("invalid-name-with-hyphens")  // Invalid: contains hyphens
-        .path("Patient.name")
-        .build();
+    final Column invalidColumn =
+        Column.builder()
+            .name("invalid-name-with-hyphens") // Invalid: contains hyphens
+            .path("Patient.name")
+            .build();
 
     return Stream.of(
         // Test validation in SelectClause
         Arguments.of(
             "SelectClause direct validation",
-            FhirView.ofResource("Patient")
-                .select(FhirView.columns(invalidColumn))
-                .build(),
-            "select[0].column[0].name"
-        ),
+            FhirView.ofResource("Patient").select(FhirView.columns(invalidColumn)).build(),
+            "select[0].column[0].name"),
 
         // Test validation in ForEachSelect
         Arguments.of(
             "ForEachSelect direct validation",
-            FhirView.ofResource("Patient")
-                .select(forEach("Patient.name", invalidColumn))
-                .build(),
-            "select[0].column[0].name"
-        ),
+            FhirView.ofResource("Patient").select(forEach("Patient.name", invalidColumn)).build(),
+            "select[0].column[0].name"),
 
         // Test validation in ForEachOrNullSelect
         Arguments.of(
@@ -310,8 +313,7 @@ class FhirViewValidationTest {
             FhirView.ofResource("Patient")
                 .select(FhirView.forEachOrNull("Patient.name", invalidColumn))
                 .build(),
-            "select[0].column[0].name"
-        ),
+            "select[0].column[0].name"),
 
         // Test validation in RepeatSelect
         Arguments.of(
@@ -319,34 +321,65 @@ class FhirViewValidationTest {
             FhirView.ofResource("QuestionnaireResponse")
                 .select(FhirView.repeat(List.of("item", "answer.item"), invalidColumn))
                 .build(),
-            "select[0].column[0].name"
-        ),
+            "select[0].column[0].name"),
 
         // Test validation in nested structures (select within select)
         Arguments.of(
             "Nested select validation",
             FhirView.ofResource("Patient")
                 .select(
-                    SelectClause.builder().column(Column.single("valid", "Patient.id"))
+                    SelectClause.builder()
+                        .column(Column.single("valid", "Patient.id"))
                         .select(FhirView.columns(invalidColumn))
-                        .build()
-                )
+                        .build())
                 .build(),
-            "select[0].select[0].column[0].name"
-        ),
+            "select[0].select[0].column[0].name"),
 
         // Test validation in unionAll
         Arguments.of(
             "UnionAll validation",
             FhirView.ofResource("Patient")
                 .select(
-                    SelectClause.builder().column(Column.single("valid", "Patient.id"))
+                    SelectClause.builder()
+                        .column(Column.single("valid", "Patient.id"))
                         .unionAll(FhirView.columns(invalidColumn))
-                        .build()
-                )
+                        .build())
                 .build(),
-            "select[0].unionAll[0].column[0].name"
-        )
-    );
+            "select[0].unionAll[0].column[0].name"));
+  }
+
+  // -------------------------------------------------------------------------
+  // Name field parsing tests
+  // -------------------------------------------------------------------------
+
+  @Test
+  void parsesNameFromJson() {
+    // The name field should be parsed from ViewDefinition JSON.
+    final String json =
+        """
+        {
+          "name": "condition_flat",
+          "resource": "Condition",
+          "select": [{"column": [{"name": "id", "path": "id"}]}]
+        }
+        """;
+    final Gson gson = new Gson();
+    final FhirView view = gson.fromJson(json, FhirView.class);
+    assertEquals("condition_flat", view.getName());
+  }
+
+  @Test
+  void nameIsNullWhenNotProvided() {
+    // When name is not in the JSON, it should be null.
+    final String json =
+        """
+        {
+          "resource": "Condition",
+          "select": [{"column": [{"name": "id", "path": "id"}]}]
+        }
+        """;
+    final Gson gson = new Gson();
+    final FhirView view = gson.fromJson(json, FhirView.class);
+    assertNull(view.getName());
   }
 }

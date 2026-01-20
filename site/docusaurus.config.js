@@ -26,10 +26,16 @@ const darkCodeTheme = themes.dracula;
 const config = {
   title: "Pathling",
   tagline: "Analytics on FHIR&reg;",
+  markdown: {
+    mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: "warn",
+    },
+  },
+  themes: ["@docusaurus/theme-mermaid"],
   url: "https://pathling.csiro.au",
   baseUrl: "/",
   onBrokenLinks: "warn",
-  onBrokenMarkdownLinks: "warn",
   favicon: "favicon.ico",
 
   organizationName: "aehrc",
@@ -49,11 +55,12 @@ const config = {
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
           editUrl: "https://github.com/aehrc/pathling/tree/main/site/",
+          routeBasePath: "docs",
           lastVersion: "current",
           versions: {
             current: {
-              label: "9.1.0",
-              path: "/",
+              label: "9.2.0",
+              path: "",
             },
             "7.2.0": {
               label: "7.2.0",
@@ -66,8 +73,39 @@ const config = {
         theme: {
           customCss: require.resolve("./src/css/custom.css"),
         },
+        blog: {
+          showReadingTime: true,
+          blogTitle: "Blog",
+          blogDescription: "News and updates from the Pathling project",
+          routeBasePath: "blog",
+          editUrl: "https://github.com/aehrc/pathling/tree/main/site/",
+        },
         sitemap: {},
+        pages: {
+          // Exclude index files so static/index.html can be served at root.
+          exclude: ["**/index.{js,jsx,ts,tsx,md,mdx}"],
+        },
       }),
+    ],
+  ],
+
+  plugins: [
+    require.resolve("./src/plugins/staticHomePage.js"),
+    [
+      "@signalwire/docusaurus-plugin-llms-txt",
+      {
+        siteTitle: "Pathling",
+        siteDescription:
+          "Tools for FHIR analytics, built on Apache Spark. " +
+          "Includes Python, R, Scala and Java libraries, plus a FHIR server.",
+        depth: 2,
+        content: {
+          includeBlog: false,
+          includePages: true,
+          enableLlmsFullTxt: false,
+          excludeRoutes: ["/docs/7.2.0/**"],
+        },
+      },
     ],
   ],
 
@@ -110,6 +148,11 @@ const config = {
           {
             label: "Roadmap",
             to: "/roadmap",
+          },
+          {
+            to: "/blog",
+            label: "Blog",
+            position: "left",
           },
           {
             type: "docsVersionDropdown",

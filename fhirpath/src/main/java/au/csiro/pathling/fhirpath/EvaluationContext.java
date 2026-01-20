@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,14 +28,15 @@ import java.util.Optional;
 /**
  * Provides the context for evaluating FHIRPath expressions. This interface defines methods for
  * resolving resources, functions, and variables during FHIRPath evaluation.
- * <p>
- * The evaluation context is responsible for:
+ *
+ * <p>The evaluation context is responsible for:
+ *
  * <ul>
- *   <li>Resolving resource references to actual resource collections</li>
- *   <li>Resolving function names to function implementations</li>
- *   <li>Resolving variable references to their values</li>
- *   <li>Providing evaluation options that control the behavior of the evaluation</li>
- *   <li>Providing access to the current input context (the focus of the evaluation)</li>
+ *   <li>Resolving resource references to actual resource collections
+ *   <li>Resolving function names to function implementations
+ *   <li>Resolving variable references to their values
+ *   <li>Providing evaluation options that control the behavior of the evaluation
+ *   <li>Providing access to the current input context (the focus of the evaluation)
  * </ul>
  */
 public interface EvaluationContext {
@@ -45,7 +46,7 @@ public interface EvaluationContext {
    *
    * @param resourceCode The code of the resource type to resolve
    * @return An optional containing the resource collection if the resource type exists, or an empty
-   * optional if it does not
+   *     optional if it does not
    */
   @Nonnull
   Optional<ResourceCollection> resolveResource(@Nonnull final String resourceCode);
@@ -58,8 +59,7 @@ public interface EvaluationContext {
    * @throws NoSuchFunctionError If no function with the given name exists
    */
   @Nonnull
-  NamedFunction resolveFunction(@Nonnull final String name)
-      throws NoSuchFunctionError;
+  NamedFunction resolveFunction(@Nonnull final String name) throws NoSuchFunctionError;
 
   /**
    * Resolves a variable name to its value.
@@ -72,8 +72,8 @@ public interface EvaluationContext {
 
   /**
    * Returns the current input context (the focus of the evaluation).
-   * <p>
-   * By default, this is the value of the predefined variable "%context".
+   *
+   * <p>By default, this is the value of the predefined variable "%context".
    *
    * @return The current input context
    */

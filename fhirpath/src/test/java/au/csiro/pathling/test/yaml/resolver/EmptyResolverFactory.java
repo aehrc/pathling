@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,7 +34,6 @@ import lombok.Value;
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class EmptyResolverFactory implements Function<RuntimeContext, ResourceResolver> {
 
-
   // singleton
   private static final EmptyResolverFactory INSTANCE = new EmptyResolverFactory();
 
@@ -49,7 +48,6 @@ public class EmptyResolverFactory implements Function<RuntimeContext, ResourceRe
     return DefaultResourceResolver.of(
         subjectResourceTag,
         DefaultDefinitionContext.of(DefaultResourceDefinition.of(subjectResourceTag)),
-        runtimeContext.getSpark().emptyDataFrame()
-    );
+        runtimeContext.getSpark().emptyDataFrame());
   }
 }

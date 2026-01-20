@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,9 +29,7 @@ import org.apache.spark.sql.Column;
  * @param requestedColumn The column that was requested to be included in the projection.
  */
 public record ProjectedColumn(
-    @Nonnull Collection collection,
-    @Nonnull RequestedColumn requestedColumn
-) {
+    @Nonnull Collection collection, @Nonnull RequestedColumn requestedColumn) {
 
   /**
    * Gets the column value from the collection and aliases it with the requested name. If a SQL type
@@ -42,22 +40,46 @@ public record ProjectedColumn(
   @Nonnull
   public Column getValue() {
     // If a type was asserted for the column, check that the collection is of that type.
-    requestedColumn.type().ifPresent(requestedType ->
-        collection.getFhirType().ifPresent(actualType -> {
-          if (!requestedType.equals(actualType)) {
-            throw new IllegalArgumentException(
-                "Collection " + collection + " has type " + actualType
-                    + ", expected " + requestedType);
-          }
-        })
-    );
-    final Column rawResult = Materializable.getExternalValue(requestedColumn.collection()
-                                                             ? collection.asPlural()
-                                                             : collection.asSingular());
-    return requestedColumn.sqlType()
+    requestedColumn
+        .type()
+        .ifPresent(
+            requestedType ->
+                collection
+                    .getFhirType()
+                    .ifPresent(
+                        actualType -> {
+                          if (!requestedType.equals(actualType)) {
+                            throw new IllegalArgumentException(
+                                "Collection "
+                                    + collection
+                                    + " has type "
+                                    + actualType
+                                    + ", expected "
+                                    + requestedType);
+                          }
+                        }));
+    final Column rawResult;
+    try {
+      rawResult =
+          Materializable.getExternalValue(
+              requestedColumn.collection() ? collection.asPlural() : collection.asSingular());
+    } catch (final UnsupportedOperationException e) {
+      // Re-throw with column context to help users identify which column caused the error.
+      final String originalMessage = e.getMessage();
+      final String contextualMessage =
+          "Column '"
+              + requestedColumn.name()
+              + "' with path '"
+              + requestedColumn.path().toExpression()
+              + "': "
+              + originalMessage.substring(0, 1).toLowerCase()
+              + originalMessage.substring(1);
+      throw new UnsupportedOperationException(contextualMessage, e);
+    }
+    return requestedColumn
+        .sqlType()
         .map(rawResult::try_cast)
         .orElse(rawResult)
         .alias(requestedColumn.name());
-
   }
 }

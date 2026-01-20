@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,12 +26,13 @@ import lombok.Value;
 
 /**
  * Represents a conversion factor between two units of measure, expressed as a fraction.
- * <p>
- * A conversion factor is stored as a fraction (numerator/denominator) rather than a decimal to
+ *
+ * <p>A conversion factor is stored as a fraction (numerator/denominator) rather than a decimal to
  * preserve precision during conversions. This is particularly important for conversions involving
  * irrational or repeating decimals.
- * <p>
- * Example usage:
+ *
+ * <p>Example usage:
+ *
  * <pre>
  *   // Convert 1000 mg to kg (factor = 1/1000)
  *   ConversionFactor factor = ConversionFactor.ofFraction(BigDecimal.ONE, new BigDecimal(1000));
@@ -42,25 +43,18 @@ import lombok.Value;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 class ConversionFactor {
 
-  /**
-   * The numerator of the conversion factor fraction.
-   */
-  @Nonnull
-  BigDecimal numerator;
+  /** The numerator of the conversion factor fraction. */
+  @Nonnull BigDecimal numerator;
 
-  /**
-   * The denominator of the conversion factor fraction.
-   */
-  @Nonnull
-  BigDecimal denominator;
-
+  /** The denominator of the conversion factor fraction. */
+  @Nonnull BigDecimal denominator;
 
   /**
    * Applies this conversion factor to a numeric value with the default precision.
-   * <p>
-   * The conversion is performed as: {@code value * numerator / denominator}
-   * <p>
-   * The result is calculated with {@value FhirPathUnit#DEFAULT_PRECISION} decimal places of
+   *
+   * <p>The conversion is performed as: {@code value * numerator / denominator}
+   *
+   * <p>The result is calculated with {@value FhirPathUnit#DEFAULT_PRECISION} decimal places of
    * precision using {@link RoundingMode#HALF_UP}, and trailing zeros are stripped.
    *
    * @param value the value to convert
@@ -73,10 +67,10 @@ class ConversionFactor {
 
   /**
    * Applies this conversion factor to a numeric value with the specified precision.
-   * <p>
-   * The conversion is performed as: {@code value * numerator / denominator}
-   * <p>
-   * The result is calculated with the specified number of decimal places of precision using
+   *
+   * <p>The conversion is performed as: {@code value * numerator / denominator}
+   *
+   * <p>The result is calculated with the specified number of decimal places of precision using
    * {@link RoundingMode#HALF_UP}, and trailing zeros are stripped.
    *
    * @param value the value to convert
@@ -87,18 +81,18 @@ class ConversionFactor {
   @Nonnull
   public BigDecimal apply(@Nonnull final BigDecimal value, final int precision) {
     if (precision < 1 || precision > 100) {
-      throw new IllegalArgumentException(
-          "precision must be between 1 and 100, got: " + precision);
+      throw new IllegalArgumentException("precision must be between 1 and 100, got: " + precision);
     }
-    return value.multiply(numerator)
+    return value
+        .multiply(numerator)
         .divide(denominator, precision, RoundingMode.HALF_UP)
         .stripTrailingZeros();
   }
 
   /**
    * Creates a conversion factor from a single numeric value.
-   * <p>
-   * This is a convenience method for creating a conversion factor with denominator 1.
+   *
+   * <p>This is a convenience method for creating a conversion factor with denominator 1.
    *
    * @param factor the conversion factor value
    * @return a ConversionFactor representing the given value
@@ -117,8 +111,8 @@ class ConversionFactor {
    * @throws IllegalArgumentException if denominator is zero
    */
   @Nonnull
-  static ConversionFactor ofFraction(@Nonnull final BigDecimal numerator,
-      @Nonnull final BigDecimal denominator) {
+  static ConversionFactor ofFraction(
+      @Nonnull final BigDecimal numerator, @Nonnull final BigDecimal denominator) {
     if (BigDecimal.ZERO.equals(denominator)) {
       throw new IllegalArgumentException("denominator cannot be zero");
     }
@@ -127,8 +121,8 @@ class ConversionFactor {
 
   /**
    * Creates a conversion factor representing the inverse (1/value) of the given value.
-   * <p>
-   * This is useful for creating reciprocal conversions (e.g., if kg→mg is 1000, then mg→kg is
+   *
+   * <p>This is useful for creating reciprocal conversions (e.g., if kg→mg is 1000, then mg→kg is
    * 1/1000).
    *
    * @param value the value to invert

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,9 +30,7 @@ import org.apache.spark.sql.SparkSession;
  */
 public class PathlingUdfConfigurer implements SparkConfigurer {
 
-  private final List<SparkConfigurer> children = List.of(
-      new PathlingUdfRegistrar()
-  );
+  private final List<SparkConfigurer> children = List.of(new PathlingUdfRegistrar());
 
   @Override
   public void configure(@Nonnull final SparkSession spark) {
@@ -44,7 +42,7 @@ public class PathlingUdfConfigurer implements SparkConfigurer {
    *
    * @param spark the Spark session to register the UDFs with
    */
-  public static void registerUDFs(@Nonnull final SparkSession spark) {
+  public static void registerUdfs(@Nonnull final SparkSession spark) {
     new PathlingUdfConfigurer().configure(spark);
   }
 }

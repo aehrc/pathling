@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,19 +44,21 @@ class FhirPathTimeTest {
         Arguments.of("14:30", "14:30:00", TemporalPrecision.MINUTE, "Hour and minute"),
         Arguments.of("14:30:14", "14:30:14", TemporalPrecision.SECOND, "Up to second"),
         Arguments.of("14:30:14.559", "14:30:14.559", TemporalPrecision.FRACS, "With milliseconds"),
-        Arguments.of("00:00:00.000000001", "00:00:00.000000001", TemporalPrecision.FRACS,
-            "With nanoseconds")
-    );
+        Arguments.of(
+            "00:00:00.000000001",
+            "00:00:00.000000001",
+            TemporalPrecision.FRACS,
+            "With nanoseconds"));
   }
 
   @ParameterizedTest(name = "{0} -> {1} ({3})")
   @MethodSource("parseTestProvider")
-  void testParse(final String input, final String expectedTime,
-      final TemporalPrecision expectedPrecision, final String ignoredDescription) {
-    assertEquals(
-        fromTimeString(expectedTime, expectedPrecision),
-        FhirPathTime.parse(input)
-    );
+  void testParse(
+      final String input,
+      final String expectedTime,
+      final TemporalPrecision expectedPrecision,
+      final String ignoredDescription) {
+    assertEquals(fromTimeString(expectedTime, expectedPrecision), FhirPathTime.parse(input));
     assertTrue(FhirPathTime.isTimeValue(input));
   }
 
@@ -66,14 +68,13 @@ class FhirPathTimeTest {
         Arguments.of("14:30", "1970-01-01T14:30:00Z", "MINUTE precision"),
         Arguments.of("14:30:45", "1970-01-01T14:30:45Z", "SECOND precision"),
         Arguments.of("14:30:45.123456", "1970-01-01T14:30:45.123456Z", "FRACS precision"),
-        Arguments.of("00:00:00.000000001", "1970-01-01T00:00:00.000000001Z", "FRACS precision")
-    );
+        Arguments.of("00:00:00.000000001", "1970-01-01T00:00:00.000000001Z", "FRACS precision"));
   }
 
   @ParameterizedTest(name = "{0} -> {1} ({2})")
   @MethodSource("lowerBoundaryProvider")
-  void testGetLowerBoundary(final String input, final String expectedLowerBound,
-      final String ignoredDescription) {
+  void testGetLowerBoundary(
+      final String input, final String expectedLowerBound, final String ignoredDescription) {
     final FhirPathTime time = FhirPathTime.parse(input);
     assertEquals(Instant.parse(expectedLowerBound), time.getLowerBoundary());
   }
@@ -83,14 +84,13 @@ class FhirPathTimeTest {
         Arguments.of("12", "1970-01-01T12:59:59.999999999Z", "HOUR precision"),
         Arguments.of("14:30", "1970-01-01T14:30:59.999999999Z", "MINUTE precision"),
         Arguments.of("14:30:45", "1970-01-01T14:30:45Z", "SECOND precision"),
-        Arguments.of("14:30:45.123", "1970-01-01T14:30:45.123Z", "FRACS precision (unchanged)")
-    );
+        Arguments.of("14:30:45.123", "1970-01-01T14:30:45.123Z", "FRACS precision (unchanged)"));
   }
 
   @ParameterizedTest(name = "{0} -> {1} ({2})")
   @MethodSource("upperBoundaryProvider")
-  void testGetUpperBoundary(final String input, final String expectedUpperBound,
-      final String ignoredDescription) {
+  void testGetUpperBoundary(
+      final String input, final String expectedUpperBound, final String ignoredDescription) {
     final FhirPathTime time = FhirPathTime.parse(input);
     assertEquals(Instant.parse(expectedUpperBound), time.getUpperBoundary());
   }
@@ -103,17 +103,17 @@ class FhirPathTimeTest {
   }
 
   @ParameterizedTest(name = "Parse error with invalid format: {0}")
-  @ValueSource(strings = {
-      "not-a-time",
-      "12:60",      // Invalid minute
-      "24:00",      // Invalid hour
-      "12:30:60",   // Invalid second
-      "12:30:45.",  // Dot with no fraction
-      "12:30:45.abc" // Non-numeric fraction
-  })
+  @ValueSource(
+      strings = {
+        "not-a-time",
+        "12:60", // Invalid minute
+        "24:00", // Invalid hour
+        "12:30:60", // Invalid second
+        "12:30:45.", // Dot with no fraction
+        "12:30:45.abc" // Non-numeric fraction
+      })
   void testParseErrorsInvalidFormat(final String input) {
     assertThrows(DateTimeParseException.class, () -> FhirPathTime.parse(input));
     assertFalse(FhirPathTime.isTimeValue(input));
   }
 }
-

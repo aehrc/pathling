@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,15 +31,17 @@ import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
-/**
- * Represents an empty collection.
- */
-public class EmptyCollection extends Collection implements Comparable, Numeric, StringCoercible,
-    Materializable {
+/** Represents an empty collection. */
+public class EmptyCollection extends Collection
+    implements Comparable, Numeric, StringCoercible, Materializable {
 
-  private static final EmptyCollection INSTANCE = new EmptyCollection(
-      DefaultRepresentation.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-      Optional.empty());
+  private static final EmptyCollection INSTANCE =
+      new EmptyCollection(
+          DefaultRepresentation.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty());
 
   /**
    * Creates a new EmptyCollection.
@@ -50,14 +52,18 @@ public class EmptyCollection extends Collection implements Comparable, Numeric, 
    * @param definition the node definition
    * @param extensionMapColumn the extension map column
    */
-  protected EmptyCollection(@Nonnull final ColumnRepresentation column,
-      @Nonnull final Optional<FhirPathType> type, @Nonnull final Optional<FHIRDefinedType> fhirType,
+  protected EmptyCollection(
+      @Nonnull final ColumnRepresentation column,
+      @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(column, type, fhirType, definition, extensionMapColumn);
   }
 
   /**
+   * Gets the singleton instance.
+   *
    * @return A singleton instance of this class
    */
   public static EmptyCollection getInstance() {
@@ -83,8 +89,8 @@ public class EmptyCollection extends Collection implements Comparable, Numeric, 
 
   /**
    * {@inheritDoc}
-   * <p>
-   * This implementation returns an empty BooleanCollection
+   *
+   * <p>This implementation returns an empty BooleanCollection
    */
   @Override
   @Nonnull
@@ -94,15 +100,14 @@ public class EmptyCollection extends Collection implements Comparable, Numeric, 
 
   /**
    * {@inheritDoc}
-   * <p>
-   * This implementation returns an empty BooleanCollection
+   *
+   * <p>This implementation returns an empty BooleanCollection
    */
   @Override
   @Nonnull
   public BooleanCollection asBooleanSingleton() {
     return BooleanCollection.empty();
   }
-
 
   @Override
   public @Nonnull Function<Numeric, Collection> getMathOperation(

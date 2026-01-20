@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,17 +59,16 @@ public class TerminologyServiceHelpers {
   public static final Parameters RESULT_TRUE = new Parameters().setParameter("result", true);
   public static final Parameters RESULT_FALSE = new Parameters().setParameter("result", false);
 
-  public static final Parameters OUTCOME_EQUIVALENT = new Parameters().setParameter("outcome",
-      EQUIVALENT.toCode());
-  public static final Parameters OUTCOME_SUBSUMES = new Parameters().setParameter("outcome",
-      SUBSUMES.toCode());
-  public static final Parameters OUTCOME_SUBSUMED_BY = new Parameters().setParameter("outcome",
-      SUBSUMEDBY.toCode());
+  public static final Parameters OUTCOME_EQUIVALENT =
+      new Parameters().setParameter("outcome", EQUIVALENT.toCode());
+  public static final Parameters OUTCOME_SUBSUMES =
+      new Parameters().setParameter("outcome", SUBSUMES.toCode());
+  public static final Parameters OUTCOME_SUBSUMED_BY =
+      new Parameters().setParameter("outcome", SUBSUMEDBY.toCode());
 
   public static class ValidateExpectations {
 
-    @Nonnull
-    private final TerminologyService mockService;
+    @Nonnull private final TerminologyService mockService;
 
     ValidateExpectations(@Nonnull final TerminologyService mockService) {
       this.mockService = mockService;
@@ -78,8 +77,8 @@ public class TerminologyServiceHelpers {
     }
 
     @Nonnull
-    public ValidateExpectations withValueSet(@Nonnull final String valueSetUrl,
-        @Nonnull final Coding... codings) {
+    public ValidateExpectations withValueSet(
+        @Nonnull final String valueSetUrl, @Nonnull final Coding... codings) {
       for (final Coding coding : codings) {
         when(mockService.validateCode(eq(valueSetUrl), codingEq(coding))).thenReturn(true);
       }
@@ -89,27 +88,27 @@ public class TerminologyServiceHelpers {
 
   public static class TranslateExpectations {
 
-    @Nonnull
-    private final TerminologyService mockService;
+    @Nonnull private final TerminologyService mockService;
 
     TranslateExpectations(@Nonnull final TerminologyService mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
-      when(mockService.translate(any(), any(), anyBoolean(), isNull())).thenReturn(
-          Collections.emptyList());
+      when(mockService.translate(any(), any(), anyBoolean(), isNull()))
+          .thenReturn(Collections.emptyList());
     }
 
-    public TranslateExpectations withTranslations(@Nonnull final Coding coding,
+    public TranslateExpectations withTranslations(
+        @Nonnull final Coding coding,
         @Nonnull final String conceptMapUrl,
         @Nonnull final Translation... translations) {
       return withTranslations(coding, conceptMapUrl, false, translations);
     }
 
-
     public TranslateExpectations withTranslations(
         @Nonnull final Coding coding,
         @Nonnull final String conceptMapUrl,
-        final boolean reverse, @Nonnull final Translation... translations) {
+        final boolean reverse,
+        @Nonnull final Translation... translations) {
 
       return withTranslations(coding, conceptMapUrl, reverse, null, translations);
     }
@@ -121,17 +120,15 @@ public class TerminologyServiceHelpers {
         @Nullable final String target,
         @Nonnull final Translation... translations) {
 
-      when(
-          mockService.translate(codingEq(coding), eq(conceptMapUrl), eq(reverse),
-              eq(target))).thenReturn(List.of(translations));
+      when(mockService.translate(codingEq(coding), eq(conceptMapUrl), eq(reverse), eq(target)))
+          .thenReturn(List.of(translations));
       return this;
     }
   }
 
   public static class SubsumesExpectations {
 
-    @Nonnull
-    private final TerminologyService mockService;
+    @Nonnull private final TerminologyService mockService;
 
     private static class DefaultAnswer implements Answer<ConceptSubsumptionOutcome> {
 
@@ -154,19 +151,18 @@ public class TerminologyServiceHelpers {
       doAnswer(new DefaultAnswer()).when(mockService).subsumes(any(), any());
     }
 
-    public SubsumesExpectations withSubsumes(@Nonnull final Coding codingA,
-        @Nonnull final Coding codingB) {
+    public SubsumesExpectations withSubsumes(
+        @Nonnull final Coding codingA, @Nonnull final Coding codingB) {
       when(mockService.subsumes(codingEq(codingA), codingEq(codingB))).thenReturn(SUBSUMES);
-      when(mockService.subsumes(codingEq(codingB), codingEq(codingA))).thenReturn(
-          SUBSUMEDBY);
+      when(mockService.subsumes(codingEq(codingB), codingEq(codingA))).thenReturn(SUBSUMEDBY);
       return this;
     }
   }
 
-
   public static class LookupExpectations {
 
-    private final Map<ImmutableCoding, List<PropertyOrDesignation>> designationsOfCoding = new HashMap<>();
+    private final Map<ImmutableCoding, List<PropertyOrDesignation>> designationsOfCoding =
+        new HashMap<>();
 
     private final TerminologyService mockService;
 
@@ -177,11 +173,10 @@ public class TerminologyServiceHelpers {
     }
 
     @Nonnull
-    public LookupExpectations withDisplay(@Nonnull final Coding coding,
-        @Nonnull final String displayName) {
+    public LookupExpectations withDisplay(
+        @Nonnull final Coding coding, @Nonnull final String displayName) {
       when(mockService.lookup(codingEq(coding), eq("display"), eq(null)))
-          .thenReturn(List.of(
-              Property.of("display", new StringType(displayName))));
+          .thenReturn(List.of(Property.of("display", new StringType(displayName))));
       return this;
     }
 
@@ -191,51 +186,58 @@ public class TerminologyServiceHelpers {
     }
 
     @Nonnull
-    public LookupExpectations withDisplay(@Nonnull final Coding coding,
-        @Nonnull final String displayName, @Nullable final String acceptLanguage) {
+    public LookupExpectations withDisplay(
+        @Nonnull final Coding coding,
+        @Nonnull final String displayName,
+        @Nullable final String acceptLanguage) {
       when(mockService.lookup(codingEq(coding), eq("display"), eq(acceptLanguage)))
-          .thenReturn(List.of(
-              Property.of("display", new StringType(displayName))));
+          .thenReturn(List.of(Property.of("display", new StringType(displayName))));
       return this;
     }
 
-
     @Nonnull
-    public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
-        @Nonnull final String propertyCode, @Nullable final String displayLanguage,
+    public final <T extends Type> LookupExpectations withProperty(
+        @Nonnull final Coding coding,
+        @Nonnull final String propertyCode,
+        @Nullable final String displayLanguage,
         final List<T> values) {
-      when(mockService.lookup(deepEq(coding), eq(propertyCode), eq(displayLanguage))).thenReturn(
-          values.stream()
-              .map(v -> (PropertyOrDesignation) Property.of(propertyCode, v))
-              .toList()
-      );
+      when(mockService.lookup(deepEq(coding), eq(propertyCode), eq(displayLanguage)))
+          .thenReturn(
+              values.stream()
+                  .map(v -> (PropertyOrDesignation) Property.of(propertyCode, v))
+                  .toList());
       return this;
     }
 
     @SafeVarargs
     @Nonnull
-    public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
-        @Nonnull final String propertyCode, @Nullable final String displayLanguage,
+    public final <T extends Type> LookupExpectations withProperty(
+        @Nonnull final Coding coding,
+        @Nonnull final String propertyCode,
+        @Nullable final String displayLanguage,
         final T... value) {
       return withProperty(coding, propertyCode, displayLanguage, List.of(value));
     }
 
-    public LookupExpectations withDesignation(@Nonnull final Coding coding,
+    public LookupExpectations withDesignation(
+        @Nonnull final Coding coding,
         @Nullable final Coding use,
-        @Nullable final String language, @Nonnull final String... designations) {
+        @Nullable final String language,
+        @Nonnull final String... designations) {
 
-      final List<PropertyOrDesignation> currentDesignations = designationsOfCoding.computeIfAbsent(
-          ImmutableCoding.of(coding),
-          c -> new ArrayList<>());
-      Stream.of(designations).forEach(
-          designation -> currentDesignations.add(Designation.of(use, language, designation)));
+      final List<PropertyOrDesignation> currentDesignations =
+          designationsOfCoding.computeIfAbsent(ImmutableCoding.of(coding), c -> new ArrayList<>());
+      Stream.of(designations)
+          .forEach(
+              designation -> currentDesignations.add(Designation.of(use, language, designation)));
       return this;
     }
 
     public void done() {
-      designationsOfCoding.forEach((coding, designations) -> when(
-          mockService.lookup(deepEq(coding.toCoding()), eq("designation")))
-          .thenReturn(designations));
+      designationsOfCoding.forEach(
+          (coding, designations) ->
+              when(mockService.lookup(deepEq(coding.toCoding()), eq("designation")))
+                  .thenReturn(designations));
     }
   }
 
@@ -244,22 +246,18 @@ public class TerminologyServiceHelpers {
     return new ValidateExpectations(mockService);
   }
 
-
   @Nonnull
   public static TranslateExpectations setupTranslate(
       @Nonnull final TerminologyService mockService) {
     return new TranslateExpectations(mockService);
   }
 
-
   @Nonnull
-  public static SubsumesExpectations setupSubsumes(
-      @Nonnull final TerminologyService mockService) {
+  public static SubsumesExpectations setupSubsumes(@Nonnull final TerminologyService mockService) {
     return new SubsumesExpectations(mockService);
   }
 
   public static LookupExpectations setupLookup(@Nonnull final TerminologyService mockService) {
     return new LookupExpectations(mockService);
   }
-
 }

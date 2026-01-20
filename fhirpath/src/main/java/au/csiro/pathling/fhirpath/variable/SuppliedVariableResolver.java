@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,13 +28,12 @@ import java.util.Optional;
  * @param variables a map of variable names to collections of values
  * @author John Grimes
  */
-public record SuppliedVariableResolver(@Nonnull Map<String, Collection> variables) implements
-    EnvironmentVariableResolver {
+public record SuppliedVariableResolver(@Nonnull Map<String, Collection> variables)
+    implements EnvironmentVariableResolver {
 
   @Nonnull
   @Override
   public Optional<Collection> get(@Nonnull final String name) {
     return Optional.ofNullable(variables.get(name));
   }
-
 }

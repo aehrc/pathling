@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,16 @@
 
 package au.csiro.pathling.library.io.sink;
 
-import static au.csiro.pathling.library.io.FileSystemPersistence.departitionResult;
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.FileSystemPersistence;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 
@@ -34,31 +37,24 @@ import org.apache.spark.sql.Dataset;
  */
 final class NdjsonSink implements DataSink {
 
-  /**
-   * The Pathling context to use.
-   */
-  @Nonnull
-  private final PathlingContext context;
+  /** The Pathling context to use. */
+  @Nonnull private final PathlingContext context;
+
+  /** The path to write the NDJSON files to. */
+  @Nonnull private final String path;
 
   /**
-   * The path to write the NDJSON files to.
+   * The (fallback) save mode to use when writing data when there is no entry in the perResource
+   * map.
    */
-  @Nonnull
-  private final String path;
+  @Nonnull private final SaveMode saveMode;
+
+  /** A function that maps resource type to file name. */
+  @Nonnull private final UnaryOperator<String> fileNameMapper;
 
   /**
-   * The save mode to use when writing data.
-   */
-  @Nonnull
-  private final SaveMode saveMode;
-
-  /**
-   * A function that maps resource type to file name.
-   */
-  @Nonnull
-  private final UnaryOperator<String> fileNameMapper;
-
-  /**
+   * Constructs an NdjsonSink with a custom file name mapper.
+   *
    * @param context the {@link PathlingContext} to use
    * @param path the path to write the NDJSON files to
    * @param saveMode the {@link SaveMode} to use
@@ -68,8 +64,7 @@ final class NdjsonSink implements DataSink {
       @Nonnull final PathlingContext context,
       @Nonnull final String path,
       @Nonnull final SaveMode saveMode,
-      @Nonnull final UnaryOperator<String> fileNameMapper
-  ) {
+      @Nonnull final UnaryOperator<String> fileNameMapper) {
     this.context = context;
     this.path = path;
     this.saveMode = saveMode;
@@ -77,51 +72,61 @@ final class NdjsonSink implements DataSink {
   }
 
   /**
+   * Constructs an NdjsonSink with default file naming.
+   *
    * @param context the {@link PathlingContext} to use
    * @param path the path to write the NDJSON files to
    * @param saveMode the {@link SaveMode} to use
    */
-  NdjsonSink(@Nonnull final PathlingContext context, @Nonnull final String path,
+  NdjsonSink(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
       @Nonnull final SaveMode saveMode) {
     // By default, name the files using the resource type alone.
     this(context, path, saveMode, UnaryOperator.identity());
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  @Nonnull
+  public WriteDetails write(@Nonnull final DataSource source) {
+    final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       // Convert the dataset of structured FHIR data to a dataset of JSON strings.
-      final Dataset<String> jsonStrings = context.decode(source.read(resourceType),
-          resourceType, PathlingContext.FHIR_JSON);
+      final Dataset<String> jsonStrings =
+          context.decode(source.read(resourceType), resourceType, PathlingContext.FHIR_JSON);
 
-      // Write the JSON strings to the file system, using a single partition.
-      final String fileName = String.join(".", fileNameMapper.apply(resourceType),
-          "ndjson");
+      // Write the JSON strings to the file system. Each partition will have their id added to the
+      // name later
+      final String fileName = String.join(".", fileNameMapper.apply(resourceType), "ndjson");
       final String resultUrl = safelyJoinPaths(path, fileName);
-      final String resultUrlPartitioned = resultUrl + ".partitioned";
 
       switch (saveMode) {
         case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
-            writeJsonStrings(jsonStrings, resultUrlPartitioned, saveMode);
-        case MERGE -> throw new UnsupportedOperationException(
-            "Merge operation is not supported for NDJSON");
+            writeJsonStrings(jsonStrings, resultUrl, saveMode);
+        case MERGE ->
+            throw new UnsupportedOperationException("Merge operation is not supported for NDJSON");
+        default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
-
-      // Remove the partitioned directory and replace it with a single file.
-      departitionResult(context.getSpark(), resultUrlPartitioned, resultUrl, "txt");
+      // Remove the partitioned directory and replace it with the renamed partitioned files
+      // <resource_type>.<partId>.ndjson, i.e. Patient.00000.ndjson
+      final Collection<String> renamed =
+          FileSystemPersistence.renamePartitionedFiles(
+              context.getSpark(), resultUrl, resultUrl, "txt");
+      renamed.forEach(
+          renamedFilename -> fileInfos.add(new FileInformation(resourceType, renamedFilename)));
     }
+    return new WriteDetails(fileInfos);
   }
 
-  void writeJsonStrings(@Nonnull final Dataset<String> jsonStrings,
+  void writeJsonStrings(
+      @Nonnull final Dataset<String> jsonStrings,
       @Nonnull final String resultUrlPartitioned,
       @Nonnull final SaveMode saveMode) {
-    final var writer = jsonStrings.coalesce(1)
-        .write();
-    
+    // final var writer = jsonStrings.coalesce(1).write()
+    final var writer = jsonStrings.write();
     // Apply save mode if it has a Spark equivalent
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
-    
+
     writer.text(resultUrlPartitioned);
   }
-
 }

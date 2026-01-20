@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,25 +32,28 @@ import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
 class FlexiDecimalTest {
-  
+
   @Test
   void testNormalize() {
     // Normalize big decimal with negative scale
     assertEquals(new BigDecimal("123000"), FlexiDecimal.normalize(new BigDecimal("1.23E+5")));
-    assertEquals(new BigDecimal("99900000000000000000000000000000000000"),
+    assertEquals(
+        new BigDecimal("99900000000000000000000000000000000000"),
         FlexiDecimal.normalize(new BigDecimal("9.99E+37")));
     // To many significant digits --> null
     assertNull(FlexiDecimal.normalize(new BigDecimal("1.0E+38")));
 
     // normalize decimals to reduced precision
-    final BigDecimal normalized = FlexiDecimal.normalize(
-        new BigDecimal("0.010000000000000000000000000000000000000000000"));
+    final BigDecimal normalized =
+        FlexiDecimal.normalize(new BigDecimal("0.010000000000000000000000000000000000000000000"));
     assertNotNull(normalized);
     assertEquals(new BigDecimal("0.010000000000000000000000000000000000000"), normalized);
     assertEquals(FlexiDecimal.MAX_PRECISION, normalized.precision());
 
-    assertEquals(new BigDecimal("0.015555555555555555555555555555555555556"),
-        FlexiDecimal.normalize(new BigDecimal(
-            "0.01555555555555555555555555555555555555555555555555555555555555555555555555")));
+    assertEquals(
+        new BigDecimal("0.015555555555555555555555555555555555556"),
+        FlexiDecimal.normalize(
+            new BigDecimal(
+                "0.01555555555555555555555555555555555555555555555555555555555555555555555555")));
   }
 }

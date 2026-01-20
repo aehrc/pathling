@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.literal;
 
 import static java.util.Map.entry;
 
+import au.csiro.pathling.utilities.Strings;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import org.apache.commons.text.translate.AggregateTranslator;
@@ -33,8 +34,7 @@ import org.apache.commons.text.translate.UnicodeUnescaper;
  */
 public abstract class StringLiteral {
 
-  private StringLiteral() {
-  }
+  private StringLiteral() {}
 
   /**
    * On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
@@ -47,14 +47,8 @@ public abstract class StringLiteral {
     return value.replace("'", "\\'");
   }
 
-
   private static final Map<CharSequence, CharSequence> FHIR_CTRL_UNESCAPE_MAP =
-      Map.ofEntries(
-          entry("\\n", "\n"),
-          entry("\\t", "\t"),
-          entry("\\f", "\f"),
-          entry("\\r", "\r")
-      );
+      Map.ofEntries(entry("\\n", "\n"), entry("\\t", "\t"), entry("\\f", "\f"), entry("\\r", "\r"));
 
   private static final Map<CharSequence, CharSequence> FHIR_CHAR_UNESCAPE_MAP =
       Map.ofEntries(
@@ -62,14 +56,13 @@ public abstract class StringLiteral {
           entry("\\'", "'"),
           entry("\\\"", "\""),
           entry("\\/", "/"),
-          entry("\\\\", "\\")
-      );
+          entry("\\\\", "\\"));
 
-  private static final CharSequenceTranslator UNESCAPE_FHIR = new AggregateTranslator(
-      new UnicodeUnescaper(),
-      new LookupTranslator(FHIR_CTRL_UNESCAPE_MAP),
-      new LookupTranslator(FHIR_CHAR_UNESCAPE_MAP)
-  );
+  private static final CharSequenceTranslator UNESCAPE_FHIR =
+      new AggregateTranslator(
+          new UnicodeUnescaper(),
+          new LookupTranslator(FHIR_CTRL_UNESCAPE_MAP),
+          new LookupTranslator(FHIR_CHAR_UNESCAPE_MAP));
 
   /**
    * This method implements the rules for dealing with strings in the FHIRPath specification.
@@ -83,4 +76,15 @@ public abstract class StringLiteral {
     return UNESCAPE_FHIR.translate(value);
   }
 
+  /**
+   * Unquotes a FHIRPath quoted identifier, handling both the tick quotes and any escaped
+   * characters.
+   *
+   * @param quotedIdentifier The identifier to unquote
+   * @return the unquoted identifier
+   */
+  @Nonnull
+  public static String unquoteFhirIdentifier(@Nonnull final String quotedIdentifier) {
+    return unescapeFhirPathString(Strings.unTickQuote(quotedIdentifier));
+  }
 }

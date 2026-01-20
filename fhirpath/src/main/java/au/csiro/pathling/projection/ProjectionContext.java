@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,7 +33,6 @@ import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Dependencies and logic relating to the traversal of FHIRPath expressions.
@@ -43,9 +42,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author Piotr Szul
  */
 public record ProjectionContext(
-    @Nonnull FhirPathEvaluator executor,
-    @Nonnull Collection inputContext
-) {
+    @Nonnull FhirPathEvaluator executor, @Nonnull Collection inputContext) {
 
   /**
    * Gets the initial dataset for this projection context.
@@ -71,12 +68,11 @@ public record ProjectionContext(
   /**
    * Creates a new ProjectionContext with the current input context collection with the value set to
    * null.
-   * <p>
-   * This is useful for creating stub contexts when determining result schemas without evaluating
-   * actual data, or when no input data is available.
-   * </p>
-   * This is different from {@link #withEmptyInput()} in that it preserves the type of the input
-   * context collection, but replaces the underlying data with an empty representation.
+   *
+   * <p>This is useful for creating stub contexts when determining result schemas without evaluating
+   * actual data, or when no input data is available. This is different from {@link
+   * #withEmptyInput()} in that it preserves the type of the input context collection, but replaces
+   * the underlying data with an empty representation.
    *
    * @return a new ProjectionContext with an empty input context
    */
@@ -87,11 +83,10 @@ public record ProjectionContext(
 
   /**
    * Creates a new ProjectionContext with the input context replaced by a new column.
-   * <p>
-   * This is a convenience method that wraps the column in a new input context while preserving
+   *
+   * <p>This is a convenience method that wraps the column in a new input context while preserving
    * other context properties. It is particularly useful when transforming input data during
    * projection evaluation.
-   * </p>
    *
    * @param inputColumn the new input column to use
    * @return a new ProjectionContext with the specified input column
@@ -103,10 +98,9 @@ public record ProjectionContext(
 
   /**
    * Creates a new ProjectionContext with an empty input context.
-   * <p>
-   * This is useful for creating stub contexts when determining result schemas without evaluating
+   *
+   * <p>This is useful for creating stub contexts when determining result schemas without evaluating
    * actual data, or when no input data is available.
-   * </p>
    *
    * @return a new ProjectionContext with an empty input context
    */
@@ -114,7 +108,6 @@ public record ProjectionContext(
   public ProjectionContext withEmptyInput() {
     return withInputContext(EmptyCollection.getInstance());
   }
-
 
   /**
    * Evaluates the given FHIRPath path and returns the result as a column.
@@ -129,26 +122,22 @@ public record ProjectionContext(
 
   /**
    * Creates a unary operator that evaluates a FHIRPath expression on a given column.
-   * <p>
-   * This method returns a function that takes a column as input, evaluates the specified FHIRPath
-   * expression using that column as the input context, and returns the resulting column value. This
-   * is particularly useful for creating reusable transformations that can be applied to multiple
-   * columns or used in higher-order operations like tree traversal.
-   * </p>
-   * <p>
-   * Example use case: Creating a traversal operation for recursive tree structures where the same
-   * FHIRPath expression needs to be evaluated on each node.
-   * </p>
+   *
+   * <p>This method returns a function that takes a column as input, evaluates the specified
+   * FHIRPath expression using that column as the input context, and returns the resulting column
+   * value. This is particularly useful for creating reusable transformations that can be applied to
+   * multiple columns or used in higher-order operations like tree traversal.
+   *
+   * <p>Example use case: Creating a traversal operation for recursive tree structures where the
+   * same FHIRPath expression needs to be evaluated on each node.
    *
    * @param path the FHIRPath expression to evaluate
    * @return a unary operator that takes a column and returns the result of evaluating the
-   * expression on that column
+   *     expression on that column
    */
   @Nonnull
   public UnaryOperator<Column> asColumnOperator(@Nonnull final FhirPath path) {
-    return c -> withInputColumn(c)
-        .evalExpression(path)
-        .getColumnValue();
+    return c -> withInputColumn(c).evalExpression(path).getColumnValue();
   }
 
   /**
@@ -156,22 +145,28 @@ public record ProjectionContext(
    * constants.
    *
    * @param context the execution context
-   * @param subjectResource the subject resource type
+   * @param subjectResourceCode the subject resource type code (e.g., "Patient", "ViewDefinition")
    * @param constants the list of constant declarations
    * @return a new ProjectionContext
    */
   @Nonnull
-  public static ProjectionContext of(@Nonnull final ExecutionContext context,
-      @Nonnull final ResourceType subjectResource,
+  public static ProjectionContext of(
+      @Nonnull final ExecutionContext context,
+      @Nonnull final String subjectResourceCode,
       @Nonnull final List<ConstantDeclaration> constants) {
     // Create a map of variables from the provided constants.
-    final Map<String, Collection> variables = constants.stream()
-        .collect(toMap(ConstantDeclaration::getName,
-            ProjectionContext::getCollectionForConstantValue));
+    final Map<String, Collection> variables =
+        constants.stream()
+            .collect(
+                toMap(
+                    ConstantDeclaration::getName,
+                    ProjectionContext::getCollectionForConstantValue));
 
     // Create a new FhirPathExecutor.
-    final FhirPathEvaluator executor = context.fhirpathEvaluatorFactory()
-        .create(subjectResource, StaticFunctionRegistry.getInstance(), variables);
+    final FhirPathEvaluator executor =
+        context
+            .fhirpathEvaluatorFactory()
+            .create(subjectResourceCode, StaticFunctionRegistry.getInstance(), variables);
 
     // Return a new ProjectionContext with the executor and the default input context.
     return new ProjectionContext(executor, executor.createDefaultInputContext());

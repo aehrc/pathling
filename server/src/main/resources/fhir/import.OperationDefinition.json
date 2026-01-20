@@ -1,0 +1,70 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "import",
+  "title": "Pathling Import Operation",
+  "status": "active",
+  "kind": "operation",
+  "experimental": false,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation allows bulk data to be imported into the server from NDJSON or Parquet format files, and is aligned with the SMART Bulk Data Import proposal.",
+  "affectsState": true,
+  "code": "import",
+  "system": true,
+  "type": false,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "inputSource",
+      "use": "in",
+      "min": 1,
+      "max": "1",
+      "documentation": "URI for tracking the imported data throughout its lifecycle.",
+      "type": "string"
+    },
+    {
+      "name": "input",
+      "use": "in",
+      "min": 1,
+      "max": "*",
+      "documentation": "An array of input files to import. Each input specifies a resource type and the location of a file containing resources of that type.",
+      "part": [
+        {
+          "name": "type",
+          "use": "in",
+          "min": 1,
+          "max": "1",
+          "documentation": "The FHIR resource type contained within this input file.",
+          "type": "code",
+          "binding": {
+            "strength": "required",
+            "valueSet": "http://hl7.org/fhir/ValueSet/resource-types|4.0.1"
+          }
+        },
+        {
+          "name": "url",
+          "use": "in",
+          "min": 1,
+          "max": "1",
+          "documentation": "The URL of the input file containing resources of the specified type.",
+          "type": "url"
+        }
+      ]
+    },
+    {
+      "name": "inputFormat",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "The MIME type of the input files. Supported values are 'application/fhir+ndjson' (default) and 'application/vnd.apache.parquet'.",
+      "type": "code"
+    },
+    {
+      "name": "saveMode",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Controls how data is merged with existing resources. Possible values are 'error' (fail if resources exist), 'overwrite' (delete and replace all existing resources; default), 'append' (add new resources without modifying existing), 'ignore' (skip if resources exist), and 'merge' (match by ID and update or add as appropriate). This parameter is an extension to the SMART Bulk Data Import proposal that is specific to the Pathling implementation.",
+      "type": "code"
+    }
+  ]
+}

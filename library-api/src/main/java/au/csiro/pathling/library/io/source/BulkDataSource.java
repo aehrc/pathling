@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,15 +23,16 @@ import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Set;
-import java.util.function.UnaryOperator;
+import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A data source that reads data from a FHIR Bulk Data endpoint. This source uses the FHIR Bulk Data
- * Export API to download resources as NDJSON files, which are then read using
- * {@link NdjsonSource}.
+ * Export API to download resources as NDJSON files, which are then read using {@link NdjsonSource}.
  *
  * @see <a href="https://github.com/aehrc/fhir-bulk-java">FHIR Bulk Client for Java</a>
  * @see <a href="https://hl7.org/fhir/uv/bulkdata/">FHIR Bulk Data Access Implementation Guide</a>
@@ -39,19 +40,18 @@ import org.apache.spark.sql.Row;
 @Slf4j
 public class BulkDataSource extends AbstractSource {
 
-  @Nonnull
-  private final NdjsonSource ndjsonSource;
+  @Nonnull private final NdjsonSource ndjsonSource;
 
   /**
    * Creates a new bulk data source using the provided client configuration.
    *
    * @param context the Pathling context
    * @param client the configured {@link BulkExportClient} that specifies the endpoint and export
-   * parameters
+   *     parameters
    * @throws RuntimeException if the export fails or the source cannot be initialized
    */
-  BulkDataSource(@Nonnull final PathlingContext context,
-      @Nonnull final BulkExportClient client) {
+  public BulkDataSource(
+      @Nonnull final PathlingContext context, @Nonnull final BulkExportClient client) {
     super(context);
 
     // Execute the export to the specified output directory
@@ -62,8 +62,8 @@ public class BulkDataSource extends AbstractSource {
     this.ndjsonSource = new NdjsonSource(context, client.getOutputDir());
   }
 
-  private BulkDataSource(@Nonnull final PathlingContext context,
-      @Nonnull final NdjsonSource ndjsonSource) {
+  private BulkDataSource(
+      @Nonnull final PathlingContext context, @Nonnull final NdjsonSource ndjsonSource) {
     super(context);
     this.ndjsonSource = ndjsonSource;
   }
@@ -80,15 +80,21 @@ public class BulkDataSource extends AbstractSource {
     return ndjsonSource.getResourceTypes();
   }
 
-  @Nonnull
   @Override
-  public QueryableDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+  public QueryableDataSource map(
+      @NotNull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
     return new BulkDataSource(context, (NdjsonSource) ndjsonSource.map(operator));
+  }
+
+  @Override
+  public @NotNull QueryableDataSource filterByResourceType(
+      @NotNull final Predicate<String> resourceTypePredicate) {
+    return new BulkDataSource(
+        context, (NdjsonSource) ndjsonSource.filterByResourceType(resourceTypePredicate));
   }
 
   @Override
   public QueryableDataSource cache() {
     return map(Dataset::cache);
   }
-
 }

@@ -12,10 +12,6 @@ on:
         required: true
         default: ".dev0"
 
-env:
-  # The add-exports and add-opens flags are required for Java 21
-  MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
-
 jobs:
   deploy-python-pre-release:
     name: Python pre-release
@@ -29,33 +25,14 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
         with:
-          java-version: 21
-          distribution: "zulu"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-
-      - name: Cache Python packages
-        uses: actions/cache@v4
-        with:
-          path: /home/runner/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements/dev.txt', 'lib/python/requirements/package.txt') }}
+          java: "true"
+          python: "true"
 
       - name: Run deploy goal (pre-release)
         env:
-          PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
-          PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
           TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
         run: |

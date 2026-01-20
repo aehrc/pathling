@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,8 +29,7 @@ public class TestHelpers {
 
   @Nonnull
   public static SparkSession spark() {
-    return sparkBuilder()
-        .getOrCreate();
+    return sparkBuilder().getOrCreate();
   }
 
   @Nonnull
@@ -42,8 +41,7 @@ public class TestHelpers {
         .config("spark.driver.bindAddress", "localhost")
         .config("spark.driver.host", "localhost")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config("spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog");
+        .config(
+            "spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog");
   }
-
 }

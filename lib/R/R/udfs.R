@@ -16,21 +16,21 @@
 #
 # Placeholders for SQL functions and UDFs.
 #
-designation <- function(...) { }
-display <- function(...) { }
-struct <- function(...) { }
-string <- function(...) { }
-member_of <- function(...) { }
-translate_coding <- function(...) { }
-subsumes <- function(...) { }
-property_Coding <- function(...) { }
-property_boolean <- function(...) { }
-property_dateTime <- function(...) { }
-property_decimal <- function(...) { }
-property_integer <- function(...) { }
-property_string <- function(...) { }
+designation <- function(...) {}
+display <- function(...) {}
+struct <- function(...) {}
+string <- function(...) {}
+member_of <- function(...) {}
+translate_coding <- function(...) {}
+subsumes <- function(...) {}
+property_Coding <- function(...) {}
+property_boolean <- function(...) {}
+property_dateTime <- function(...) {}
+property_decimal <- function(...) {}
+property_integer <- function(...) {}
+property_string <- function(...) {}
 
-#' Convert a vector to a SQL array literal 
+#' Convert a vector to a SQL array literal
 #'
 #' Converts a vector to an expression with the corresponding SQL array literal.
 #'
@@ -46,7 +46,7 @@ to_array <- function(value) {
 }
 
 #' Coding property data types
-#' 
+#'
 #' The following data types are supported:
 #' \itemize{
 #'   \item \code{STRING} - A string value.
@@ -62,13 +62,13 @@ to_array <- function(value) {
 #'
 #' @export
 PropertyType <- list(
-    STRING = "string",
-    INTEGER = "integer",
-    BOOLEAN = "boolean",
-    DECIMAL = "decimal",
-    DATETIME = "dateTime",
-    CODE = "code",
-    CODING = "Coding"
+  STRING = "string",
+  INTEGER = "integer",
+  BOOLEAN = "boolean",
+  DECIMAL = "decimal",
+  DATETIME = "dateTime",
+  CODE = "code",
+  CODING = "Coding"
 )
 
 #' Concept map equivalence types
@@ -91,16 +91,16 @@ PropertyType <- list(
 #'
 #' @export
 Equivalence <- list(
-    RELATEDTO = "relatedto",
-    EQUIVALENT = "equivalent",
-    EQUAL = "equal",
-    WIDER = "wider",
-    SUBSUMES = "subsumes",
-    NARROWER = "narrower",
-    SPECIALIZES = "specializes",
-    INEXACT = "inexact",
-    UNMATCHED = "unmatched",
-    DISJOINT = "disjoint"
+  RELATEDTO = "relatedto",
+  EQUIVALENT = "equivalent",
+  EQUAL = "equal",
+  WIDER = "wider",
+  SUBSUMES = "subsumes",
+  NARROWER = "narrower",
+  SPECIALIZES = "specializes",
+  INEXACT = "inexact",
+  UNMATCHED = "unmatched",
+  DISJOINT = "disjoint"
 )
 
 #' Test membership within a value set
@@ -109,30 +109,21 @@ Equivalence <- list(
 #' Boolean value, indicating whether any of the input Codings is a member of the specified FHIR
 #' ValueSet.
 #'
-#' @param codings A Column containing a struct representation of a Coding or an array of such 
+#' @param codings A Column containing a struct representation of a Coding or an array of such
 #' structs.
 #' @param value_set_uri An identifier for a FHIR ValueSet.
 #'
 #' @return A Column containing the result of the operation.
-#' 
+#'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#value-set-membership}{Pathling documentation - Value set membership}
-#' 
+#'
 #' @family terminology functions
 #'
 #' @export
-#' 
-#' @examples \dontrun{
-#' # Test the Condition codings for membership in the SNOMED CT 'Lateralisable body structure 
-#' reference set' (723264001).
-#' pc %>% pathling_example_resource('Condition') %>%
-#'      sparklyr::mutate(
-#'          id, 
-#'          is_member = !!tx_member_of(code[['coding']], 
-#'                  'http://snomed.info/sct?fhir_vs=refset/723264001'), 
-#'          .keep='none')
-#' }
+#'
+#' @examples
 tx_member_of <- function(codings, value_set_uri) {
-  rlang::expr(member_of({ { codings } }, { { value_set_uri } }))
+  rlang::expr(member_of({{ codings }}, {{ value_set_uri }}))
 }
 
 #' Translate between value sets
@@ -151,25 +142,31 @@ tx_member_of <- function(codings, value_set_uri) {
 #'   target specified, the server should return all known translations.
 #'
 #' @return A Column containing the result of the operation (an array of Coding structs).
-#' 
+#'
 #' @seealso \code{\link{Equivalence}}
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#concept-translation}{Pathling documentation - Concept translation}
 #'
 #' @family terminology functions
-#' 
+#'
 #' @export
 #' @examples \dontrun{
 #' # Translates the codings of the Condition `code` using a SNOMED implicit concept map.
-#' pc %>% pathling_example_resource('Condition') %>%
-#'     sparklyr::mutate(
-#'          id,
-#'          translation = !!tx_translate(code[['coding']],
-#'                  'http://snomed.info/sct?fhir_cm=900000000000527005'),
-#'          .keep='none')
+#' pc %>%
+#'   pathling_example_resource("Condition") %>%
+#'   sparklyr::mutate(
+#'     id,
+#'     translation = !!tx_translate(
+#'       code[["coding"]],
+#'       "http://snomed.info/sct?fhir_cm=900000000000527005"
+#'     ),
+#'     .keep = "none"
+#'   )
 #' }
 tx_translate <- function(codings, concept_map_uri, reverse = FALSE, equivalences = NULL, target = NULL) {
-  rlang::expr(translate_coding({ { codings } }, { { concept_map_uri } }, { { reverse } },
-                               !!to_array(equivalences), { { target } }))
+  rlang::expr(translate_coding(
+    {{ codings }}, {{ concept_map_uri }}, {{ reverse }},
+    !!to_array(equivalences), {{ target }}
+  ))
 }
 
 #' Test subsumption between codings
@@ -181,23 +178,27 @@ tx_translate <- function(codings, concept_map_uri, reverse = FALSE, equivalences
 #' @param right_codings A Column containing a struct representation of a Coding or an array of Codings.
 #'
 #' @return A Column containing the result of the operation (boolean).
-#' 
+#'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#subsumption-testing}{Pathling documentation - Subsumption testing}
-#' 
+#'
 #' @family terminology functions
 #'
 #' @export
 #' @examples \dontrun{
 #' # Test the codings of the Condition `code` for subsumption of a SNOMED CT code.
-#' pc %>% pathling_example_resource('Condition') %>%
-#'     sparklyr::mutate(
-#'          id,
-#'          subsumes = !!tx_subsumes(code[['coding']],
-#'              !!tx_to_snomed_coding('444814009')),
-#'          .keep='none')
+#' pc %>%
+#'   pathling_example_resource("Condition") %>%
+#'   sparklyr::mutate(
+#'     id,
+#'     subsumes = !!tx_subsumes(
+#'       code[["coding"]],
+#'       !!tx_to_snomed_coding("444814009")
+#'     ),
+#'     .keep = "none"
+#'   )
 #' }
 tx_subsumes <- function(left_codings, right_codings) {
-  rlang::expr(subsumes({ { left_codings } }, { { right_codings } }, FALSE))
+  rlang::expr(subsumes({{ left_codings }}, {{ right_codings }}, FALSE))
 }
 
 #' Test subsumption between codings
@@ -209,27 +210,31 @@ tx_subsumes <- function(left_codings, right_codings) {
 #' @param right_codings A Column containing a struct representation of a Coding or an array of Codings.
 #'
 #' @return A Column containing the result of the operation (boolean).
-#' 
+#'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#subsumption-testing}{Pathling documentation - Subsumption testing}
 #'
 #' @family terminology functions
-#' 
+#'
 #' @export
-#' 
+#'
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
-#' 
+#'
 #' # Test the codings of the Condition `code` for subsumption by a SNOMED CT code.
-#' pc %>% pathling_example_resource('Condition') %>%
-#'     sparklyr::mutate(
-#'          id,
-#'          is_subsumed_by = !!tx_subsumed_by(code[['coding']],
-#'              !!tx_to_snomed_coding('444814009')),
-#'          .keep='none')
-#'  
+#' pc %>%
+#'   pathling_example_resource("Condition") %>%
+#'   sparklyr::mutate(
+#'     id,
+#'     is_subsumed_by = !!tx_subsumed_by(
+#'       code[["coding"]],
+#'       !!tx_to_snomed_coding("444814009")
+#'     ),
+#'     .keep = "none"
+#'   )
+#'
 #' pathling_disconnect(pc)
 tx_subsumed_by <- function(left_codings, right_codings) {
-  rlang::expr(subsumes({ { left_codings } }, { { right_codings } }, TRUE))
+  rlang::expr(subsumes({{ left_codings }}, {{ right_codings }}, TRUE))
 }
 
 #' Get the display text for codings
@@ -242,23 +247,25 @@ tx_subsumed_by <- function(left_codings, right_codings) {
 #'        Overrides the parameter `accept_language` in \code{\link{pathling_connect}}.
 #'
 #' @return A Column containing the result of the operation (String).
-#' 
+#'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#multi-language-support}{Pathling documentation - Multi-language support}
 #'
 #' @family terminology functions
-#' 
+#'
 #' @export
-#' 
+#'
 #' @examples \dontrun{
 #' # Get the display name of the first coding of the Condition resource, with the default language.
-#' pc %>% pathling_example_resource('Condition') %>%
-#'      sparklyr::mutate(
-#'          id, 
-#'          display = !!tx_display(code[['coding']][[0]]), 
-#'          .keep='none')
+#' pc %>%
+#'   pathling_example_resource("Condition") %>%
+#'   sparklyr::mutate(
+#'     id,
+#'     display = !!tx_display(code[["coding"]][[0]]),
+#'     .keep = "none"
+#'   )
 #' }
 tx_display <- function(coding, accept_language = NULL) {
-  rlang::expr(display({ { coding } }, { { accept_language } }))
+  rlang::expr(display({{ coding }}, {{ accept_language }}))
 }
 
 #' Get properties for codings
@@ -275,39 +282,41 @@ tx_display <- function(coding, accept_language = NULL) {
 #'        Overrides the parameter `accept_language` in `PathlingContext.create`.
 #'
 #' @return The Column containing the result of the operation (array of property values).
-#' 
+#'
 #' @seealso \code{\link{PropertyType}}
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#retrieving-properties}{Pathling documentation - Retrieving properties}
-#' 
+#'
 #' @family terminology functions
 #'
 #' @export
-#' 
+#'
 #' @examples \dontrun{
 #' # Get the (first) value of the `inactive` property of the first coding of the Condition resource.
-#' pc %>% pathling_example_resource('Condition') %>%
-#'      sparklyr::mutate(id, 
-#'          is_inavtive = (!!tx_property_of(code[['coding']][[0]], 
-#'                                  "inactive",PropertyType$BOOLEAN))[[0]], 
-#'          .keep='none'
-#'      )
+#' pc %>%
+#'   pathling_example_resource("Condition") %>%
+#'   sparklyr::mutate(id,
+#'     is_inavtive = (!!tx_property_of(
+#'       code[["coding"]][[0]],
+#'       "inactive", PropertyType$BOOLEAN
+#'     ))[[0]],
+#'     .keep = "none"
+#'   )
 #' }
 tx_property_of <- function(coding, property_code, property_type = "string", accept_language = NULL) {
-
   if (property_type == PropertyType$CODE) {
-    rlang::expr(property_code({ { coding } }, { { property_code } }, { { accept_language } }))
+    rlang::expr(property_code({{ coding }}, {{ property_code }}, {{ accept_language }}))
   } else if (property_type == PropertyType$CODING) {
-    rlang::expr(property_Coding({ { coding } }, { { property_code } }, { { accept_language } }))
+    rlang::expr(property_Coding({{ coding }}, {{ property_code }}, {{ accept_language }}))
   } else if (property_type == PropertyType$STRING) {
-    rlang::expr(property_string({ { coding } }, { { property_code } }, { { accept_language } }))
+    rlang::expr(property_string({{ coding }}, {{ property_code }}, {{ accept_language }}))
   } else if (property_type == PropertyType$INTEGER) {
-    rlang::expr(property_integer({ { coding } }, { { property_code } }, { { accept_language } }))
+    rlang::expr(property_integer({{ coding }}, {{ property_code }}, {{ accept_language }}))
   } else if (property_type == PropertyType$BOOLEAN) {
-    rlang::expr(property_boolean({ { coding } }, { { property_code } }, { { accept_language } }))
+    rlang::expr(property_boolean({{ coding }}, {{ property_code }}, {{ accept_language }}))
   } else if (property_type == PropertyType$DATETIME) {
-    rlang::expr(property_dateTime({ { coding } }, { { property_code } }, { { accept_language } }))
+    rlang::expr(property_dateTime({{ coding }}, {{ property_code }}, {{ accept_language }}))
   } else if (property_type == PropertyType$DECIMAL) {
-    rlang::expr(property_decimal({ { coding } }, { { property_code } }, { { accept_language } }))
+    rlang::expr(property_decimal({{ coding }}, {{ property_code }}, {{ accept_language }}))
   } else {
     stop("Unsupported property type: ", property_type)
   }
@@ -315,7 +324,7 @@ tx_property_of <- function(coding, property_code, property_type = "string", acce
 
 #' Get designations for codings
 #'
-#' Takes a Coding column as its input. Returns a Column that contains the values of designations 
+#' Takes a Coding column as its input. Returns a Column that contains the values of designations
 #' (strings) for this coding that match the specified use and language. If the language is
 #' not provided, then all designations with the specified type are returned regardless of
 #' their language.
@@ -325,23 +334,27 @@ tx_property_of <- function(coding, property_code, property_type = "string", acce
 #' @param language The language of the designations.
 #'
 #' @return The Column containing the result of the operation (array of strings with designation values).
-#' 
+#'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#retrieving-designations}{Pathling documentation - Retrieving designations}
 #'
 #' @family Terminology functions
-#' 
+#'
 #' @export
-#' 
+#'
 #' @examples \dontrun{
-#' # Get the (first) SNOMED CT "Fully specified name" ('900000000000003001')  
+#' # Get the (first) SNOMED CT "Fully specified name" ('900000000000003001')
 #' # for the first coding of the Condition resource, in the 'en' language.
-#' pc %>% pathling_example_resource('Condition') %>%
-#'      sparklyr::mutate(
-#'             id, 
-#'             designation = (!!tx_designation(code[['coding']][[0]], 
-#'                      !!tx_to_snomed_coding('900000000000003001'), language = 'en'))[[0]], 
-#'             .keep='none')
+#' pc %>%
+#'   pathling_example_resource("Condition") %>%
+#'   sparklyr::mutate(
+#'     id,
+#'     designation = (!!tx_designation(code[["coding"]][[0]],
+#'       !!tx_to_snomed_coding("900000000000003001"),
+#'       language = "en"
+#'     ))[[0]],
+#'     .keep = "none"
+#'   )
 #' }
 tx_designation <- function(coding, use = NULL, language = NULL) {
-  rlang::expr(designation({ { coding } }, { { use } }, { { language } }))
+  rlang::expr(designation({{ coding }}, {{ use }}, {{ language }}))
 }

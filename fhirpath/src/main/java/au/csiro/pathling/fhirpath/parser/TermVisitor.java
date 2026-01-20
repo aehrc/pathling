@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,8 +41,7 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitInvocationTerm(
-      @Nullable final InvocationTermContext ctx) {
+  public FhirPath visitInvocationTerm(@Nullable final InvocationTermContext ctx) {
     return new InvocationVisitor(true).visit(requireNonNull(ctx).invocation());
   }
 
@@ -54,12 +53,13 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitExternalConstantTerm(
-      @Nullable final ExternalConstantTermContext ctx) {
-    final ExternalConstantContext constantContext = requireNonNull(
-        requireNonNull(ctx).externalConstant());
-    String term = Optional.ofNullable((ParseTree) constantContext.identifier())
-        .orElse(constantContext.STRING()).getText();
+  public FhirPath visitExternalConstantTerm(@Nullable final ExternalConstantTermContext ctx) {
+    final ExternalConstantContext constantContext =
+        requireNonNull(requireNonNull(ctx).externalConstant());
+    String term =
+        Optional.ofNullable((ParseTree) constantContext.identifier())
+            .orElse(constantContext.STRING())
+            .getText();
     requireNonNull(term);
 
     // Trim any backticks or single quotes from the start and end of the term.
@@ -71,8 +71,7 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitParenthesizedTerm(
-      @Nullable final ParenthesizedTermContext ctx) {
+  public FhirPath visitParenthesizedTerm(@Nullable final ParenthesizedTermContext ctx) {
     return new Visitor().visit(requireNonNull(ctx).expression());
   }
 }

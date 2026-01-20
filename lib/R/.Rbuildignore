@@ -14,3 +14,4 @@
 ^spark-warehouse
 ^src
 ^cran-comments\.md$
+.lintr$

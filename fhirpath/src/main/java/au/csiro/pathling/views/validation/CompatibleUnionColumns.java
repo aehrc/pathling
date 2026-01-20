@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,20 +27,22 @@ import java.lang.annotation.Target;
 
 /**
  * Validation constraint that ensures all elements in unionAll lists have compatible columns.
- * <p>
- * This constraint is used to validate that when multiple {@code SelectClause} objects are combined
- * in a union operation, they all have compatible column structures. Compatibility requires:
+ *
+ * <p>This constraint is used to validate that when multiple {@code SelectClause} objects are
+ * combined in a union operation, they all have compatible column structures. Compatibility
+ * requires:
+ *
  * <ul>
- *   <li>The same number of columns in each element</li>
- *   <li>Compatible data types for corresponding columns</li>
- *   <li>Matching collection indicators (whether a column represents a collection or a single value)</li>
+ *   <li>The same number of columns in each element
+ *   <li>Compatible data types for corresponding columns
+ *   <li>Matching collection indicators (whether a column represents a collection or a single value)
  * </ul>
- * <p>
- * When applied to a field of type {@code List<SelectClause>}, this constraint ensures that
- * all elements can be safely combined in a SQL UNION ALL operation without type conflicts.
- * <p>
- * The validation is performed by {@link CompatibleUnionColumnsValidator}, which compares
- * the first element's columns with all other elements in the list.
+ *
+ * <p>When applied to a field of type {@code List<SelectClause>}, this constraint ensures that all
+ * elements can be safely combined in a SQL UNION ALL operation without type conflicts.
+ *
+ * <p>The validation is performed by {@link CompatibleUnionColumnsValidator}, which compares the
+ * first element's columns with all other elements in the list.
  *
  * @see CompatibleUnionColumnsValidator
  */
@@ -52,9 +54,9 @@ public @interface CompatibleUnionColumns {
 
   /**
    * Error message template to use when the validation fails.
-   * <p>
-   * The default message is overridden by the validator with a more specific message that includes
-   * details about which element is incompatible and why.
+   *
+   * <p>The default message is overridden by the validator with a more specific message that
+   * includes details about which element is incompatible and why.
    *
    * @return the error message template
    */

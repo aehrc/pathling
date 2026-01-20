@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,8 +41,8 @@ import org.hl7.fhir.r4.model.TimeType;
  *
  * @author John Grimes
  */
-public class TimeCollection extends Collection implements StringCoercible, Materializable,
-    Comparable {
+public class TimeCollection extends Collection
+    implements StringCoercible, Materializable, Comparable {
 
   /**
    * Creates a new TimeCollection with the specified parameters.
@@ -53,7 +53,8 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
    * @param definition the node definition for this collection
    * @param extensionMapColumn the extension map column for this collection
    */
-  protected TimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  protected TimeCollection(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
@@ -69,10 +70,15 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
    * @return A new instance of {@link TimeCollection}
    */
   @Nonnull
-  public static TimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static TimeCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new TimeCollection(columnRepresentation, Optional.of(FhirPathType.TIME),
-        Optional.of(FHIRDefinedType.TIME), definition, Optional.empty());
+    return new TimeCollection(
+        columnRepresentation,
+        Optional.of(FhirPathType.TIME),
+        Optional.of(FHIRDefinedType.TIME),
+        definition,
+        Optional.empty());
   }
 
   /**
@@ -85,7 +91,6 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
   public static TimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return build(columnRepresentation, Optional.empty());
   }
-
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
@@ -132,5 +137,4 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
   public boolean isComparableTo(@Nonnull final Collection target) {
     return target instanceof TimeCollection;
   }
-
 }

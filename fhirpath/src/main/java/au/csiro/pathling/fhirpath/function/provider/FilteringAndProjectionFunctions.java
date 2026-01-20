@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,36 +31,35 @@ import jakarta.annotation.Nonnull;
  * @author Piotr Szul
  * @author John Grimes
  * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#filtering-and-projection">FHIRPath
- * Specification - Filtering and projection</a>
+ *     Specification - Filtering and projection</a>
  */
 public class FilteringAndProjectionFunctions {
 
-  private FilteringAndProjectionFunctions() {
-  }
+  private FilteringAndProjectionFunctions() {}
 
   /**
    * Returns a collection containing only those elements in the input collection for which the
    * stated criteria expression evaluates to {@code true}. Elements for which the expression
    * evaluates to {@code false} or empty are not included in the result.
-   * <p>
-   * If the input collection is empty, the result is empty.
-   * <p>
-   * If the result of evaluating the condition is other than a single boolean value, the evaluation
-   * will end and signal an error to the calling environment, consistent with singleton evaluation
-   * of collections behavior.
+   *
+   * <p>If the input collection is empty, the result is empty.
+   *
+   * <p>If the result of evaluating the condition is other than a single boolean value, the
+   * evaluation will end and signal an error to the calling environment, consistent with singleton
+   * evaluation of collections behavior.
    *
    * @param input The input collection
    * @param expression The criteria expression
    * @return A collection containing only those elements for which the criteria expression evaluates
-   * to {@code true}
+   *     to {@code true}
    * @see <a
-   * href="https://build.fhir.org/ig/HL7/FHIRPath/#wherecriteria--expression--collection">where</a>
+   *     href="https://build.fhir.org/ig/HL7/FHIRPath/#wherecriteria--expression--collection">where</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
-  public static Collection where(@Nonnull final Collection input,
-      @Nonnull final CollectionTransform expression) {
+  public static Collection where(
+      @Nonnull final Collection input, @Nonnull final CollectionTransform expression) {
     return input.filter(expression.requireBooleanSingleton().toColumnTransformation(input));
   }
 
@@ -79,9 +78,8 @@ public class FilteringAndProjectionFunctions {
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
-  public static Collection ofType(@Nonnull final Collection input,
-      @Nonnull final TypeSpecifier typeSpecifier) {
+  public static Collection ofType(
+      @Nonnull final Collection input, @Nonnull final TypeSpecifier typeSpecifier) {
     return input.filterByType(typeSpecifier);
   }
-
 }

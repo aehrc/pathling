@@ -30,6 +30,7 @@ import org.apache.spark.sql.catalyst.encoders.{AgnosticEncoder, AgnosticExpressi
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.types.DataType
 
+import scala.jdk.CollectionConverters._
 import scala.reflect.ClassTag
 
 /**
@@ -37,8 +38,8 @@ import scala.reflect.ClassTag
  */
 object EncoderBuilder {
 
-  val UNSUPPORTED_RESOURCES: Set[String] = Set("Parameters", "StructureDefinition", "StructureMap",
-    "Bundle")
+  // Delegate to the central ResourceTypes utility class for the set of unsupported resources.
+  val UNSUPPORTED_RESOURCES: Set[String] = ResourceTypes.UNSUPPORTED_RESOURCES.asScala.toSet
 
   /**
    * Custom AgnosticEncoder that wraps serializer and deserializer expressions.

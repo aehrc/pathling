@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,31 +33,17 @@ import lombok.Value;
 @Value
 public class TerminologyResult<T extends Serializable> implements Serializable {
 
-  @Serial
-  private static final long serialVersionUID = -8569345179387329139L;
+  @Serial private static final long serialVersionUID = -8569345179387329139L;
 
-  /**
-   * The value of the cache entry.
-   */
-  @Nullable
-  T data;
+  /** The value of the cache entry. */
+  @Nullable T data;
 
-  /**
-   * The ETag returned in the response that generated this value.
-   */
-  @Nullable
-  String eTag;
+  /** The ETag returned in the response that generated this value. */
+  @Nullable String etag;
 
-  /**
-   * The expiry time in milliseconds since the epoch.
-   */
-  @Nullable
-  Long expires;
+  /** The expiry time in milliseconds since the epoch. */
+  @Nullable Long expires;
 
-  /**
-   * Set to true if the response was a 304 Not Modified.
-   */
-  @Nonnull
-  Boolean notModified;
-
+  /** Set to true if the response was a 304 Not Modified. */
+  @Nonnull Boolean notModified;
 }

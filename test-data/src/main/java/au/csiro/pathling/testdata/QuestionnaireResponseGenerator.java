@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,11 +39,10 @@ import org.hl7.fhir.r4.model.StringType;
 
 /**
  * Generates synthetic FHIR QuestionnaireResponse resources with nested items and answers.
- * <p>
- * This generator creates realistic QuestionnaireResponse resources featuring multiple levels of
+ *
+ * <p>This generator creates realistic QuestionnaireResponse resources featuring multiple levels of
  * nested items and various answer types including strings, integers, booleans, dates, codings, and
  * more.
- * </p>
  *
  * @author John Grimes
  */
@@ -54,40 +53,32 @@ public class QuestionnaireResponseGenerator {
   private static final Random random = new Random(12345);
 
   private static final String[] QUESTIONNAIRE_IDS = {
-      "patient-intake",
-      "mental-health-screen",
-      "medication-review",
-      "symptom-assessment",
-      "quality-of-life"
+    "patient-intake",
+    "mental-health-screen",
+    "medication-review",
+    "symptom-assessment",
+    "quality-of-life"
   };
 
   private static final String[] SYMPTOM_CODES = {
-      "386661006", // Fever
-      "49727002", // Cough
-      "267036007", // Dyspnoea
-      "25064002", // Headache
-      "22253000" // Pain
+    "386661006", // Fever
+    "49727002", // Cough
+    "267036007", // Dyspnoea
+    "25064002", // Headache
+    "22253000" // Pain
   };
 
   private static final String[] SYMPTOM_DISPLAYS = {
-      "Fever",
-      "Cough",
-      "Dyspnoea",
-      "Headache",
-      "Pain"
+    "Fever", "Cough", "Dyspnoea", "Headache", "Pain"
   };
 
   private static final String[] SEVERITY_CODES = {
-      "255604002", // Mild
-      "6736007", // Moderate
-      "24484000" // Severe
+    "255604002", // Mild
+    "6736007", // Moderate
+    "24484000" // Severe
   };
 
-  private static final String[] SEVERITY_DISPLAYS = {
-      "Mild",
-      "Midgrade",
-      "Severe"
-  };
+  private static final String[] SEVERITY_DISPLAYS = {"Mild", "Midgrade", "Severe"};
 
   /**
    * Main entry point for the generator.
@@ -96,33 +87,26 @@ public class QuestionnaireResponseGenerator {
    * @throws IOException if there's an error writing to the output file
    */
   public static void main(final String[] args) throws IOException {
-    final String outputFile = args.length > 0
-                              ? args[0]
-                              : OUTPUT_FILE;
-    final int numResources = args.length > 1
-                             ? Integer.parseInt(args[1])
-                             : NUM_RESOURCES;
+    final String outputFile = args.length > 0 ? args[0] : OUTPUT_FILE;
+    final int numResources = args.length > 1 ? Integer.parseInt(args[1]) : NUM_RESOURCES;
 
     System.out.println("Generating " + numResources + " QuestionnaireResponse resources...");
 
     // Create parent directories if they don't exist.
     final File outputFileObj = new File(outputFile);
     final File parentDir = outputFileObj.getParentFile();
-    if (parentDir != null && !parentDir.exists()) {
-      if (!parentDir.mkdirs()) {
-        throw new IOException("Failed to create directory: " + parentDir.getAbsolutePath());
-      }
+    if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
+      throw new IOException("Failed to create directory: " + parentDir.getAbsolutePath());
     }
 
     final FhirContext fhirContext = FhirContext.forR4();
     final String baseUrl = "https://example.org/fhir";
 
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+    try (final BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
       for (int i = 0; i < numResources; i++) {
-        final QuestionnaireResponse response = generateQuestionnaireResponse(i, baseUrl);
-        final String json = fhirContext.newJsonParser()
-            .setPrettyPrint(false)
-            .encodeResourceToString(response);
+        final QuestionnaireResponse response = generateQuestionnaireResponse(baseUrl);
+        final String json =
+            fhirContext.newJsonParser().setPrettyPrint(false).encodeResourceToString(response);
         writer.write(json);
         writer.newLine();
 
@@ -138,12 +122,10 @@ public class QuestionnaireResponseGenerator {
   /**
    * Generates a single QuestionnaireResponse resource with nested items.
    *
-   * @param index the index of the resource being generated
    * @param baseUrl the base URL for resource references
    * @return a populated QuestionnaireResponse resource
    */
-  private static QuestionnaireResponse generateQuestionnaireResponse(final int index,
-      final String baseUrl) {
+  private static QuestionnaireResponse generateQuestionnaireResponse(final String baseUrl) {
     final QuestionnaireResponse response = new QuestionnaireResponse();
     response.setId(UUID.randomUUID().toString());
     response.setStatus(QuestionnaireResponseStatus.COMPLETED);
@@ -159,8 +141,7 @@ public class QuestionnaireResponseGenerator {
     // Set authored date.
     final LocalDate baseDate = LocalDate.of(2024, 1, 1);
     final LocalDate authoredDate = baseDate.plusDays(random.nextInt(365));
-    response.setAuthored(
-        Date.from(authoredDate.atStartOfDay(ZoneId.systemDefault()).toInstant()));
+    response.setAuthored(Date.from(authoredDate.atStartOfDay(ZoneId.systemDefault()).toInstant()));
 
     // Add nested items based on questionnaire type.
     switch (questionnaireId) {
@@ -193,7 +174,8 @@ public class QuestionnaireResponseGenerator {
    */
   private static void addPatientIntakeItems(final QuestionnaireResponse response) {
     // Demographics section.
-    final QuestionnaireResponseItemComponent demographics = new QuestionnaireResponseItemComponent();
+    final QuestionnaireResponseItemComponent demographics =
+        new QuestionnaireResponseItemComponent();
     demographics.setLinkId("demographics");
     demographics.setText("Demographics");
 
@@ -217,11 +199,9 @@ public class QuestionnaireResponseGenerator {
     gender.setText("Gender");
     final Coding genderCoding = new Coding();
     genderCoding.setSystem("http://hl7.org/fhir/administrative-gender");
-    genderCoding.setCode(random.nextBoolean()
-                         ? "male"
-                         : "female");
-    genderCoding.setDisplay(genderCoding.getCode().substring(0, 1).toUpperCase()
-        + genderCoding.getCode().substring(1));
+    genderCoding.setCode(random.nextBoolean() ? "male" : "female");
+    genderCoding.setDisplay(
+        genderCoding.getCode().substring(0, 1).toUpperCase() + genderCoding.getCode().substring(1));
     gender.addAnswer().setValue(genderCoding);
     demographics.addItem(gender);
 
@@ -270,11 +250,11 @@ public class QuestionnaireResponseGenerator {
     phq9.setText("Patient Health Questionnaire-9");
 
     final String[] phq9Questions = {
-        "Little interest or pleasure in doing things",
-        "Feeling down, depressed, or hopeless",
-        "Trouble falling or staying asleep, or sleeping too much",
-        "Feeling tired or having little energy",
-        "Poor appetite or overeating"
+      "Little interest or pleasure in doing things",
+      "Feeling down, depressed, or hopeless",
+      "Trouble falling or staying asleep, or sleeping too much",
+      "Feeling tired or having little energy",
+      "Poor appetite or overeating"
     };
 
     for (int i = 0; i < phq9Questions.length; i++) {
@@ -293,9 +273,9 @@ public class QuestionnaireResponseGenerator {
     gad7.setText("Generalised Anxiety Disorder-7");
 
     final String[] gad7Questions = {
-        "Feeling nervous, anxious, or on edge",
-        "Not being able to stop or control worrying",
-        "Worrying too much about different things"
+      "Feeling nervous, anxious, or on edge",
+      "Not being able to stop or control worrying",
+      "Worrying too much about different things"
     };
 
     for (int i = 0; i < gad7Questions.length; i++) {
@@ -318,7 +298,8 @@ public class QuestionnaireResponseGenerator {
     final int numMedications = random.nextInt(3) + 1;
 
     for (int i = 0; i < numMedications; i++) {
-      final QuestionnaireResponseItemComponent medication = new QuestionnaireResponseItemComponent();
+      final QuestionnaireResponseItemComponent medication =
+          new QuestionnaireResponseItemComponent();
       medication.setLinkId("medication." + (i + 1));
       medication.setText("Medication " + (i + 1));
 
@@ -341,7 +322,8 @@ public class QuestionnaireResponseGenerator {
       frequency.setLinkId("medication." + (i + 1) + ".frequency");
       frequency.setText("Frequency");
       final String[] frequencies = {"Once daily", "Twice daily", "Three times daily", "As needed"};
-      frequency.addAnswer()
+      frequency
+          .addAnswer()
           .setValue(new StringType(frequencies[random.nextInt(frequencies.length)]));
       medication.addItem(frequency);
 
@@ -382,7 +364,8 @@ public class QuestionnaireResponseGenerator {
       symptom.setText("Symptom " + (i + 1));
 
       // Symptom type.
-      final QuestionnaireResponseItemComponent symptomType = new QuestionnaireResponseItemComponent();
+      final QuestionnaireResponseItemComponent symptomType =
+          new QuestionnaireResponseItemComponent();
       symptomType.setLinkId("symptom." + (i + 1) + ".type");
       symptomType.setText("Symptom type");
       final Coding symptomCoding = new Coding();
@@ -416,20 +399,24 @@ public class QuestionnaireResponseGenerator {
       onset.setLinkId("symptom." + (i + 1) + ".onset");
       onset.setText("Onset date");
       final LocalDate onsetDate = LocalDate.of(2024, 1, 1).plusDays(random.nextInt(365));
-      onset.addAnswer().setValue(new DateType(
-          Date.from(onsetDate.atStartOfDay(ZoneId.systemDefault()).toInstant())));
+      onset
+          .addAnswer()
+          .setValue(
+              new DateType(Date.from(onsetDate.atStartOfDay(ZoneId.systemDefault()).toInstant())));
       symptom.addItem(onset);
 
       // Pain scale (if pain symptom).
       if (SYMPTOM_CODES[symptomIndex].equals("22253000")) {
-        final QuestionnaireResponseItemComponent painScale = new QuestionnaireResponseItemComponent();
+        final QuestionnaireResponseItemComponent painScale =
+            new QuestionnaireResponseItemComponent();
         painScale.setLinkId("symptom." + (i + 1) + ".painScale");
         painScale.setText("Pain scale (0-10)");
         painScale.addAnswer().setValue(new IntegerType(random.nextInt(11)));
         symptom.addItem(painScale);
 
         // Pain location.
-        final QuestionnaireResponseItemComponent location = new QuestionnaireResponseItemComponent();
+        final QuestionnaireResponseItemComponent location =
+            new QuestionnaireResponseItemComponent();
         location.setLinkId("symptom." + (i + 1) + ".painScale.location");
         location.setText("Pain location");
         final String[] locations = {"Head", "Chest", "Abdomen", "Back", "Limbs"};
@@ -473,7 +460,8 @@ public class QuestionnaireResponseGenerator {
     response.addItem(physical);
 
     // Psychological health section.
-    final QuestionnaireResponseItemComponent psychological = new QuestionnaireResponseItemComponent();
+    final QuestionnaireResponseItemComponent psychological =
+        new QuestionnaireResponseItemComponent();
     psychological.setLinkId("psychological");
     psychological.setText("Psychological health");
 
@@ -496,7 +484,8 @@ public class QuestionnaireResponseGenerator {
     social.setLinkId("social");
     social.setText("Social relationships");
 
-    final QuestionnaireResponseItemComponent relationships = new QuestionnaireResponseItemComponent();
+    final QuestionnaireResponseItemComponent relationships =
+        new QuestionnaireResponseItemComponent();
     relationships.setLinkId("social.relationships");
     relationships.setText("Satisfaction with relationships");
     relationships.addAnswer().setValue(new IntegerType(random.nextInt(5) + 1));
@@ -525,14 +514,15 @@ public class QuestionnaireResponseGenerator {
    */
   private static String generateRandomName() {
     final String[] firstNames = {
-        "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda",
-        "William", "Elizabeth", "David", "Barbara", "Richard", "Susan", "Joseph", "Jessica"
+      "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda",
+      "William", "Elizabeth", "David", "Barbara", "Richard", "Susan", "Joseph", "Jessica"
     };
     final String[] lastNames = {
-        "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
-        "Rodriguez", "Martinez", "Hernandez", "Lopez", "Wilson", "Anderson", "Thomas", "Taylor"
+      "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
+      "Rodriguez", "Martinez", "Hernandez", "Lopez", "Wilson", "Anderson", "Thomas", "Taylor"
     };
-    return firstNames[random.nextInt(firstNames.length)] + " "
+    return firstNames[random.nextInt(firstNames.length)]
+        + " "
         + lastNames[random.nextInt(lastNames.length)];
   }
 
@@ -543,8 +533,8 @@ public class QuestionnaireResponseGenerator {
    */
   private static String generateRandomCity() {
     final String[] cities = {
-        "Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide",
-        "Canberra", "Hobart", "Darwin", "Gold Coast", "Newcastle"
+      "Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide",
+      "Canberra", "Hobart", "Darwin", "Gold Coast", "Newcastle"
     };
     return cities[random.nextInt(cities.length)];
   }
@@ -556,9 +546,9 @@ public class QuestionnaireResponseGenerator {
    */
   private static String generateRandomMedication() {
     final String[] medications = {
-        "Paracetamol", "Ibuprofen", "Amoxicillin", "Atorvastatin", "Metformin",
-        "Amlodipine", "Omeprazole", "Salbutamol", "Metoprolol", "Lisinopril",
-        "Simvastatin", "Levothyroxine", "Azithromycin", "Albuterol", "Gabapentin"
+      "Paracetamol", "Ibuprofen", "Amoxicillin", "Atorvastatin", "Metformin",
+      "Amlodipine", "Omeprazole", "Salbutamol", "Metoprolol", "Lisinopril",
+      "Simvastatin", "Levothyroxine", "Azithromycin", "Albuterol", "Gabapentin"
     };
     return medications[random.nextInt(medications.length)];
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,11 +28,7 @@ import jakarta.annotation.Nonnull;
  * @param coding the coding to validate
  * @author John Grimes
  * @see <a
- * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
+ *     href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
  */
-public record ValidateCodeParameters(
-    @Nonnull String valueSetUrl,
-    @Nonnull ImmutableCoding coding
-) implements TerminologyParameters {
-
-}
+public record ValidateCodeParameters(@Nonnull String valueSetUrl, @Nonnull ImmutableCoding coding)
+    implements TerminologyParameters {}

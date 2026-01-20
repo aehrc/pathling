@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,23 +39,22 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value(staticConstructor = "of")
 public class FhirResolverFactory implements Function<RuntimeContext, ResourceResolver> {
 
-  @Nonnull
-  String resourceJson;
+  @Nonnull String resourceJson;
 
   @Override
   @Nonnull
   public ResourceResolver apply(final RuntimeContext rt) {
 
     final IParser jsonParser = rt.getFhirEncoders().getContext().newJsonParser();
-    final IBaseResource resource = jsonParser.parseResource(
-        resourceJson);
-    final Dataset<Row> resourceDS = rt.getSpark().createDataset(List.of(resource),
-        rt.getFhirEncoders().of(resource.fhirType())).toDF();
+    final IBaseResource resource = jsonParser.parseResource(resourceJson);
+    final Dataset<Row> resourceDS =
+        rt.getSpark()
+            .createDataset(List.of(resource), rt.getFhirEncoders().of(resource.fhirType()))
+            .toDF();
 
     return DefaultResourceResolver.of(
         FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
         FhirDefinitionContext.of(rt.getFhirEncoders().getContext()),
-        resourceDS
-    );
+        resourceDS);
   }
 }

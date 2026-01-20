@@ -1,0 +1,105 @@
+# Reusable workflow for releasing Helm charts to the GitHub Pages repository.
+#
+# Author: John Grimes
+
+name: Release Helm chart
+
+on:
+  workflow_call:
+    inputs:
+      chart-path:
+        description: Path to the Helm chart directory.
+        required: true
+        type: string
+      chart-name:
+        description: Name of the chart for the package file.
+        required: true
+        type: string
+      tag-prefix:
+        description: Tag prefix for version extraction (e.g., "helm-server-v").
+        required: true
+        type: string
+      version:
+        description: Chart version to release (for manual dispatch).
+        required: false
+        type: string
+
+jobs:
+  release-helm-chart:
+    name: Package and release Helm chart
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Extract and validate version
+        working-directory: ${{ inputs.chart-path }}
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_TAG_PREFIX: ${{ inputs.tag-prefix }}
+        run: |
+          # Get version from input or tag.
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
+          else
+            VERSION="${GITHUB_REF_NAME#$INPUT_TAG_PREFIX}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+          # Validate against Chart.yaml.
+          CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}')
+          if [ "$VERSION" != "$CHART_VERSION" ]; then
+            echo "Error: Tag version ($VERSION) does not match Chart.yaml ($CHART_VERSION)"
+            exit 1
+          fi
+
+          echo "Releasing chart version: ${VERSION}"
+
+      - name: Package chart
+        env:
+          INPUT_CHART_PATH: ${{ inputs.chart-path }}
+          INPUT_CHART_NAME: ${{ inputs.chart-name }}
+        run: |
+          helm package "$INPUT_CHART_PATH"
+          PACKAGE_NAME="${INPUT_CHART_NAME}-${VERSION}.tgz"
+          echo "PACKAGE_NAME=${PACKAGE_NAME}" >> $GITHUB_ENV
+
+          if [ ! -f "$PACKAGE_NAME" ]; then
+            echo "Error: Expected package ${PACKAGE_NAME} was not created"
+            exit 1
+          fi
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Check for existing chart version
+        run: |
+          if [ -f "gh-pages/helm/${PACKAGE_NAME}" ]; then
+            echo "Error: ${PACKAGE_NAME} already exists in the Helm repository"
+            exit 1
+          fi
+
+      - name: Add chart to repository
+        run: |
+          cp "${PACKAGE_NAME}" gh-pages/helm/
+          helm repo index gh-pages/helm/ --url https://pathling.csiro.au/helm --merge gh-pages/helm/index.yaml
+
+      - name: Commit and push
+        working-directory: gh-pages
+        env:
+          INPUT_CHART_NAME: ${{ inputs.chart-name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm/
+          git commit -m "Release Helm chart ${INPUT_CHART_NAME}-${VERSION}"
+          git push

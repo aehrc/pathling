@@ -1,0 +1,10 @@
+# This file documents exclusions from the test cases along with justification of why the tests are
+# excluded and links to related issues.
+excludeSet:
+  - title: Global exclusions
+    glob: "*.yaml"
+    exclude:
+      - title: Unsupported resources types (post r4)
+        type: wontfix
+        expression:
+          - "is MedicinalProductDefinition"

@@ -1,0 +1,9 @@
+spring:
+  main:
+    banner-mode: off
+
+logging:
+  level:
+    au.csiro.pathling: WARN
+    ca.uhn.fhir.parser.LenientErrorHandler: ERROR
+    au.csiro.pathling.encoders.terminology.ucum.Ucum: ERROR

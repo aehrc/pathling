@@ -1,0 +1,44 @@
+{
+  "resourceType": "ViewDefinition",
+  "name": "rv_icu_encounter",
+  "resource": "Encounter",
+  "status": "draft",
+  "select": [
+    {
+      "column": [
+        {
+          "name": "stay_id",
+          "path": "getResourceKey()",
+          "type": "string",
+          "collection": false
+        },
+        {
+          "name": "subject_id",
+          "path": "subject.getReferenceKey()",
+          "type": "string",
+          "collection": false
+        },
+        {
+          "name": "admittime",
+          "path": "period.start",
+          "type": "dateTime",
+          "collection": false
+        },
+        {
+          "name": "dischtime",
+          "path": "period.end",
+          "type": "dateTime",
+          "collection": false
+        }
+      ]
+    }
+  ],
+  "where": [
+    {
+      "path": "class.system = 'http://terminology.hl7.org/CodeSystem/v3-ActCode'"
+    },
+    {
+      "path": "class.code = 'ACUTE'"
+    }
+  ]
+}

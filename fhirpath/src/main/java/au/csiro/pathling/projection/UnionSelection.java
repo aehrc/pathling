@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,25 +22,23 @@ import java.util.List;
 
 /**
  * Groups multiple selections together using a union (concatenation).
- * <p>
- * This is the primary mechanism for combining multiple projection clauses into a single result
+ *
+ * <p>This is the primary mechanism for combining multiple projection clauses into a single result
  * where all component results are concatenated sequentially.
- * </p>
  *
  * @param components The list of projection clauses to be combined via concatenation
  * @author John Grimes
  * @author Piotr Szul
  */
-public record UnionSelection(@Nonnull List<ProjectionClause> components) implements
-    CompositeSelection {
+public record UnionSelection(@Nonnull List<ProjectionClause> components)
+    implements CompositeSelection {
 
   @Nonnull
   @Override
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
     // Evaluate each component
-    final List<ProjectionResult> results = components.stream()
-        .map(c -> c.evaluate(context))
-        .toList();
+    final List<ProjectionResult> results =
+        components.stream().map(c -> c.evaluate(context)).toList();
 
     // Use the explicit concatenate method
     return ProjectionResult.concatenate(results);

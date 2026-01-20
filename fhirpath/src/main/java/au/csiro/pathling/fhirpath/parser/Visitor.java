@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,9 +23,11 @@ import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.operator.FhirPathBinaryOperator;
+import au.csiro.pathling.fhirpath.operator.AsOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.CollectionOperations;
+import au.csiro.pathling.fhirpath.operator.FhirPathBinaryOperator;
+import au.csiro.pathling.fhirpath.operator.IsOperator;
 import au.csiro.pathling.fhirpath.operator.MethodDefinedOperator;
 import au.csiro.pathling.fhirpath.operator.MethodInvocationError;
 import au.csiro.pathling.fhirpath.operator.PolarityOperator;
@@ -62,7 +64,6 @@ import org.antlr.v4.runtime.tree.ParseTree;
  */
 class Visitor extends FhirPathBaseVisitor<FhirPath> {
 
-
   /**
    * Visit the expression and ignore EOF token.
    *
@@ -82,8 +83,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitTermExpression(
-      @Nullable final TermExpressionContext ctx) {
+  public FhirPath visitTermExpression(@Nullable final TermExpressionContext ctx) {
     return requireNonNull(ctx).term().accept(new TermVisitor());
   }
 
@@ -95,112 +95,105 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitInvocationExpression(
-      @Nullable final InvocationExpressionContext ctx) {
+  public FhirPath visitInvocationExpression(@Nullable final InvocationExpressionContext ctx) {
 
-    final FhirPath invocationSubject = new Visitor().visit(
-        requireNonNull(ctx).expression());
-    final FhirPath invocationVerb = ctx.invocation()
-        .accept(new InvocationVisitor());
+    final FhirPath invocationSubject = new Visitor().visit(requireNonNull(ctx).expression());
+    final FhirPath invocationVerb = ctx.invocation().accept(new InvocationVisitor());
     return invocationSubject.andThen(invocationVerb);
   }
 
-  private static final Map<String, FhirPathBinaryOperator> BINARY_OPERATORS = MethodDefinedOperator.mapOf(
-      CollectionOperations.class);
+  private static final Map<String, FhirPathBinaryOperator> BINARY_OPERATORS =
+      MethodDefinedOperator.mapOf(CollectionOperations.class);
 
   @Nonnull
   private FhirPath visitBinaryOperator(
       @Nullable final ParseTree leftContext,
-      @Nullable final ParseTree rightContext, @Nullable final String operatorName) {
+      @Nullable final ParseTree rightContext,
+      @Nullable final String operatorName) {
     requireNonNull(operatorName);
-    return new EvalOperator(new Visitor().visit(leftContext),
+    return new EvalOperator(
+        new Visitor().visit(leftContext),
         new Visitor().visit(rightContext),
         Optional.ofNullable(BINARY_OPERATORS.get(operatorName))
             .orElseGet(() -> BinaryOperatorType.fromSymbol(operatorName).getInstance()));
-
   }
 
   @Override
   @Nonnull
-  public FhirPath visitEqualityExpression(
-      @Nullable final EqualityExpressionContext ctx) {
-    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
-        ctx.children.get(1).toString());
+  public FhirPath visitEqualityExpression(@Nullable final EqualityExpressionContext ctx) {
+    return visitBinaryOperator(
+        requireNonNull(ctx).expression(0), ctx.expression(1), ctx.children.get(1).toString());
   }
 
   @Override
-  public FhirPath visitInequalityExpression(
-      @Nullable final InequalityExpressionContext ctx) {
-    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
-        ctx.children.get(1).toString());
-  }
-
-  @Override
-  @Nonnull
-  public FhirPath visitAndExpression(
-      @Nullable final AndExpressionContext ctx) {
-    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
-        ctx.children.get(1).toString());
+  public FhirPath visitInequalityExpression(@Nullable final InequalityExpressionContext ctx) {
+    return visitBinaryOperator(
+        requireNonNull(ctx).expression(0), ctx.expression(1), ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitOrExpression(
-      @Nullable final OrExpressionContext ctx) {
-    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
-        ctx.children.get(1).toString());
+  public FhirPath visitAndExpression(@Nullable final AndExpressionContext ctx) {
+    return visitBinaryOperator(
+        requireNonNull(ctx).expression(0), ctx.expression(1), ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitImpliesExpression(
-      @Nullable final ImpliesExpressionContext ctx) {
-    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
-        ctx.children.get(1).toString());
+  public FhirPath visitOrExpression(@Nullable final OrExpressionContext ctx) {
+    return visitBinaryOperator(
+        requireNonNull(ctx).expression(0), ctx.expression(1), ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitMembershipExpression(
-      @Nullable final MembershipExpressionContext ctx) {
-    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
-        ctx.children.get(1).toString());
+  public FhirPath visitImpliesExpression(@Nullable final ImpliesExpressionContext ctx) {
+    return visitBinaryOperator(
+        requireNonNull(ctx).expression(0), ctx.expression(1), ctx.children.get(1).toString());
+  }
+
+  @Override
+  @Nonnull
+  public FhirPath visitMembershipExpression(@Nullable final MembershipExpressionContext ctx) {
+    return visitBinaryOperator(
+        requireNonNull(ctx).expression(0), ctx.expression(1), ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
   public FhirPath visitMultiplicativeExpression(
       @Nullable final MultiplicativeExpressionContext ctx) {
-    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
-        ctx.children.get(1).toString());
+    return visitBinaryOperator(
+        requireNonNull(ctx).expression(0), ctx.expression(1), ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitAdditiveExpression(
-      @Nullable final AdditiveExpressionContext ctx) {
-    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
-        ctx.children.get(1).toString());
+  public FhirPath visitAdditiveExpression(@Nullable final AdditiveExpressionContext ctx) {
+    return visitBinaryOperator(
+        requireNonNull(ctx).expression(0), ctx.expression(1), ctx.children.get(1).toString());
   }
 
   /**
+   * Visits an indexer expression and returns a FhirPath expression.
+   *
    * @param ctx The {@link IndexerExpressionContext}
    * @return A {@link FhirPath} expression
    * @throws MethodInvocationError if the index operator cannot be invoked
    */
   @Override
   @Nonnull
-  public FhirPath visitIndexerExpression(
-      final IndexerExpressionContext ctx) {
+  public FhirPath visitIndexerExpression(final IndexerExpressionContext ctx) {
     final EvalOperator operator;
     try {
-      operator = new EvalOperator(
-          new Visitor().visit(requireNonNull(ctx).expression(0)),
-          new Visitor().visit(ctx.expression(1)),
-          // Get a wrapped version of the index operator.
-          MethodDefinedOperator.build(
-              SubsettingOperations.class.getDeclaredMethod("index", Collection.class,
-                  IntegerCollection.class)));
+      operator =
+          new EvalOperator(
+              new Visitor().visit(requireNonNull(ctx).expression(0)),
+              new Visitor().visit(ctx.expression(1)),
+              // Get a wrapped version of the index operator.
+              MethodDefinedOperator.build(
+                  SubsettingOperations.class.getDeclaredMethod(
+                      "index", Collection.class, IntegerCollection.class)));
     } catch (final NoSuchMethodException e) {
       throw new MethodInvocationError("Problem invoking the index operator", e);
     }
@@ -211,24 +204,43 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitPolarityExpression(
-      final PolarityExpressionContext ctx) {
+  public FhirPath visitPolarityExpression(final PolarityExpressionContext ctx) {
     return new Paths.EvalUnaryOperator(
         ctx.expression().accept(this),
-        PolarityOperator.fromSymbol(ctx.children.get(0).toString())
-    );
+        PolarityOperator.fromSymbol(ctx.children.getFirst().toString()));
   }
 
   @Override
   @Nonnull
   public FhirPath visitUnionExpression(final UnionExpressionContext ctx) {
-    throw new UnsupportedFhirPathFeatureError("Union expressions are not supported");
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1), "|");
   }
 
   @Override
   @Nonnull
   public FhirPath visitTypeExpression(final TypeExpressionContext ctx) {
-    throw new UnsupportedFhirPathFeatureError("Type expressions are not supported");
-  }
+    requireNonNull(ctx);
 
+    // Determine which operator: 'is' or 'as'
+    final String operatorText = ctx.children.get(1).toString();
+
+    // Parse the left expression (the value to check/cast)
+    final FhirPath leftPath = new Visitor().visit(ctx.expression());
+
+    // Parse the type specifier using TypeSpecifierVisitor
+    // This returns a TypeSpecifierPath, which will be passed to the operator
+    final FhirPath rightPath = TypeSpecifierVisitor.defaultVisitor().visit(ctx.typeSpecifier());
+
+    // Create the appropriate operator based on operator text
+    final FhirPathBinaryOperator operator =
+        switch (operatorText) {
+          case "is" -> new IsOperator();
+          case "as" -> new AsOperator();
+          default ->
+              throw new UnsupportedFhirPathFeatureError("Unknown type operator: " + operatorText);
+        };
+
+    // Use the standard EvalOperator - it will call invokeWithPaths()
+    return new EvalOperator(leftPath, rightPath, operator);
+  }
 }

@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,27 +31,19 @@ import java.util.Set;
 import lombok.Builder;
 import lombok.Data;
 
-/**
- * Represents configuration specific to FHIR encoding.
- */
+/** Represents configuration specific to FHIR encoding. */
 @Data
 @Builder
 public class EncodingConfiguration {
 
-  /**
-   * Controls the maximum depth of nested element data that is encoded upon import.
-   */
+  /** Controls the maximum depth of nested element data that is encoded upon import. */
   @NotNull
   @Min(0)
   @Builder.Default
   private Integer maxNestingLevel = 3;
 
-  /**
-   * Enables support for FHIR extensions.
-   */
-  @NotNull
-  @Builder.Default
-  private boolean enableExtensions = true;
+  /** Enables support for FHIR extensions. */
+  @NotNull @Builder.Default private boolean enableExtensions = true;
 
   /**
    * The list of types that are encoded within open types, such as extensions. This default list was
@@ -59,7 +51,5 @@ public class EncodingConfiguration {
    * US and AU base profiles. In general, you will get the best query performance by encoding your
    * data with the shortest possible list.
    */
-  @NotNull
-  @Builder.Default
-  private Set<String> openTypes = FhirEncoders.STANDARD_OPEN_TYPES;
+  @NotNull @Builder.Default private Set<String> openTypes = FhirEncoders.STANDARD_OPEN_TYPES;
 }

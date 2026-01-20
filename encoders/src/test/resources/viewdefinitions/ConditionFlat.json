@@ -1,0 +1,71 @@
+{
+  "resourceType": "ViewDefinition",
+  "id": "ConditionFlat",
+  "select": [
+    {
+      "column": [
+        {
+          "path": "getResourceKey()",
+          "name": "id"
+        },
+        {
+          "path": "subject.getReferenceKey(Patient)",
+          "name": "patient_id"
+        },
+        {
+          "path": "encounter.getReferenceKey(Encounter)",
+          "name": "encounter_id"
+        },
+        {
+          "path": "onset.ofType(dateTime)",
+          "name": "onset_datetime",
+          "type": "dateTime"
+        }
+      ]
+    },
+    {
+      "column": [
+        {
+          "name": "system",
+          "path": "system",
+          "type": "uri"
+        },
+        {
+          "path": "code",
+          "name": "code"
+        }
+      ],
+      "forEach": "code.coding"
+    },
+    {
+      "column": [
+        {
+          "path": "code",
+          "name": "category"
+        }
+      ],
+      "forEach": "category.coding"
+    },
+    {
+      "column": [
+        {
+          "path": "code",
+          "name": "clinical_status"
+        }
+      ],
+      "forEach": "clinicalStatus.coding"
+    },
+    {
+      "column": [
+        {
+          "path": "code",
+          "name": "verification_status"
+        }
+      ],
+      "forEach": "verificationStatus.coding"
+    }
+  ],
+  "name": "condition_flat",
+  "status": "draft",
+  "resource": "Condition"
+}

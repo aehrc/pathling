@@ -1,0 +1,168 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package au.csiro.pathling.security;
+
+import au.csiro.pathling.errors.AccessDeniedError;
+import jakarta.annotation.Nonnull;
+import java.util.Collection;
+import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.jetbrains.annotations.Nullable;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.JwtClaimAccessor;
+import org.springframework.stereotype.Component;
+
+/**
+ * The aspect that inserts checks relating to security.
+ *
+ * @author Piotr Szul
+ * @see <a
+ *     href="https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#aop-ataspectj-advice-params">Advice
+ *     Parameters</a>
+ */
+@Aspect
+@Component
+@ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
+@Slf4j
+@Order(100)
+public class SecurityAspect {
+
+  /**
+   * Checks if the current user is authorised to access the resource.
+   *
+   * @param resourceAccess the resource access required.
+   * @param resourceTypeCode the resource type code.
+   * @throws AccessDeniedError if unauthorised.
+   */
+  @Before("@annotation(resourceAccess) && args(resourceTypeCode,..)")
+  public void checkResourceRead(
+      @Nonnull final ResourceAccess resourceAccess, final String resourceTypeCode) {
+    log.debug(
+        "Checking access to resource: {}, type: {}", resourceTypeCode, resourceAccess.value());
+    checkHasAuthority(PathlingAuthority.resourceAccess(resourceAccess.value(), resourceTypeCode));
+  }
+
+  /**
+   * Checks if the current user is authorised to access the operation. If multiple operation names
+   * are specified in the annotation, access is granted if the user has permission for ANY of the
+   * listed operations.
+   *
+   * @param operationAccess the operation access required.
+   * @throws AccessDeniedError if unauthorised.
+   */
+  @Before("@annotation(operationAccess)")
+  public void checkRequiredAuthority(@Nonnull final OperationAccess operationAccess) {
+    final String[] operationNames = operationAccess.value();
+    log.debug("Checking access to operation(s): {}", (Object) operationNames);
+
+    if (operationNames.length == 1) {
+      // Single operation - use existing check.
+      checkHasAuthority(PathlingAuthority.operationAccess(operationNames[0]));
+    } else {
+      // Multiple operations - check if ANY is authorized.
+      boolean hasAnyAuthority = false;
+      for (final String operationName : operationNames) {
+        if (hasAuthority(PathlingAuthority.operationAccess(operationName))) {
+          hasAnyAuthority = true;
+          break;
+        }
+      }
+      if (!hasAnyAuthority) {
+        throw new AccessDeniedError(
+            String.format("Missing authority for any of: %s", String.join(", ", operationNames)),
+            operationNames[0]);
+      }
+    }
+  }
+
+  /**
+   * Checks whether the current user has the specified authority.
+   *
+   * @param requiredAuthority the authority to check for
+   * @return true if the user has the authority, false otherwise
+   */
+  public static boolean hasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    final AbstractAuthenticationToken authToken =
+        (authentication instanceof AbstractAuthenticationToken abstractAuthenticationToken)
+            ? abstractAuthenticationToken
+            : null;
+    if (authToken == null) {
+      return false;
+    }
+    final Collection<PathlingAuthority> authorities =
+        authToken.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .filter(authority -> authority.startsWith("pathling"))
+            .map(PathlingAuthority::fromAuthority)
+            .toList();
+    return authToken.getAuthorities() != null && requiredAuthority.subsumedByAny(authorities);
+  }
+
+  /**
+   * Checks for the supplied authority and raises an error if it is not present.
+   *
+   * @param requiredAuthority the authority required for the operation
+   */
+  public static void checkHasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    final AbstractAuthenticationToken authToken =
+        (authentication instanceof AbstractAuthenticationToken abstractAuthenticationToken)
+            ? abstractAuthenticationToken
+            : null;
+    if (authToken == null) {
+      throw new AccessDeniedError("Token not present");
+    }
+    final Collection<PathlingAuthority> authorities =
+        authToken.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .filter(authority -> authority.startsWith("pathling"))
+            .map(PathlingAuthority::fromAuthority)
+            .toList();
+    if (authToken.getAuthorities() == null || !requiredAuthority.subsumedByAny(authorities)) {
+      throw new AccessDeniedError(
+          String.format("Missing authority: '%s'", requiredAuthority),
+          requiredAuthority.getAuthority());
+    }
+  }
+
+  /**
+   * Retrieves the current user's subject identifier from the authentication token.
+   *
+   * @param authentication the Spring Security authentication object
+   * @return the user's subject identifier, or empty if not available
+   */
+  @Nonnull
+  public static Optional<String> getCurrentUserId(@Nullable final Authentication authentication) {
+    String subject = null;
+    if (authentication != null) {
+      final Object principal = authentication.getPrincipal();
+      if (principal instanceof JwtClaimAccessor jwtClaimAccessor) {
+        subject = jwtClaimAccessor.getSubject();
+      }
+    }
+    return Optional.ofNullable(subject);
+  }
+}

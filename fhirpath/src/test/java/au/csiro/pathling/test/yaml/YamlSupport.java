@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,8 +89,11 @@ public class YamlSupport {
   public class FhirTypedLiteralSerializer extends JsonSerializer<FhirTypedLiteral> {
 
     @Override
-    public void serialize(final FhirTypedLiteral fhirLiteral, final JsonGenerator gen,
-        final SerializerProvider serializers) throws IOException {
+    public void serialize(
+        final FhirTypedLiteral fhirLiteral,
+        final JsonGenerator gen,
+        final SerializerProvider serializers)
+        throws IOException {
       if (nonNull(fhirLiteral.getLiteral())) {
         @Nonnull final String literalValue = requireNonNull(fhirLiteral.getLiteral());
         switch (fhirLiteral.getType()) {
@@ -107,8 +110,9 @@ public class YamlSupport {
       }
     }
 
-    private void writeCoding(@Nonnull final CharSequence codingLiteral,
-        @Nonnull final JsonGenerator gen) throws IOException {
+    private void writeCoding(
+        @Nonnull final CharSequence codingLiteral, @Nonnull final JsonGenerator gen)
+        throws IOException {
       final Coding coding = CodingLiteral.fromString(codingLiteral);
       // write as object to gen using low level api
       gen.writeStartObject();
@@ -126,8 +130,8 @@ public class YamlSupport {
       super(new LoaderOptions());
       // Register a generic handler for FHIR types
       for (final FHIRDefinedType type : FHIR_TO_SQL.keySet()) {
-        this.yamlConstructors.put(new Tag(FhirTypedLiteral.toTag(type)),
-            new ConstructFhirTypedLiteral(type));
+        this.yamlConstructors.put(
+            new Tag(FhirTypedLiteral.toTag(type)), new ConstructFhirTypedLiteral(type));
       }
     }
 
@@ -139,9 +143,7 @@ public class YamlSupport {
       @Override
       public Object construct(final Node node) {
         if (node instanceof final ScalarNode sn) {
-          return FhirTypedLiteral.of(type, sn.getValue().isEmpty()
-                                           ? null
-                                           : sn.getValue());
+          return FhirTypedLiteral.of(type, sn.getValue().isEmpty() ? null : sn.getValue());
         }
         throw new IllegalArgumentException("Expected a scalar node for " + type);
       }
@@ -165,24 +167,22 @@ public class YamlSupport {
     }
   }
 
+  private static final Map<FHIRDefinedType, DataType> FHIR_TO_SQL =
+      Map.ofEntries(
+          Map.entry(FHIRDefinedType.STRING, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.URI, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.CODE, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.INTEGER, DataTypes.IntegerType),
+          Map.entry(FHIRDefinedType.BOOLEAN, DataTypes.BooleanType),
+          Map.entry(FHIRDefinedType.DECIMAL, DecimalCollection.DECIMAL_TYPE),
+          Map.entry(FHIRDefinedType.CODING, CodingSchema.codingStructType()),
+          Map.entry(FHIRDefinedType.TIME, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.DATETIME, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.DATE, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.NULL, DataTypes.NullType));
 
-  private static final Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.ofEntries(
-      Map.entry(FHIRDefinedType.STRING, DataTypes.StringType),
-      Map.entry(FHIRDefinedType.URI, DataTypes.StringType),
-      Map.entry(FHIRDefinedType.CODE, DataTypes.StringType),
-      Map.entry(FHIRDefinedType.INTEGER, DataTypes.IntegerType),
-      Map.entry(FHIRDefinedType.BOOLEAN, DataTypes.BooleanType),
-      Map.entry(FHIRDefinedType.DECIMAL, DecimalCollection.DECIMAL_TYPE),
-      Map.entry(FHIRDefinedType.CODING, CodingSchema.codingStructType()),
-      Map.entry(FHIRDefinedType.TIME, DataTypes.StringType),
-      Map.entry(FHIRDefinedType.DATETIME, DataTypes.StringType),
-      Map.entry(FHIRDefinedType.DATE, DataTypes.StringType),
-      Map.entry(FHIRDefinedType.NULL, DataTypes.NullType)
-  );
-  
   public static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
 
   /**
    * Creates a struct Column from a Map.
@@ -204,9 +204,7 @@ public class YamlSupport {
       }
     }
 
-    return org.apache.spark.sql.functions.struct(
-        fields.toArray(new Column[0])
-    );
+    return org.apache.spark.sql.functions.struct(fields.toArray(new Column[0]));
   }
 
   /**
@@ -259,8 +257,8 @@ public class YamlSupport {
     try {
       return switch (typedLiteral.getType()) {
         case CODING -> CodingCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
-        default -> throw new IllegalArgumentException(
-            "Unsupported FHIR type: " + typedLiteral.getType());
+        default ->
+            throw new IllegalArgumentException("Unsupported FHIR type: " + typedLiteral.getType());
       };
     } catch (final Exception e) {
       throw new IllegalArgumentException("Failed to convert typed literal: " + typedLiteral, e);
@@ -280,10 +278,7 @@ public class YamlSupport {
     }
 
     // Get the first non-null element to determine the type
-    final Object firstNonNull = list.stream()
-        .filter(Objects::nonNull)
-        .findFirst()
-        .orElse(null);
+    final Object firstNonNull = list.stream().filter(Objects::nonNull).findFirst().orElse(null);
 
     if (firstNonNull == null) {
       return null;
@@ -305,33 +300,33 @@ public class YamlSupport {
   }
 
   @Nonnull
-  public static ResourceDefinition yamlToDefinition(@Nonnull final String resourceCode,
-      @Nonnull final Map<Object, Object> data) {
+  public static ResourceDefinition yamlToDefinition(
+      @Nonnull final String resourceCode, @Nonnull final Map<Object, Object> data) {
     final List<ChildDefinition> definedFields = elementsFromYaml(data);
-    final Set<String> definedFieldNames = definedFields.stream()
-        .map(ChildDefinition::getName)
-        .collect(Collectors.toUnmodifiableSet());
+    final Set<String> definedFieldNames =
+        definedFields.stream()
+            .map(ChildDefinition::getName)
+            .collect(Collectors.toUnmodifiableSet());
 
     return DefaultResourceDefinition.of(
         DefaultResourceTag.of(resourceCode),
         Stream.concat(
-            Stream.of(
-                    DefaultPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
-                    DefaultPrimitiveDefinition.single("id_versioned", FHIRDefinedType.STRING)
-                )
-                .filter(field -> !definedFieldNames.contains(field.getName())),
-            definedFields.stream()
-        ).toList()
-    );
+                Stream.of(
+                        DefaultPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
+                        DefaultPrimitiveDefinition.single("id_versioned", FHIRDefinedType.STRING))
+                    .filter(field -> !definedFieldNames.contains(field.getName())),
+                definedFields.stream())
+            .toList());
   }
 
   @Nonnull
   static List<ChildDefinition> elementsFromYaml(@Nonnull final Map<Object, Object> data) {
 
-    final List<ChildDefinition> children = data.entrySet().stream()
-        .filter(entry -> !isAnnotation(entry.getKey()))
-        .map(entry -> elementFromYaml(entry.getKey().toString(), entry.getValue()))
-        .toList();
+    final List<ChildDefinition> children =
+        data.entrySet().stream()
+            .filter(entry -> !isAnnotation(entry.getKey()))
+            .map(entry -> elementFromYaml(entry.getKey().toString(), entry.getValue()))
+            .toList();
     return Optional.ofNullable(data.get(CHOICE_ANNOTATION))
         .map(
             name -> List.<ChildDefinition>of(DefaultChoiceDefinition.of(name.toString(), children)))
@@ -348,33 +343,37 @@ public class YamlSupport {
 
   @Nonnull
   @SuppressWarnings("unchecked")
-  static ChildDefinition elementFromValues(@Nonnull final String key,
-      @Nonnull final List<?> values) {
+  static ChildDefinition elementFromValues(
+      @Nonnull final String key, @Nonnull final List<?> values) {
 
-    final List<?> nonNullValues = values.stream()
-        .filter(Objects::nonNull)
-        .toList();
+    final List<?> nonNullValues = values.stream().filter(Objects::nonNull).toList();
 
     // Get the set of unique types from the list of values.
-    final Set<Class<?>> types = nonNullValues.stream()
-        .map(Object::getClass)
-        .map(clazz -> Map.class.isAssignableFrom(clazz)
-                      // We treat all maps as the same type.
-                      ? Map.class
-                      : clazz)
-        .collect(Collectors.toUnmodifiableSet());
+    final Set<Class<?>> types =
+        nonNullValues.stream()
+            .map(Object::getClass)
+            .map(
+                clazz ->
+                    Map.class.isAssignableFrom(clazz)
+                        // We treat all maps as the same type.
+                        ? Map.class
+                        : clazz)
+            .collect(Collectors.toUnmodifiableSet());
 
     // If there is only one type, we can make some assumptions about the data.
     if (types.size() == 1) {
       // If the type is a map, we merge all the maps into one. This is useful for when a
       // choice contains a complex type, and the examples are split across multiple lines.
       if (types.contains(Map.class)) {
-        final Map<?, ?> mergedValues = nonNullValues.stream()
-            .map(Map.class::cast)
-            .reduce(new HashMap<>(), (acc, m) -> {
-              acc.putAll(m);
-              return acc;
-            });
+        final Map<?, ?> mergedValues =
+            nonNullValues.stream()
+                .map(Map.class::cast)
+                .reduce(
+                    new HashMap<>(),
+                    (acc, m) -> {
+                      acc.putAll(m);
+                      return acc;
+                    });
         return elementFromValue(key, mergedValues, -1);
 
       } else {
@@ -393,8 +392,8 @@ public class YamlSupport {
 
   @Nonnull
   @SuppressWarnings("unchecked")
-  private static ChildDefinition elementFromValue(@Nonnull final String key,
-      @Nullable final Object value, final int cardinality) {
+  private static ChildDefinition elementFromValue(
+      @Nonnull final String key, @Nullable final Object value, final int cardinality) {
     if (isNull(value)) {
       return DefaultPrimitiveDefinition.of(key, FHIRDefinedType.NULL, cardinality);
     } else if (value instanceof final FhirTypedLiteral typedLiteral) {
@@ -416,16 +415,17 @@ public class YamlSupport {
       return Optional.ofNullable(map.get(FHIR_TYPE_ANNOTATION))
           .map(Object::toString)
           .map(FHIRDefinedType::fromCode)
-          .map(fhirType -> DefaultCompositeDefinition.of(key,
-              elementsFromYaml((Map<Object, Object>) map),
-              cardinality, fhirType))
-          .orElseGet(() -> DefaultCompositeDefinition.backbone(key,
-              elementsFromYaml((Map<Object, Object>) map),
-              cardinality));
+          .map(
+              fhirType ->
+                  DefaultCompositeDefinition.of(
+                      key, elementsFromYaml((Map<Object, Object>) map), cardinality, fhirType))
+          .orElseGet(
+              () ->
+                  DefaultCompositeDefinition.backbone(
+                      key, elementsFromYaml((Map<Object, Object>) map), cardinality));
     } else {
       throw new IllegalArgumentException(
-          "Unsupported data type: " + value + " (" + value.getClass()
-              .getName() + ")");
+          "Unsupported data type: " + value + " (" + value.getClass().getName() + ")");
     }
   }
 
@@ -441,39 +441,44 @@ public class YamlSupport {
     return new StructType(
         childDefinitions.stream()
             .flatMap(YamlSupport::elementToStructField)
-            .toArray(StructField[]::new)
-    );
+            .toArray(StructField[]::new));
   }
 
   private static Stream<StructField> elementToStructField(final ChildDefinition childDefinition) {
     if (childDefinition instanceof final DefaultPrimitiveDefinition primitiveDefinition) {
-      final DataType elementType = requireNonNull(
-          FHIR_TO_SQL.get(primitiveDefinition.getType()),
-          "No SQL type for " + primitiveDefinition.getFhirType());
-      return Stream.of(new StructField(
-          primitiveDefinition.getName(),
-          primitiveDefinition.getCardinality() < 0
-          ? new ArrayType(elementType, true)
-          : elementType,
-          true, Metadata.empty()
-      ));
+      final DataType elementType =
+          requireNonNull(
+              FHIR_TO_SQL.get(primitiveDefinition.getType()),
+              "No SQL type for " + primitiveDefinition.getFhirType());
+      return Stream.of(
+          new StructField(
+              primitiveDefinition.getName(),
+              primitiveDefinition.getCardinality() < 0
+                  ? new ArrayType(elementType, true)
+                  : elementType,
+              true,
+              Metadata.empty()));
     } else if (childDefinition instanceof final DefaultCompositeDefinition compositeDefinition) {
 
       final StructType predefinedType = (StructType) FHIR_TO_SQL.get(compositeDefinition.getType());
-      final StructType elementType = predefinedType != null
-                                     ? predefinedType
-                                     : childrenToStruct(compositeDefinition.getChildren());
-      return Stream.of(new StructField(
-          compositeDefinition.getName(),
-          compositeDefinition.getCardinality() < 0
-          ? new ArrayType(elementType, true)
-          : elementType,
-          true, Metadata.empty()
-      ));
+      final StructType elementType =
+          predefinedType != null
+              ? predefinedType
+              : childrenToStruct(compositeDefinition.getChildren());
+      return Stream.of(
+          new StructField(
+              compositeDefinition.getName(),
+              compositeDefinition.getCardinality() < 0
+                  ? new ArrayType(elementType, true)
+                  : elementType,
+              true,
+              Metadata.empty()));
     } else if (childDefinition instanceof final DefaultChoiceDefinition choiceDefinition) {
-      final StructType elementType = childrenToStruct(
-          choiceDefinition.getChoices().stream().filter(c -> !c.getName().startsWith("_"))
-              .toList());
+      final StructType elementType =
+          childrenToStruct(
+              choiceDefinition.getChoices().stream()
+                  .filter(c -> !c.getName().startsWith("_"))
+                  .toList());
       return Stream.of(elementType.fields());
     } else {
       throw new IllegalArgumentException("Unsupported child definition: " + childDefinition);

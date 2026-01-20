@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,12 +28,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalog.Catalog;
 import org.apache.spark.sql.catalog.Table;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A class for making FHIR data in the Spark catalog available for query.
@@ -43,21 +46,24 @@ import org.apache.spark.sql.catalog.Table;
  */
 public class CatalogSource extends AbstractSource {
 
-  @Nonnull
-  private final Optional<String> schema;
+  @Nonnull private final Optional<String> schema;
 
-  @Nonnull
-  private final Optional<UnaryOperator<Dataset<Row>>> transformation;
+  @Nonnull private final Optional<UnaryOperator<Dataset<Row>>> transformation;
+  private final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator;
+
+  private final Optional<Predicate<String>> filterResourcePredicate;
 
   /**
    * Constructs a CatalogSource with the specified PathlingContext and an empty schema.
    *
    * @param context the PathlingContext to use
    */
-  CatalogSource(@Nonnull final PathlingContext context) {
+  public CatalogSource(@Nonnull final PathlingContext context) {
     super(context);
     this.schema = Optional.empty(); // Default schema is empty
     this.transformation = Optional.empty(); // No transformation by default
+    this.universalOperator = Optional.empty();
+    this.filterResourcePredicate = Optional.empty();
   }
 
   /**
@@ -66,29 +72,52 @@ public class CatalogSource extends AbstractSource {
    * @param context the PathlingContext to use
    * @param schema the schema to use for the catalog tables
    */
-  CatalogSource(@Nonnull final PathlingContext context, @Nonnull final String schema) {
+  public CatalogSource(@Nonnull final PathlingContext context, @Nonnull final String schema) {
     super(context);
     this.schema = Optional.of(schema);
     this.transformation = Optional.empty(); // No transformation by default
+    this.universalOperator = Optional.empty();
+    this.filterResourcePredicate = Optional.empty();
   }
 
-  private CatalogSource(@Nonnull final PathlingContext context,
+  /**
+   * Constructs a CatalogSource with full control over all optional parameters.
+   *
+   * @param context the PathlingContext to use
+   * @param schema optional schema name for the catalog tables
+   * @param transformation optional transformation to apply to each dataset
+   * @param universalOperator optional operator to apply to each resource with its type
+   * @param filterResourcePredicate optional predicate to filter resource types
+   */
+  public CatalogSource(
+      @Nonnull final PathlingContext context,
       @Nonnull final Optional<String> schema,
-      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation) {
+      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation,
+      @Nonnull final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator,
+      @Nonnull final Optional<Predicate<String>> filterResourcePredicate) {
     super(context);
     this.schema = schema;
     this.transformation = transformation;
+    this.universalOperator = universalOperator;
+    this.filterResourcePredicate = filterResourcePredicate;
   }
 
   @Nonnull
   @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
     requireNonNull(resourceCode);
-    final Dataset<Row> table = context.getSpark().table(getTableName(resourceCode));
-    // If a transformation is provided, apply it to the table. 
+    Dataset<Row> table = context.getSpark().table(getTableName(resourceCode));
+    // If a transformation is provided, apply it to the table.
     // Otherwise, return the table as is.
-    return transformation.map(t -> t.apply(table))
-        .orElse(table);
+    if (filterResourcePredicate.isPresent() && !filterResourcePredicate.get().test(resourceCode)) {
+      // The resourceCode is meant to be excluded, no more mapping required
+      return table.limit(0);
+    }
+    if (universalOperator.isPresent()) {
+      table = universalOperator.get().apply(resourceCode, table);
+    }
+    final Dataset<Row> finalTable = table;
+    return transformation.map(t -> t.apply(finalTable)).orElse(table);
   }
 
   @Nonnull
@@ -108,45 +137,57 @@ public class CatalogSource extends AbstractSource {
   }
 
   /**
+   * Gets the table name for the given resource type.
+   *
    * @param resourceType the resource type to get the table name for
    * @return the name of the table for the given resource type, qualified by the specified schema if
-   * one is provided
+   *     one is provided
    */
   @Nonnull
   private String getTableName(@Nonnull final String resourceType) {
-    return schema.map(s -> String.join(".", s, resourceType))
-        .orElse(resourceType);
+    return schema.map(s -> String.join(".", s, resourceType)).orElse(resourceType);
   }
 
   /**
+   * Gets the list of tables from the catalog.
+   *
    * @return the list of tables from the catalog, using the specified schema if one is provided
    * @throws PersistenceError if the specified schema does not exist
    */
   private List<Table> getTables() {
     final Catalog catalog = context.getSpark().catalog();
     final Dataset<Table> tablesDataset;
-    // If a schema is provided, use it to list the tables. Otherwise, list tables from the currently 
+    // If a schema is provided, use it to list the tables. Otherwise, list tables from the currently
     // selected schema.
-    tablesDataset = schema.map(dbName -> {
-          try {
-            return catalog.listTables(dbName);
-          } catch (final AnalysisException e) {
-            throw new PersistenceError("Specified schema was not found", e);
-          }
-        })
-        .orElseGet(catalog::listTables);
+    tablesDataset =
+        schema
+            .map(
+                dbName -> {
+                  try {
+                    return catalog.listTables(dbName);
+                  } catch (final AnalysisException e) {
+                    throw new PersistenceError("Specified schema was not found", e);
+                  }
+                })
+            .orElseGet(catalog::listTables);
     return tablesDataset.collectAsList();
   }
 
-  @Nonnull
   @Override
-  public CatalogSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
-    return new CatalogSource(context, schema, Optional.of(operator));
+  public CatalogSource map(@NotNull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
+    return new CatalogSource(
+        context, schema, transformation, Optional.of(operator), filterResourcePredicate);
+  }
+
+  @Override
+  public @NotNull QueryableDataSource filterByResourceType(
+      @NotNull final Predicate<String> resourceTypePredicate) {
+    return new CatalogSource(
+        context, schema, transformation, universalOperator, Optional.of(resourceTypePredicate));
   }
 
   @Override
   public CatalogSource cache() {
-    return map(Dataset::cache);
+    return map((resourceType, rowDataset) -> rowDataset.cache());
   }
-
 }

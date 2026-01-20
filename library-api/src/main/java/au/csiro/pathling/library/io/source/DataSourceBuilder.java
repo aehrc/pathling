@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,8 +39,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * Creates a new data source from a directory containing NDJSON encoded FHIR resource data, with
    * filenames containing the resource type the file contains, e.g. "Patient.ndjson" should contain
    * only Patient resources.
-   * <p>
-   * The filename can also optionally contain a qualifier after the resource type, to allow for
+   *
+   * <p>The filename can also optionally contain a qualifier after the resource type, to allow for
    * resources of the same type to be organised into different files, e.g.
    * "Observation.Chart.ndjson" and "Observation.Lab.ndjson".
    *
@@ -56,13 +56,13 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * Creates a new data source from a directory containing NDJSON encoded FHIR resource data, with
    * filenames containing the resource type the file contains, e.g. "Patient.ndjson" should contain
    * only Patient resources.
-   * <p>
-   * The filename can also optionally contain a qualifier after the resource type, to allow for
+   *
+   * <p>The filename can also optionally contain a qualifier after the resource type, to allow for
    * resources of the same type to be organised into different files, e.g.
    * "Observation.Chart.ndjson" and "Observation.Lab.ndjson".
-   * <p>
-   * A file extension is also provided, which overrides the default ".ndjson" extension and serves
-   * as a filter for the files to be included in the data source.
+   *
+   * <p>A file extension is also provided, which overrides the default ".ndjson" extension and
+   * serves as a filter for the files to be included in the data source.
    *
    * @param path the URI of directory containing NDJSON files
    * @param extension the file extension to expect
@@ -76,9 +76,9 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   /**
    * Creates a new data source from a directory containing NDJSON encoded FHIR resource data, with
    * filenames determined by the provided function.
-   * <p>
-   * A file extension is also provided, which overrides the default ".ndjson" extension and serves
-   * as a filter for the files to be included in the data source.
+   *
+   * <p>A file extension is also provided, which overrides the default ".ndjson" extension and
+   * serves as a filter for the files to be included in the data source.
    *
    * @param path the URI of directory containing NDJSON files
    * @param extension the file extension to expect
@@ -86,10 +86,14 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public QueryableDataSource ndjson(@Nullable final String path,
+  public QueryableDataSource ndjson(
+      @Nullable final String path,
       @Nullable final String extension,
       @Nullable final Function<String, Set<String>> fileNameMapper) {
-    return new NdjsonSource(context, checkArgumentNotNull(path), checkArgumentNotNull(extension),
+    return new NdjsonSource(
+        context,
+        checkArgumentNotNull(path),
+        checkArgumentNotNull(extension),
         checkArgumentNotNull(fileNameMapper));
   }
 
@@ -97,11 +101,11 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * Creates a new data source from a directory containing FHIR Bundles. Takes an argument that
    * specifies the resource types that should be extracted from the bundles and added to the data
    * source.
-   * <p>
-   * If the MIME type is "application/fhir+xml", then the bundles are expected to be in XML format,
-   * and the file extensions are expected to be ".xml". If the MIME type is "application/fhir+json",
-   * then the bundles are expected to be in JSON format, and the file extensions are expected to be
-   * ".json".
+   *
+   * <p>If the MIME type is "application/fhir+xml", then the bundles are expected to be in XML
+   * format, and the file extensions are expected to be ".xml". If the MIME type is
+   * "application/fhir+json", then the bundles are expected to be in JSON format, and the file
+   * extensions are expected to be ".json".
    *
    * @param path the URI of the directory containing the bundles
    * @param resourceTypes the resource types to extract from the bundles
@@ -109,9 +113,14 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public QueryableDataSource bundles(@Nullable final String path,
-      @Nullable final Set<String> resourceTypes, @Nullable final String mimeType) {
-    return new BundlesSource(context, checkArgumentNotNull(path), checkArgumentNotNull(mimeType),
+  public QueryableDataSource bundles(
+      @Nullable final String path,
+      @Nullable final Set<String> resourceTypes,
+      @Nullable final String mimeType) {
+    return new BundlesSource(
+        context,
+        checkArgumentNotNull(path),
+        checkArgumentNotNull(mimeType),
         checkArgumentNotNull(resourceTypes));
   }
 
@@ -119,7 +128,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * Creates a new data source from Spark datasets.
    *
    * @return a {@link DatasetSource}, which can then be populated with datasets that are mapped to
-   * the resource types that they contain, using the {@link DatasetSource#dataset} method.
+   *     the resource types that they contain, using the {@link DatasetSource#dataset} method.
    */
   @Nonnull
   public DatasetSource datasets() {
@@ -148,10 +157,10 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public QueryableDataSource parquet(@Nullable final String path,
-      @Nullable final Function<String, Set<String>> fileNameMapper) {
-    return new ParquetSource(context, checkArgumentNotNull(path),
-        checkArgumentNotNull(fileNameMapper));
+  public QueryableDataSource parquet(
+      @Nullable final String path, @Nullable final Function<String, Set<String>> fileNameMapper) {
+    return new ParquetSource(
+        context, checkArgumentNotNull(path), checkArgumentNotNull(fileNameMapper));
   }
 
   /**
@@ -193,12 +202,11 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * Creates a new data source from a FHIR Bulk Data endpoint.
    *
    * @param client the configured {@link BulkExportClient} that specifies the endpoint and export
-   * parameters
+   *     parameters
    * @return the new data source
    */
   @Nonnull
   public QueryableDataSource bulk(@Nullable final BulkExportClient client) {
     return new BulkDataSource(context, checkArgumentNotNull(client));
   }
-
 }

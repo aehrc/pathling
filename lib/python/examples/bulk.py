@@ -1,12 +1,12 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #  Unless required by applicable law or agreed to in writing, software
 #  distributed under the License is distributed on an "AS IS" BASIS,
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,9 +49,10 @@ def test_bulk_exports():
     # Base parameters from the demo server
     fhir_server = "https://bulk-data.smarthealthit.org/fhir"
     output_base = os.path.join(tempfile.gettempdir(), "bulk_export_test")
-    
+
     if os.path.exists(output_base):
         import shutil
+
         shutil.rmtree(output_base)
     os.makedirs(output_base)
 
@@ -75,8 +76,8 @@ def test_bulk_exports():
             "use_smart": True,
             "use_form_for_basic_auth": False,
             "scope": "system/*.read",
-            "token_expiry_tolerance": 30
-        }
+            "token_expiry_tolerance": 30,
+        },
     )
     print("System export completed successfully")
 
@@ -85,7 +86,7 @@ def test_bulk_exports():
     pc.read.bulk(
         fhir_endpoint_url=fhir_server,
         output_dir=f"{output_base}/group_basic",
-        group_id="BMCHealthNet"
+        group_id="BMCHealthNet",
     )
     print("Group export completed successfully")
 
@@ -103,7 +104,7 @@ def test_bulk_exports():
         type_filters=["Patient?status=active"],
         output_extension="ndjson",
         timeout=1800,
-        max_concurrent_downloads=8
+        max_concurrent_downloads=8,
     )
     print("Group export completed successfully")
 
@@ -114,8 +115,8 @@ def test_bulk_exports():
         output_dir=f"{output_base}/patient_basic",
         patients=[
             "Patient/58c297c4-d684-4677-8024-01131d93835e",
-            "Patient/118616a4-f0b2-411f-8050-39d5d27c738c"
-        ]
+            "Patient/118616a4-f0b2-411f-8050-39d5d27c738c",
+        ],
     )
     print("Patient export completed successfully")
 
@@ -127,7 +128,7 @@ def test_bulk_exports():
         patients=[
             "Patient/58c297c4-d684-4677-8024-01131d93835e",
             "Patient/118616a4-f0b2-411f-8050-39d5d27c738c",
-            "Patient/21fba439-ca79-411f-a081-37a432a78f3a"
+            "Patient/21fba439-ca79-411f-a081-37a432a78f3a",
         ],
         output_format="application/fhir+ndjson",
         since=datetime(2020, 1, 1, tzinfo=timezone.utc),
@@ -137,7 +138,7 @@ def test_bulk_exports():
         type_filters=["Observation?category=vital-signs"],
         output_extension="ndjson",
         timeout=2400,
-        max_concurrent_downloads=3
+        max_concurrent_downloads=3,
     )
     print("Patient export completed successfully")
 

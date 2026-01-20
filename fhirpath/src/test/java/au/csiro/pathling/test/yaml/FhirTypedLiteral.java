@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,10 +27,8 @@ import org.hl7.fhir.r4.model.Enumerations;
 @Value(staticConstructor = "of")
 public class FhirTypedLiteral {
 
-  @Nonnull
-  Enumerations.FHIRDefinedType type;
-  @Nullable
-  String literal;
+  @Nonnull Enumerations.FHIRDefinedType type;
+  @Nullable String literal;
 
   @Nonnull
   public String getTag() {
@@ -105,5 +103,4 @@ public class FhirTypedLiteral {
   public static FhirTypedLiteral toBoolean(@Nullable final String literal) {
     return of(Enumerations.FHIRDefinedType.BOOLEAN, literal);
   }
-
 }

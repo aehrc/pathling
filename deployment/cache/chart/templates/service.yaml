@@ -1,0 +1,20 @@
+# Copyright © 2025, Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+# ABN 41 687 119 230. Licensed under the Apache License, Version 2.0.
+#
+# Author: John Grimes
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-service
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  type: {{ .Values.pathlingCache.service.type | quote }}
+  ports:
+    - port: {{ .Values.pathlingCache.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Release.Name }}

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,25 +21,29 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
-/**
- * Represents a definition of a FHIR-like element.
- */
+/** Represents a definition of a FHIR-like element. */
 public interface ElementDefinition extends ChildDefinition {
 
   /**
+   * Gets the name of this element.
+   *
    * @return the name of this element
    */
   @Nonnull
   String getElementName();
 
   /**
+   * Gets the FHIR type of this element.
+   *
    * @return The {@link FHIRDefinedType} that corresponds to the type of this element. Not all
-   * elements have a type, e.g. polymorphic elements.
+   *     elements have a type, e.g. polymorphic elements.
    */
   @Nonnull
   Optional<FHIRDefinedType> getFhirType();
-  
+
   /**
+   * Checks if this element is a choice element.
+   *
    * @return true if this element is a choice element, false otherwise
    */
   default boolean isChoiceElement() {

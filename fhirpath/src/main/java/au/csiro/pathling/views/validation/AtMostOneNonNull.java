@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,13 +27,13 @@ import java.lang.annotation.Target;
 
 /**
  * Validation constraint that ensures at most one of the specified fields is non-null.
- * <p>
- * This constraint is used to validate that among a set of fields, at most one can have a non-null
- * value. It's particularly useful for mutually exclusive options where setting multiple fields
- * would create ambiguity or invalid configurations.
- * <p>
- * The validation is performed by {@link AtMostOneNonNullValidator}, which checks that at most one
- * of the specified fields has a non-null value.
+ *
+ * <p>This constraint is used to validate that among a set of fields, at most one can have a
+ * non-null value. It's particularly useful for mutually exclusive options where setting multiple
+ * fields would create ambiguity or invalid configurations.
+ *
+ * <p>The validation is performed by {@link AtMostOneNonNullValidator}, which checks that at most
+ * one of the specified fields has a non-null value.
  */
 @Documented
 @Constraint(validatedBy = AtMostOneNonNullValidator.class)

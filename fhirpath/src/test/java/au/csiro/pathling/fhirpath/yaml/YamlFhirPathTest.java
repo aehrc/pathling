@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,9 +25,7 @@ import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@YamlTestConfiguration(
-    resourceBase = "fhirpath-ptl/resources"
-)
+@YamlTestConfiguration(config = "fhirpath-ptl/config.yaml", resourceBase = "fhirpath-ptl/resources")
 public class YamlFhirPathTest extends YamlCachedTestBase {
 
   @YamlTest("fhirpath-ptl/cases/math.yaml")
