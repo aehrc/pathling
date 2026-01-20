@@ -71,7 +71,7 @@
   <h1>Source code for pathling.datasource</h1><div class="highlight"><pre>
 <span></span><span class="c1">#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research</span>
 <span class="c1">#  Organisation (CSIRO) ABN 41 687 119 230.</span>
-<span class="c1"># </span>
+<span class="c1">#</span>
 <span class="c1">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
 <span class="c1">#  you may not use this file except in compliance with the License.</span>
 <span class="c1">#  You may obtain a copy of the License at</span>
@@ -85,16 +85,15 @@
 <span class="c1">#  limitations under the License.</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Callable</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">TYPE_CHECKING</span>
-
 <span class="kn">from</span><span class="w"> </span><span class="nn">json</span><span class="w"> </span><span class="kn">import</span> <span class="n">dumps</span><span class="p">,</span> <span class="n">loads</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">py4j.java_gateway</span><span class="w"> </span><span class="kn">import</span> <span class="n">JavaObject</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">py4j.java_collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">SetConverter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">py4j.java_gateway</span><span class="w"> </span><span class="kn">import</span> <span class="n">JavaObject</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrame</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling</span><span class="w"> </span><span class="kn">import</span> <span class="n">PathlingContext</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">StringToStringSetMapper</span><span class="p">,</span> <span class="n">SparkConversionsMixin</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">SparkConversionsMixin</span><span class="p">,</span> <span class="n">StringToStringSetMapper</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.fhir</span><span class="w"> </span><span class="kn">import</span> <span class="n">MimeType</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.spark</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dfs</span>
 
@@ -125,7 +124,7 @@
 <div class="viewcode-block" id="DataSource.resource_types"><a class="viewcode-back" href="../../pathling.html#pathling.datasource.DataSource.resource_types">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">resource_types</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a list of the resource types that are available in the data source.</span>
-<span class="sd">        </span>
+
 <span class="sd">        :return: A list of strings representing the resource types.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_jds</span><span class="o">.</span><span class="n">getResourceTypes</span><span class="p">())</span></div>
@@ -137,6 +136,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Import here to avoid circular dependency</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.datasink</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataSinks</span>
+
         <span class="k">return</span> <span class="n">DataSinks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
 <div class="viewcode-block" id="DataSource.view"><a class="viewcode-back" href="../../pathling.html#pathling.datasource.DataSource.view">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">view</span><span class="p">(</span>
@@ -311,14 +311,14 @@
         <span class="n">type_filters</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">max_concurrent_downloads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
-        <span class="n">auth_config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">auth_config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataSource</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Creates a data source from a FHIR Bulk Data Access API endpoint. </span>
+<span class="sd">        Creates a data source from a FHIR Bulk Data Access API endpoint.</span>
 <span class="sd">        Currently only supports bulk export in the ndjson format.</span>
-<span class="sd">        </span>
+
 <span class="sd">        :param fhir_endpoint_url: The URL of the FHIR server to export from</span>
-<span class="sd">        :param output_dir: The directory to write the output files to. </span>
+<span class="sd">        :param output_dir: The directory to write the output files to.</span>
 <span class="sd">                This should be a valid path in the Spark&#39;s filesystem.</span>
 <span class="sd">                If set to `None`, a temporary directory will be used instead.</span>
 <span class="sd">        :param overwrite: Whether to overwrite the output directory if it already exists. Defaults to True.</span>
@@ -348,7 +348,9 @@
         <span class="n">dfs</span> <span class="o">=</span> <span class="n">Dfs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pc</span><span class="o">.</span><span class="n">spark</span><span class="p">)</span>
 
         <span class="c1"># If `output_dir` is not provided, create a temporary directory</span>
-        <span class="n">output_dir</span> <span class="o">=</span> <span class="n">output_dir</span> <span class="ow">or</span> <span class="n">dfs</span><span class="o">.</span><span class="n">get_temp_dir_path</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;tmp-bulk-export&quot;</span><span class="p">,</span> <span class="n">qualified</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">output_dir</span> <span class="o">=</span> <span class="n">output_dir</span> <span class="ow">or</span> <span class="n">dfs</span><span class="o">.</span><span class="n">get_temp_dir_path</span><span class="p">(</span>
+            <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;tmp-bulk-export&quot;</span><span class="p">,</span> <span class="n">qualified</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
         <span class="c1"># If `overwrite`, then ensure the output directory does not exist</span>
         <span class="k">if</span> <span class="n">overwrite</span> <span class="ow">and</span> <span class="n">dfs</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_dir</span><span class="p">):</span>
             <span class="n">dfs</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -372,7 +374,7 @@
                 <span class="n">output_extension</span><span class="o">=</span><span class="n">output_extension</span><span class="p">,</span>
                 <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
                 <span class="n">max_concurrent_downloads</span><span class="o">=</span><span class="n">max_concurrent_downloads</span><span class="p">,</span>
-                <span class="n">auth_config</span><span class="o">=</span><span class="n">auth_config</span>
+                <span class="n">auth_config</span><span class="o">=</span><span class="n">auth_config</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">elif</span> <span class="n">patients</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">client</span> <span class="o">=</span> <span class="n">BulkExportClient</span><span class="o">.</span><span class="n">for_patient</span><span class="p">(</span>
@@ -389,7 +391,7 @@
                 <span class="n">output_extension</span><span class="o">=</span><span class="n">output_extension</span><span class="p">,</span>
                 <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
                 <span class="n">max_concurrent_downloads</span><span class="o">=</span><span class="n">max_concurrent_downloads</span><span class="p">,</span>
-                <span class="n">auth_config</span><span class="o">=</span><span class="n">auth_config</span>
+                <span class="n">auth_config</span><span class="o">=</span><span class="n">auth_config</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">client</span> <span class="o">=</span> <span class="n">BulkExportClient</span><span class="o">.</span><span class="n">for_system</span><span class="p">(</span>
@@ -405,7 +407,7 @@
                 <span class="n">output_extension</span><span class="o">=</span><span class="n">output_extension</span><span class="p">,</span>
                 <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
                 <span class="n">max_concurrent_downloads</span><span class="o">=</span><span class="n">max_concurrent_downloads</span><span class="p">,</span>
-                <span class="n">auth_config</span><span class="o">=</span><span class="n">auth_config</span>
+                <span class="n">auth_config</span><span class="o">=</span><span class="n">auth_config</span><span class="p">,</span>
             <span class="p">)</span>
 
         <span class="c1"># Perform the export</span>

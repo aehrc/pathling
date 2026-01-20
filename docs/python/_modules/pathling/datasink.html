@@ -71,7 +71,7 @@
   <h1>Source code for pathling.datasink</h1><div class="highlight"><pre>
 <span></span><span class="c1">#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research</span>
 <span class="c1">#  Organisation (CSIRO) ABN 41 687 119 230.</span>
-<span class="c1"># </span>
+<span class="c1">#</span>
 <span class="c1">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
 <span class="c1">#  you may not use this file except in compliance with the License.</span>
 <span class="c1">#  You may obtain a copy of the License at</span>
@@ -84,12 +84,55 @@
 <span class="c1">#  See the License for the specific language governing permissions and</span>
 <span class="c1">#  limitations under the License.</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">SparkConversionsMixin</span><span class="p">,</span> <span class="n">StringMapper</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.datasource</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataSource</span>
+
+
+<div class="viewcode-block" id="FileInformation"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.FileInformation">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">FileInformation</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Information about a file created by a write operation.</span>
+
+<span class="sd">    :param fhir_resource_type: The FHIR resource type code for this file.</span>
+<span class="sd">    :param absolute_url: The absolute URL or path to the file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">fhir_resource_type</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">absolute_url</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+<div class="viewcode-block" id="WriteDetails"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.WriteDetails">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">WriteDetails</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Details about files created or modified by a write operation.</span>
+
+<span class="sd">    :param file_infos: A list of file information objects describing each file written.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">file_infos</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">FileInformation</span><span class="p">]</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_convert_write_details</span><span class="p">(</span><span class="n">java_result</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WriteDetails</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert a Java WriteDetails object to a Python WriteDetails dataclass.</span>
+
+<span class="sd">    :param java_result: The Java WriteDetails object from the library API.</span>
+<span class="sd">    :returns: A Python WriteDetails dataclass with the converted data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">java_file_infos</span> <span class="o">=</span> <span class="n">java_result</span><span class="o">.</span><span class="n">fileInfos</span><span class="p">()</span>
+    <span class="n">file_infos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">FileInformation</span><span class="p">(</span>
+            <span class="n">fhir_resource_type</span><span class="o">=</span><span class="n">fi</span><span class="o">.</span><span class="n">fhirResourceType</span><span class="p">(),</span>
+            <span class="n">absolute_url</span><span class="o">=</span><span class="n">fi</span><span class="o">.</span><span class="n">absoluteUrl</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">fi</span> <span class="ow">in</span> <span class="n">java_file_infos</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">WriteDetails</span><span class="p">(</span><span class="n">file_infos</span><span class="o">=</span><span class="n">file_infos</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="SaveMode"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.SaveMode">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">SaveMode</span><span class="p">:</span>
@@ -128,7 +171,7 @@
         <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">save_mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveMode</span><span class="o">.</span><span class="n">ERROR</span><span class="p">,</span>
         <span class="n">file_name_mapper</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WriteDetails</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Writes the data to a directory of NDJSON files. The files will be named using the resource</span>
 <span class="sd">        type and the &quot;.ndjson&quot; extension.</span>
@@ -141,16 +184,20 @@
 <span class="sd">            - &quot;error&quot; will raise an error if the file already exists.</span>
 <span class="sd">        :param file_name_mapper: An optional function that can be used to customise the mapping of</span>
 <span class="sd">        the resource type to the file name.</span>
+<span class="sd">        :returns: Details about the files that were written.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">file_name_mapper</span><span class="p">:</span>
             <span class="n">wrapped_mapper</span> <span class="o">=</span> <span class="n">StringMapper</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">_jvm</span><span class="o">.</span><span class="n">_gateway_client</span><span class="p">,</span> <span class="n">file_name_mapper</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">ndjson</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">wrapped_mapper</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">ndjson</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">wrapped_mapper</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">ndjson</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">ndjson</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_convert_write_details</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="DataSinks.parquet"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.DataSinks.parquet">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">parquet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">save_mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveMode</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="DataSinks.parquet"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.DataSinks.parquet">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">parquet</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">save_mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveMode</span><span class="o">.</span><span class="n">ERROR</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WriteDetails</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Writes the data to a directory of Parquet files.</span>
 
@@ -160,12 +207,14 @@
 <span class="sd">            - &quot;append&quot; will append the new data to the existing data.</span>
 <span class="sd">            - &quot;ignore&quot; will only save the data if the file does not already exist.</span>
 <span class="sd">            - &quot;error&quot; will raise an error if the file already exists.</span>
+<span class="sd">        :returns: Details about the files that were written.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_convert_write_details</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="DataSinks.delta"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.DataSinks.delta">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">delta</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">save_mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveMode</span><span class="o">.</span><span class="n">OVERWRITE</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WriteDetails</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Writes the data to a directory of Delta files.</span>
 
@@ -173,14 +222,16 @@
 <span class="sd">        :param save_mode: The save mode to use when writing the data - &quot;overwrite&quot; will</span>
 <span class="sd">        overwrite any existing data, &quot;merge&quot; will merge the new data with the existing data based</span>
 <span class="sd">        on resource ID.</span>
+<span class="sd">        :returns: Details about the files that were written.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">delta</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">delta</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_convert_write_details</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="DataSinks.tables"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.DataSinks.tables">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">tables</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">schema</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">save_mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveMode</span><span class="o">.</span><span class="n">OVERWRITE</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WriteDetails</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Writes the data to a set of tables in the Spark catalog.</span>
 
@@ -188,11 +239,13 @@
 <span class="sd">        :param save_mode: The save mode to use when writing the data - &quot;overwrite&quot; will</span>
 <span class="sd">        overwrite any existing data, &quot;merge&quot; will merge the new data with the existing data based</span>
 <span class="sd">        on resource ID.</span>
+<span class="sd">        :returns: Details about the files that were written.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">schema</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">tables</span><span class="p">(</span><span class="n">schema</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">tables</span><span class="p">(</span><span class="n">schema</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">tables</span><span class="p">()</span></div></div>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">tables</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">_convert_write_details</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>

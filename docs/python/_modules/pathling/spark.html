@@ -71,7 +71,7 @@
   <h1>Source code for pathling.spark</h1><div class="highlight"><pre>
 <span></span><span class="c1">#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research</span>
 <span class="c1">#  Organisation (CSIRO) ABN 41 687 119 230.</span>
-<span class="c1"># </span>
+<span class="c1">#</span>
 <span class="c1">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
 <span class="c1">#  you may not use this file except in compliance with the License.</span>
 <span class="c1">#  You may obtain a copy of the License at</span>
@@ -111,11 +111,11 @@
 <div class="viewcode-block" id="Dfs.get_temp_dir_path"><a class="viewcode-back" href="../../pathling.html#pathling.spark.Dfs.get_temp_dir_path">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_temp_dir_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;tmp-app&quot;</span><span class="p">,</span> <span class="n">qualified</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a unique path for a temporary directory in Spark&#39;s filesystem.</span>
-<span class="sd">    </span>
-<span class="sd">        The path is constructed by appending a UUID to the base temporary directory, </span>
+
+<span class="sd">        The path is constructed by appending a UUID to the base temporary directory,</span>
 <span class="sd">        ensuring uniqueness for each call.</span>
 <span class="sd">        The directory itself is not created, only the path is returned.</span>
-<span class="sd">        </span>
+
 <span class="sd">        :param prefix: String to insert between the base directory and the UUID (default: &quot;tmp-app&quot;).</span>
 <span class="sd">        :param qualified: If True, returns a fully qualified Hadoop path; if False, returns a raw path string.</span>
 <span class="sd">        :return: String representing the unique temporary directory path.</span>
@@ -125,8 +125,14 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`hadoop.tmp.dir` must be set in Hadoop configuration.&quot;</span><span class="p">)</span>
         <span class="n">uuid_suffix</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
         <span class="n">base_tmp_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jvm</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">base_tmp_dir</span><span class="p">)</span>
-        <span class="n">tmp_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jvm</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">base_tmp_path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">uuid_suffix</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fs</span><span class="o">.</span><span class="n">makeQualified</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">)</span><span class="o">.</span><span class="n">toString</span><span class="p">()</span> <span class="k">if</span> <span class="n">qualified</span> <span class="k">else</span> <span class="n">tmp_path</span><span class="o">.</span><span class="n">toString</span><span class="p">()</span></div>
+        <span class="n">tmp_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jvm</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span>
+            <span class="n">base_tmp_path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">uuid_suffix</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fs</span><span class="o">.</span><span class="n">makeQualified</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">)</span><span class="o">.</span><span class="n">toString</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">qualified</span>
+            <span class="k">else</span> <span class="n">tmp_path</span><span class="o">.</span><span class="n">toString</span><span class="p">()</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Dfs.exists"><a class="viewcode-back" href="../../pathling.html#pathling.spark.Dfs.exists">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>

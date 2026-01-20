@@ -18,7 +18,7 @@ name associated with the given code."><!-- mathjax --><script src="https://cdnjs
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">9.1.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">9.2.0</span>
       </span>
     </div>
 
@@ -90,11 +90,13 @@ Overrides the parameter `accept_language` in <code><a href="pathling_connect.htm
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="co"># Get the display name of the first coding of the Condition resource, with the default language.</span></span></span>
-<span class="r-in"><span><span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="pathling_example_resource.html">pathling_example_resource</a></span><span class="op">(</span><span class="st">'Condition'</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span></span>
-<span class="r-in"><span>     <span class="fu">sparklyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>         <span class="va">id</span>, </span></span>
-<span class="r-in"><span>         display <span class="op">=</span> <span class="op">!</span><span class="op">!</span><span class="fu">tx_display</span><span class="op">(</span><span class="va">code</span><span class="op">[[</span><span class="st">'coding'</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="fl">0</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, </span></span>
-<span class="r-in"><span>         .keep<span class="op">=</span><span class="st">'none'</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="pathling_example_resource.html">pathling_example_resource</a></span><span class="op">(</span><span class="st">"Condition"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu">sparklyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="va">id</span>,</span></span>
+<span class="r-in"><span>    display <span class="op">=</span> <span class="op">!</span><span class="op">!</span><span class="fu">tx_display</span><span class="op">(</span><span class="va">code</span><span class="op">[[</span><span class="st">"coding"</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="fl">0</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    .keep <span class="op">=</span> <span class="st">"none"</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

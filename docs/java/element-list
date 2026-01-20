@@ -23,7 +23,6 @@ au.csiro.pathling.fhirpath.function.resolver
 au.csiro.pathling.fhirpath.literal
 au.csiro.pathling.fhirpath.operator
 au.csiro.pathling.fhirpath.parser
-au.csiro.pathling.fhirpath.parser.generated
 au.csiro.pathling.fhirpath.path
 au.csiro.pathling.fhirpath.unit
 au.csiro.pathling.fhirpath.variable
@@ -46,5 +45,4 @@ au.csiro.pathling.terminology.translate
 au.csiro.pathling.terminology.validatecode
 au.csiro.pathling.views
 au.csiro.pathling.views.ansi
-au.csiro.pathling.views.ansi.generated
 au.csiro.pathling.views.validation

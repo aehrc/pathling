@@ -71,13 +71,13 @@
   <h1>Source code for pathling.bulk</h1><div class="highlight"><pre>
 <span></span><span class="c1">#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research</span>
 <span class="c1">#  Organisation (CSIRO) ABN 41 687 119 230.</span>
-<span class="c1"># </span>
+<span class="c1">#</span>
 <span class="c1">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
 <span class="c1">#  you may not use this file except in compliance with the License.</span>
 <span class="c1">#  You may obtain a copy of the License at</span>
-<span class="c1"># </span>
+<span class="c1">#</span>
 <span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="c1"># </span>
+<span class="c1">#</span>
 <span class="c1">#  Unless required by applicable law or agreed to in writing, software</span>
 <span class="c1">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
 <span class="c1">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
@@ -86,7 +86,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timezone</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Callable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">py4j.java_gateway</span><span class="w"> </span><span class="kn">import</span> <span class="n">JavaObject</span><span class="p">,</span> <span class="n">JVMView</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">SparkSession</span>
@@ -97,6 +97,7 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Represents the result of a single file export operation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">source</span><span class="p">:</span> <span class="nb">str</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    The source URL of the exported file.</span>
@@ -116,6 +117,7 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Represents the result of a bulk export operation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">transaction_time</span><span class="p">:</span> <span class="n">datetime</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    The time at which the transaction was processed at the server.</span>
@@ -127,30 +129,29 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="ExportResult.from_java"><a class="viewcode-back" href="../../pathling.html#pathling.bulk.ExportResult.from_java">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">from_java</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">java_result</span><span class="p">:</span> <span class="n">JavaObject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ExportResult&#39;</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_java</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">java_result</span><span class="p">:</span> <span class="n">JavaObject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;ExportResult&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create an ExportResult from a Java export result object.</span>
-<span class="sd">        </span>
+
 <span class="sd">        :param java_result: The Java export result object</span>
 <span class="sd">        :return: A Python ExportResult object</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Convert transaction time from Java Instant to Python datetime</span>
         <span class="n">transaction_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span>
-            <span class="n">java_result</span><span class="o">.</span><span class="n">getTransactionTime</span><span class="p">()</span><span class="o">.</span><span class="n">toEpochMilli</span><span class="p">()</span> <span class="o">/</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span>
+            <span class="n">java_result</span><span class="o">.</span><span class="n">getTransactionTime</span><span class="p">()</span><span class="o">.</span><span class="n">toEpochMilli</span><span class="p">()</span> <span class="o">/</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span>
+        <span class="p">)</span>
 
         <span class="c1"># Convert file results</span>
         <span class="n">file_results</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">FileResult</span><span class="p">(</span>
                 <span class="n">source</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">java_file_result</span><span class="o">.</span><span class="n">getSource</span><span class="p">()),</span>
                 <span class="n">destination</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">java_file_result</span><span class="o">.</span><span class="n">getDestination</span><span class="p">()),</span>
-                <span class="n">size</span><span class="o">=</span><span class="n">java_file_result</span><span class="o">.</span><span class="n">getSize</span><span class="p">())</span>
+                <span class="n">size</span><span class="o">=</span><span class="n">java_file_result</span><span class="o">.</span><span class="n">getSize</span><span class="p">(),</span>
+            <span class="p">)</span>
             <span class="k">for</span> <span class="n">java_file_result</span> <span class="ow">in</span> <span class="n">java_result</span><span class="o">.</span><span class="n">getResults</span><span class="p">()</span>
         <span class="p">]</span>
 
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
-            <span class="n">transaction_time</span><span class="o">=</span><span class="n">transaction_time</span><span class="p">,</span>
-            <span class="n">results</span><span class="o">=</span><span class="n">file_results</span>
-        <span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">transaction_time</span><span class="o">=</span><span class="n">transaction_time</span><span class="p">,</span> <span class="n">results</span><span class="o">=</span><span class="n">file_results</span><span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="BulkExportClient"><a class="viewcode-back" href="../../pathling.html#pathling.bulk.BulkExportClient">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">BulkExportClient</span><span class="p">:</span>
@@ -161,7 +162,7 @@
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">java_client</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a new BulkExportClient that wraps a Java BulkExportClient.</span>
-<span class="sd">        </span>
+
 <span class="sd">        :param java_client: The Java BulkExportClient instance to wrap</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_java_client</span> <span class="o">=</span> <span class="n">java_client</span>
@@ -169,27 +170,33 @@
 <div class="viewcode-block" id="BulkExportClient.export"><a class="viewcode-back" href="../../pathling.html#pathling.bulk.BulkExportClient.export">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">export</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExportResult</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Export data from the FHIR server.</span>
-<span class="sd">        </span>
+
 <span class="sd">        :return: The result of the export operation as a Python ExportResult object</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">java_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_java_client</span><span class="o">.</span><span class="n">export</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">ExportResult</span><span class="o">.</span><span class="n">from_java</span><span class="p">(</span><span class="n">java_result</span><span class="p">)</span></div>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_configure_builder</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">jvm</span><span class="p">,</span> <span class="n">builder</span><span class="p">,</span> <span class="n">fhir_endpoint_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                           <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;application/fhir+ndjson&quot;</span><span class="p">,</span>
-                           <span class="n">since</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                           <span class="n">types</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                           <span class="n">elements</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                           <span class="n">include_associated_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                           <span class="n">type_filters</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                           <span class="n">output_extension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ndjson&quot;</span><span class="p">,</span>
-                           <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                           <span class="n">max_concurrent_downloads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
-                           <span class="n">auth_config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_configure_builder</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">jvm</span><span class="p">,</span>
+        <span class="n">builder</span><span class="p">,</span>
+        <span class="n">fhir_endpoint_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;application/fhir+ndjson&quot;</span><span class="p">,</span>
+        <span class="n">since</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">types</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">elements</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">include_associated_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">type_filters</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_extension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ndjson&quot;</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">max_concurrent_downloads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">auth_config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Configure common builder parameters.</span>
-<span class="sd">        </span>
+
 <span class="sd">        :param jvm: The JVM instance</span>
 <span class="sd">        :param builder: The builder instance to configure</span>
 <span class="sd">        :param fhir_endpoint_url: The URL of the FHIR server</span>
@@ -228,11 +235,13 @@
             <span class="k">if</span> <span class="n">since</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;datetime must include timezone information&quot;</span><span class="p">)</span>
             <span class="c1"># Format with microsecond precision and timezone offset</span>
-            <span class="n">instant_str</span> <span class="o">=</span> <span class="n">since</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">T%H:%M:%S.</span><span class="si">%f</span><span class="s1">&#39;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>  <span class="c1"># Truncate to milliseconds</span>
+            <span class="n">instant_str</span> <span class="o">=</span> <span class="n">since</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%S.</span><span class="si">%f</span><span class="s2">&quot;</span><span class="p">)[</span>
+                <span class="p">:</span><span class="o">-</span><span class="mi">3</span>
+            <span class="p">]</span>  <span class="c1"># Truncate to milliseconds</span>
             <span class="k">if</span> <span class="n">since</span><span class="o">.</span><span class="n">utcoffset</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">instant_str</span> <span class="o">+=</span> <span class="s1">&#39;Z&#39;</span>
+                <span class="n">instant_str</span> <span class="o">+=</span> <span class="s2">&quot;Z&quot;</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">offset</span> <span class="o">=</span> <span class="n">since</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%z&#39;</span><span class="p">)</span>
+                <span class="n">offset</span> <span class="o">=</span> <span class="n">since</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%z&quot;</span><span class="p">)</span>
                 <span class="c1"># Insert colon in timezone offset</span>
                 <span class="n">instant_str</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">offset</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">offset</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="n">java_instant</span> <span class="o">=</span> <span class="n">jvm</span><span class="o">.</span><span class="n">java</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">Instant</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">instant_str</span><span class="p">)</span>
@@ -263,33 +272,33 @@
             <span class="n">auth_builder</span><span class="o">.</span><span class="n">tokenExpiryTolerance</span><span class="p">(</span><span class="mi">120</span><span class="p">)</span>
 
             <span class="c1"># Map Python config to Java builder methods</span>
-            <span class="k">if</span> <span class="s1">&#39;enabled&#39;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
-                <span class="n">auth_builder</span><span class="o">.</span><span class="n">enabled</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s1">&#39;enabled&#39;</span><span class="p">])</span>
-            <span class="k">if</span> <span class="s1">&#39;use_smart&#39;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
-                <span class="n">auth_builder</span><span class="o">.</span><span class="n">useSMART</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s1">&#39;use_smart&#39;</span><span class="p">])</span>
-            <span class="k">if</span> <span class="s1">&#39;token_endpoint&#39;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
-                <span class="n">auth_builder</span><span class="o">.</span><span class="n">tokenEndpoint</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s1">&#39;token_endpoint&#39;</span><span class="p">])</span>
-            <span class="k">if</span> <span class="s1">&#39;client_id&#39;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
-                <span class="n">auth_builder</span><span class="o">.</span><span class="n">clientId</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s1">&#39;client_id&#39;</span><span class="p">])</span>
-            <span class="k">if</span> <span class="s1">&#39;client_secret&#39;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
-                <span class="n">auth_builder</span><span class="o">.</span><span class="n">clientSecret</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s1">&#39;client_secret&#39;</span><span class="p">])</span>
-            <span class="k">if</span> <span class="s1">&#39;private_key_jwk&#39;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
-                <span class="n">auth_builder</span><span class="o">.</span><span class="n">privateKeyJWK</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s1">&#39;private_key_jwk&#39;</span><span class="p">])</span>
-            <span class="k">if</span> <span class="s1">&#39;use_form_for_basic_auth&#39;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
-                <span class="n">auth_builder</span><span class="o">.</span><span class="n">useFormForBasicAuth</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s1">&#39;use_form_for_basic_auth&#39;</span><span class="p">])</span>
-            <span class="k">if</span> <span class="s1">&#39;scope&#39;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
-                <span class="n">auth_builder</span><span class="o">.</span><span class="n">scope</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s1">&#39;scope&#39;</span><span class="p">])</span>
-            <span class="k">if</span> <span class="s1">&#39;token_expiry_tolerance&#39;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
-                <span class="n">auth_builder</span><span class="o">.</span><span class="n">tokenExpiryTolerance</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s1">&#39;token_expiry_tolerance&#39;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s2">&quot;enabled&quot;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
+                <span class="n">auth_builder</span><span class="o">.</span><span class="n">enabled</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s2">&quot;enabled&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s2">&quot;use_smart&quot;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
+                <span class="n">auth_builder</span><span class="o">.</span><span class="n">useSMART</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s2">&quot;use_smart&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s2">&quot;token_endpoint&quot;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
+                <span class="n">auth_builder</span><span class="o">.</span><span class="n">tokenEndpoint</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s2">&quot;token_endpoint&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s2">&quot;client_id&quot;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
+                <span class="n">auth_builder</span><span class="o">.</span><span class="n">clientId</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s2">&quot;client_id&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s2">&quot;client_secret&quot;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
+                <span class="n">auth_builder</span><span class="o">.</span><span class="n">clientSecret</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s2">&quot;client_secret&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s2">&quot;private_key_jwk&quot;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
+                <span class="n">auth_builder</span><span class="o">.</span><span class="n">privateKeyJWK</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s2">&quot;private_key_jwk&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s2">&quot;use_form_for_basic_auth&quot;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
+                <span class="n">auth_builder</span><span class="o">.</span><span class="n">useFormForBasicAuth</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s2">&quot;use_form_for_basic_auth&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s2">&quot;scope&quot;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
+                <span class="n">auth_builder</span><span class="o">.</span><span class="n">scope</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s2">&quot;scope&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s2">&quot;token_expiry_tolerance&quot;</span> <span class="ow">in</span> <span class="n">auth_config</span><span class="p">:</span>
+                <span class="n">auth_builder</span><span class="o">.</span><span class="n">tokenExpiryTolerance</span><span class="p">(</span><span class="n">auth_config</span><span class="p">[</span><span class="s2">&quot;token_expiry_tolerance&quot;</span><span class="p">])</span>
 
             <span class="n">auth_config_obj</span> <span class="o">=</span> <span class="n">auth_builder</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
             <span class="n">builder</span><span class="o">.</span><span class="n">withAuthConfig</span><span class="p">(</span><span class="n">auth_config_obj</span><span class="p">)</span>
 
 <div class="viewcode-block" id="BulkExportClient.for_system"><a class="viewcode-back" href="../../pathling.html#pathling.bulk.BulkExportClient.for_system">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">for_system</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">spark</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;BulkExportClient&#39;</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">for_system</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">spark</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;BulkExportClient&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a builder for a system-level export.</span>
-<span class="sd">        </span>
+
 <span class="sd">        :param spark: The SparkSession instance</span>
 <span class="sd">        :param fhir_endpoint_url: The URL of the FHIR server to export from</span>
 <span class="sd">        :param output_dir: The directory to write the output files to</span>
@@ -310,11 +319,18 @@
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">())</span></div>
 
 <div class="viewcode-block" id="BulkExportClient.for_group"><a class="viewcode-back" href="../../pathling.html#pathling.bulk.BulkExportClient.for_group">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">for_group</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">spark</span><span class="p">,</span> <span class="n">fhir_endpoint_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                  <span class="n">group_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;BulkExportClient&#39;</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">for_group</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">spark</span><span class="p">,</span>
+        <span class="n">fhir_endpoint_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">group_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;BulkExportClient&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a builder for a group-level export.</span>
-<span class="sd">        </span>
+
 <span class="sd">        :param spark: The SparkSession instance</span>
 <span class="sd">        :param fhir_endpoint_url: The URL of the FHIR server to export from</span>
 <span class="sd">        :param output_dir: The directory to write the output files to</span>
@@ -333,15 +349,24 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Pass group_id directly to groupBuilder</span>
         <span class="n">builder</span><span class="p">,</span> <span class="n">jvm</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_create_builder</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">bc</span><span class="p">:</span> <span class="n">bc</span><span class="o">.</span><span class="n">groupBuilder</span><span class="p">(</span><span class="n">group_id</span><span class="p">))</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_configure_builder</span><span class="p">(</span><span class="n">jvm</span><span class="p">,</span> <span class="n">builder</span><span class="p">,</span> <span class="n">fhir_endpoint_url</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_configure_builder</span><span class="p">(</span>
+            <span class="n">jvm</span><span class="p">,</span> <span class="n">builder</span><span class="p">,</span> <span class="n">fhir_endpoint_url</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">())</span></div>
 
 <div class="viewcode-block" id="BulkExportClient.for_patient"><a class="viewcode-back" href="../../pathling.html#pathling.bulk.BulkExportClient.for_patient">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">for_patient</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">spark</span><span class="p">,</span> <span class="n">fhir_endpoint_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                    <span class="n">patients</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;BulkExportClient&#39;</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">for_patient</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">spark</span><span class="p">,</span>
+        <span class="n">fhir_endpoint_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">patients</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;BulkExportClient&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a builder for a patient-level export.</span>
-<span class="sd">        </span>
+
 <span class="sd">        :param spark: The SparkSession instance</span>
 <span class="sd">        :param fhir_endpoint_url: The URL of the FHIR server to export from</span>
 <span class="sd">        :param output_dir: The directory to write the output files to</span>
@@ -363,20 +388,22 @@
             <span class="k">for</span> <span class="n">patient</span> <span class="ow">in</span> <span class="n">patients</span><span class="p">:</span>
                 <span class="n">ref</span> <span class="o">=</span> <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">fhir</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">Reference</span><span class="o">.</span><span class="n">of</span><span class="p">(</span><span class="n">patient</span><span class="p">)</span>
                 <span class="n">builder</span><span class="o">.</span><span class="n">withPatient</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_configure_builder</span><span class="p">(</span><span class="n">jvm</span><span class="p">,</span> <span class="n">builder</span><span class="p">,</span> <span class="n">fhir_endpoint_url</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_configure_builder</span><span class="p">(</span>
+            <span class="n">jvm</span><span class="p">,</span> <span class="n">builder</span><span class="p">,</span> <span class="n">fhir_endpoint_url</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">())</span></div>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_create_builder</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
-                        <span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span>
-                        <span class="n">factory_f</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">JavaObject</span><span class="p">],</span> <span class="n">JavaObject</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
-        <span class="n">JavaObject</span><span class="p">,</span> <span class="n">JVMView</span><span class="p">]:</span>
-
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_builder</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span> <span class="n">factory_f</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">JavaObject</span><span class="p">],</span> <span class="n">JavaObject</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">JavaObject</span><span class="p">,</span> <span class="n">JVMView</span><span class="p">]:</span>
         <span class="n">jvm</span><span class="p">:</span> <span class="n">JVMView</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">_jvm</span>
         <span class="n">client_class</span> <span class="o">=</span> <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">fhir</span><span class="o">.</span><span class="n">export</span><span class="o">.</span><span class="n">BulkExportClient</span>
         <span class="n">builder</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">factory_f</span><span class="p">(</span><span class="n">client_class</span><span class="p">)</span>
         <span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">withFileStoreFactory</span><span class="p">(</span>
-            <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">filestore</span><span class="o">.</span><span class="n">hdfs</span><span class="o">.</span><span class="n">HdfsFileStoreFactory</span><span class="p">(</span><span class="n">spark</span><span class="o">.</span><span class="n">_jsc</span><span class="o">.</span><span class="n">sc</span><span class="p">()</span><span class="o">.</span><span class="n">hadoopConfiguration</span><span class="p">())</span>
+            <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">filestore</span><span class="o">.</span><span class="n">hdfs</span><span class="o">.</span><span class="n">HdfsFileStoreFactory</span><span class="p">(</span>
+                <span class="n">spark</span><span class="o">.</span><span class="n">_jsc</span><span class="o">.</span><span class="n">sc</span><span class="p">()</span><span class="o">.</span><span class="n">hadoopConfiguration</span><span class="p">()</span>
+            <span class="p">)</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">builder</span><span class="p">,</span> <span class="n">jvm</span><span class="p">)</span></div>
 </pre></div>
