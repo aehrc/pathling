@@ -59,7 +59,7 @@ const config = {
           lastVersion: "current",
           versions: {
             current: {
-              label: "9.1.0",
+              label: "9.2.0",
               path: "",
             },
             "7.2.0": {
