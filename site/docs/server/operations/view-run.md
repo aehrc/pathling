@@ -20,15 +20,15 @@ POST [base]/$viewdefinition-run
 ## Parameters
 
 | Name           | Cardinality | Type     | Description                                                                                               |
-|----------------|-------------|----------|-----------------------------------------------------------------------------------------------------------|
+| -------------- | ----------- | -------- | --------------------------------------------------------------------------------------------------------- |
 | `viewResource` | 1..1        | Resource | The ViewDefinition resource.                                                                              |
 | `_format`      | 0..1        | string   | Output format. Accepts `application/x-ndjson` (default) or `text/csv`.                                    |
 | `header`       | 0..1        | boolean  | Include header row in CSV output. Defaults to `true`.                                                     |
 | `_limit`       | 0..1        | integer  | Maximum number of rows to return.                                                                         |
-| `patient`      | 0..*        | id       | Filter to resources for the specified patient(s).                                                         |
-| `group`        | 0..*        | id       | Filter to resources for patients in the specified Group(s).                                               |
+| `patient`      | 0..\*       | id       | Filter to resources for the specified patient(s).                                                         |
+| `group`        | 0..\*       | id       | Filter to resources for patients in the specified Group(s).                                               |
 | `_since`       | 0..1        | instant  | Only include resources where `meta.lastUpdated` is at or after this time.                                 |
-| `resource`     | 0..*        | string   | Inline FHIR resources as JSON strings. When provided, these are used instead of the server's stored data. |
+| `resource`     | 0..\*       | string   | Inline FHIR resources as JSON strings. When provided, these are used instead of the server's stored data. |
 
 ## Request format
 
@@ -83,6 +83,10 @@ Accept: application/x-ndjson
 ```
 
 ## Response formats
+
+The response uses HTTP chunked transfer encoding, allowing clients to process
+results incrementally as they arrive rather than waiting for the complete
+response. This is particularly useful for large result sets.
 
 ### NDJSON
 
