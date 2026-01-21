@@ -3,17 +3,17 @@
 name: Release Helm chart (cache)
 
 on:
-  push:
-    tags:
-      - "helm-cache-v*"
   workflow_dispatch:
     inputs:
       version:
         description: "Chart version to release (must match Chart.yaml)"
         required: true
+  release:
+    types: [published]
 
 jobs:
   release:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref_name, 'helm-cache-v')
     uses: ./.github/workflows/helm-release.yml
     with:
       chart-path: deployment/cache/chart
