@@ -23,6 +23,13 @@ on:
         description: Chart version to release (for manual dispatch).
         required: false
         type: string
+    secrets:
+      GPG_KEY:
+        description: GPG private key for signing the chart.
+        required: true
+      GPG_PASSPHRASE:
+        description: Passphrase for the GPG private key.
+        required: true
 
 jobs:
   release-helm-chart:
@@ -37,6 +44,26 @@ jobs:
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
+
+      - name: Import GPG key
+        env:
+          GPG_KEY: ${{ secrets.GPG_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Import the GPG key.
+          echo "$GPG_KEY" | gpg --batch --import
+
+          # Get the key ID.
+          KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | head -1 | awk '{print $2}' | cut -d'/' -f2)
+          echo "KEY_ID=${KEY_ID}" >> $GITHUB_ENV
+
+          # Get the key name for Helm signing.
+          KEY_NAME=$(gpg --list-secret-keys --keyid-format LONG | grep uid | head -1 | sed 's/.*] //')
+          echo "KEY_NAME=${KEY_NAME}" >> $GITHUB_ENV
+
+          # Create legacy GPG keyring for Helm (which uses the old format).
+          mkdir -p ~/.gnupg
+          echo "$GPG_KEY" | gpg --batch --no-tty --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --export-secret-keys > ~/.gnupg/secring.gpg
 
       - name: Extract and validate version
         working-directory: ${{ inputs.chart-path }}
@@ -61,19 +88,34 @@ jobs:
 
           echo "Releasing chart version: ${VERSION}"
 
-      - name: Package chart
+      - name: Package and sign chart
         env:
           INPUT_CHART_PATH: ${{ inputs.chart-path }}
           INPUT_CHART_NAME: ${{ inputs.chart-name }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          helm package "$INPUT_CHART_PATH"
+          helm package "$INPUT_CHART_PATH" \
+            --sign \
+            --key "$KEY_NAME" \
+            --keyring ~/.gnupg/secring.gpg \
+            --passphrase-file <(echo "$GPG_PASSPHRASE")
           PACKAGE_NAME="${INPUT_CHART_NAME}-${VERSION}.tgz"
+          PROVENANCE_NAME="${INPUT_CHART_NAME}-${VERSION}.tgz.prov"
           echo "PACKAGE_NAME=${PACKAGE_NAME}" >> $GITHUB_ENV
+          echo "PROVENANCE_NAME=${PROVENANCE_NAME}" >> $GITHUB_ENV
 
           if [ ! -f "$PACKAGE_NAME" ]; then
             echo "Error: Expected package ${PACKAGE_NAME} was not created"
             exit 1
           fi
+
+          if [ ! -f "$PROVENANCE_NAME" ]; then
+            echo "Error: Expected provenance file ${PROVENANCE_NAME} was not created"
+            exit 1
+          fi
+
+          echo "Created signed package: ${PACKAGE_NAME}"
+          echo "Created provenance file: ${PROVENANCE_NAME}"
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
@@ -91,6 +133,7 @@ jobs:
       - name: Add chart to repository
         run: |
           cp "${PACKAGE_NAME}" gh-pages/helm/
+          cp "${PROVENANCE_NAME}" gh-pages/helm/
           helm repo index gh-pages/helm/ --url https://pathling.csiro.au/helm --merge gh-pages/helm/index.yaml
 
       - name: Commit and push

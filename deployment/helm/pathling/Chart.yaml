@@ -15,3 +15,7 @@ keywords:
   - standards
   - fhir
   - terminology
+annotations:
+  artifacthub.io/signKey: |
+    fingerprint: F814751C64B5F5E708A8C73FC3C6291FED48678D
+    url: https://pathling.csiro.au/helm/pubkey.asc
