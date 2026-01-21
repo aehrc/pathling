@@ -20,6 +20,9 @@ package au.csiro.pathling.operations.bulkexport;
 import au.csiro.pathling.OperationResponse;
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.sink.WriteDetails;
+import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
+import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
+import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import jakarta.annotation.Nonnull;
 import java.net.URISyntaxException;
@@ -40,6 +43,9 @@ import org.hl7.fhir.r4.model.UriType;
  * @author John Grimes
  */
 public class ExportResponse implements OperationResponse<Parameters> {
+
+  private static final String NATIVE_JSON_KEY = "nativeJson";
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Nonnull private final String kickOffRequestUrl;
 
@@ -72,14 +78,66 @@ public class ExportResponse implements OperationResponse<Parameters> {
   @Nonnull
   @Override
   public Parameters toOutput() {
-    final Parameters parameters = new Parameters();
-
     // Ensure the base URL ends with a slash for proper URL construction.
     final String normalizedBaseUrl =
         serverBaseUrl.endsWith("/") ? serverBaseUrl : serverBaseUrl + "/";
 
+    // Build native JSON first.
+    final ObjectNode json = buildJson(normalizedBaseUrl);
+
+    // Convert to Parameters for FHIR compatibility.
+    final Parameters parameters = jsonToParameters(json, normalizedBaseUrl);
+
+    // Attach native JSON for direct extraction by the interceptor.
+    parameters.setUserData(NATIVE_JSON_KEY, json.toString());
+
+    return parameters;
+  }
+
+  /**
+   * Builds the native JSON representation of the export manifest.
+   *
+   * @param normalizedBaseUrl the normalised base server URL
+   * @return the JSON object
+   */
+  @Nonnull
+  private ObjectNode buildJson(@Nonnull final String normalizedBaseUrl) {
+    final ObjectNode json = MAPPER.createObjectNode();
+    json.put("transactionTime", InstantType.now().getValueAsString());
+    json.put("request", kickOffRequestUrl);
+    json.put("requiresAccessToken", requiresAccessToken);
+
+    // Output is always an array.
+    final ArrayNode outputArray = json.putArray("output");
+    for (final FileInformation fileInfo : writeDetails.fileInfos()) {
+      final ObjectNode entry = outputArray.addObject();
+      entry.put("type", fileInfo.fhirResourceType());
+      entry.put("url", buildResultUrl(normalizedBaseUrl, fileInfo.absoluteUrl()));
+    }
+
+    // Error is always an array (even when empty).
+    json.putArray("error");
+
+    return json;
+  }
+
+  /**
+   * Converts the JSON manifest to FHIR Parameters for compatibility.
+   *
+   * @param json the JSON object
+   * @param normalizedBaseUrl the normalised base server URL
+   * @return the Parameters resource
+   */
+  @Nonnull
+  private Parameters jsonToParameters(
+      @Nonnull final ObjectNode json, @Nonnull final String normalizedBaseUrl) {
+    final Parameters parameters = new Parameters();
+
     // Add transactionTime parameter.
-    parameters.addParameter().setName("transactionTime").setValue(InstantType.now());
+    parameters
+        .addParameter()
+        .setName("transactionTime")
+        .setValue(new InstantType(json.get("transactionTime").asText()));
 
     // Add request parameter.
     parameters.addParameter().setName("request").setValue(new UriType(kickOffRequestUrl));
@@ -99,6 +157,9 @@ public class ExportResponse implements OperationResponse<Parameters> {
           .setName("url")
           .setValue(new UriType(buildResultUrl(normalizedBaseUrl, fileInfo.absoluteUrl())));
     }
+
+    // Add empty error parameter to match JSON structure.
+    parameters.addParameter().setName("error");
 
     return parameters;
   }

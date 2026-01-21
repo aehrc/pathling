@@ -72,6 +72,12 @@ public class Job<T> {
   @Setter private boolean markedAsDeleted;
 
   /**
+   * When true, completed jobs return 303 See Other with redirect to result endpoint, rather than
+   * returning the result inline. This follows the SQL on FHIR unify-async specification.
+   */
+  @Setter private boolean redirectOnComplete;
+
+  /**
    * The last calculated progress percentage. When a job is at 100% that does not always indicate
    * that the job is actually finished. Most of the time, this indicates that a new stage has not
    * been submitted while the current stage is already completed. In that case just show the last

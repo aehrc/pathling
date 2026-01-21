@@ -20,6 +20,7 @@ package au.csiro.pathling;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.async.JobProvider;
+import au.csiro.pathling.async.JobResultProvider;
 import au.csiro.pathling.cache.EntityTagInterceptor;
 import au.csiro.pathling.config.OperationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
@@ -127,6 +128,8 @@ public class FhirServer extends RestfulServer {
 
   @Nonnull private final transient Optional<JobProvider> jobProvider;
 
+  @Nonnull private final transient Optional<JobResultProvider> jobResultProvider;
+
   @Nonnull private final transient SystemExportProvider exportProvider;
 
   @Nonnull private final transient ExportResultProvider exportResultProvider;
@@ -178,6 +181,7 @@ public class FhirServer extends RestfulServer {
    * @param configuration the server configuration
    * @param oidcConfiguration the optional OIDC configuration
    * @param jobProvider the optional job provider
+   * @param jobResultProvider the optional job result provider
    * @param exportProvider the export provider
    * @param exportResultProvider the export result provider
    * @param patientExportProvider the patient export provider
@@ -205,6 +209,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final Optional<JobProvider> jobProvider,
+      @Nonnull final Optional<JobResultProvider> jobResultProvider,
       @Nonnull final SystemExportProvider exportProvider,
       @Nonnull final ExportResultProvider exportResultProvider,
       @Nonnull final PatientExportProvider patientExportProvider,
@@ -232,6 +237,7 @@ public class FhirServer extends RestfulServer {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.jobProvider = jobProvider;
+    this.jobResultProvider = jobResultProvider;
     this.exportProvider = exportProvider;
     this.exportResultProvider = exportResultProvider;
     this.patientExportProvider = patientExportProvider;
@@ -272,8 +278,9 @@ public class FhirServer extends RestfulServer {
       // Get operation configuration.
       final OperationConfiguration ops = configuration.getOperations();
 
-      // Register job provider, if async is enabled.
+      // Register job providers, if async is enabled.
       jobProvider.ifPresent(this::registerProvider);
+      jobResultProvider.ifPresent(this::registerProvider);
 
       // Register export providers based on configuration.
       if (ops.isExportEnabled()) {

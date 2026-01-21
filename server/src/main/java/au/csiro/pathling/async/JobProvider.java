@@ -232,7 +232,7 @@ public class JobProvider {
       throw handleCancelledJob();
     }
     if (job.getResult().isDone()) {
-      return handleCompletedJob(job, response);
+      return handleCompletedJob(job, request, response);
     }
     return handleInProgressJob(request, response, job);
   }
@@ -253,21 +253,38 @@ public class JobProvider {
   }
 
   /**
-   * Handles a completed job by returning its result or converting exceptions.
+   * Handles a completed job by returning its result or redirecting to the result endpoint.
+   *
+   * <p>If the job has {@code redirectOnComplete} enabled (following the SQL on FHIR unify-async
+   * specification), returns 303 See Other with a Location header pointing to the result endpoint.
+   * Otherwise, returns the result inline.
    *
    * @param job The completed job.
+   * @param request The HTTP request for building the result URL.
    * @param response The HTTP response for applying response modifications.
-   * @return The job result.
+   * @return The job result (if not redirecting) or an empty Parameters resource (if redirecting).
    * @throws InternalErrorException If the job was interrupted.
    */
   @Nonnull
   private IBaseResource handleCompletedJob(
-      @Nonnull final Job<?> job, @Nullable final HttpServletResponse response) {
+      @Nonnull final Job<?> job,
+      @Nonnull final HttpServletRequest request,
+      @Nullable final HttpServletResponse response) {
     try {
       // Completed responses use TTL-based caching with configured max-age.
       if (response != null) {
         setAsyncCacheHeaders(response);
       }
+
+      // If redirect is enabled, return 303 See Other with Location header.
+      if (job.isRedirectOnComplete() && response != null) {
+        final String resultUrl = buildResultUrl(request, job.getId());
+        response.setStatus(HttpServletResponse.SC_SEE_OTHER);
+        response.setHeader("Location", resultUrl);
+        return new Parameters();
+      }
+
+      // Otherwise return the result inline (legacy behaviour).
       job.getResponseModification().accept(response);
       return job.getResult().get();
     } catch (final InterruptedException e) {
@@ -276,6 +293,22 @@ public class JobProvider {
     } catch (final ExecutionException e) {
       throw ErrorHandlingInterceptor.convertError(unwrapExecutionException(e));
     }
+  }
+
+  /**
+   * Builds the URL for the job result endpoint. Uses the servlet context path to ensure the URL is
+   * correctly prefixed (e.g., /fhir/$job-result).
+   *
+   * @param request The HTTP request to extract the context path from.
+   * @param jobId The job ID.
+   * @return The result URL.
+   */
+  @Nonnull
+  private static String buildResultUrl(
+      @Nonnull final HttpServletRequest request, @Nonnull final String jobId) {
+    // Use the servlet path to get the FHIR server mount point (e.g., "/fhir").
+    final String servletPath = request.getServletPath();
+    return servletPath + "/$job-result?id=" + jobId;
   }
 
   /**
