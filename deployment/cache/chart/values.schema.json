@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Pathling Cache Helm Chart Values",
+  "description": "Configuration values for deploying Pathling Cache on Kubernetes",
+  "type": "object",
+  "properties": {
+    "pathlingCache": {
+      "type": "object",
+      "description": "Pathling cache configuration",
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Docker image for the Pathling cache",
+          "default": "ghcr.io/aehrc/pathling-cache:latest"
+        },
+        "imagePullPolicy": {
+          "type": "string",
+          "description": "Image pull policy for the container",
+          "enum": ["Always", "IfNotPresent", "Never"],
+          "default": "IfNotPresent"
+        },
+        "replicas": {
+          "type": "integer",
+          "description": "Number of cache replicas to deploy",
+          "minimum": 1,
+          "default": 1
+        },
+        "pathlingHost": {
+          "type": ["string", "null"],
+          "description": "Hostname of the Pathling server to cache (required)"
+        },
+        "pathlingPort": {
+          "type": ["integer", "null"],
+          "description": "Port of the Pathling server to cache (required)"
+        },
+        "service": {
+          "type": "object",
+          "description": "Kubernetes service configuration",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Service type",
+              "enum": ["ClusterIP", "NodePort", "LoadBalancer"],
+              "default": "ClusterIP"
+            },
+            "port": {
+              "type": "integer",
+              "description": "Service port",
+              "default": 80
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "description": "Resource requirements and limits for the cache pod",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "description": "Resource requests for scheduling",
+              "properties": {
+                "cpu": {
+                  "type": ["string", "integer"],
+                  "description": "CPU request (e.g., '100m' or '1')"
+                },
+                "memory": {
+                  "type": "string",
+                  "description": "Memory request (e.g., '128Mi')"
+                }
+              }
+            },
+            "limits": {
+              "type": "object",
+              "description": "Resource limits for the container",
+              "properties": {
+                "cpu": {
+                  "type": ["string", "integer"],
+                  "description": "CPU limit (e.g., '200m' or '1')"
+                },
+                "memory": {
+                  "type": "string",
+                  "description": "Memory limit (e.g., '256Mi')"
+                }
+              }
+            }
+          },
+          "default": {}
+        },
+        "tolerations": {
+          "type": "array",
+          "description": "Tolerations for pod scheduling",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "Toleration key"
+              },
+              "operator": {
+                "type": "string",
+                "description": "Toleration operator",
+                "enum": ["Exists", "Equal"]
+              },
+              "value": {
+                "type": "string",
+                "description": "Toleration value"
+              },
+              "effect": {
+                "type": "string",
+                "description": "Toleration effect",
+                "enum": ["NoSchedule", "PreferNoSchedule", "NoExecute"]
+              }
+            }
+          },
+          "default": []
+        },
+        "affinity": {
+          "type": "object",
+          "description": "Affinity rules for pod scheduling",
+          "default": {}
+        },
+        "nodeSelector": {
+          "type": "object",
+          "description": "Node selector for pod scheduling",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {}
+        }
+      }
+    }
+  }
+}

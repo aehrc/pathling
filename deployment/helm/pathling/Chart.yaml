@@ -3,7 +3,7 @@ name: pathling
 description: A Helm chart for Pathling Server
 icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
 type: application
-version: 1.0.2
+version: 2.0.0
 maintainers:
   - name: John Grimes
     email: John.Grimes@csiro.au
@@ -15,3 +15,7 @@ keywords:
   - standards
   - fhir
   - terminology
+annotations:
+  artifacthub.io/signKey: |
+    fingerprint: F814751C64B5F5E708A8C73FC3C6291FED48678D
+    url: https://pathling.csiro.au/helm/pubkey.asc

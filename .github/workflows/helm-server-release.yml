@@ -20,5 +20,8 @@ jobs:
       chart-name: pathling
       tag-prefix: helm-server-v
       version: ${{ inputs.version }}
+    secrets:
+      GPG_KEY: ${{ secrets.GPG_KEY }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
     permissions:
       contents: write
