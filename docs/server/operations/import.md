@@ -57,7 +57,7 @@ Send a request with `Content-Type: application/json` containing a JSON manifest:
             "url": "s3a://my-bucket/fhir/Observation.ndjson"
         }
     ],
-    "mode": "overwrite"
+    "saveMode": "overwrite"
 }
 ```
 
@@ -69,7 +69,7 @@ Send a request with `Content-Type: application/json` containing a JSON manifest:
 | `input`       | 1..\*       | An array of input file specifications.                                          |
 | `input.type`  | 1..1        | The FHIR resource type contained in the file.                                   |
 | `input.url`   | 1..1        | The URL where the source file can be retrieved.                                 |
-| `mode`        | 0..1        | The import mode. See [Import modes](#import-modes). Defaults to `overwrite`.    |
+| `saveMode`    | 0..1        | The import mode. See [Import modes](#import-modes). Defaults to `overwrite`.    |
 
 ### FHIR Parameters format[​](#fhir-parameters-format "Direct link to FHIR Parameters format")
 

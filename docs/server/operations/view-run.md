@@ -74,6 +74,8 @@ Accept: application/x-ndjson
 
 ## Response formats[​](#response-formats "Direct link to Response formats")
 
+The response uses HTTP chunked transfer encoding, allowing clients to process results incrementally as they arrive rather than waiting for the complete response. This is particularly useful for large result sets.
+
 ### NDJSON[​](#ndjson "Direct link to NDJSON")
 
 When `_format` is `application/x-ndjson` (the default), the response is newline-delimited JSON with one row per line:

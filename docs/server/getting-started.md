@@ -45,6 +45,7 @@ docker compose up
 
 ## Next steps[​](#next-steps "Direct link to Next steps")
 
-* [Configuration](/docs/server/configuration.md) - Customise server behaviour with environment variables
+* [Operations](/docs/server/operations) - Learn about the FHIR operations available
 * [Admin UI](/docs/server/admin-ui.md) - Visual interface for managing data and testing queries
+* [Configuration](/docs/server/configuration.md) - Customise server behaviour with environment variables
 * [Kubernetes deployment](/docs/server/deployment/kubernetes.md) - Deploy to a Kubernetes cluster
