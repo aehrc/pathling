@@ -1,6 +1,6 @@
 # Kubernetes
 
-[Kubernetes](https://kubernetes.io/) is an open-source system for automating deployment, scaling, and management of containerized applications. Support for deploying Pathling on Kubernetes is provided via a [Helm](https://helm.sh/) chart.
+[Kubernetes](https://kubernetes.io/) is an open-source system for automating deployment, scaling, and management of containerized applications. Support for deploying Pathling on Kubernetes is provided via a [Helm](https://helm.sh/) chart, which is available on [Artifact Hub](https://artifacthub.io/packages/helm/pathling/pathling).
 
 The Helm chart includes the following features:
 
@@ -64,28 +64,28 @@ This configuration is suitable for a single node deployment of Pathling. In this
 
 ```
 pathling:
-  image: ghcr.io/aehrc/pathling:8
-  resources:
-    requests:
-      cpu: 2
-      memory: 4G
-    limits:
-      memory: 4G
-    maxHeapSize: 3g
-  volumes:
-    - name: warehouse
-      hostPath:
-        path: /home/user/data/pathling
-  volumeMounts:
-    - name: warehouse
-      mountPath: /usr/share/warehouse
-      readOnly: false
-  config:
-    pathling.implementationDescription: My Pathling Server
-    pathling.terminology.cache.maxEntries: 500000
-    pathling.terminology.cache.overrideExpiry: "2592000"
-    pathling.encoding.openTypes: string,code,decimal,Coding,Address
-    logging.level.au.csiro.pathling: debug
+    image: ghcr.io/aehrc/pathling:8
+    resources:
+        requests:
+            cpu: 2
+            memory: 4G
+        limits:
+            memory: 4G
+        maxHeapSize: 3g
+    volumes:
+        - name: warehouse
+          hostPath:
+              path: /home/user/data/pathling
+    volumeMounts:
+        - name: warehouse
+          mountPath: /usr/share/warehouse
+          readOnly: false
+    config:
+        pathling.implementationDescription: My Pathling Server
+        pathling.terminology.cache.maxEntries: 500000
+        pathling.terminology.cache.overrideExpiry: "2592000"
+        pathling.encoding.openTypes: string,code,decimal,Coding,Address
+        logging.level.au.csiro.pathling: debug
 ```
 
 ### Cluster[​](#cluster "Direct link to Cluster")
@@ -96,39 +96,39 @@ This configuration is suitable for the processing of larger datasets, or scenari
 
 ```
 pathling:
-  image: ghcr.io/aehrc/pathling:8
-  resources:
-    requests:
-      cpu: 1
-      memory: 2G
-    limits:
-      memory: 2G
-    maxHeapSize: 1500m
-  volumes:
-    - name: warehouse
-      hostPath:
-        path: /home/user/data/pathling
-  volumeMounts:
-    - name: warehouse
-      mountPath: /usr/share/warehouse
-      readOnly: false
-  serviceAccount: spark-service-account
-  config:
-    pathling.implementationDescription: My Pathling Server
-    pathling.terminology.cache.maxEntries: 500000
-    pathling.terminology.cache.overrideExpiry: "2592000"
-    pathling.encoding.openTypes: string,code,decimal,Coding,Address
-    logging.level.au.csiro.pathling: debug
-    spark.master: k8s://https://kubernetes.default.svc
-    spark.kubernetes.namespace: pathling
-    spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling:8
-    spark.kubernetes.executor.volumes.hostPath.warehouse.options.path: /home/user/data/pathling
-    spark.kubernetes.executor.volumes.hostPath.warehouse.mount.path: /usr/share/warehouse
-    spark.kubernetes.executor.volumes.hostPath.warehouse.mount.readOnly: false
-    spark.executor.instances: 3
-    spark.executor.memory: 3G
-    spark.kubernetes.executor.request.cores: 2
-    spark.kubernetes.executor.limit.cores: 2
-    spark.kubernetes.executor.request.memory: 4G
-    spark.kubernetes.executor.limit.memory: 4G
+    image: ghcr.io/aehrc/pathling:8
+    resources:
+        requests:
+            cpu: 1
+            memory: 2G
+        limits:
+            memory: 2G
+        maxHeapSize: 1500m
+    volumes:
+        - name: warehouse
+          hostPath:
+              path: /home/user/data/pathling
+    volumeMounts:
+        - name: warehouse
+          mountPath: /usr/share/warehouse
+          readOnly: false
+    serviceAccount: spark-service-account
+    config:
+        pathling.implementationDescription: My Pathling Server
+        pathling.terminology.cache.maxEntries: 500000
+        pathling.terminology.cache.overrideExpiry: "2592000"
+        pathling.encoding.openTypes: string,code,decimal,Coding,Address
+        logging.level.au.csiro.pathling: debug
+        spark.master: k8s://https://kubernetes.default.svc
+        spark.kubernetes.namespace: pathling
+        spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling:8
+        spark.kubernetes.executor.volumes.hostPath.warehouse.options.path: /home/user/data/pathling
+        spark.kubernetes.executor.volumes.hostPath.warehouse.mount.path: /usr/share/warehouse
+        spark.kubernetes.executor.volumes.hostPath.warehouse.mount.readOnly: false
+        spark.executor.instances: 3
+        spark.executor.memory: 3G
+        spark.kubernetes.executor.request.cores: 2
+        spark.kubernetes.executor.limit.cores: 2
+        spark.kubernetes.executor.request.memory: 4G
+        spark.kubernetes.executor.limit.memory: 4G
 ```

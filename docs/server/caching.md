@@ -28,7 +28,7 @@ To use it, set the following environment variables:
 * `PATHLING_HOST`: The hostname of the Pathling server
 * `PATHLING_PORT`: The port number exposed by the Pathling server
 
-A Helm chart is also provided for Kubernetes deployments.
+A [Helm chart](https://artifacthub.io/packages/helm/pathling/pathling-cache) is also provided for Kubernetes deployments.
 
 ## Asynchronous endpoint caching[​](#asynchronous-endpoint-caching "Direct link to Asynchronous endpoint caching")
 
