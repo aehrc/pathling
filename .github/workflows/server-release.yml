@@ -4,6 +4,7 @@ name: Release server
 
 # This workflow is only run when a release is published with a server-v* tag.
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
