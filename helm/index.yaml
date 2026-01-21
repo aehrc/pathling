@@ -6,9 +6,9 @@ entries:
         fingerprint: F814751C64B5F5E708A8C73FC3C6291FED48678D
         url: https://pathling.csiro.au/helm/pubkey.asc
     apiVersion: v2
-    created: "2026-01-21T07:19:02.971686955Z"
+    created: "2026-01-21T10:09:09.597204541Z"
     description: A Helm chart for Pathling Server
-    digest: c6de3e9eee7a48bc208f8ef57834ec0d161e325450d82d20f0ab94b5c145f22c
+    digest: 0c0df1f183f682ac1baca07e6581fb90046b018a0e0eed77f2df01d0ffe16e78
     icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
     keywords:
     - spark
@@ -27,7 +27,7 @@ entries:
     - https://pathling.csiro.au/helm/pathling-2.0.0.tgz
     version: 2.0.0
   - apiVersion: v2
-    created: "2026-01-21T07:19:02.971240031Z"
+    created: "2026-01-21T10:09:09.596770094Z"
     description: A Helm chart for Pathling Server
     digest: bc3ab10a1915a12c7f7723946681d71c71df707b6388e2b63ed3548b86af1308
     icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
@@ -73,4 +73,4 @@ entries:
     urls:
     - https://pathling.csiro.au/helm/pathling-cache-1.0.0.tgz
     version: 1.0.0
-generated: "2026-01-21T07:19:02.970702359Z"
+generated: "2026-01-21T10:09:09.596234489Z"
