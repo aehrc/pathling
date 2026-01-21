@@ -74,32 +74,45 @@ Pathling Server is a FHIR R4 analytics server that exposes a range of
 functionality for use by applications and implements:
 
 - **SQL on FHIR**:
-  [Run](https://pathling.csiro.au/docs/server/operations/view-run) view definitions to
+  [Run](https://pathling.csiro.au/docs/server/operations/view-run) view
+  definitions to
   preview tabular projections of FHIR data,
-  then [export](https://pathling.csiro.au/docs/server/operations/view-export) to NDJSON, CSV, or Parquet
-- **Bulk Data Access**: [Export data](https://pathling.csiro.au/docs/server/operations/export) at system,
+  then [export](https://pathling.csiro.au/docs/server/operations/view-export) to
+  NDJSON, CSV, or Parquet
+- **Bulk Data Access
+  **: [Export data](https://pathling.csiro.au/docs/server/operations/export) at
+  system,
   patient, or group level using the FHIR Bulk Data Access specification
-- **Bulk Import**: [Import data](https://pathling.csiro.au/docs/server/operations/import) from NDJSON,
+- **Bulk Import
+  **: [Import data](https://pathling.csiro.au/docs/server/operations/import)
+  from NDJSON,
   Parquet, or Delta Lake sources,
   or [sync with another FHIR server](https://pathling.csiro.au/docs/server/deployment/synchronization)
   that supports bulk export
-- **[Bulk Submit](https://pathling.csiro.au/docs/server/operations/bulk-submit)**: An experimental
+- **[Bulk Submit](https://pathling.csiro.au/docs/server/operations/bulk-submit)
+  **: An experimental
   implementation of the new Bulk Submit proposal
-- **[FHIRPath Search](https://pathling.csiro.au/docs/server/operations/search)**: Query resources using
+- **[FHIRPath Search](https://pathling.csiro.au/docs/server/operations/search)
+  **: Query resources using
   FHIRPath expressions
-- **[CRUD Operations](https://pathling.csiro.au/docs/server/operations/crud)**: Create, read, update, and
+- **[CRUD Operations](https://pathling.csiro.au/docs/server/operations/crud)**:
+  Create, read, update, and
   delete resources
 
 The server is distributed as a Docker image. It
-supports [authentication](https://pathling.csiro.au/docs/server/authorization) and also can be scaled
-over a cluster on [Kubernetes](https://pathling.csiro.au/docs/server/deployment/kubernetes) or other
+supports [authentication](https://pathling.csiro.au/docs/server/authorization)
+and also can be scaled
+over a cluster
+on [Kubernetes](https://pathling.csiro.au/docs/server/deployment/kubernetes) or
+other
 Apache Spark clustering solutions.
 
-See [Server](https://pathling.csiro.au/docs/server) for installation and configuration details.
+See [Server](https://pathling.csiro.au/docs/server) for installation and
+configuration details.
 
 ## Artifact signing
 
-Published Maven artifacts are signed with the following GPG key:
+Published Maven artifacts and Helm charts are signed with the following GPG key:
 
 - **Key ID**: `ED48678D`
 - **Fingerprint**: `F814 751C 64B5 F5E7 08A8 C73F C3C6 291F ED48 678D`
