@@ -1,14 +1,25 @@
-# Copyright © 2025, Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+# Copyright © 2026, Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 # ABN 41 687 119 230. Licensed under the Apache License, Version 2.0.
 #
 # Author: John Grimes
 
 apiVersion: v2
 name: pathling-cache
-description: A Varnish-based frontend cache optimised for use with Pathling
+description: A Varnish-based frontend cache optimised for use with Pathling Server
+icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
 type: application
 version: 1.0.0
-appVersion: "1.0.0"
+maintainers:
+  - name: John Grimes
+    email: John.Grimes@csiro.au
+sources:
+  - https://github.com/aehrc/pathling
+keywords:
+  - spark
+  - analytics
+  - standards
+  - fhir
+  - terminology
 annotations:
   artifacthub.io/signKey: |
     fingerprint: F814751C64B5F5E708A8C73FC3C6291FED48678D
