@@ -2,11 +2,14 @@
 
 name: Deploy site
 
-# This workflow only runs on the main branch.
+# This workflow only runs on the main branch when site files change.
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+    paths:
+      - "site/**"
 
 jobs:
   site:
