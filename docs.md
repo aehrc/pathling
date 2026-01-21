@@ -18,7 +18,7 @@ See [Data in and out](/docs/libraries/io.md) and [Running queries](/docs/librari
 
 ### Terminology queries[​](#terminology-queries "Direct link to Terminology queries")
 
-Health data often contains codes from systems such as [SNOMED CT](https://www.snomed.org/snomed-ct/five-step-briefing), [LOINC](https://loinc.org/) or [ICD](https://www.who.int/standards/classifications/classification-of-diseases). These codes contain a great deal of information about diagnoses, procedures, observations and many other aspects of a patient's clinical record.
+Health data often contains codes from systems such as [SNOMED CT](https://www.snomed.org/what-is-snomed-ct), [LOINC](https://loinc.org/) or [ICD](https://www.who.int/standards/classifications/classification-of-diseases). These codes contain a great deal of information about diagnoses, procedures, observations and many other aspects of a patient's clinical record.
 
 It is common to group these codes based upon their properties, relationships to other codes, or membership within a pre-defined set. Pathling can automate the task of calling out to a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html) to ask questions about the codes within your data.
 
