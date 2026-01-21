@@ -27,10 +27,13 @@ import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
@@ -234,5 +237,77 @@ class JobResultProviderTest {
     assertThatThrownBy(() -> jobResultProvider.jobResult(JOB_ID, request, response))
         .isInstanceOf(ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException.class)
         .hasMessageContaining("DELETE request cancelled this job");
+  }
+
+  @Test
+  void interruptedJobThrowsInternalError() {
+    // A job that was interrupted should throw an InternalErrorException.
+    // Create a future that will throw InterruptedException when get() is called.
+    @SuppressWarnings("unchecked")
+    final Future<IBaseResource> mockFuture = mock(Future.class);
+    try {
+      when(mockFuture.isDone()).thenReturn(true);
+      when(mockFuture.isCancelled()).thenReturn(false);
+      when(mockFuture.get()).thenThrow(new InterruptedException("Thread was interrupted"));
+    } catch (final InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+
+    final Job<IBaseResource> job = new Job<>(JOB_ID, "view-export", mockFuture, Optional.empty());
+    job.setRedirectOnComplete(true);
+    jobRegistry.register(job);
+
+    assertThatThrownBy(() -> jobResultProvider.jobResult(JOB_ID, request, response))
+        .isInstanceOf(InternalErrorException.class)
+        .hasMessageContaining("Job was interrupted");
+  }
+
+  @Test
+  void errorUnwrappingHandlesDirectCause() {
+    // Test that errors with a direct cause are properly unwrapped.
+    final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
+    future.completeExceptionally(new InvalidRequestException("Direct error"));
+
+    final Job<IBaseResource> job = new Job<>(JOB_ID, "view-export", future, Optional.empty());
+    job.setRedirectOnComplete(true);
+    jobRegistry.register(job);
+
+    assertThatThrownBy(() -> jobResultProvider.jobResult(JOB_ID, request, response))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("Direct error");
+  }
+
+  @Test
+  void errorUnwrappingHandlesNestedCause() {
+    // Test that errors with a nested cause (wrapped in IllegalStateException) are properly
+    // unwrapped.
+    final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
+    future.completeExceptionally(
+        new IllegalStateException(
+            "Outer wrapper", new InvalidRequestException("Nested error message")));
+
+    final Job<IBaseResource> job = new Job<>(JOB_ID, "view-export", future, Optional.empty());
+    job.setRedirectOnComplete(true);
+    jobRegistry.register(job);
+
+    assertThatThrownBy(() -> jobResultProvider.jobResult(JOB_ID, request, response))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("Nested error message");
+  }
+
+  @Test
+  void nullJobIdReturns404() {
+    // A null job ID should return 404 Not Found.
+    assertThatThrownBy(() -> jobResultProvider.jobResult(null, request, response))
+        .isInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("Job ID not found");
+  }
+
+  @Test
+  void invalidJobIdFormatReturns404() {
+    // An invalid job ID format should return 404 Not Found.
+    assertThatThrownBy(() -> jobResultProvider.jobResult("not-a-valid-uuid", request, response))
+        .isInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("Job ID not found");
   }
 }
