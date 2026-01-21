@@ -1,0 +1,68 @@
+# Manually triggered workflow to run SonarCloud analysis on the codebase.
+#
+# Author: John Grimes
+
+name: SonarQube Scan
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan-core-libraries:
+    name: Scan core libraries
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+          sonar-cache: "true"
+
+      - name: Build and scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn --batch-mode verify \
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -pl '!site,!benchmark,!lib/python,!lib/R'
+
+  scan-server:
+    name: Scan server
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+          bun: "true"
+          sonar-cache: "true"
+
+      - name: Build and scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn --batch-mode -U verify \
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -f server/pom.xml \
+          -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.sarifReportPaths=trivy-results.sarif
