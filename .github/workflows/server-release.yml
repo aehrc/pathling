@@ -45,10 +45,10 @@ jobs:
         working-directory: server
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          DOCKER_USERNAME: ${{ github.actor }}
-          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mvn --batch-mode deploy -Pdocker -Dmaven.deploy.skip \
+          -Djib.to.auth.username=${{ github.actor }} \
+          -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
