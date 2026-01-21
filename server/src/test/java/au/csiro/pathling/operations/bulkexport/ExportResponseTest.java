@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.sink.WriteDetails;
+import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
+import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -226,6 +228,98 @@ class ExportResponseTest {
 
     // Should not have double slash.
     assertThat(url).startsWith("http://example.org/fhir/$result").doesNotContain("fhir//$result");
+  }
+
+  // -------------------------------------------------------------------------
+  // Native JSON tests
+  // -------------------------------------------------------------------------
+
+  @Test
+  void manifestIncludesEmptyErrorArray() {
+    // The manifest should always include an error parameter, even when there are no errors.
+    final WriteDetails writeDetails = new WriteDetails(List.of());
+
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
+
+    final Parameters parameters = response.toOutput();
+
+    assertThat(hasParameter(parameters, "error")).isTrue();
+  }
+
+  @Test
+  void manifestAttachesNativeJson() {
+    // The Parameters should have native JSON attached via userData.
+    final WriteDetails writeDetails = new WriteDetails(List.of());
+
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
+
+    final Parameters parameters = response.toOutput();
+    final Object nativeJson = parameters.getUserData("nativeJson");
+
+    assertThat(nativeJson).isNotNull();
+    assertThat(nativeJson).isInstanceOf(String.class);
+  }
+
+  @Test
+  void nativeJsonHasCorrectStructure() throws Exception {
+    // The native JSON should have output and error as arrays, with all expected fields.
+    final FileInformation patientFile =
+        new FileInformation("Patient", "file:///tmp/jobs/job-id/Patient.ndjson");
+    final FileInformation observationFile =
+        new FileInformation("Observation", "file:///tmp/jobs/job-id/Observation.ndjson");
+    final WriteDetails writeDetails = new WriteDetails(List.of(patientFile, observationFile));
+
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
+
+    final Parameters parameters = response.toOutput();
+    final String nativeJson = (String) parameters.getUserData("nativeJson");
+    final ObjectMapper mapper = new ObjectMapper();
+    final JsonNode json = mapper.readTree(nativeJson);
+
+    // Verify all expected fields are present.
+    assertThat(json.has("transactionTime")).isTrue();
+    assertThat(json.has("request")).isTrue();
+    assertThat(json.has("requiresAccessToken")).isTrue();
+    assertThat(json.has("output")).isTrue();
+    assertThat(json.has("error")).isTrue();
+
+    // Verify output is always an array.
+    assertThat(json.get("output").isArray()).isTrue();
+    assertThat(json.get("output").size()).isEqualTo(2);
+    assertThat(json.get("output").get(0).get("type").asText()).isEqualTo("Patient");
+    assertThat(json.get("output").get(1).get("type").asText()).isEqualTo("Observation");
+
+    // Verify error is always an array (empty when no errors).
+    assertThat(json.get("error").isArray()).isTrue();
+    assertThat(json.get("error").isEmpty()).isTrue();
+
+    // Verify field values.
+    assertThat(json.get("request").asText()).isEqualTo("http://example.org/fhir/$export");
+    assertThat(json.get("requiresAccessToken").asBoolean()).isFalse();
+  }
+
+  @Test
+  void nativeJsonOutputIsEmptyArrayWhenNoFiles() throws Exception {
+    // When there are no files, output should be an empty array, not missing.
+    final WriteDetails writeDetails = new WriteDetails(List.of());
+
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
+
+    final Parameters parameters = response.toOutput();
+    final String nativeJson = (String) parameters.getUserData("nativeJson");
+    final ObjectMapper mapper = new ObjectMapper();
+    final JsonNode json = mapper.readTree(nativeJson);
+
+    assertThat(json.get("output").isArray()).isTrue();
+    assertThat(json.get("output").isEmpty()).isTrue();
   }
 
   // -------------------------------------------------------------------------

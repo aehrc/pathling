@@ -62,20 +62,22 @@ class ParametersToJsonInterceptorTest {
   // -------------------------------------------------------------------------
 
   @Test
-  void continuesNormallyWhenNoAcceptHeader() throws Exception {
-    // When no Accept header is present, continue with normal FHIR processing.
+  void transformsToJsonWhenNoAcceptHeader() throws Exception {
+    // When no Accept header is present, default to plain JSON.
     final Parameters parameters = new Parameters();
     parameters.addParameter().setName("test").setValue(new StringType("value"));
 
+    final StringWriter writer = new StringWriter();
     final HttpServletRequest request = mockRequest(null);
-    final HttpServletResponse response = mockResponse(new StringWriter());
+    final HttpServletResponse response = mockResponse(writer);
     final RequestDetails requestDetails = mock(RequestDetails.class);
 
     final boolean result =
         interceptor.transformResponse(requestDetails, parameters, request, response);
 
-    assertThat(result).isTrue();
-    verify(response, never()).setContentType("application/json");
+    assertThat(result).isFalse();
+    verify(response).setContentType("application/json");
+    verify(response).setCharacterEncoding("UTF-8");
   }
 
   @Test
@@ -96,20 +98,22 @@ class ParametersToJsonInterceptorTest {
   }
 
   @Test
-  void continuesNormallyWhenAcceptIsWildcard() throws Exception {
-    // When Accept is */*, continue with normal FHIR processing.
+  void transformsToJsonWhenAcceptIsWildcard() throws Exception {
+    // When Accept is */*, default to plain JSON.
     final Parameters parameters = new Parameters();
     parameters.addParameter().setName("test").setValue(new StringType("value"));
 
+    final StringWriter writer = new StringWriter();
     final HttpServletRequest request = mockRequest("*/*");
-    final HttpServletResponse response = mockResponse(new StringWriter());
+    final HttpServletResponse response = mockResponse(writer);
     final RequestDetails requestDetails = mock(RequestDetails.class);
 
     final boolean result =
         interceptor.transformResponse(requestDetails, parameters, request, response);
 
-    assertThat(result).isTrue();
-    verify(response, never()).setContentType("application/json");
+    assertThat(result).isFalse();
+    verify(response).setContentType("application/json");
+    verify(response).setCharacterEncoding("UTF-8");
   }
 
   @Test
@@ -299,6 +303,40 @@ class ParametersToJsonInterceptorTest {
     final JsonNode node = mapper.readTree(json);
 
     assertThat(node.isEmpty()).isTrue();
+  }
+
+  // -------------------------------------------------------------------------
+  // Native JSON tests
+  // -------------------------------------------------------------------------
+
+  @Test
+  void usesNativeJsonWhenAvailable() throws Exception {
+    // When Parameters has native JSON attached, it should be used directly.
+    final Parameters parameters = new Parameters();
+    parameters.addParameter().setName("test").setValue(new StringType("converted-value"));
+
+    // Attach native JSON with a different value to prove it's being used.
+    final String nativeJson = "{\"test\":\"native-value\",\"output\":[],\"error\":[]}";
+    parameters.setUserData("nativeJson", nativeJson);
+
+    final String json = transformAndCapture(parameters);
+    final JsonNode node = mapper.readTree(json);
+
+    // Should use the native JSON value, not the converted one.
+    assertThat(node.get("test").asText()).isEqualTo("native-value");
+  }
+
+  @Test
+  void fallsBackToConversionWhenNoNativeJson() throws Exception {
+    // When Parameters does not have native JSON, conversion should be used.
+    final Parameters parameters = new Parameters();
+    parameters.addParameter().setName("test").setValue(new StringType("converted-value"));
+
+    final String json = transformAndCapture(parameters);
+    final JsonNode node = mapper.readTree(json);
+
+    // Should use the converted value.
+    assertThat(node.get("test").asText()).isEqualTo("converted-value");
   }
 
   // -------------------------------------------------------------------------

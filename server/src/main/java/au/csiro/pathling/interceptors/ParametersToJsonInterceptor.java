@@ -61,7 +61,7 @@ public class ParametersToJsonInterceptor {
 
   private static final String APPLICATION_JSON = "application/json";
   private static final String APPLICATION_FHIR_JSON = "application/fhir+json";
-  private static final String WILDCARD = "*/*";
+  private static final String NATIVE_JSON_KEY = "nativeJson";
 
   private final ObjectMapper mapper = new ObjectMapper();
 
@@ -100,8 +100,10 @@ public class ParametersToJsonInterceptor {
       return true;
     }
 
-    // Transform Parameters to plain JSON and write directly to the response.
-    final String json = parametersToJson(parameters);
+    // Check for native JSON first (used by ExportResponse for lossless conversion).
+    final Object nativeJson = parameters.getUserData(NATIVE_JSON_KEY);
+    final String json = (nativeJson != null) ? (String) nativeJson : parametersToJson(parameters);
+
     response.setContentType(APPLICATION_JSON);
     response.setCharacterEncoding("UTF-8");
     response.getWriter().write(json);
@@ -111,8 +113,8 @@ public class ParametersToJsonInterceptor {
   }
 
   /**
-   * Determines whether the client prefers plain JSON based on the Accept header. Returns true only
-   * if the Accept header explicitly requests application/json.
+   * Determines whether the client prefers plain JSON based on the Accept header. Returns true by
+   * default, only returning false if the client explicitly requests FHIR JSON.
    *
    * @param request the HTTP servlet request
    * @return true if the client prefers plain JSON
@@ -120,18 +122,13 @@ public class ParametersToJsonInterceptor {
   private boolean prefersPlainJson(@Nonnull final HttpServletRequest request) {
     final String acceptHeader = request.getHeader("Accept");
 
-    // No Accept header or wildcard means continue with normal FHIR processing.
-    if (acceptHeader == null || acceptHeader.isBlank() || acceptHeader.contains(WILDCARD)) {
+    // Only use FHIR format if explicitly requested.
+    if (acceptHeader != null && acceptHeader.contains(APPLICATION_FHIR_JSON)) {
       return false;
     }
 
-    // If explicitly requesting FHIR JSON, continue with normal processing.
-    if (acceptHeader.contains(APPLICATION_FHIR_JSON)) {
-      return false;
-    }
-
-    // Only transform if explicitly requesting plain JSON.
-    return acceptHeader.contains(APPLICATION_JSON);
+    // Default to plain JSON for all other cases.
+    return true;
   }
 
   /**
