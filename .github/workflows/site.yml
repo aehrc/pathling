@@ -50,6 +50,13 @@ jobs:
           mkdir -p site/target/site/R
           cp lib/R/target/pathling_*.tar.gz site/target/site/R/
 
+      - name: Preserve helm directory from gh-pages
+        run: |
+          git fetch origin gh-pages:gh-pages || true
+          if git show gh-pages:helm/index.yaml >/dev/null 2>&1; then
+            git archive gh-pages helm | tar -x -C site/target/site/
+          fi
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
         with:
