@@ -39,7 +39,7 @@ See [Data in and out](/docs/libraries/io) and
 ### Terminology queries
 
 Health data often contains codes from systems such
-as [SNOMED CT](https://www.snomed.org/snomed-ct/five-step-briefing), [LOINC](https://loinc.org/)
+as [SNOMED CT](https://www.snomed.org/what-is-snomed-ct), [LOINC](https://loinc.org/)
 or [ICD](https://www.who.int/standards/classifications/classification-of-diseases).
 These codes contain a great deal of information about diagnoses, procedures,
 observations and many other aspects of a patient's clinical record.

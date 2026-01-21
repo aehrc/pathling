@@ -48,18 +48,3 @@ Save this as `docker-compose.yml` and run:
 ```bash
 docker compose up
 ```
-
-## Next steps
-
-- [Operations](/docs/server/operations) - Learn about the FHIR operations
-  available
-- [Admin UI](/docs/server/admin-ui) - Visual interface for managing data and
-  testing queries
-- [Configuration](/docs/server/configuration) - Customise server behaviour with
-  environment variables
-- [Kubernetes deployment](/docs/server/deployment/kubernetes) - Deploy to a
-  Kubernetes cluster
-
-<!--
-  @author John Grimes
--->
