@@ -36,7 +36,7 @@ helm repo add pathling https://pathling.csiro.au/helm
 # Get the latest information about charts from the repository.
 helm repo update
 
-# Install the Pathling server chart as a release named `pathling`, with the 
+# Install the Pathling server chart as a release named `pathling`, with the
 # default values.
 helm install pathling pathling/pathling
 ```
@@ -46,25 +46,25 @@ helm install pathling pathling/pathling
 This is the list of the configuration values that the chart supports, along with
 their default values.
 
-| Key                                   | Default                 | Description                                                                                                                                                                 |
-|---------------------------------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Key                                   | Default                         | Description                                                                                                                                                                 |
+| ------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pathling.image`                      | `ghcr.io/aehrc/pathling:latest` | The Pathling Docker image to use                                                                                                                                            |
-| `pathling.resources.requests.cpu`     | `2`                     | The CPU request for the Pathling pod                                                                                                                                        |
-| `pathling.resources.requests.memory`  | `4G`                    | The memory request for the Pathling pod                                                                                                                                     |
-| `pathling.resources.limits.memory`    | `4G`                    | The memory limit for the Pathling pod                                                                                                                                       |
-| `pathling.resources.maxHeapSize`      | `2800m`                 | The maximum heap size for the JVM, should usually be about 75% of the available memory                                                                                      |
-| `pathling.additionalJavaOptions`      | `-Duser.timezone=UTC`   | Additional Java options to pass to the JVM                                                                                                                                  |
-| `pathling.deployment.strategy`        | `Recreate`              | The [deployment strategy](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy) to use                                                            |
-| `pathling.deployment.imagePullPolicy` | `Always`                | The [image pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) to use                                                                      |
-| `pathling.volumes`                    | `[ ]`                   | A list of [volumes](https://kubernetes.io/docs/concepts/storage/volumes/) to mount in the pod                                                                               |
-| `pathling.volumeMounts`               | `[ ]`                   | A list of [volume mounts](https://kubernetes.io/docs/concepts/storage/volumes/#using-volumes) to mount                                                                      |
-| `pathling.serviceAccount`             | `~`                     | The [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) to assign to the pod                                             
-| `pathling.imagePullSecrets`           | `[ ]`                   | A list of [image pull secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) to use                                                |
-| `pathling.tolerations`                | `[ ]`                   | A list of [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) to apply to the pod                                                  |
-| `pathling.affinity`                   | `~`                     | [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) to apply to the pod                                         |
-| `pathling.securityContext`            | `~`                     | [Security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the pod                                                                  |
-| `pathling.config`                     | `{ }`                   | A map of [configuration values](/server/configuration) to pass to Pathling                                                                                                  |
-| `pathling.secretConfig`               | `{ }`                   | A map of secret configuration values to pass to Pathling, these values will be stored using [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/) |
+| `pathling.resources.requests.cpu`     | `2`                             | The CPU request for the Pathling pod                                                                                                                                        |
+| `pathling.resources.requests.memory`  | `4G`                            | The memory request for the Pathling pod                                                                                                                                     |
+| `pathling.resources.limits.memory`    | `4G`                            | The memory limit for the Pathling pod                                                                                                                                       |
+| `pathling.resources.maxHeapSize`      | `2800m`                         | The maximum heap size for the JVM, should usually be about 75% of the available memory                                                                                      |
+| `pathling.additionalJavaOptions`      | `-Duser.timezone=UTC`           | Additional Java options to pass to the JVM                                                                                                                                  |
+| `pathling.deployment.strategy`        | `Recreate`                      | The [deployment strategy](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy) to use                                                            |
+| `pathling.deployment.imagePullPolicy` | `Always`                        | The [image pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) to use                                                                      |
+| `pathling.volumes`                    | `[ ]`                           | A list of [volumes](https://kubernetes.io/docs/concepts/storage/volumes/) to mount in the pod                                                                               |
+| `pathling.volumeMounts`               | `[ ]`                           | A list of [volume mounts](https://kubernetes.io/docs/concepts/storage/volumes/#using-volumes) to mount                                                                      |
+| `pathling.serviceAccount`             | `~`                             | The [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) to assign to the pod                                             |
+| `pathling.imagePullSecrets`           | `[ ]`                           | A list of [image pull secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) to use                                                |
+| `pathling.tolerations`                | `[ ]`                           | A list of [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) to apply to the pod                                                  |
+| `pathling.affinity`                   | `~`                             | [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) to apply to the pod                                         |
+| `pathling.securityContext`            | `~`                             | [Security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the pod                                                                  |
+| `pathling.config`                     | `{ }`                           | A map of [configuration values](/server/configuration) to pass to Pathling                                                                                                  |
+| `pathling.secretConfig`               | `{ }`                           | A map of secret configuration values to pass to Pathling, these values will be stored using [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/) |
 
 ## Example configuration
 
@@ -87,13 +87,13 @@ pathling:
             memory: 4G
         maxHeapSize: 3g
     volumes:
-        -   name: warehouse
-            hostPath:
-                path: /home/user/data/pathling
+        - name: warehouse
+          hostPath:
+              path: /home/user/data/pathling
     volumeMounts:
-        -   name: warehouse
-            mountPath: /usr/share/warehouse
-            readOnly: false
+        - name: warehouse
+          mountPath: /usr/share/warehouse
+          readOnly: false
     config:
         pathling.implementationDescription: My Pathling Server
         pathling.terminology.cache.maxEntries: 500000
@@ -125,13 +125,13 @@ pathling:
             memory: 2G
         maxHeapSize: 1500m
     volumes:
-        -   name: warehouse
-            hostPath:
-                path: /home/user/data/pathling
+        - name: warehouse
+          hostPath:
+              path: /home/user/data/pathling
     volumeMounts:
-        -   name: warehouse
-            mountPath: /usr/share/warehouse
-            readOnly: false
+        - name: warehouse
+          mountPath: /usr/share/warehouse
+          readOnly: false
     serviceAccount: spark-service-account
     config:
         pathling.implementationDescription: My Pathling Server
@@ -153,7 +153,7 @@ pathling:
         spark.kubernetes.executor.limit.memory: 4G
 ```
 
-Pathling is copyright © 2018-2025, Commonwealth Scientific and Industrial
+Pathling is copyright © 2018-2026, Commonwealth Scientific and Industrial
 Research Organisation
 (CSIRO) ABN 41 687 119 230. Licensed under
 the [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
