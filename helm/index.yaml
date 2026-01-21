@@ -6,7 +6,7 @@ entries:
         fingerprint: F814751C64B5F5E708A8C73FC3C6291FED48678D
         url: https://pathling.csiro.au/helm/pubkey.asc
     apiVersion: v2
-    created: "2026-01-21T07:18:29.85656875Z"
+    created: "2026-01-21T07:19:02.971686955Z"
     description: A Helm chart for Pathling Server
     digest: c6de3e9eee7a48bc208f8ef57834ec0d161e325450d82d20f0ab94b5c145f22c
     icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
@@ -27,7 +27,7 @@ entries:
     - https://pathling.csiro.au/helm/pathling-2.0.0.tgz
     version: 2.0.0
   - apiVersion: v2
-    created: "2026-01-21T07:18:29.856092695Z"
+    created: "2026-01-21T07:19:02.971240031Z"
     description: A Helm chart for Pathling Server
     digest: bc3ab10a1915a12c7f7723946681d71c71df707b6388e2b63ed3548b86af1308
     icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
@@ -53,13 +53,24 @@ entries:
         fingerprint: F814751C64B5F5E708A8C73FC3C6291FED48678D
         url: https://pathling.csiro.au/helm/pubkey.asc
     apiVersion: v2
-    appVersion: 1.0.0
-    created: "2026-01-21T07:08:07.647343788Z"
-    description: A Varnish-based frontend cache optimised for use with Pathling
-    digest: 6465c1f95952b486d08fe6fbd6d3cd04867da418f03e832edfc8ec2d75839fc5
+    created: "2026-01-21T07:19:02.972013604Z"
+    description: A Varnish-based frontend cache optimised for use with Pathling Server
+    digest: fe970a7341e57260d84ee18febd91d4dd67c3938787863a642e7b4e9936ed660
+    icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
+    keywords:
+    - spark
+    - analytics
+    - standards
+    - fhir
+    - terminology
+    maintainers:
+    - email: John.Grimes@csiro.au
+      name: John Grimes
     name: pathling-cache
+    sources:
+    - https://github.com/aehrc/pathling
     type: application
     urls:
     - https://pathling.csiro.au/helm/pathling-cache-1.0.0.tgz
     version: 1.0.0
-generated: "2026-01-21T07:18:29.855492327Z"
+generated: "2026-01-21T07:19:02.970702359Z"
