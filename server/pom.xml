@@ -872,10 +872,7 @@
                 </platforms>
               </from>
               <to>
-                <image>${pathling.fhirServerDockerRepo}</image>
-                <tags>
-                  <tag>${project.version}</tag>
-                </tags>
+                <image>${pathling.fhirServerDockerRepo}:${project.version}</image>
               </to>
               <container>
                 <jvmFlags>
