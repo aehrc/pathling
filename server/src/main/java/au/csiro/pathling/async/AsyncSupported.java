@@ -33,4 +33,13 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface AsyncSupported {}
+public @interface AsyncSupported {
+
+  /**
+   * When true, completed jobs return 303 See Other with a redirect to the result endpoint, rather
+   * than returning the result inline. This follows the SQL on FHIR unify-async specification.
+   *
+   * @return true if completed jobs should redirect to the result endpoint
+   */
+  boolean redirectOnComplete() default false;
+}

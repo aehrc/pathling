@@ -130,12 +130,11 @@ public class AsyncAspect {
       log.info("Asynchronous processing requested");
 
       if (result == null) {
-        // the class containing the async annotation on a method does not implement
-        // PreAsyncValidation
-        // set some values to prevent NPEs
+        // The class containing the async annotation on a method does not implement
+        // PreAsyncValidation. Set some values to prevent NPEs.
         result = new PreAsyncValidationResult<>(new Object(), List.of());
       }
-      processRequestAsynchronously(joinPoint, requestDetails, result, spark);
+      processRequestAsynchronously(joinPoint, requestDetails, result, spark, asyncSupported);
       throw new ProcessingNotCompletedException("Accepted", buildOperationOutcome(result));
     } else {
       return (IBaseResource) joinPoint.proceed();
@@ -146,7 +145,8 @@ public class AsyncAspect {
       @Nonnull final ProceedingJoinPoint joinPoint,
       @Nonnull final ServletRequestDetails requestDetails,
       @Nonnull final PreAsyncValidationResult<?> preAsyncValidationResult,
-      @Nonnull final SparkSession spark) {
+      @Nonnull final SparkSession spark,
+      @Nonnull final AsyncSupported asyncSupported) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
     // Compute operation-specific cache key if the operation provides it.
@@ -217,6 +217,7 @@ public class AsyncAspect {
               final Optional<String> ownerId = getCurrentUserId(authentication);
               final Job<IBaseResource> newJob = new Job<>(jobId, operation, result, ownerId);
               newJob.setPreAsyncValidationResult(preAsyncValidationResult.result());
+              newJob.setRedirectOnComplete(asyncSupported.redirectOnComplete());
               return newJob;
             });
     final HttpServletResponse response = requestDetails.getServletResponse();

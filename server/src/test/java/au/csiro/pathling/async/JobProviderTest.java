@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.config.AsyncConfiguration;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import org.apache.spark.sql.SparkSession;
@@ -68,6 +69,8 @@ class JobProviderTest {
     jobProvider = new JobProvider(config, jobRegistry, spark, "/tmp/test");
     request = new MockHttpServletRequest();
     request.setMethod("GET");
+    // Set the servlet path to match the FHIR server mount point.
+    request.setServletPath("/fhir");
     response = new MockHttpServletResponse();
   }
 
@@ -109,5 +112,101 @@ class JobProviderTest {
     jobProvider.job(JOB_ID, request, response);
 
     assertThat(response.getHeader("ETag")).isNull();
+  }
+
+  @Test
+  void completedJobWithRedirectReturns303SeeOther() {
+    // When redirectOnComplete is enabled, completed jobs should return 303 See Other with a
+    // Location header pointing to the result endpoint.
+    final CompletableFuture<IBaseResource> future =
+        CompletableFuture.completedFuture(new Parameters());
+    final Job<IBaseResource> job = new Job<>(JOB_ID, "export", future, Optional.empty());
+    job.setRedirectOnComplete(true);
+    jobRegistry.register(job);
+
+    final IBaseResource result = jobProvider.job(JOB_ID, request, response);
+
+    assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_SEE_OTHER);
+    assertThat(response.getHeader("Location")).isEqualTo("/fhir/$job-result?id=" + JOB_ID);
+    // An empty Parameters resource is returned with the 303.
+    assertThat(result).isInstanceOf(Parameters.class);
+    assertThat(((Parameters) result).getParameter()).isEmpty();
+  }
+
+  @Test
+  void completedJobWithoutRedirectReturns200WithResult() {
+    // When redirectOnComplete is not enabled (default), completed jobs return 200 OK with the
+    // inline result.
+    final Parameters expectedResult = new Parameters();
+    expectedResult
+        .addParameter()
+        .setName("test")
+        .setValue(new org.hl7.fhir.r4.model.StringType("value"));
+    final CompletableFuture<IBaseResource> future =
+        CompletableFuture.completedFuture(expectedResult);
+    final Job<IBaseResource> job = new Job<>(JOB_ID, "export", future, Optional.empty());
+    // redirectOnComplete is false by default.
+    jobRegistry.register(job);
+
+    final IBaseResource result = jobProvider.job(JOB_ID, request, response);
+
+    assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_OK);
+    assertThat(response.getHeader("Location")).isNull();
+    assertThat(result).isInstanceOf(Parameters.class);
+    assertThat(((Parameters) result).getParameter()).hasSize(1);
+    assertThat(((Parameters) result).getParameter().get(0).getName()).isEqualTo("test");
+  }
+
+  @Test
+  void inProgressJobReturns202RegardlessOfRedirectFlag() {
+    // In-progress jobs always return 202 Accepted, regardless of the redirect setting.
+    final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
+    final Job<IBaseResource> job = new Job<>(JOB_ID, "export", future, Optional.empty());
+    job.setRedirectOnComplete(true);
+    jobRegistry.register(job);
+
+    assertThatThrownBy(() -> jobProvider.job(JOB_ID, request, response))
+        .isInstanceOf(ProcessingNotCompletedException.class);
+
+    // The 202 status is set by HAPI FHIR based on ProcessingNotCompletedException, not by us.
+    // We verify the Cache-Control header which indicates in-progress handling.
+    assertThat(response.getHeader("Cache-Control")).isEqualTo("no-cache");
+    assertThat(response.getHeader("Location")).isNull();
+  }
+
+  @Test
+  void completedJobWithRedirectIncludesServerBaseInLocation() {
+    // Verify that the Location header includes the server base URL when available.
+    request.setServerName("example.com");
+    request.setServerPort(8080);
+    request.setScheme("https");
+
+    final CompletableFuture<IBaseResource> future =
+        CompletableFuture.completedFuture(new Parameters());
+    final Job<IBaseResource> job = new Job<>(JOB_ID, "export", future, Optional.empty());
+    job.setRedirectOnComplete(true);
+    jobRegistry.register(job);
+
+    jobProvider.job(JOB_ID, request, response);
+
+    // The Location header should be a relative URL (starts with /) for flexibility.
+    final String location = response.getHeader("Location");
+    assertThat(location).startsWith("/");
+    assertThat(location).contains("$job-result");
+    assertThat(location).contains("id=" + JOB_ID);
+  }
+
+  @Test
+  void completedJobWithRedirectSetsCacheHeaders() {
+    // Verify that 303 responses also include cache headers.
+    final CompletableFuture<IBaseResource> future =
+        CompletableFuture.completedFuture(new Parameters());
+    final Job<IBaseResource> job = new Job<>(JOB_ID, "export", future, Optional.empty());
+    job.setRedirectOnComplete(true);
+    jobRegistry.register(job);
+
+    jobProvider.job(JOB_ID, request, response);
+
+    assertThat(response.getHeader("Cache-Control")).isEqualTo("max-age=60");
   }
 }

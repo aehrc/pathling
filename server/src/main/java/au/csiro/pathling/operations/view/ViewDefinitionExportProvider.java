@@ -150,7 +150,7 @@ public class ViewDefinitionExportProvider
   @SuppressWarnings({"unused", "java:S107"})
   @Operation(name = "viewdefinition-export", idempotent = true)
   @OperationAccess("view-export")
-  @AsyncSupported
+  @AsyncSupported(redirectOnComplete = true)
   @Nullable
   public Parameters export(
       @Nullable @OperationParam(name = "view.name") final List<String> viewNames,

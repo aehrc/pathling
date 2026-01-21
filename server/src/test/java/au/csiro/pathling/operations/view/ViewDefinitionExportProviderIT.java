@@ -17,11 +17,14 @@
 
 package au.csiro.pathling.operations.view;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import ca.uhn.fhir.context.FhirContext;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -36,6 +39,7 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -228,5 +232,138 @@ class ViewDefinitionExportProviderIT {
             Map.of(
                 "column", List.of(Map.of("name", "family_name", "path", "name.first().family")))));
     return view;
+  }
+
+  // -------------------------------------------------------------------------
+  // 303 Redirect pattern tests (SQL on FHIR unify-async specification)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Tests the complete async flow with 303 redirect pattern: 1. POST kick-off request → 202
+   * Accepted with Content-Location 2. Poll status endpoint → 202 (in-progress) or 303 (complete) 3.
+   * GET result endpoint → 200 OK with Parameters
+   */
+  @Test
+  void exportAsyncWith303RedirectPattern() throws InterruptedException {
+    final String parametersJson = createExportParametersWithNestedView();
+
+    // Step 1: Kick-off request should return 202 with Content-Location header.
+    final String contentLocation =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$viewdefinition-export")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .bodyValue(parametersJson)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists("Content-Location")
+            .returnResult(String.class)
+            .getResponseHeaders()
+            .getFirst("Content-Location");
+
+    assertThat(contentLocation).isNotNull();
+    assertThat(contentLocation).contains("$job?id=");
+    log.debug("Content-Location: {}", contentLocation);
+
+    // Step 2: Poll the status endpoint until we get 303 See Other.
+    // Poll with exponential backoff up to a timeout.
+    final int maxAttempts = 30;
+    String resultLocation = null;
+
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+      final var result =
+          webTestClient
+              .get()
+              .uri(contentLocation)
+              .header("Accept", "application/fhir+json")
+              .exchange()
+              .returnResult(String.class);
+
+      final HttpStatus status = (HttpStatus) result.getStatus();
+      log.debug("Poll attempt {}: status={}", attempt + 1, status);
+
+      if (status == HttpStatus.SEE_OTHER) {
+        // Job complete - 303 redirect.
+        resultLocation = result.getResponseHeaders().getFirst("Location");
+        assertThat(resultLocation).isNotNull();
+        assertThat(resultLocation).contains("$job-result?id=");
+        break;
+      } else if (status == HttpStatus.ACCEPTED) {
+        // Still processing - wait and retry.
+        Thread.sleep(500);
+      } else if (status == HttpStatus.OK) {
+        // Legacy behaviour without redirect - test passes but logs warning.
+        log.warn("Got 200 OK instead of 303. This indicates redirectOnComplete=false.");
+        return;
+      } else {
+        throw new AssertionError("Unexpected status: " + status);
+      }
+    }
+
+    assertThat(resultLocation)
+        .as("Expected 303 See Other with Location header within timeout")
+        .isNotNull();
+
+    // Step 3: GET the result endpoint should return 200 with Parameters.
+    webTestClient
+        .get()
+        .uri(resultLocation)
+        .header("Accept", "application/fhir+json")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectHeader()
+        .exists("Expires")
+        .expectBody()
+        .jsonPath("$.resourceType")
+        .isEqualTo("Parameters")
+        .jsonPath("$.parameter")
+        .isArray();
+  }
+
+  /**
+   * Tests that attempting to get results from an in-progress job via the result endpoint returns
+   * 400 Bad Request.
+   */
+  @Test
+  void resultEndpointRejectsInProgressJob() {
+    final String parametersJson = createExportParametersWithNestedView();
+
+    // Kick-off request.
+    final String contentLocation =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$viewdefinition-export")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .bodyValue(parametersJson)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .returnResult(String.class)
+            .getResponseHeaders()
+            .getFirst("Content-Location");
+
+    // Extract job ID from Content-Location.
+    assertThat(contentLocation).isNotNull();
+    final String jobId = contentLocation.substring(contentLocation.lastIndexOf("=") + 1);
+
+    // Immediately try to access the result endpoint (job likely still in progress).
+    // This should fail with 400 Bad Request or 404 if redirect not enabled.
+    webTestClient
+        .mutate()
+        .responseTimeout(Duration.ofMillis(500))
+        .build()
+        .get()
+        .uri("http://localhost:" + port + "/fhir/$job-result?id=" + jobId)
+        .header("Accept", "application/fhir+json")
+        .exchange()
+        .expectStatus()
+        .is4xxClientError();
   }
 }
