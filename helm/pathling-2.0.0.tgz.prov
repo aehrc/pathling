@@ -1,0 +1,46 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+annotations:
+  artifacthub.io/signKey: |
+    fingerprint: F814751C64B5F5E708A8C73FC3C6291FED48678D
+    url: https://pathling.csiro.au/helm/pubkey.asc
+apiVersion: v2
+description: A Helm chart for Pathling Server
+icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
+keywords:
+- - spark
+- - analytics
+- - standards
+- - fhir
+- - terminology
+maintainers:
+- - email: John.Grimes@csiro.au
+  name: John Grimes
+name: pathling
+sources:
+- - https://github.com/aehrc/pathling
+type: application
+version: 2.0.0
+
+...
+files:
+  pathling-2.0.0.tgz: sha256:61959041394151de10a17233f084db246d47576bee6ab3e09d4d5807a4dda236
+
+-----BEGIN PGP SIGNATURE-----
+
+wsG5BAEBCgBtBYJpcHtUCRDDxikf7UhnjUUUAAAAAAAcACBzYWx0QG5vdGF0aW9u
+cy5vcGVucGdwanMub3Jnv/lfJ7W9Af5wodECCySELTiuX+rqqDXRa7f5KHhCUDkW
+IQT4FHUcZLX15wioxz/Dxikf7UhnjQAARf0P/3kF+FYHIhlUSn2FRmmKjRnnYi9c
+eDkdifasjiwVcDuPU1wX+/9M8fXWbK8YZdMlyhcNlksGEOBKiorA5dC0FEL8a/Os
+UheT2z/7AOSDjE01FoGfJAYoOclGQkJQXB35296WC2UdfhjbMAeYPiQD9bB5i6BU
+6waHIxxqvjv0xmq7KUPENbo4ROayrg659NmCJJKMA+ePwHB2IcC2bXK3s2rRxVX0
+plrBbl2h6TFP7fUWLCsXSbpZHIP9QsoyacwqB4z1z8DXloUIvl5KGKxQm+Fj97mN
+LyB/MmnFuGBAxsfe09LtYsvjuEKIEys3gsj1AOh9UI8ZBDIBCwDtEemdOY64hhgI
+WMlyMVHC+ZLU6s99NfZ0C50ge/VM2TnhKQ6zD++nN5ZvnY8wFWJDZ0Oje2dC67J7
+Q75Waipq97AEOm5BdFbqq3ESqhkrXTbB81rx99Y7dq7NAEtiUMTqqyt3ZQCR/KDp
+iSZWVaaIwvm2z/QJFfWpcOzl7yaCk593/BrHbjGro+audqpbbG5fZ+GDNUiJbReM
+M99j5rBo5kJmsUAGL4UywOjcyKy2Zz8+Wl3C1OtmjAhTcfsGIm1HD6RNE75WHOWb
+rHABvHOIqiKKWsJO680APi9qi1q5M3WNJr0BP/28pwpBzYE/PQJN7Rqkjg4xVBf9
+6/hXoGta6kSCQDtI
+-----END PGP SIGNATURE-----
