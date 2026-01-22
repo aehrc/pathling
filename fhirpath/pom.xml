@@ -222,6 +222,7 @@
               <systemPropertyVariables>
                 <spring.profiles.active>unit-test</spring.profiles.active>
                 <spark.logConf>true</spark.logConf>
+                <au.csiro.pathling.views.test.disableExclusions>true</au.csiro.pathling.views.test.disableExclusions>
               </systemPropertyVariables>
             </configuration>
           </execution>

@@ -39,9 +39,6 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.utilities.Streams;
 import ca.uhn.fhir.context.FhirContext;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
@@ -95,6 +92,9 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -105,6 +105,8 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 @Import(FhirViewTest.CustomEncoderConfiguration.class)
 abstract class FhirViewTest {
 
+  public static final String PATHLING_VIEWS_TEST_DISABLE_EXCLUSIONS = "au.csiro.pathling.views.test.disableExclusions";
+
   /**
    * Custom configuration for FhirViewTest to provide FhirEncoders with increased maxNestingLevel.
    * This is necessary to support the repeat directive which can create deeply nested structures.
@@ -113,8 +115,8 @@ abstract class FhirViewTest {
   static class CustomEncoderConfiguration {
 
     /**
-     * Provides FhirEncoders configured with maxNestingLevel=3 to handle nested structures
-     * created by the repeat directive.
+     * Provides FhirEncoders configured with maxNestingLevel=3 to handle nested structures created
+     * by the repeat directive.
      *
      * @return configured FhirEncoders instance
      */
@@ -260,7 +262,7 @@ abstract class FhirViewTest {
           asScala(selectColumns).toSeq());
 
       log.debug("Actual schema:\n {}", selectedActualResult.schema().treeString());
-      
+
       // Assert that the rowDataset has rows unordered as in selectedExpectedResult.
       assertThat(selectedActualResult).hasRowsAndColumnsUnordered(selectedExpectedResult);
     }
@@ -347,8 +349,13 @@ abstract class FhirViewTest {
 
   boolean includeTest(@Nonnull final TestParameters testParameters) {
     if (this.excludedTests.contains(testParameters.getTitle())) {
-      log.warn("Excluding test: {}", testParameters);
-      return false;
+      if (System.getProperty(PATHLING_VIEWS_TEST_DISABLE_EXCLUSIONS) != null) {
+        log.warn("Ignoring exclusion for test: {}", testParameters);
+        return true;
+      } else {
+        log.warn("Excluding test: {}", testParameters);
+        return false;
+      }
     } else {
       return true;
     }

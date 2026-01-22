@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.views;
 
-import static java.util.Collections.emptySet;
-
 import java.util.Set;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -32,7 +30,10 @@ public class FhirViewShareableComplianceTest extends FhirViewTest {
   public FhirViewShareableComplianceTest() {
     super("classpath:tests/sql-on-fhir/*.json",
         Set.of("shareable"),
-        emptySet()
+        Set.of(
+            "fhirpath - string join",
+            "fhirpath - string join: default separator"
+        )
     );
   }
 }
