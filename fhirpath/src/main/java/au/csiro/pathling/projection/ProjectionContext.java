@@ -17,45 +17,29 @@
 
 package au.csiro.pathling.projection;
 
-import static java.util.stream.Collectors.toMap;
-
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
-import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
-import au.csiro.pathling.views.ConstantDeclaration;
+import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import jakarta.annotation.Nonnull;
-import java.util.List;
-import java.util.Map;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Dependencies and logic relating to the traversal of FHIRPath expressions.
+ * <p>
+ * This context holds an evaluator for FHIRPath expressions and the current input context
+ * for expression evaluation.
  *
- * @param executor an evaluator for FHIRPath expressions
+ * @param evaluator an evaluator for FHIRPath expressions (produces Column expressions)
  * @param inputContext the initial context for evaluation
  * @author Piotr Szul
  */
 public record ProjectionContext(
-    @Nonnull FhirPathEvaluator executor,
+    @Nonnull SingleResourceEvaluator evaluator,
     @Nonnull Collection inputContext
 ) {
-
-  /**
-   * Gets the initial dataset for this projection context.
-   *
-   * @return the initial dataset
-   */
-  @Nonnull
-  public Dataset<Row> getDataset() {
-    return executor.createInitialDataset();
-  }
 
   /**
    * Creates a new ProjectionContext with a different input context.
@@ -65,7 +49,7 @@ public record ProjectionContext(
    */
   @Nonnull
   public ProjectionContext withInputContext(@Nonnull final Collection inputContext) {
-    return new ProjectionContext(executor, inputContext);
+    return new ProjectionContext(evaluator, inputContext);
   }
 
   /**
@@ -117,14 +101,14 @@ public record ProjectionContext(
 
 
   /**
-   * Evaluates the given FHIRPath path and returns the result as a column.
+   * Evaluates the given FHIRPath path and returns the result as a collection.
    *
    * @param path the path to evaluate
-   * @return the result as a column
+   * @return the result as a collection
    */
   @Nonnull
   public Collection evalExpression(@Nonnull final FhirPath path) {
-    return executor.evaluate(path, inputContext);
+    return evaluator.evaluate(path, inputContext);
   }
 
   /**
@@ -151,34 +135,4 @@ public record ProjectionContext(
         .getColumnValue();
   }
 
-  /**
-   * Creates a new ProjectionContext from the given execution context, subject resource, and
-   * constants.
-   *
-   * @param context the execution context
-   * @param subjectResource the subject resource type
-   * @param constants the list of constant declarations
-   * @return a new ProjectionContext
-   */
-  @Nonnull
-  public static ProjectionContext of(@Nonnull final ExecutionContext context,
-      @Nonnull final ResourceType subjectResource,
-      @Nonnull final List<ConstantDeclaration> constants) {
-    // Create a map of variables from the provided constants.
-    final Map<String, Collection> variables = constants.stream()
-        .collect(toMap(ConstantDeclaration::getName,
-            ProjectionContext::getCollectionForConstantValue));
-
-    // Create a new FhirPathExecutor.
-    final FhirPathEvaluator executor = context.fhirpathEvaluatorFactory()
-        .create(subjectResource, StaticFunctionRegistry.getInstance(), variables);
-
-    // Return a new ProjectionContext with the executor and the default input context.
-    return new ProjectionContext(executor, executor.createDefaultInputContext());
-  }
-
-  @Nonnull
-  private static Collection getCollectionForConstantValue(@Nonnull final ConstantDeclaration c) {
-    return Collection.fromValue(c.getValue());
-  }
 }

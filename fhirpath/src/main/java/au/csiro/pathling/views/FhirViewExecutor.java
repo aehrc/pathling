@@ -21,14 +21,17 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators.SingleEvaluatorFactory;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
+import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.projection.ColumnSelection;
-import au.csiro.pathling.projection.ExecutionContext;
 import au.csiro.pathling.projection.GroupingSelection;
 import au.csiro.pathling.projection.Projection;
 import au.csiro.pathling.projection.ProjectionClause;
@@ -42,13 +45,13 @@ import au.csiro.pathling.views.ansi.AnsiSqlTypeParser;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -68,9 +71,6 @@ public class FhirViewExecutor {
   private final FhirContext fhirContext;
 
   @Nonnull
-  private final SparkSession sparkSession;
-
-  @Nonnull
   private final DataSource dataSource;
 
   @Nonnull
@@ -81,15 +81,13 @@ public class FhirViewExecutor {
 
   /**
    * @param fhirContext The FHIR context to use for the execution context
-   * @param sparkSession The Spark session to use for the execution context
    * @param dataset The data source to use for the execution context
    * @param queryConfiguration The query configuration to control query execution behavior
    */
   public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset,
+      @Nonnull final DataSource dataset,
       @Nonnull final QueryConfiguration queryConfiguration) {
     this.fhirContext = fhirContext;
-    this.sparkSession = sparkSession;
     this.dataSource = dataset;
     this.queryConfiguration = queryConfiguration;
     this.parser = new Parser();
@@ -97,12 +95,11 @@ public class FhirViewExecutor {
 
   /**
    * @param fhirContext The FHIR context to use for the execution context
-   * @param sparkSession The Spark session to use for the execution context
    * @param dataset The data source to use for the execution context
    */
   public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset) {
-    this(fhirContext, sparkSession, dataset, QueryConfiguration.builder().build());
+      @Nonnull final DataSource dataset) {
+    this(fhirContext, dataset, QueryConfiguration.builder().build());
   }
 
   /**
@@ -116,11 +113,27 @@ public class FhirViewExecutor {
     // Validate the view using JSR-380 validation
     ValidationUtils.ensureValid(view, "Valid SQL on FHIR view");
 
-    final ExecutionContext executionContext = new ExecutionContext(sparkSession,
-        SingleEvaluatorFactory.of(fhirContext, dataSource)
-    );
+    // Build the projection structure from the view
     final Projection projection = buildProjection(view);
-    return projection.execute(executionContext);
+
+    // Get the subject resource type
+    final ResourceType subjectResource = ResourceType.fromCode(view.getResource());
+
+    // Read the flat dataset from DataSource
+    final Dataset<Row> dataset = dataSource.read(subjectResource.toCode());
+
+    // Create variables from constants
+    final Map<String, Collection> variables = view.getConstant().stream()
+        .collect(toMap(ConstantDeclaration::getName, c -> Collection.fromValue(c.getValue())));
+
+    // Create evaluator (uses ResourceRepresentation with id column)
+    final SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
+        .create(subjectResource, fhirContext)
+        .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
+        .withVariables(variables)
+        .build();
+
+    return projection.execute(dataset, evaluator);
   }
 
   /**

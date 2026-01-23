@@ -18,7 +18,8 @@
 package au.csiro.pathling.test.yaml.resolver;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
+import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.function.Function;
 import lombok.Value;
@@ -33,13 +34,24 @@ public class RuntimeContext implements ResolverBuilder {
 
   @Nonnull
   SparkSession spark;
+
   @Nonnull
   FhirEncoders fhirEncoders;
 
+  /**
+   * Returns the FHIR context from the FHIR encoders.
+   *
+   * @return the FHIR context
+   */
+  @Nonnull
+  public FhirContext getFhirContext() {
+    return fhirEncoders.getContext();
+  }
+
   @Override
   @Nonnull
-  public ResourceResolver create(
-      @Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory) {
-    return resolveFactory.apply(this);
+  public DatasetEvaluator create(
+      @Nonnull final Function<RuntimeContext, DatasetEvaluator> evaluatorFactory) {
+    return evaluatorFactory.apply(this);
   }
 }

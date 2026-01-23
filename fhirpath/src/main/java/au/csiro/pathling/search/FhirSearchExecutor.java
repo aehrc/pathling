@@ -22,6 +22,7 @@ import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -29,12 +30,11 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 /**
  * Executes FHIR search queries against a data source.
  * <p>
- * This executor uses {@link ResourceFilterFactory} to create filters from FHIR search criteria,
- * then applies those filters to resource datasets from the data source.
+ * This executor uses {@link SearchColumnBuilder} to create filter columns from FHIR search
+ * criteria, then applies those filters to resource datasets from the data source.
  *
  * @see <a href="https://hl7.org/fhir/search.html">FHIR Search</a>
- * @see ResourceFilterFactory
- * @see ResourceFilter
+ * @see SearchColumnBuilder
  */
 @Getter
 @RequiredArgsConstructor
@@ -44,7 +44,7 @@ public class FhirSearchExecutor {
   private final DataSource dataSource;
 
   @Nonnull
-  private final ResourceFilterFactory filterFactory;
+  private final SearchColumnBuilder columnBuilder;
 
   /**
    * Creates an executor with the default bundled search parameter registry for FHIR R4.
@@ -62,7 +62,7 @@ public class FhirSearchExecutor {
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource) {
     return new FhirSearchExecutor(dataSource,
-        ResourceFilterFactory.withDefaultRegistry(fhirContext));
+        SearchColumnBuilder.withDefaultRegistry(fhirContext));
   }
 
   /**
@@ -79,7 +79,7 @@ public class FhirSearchExecutor {
       @Nonnull final DataSource dataSource,
       @Nonnull final SearchParameterRegistry registry) {
     return new FhirSearchExecutor(dataSource,
-        ResourceFilterFactory.withRegistry(fhirContext, registry));
+        SearchColumnBuilder.withRegistry(fhirContext, registry));
   }
 
   /**
@@ -95,8 +95,8 @@ public class FhirSearchExecutor {
     // Read the flat resource dataset
     final Dataset<Row> dataset = dataSource.read(resourceType.toCode());
 
-    // Create filter from search and apply it
-    final ResourceFilter filter = filterFactory.fromSearch(resourceType, search);
-    return filter.apply(dataset);
+    // Create filter column from search and apply it
+    final Column filterColumn = columnBuilder.fromSearch(resourceType, search);
+    return dataset.filter(filterColumn);
   }
 }

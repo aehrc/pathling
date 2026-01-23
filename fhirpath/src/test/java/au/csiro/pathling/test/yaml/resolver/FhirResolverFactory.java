@@ -17,10 +17,9 @@
 
 package au.csiro.pathling.test.yaml.resolver;
 
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
-import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
-import au.csiro.pathling.fhirpath.definition.fhir.FhirResourceTag;
-import au.csiro.pathling.fhirpath.execution.DefaultResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -32,30 +31,36 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Factory for creating resource resolvers from FHIR JSON resources. This implementation handles the
- * parsing and conversion of FHIR resources into a format suitable for FHIRPath expression
- * evaluation.
+ * Factory for creating DatasetEvaluator instances from FHIR JSON resources. This implementation
+ * handles the parsing and conversion of FHIR resources into a format suitable for FHIRPath
+ * expression evaluation using flat schema.
  */
 @Value(staticConstructor = "of")
-public class FhirResolverFactory implements Function<RuntimeContext, ResourceResolver> {
+public class FhirResolverFactory implements Function<RuntimeContext, DatasetEvaluator> {
 
   @Nonnull
   String resourceJson;
 
   @Override
   @Nonnull
-  public ResourceResolver apply(final RuntimeContext rt) {
-
+  public DatasetEvaluator apply(final RuntimeContext rt) {
     final IParser jsonParser = rt.getFhirEncoders().getContext().newJsonParser();
-    final IBaseResource resource = jsonParser.parseResource(
-        resourceJson);
-    final Dataset<Row> resourceDS = rt.getSpark().createDataset(List.of(resource),
-        rt.getFhirEncoders().of(resource.fhirType())).toDF();
+    final IBaseResource resource = jsonParser.parseResource(resourceJson);
+    final ResourceType resourceType = ResourceType.fromCode(resource.fhirType());
 
-    return DefaultResourceResolver.of(
-        FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
-        FhirDefinitionContext.of(rt.getFhirEncoders().getContext()),
-        resourceDS
-    );
+    // Create flat dataset using FHIR encoders
+    final Dataset<Row> resourceDS = rt.getSpark().createDataset(
+        List.of(resource),
+        rt.getFhirEncoders().of(resource.fhirType())
+    ).toDF();
+
+    // Build DatasetEvaluator using the builder
+    // Use EMPTY strategy for cross-resource references to return empty collections
+    // rather than throwing exceptions (matching the behavior expected by YAML tests)
+    return DatasetEvaluatorBuilder
+        .create(resourceType, rt.getFhirContext())
+        .withDataset(resourceDS)
+        .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
+        .build();
   }
 }

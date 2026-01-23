@@ -374,17 +374,22 @@ public class Collection implements Equatable {
    * </p>
    *
    * @param newColumn The new {@link Column} to use as the collection's data
-   * @return A new {@link Collection} with the specified {@link Column} but preserving FHIR type and
-   * extension information
+   * @return A new {@link Collection} with the specified {@link Column} but preserving FHIR type,
+   * extension information, and column representation type
    * @throws CollectionConstructionError if there was a problem constructing the collection
    */
   @Nonnull
   public Collection copyWithColumn(@Nonnull final Column newColumn) {
-    return copyWith(new DefaultRepresentation(newColumn));
+    // Use the current column's copyOf method to preserve the representation type.
+    // This is important for ResourceRepresentation to maintain flat schema behavior.
+    return copyWith(getColumn().copyOf(newColumn));
   }
 
   /**
    * Filters the elements of this collection using the specified lambda.
+   * <p>
+   * The lambda is applied using the same representation type as this collection's column,
+   * preserving flat schema behavior when filtering resource collections.
    *
    * @param lambda The lambda to use for filtering
    * @return A new collection representing the filtered elements
@@ -393,7 +398,7 @@ public class Collection implements Equatable {
   public Collection filter(
       @Nonnull final ColumnTransform lambda) {
     return map(
-        ctx -> ctx.filter(col -> lambda.apply(new DefaultRepresentation(col)).getValue()));
+        ctx -> ctx.filter(col -> lambda.apply(ctx.copyOf(col)).getValue()));
   }
 
   /**

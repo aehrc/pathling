@@ -113,12 +113,17 @@ public abstract class ColumnRepresentation {
 
   /**
    * Create a new {@link ColumnRepresentation} from a new {@link Column}.
+   * <p>
+   * This method preserves the representation type - a {@link ResourceRepresentation} will
+   * return a new {@link ResourceRepresentation}, and a {@link DefaultRepresentation} will
+   * return a new {@link DefaultRepresentation}. This is important for maintaining correct
+   * behavior when transforming columns in different schema contexts.
    *
    * @param newValue The new {@link Column} to represent
    * @return A new {@link ColumnRepresentation} representing the new column
    */
   @Nonnull
-  protected abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
+  public abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
 
 
   /**

@@ -20,7 +20,7 @@ package au.csiro.pathling.test.dsl;
 import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
 import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.test.yaml.YamlTestDefinition;
 import au.csiro.pathling.test.yaml.executor.DefaultYamlTestExecutor;
 import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
@@ -72,7 +72,7 @@ public class FhirPathTestCaseBuilder {
 
 
   YamlTestExecutor build(
-      final Function<RuntimeContext, ResourceResolver> resolverFactory) {
+      final Function<RuntimeContext, DatasetEvaluator> evaluatorFactory) {
     // Convert the result to the expected format
     final Object formattedResult;
     if (result instanceof Number || result instanceof Boolean || result instanceof String) {
@@ -80,7 +80,7 @@ public class FhirPathTestCaseBuilder {
     } else if (result == null && nonNull(expectError)) {
       formattedResult = null;
     } else if (result instanceof List && ((List<?>) result).size() == 1) {
-      formattedResult = ((List<?>) result).get(0);
+      formattedResult = ((List<?>) result).getFirst();
     } else {
       formattedResult = result;
     }
@@ -102,7 +102,7 @@ public class FhirPathTestCaseBuilder {
     // Create and return the YamlTestExecutor
     return DefaultYamlTestExecutor.of(
         testCase,
-        resolverFactory,
+        evaluatorFactory,
         java.util.Optional.empty()
     );
   }

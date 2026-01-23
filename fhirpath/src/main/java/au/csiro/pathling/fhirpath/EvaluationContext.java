@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.context.FhirPathContext;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionError;
 import jakarta.annotation.Nonnull;
@@ -72,13 +71,9 @@ public interface EvaluationContext {
 
   /**
    * Returns the current input context (the focus of the evaluation).
-   * <p>
-   * By default, this is the value of the predefined variable "%context".
    *
    * @return The current input context
    */
   @Nonnull
-  default Collection getInputContext() {
-    return resolveVariable(FhirPathContext.CONTEXT_VARIABLE_NAME);
-  }
+  Collection getInputContext();
 }

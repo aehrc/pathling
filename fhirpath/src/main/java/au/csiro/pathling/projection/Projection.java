@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import au.csiro.pathling.views.ConstantDeclaration;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
@@ -119,25 +120,27 @@ public class Projection {
   /**
    * Executes the projection, returning a dataset that can be used to retrieve the result.
    *
-   * @param context The execution context
+   * @param dataset the Spark Dataset containing the resource data
+   * @param evaluator the FHIRPath evaluator for Column expression generation
    * @return The dataset that represents the result of the projection
    */
-  public Dataset<Row> execute(@Nonnull final ExecutionContext context) {
+  public Dataset<Row> execute(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final SingleResourceEvaluator evaluator) {
     // Prepare dependencies for evaluation.
-    final ProjectionContext projectionContext = ProjectionContext.of(context,
-        subjectResource, constants);
+    final ProjectionContext projectionContext = new ProjectionContext(
+        evaluator, evaluator.getDefaultInputContext());
 
     // Evaluate the selection clause.
     final ProjectionResult projectionResult = selection.evaluate(projectionContext);
-    final Dataset<Row> unfiltered = projectionContext.getDataset();
 
     // Evaluate the where clause and build a filter column.
     final Optional<Column> filterColumn = evaluateFilters(projectionContext);
 
     // Apply the filter column to the unfiltered dataset.
     final Dataset<Row> filteredResult = filterColumn
-        .map(unfiltered::filter)
-        .orElse(unfiltered);
+        .map(dataset::filter)
+        .orElse(dataset);
 
     // Convert the intermediate struct representation in the result column to a regular row, using 
     // the inline function.

@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -48,12 +49,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests for {@link ResourceFilterFactory}.
+ * Tests for {@link SearchColumnBuilder}.
  */
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
 @Slf4j
-class ResourceFilterFactoryTest {
+class SearchColumnBuilderTest {
 
   @Autowired
   SparkSession spark;
@@ -62,25 +63,25 @@ class ResourceFilterFactoryTest {
   FhirEncoders encoders;
 
   private SearchParameterRegistry registry;
-  private ResourceFilterFactory factory;
+  private SearchColumnBuilder builder;
   private FhirContext fhirContext;
 
   @BeforeEach
   void setUp() {
     fhirContext = encoders.getContext();
     registry = new TestSearchParameterRegistry();
-    factory = new ResourceFilterFactory(fhirContext, registry, new Parser());
+    builder = new SearchColumnBuilder(fhirContext, registry, new Parser());
   }
 
   // ========== Factory method tests ==========
 
   @Test
-  void withDefaultRegistry_createsFactoryWithR4Registry() {
-    final ResourceFilterFactory defaultFactory = ResourceFilterFactory.withDefaultRegistry(
+  void withDefaultRegistry_createsBuilderWithR4Registry() {
+    final SearchColumnBuilder defaultBuilder = SearchColumnBuilder.withDefaultRegistry(
         fhirContext);
 
-    assertNotNull(defaultFactory);
-    assertNotNull(defaultFactory.getRegistry());
+    assertNotNull(defaultBuilder);
+    assertNotNull(defaultBuilder.getRegistry());
   }
 
   // Note: Testing for non-R4 context would require DSTU3/R5 libraries on classpath
@@ -89,11 +90,10 @@ class ResourceFilterFactoryTest {
   // ========== fromQueryString tests ==========
 
   @Test
-  void fromQueryString_createsFilterForGenderSearch() {
-    final ResourceFilter filter = factory.fromQueryString(ResourceType.PATIENT, "gender=male");
+  void fromQueryString_createsColumnForGenderSearch() {
+    final Column filterColumn = builder.fromQueryString(ResourceType.PATIENT, "gender=male");
 
-    assertNotNull(filter);
-    assertEquals(ResourceType.PATIENT, filter.getResourceType());
+    assertNotNull(filterColumn);
   }
 
   @Test
@@ -101,8 +101,8 @@ class ResourceFilterFactoryTest {
     final ObjectDataSource dataSource = createPatientDataSource();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
-    final ResourceFilter filter = factory.fromQueryString(ResourceType.PATIENT, "");
-    final Dataset<Row> result = filter.apply(dataset);
+    final Column filterColumn = builder.fromQueryString(ResourceType.PATIENT, "");
+    final Dataset<Row> result = dataset.filter(filterColumn);
 
     assertEquals(4, result.count());
   }
@@ -110,27 +110,26 @@ class ResourceFilterFactoryTest {
   @Test
   void fromQueryString_unknownParameter_throwsException() {
     assertThrows(UnknownSearchParameterException.class,
-        () -> factory.fromQueryString(ResourceType.PATIENT, "unknown-param=value"));
+        () -> builder.fromQueryString(ResourceType.PATIENT, "unknown-param=value"));
   }
 
   @Test
   void fromQueryString_invalidModifier_throwsException() {
     assertThrows(InvalidModifierException.class,
-        () -> factory.fromQueryString(ResourceType.PATIENT, "gender:exact=male"));
+        () -> builder.fromQueryString(ResourceType.PATIENT, "gender:exact=male"));
   }
 
   // ========== fromSearch tests ==========
 
   @Test
-  void fromSearch_createsFilterFromFhirSearch() {
+  void fromSearch_createsColumnFromFhirSearch() {
     final FhirSearch search = FhirSearch.builder()
         .criterion("gender", "male")
         .build();
 
-    final ResourceFilter filter = factory.fromSearch(ResourceType.PATIENT, search);
+    final Column filterColumn = builder.fromSearch(ResourceType.PATIENT, search);
 
-    assertNotNull(filter);
-    assertEquals(ResourceType.PATIENT, filter.getResourceType());
+    assertNotNull(filterColumn);
   }
 
   @Test
@@ -139,8 +138,8 @@ class ResourceFilterFactoryTest {
     final Dataset<Row> dataset = dataSource.read("Patient");
 
     final FhirSearch search = FhirSearch.builder().build();
-    final ResourceFilter filter = factory.fromSearch(ResourceType.PATIENT, search);
-    final Dataset<Row> result = filter.apply(dataset);
+    final Column filterColumn = builder.fromSearch(ResourceType.PATIENT, search);
+    final Dataset<Row> result = dataset.filter(filterColumn);
 
     assertEquals(4, result.count());
   }
@@ -148,12 +147,11 @@ class ResourceFilterFactoryTest {
   // ========== fromExpression tests ==========
 
   @Test
-  void fromExpression_createsFilterFromFhirPathExpression() {
-    final ResourceFilter filter = factory.fromExpression(
+  void fromExpression_createsColumnFromFhirPathExpression() {
+    final Column filterColumn = builder.fromExpression(
         ResourceType.PATIENT, "gender = 'male'");
 
-    assertNotNull(filter);
-    assertEquals(ResourceType.PATIENT, filter.getResourceType());
+    assertNotNull(filterColumn);
   }
 
   @Test
@@ -161,9 +159,9 @@ class ResourceFilterFactoryTest {
     final ObjectDataSource dataSource = createPatientDataSource();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
-    final ResourceFilter filter = factory.fromExpression(
+    final Column filterColumn = builder.fromExpression(
         ResourceType.PATIENT, "gender = 'male'");
-    final Dataset<Row> result = filter.apply(dataset);
+    final Dataset<Row> result = dataset.filter(filterColumn);
 
     final Set<String> resultIds = extractIds(result);
     assertEquals(Set.of("1", "3"), resultIds);
@@ -174,9 +172,9 @@ class ResourceFilterFactoryTest {
     final ObjectDataSource dataSource = createPatientDataSourceWithActive();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
-    final ResourceFilter filter = factory.fromExpression(
+    final Column filterColumn = builder.fromExpression(
         ResourceType.PATIENT, "active = true");
-    final Dataset<Row> result = filter.apply(dataset);
+    final Dataset<Row> result = dataset.filter(filterColumn);
 
     final Set<String> resultIds = extractIds(result);
     assertEquals(Set.of("1", "3"), resultIds);
@@ -189,13 +187,14 @@ class ResourceFilterFactoryTest {
     final ObjectDataSource dataSource = createPatientDataSourceWithActive();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
-    final ResourceFilter genderFilter = factory.fromQueryString(
+    final Column genderFilter = builder.fromQueryString(
         ResourceType.PATIENT, "gender=male");
-    final ResourceFilter activeFilter = factory.fromExpression(
+    final Column activeFilter = builder.fromExpression(
         ResourceType.PATIENT, "active = true");
 
-    final ResourceFilter combined = genderFilter.and(activeFilter);
-    final Dataset<Row> result = combined.apply(dataset);
+    // Use standard SparkSQL Column.and() method
+    final Column combined = genderFilter.and(activeFilter);
+    final Dataset<Row> result = dataset.filter(combined);
 
     // Should match Patients 1 and 3: male AND active
     final Set<String> resultIds = extractIds(result);
@@ -207,13 +206,14 @@ class ResourceFilterFactoryTest {
     final ObjectDataSource dataSource = createPatientDataSource();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
-    final ResourceFilter maleFilter = factory.fromQueryString(
+    final Column maleFilter = builder.fromQueryString(
         ResourceType.PATIENT, "gender=male");
-    final ResourceFilter femaleFilter = factory.fromQueryString(
+    final Column femaleFilter = builder.fromQueryString(
         ResourceType.PATIENT, "gender=female");
 
-    final ResourceFilter combined = maleFilter.or(femaleFilter);
-    final Dataset<Row> result = combined.apply(dataset);
+    // Use standard SparkSQL Column.or() method
+    final Column combined = maleFilter.or(femaleFilter);
+    final Dataset<Row> result = dataset.filter(combined);
 
     // Should match all patients with gender set
     final Set<String> resultIds = extractIds(result);
@@ -239,7 +239,7 @@ class ResourceFilterFactoryTest {
 
   @ParameterizedTest(name = "equivalence test: {0}")
   @MethodSource("equivalenceTestCases")
-  void filterFactory_producesEquivalentResults_toFhirSearchExecutor(
+  void columnBuilder_producesEquivalentResults_toFhirSearchExecutor(
       final String queryString,
       final Set<String> expectedIds) {
 
@@ -253,9 +253,9 @@ class ResourceFilterFactoryTest {
     final Dataset<Row> executorResult = executor.execute(ResourceType.PATIENT, search);
     final Set<String> executorIds = extractIds(executorResult);
 
-    // Execute using ResourceFilterFactory (new implementation)
-    final ResourceFilter filter = factory.fromQueryString(ResourceType.PATIENT, queryString);
-    final Dataset<Row> filterResult = filter.apply(dataset);
+    // Execute using SearchColumnBuilder (new implementation)
+    final Column filterColumn = builder.fromQueryString(ResourceType.PATIENT, queryString);
+    final Dataset<Row> filterResult = dataset.filter(filterColumn);
     final Set<String> filterIds = extractIds(filterResult);
 
     // Verify both produce the same results
@@ -263,14 +263,14 @@ class ResourceFilterFactoryTest {
         () -> assertEquals(expectedIds, executorIds,
             "FhirSearchExecutor should return expected IDs"),
         () -> assertEquals(expectedIds, filterIds,
-            "ResourceFilterFactory should return expected IDs"),
+            "SearchColumnBuilder should return expected IDs"),
         () -> assertEquals(executorIds, filterIds,
             "Both implementations should return identical results")
     );
   }
 
   @Test
-  void filterFactory_schemaEquivalent_toFhirSearchExecutor() {
+  void columnBuilder_schemaEquivalent_toFhirSearchExecutor() {
     final ObjectDataSource dataSource = createPatientDataSource();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
@@ -280,9 +280,9 @@ class ResourceFilterFactoryTest {
     final FhirSearch search = FhirSearch.fromQueryString("gender=male");
     final Dataset<Row> executorResult = executor.execute(ResourceType.PATIENT, search);
 
-    // Execute using ResourceFilterFactory
-    final ResourceFilter filter = factory.fromQueryString(ResourceType.PATIENT, "gender=male");
-    final Dataset<Row> filterResult = filter.apply(dataset);
+    // Execute using SearchColumnBuilder
+    final Column filterColumn = builder.fromQueryString(ResourceType.PATIENT, "gender=male");
+    final Dataset<Row> filterResult = dataset.filter(filterColumn);
 
     // Schemas should be identical
     assertEquals(executorResult.schema(), filterResult.schema());
@@ -295,13 +295,13 @@ class ResourceFilterFactoryTest {
     final ObjectDataSource dataSource = createPatientDataSource();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
-    final ResourceFilterFactory defaultFactory = ResourceFilterFactory.withDefaultRegistry(
+    final SearchColumnBuilder defaultBuilder = SearchColumnBuilder.withDefaultRegistry(
         fhirContext);
 
     // Use a standard FHIR search parameter
-    final ResourceFilter filter = defaultFactory.fromQueryString(
+    final Column filterColumn = defaultBuilder.fromQueryString(
         ResourceType.PATIENT, "gender=male");
-    final Dataset<Row> result = filter.apply(dataset);
+    final Dataset<Row> result = dataset.filter(filterColumn);
 
     final Set<String> resultIds = extractIds(result);
     assertEquals(Set.of("1", "3"), resultIds);

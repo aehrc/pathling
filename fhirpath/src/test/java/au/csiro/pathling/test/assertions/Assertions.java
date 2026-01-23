@@ -19,7 +19,7 @@ package au.csiro.pathling.test.assertions;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
 
-import au.csiro.pathling.fhirpath.execution.CollectionDataset;
+import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
 import jakarta.annotation.Nonnull;
 import java.net.URL;
 import java.net.URLDecoder;

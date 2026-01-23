@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.test.dsl;
 
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.test.yaml.YamlTestBase;
 import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
 import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
@@ -170,11 +170,11 @@ public class FhirPathTestBuilder {
   @Nonnull
   public Stream<DynamicTest> build() {
 
-    final Function<RuntimeContext, ResourceResolver> resolverFactory;
+    final Function<RuntimeContext, DatasetEvaluator> evaluatorFactory;
     if (resource != null) {
-      resolverFactory = HapiResolverFactory.of(resource);
+      evaluatorFactory = HapiResolverFactory.of(resource);
     } else if (subject != null) {
-      resolverFactory = ArbitraryObjectResolverFactory.of(buildSubject());
+      evaluatorFactory = ArbitraryObjectResolverFactory.of(buildSubject());
     } else {
       throw new IllegalStateException("No resource or subject provided for FhirPath tests.");
     }
@@ -186,7 +186,7 @@ public class FhirPathTestBuilder {
 
     return testCases.stream()
         .map(tc -> {
-          final YamlTestExecutor executor = tc.build(resolverFactory);
+          final YamlTestExecutor executor = tc.build(evaluatorFactory);
           return DynamicTest.dynamicTest(
               executor.getDescription(),
               () -> testBase.run(executor)
@@ -203,8 +203,8 @@ public class FhirPathTestBuilder {
    */
   private String createTestDescription(final String description) {
     return group != null
-           ? group + " - " + description
-           : description;
+        ? group + " - " + description
+        : description;
   }
 
 }

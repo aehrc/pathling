@@ -53,8 +53,7 @@ public class QueryContext {
       @Nonnull final DataSource dataSource) {
     this.viewExecutor = new FhirViewExecutor(
         context.getFhirContext(),
-        context.getSpark(),
-        dataSource,
+            dataSource,
         context.getQueryConfiguration()
     );
     this.searchExecutor = FhirSearchExecutor.withDefaultRegistry(

@@ -17,24 +17,32 @@
 
 package au.csiro.pathling.test.yaml.resolver;
 
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.function.Function;
 import lombok.Value;
 
+/**
+ * A ResolverBuilder implementation that caches created DatasetEvaluator instances.
+ * <p>
+ * This builder wraps a delegate ResolverBuilder and maintains a cache of evaluators
+ * keyed by their factory functions. This avoids redundant creation of evaluators
+ * when the same factory is used multiple times.
+ */
 @Value(staticConstructor = "of")
 public class CachingResolverBuilder implements ResolverBuilder {
 
   @Nonnull
   ResolverBuilder delegate;
+
   @Nonnull
-  Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> cache;
+  Map<Function<RuntimeContext, DatasetEvaluator>, DatasetEvaluator> cache;
 
   @Override
   @Nonnull
-  public ResourceResolver create(
-      @Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory) {
-    return cache.computeIfAbsent(resolveFactory, delegate::create);
+  public DatasetEvaluator create(
+      @Nonnull final Function<RuntimeContext, DatasetEvaluator> evaluatorFactory) {
+    return cache.computeIfAbsent(evaluatorFactory, delegate::create);
   }
 }

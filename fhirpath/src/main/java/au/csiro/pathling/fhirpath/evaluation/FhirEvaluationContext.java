@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.context;
+package au.csiro.pathling.fhirpath.evaluation;
 
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -23,34 +23,32 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionError;
+import au.csiro.pathling.fhirpath.variable.EnvironmentVariableResolver;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
 /**
+ * An implementation of {@link EvaluationContext} for FHIRPath evaluation.
  * <p>
- * An implementation of {@link EvaluationContext} used for evaluating FHIRPath expressions within
- * FHIR views.
- * </p>
- * <p>
- * This class combines three key components needed for FHIRPath evaluation:
- * </p>
+ * This context provides all the components needed for FHIRPath expression evaluation:
  * <ul>
- *   <li>A {@link FhirPathContext} that provides access to variables and the input context</li>
- *   <li>A {@link FunctionRegistry} that provides access to FHIRPath functions</li>
- *   <li>A {@link ResourceResolver} that provides access to FHIR resources</li>
+ *   <li>Resource and input context for the current evaluation</li>
+ *   <li>Variable resolution through an {@link EnvironmentVariableResolver}</li>
+ *   <li>Function resolution through a {@link FunctionRegistry}</li>
+ *   <li>Resource resolution through a {@link ResourceResolver}</li>
  * </ul>
  *
- * @param fhirPathContext The FHIRPath context that provides access to variables and the input
- * context.
- * @param functionRegistry The function registry that provides access to FHIRPath functions.
- * @param resourceResolver The resource resolver that provides access to FHIR resources.
+ * @param inputContext the current input context (focus) for the evaluation
+ * @param variableResolver the resolver for environment variables
+ * @param functionRegistry the registry for resolving FHIRPath functions
+ * @param resourceResolver the resolver for FHIR resources
  */
-public record ViewEvaluationContext(
-    @Nonnull FhirPathContext fhirPathContext,
+public record FhirEvaluationContext(
+    @Nonnull Collection inputContext,
+    @Nonnull EnvironmentVariableResolver variableResolver,
     @Nonnull FunctionRegistry functionRegistry,
     @Nonnull ResourceResolver resourceResolver
-) implements
-    EvaluationContext {
+) implements EvaluationContext {
 
   /**
    * {@inheritDoc}
@@ -70,31 +68,30 @@ public record ViewEvaluationContext(
    */
   @Nonnull
   @Override
-  public NamedFunction resolveFunction(@Nonnull final String name)
-      throws NoSuchFunctionError {
+  public NamedFunction resolveFunction(@Nonnull final String name) throws NoSuchFunctionError {
     return functionRegistry.getInstance(name);
   }
 
   /**
    * {@inheritDoc}
    * <p>
-   * Delegates to the underlying {@link FhirPathContext}.
+   * Delegates to the underlying {@link EnvironmentVariableResolver}.
    */
   @Nonnull
   @Override
   public Collection resolveVariable(@Nonnull final String name) {
-    return fhirPathContext.resolveVariable(name);
+    return variableResolver.get(name)
+        .orElseThrow(() -> new IllegalArgumentException("Unknown variable: " + name));
   }
 
   /**
    * {@inheritDoc}
    * <p>
-   * Delegates to the underlying {@link FhirPathContext}.
+   * Returns the input context directly.
    */
   @Override
   @Nonnull
   public Collection getInputContext() {
-    return fhirPathContext.getInputContext();
+    return inputContext;
   }
-
 }

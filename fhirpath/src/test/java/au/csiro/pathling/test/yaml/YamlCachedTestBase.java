@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.test.yaml;
 
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.test.yaml.resolver.CachingResolverBuilder;
 import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
 import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
@@ -31,11 +31,11 @@ public abstract class YamlCachedTestBase extends YamlTestBase {
 
   @Nonnull
   private static final Map<Class<? extends YamlCachedTestBase>,
-      Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver>> CACHE =
+      Map<Function<RuntimeContext, DatasetEvaluator>, DatasetEvaluator>> CACHE =
       Collections.synchronizedMap(new HashMap<>());
 
 
-  private Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> getResolverCache() {
+  private Map<Function<RuntimeContext, DatasetEvaluator>, DatasetEvaluator> getResolverCache() {
     return CACHE.computeIfAbsent(getClass(), key -> new HashMap<>());
   }
 

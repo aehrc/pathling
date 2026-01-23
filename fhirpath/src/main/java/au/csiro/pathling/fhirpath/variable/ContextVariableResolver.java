@@ -39,9 +39,9 @@ public record ContextVariableResolver(
 
   @Override
   public Optional<Collection> get(@Nonnull final String name) {
-    if (name.equals("%context")) {
+    if (name.equals("context")) {
       return Optional.of(inputContext);
-    } else if (name.equals("%resource") || name.equals("%rootResource")) {
+    } else if (name.equals("resource") || name.equals("rootResource")) {
       return Optional.of(resource);
     } else {
       return Optional.empty();

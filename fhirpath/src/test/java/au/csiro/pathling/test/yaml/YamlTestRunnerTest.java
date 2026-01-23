@@ -28,14 +28,13 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
-import au.csiro.pathling.fhirpath.definition.DefinitionContext;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceTag;
-import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
-import au.csiro.pathling.fhirpath.definition.fhir.FhirResourceTag;
-import au.csiro.pathling.fhirpath.execution.DefaultResourceResolver;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
+import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.DefinitionResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.ResourceResolver;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -132,18 +131,20 @@ class YamlTestRunnerTest {
     inputDS.printSchema();
     inputDS.show();
 
-    final DefinitionContext definitionContext = DefaultDefinitionContext.of(subjectDefinition);
-    final FhirPathEvaluator evaluator = new FhirPathEvaluator(
-        DefaultResourceResolver.of(
-            DefaultResourceTag.of("Test"),
-            definitionContext,
-            inputDS
-        ),
-        StaticFunctionRegistry.getInstance(),
-        Map.of()
-    );
+    // Create resolver using DefinitionResourceResolver
+    final ResourceResolver resolver = DefinitionResourceResolver.of(
+        "Test",
+        DefaultDefinitionContext.of(subjectDefinition));
 
-    final Dataset<Row> ds = evaluator.createInitialDataset().cache();
+    // Create evaluator with resolver
+    final SingleResourceEvaluator singleEvaluator = SingleResourceEvaluator.of(
+        resolver,
+        StaticFunctionRegistry.getInstance(),
+        Map.of());
+
+    final DatasetEvaluator evaluator = new DatasetEvaluator(singleEvaluator, inputDS);
+
+    final Dataset<Row> ds = evaluator.getDataset().cache();
     final Parser parser = new Parser();
 
     final String testCaseStr = """
@@ -162,8 +163,8 @@ class YamlTestRunnerTest {
 
     final Object result = testCase.get("result");
     final Object resultRepresentation = result instanceof final List<?> list && list.size() == 1
-                                        ? list.get(0)
-                                        : result;
+        ? list.getFirst()
+        : result;
 
     final ChildDefinition resultDefinition = YamlSupport.elementFromYaml(
         "result",
@@ -182,7 +183,7 @@ class YamlTestRunnerTest {
             resultSchema).getField("result"));
 
     System.out.println("Evaluating: `" + desc + "` with: `" + expression + "`");
-    final Collection evalResult = evaluator.evaluate(
+    final Collection evalResult = evaluator.evaluateToCollection(
         parser.parse(expression));
     final Row resultRow = ds.select(
         evalResult.getColumn().asCanonical().getValue().alias("actual"),
@@ -193,12 +194,12 @@ class YamlTestRunnerTest {
     System.out.println("Result row: " + resultRow);
 
     final Object actual = resultRow.isNullAt(0)
-                          ? null
-                          : resultRow.get(0);
+        ? null
+        : resultRow.get(0);
 
     final Object expected = resultRow.isNullAt(1)
-                            ? null
-                            : resultRow.get(1);
+        ? null
+        : resultRow.get(1);
 
     assertEquals(expected, actual, "Expected: " + expected + " but got: " + actual);
   }
@@ -244,29 +245,21 @@ class YamlTestRunnerTest {
     assertNotNull(inputDS);
     assertEquals(1, inputDS.count());
 
-    final DefaultResourceResolver resolver = DefaultResourceResolver.of(
-        FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
-        FhirDefinitionContext.of(fhirContext),
-        inputDS
-    );
-
-    assertNotNull(resolver);
-
-    final FhirPathEvaluator evaluator = new FhirPathEvaluator(
-        resolver,
-        StaticFunctionRegistry.getInstance(),
-        Map.of()
-    );
+    // Create evaluator using DatasetEvaluatorBuilder
+    final DatasetEvaluator evaluator = DatasetEvaluatorBuilder
+        .create(ResourceType.fromCode(resource.fhirType()), fhirContext)
+        .withDataset(inputDS)
+        .build();
 
     assertNotNull(evaluator);
 
-    final Dataset<Row> ds = evaluator.createInitialDataset().cache();
+    final Dataset<Row> ds = evaluator.getDataset().cache();
     assertNotNull(ds);
 
     final Parser parser = new Parser();
     assertNotNull(parser);
 
-    final Collection result = evaluator.evaluate(parser.parse("Patient.name"));
+    final Collection result = evaluator.evaluateToCollection(parser.parse("Patient.name"));
     assertNotNull(result);
 
     final Dataset<Row> resultDS = ds.select(

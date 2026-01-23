@@ -660,7 +660,7 @@ class FhirSearchExecutorTest {
     final FhirSearchExecutor executor = FhirSearchExecutor.withDefaultRegistry(
         encoders.getContext(), dataSource);
 
-    final SearchParameterRegistry defaultRegistry = executor.getFilterFactory().getRegistry();
+    final SearchParameterRegistry defaultRegistry = executor.getColumnBuilder().getRegistry();
 
     // Verify a sample of standard FHIR search parameters are loaded.
     // These are stable parameters defined in the FHIR R4 spec.

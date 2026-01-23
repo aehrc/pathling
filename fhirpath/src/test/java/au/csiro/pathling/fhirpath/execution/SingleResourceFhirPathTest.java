@@ -20,14 +20,15 @@ package au.csiro.pathling.fhirpath.execution;
 import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators.SingleEvaluatorProvider;
-import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
+import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.Assertions;
@@ -37,7 +38,6 @@ import au.csiro.pathling.test.datasource.ObjectDataSource;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -74,6 +74,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Slf4j
 class SingleResourceFhirPathTest {
 
+  private static final Parser PARSER = new Parser();
+
   @Autowired
   SparkSession spark;
 
@@ -88,10 +90,9 @@ class SingleResourceFhirPathTest {
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirExpression) {
 
-    return createEvaluator(dataSource)
-        .evaluate(subjectResource, fhirExpression)
-        .toCanonical();
-
+    final DatasetEvaluator evaluator = createEvaluator(dataSource, subjectResource);
+    final FhirPath fhirPath = PARSER.parse(fhirExpression);
+    return evaluator.evaluate(fhirPath).toCanonical();
   }
 
   @Nonnull
@@ -104,11 +105,13 @@ class SingleResourceFhirPathTest {
   }
 
   @Nonnull
-  FhirPathExecutor createEvaluator(@Nonnull final DataSource datasource) {
-    return FhirPathExecutor.of(new Parser(), new SingleEvaluatorProvider(encoders.getContext(),
-        StaticFunctionRegistry.getInstance(),
-        Map.of(),
-        datasource));
+  DatasetEvaluator createEvaluator(@Nonnull final ObjectDataSource dataSource,
+      @Nonnull final ResourceType subjectResource) {
+    final Dataset<Row> dataset = dataSource.read(subjectResource.toCode());
+    return DatasetEvaluatorBuilder
+        .create(subjectResource, encoders.getContext())
+        .withDataset(dataset)
+        .build();
   }
 
   @Test

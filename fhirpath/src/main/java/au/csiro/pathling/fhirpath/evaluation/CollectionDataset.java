@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.execution;
+package au.csiro.pathling.fhirpath.evaluation;
 
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -103,7 +103,7 @@ public class CollectionDataset {
   }
 
   /**
-   * Converts this CollectionDataset to a dataset with id and external value columns. 
+   * Converts this CollectionDataset to a dataset with id and external value columns.
    * <p>
    * This method is useful for creating an output format that includes:
    * <ul>

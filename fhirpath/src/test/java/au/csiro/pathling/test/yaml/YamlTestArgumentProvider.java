@@ -19,7 +19,7 @@ package au.csiro.pathling.test.yaml;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
 
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.test.TestResources;
 import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
 import au.csiro.pathling.test.yaml.annotations.YamlTest;
@@ -61,10 +61,10 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   public Stream<? extends Arguments> provideArguments(final ExtensionContext context) {
     final TestConfiguration config = loadTestConfiguration(context);
     final YamlTestDefinition spec = loadTestSpec(context);
-    final Function<RuntimeContext, ResourceResolver> defaultResolverFactory = createDefaultResolverFactory(
-        spec);
+    final Function<RuntimeContext, DatasetEvaluator> defaultEvaluatorFactory =
+        createDefaultEvaluatorFactory(spec);
 
-    return createTestCases(spec, config, defaultResolverFactory);
+    return createTestCases(spec, config, defaultEvaluatorFactory);
   }
 
   private TestConfiguration loadTestConfiguration(final ExtensionContext context) {
@@ -122,18 +122,17 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
     return YamlTestDefinition.fromYaml(testSpec);
   }
 
-  private Function<RuntimeContext, ResourceResolver> createDefaultResolverFactory(
+  private Function<RuntimeContext, DatasetEvaluator> createDefaultEvaluatorFactory(
       final YamlTestDefinition spec) {
     return Optional.ofNullable(spec.subject())
         .map(subject -> {
-          final Map<Object, Object> convertedSubject = new HashMap<>(
-              subject);
-          return createResolverFactoryFromSubject(convertedSubject);
+          final Map<Object, Object> convertedSubject = new HashMap<>(subject);
+          return createEvaluatorFactoryFromSubject(convertedSubject);
         })
         .orElse(EmptyResolverFactory.getInstance());
   }
 
-  private Function<RuntimeContext, ResourceResolver> createResolverFactoryFromSubject(
+  private Function<RuntimeContext, DatasetEvaluator> createEvaluatorFactoryFromSubject(
       final Map<Object, Object> subject) {
     final String resourceTypeStr = Optional.ofNullable(subject.get("resourceType"))
         .map(String.class::cast)
@@ -156,18 +155,18 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   private Stream<Arguments> createTestCases(
       final YamlTestDefinition spec,
       final TestConfiguration config,
-      final Function<RuntimeContext, ResourceResolver> defaultResolverFactory) {
+      final Function<RuntimeContext, DatasetEvaluator> defaultEvaluatorFactory) {
 
     final List<Arguments> cases = spec.cases()
         .stream()
         .filter(this::filterDisabledTests)
-        .map(testCase -> createRuntimeCase(testCase, config, defaultResolverFactory))
+        .map(testCase -> createRuntimeCase(testCase, config, defaultEvaluatorFactory))
         .map(Arguments::of)
         .toList();
 
     return cases.isEmpty()
-           ? Stream.of(Arguments.of(EmptyYamlTestExecutor.of()))
-           : cases.stream();
+        ? Stream.of(Arguments.of(EmptyYamlTestExecutor.of()))
+        : cases.stream();
   }
 
   private boolean filterDisabledTests(final TestCase testCase) {
@@ -181,21 +180,21 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   private YamlTestExecutor createRuntimeCase(
       final TestCase testCase,
       final TestConfiguration config,
-      final Function<RuntimeContext, ResourceResolver> defaultResolverFactory) {
+      final Function<RuntimeContext, DatasetEvaluator> defaultEvaluatorFactory) {
 
-    final Function<RuntimeContext, ResourceResolver> resolverFactory = Optional.ofNullable(
+    final Function<RuntimeContext, DatasetEvaluator> evaluatorFactory = Optional.ofNullable(
             testCase.inputFile())
-        .map(f -> createFileBasedResolver(f, config.resourceBase()))
-        .orElse(defaultResolverFactory);
+        .map(f -> createFileBasedEvaluatorFactory(f, config.resourceBase()))
+        .orElse(defaultEvaluatorFactory);
 
     return DefaultYamlTestExecutor.of(
         testCase,
-        resolverFactory,
+        evaluatorFactory,
         config.excluder().apply(testCase)
     );
   }
 
-  private Function<RuntimeContext, ResourceResolver> createFileBasedResolver(
+  private Function<RuntimeContext, DatasetEvaluator> createFileBasedEvaluatorFactory(
       final String inputFile, final Optional<String> resourceBase) {
     final String path = resourceBase.orElse("") + File.separator + inputFile;
     return FhirResolverFactory.of(getResourceAsString(path));

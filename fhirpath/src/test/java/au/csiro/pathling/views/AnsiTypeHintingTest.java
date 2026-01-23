@@ -128,8 +128,8 @@ class AnsiTypeHintingTest {
     final ObjectDataSource dataSource = new ObjectDataSource(sparkSession, fhirEncoders,
         List.of(observation, patient));
 
-    fhirViewExecutor = new FhirViewExecutor(fhirEncoders.getContext(), sparkSession,
-        dataSource);
+    fhirViewExecutor = new FhirViewExecutor(fhirEncoders.getContext(),
+            dataSource);
     System.out.println("Setting up TypeMappingTest with FhirViewExecutor");
   }
 

@@ -22,8 +22,9 @@ import static org.apache.spark.sql.functions.lit;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.execution.ColumnOnlyResolver;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
+import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.search.filter.SearchFilter;
 import ca.uhn.fhir.context.FhirContext;
@@ -39,13 +40,13 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Factory for creating {@link ResourceFilter} instances from various sources.
+ * Builds SparkSQL Column expressions from FHIR Search queries or FHIRPath expressions.
  * <p>
- * This factory creates filters that can be applied to Pathling-encoded FHIR resource datasets.
- * Filters are created eagerly (SparkSQL Column expressions are built at creation time), allowing
- * them to be created without requiring a SparkSession or actual data.
+ * This builder creates Column expressions that can be applied to Pathling-encoded FHIR resource
+ * datasets. Columns are created eagerly (SparkSQL Column expressions are built at creation time),
+ * allowing them to be created without requiring a SparkSession or actual data.
  * <p>
- * The factory supports creating filters from:
+ * The builder supports creating filter columns from:
  * <ul>
  *   <li>FHIR Search queries ({@link #fromSearch}, {@link #fromQueryString})</li>
  *   <li>FHIRPath expressions ({@link #fromExpression})</li>
@@ -53,26 +54,24 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * <p>
  * Usage example:
  * <pre>{@code
- * // Create factory with default registry
- * ResourceFilterFactory factory = ResourceFilterFactory.withDefaultRegistry(fhirContext);
+ * // Create builder with default registry
+ * SearchColumnBuilder builder = SearchColumnBuilder.withDefaultRegistry(fhirContext);
  *
- * // Create filter from FHIR search query string
- * ResourceFilter genderFilter = factory.fromQueryString(ResourceType.PATIENT, "gender=male");
+ * // Create filter column from FHIR search query string
+ * Column genderFilter = builder.fromQueryString(ResourceType.PATIENT, "gender=male");
  *
- * // Create filter from FHIRPath expression
- * ResourceFilter activeFilter = factory.fromExpression(ResourceType.PATIENT, "active = true");
+ * // Create filter column from FHIRPath expression
+ * Column activeFilter = builder.fromExpression(ResourceType.PATIENT, "active = true");
  *
- * // Combine filters
- * ResourceFilter combined = genderFilter.and(activeFilter);
+ * // Combine filters using standard SparkSQL operations
+ * Column combined = genderFilter.and(activeFilter);
  *
- * // Apply to dataset
- * Dataset<Row> result = combined.apply(dataSource.read("Patient"));
+ * // Apply to dataset using standard SparkSQL
+ * Dataset<Row> result = dataSource.read("Patient").filter(combined);
  * }</pre>
- *
- * @see ResourceFilter
  */
 @Value
-public class ResourceFilterFactory {
+public class SearchColumnBuilder {
 
   /**
    * Resource path for the bundled R4 search parameters.
@@ -98,23 +97,23 @@ public class ResourceFilterFactory {
   Parser parser;
 
   /**
-   * Creates a factory with the default bundled search parameter registry for FHIR R4.
+   * Creates a builder with the default bundled search parameter registry for FHIR R4.
    * <p>
    * This method requires an R4 FhirContext and uses the bundled R4 search parameters from the HL7
    * FHIR specification.
    *
    * @param fhirContext the FHIR context (must be R4)
-   * @return a new factory with the default R4 registry
+   * @return a new builder with the default R4 registry
    * @throws IllegalArgumentException if the FhirContext is not R4
    */
   @Nonnull
-  public static ResourceFilterFactory withDefaultRegistry(@Nonnull final FhirContext fhirContext) {
+  public static SearchColumnBuilder withDefaultRegistry(@Nonnull final FhirContext fhirContext) {
     if (fhirContext.getVersion().getVersion() != FhirVersionEnum.R4) {
       throw new IllegalArgumentException(
           "Default registry requires FHIR R4 context, but got: "
               + fhirContext.getVersion().getVersion());
     }
-    try (final InputStream is = ResourceFilterFactory.class.getResourceAsStream(
+    try (final InputStream is = SearchColumnBuilder.class.getResourceAsStream(
         R4_REGISTRY_RESOURCE)) {
       if (is == null) {
         throw new IllegalStateException(
@@ -127,84 +126,82 @@ public class ResourceFilterFactory {
   }
 
   /**
-   * Creates a factory with an explicit registry.
+   * Creates a builder with an explicit registry.
    *
    * @param fhirContext the FHIR context
    * @param registry the search parameter registry
-   * @return a new factory
+   * @return a new builder
    */
   @Nonnull
-  public static ResourceFilterFactory withRegistry(
+  public static SearchColumnBuilder withRegistry(
       @Nonnull final FhirContext fhirContext,
       @Nonnull final SearchParameterRegistry registry) {
-    return new ResourceFilterFactory(fhirContext, registry, new Parser());
+    return new SearchColumnBuilder(fhirContext, registry, new Parser());
   }
 
   /**
-   * Creates a filter from a FHIR search query.
+   * Creates a filter Column from a FHIR search query.
    * <p>
    * Multiple criteria in the search are combined with AND logic.
    *
    * @param resourceType the resource type to filter
    * @param search the FHIR search query
-   * @return a filter representing the search criteria
+   * @return a SparkSQL Column representing the search criteria
    * @throws UnknownSearchParameterException if a search parameter is not found in the registry
    * @throws InvalidModifierException if an unsupported modifier is used
    * @throws InvalidSearchParameterException if the search parameter configuration is invalid
    */
   @Nonnull
-  public ResourceFilter fromSearch(
+  public Column fromSearch(
       @Nonnull final ResourceType resourceType,
       @Nonnull final FhirSearch search) {
 
-    // If there are no criteria, return a filter that matches all resources
+    // If there are no criteria, return a column that matches all resources
     if (search.getCriteria().isEmpty()) {
-      return new ResourceFilter(resourceType, lit(true));
+      return lit(true);
     }
 
-    // Create the evaluator for FHIRPath evaluation (using ColumnOnlyResolver)
-    final FhirPathEvaluator evaluator = createEvaluator(resourceType);
+    // Create the evaluator for FHIRPath evaluation
+    final SingleResourceEvaluator evaluator = createEvaluator(resourceType);
 
     // Build the combined filter expression
-    final Column filterExpression = search.getCriteria().stream()
+    return search.getCriteria().stream()
         .map(criterion -> buildCriterionFilter(resourceType, criterion, evaluator))
         .reduce(Column::and)
         .orElse(lit(true));
-
-    return new ResourceFilter(resourceType, filterExpression);
   }
 
   /**
-   * Creates a filter from a FHIR search query string.
+   * Creates a filter Column from a FHIR search query string.
    * <p>
    * The query string should be in standard URL query format without the leading '?'.
    *
    * @param resourceType the resource type to filter
    * @param queryString the query string (e.g., "gender=male&amp;birthdate=ge1990")
-   * @return a filter representing the search criteria
+   * @return a SparkSQL Column representing the search criteria
    * @throws UnknownSearchParameterException if a search parameter is not found in the registry
    * @throws InvalidModifierException if an unsupported modifier is used
    * @throws InvalidSearchParameterException if the search parameter configuration is invalid
    */
   @Nonnull
-  public ResourceFilter fromQueryString(
+  public Column fromQueryString(
       @Nonnull final ResourceType resourceType,
       @Nonnull final String queryString) {
     return fromSearch(resourceType, FhirSearch.fromQueryString(queryString));
   }
 
   /**
-   * Creates a filter from a FHIRPath boolean expression.
+   * Creates a filter Column from a FHIRPath boolean expression.
    * <p>
    * The expression should evaluate to a boolean value. Resources where the expression evaluates to
    * true will be included in the filtered result.
    *
    * @param resourceType the resource type to filter
    * @param fhirPathExpression the FHIRPath expression (must evaluate to boolean)
-   * @return a filter representing the expression
+   * @return a SparkSQL Column representing the expression
    */
   @Nonnull
-  public ResourceFilter fromExpression(
+  public Column fromExpression(
       @Nonnull final ResourceType resourceType,
       @Nonnull final String fhirPathExpression) {
 
@@ -212,27 +209,33 @@ public class ResourceFilterFactory {
     final FhirPath fhirPath = parser.parse(fhirPathExpression);
 
     // Create evaluator and evaluate
-    final FhirPathEvaluator evaluator = createEvaluator(resourceType);
+    final SingleResourceEvaluator evaluator = createEvaluator(resourceType);
     final Collection result = evaluator.evaluate(fhirPath);
 
     // Get the Column value - for boolean expressions this should be a scalar boolean
-    final Column filterExpression = result.getColumn().getValue();
-
-    return new ResourceFilter(resourceType, filterExpression);
+    return result.getColumn().getValue();
   }
 
   /**
-   * Creates a FhirPathEvaluator using ColumnOnlyResolver.
+   * Creates a SingleResourceEvaluator in flat schema mode with EMPTY cross-resource strategy.
    * <p>
-   * This evaluator generates Column references without requiring a DataSource.
+   * This evaluator generates Column references that work directly on flat Pathling-encoded datasets
+   * without requiring schema wrapping/unwrapping. Column expressions are generated as direct column
+   * access (e.g., {@code col("name")} instead of {@code col("Patient").getField("name")}).
+   * <p>
+   * Cross-resource references (e.g., paths that reference foreign resources) are handled using the
+   * EMPTY strategy, which returns empty collections with correct type information. This allows
+   * search parameters with cross-resource paths to evaluate gracefully.
    *
    * @param resourceType the resource type
-   * @return a new evaluator
+   * @return a new evaluator configured for flat schema mode
    */
   @Nonnull
-  private FhirPathEvaluator createEvaluator(@Nonnull final ResourceType resourceType) {
-    return FhirPathEvaluator.fromResolver(
-        new ColumnOnlyResolver(resourceType, fhirContext)).build();
+  private SingleResourceEvaluator createEvaluator(@Nonnull final ResourceType resourceType) {
+    return SingleResourceEvaluatorBuilder
+        .create(resourceType, fhirContext)
+        .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
+        .build();
   }
 
   /**
@@ -250,7 +253,7 @@ public class ResourceFilterFactory {
   private Column buildCriterionFilter(
       @Nonnull final ResourceType resourceType,
       @Nonnull final SearchCriterion criterion,
-      @Nonnull final FhirPathEvaluator evaluator) {
+      @Nonnull final SingleResourceEvaluator evaluator) {
 
     // Look up the parameter definition
     final SearchParameterDefinition paramDef = registry
@@ -280,7 +283,7 @@ public class ResourceFilterFactory {
       @Nonnull final SearchParameterType paramType,
       @Nonnull final SearchCriterion criterion,
       @Nonnull final String expression,
-      @Nonnull final FhirPathEvaluator evaluator) {
+      @Nonnull final SingleResourceEvaluator evaluator) {
 
     // Parse the FHIRPath expression
     final FhirPath fhirPath = parser.parse(expression);

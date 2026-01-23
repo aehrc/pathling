@@ -51,7 +51,7 @@ public class UnsupportedRepresentation extends ColumnRepresentation {
 
   @Override
   @Nonnull
-  protected ColumnRepresentation copyOf(@Nonnull final Column newValue) {
+  public ColumnRepresentation copyOf(@Nonnull final Column newValue) {
     return new UnsupportedRepresentation(description);
   }
 

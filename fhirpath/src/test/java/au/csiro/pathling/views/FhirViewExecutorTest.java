@@ -24,7 +24,6 @@ import static org.mockito.Mockito.mock;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.validation.ConstraintViolationException;
-import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Test;
 
 class FhirViewExecutorTest {
@@ -37,7 +36,6 @@ class FhirViewExecutorTest {
 
     final FhirViewExecutor executor = new FhirViewExecutor(
         mock(FhirContext.class),
-        mock(SparkSession.class),
         mock(DataSource.class));
 
     final ConstraintViolationException ex = assertThrows(

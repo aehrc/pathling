@@ -99,7 +99,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
 
   @Override
   @Nonnull
-  protected DefaultRepresentation copyOf(@Nonnull final Column newValue) {
+  public DefaultRepresentation copyOf(@Nonnull final Column newValue) {
     return new DefaultRepresentation(newValue);
   }
 
@@ -109,7 +109,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
       @Nonnull final UnaryOperator<Column> arrayExpression,
       @Nonnull final UnaryOperator<Column> singularExpression) {
     return copyOf(
-        ValueFunctions.ifArray(value, arrayExpression::apply, singularExpression::apply));
+        ValueFunctions.ifArray(value, arrayExpression, singularExpression));
   }
 
   @Override

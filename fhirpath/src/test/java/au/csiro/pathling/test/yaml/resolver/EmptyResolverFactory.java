@@ -17,23 +17,27 @@
 
 package au.csiro.pathling.test.yaml.resolver;
 
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceTag;
-import au.csiro.pathling.fhirpath.execution.DefaultResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.DefinitionResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.ResourceResolver;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
+import java.util.Map;
 import java.util.function.Function;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
 /**
- * Factory for creating empty resource resolvers. This implementation provides a resolver that
- * returns an empty DataFrame, useful for testing expressions that don't require input data.
+ * Factory for creating empty DatasetEvaluator instances. This implementation provides an evaluator
+ * with an empty DataFrame, useful for testing expressions that don't require input data.
  */
 @Value
-@AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
-public class EmptyResolverFactory implements Function<RuntimeContext, ResourceResolver> {
-
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class EmptyResolverFactory implements Function<RuntimeContext, DatasetEvaluator> {
 
   // singleton
   private static final EmptyResolverFactory INSTANCE = new EmptyResolverFactory();
@@ -43,13 +47,24 @@ public class EmptyResolverFactory implements Function<RuntimeContext, ResourceRe
   }
 
   @Override
-  public ResourceResolver apply(final RuntimeContext runtimeContext) {
+  public DatasetEvaluator apply(final RuntimeContext runtimeContext) {
+    final String resourceCode = "Empty";
+    final DefaultResourceTag subjectResourceTag = DefaultResourceTag.of(resourceCode);
+    final DefaultResourceDefinition resourceDefinition = DefaultResourceDefinition.of(
+        subjectResourceTag);
 
-    final DefaultResourceTag subjectResourceTag = DefaultResourceTag.of("Empty");
-    return DefaultResourceResolver.of(
-        subjectResourceTag,
-        DefaultDefinitionContext.of(DefaultResourceDefinition.of(subjectResourceTag)),
-        runtimeContext.getSpark().emptyDataFrame()
-    );
+    // Create resolver using DefinitionResourceResolver
+    final ResourceResolver resolver = DefinitionResourceResolver.of(
+        resourceCode,
+        DefaultDefinitionContext.of(resourceDefinition));
+
+    // Create the evaluator with the resolver
+    final SingleResourceEvaluator evaluator = SingleResourceEvaluator.of(
+        resolver,
+        StaticFunctionRegistry.getInstance(),
+        Map.of());
+
+    // Create and return DatasetEvaluator with empty dataset
+    return new DatasetEvaluator(evaluator, runtimeContext.getSpark().emptyDataFrame());
   }
 }

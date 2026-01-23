@@ -17,17 +17,26 @@
 
 package au.csiro.pathling.test.yaml.resolver;
 
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import jakarta.annotation.Nonnull;
 import java.util.function.Function;
 
 /**
- * Interface for building resource resolvers with specific context.
+ * Interface for building DatasetEvaluator instances with specific context.
+ * <p>
+ * This interface abstracts the creation of evaluators from factories, allowing for
+ * caching and other optimizations.
  */
 @FunctionalInterface
 public interface ResolverBuilder {
 
+  /**
+   * Creates a DatasetEvaluator from the given factory function.
+   *
+   * @param evaluatorFactory factory function that creates a DatasetEvaluator from RuntimeContext
+   * @return the created DatasetEvaluator
+   */
   @Nonnull
-  ResourceResolver create(
-      @Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory);
+  DatasetEvaluator create(
+      @Nonnull Function<RuntimeContext, DatasetEvaluator> evaluatorFactory);
 }
