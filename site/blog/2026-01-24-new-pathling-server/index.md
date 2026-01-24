@@ -1,8 +1,8 @@
 ---
 slug: new-pathling-server
 title: Introducing the new Pathling server
-authors: [ johngrimes ]
-tags: [ release, server ]
+authors: [johngrimes]
+tags: [release, server]
 ---
 
 We're excited to announce the release of a new Pathling server. This is a
@@ -187,7 +187,7 @@ The `$import` operation loads FHIR data from external sources into the server.
 Supported formats include:
 
 | Format  | MIME type                        |
-|---------|----------------------------------|
+| ------- | -------------------------------- |
 | NDJSON  | `application/fhir+ndjson`        |
 | Parquet | `application/vnd.apache.parquet` |
 
@@ -336,7 +336,7 @@ The Bulk Submit page allows you to monitor and manage Bulk Submit jobs.
 
 The SQL on FHIR page allows you to create, run, and export view definitions.
 
-![Pathling SQL on FHIR page](./bulk-submit.png)
+![Pathling SQL on FHIR page](./sql-on-fhir.png)
 
 You can interact with a demonstration server
 at [https://demo.pathling.app](https://demo.pathling.app).
@@ -378,12 +378,12 @@ pathling:
         limits:
             memory: 4G
     volumes:
-        -   name: warehouse
-            persistentVolumeClaim:
-                claimName: pathling-warehouse
+        - name: warehouse
+          persistentVolumeClaim:
+              claimName: pathling-warehouse
     volumeMounts:
-        -   name: warehouse
-            mountPath: /usr/share/warehouse
+        - name: warehouse
+          mountPath: /usr/share/warehouse
     config:
         pathling.implementationDescription: My Pathling Server
 ```
