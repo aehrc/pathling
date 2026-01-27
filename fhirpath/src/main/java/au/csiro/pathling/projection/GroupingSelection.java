@@ -22,24 +22,23 @@ import java.util.List;
 
 /**
  * Groups multiple selections together using a cross join (Cartesian product).
- * <p>
- * This is the primary mechanism for composing multiple projection clauses into a single result
+ *
+ * <p>This is the primary mechanism for composing multiple projection clauses into a single result
  * where all combinations of the component results are included.
- * </p>
  *
  * @param components the list of projection clauses to be combined via product
  * @author John Grimes
  * @author Piotr Szul
  */
-public record GroupingSelection(@Nonnull List<ProjectionClause> components) implements
-    CompositeSelection {
+public record GroupingSelection(@Nonnull List<ProjectionClause> components)
+    implements CompositeSelection {
 
   @Override
   @Nonnull
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
     // Evaluate all components
-    final List<ProjectionResult> subResults = components.stream().map(c -> c.evaluate(context))
-        .toList();
+    final List<ProjectionResult> subResults =
+        components.stream().map(c -> c.evaluate(context)).toList();
     // Use the explicit product method for clarity
     return ProjectionResult.product(subResults);
   }

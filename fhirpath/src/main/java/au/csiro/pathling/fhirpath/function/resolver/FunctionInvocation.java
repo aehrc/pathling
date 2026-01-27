@@ -78,10 +78,11 @@ public record FunctionInvocation(Method method, Object[] arguments) {
   @Override
   @Nonnull
   public String toString() {
-    return "FunctionInvocation{" +
-        "method=" + method +
-        ", arguments=" + Arrays.toString(arguments) +
-        '}';
+    return "FunctionInvocation{"
+        + "method="
+        + method
+        + ", arguments="
+        + Arrays.toString(arguments)
+        + '}';
   }
-
 }

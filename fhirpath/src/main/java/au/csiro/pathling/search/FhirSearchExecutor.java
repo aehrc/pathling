@@ -29,8 +29,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Executes FHIR search queries against a data source.
- * <p>
- * This executor uses {@link SearchColumnBuilder} to create filter columns from FHIR search
+ *
+ * <p>This executor uses {@link SearchColumnBuilder} to create filter columns from FHIR search
  * criteria, then applies those filters to resource datasets from the data source.
  *
  * @see <a href="https://hl7.org/fhir/search.html">FHIR Search</a>
@@ -40,17 +40,15 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @RequiredArgsConstructor
 public class FhirSearchExecutor {
 
-  @Nonnull
-  private final DataSource dataSource;
+  @Nonnull private final DataSource dataSource;
 
-  @Nonnull
-  private final SearchColumnBuilder columnBuilder;
+  @Nonnull private final SearchColumnBuilder columnBuilder;
 
   /**
    * Creates an executor with the default bundled search parameter registry for FHIR R4.
-   * <p>
-   * This method requires an R4 FhirContext and uses the bundled R4 search parameters from the HL7
-   * FHIR specification.
+   *
+   * <p>This method requires an R4 FhirContext and uses the bundled R4 search parameters from the
+   * HL7 FHIR specification.
    *
    * @param fhirContext the FHIR context (must be R4)
    * @param dataSource the data source
@@ -59,10 +57,8 @@ public class FhirSearchExecutor {
    */
   @Nonnull
   public static FhirSearchExecutor withDefaultRegistry(
-      @Nonnull final FhirContext fhirContext,
-      @Nonnull final DataSource dataSource) {
-    return new FhirSearchExecutor(dataSource,
-        SearchColumnBuilder.withDefaultRegistry(fhirContext));
+      @Nonnull final FhirContext fhirContext, @Nonnull final DataSource dataSource) {
+    return new FhirSearchExecutor(dataSource, SearchColumnBuilder.withDefaultRegistry(fhirContext));
   }
 
   /**
@@ -78,8 +74,8 @@ public class FhirSearchExecutor {
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
       @Nonnull final SearchParameterRegistry registry) {
-    return new FhirSearchExecutor(dataSource,
-        SearchColumnBuilder.withRegistry(fhirContext, registry));
+    return new FhirSearchExecutor(
+        dataSource, SearchColumnBuilder.withRegistry(fhirContext, registry));
   }
 
   /**
@@ -90,8 +86,8 @@ public class FhirSearchExecutor {
    * @return a filtered dataset with the same schema as the original resource data
    */
   @Nonnull
-  public Dataset<Row> execute(@Nonnull final ResourceType resourceType,
-      @Nonnull final FhirSearch search) {
+  public Dataset<Row> execute(
+      @Nonnull final ResourceType resourceType, @Nonnull final FhirSearch search) {
     // Read the flat resource dataset
     final Dataset<Row> dataset = dataSource.read(resourceType.toCode());
 

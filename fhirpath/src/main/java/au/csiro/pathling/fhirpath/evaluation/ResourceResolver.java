@@ -24,14 +24,15 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Interface for resolving FHIR resources during single-resource FHIRPath evaluation.
- * <p>
- * This interface is designed for scenarios where only column expressions are needed without
+ *
+ * <p>This interface is designed for scenarios where only column expressions are needed without
  * access to actual dataset views. It does not require the {@code createView()} method, making it
  * suitable for:
+ *
  * <ul>
- *   <li>Building filter expressions where only Column references are needed</li>
- *   <li>Single-resource evaluation without DataSource dependencies</li>
- *   <li>Search column building and similar use cases</li>
+ *   <li>Building filter expressions where only Column references are needed
+ *   <li>Single-resource evaluation without DataSource dependencies
+ *   <li>Search column building and similar use cases
  * </ul>
  *
  * @see SingleResourceEvaluator
@@ -40,9 +41,9 @@ public interface ResourceResolver {
 
   /**
    * Returns the subject resource type for this resolver.
-   * <p>
-   * The subject resource is the primary resource type being queried, such as Patient in a
-   * query starting with {@code Patient.name.given}.
+   *
+   * <p>The subject resource is the primary resource type being queried, such as Patient in a query
+   * starting with {@code Patient.name.given}.
    *
    * @return the subject resource type
    */
@@ -51,8 +52,8 @@ public interface ResourceResolver {
 
   /**
    * Resolves the subject resource for this context.
-   * <p>
-   * The subject resource is the primary resource type being queried and evaluated against.
+   *
+   * <p>The subject resource is the primary resource type being queried and evaluated against.
    *
    * @return a ResourceCollection representing the subject resource
    */
@@ -61,27 +62,27 @@ public interface ResourceResolver {
 
   /**
    * Resolves a resource by its type code.
-   * <p>
-   * This method returns an Optional containing a ResourceCollection. The behavior depends on
-   * the implementation:
+   *
+   * <p>This method returns an Optional containing a ResourceCollection. The behavior depends on the
+   * implementation:
+   *
    * <ul>
-   *   <li>For the subject resource, returns its ResourceCollection</li>
-   *   <li>For foreign resources with EMPTY strategy, returns a ResourceCollection with
-   *       correct type information but {@code lit(null)} column value</li>
-   *   <li>For foreign resources with FAIL strategy, throws an exception</li>
-   *   <li>Returns {@code Optional.empty()} only if the resource type is truly unknown</li>
+   *   <li>For the subject resource, returns its ResourceCollection
+   *   <li>For foreign resources with EMPTY strategy, returns a ResourceCollection with correct type
+   *       information but {@code lit(null)} column value
+   *   <li>For foreign resources with FAIL strategy, throws an exception
+   *   <li>Returns {@code Optional.empty()} only if the resource type is truly unknown
    * </ul>
-   * <p>
-   * <strong>Important:</strong> Returning {@code Optional.empty()} will cause the FHIRPath
-   * evaluation to fall back to field traversal, which may not be the desired behavior for
-   * known resource types. Implementations should return an empty ResourceCollection (with
-   * correct type but null column) rather than {@code Optional.empty()} for known but
-   * unavailable resources.
+   *
+   * <p><strong>Important:</strong> Returning {@code Optional.empty()} will cause the FHIRPath
+   * evaluation to fall back to field traversal, which may not be the desired behavior for known
+   * resource types. Implementations should return an empty ResourceCollection (with correct type
+   * but null column) rather than {@code Optional.empty()} for known but unavailable resources.
    *
    * @param resourceCode the FHIR resource type code (e.g., "Patient", "Observation")
    * @return an Optional containing the ResourceCollection if available
-   * @throws UnsupportedOperationException if cross-resource references are not supported and
-   *     the FAIL strategy is in use
+   * @throws UnsupportedOperationException if cross-resource references are not supported and the
+   *     FAIL strategy is in use
    */
   @Nonnull
   Optional<ResourceCollection> resolveResource(@Nonnull String resourceCode);

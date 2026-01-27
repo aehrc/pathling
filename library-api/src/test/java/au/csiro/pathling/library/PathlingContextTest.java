@@ -75,17 +75,13 @@ public class PathlingContextTest {
   private static SparkSession spark;
   private static final String TEST_DATA_URL = "target/encoders-tests/data";
 
-  /**
-   * Set up Spark.
-   */
+  /** Set up Spark. */
   @BeforeAll
   static void setUpAll() {
     spark = TestHelpers.spark();
   }
 
-  /**
-   * Tear down Spark.
-   */
+  /** Tear down Spark. */
   @AfterAll
   static void tearDownAll() {
     spark.stop();
@@ -94,18 +90,13 @@ public class PathlingContextTest {
   private TerminologyServiceFactory terminologyServiceFactory;
   private TerminologyService terminologyService;
 
+  private static final String GUID_REG_SUBEXPRESSION =
+      "[0-9a-fA-F]{8}" + "-([0-9a-fA-F]{4}-)" + "{3}[0-9a-fA-F]{12}";
 
-  private static final String GUID_REG_SUBEXPRESSION = "[0-9a-fA-F]{8}"
-      + "-([0-9a-fA-F]{4}-)"
-      + "{3}[0-9a-fA-F]{12}";
+  public static final Pattern GUID_REGEX = Pattern.compile("^" + GUID_REG_SUBEXPRESSION + "$");
 
-
-  public static final Pattern GUID_REGEX = Pattern.compile(
-      "^" + GUID_REG_SUBEXPRESSION + "$");
-
-  private static final Pattern RELATIVE_REF_REGEX = Pattern.compile(
-      "^[A-Z][A-Za-z]+/" + GUID_REG_SUBEXPRESSION + "$");
-
+  private static final Pattern RELATIVE_REF_REGEX =
+      Pattern.compile("^[A-Z][A-Za-z]+/" + GUID_REG_SUBEXPRESSION + "$");
 
   public static boolean isValidGUID(@Nonnull final String maybeGUID) {
     final Matcher m = GUID_REGEX.matcher(maybeGUID);
@@ -118,20 +109,20 @@ public class PathlingContextTest {
   }
 
   public void assertAllGUIDs(@Nonnull final Collection<String> maybeGuids) {
-    final List<String> invalidValues = maybeGuids.stream()
-        .filter(not(PathlingContextTest::isValidGUID))
-        .limit(7)
-        .toList();
-    assertTrue(invalidValues.isEmpty(),
-        "All values should be GUIDs, but some are not: " + invalidValues);
+    final List<String> invalidValues =
+        maybeGuids.stream().filter(not(PathlingContextTest::isValidGUID)).limit(7).toList();
+    assertTrue(
+        invalidValues.isEmpty(), "All values should be GUIDs, but some are not: " + invalidValues);
   }
 
   public void assertAllRelativeReferences(@Nonnull final Collection<String> maybeRelativeRefs) {
-    final List<String> invalidValues = maybeRelativeRefs.stream()
-        .filter(not(PathlingContextTest::isValidRelativeReference))
-        .limit(7)
-        .toList();
-    assertTrue(invalidValues.isEmpty(),
+    final List<String> invalidValues =
+        maybeRelativeRefs.stream()
+            .filter(not(PathlingContextTest::isValidRelativeReference))
+            .limit(7)
+            .toList();
+    assertTrue(
+        invalidValues.isEmpty(),
         "All values should be relative references, but some are not: " + invalidValues);
   }
 
@@ -140,63 +131,62 @@ public class PathlingContextTest {
     assertAllRelativeReferences(df.select("id_versioned").as(Encoders.STRING()).collectAsList());
   }
 
-  public <T> void assertValidRelativeRefColumns(@Nonnull final Dataset<T> df,
-      final Column... refColumns) {
-    Stream.of(refColumns).forEach(c -> assertAllRelativeReferences(
-        df.select(c.getField("reference")).as(Encoders.STRING()).collectAsList()));
+  public <T> void assertValidRelativeRefColumns(
+      @Nonnull final Dataset<T> df, final Column... refColumns) {
+    Stream.of(refColumns)
+        .forEach(
+            c ->
+                assertAllRelativeReferences(
+                    df.select(c.getField("reference")).as(Encoders.STRING()).collectAsList()));
   }
 
   @BeforeEach
   void setUp() {
     // setup terminology mocks
-    terminologyServiceFactory = mock(
-        TerminologyServiceFactory.class, withSettings().serializable());
-    terminologyService = mock(TerminologyService.class,
-        withSettings().serializable());
+    terminologyServiceFactory =
+        mock(TerminologyServiceFactory.class, withSettings().serializable());
+    terminologyService = mock(TerminologyService.class, withSettings().serializable());
     when(terminologyServiceFactory.build()).thenReturn(terminologyService);
 
     DefaultTerminologyServiceFactory.reset();
   }
 
-
   @Test
   void testEncodeResourcesFromJsonBundle() {
 
-    final Dataset<String> bundlesDF = spark.read().option("wholetext", true)
-        .textFile(TEST_DATA_URL + "/bundles/R4/json");
+    final Dataset<String> bundlesDF =
+        spark.read().option("wholetext", true).textFile(TEST_DATA_URL + "/bundles/R4/json");
 
     final PathlingContext pathling = PathlingContext.create(spark);
 
-    final Dataset<Row> patientsDataframe = pathling.encodeBundle(bundlesDF.toDF(),
-        "Patient", PathlingContext.FHIR_JSON);
+    final Dataset<Row> patientsDataframe =
+        pathling.encodeBundle(bundlesDF.toDF(), "Patient", PathlingContext.FHIR_JSON);
     assertEquals(5, patientsDataframe.count());
 
     assertValidIdColumns(patientsDataframe);
 
     // Test omission of MIME type.
-    final Dataset<Row> patientsDataframe2 = pathling.encodeBundle(bundlesDF.toDF(),
-        "Patient");
+    final Dataset<Row> patientsDataframe2 = pathling.encodeBundle(bundlesDF.toDF(), "Patient");
     assertEquals(5, patientsDataframe2.count());
     assertValidIdColumns(patientsDataframe2);
 
-    final Dataset<Condition> conditionsDataframe = pathling.encodeBundle(bundlesDF, Condition.class,
-        PathlingContext.FHIR_JSON);
+    final Dataset<Condition> conditionsDataframe =
+        pathling.encodeBundle(bundlesDF, Condition.class, PathlingContext.FHIR_JSON);
     assertEquals(107, conditionsDataframe.count());
 
     assertValidIdColumns(conditionsDataframe);
     assertValidRelativeRefColumns(conditionsDataframe, col("subject"));
     assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
-
 
   @Test
   void testEncodeResourcesFromXmlBundle() {
-    final Dataset<String> bundlesDF = spark.read().option("wholetext", true)
-        .textFile(TEST_DATA_URL + "/bundles/R4/xml");
+    final Dataset<String> bundlesDF =
+        spark.read().option("wholetext", true).textFile(TEST_DATA_URL + "/bundles/R4/xml");
 
     final PathlingContext pathling = PathlingContext.create(spark);
-    final Dataset<Condition> conditionsDataframe = pathling.encodeBundle(bundlesDF, Condition.class,
-        PathlingContext.FHIR_XML);
+    final Dataset<Condition> conditionsDataframe =
+        pathling.encodeBundle(bundlesDF, Condition.class, PathlingContext.FHIR_XML);
     assertEquals(107, conditionsDataframe.count());
 
     assertValidIdColumns(conditionsDataframe);
@@ -204,21 +194,20 @@ public class PathlingContextTest {
     assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
 
-
   @Test
   void testEncodeResourcesFromJson() {
-    final Dataset<String> jsonResources = spark.read()
-        .textFile(TEST_DATA_URL + "/resources/R4/json");
+    final Dataset<String> jsonResources =
+        spark.read().textFile(TEST_DATA_URL + "/resources/R4/json");
 
     final PathlingContext pathling = PathlingContext.create(spark);
 
-    final Dataset<Row> patientsDataframe = pathling.encode(jsonResources.toDF(), "Patient",
-        PathlingContext.FHIR_JSON);
+    final Dataset<Row> patientsDataframe =
+        pathling.encode(jsonResources.toDF(), "Patient", PathlingContext.FHIR_JSON);
     assertEquals(9, patientsDataframe.count());
     assertValidIdColumns(patientsDataframe);
 
-    final Dataset<Condition> conditionsDataframe = pathling.encode(jsonResources, Condition.class,
-        PathlingContext.FHIR_JSON);
+    final Dataset<Condition> conditionsDataframe =
+        pathling.encode(jsonResources, Condition.class, PathlingContext.FHIR_JSON);
     assertEquals(71, conditionsDataframe.count());
 
     assertValidIdColumns(conditionsDataframe);
@@ -228,33 +217,29 @@ public class PathlingContextTest {
 
   @Test
   void testEncoderOptions() {
-    final Dataset<Row> jsonResourcesDF = spark.read()
-        .text(TEST_DATA_URL + "/resources/R4/json");
+    final Dataset<Row> jsonResourcesDF = spark.read().text(TEST_DATA_URL + "/resources/R4/json");
 
     // Test the defaults
-    final Row defaultRow = PathlingContext.create(spark)
-        .encode(jsonResourcesDF, "Questionnaire")
-        .head();
+    final Row defaultRow =
+        PathlingContext.create(spark).encode(jsonResourcesDF, "Questionnaire").head();
     assertFieldPresent("_extension", defaultRow.schema());
     final Row defaultItem = (Row) defaultRow.getList(defaultRow.fieldIndex("item")).getFirst();
     assertFieldPresent("item", defaultItem.schema());
 
     // Test explicit options
     // Nested items
-    final EncodingConfiguration encodingConfig1 = EncodingConfiguration.builder()
-        .enableExtensions(false)
-        .maxNestingLevel(1)
-        .build();
+    final EncodingConfiguration encodingConfig1 =
+        EncodingConfiguration.builder().enableExtensions(false).maxNestingLevel(1).build();
     final PathlingContext context1 = PathlingContext.createForEncoding(spark, encodingConfig1);
 
     final Row rowWithNesting = context1.encode(jsonResourcesDF, "Questionnaire").head();
     assertFieldNotPresent("_extension", rowWithNesting.schema());
     // Test item nesting
-    final Row itemWithNesting = (Row) rowWithNesting
-        .getList(rowWithNesting.fieldIndex("item")).getFirst();
+    final Row itemWithNesting =
+        (Row) rowWithNesting.getList(rowWithNesting.fieldIndex("item")).getFirst();
     assertFieldPresent("item", itemWithNesting.schema());
-    final Row nestedItem = (Row) itemWithNesting
-        .getList(itemWithNesting.fieldIndex("item")).getFirst();
+    final Row nestedItem =
+        (Row) itemWithNesting.getList(itemWithNesting.fieldIndex("item")).getFirst();
     assertFieldNotPresent("item", nestedItem.schema());
 
     // Verify encoding configuration can be retrieved
@@ -264,16 +249,17 @@ public class PathlingContextTest {
 
     // Test explicit options
     // Extensions and open types
-    final EncodingConfiguration encodingConfig2 = EncodingConfiguration.builder()
-        .enableExtensions(true)
-        .openTypes(Set.of("boolean", "string", "Address"))
-        .build();
+    final EncodingConfiguration encodingConfig2 =
+        EncodingConfiguration.builder()
+            .enableExtensions(true)
+            .openTypes(Set.of("boolean", "string", "Address"))
+            .build();
     final PathlingContext context2 = PathlingContext.createForEncoding(spark, encodingConfig2);
     final Row rowWithExtensions = context2.encode(jsonResourcesDF, "Patient").head();
     assertFieldPresent("_extension", rowWithExtensions.schema());
 
-    final Map<Integer, ArraySeq<Row>> extensions = rowWithExtensions
-        .getJavaMap(rowWithExtensions.fieldIndex("_extension"));
+    final Map<Integer, ArraySeq<Row>> extensions =
+        rowWithExtensions.getJavaMap(rowWithExtensions.fieldIndex("_extension"));
 
     // get the first extension of some extension set
     final Row extension = (Row) extensions.values().toArray(ArraySeq[]::new)[0].apply(0);
@@ -290,40 +276,37 @@ public class PathlingContextTest {
 
   @Test
   void testEncodeResourceStream() throws Exception {
-    final EncodingConfiguration encodingConfig = EncodingConfiguration.builder()
-        .enableExtensions(true)
-        .build();
+    final EncodingConfiguration encodingConfig =
+        EncodingConfiguration.builder().enableExtensions(true).build();
     final PathlingContext pathling = PathlingContext.createForEncoding(spark, encodingConfig);
 
-    final Dataset<Row> jsonResources = spark.readStream()
-        .text(TEST_DATA_URL + "/resources/R4/json");
+    final Dataset<Row> jsonResources =
+        spark.readStream().text(TEST_DATA_URL + "/resources/R4/json");
 
     assertTrue(jsonResources.isStreaming());
 
-    final Dataset<Row> patientsStream = pathling.encode(jsonResources, "Patient",
-        PathlingContext.FHIR_JSON);
+    final Dataset<Row> patientsStream =
+        pathling.encode(jsonResources, "Patient", PathlingContext.FHIR_JSON);
 
     assertTrue(patientsStream.isStreaming());
 
-    final StreamingQuery patientsQuery = patientsStream
-        .writeStream()
-        .queryName("patients")
-        .format("memory")
-        .start();
+    final StreamingQuery patientsQuery =
+        patientsStream.writeStream().queryName("patients").format("memory").start();
 
     patientsQuery.processAllAvailable();
     final long patientsCount = spark.sql("select count(*) from patients").head().getLong(0);
     assertEquals(9, patientsCount);
 
-    final StreamingQuery conditionQuery = pathling.encode(jsonResources, "Condition",
-            PathlingContext.FHIR_JSON)
-        .groupBy()
-        .count()
-        .writeStream()
-        .outputMode(OutputMode.Complete())
-        .queryName("countCondition")
-        .format("memory")
-        .start();
+    final StreamingQuery conditionQuery =
+        pathling
+            .encode(jsonResources, "Condition", PathlingContext.FHIR_JSON)
+            .groupBy()
+            .count()
+            .writeStream()
+            .outputMode(OutputMode.Complete())
+            .queryName("countCondition")
+            .format("memory")
+            .start();
 
     conditionQuery.processAllAvailable();
     final long conditionsCount = spark.sql("select * from countCondition").head().getLong(0);
@@ -334,16 +317,17 @@ public class PathlingContextTest {
   void testBuildContextWithTerminologyDefaults() {
     final String terminologyServerUrl = "https://tx.ontoserver.csiro.au/fhir";
 
-    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
-        .serverUrl(terminologyServerUrl)
-        .build();
-    final PathlingContext pathlingContext = PathlingContext.createForTerminology(spark, terminologyConfig);
+    final TerminologyConfiguration terminologyConfig =
+        TerminologyConfiguration.builder().serverUrl(terminologyServerUrl).build();
+    final PathlingContext pathlingContext =
+        PathlingContext.createForTerminology(spark, terminologyConfig);
 
     assertNotNull(pathlingContext);
-    final DefaultTerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
-        FhirVersionEnum.R4, terminologyConfig);
+    final DefaultTerminologyServiceFactory expectedFactory =
+        new DefaultTerminologyServiceFactory(FhirVersionEnum.R4, terminologyConfig);
 
-    final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
+    final TerminologyServiceFactory actualServiceFactory =
+        pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
     final TerminologyService actualService = actualServiceFactory.build();
     assertNotNull(actualService);
@@ -359,20 +343,21 @@ public class PathlingContextTest {
   void testBuildContextWithTerminologyNoCache() {
     final String terminologyServerUrl = "https://tx.ontoserver.csiro.au/fhir";
 
-    final HttpClientCachingConfiguration cacheConfig = HttpClientCachingConfiguration.builder()
-        .enabled(false)
-        .build();
-    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
-        .serverUrl(terminologyServerUrl)
-        .cache(cacheConfig)
-        .build();
-    final PathlingContext pathlingContext = PathlingContext.createForTerminology(spark,
-        terminologyConfig);
+    final HttpClientCachingConfiguration cacheConfig =
+        HttpClientCachingConfiguration.builder().enabled(false).build();
+    final TerminologyConfiguration terminologyConfig =
+        TerminologyConfiguration.builder()
+            .serverUrl(terminologyServerUrl)
+            .cache(cacheConfig)
+            .build();
+    final PathlingContext pathlingContext =
+        PathlingContext.createForTerminology(spark, terminologyConfig);
     assertNotNull(pathlingContext);
-    final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
-        FhirVersionEnum.R4, terminologyConfig);
+    final TerminologyServiceFactory expectedFactory =
+        new DefaultTerminologyServiceFactory(FhirVersionEnum.R4, terminologyConfig);
 
-    final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
+    final TerminologyServiceFactory actualServiceFactory =
+        pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
     final TerminologyService actualService = actualServiceFactory.build();
     assertNotNull(actualService);
@@ -381,7 +366,8 @@ public class PathlingContextTest {
   @Test
   void testBuildContextWithCustomizedTerminology() throws IOException {
     final String terminologyServerUrl = "https://r4.ontoserver.csiro.au/fhir";
-    final String tokenEndpoint = "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token";
+    final String tokenEndpoint =
+        "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token";
     final String clientId = "some-client";
     final String clientSecret = "some-secret";
     final String scope = "openid";
@@ -397,39 +383,44 @@ public class PathlingContextTest {
     tempDirectory.deleteOnExit();
     final String cacheStoragePath = tempDirectory.getAbsolutePath();
 
-    final HttpClientConfiguration clientConfig = HttpClientConfiguration.builder()
-        .maxConnectionsTotal(maxConnectionsTotal)
-        .maxConnectionsPerRoute(maxConnectionsPerRoute)
-        .socketTimeout(socketTimeout)
-        .build();
-    final HttpClientCachingConfiguration cacheConfig = HttpClientCachingConfiguration.builder()
-        .maxEntries(cacheMaxEntries)
-        .storageType(cacheStorageType)
-        .storagePath(cacheStoragePath)
-        .build();
-    final TerminologyAuthConfiguration authConfig = TerminologyAuthConfiguration.builder()
-        .tokenEndpoint(tokenEndpoint)
-        .clientId(clientId)
-        .clientSecret(clientSecret)
-        .scope(scope)
-        .tokenExpiryTolerance(tokenExpiryTolerance)
-        .build();
-    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
-        .serverUrl(terminologyServerUrl)
-        .verboseLogging(true)
-        .client(clientConfig)
-        .cache(cacheConfig)
-        .authentication(authConfig)
-        .build();
+    final HttpClientConfiguration clientConfig =
+        HttpClientConfiguration.builder()
+            .maxConnectionsTotal(maxConnectionsTotal)
+            .maxConnectionsPerRoute(maxConnectionsPerRoute)
+            .socketTimeout(socketTimeout)
+            .build();
+    final HttpClientCachingConfiguration cacheConfig =
+        HttpClientCachingConfiguration.builder()
+            .maxEntries(cacheMaxEntries)
+            .storageType(cacheStorageType)
+            .storagePath(cacheStoragePath)
+            .build();
+    final TerminologyAuthConfiguration authConfig =
+        TerminologyAuthConfiguration.builder()
+            .tokenEndpoint(tokenEndpoint)
+            .clientId(clientId)
+            .clientSecret(clientSecret)
+            .scope(scope)
+            .tokenExpiryTolerance(tokenExpiryTolerance)
+            .build();
+    final TerminologyConfiguration terminologyConfig =
+        TerminologyConfiguration.builder()
+            .serverUrl(terminologyServerUrl)
+            .verboseLogging(true)
+            .client(clientConfig)
+            .cache(cacheConfig)
+            .authentication(authConfig)
+            .build();
 
-    final PathlingContext pathlingContext = PathlingContext.createForTerminology(spark,
-        terminologyConfig);
+    final PathlingContext pathlingContext =
+        PathlingContext.createForTerminology(spark, terminologyConfig);
 
     assertNotNull(pathlingContext);
-    final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
-        FhirVersionEnum.R4, terminologyConfig);
+    final TerminologyServiceFactory expectedFactory =
+        new DefaultTerminologyServiceFactory(FhirVersionEnum.R4, terminologyConfig);
 
-    final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
+    final TerminologyServiceFactory actualServiceFactory =
+        pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
     final TerminologyService actualService = actualServiceFactory.build();
     assertNotNull(actualService);
@@ -449,52 +440,55 @@ public class PathlingContextTest {
     assertEquals(clientId, retrievedConfig.getAuthentication().getClientId());
     assertEquals(clientSecret, retrievedConfig.getAuthentication().getClientSecret());
     assertEquals(scope, retrievedConfig.getAuthentication().getScope());
-    assertEquals(tokenExpiryTolerance,
-        retrievedConfig.getAuthentication().getTokenExpiryTolerance());
+    assertEquals(
+        tokenExpiryTolerance, retrievedConfig.getAuthentication().getTokenExpiryTolerance());
   }
 
   @Test
   void failsOnInvalidTerminologyConfiguration() {
 
-    final TerminologyConfiguration invalidTerminologyConfig = TerminologyConfiguration.builder()
-        .serverUrl("not-a-URL")
-        .client(null)
-        .cache(HttpClientCachingConfiguration.builder()
-            .storageType(HttpClientCachingStorageType.DISK)
-            .build())
-        .build();
+    final TerminologyConfiguration invalidTerminologyConfig =
+        TerminologyConfiguration.builder()
+            .serverUrl("not-a-URL")
+            .client(null)
+            .cache(
+                HttpClientCachingConfiguration.builder()
+                    .storageType(HttpClientCachingStorageType.DISK)
+                    .build())
+            .build();
 
-    final PathlingContext.Builder builder = PathlingContext.builder(spark)
-        .terminologyConfiguration(invalidTerminologyConfig);
+    final PathlingContext.Builder builder =
+        PathlingContext.builder(spark).terminologyConfiguration(invalidTerminologyConfig);
 
-    final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
-        builder::build);
+    final ConstraintViolationException ex =
+        assertThrows(ConstraintViolationException.class, builder::build);
 
-    assertEquals("Invalid terminology configuration:"
-        + " cache: If the storage type is disk, then a storage path must be supplied.,"
-        + " client: must not be null,"
-        + " serverUrl: must be a valid URL", ex.getMessage());
+    assertEquals(
+        "Invalid terminology configuration:"
+            + " cache: If the storage type is disk, then a storage path must be supplied.,"
+            + " client: must not be null,"
+            + " serverUrl: must be a valid URL",
+        ex.getMessage());
   }
 
   @Test
   void failsOnInvalidEncodingConfiguration() {
 
-    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
-        .build();
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder().build();
 
-    final EncodingConfiguration invalidEncodersConfiguration = EncodingConfiguration.builder()
-        .maxNestingLevel(-10)
-        .openTypes(null)
-        .build();
+    final EncodingConfiguration invalidEncodersConfiguration =
+        EncodingConfiguration.builder().maxNestingLevel(-10).openTypes(null).build();
 
-    final PathlingContext.Builder builder = PathlingContext.builder(spark)
-        .encodingConfiguration(invalidEncodersConfiguration)
-        .terminologyConfiguration(terminologyConfig);
+    final PathlingContext.Builder builder =
+        PathlingContext.builder(spark)
+            .encodingConfiguration(invalidEncodersConfiguration)
+            .terminologyConfiguration(terminologyConfig);
 
-    final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
-        builder::build);
+    final ConstraintViolationException ex =
+        assertThrows(ConstraintViolationException.class, builder::build);
 
-    assertEquals("Invalid encoding configuration:"
+    assertEquals(
+        "Invalid encoding configuration:"
             + " maxNestingLevel: must be greater than or equal to 0,"
             + " openTypes: must not be null",
         ex.getMessage());
@@ -502,14 +496,11 @@ public class PathlingContextTest {
 
   @Test
   void testBuildContextWithQueryConfiguration() {
-    final QueryConfiguration queryConfig = QueryConfiguration.builder()
-        .explainQueries(true)
-        .maxUnboundTraversalDepth(20)
-        .build();
+    final QueryConfiguration queryConfig =
+        QueryConfiguration.builder().explainQueries(true).maxUnboundTraversalDepth(20).build();
 
-    final PathlingContext pathlingContext = PathlingContext.builder(spark)
-        .queryConfiguration(queryConfig)
-        .build();
+    final PathlingContext pathlingContext =
+        PathlingContext.builder(spark).queryConfiguration(queryConfig).build();
 
     assertNotNull(pathlingContext);
     assertNotNull(pathlingContext.getQueryConfiguration());
@@ -534,27 +525,26 @@ public class PathlingContextTest {
   @Test
   void failsOnInvalidQueryConfiguration() {
     // Test with negative maxUnboundTraversalDepth
-    final QueryConfiguration invalidQueryConfig = QueryConfiguration.builder()
-        .maxUnboundTraversalDepth(-5)
-        .build();
+    final QueryConfiguration invalidQueryConfig =
+        QueryConfiguration.builder().maxUnboundTraversalDepth(-5).build();
 
-    final PathlingContext.Builder builder = PathlingContext.builder(spark)
-        .queryConfiguration(invalidQueryConfig);
+    final PathlingContext.Builder builder =
+        PathlingContext.builder(spark).queryConfiguration(invalidQueryConfig);
 
-    final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
-        builder::build);
+    final ConstraintViolationException ex =
+        assertThrows(ConstraintViolationException.class, builder::build);
 
     final String message = ex.getMessage();
-    assertTrue(message.contains("maxUnboundTraversalDepth: must be greater than or equal to 0"),
-        "Expected error message to contain 'maxUnboundTraversalDepth: must be greater than or equal to 0', but was: "
+    assertTrue(
+        message.contains("maxUnboundTraversalDepth: must be greater than or equal to 0"),
+        "Expected error message to contain 'maxUnboundTraversalDepth: must be greater than or equal"
+            + " to 0', but was: "
             + message);
   }
 
   @Test
   void testBuilderWithNullSpark() {
-    final PathlingContext pathlingContext = PathlingContext.builder()
-        .spark(null)
-        .build();
+    final PathlingContext pathlingContext = PathlingContext.builder().spark(null).build();
 
     assertNotNull(pathlingContext);
     assertNotNull(pathlingContext.getSpark());
@@ -562,24 +552,20 @@ public class PathlingContextTest {
 
   @Test
   void testBuilderWithAllConfigurations() {
-    final EncodingConfiguration encodingConfig = EncodingConfiguration.builder()
-        .maxNestingLevel(5)
-        .enableExtensions(false)
-        .build();
+    final EncodingConfiguration encodingConfig =
+        EncodingConfiguration.builder().maxNestingLevel(5).enableExtensions(false).build();
 
-    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
-        .build();
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder().build();
 
-    final QueryConfiguration queryConfig = QueryConfiguration.builder()
-        .explainQueries(true)
-        .maxUnboundTraversalDepth(15)
-        .build();
+    final QueryConfiguration queryConfig =
+        QueryConfiguration.builder().explainQueries(true).maxUnboundTraversalDepth(15).build();
 
-    final PathlingContext pathlingContext = PathlingContext.builder(spark)
-        .encodingConfiguration(encodingConfig)
-        .terminologyConfiguration(terminologyConfig)
-        .queryConfiguration(queryConfig)
-        .build();
+    final PathlingContext pathlingContext =
+        PathlingContext.builder(spark)
+            .encodingConfiguration(encodingConfig)
+            .terminologyConfiguration(terminologyConfig)
+            .queryConfiguration(queryConfig)
+            .build();
 
     assertNotNull(pathlingContext);
     assertNotNull(pathlingContext.getQueryConfiguration());
@@ -590,32 +576,35 @@ public class PathlingContextTest {
   @Test
   void testConfigurationRoundTrip() {
     // Create specific configurations
-    final EncodingConfiguration encodingConfig = EncodingConfiguration.builder()
-        .maxNestingLevel(7)
-        .enableExtensions(true)
-        .openTypes(Set.of("string", "Coding"))
-        .build();
+    final EncodingConfiguration encodingConfig =
+        EncodingConfiguration.builder()
+            .maxNestingLevel(7)
+            .enableExtensions(true)
+            .openTypes(Set.of("string", "Coding"))
+            .build();
 
-    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
-        .serverUrl("https://test.server.com/fhir")
-        .verboseLogging(true)
-        .build();
+    final TerminologyConfiguration terminologyConfig =
+        TerminologyConfiguration.builder()
+            .serverUrl("https://test.server.com/fhir")
+            .verboseLogging(true)
+            .build();
 
-    final QueryConfiguration queryConfig = QueryConfiguration.builder()
-        .explainQueries(true)
-        .maxUnboundTraversalDepth(25)
-        .build();
+    final QueryConfiguration queryConfig =
+        QueryConfiguration.builder().explainQueries(true).maxUnboundTraversalDepth(25).build();
 
     // Build context with configurations
-    final PathlingContext pathlingContext = PathlingContext.builder(spark)
-        .encodingConfiguration(encodingConfig)
-        .terminologyConfiguration(terminologyConfig)
-        .queryConfiguration(queryConfig)
-        .build();
+    final PathlingContext pathlingContext =
+        PathlingContext.builder(spark)
+            .encodingConfiguration(encodingConfig)
+            .terminologyConfiguration(terminologyConfig)
+            .queryConfiguration(queryConfig)
+            .build();
 
     // Retrieve configurations
-    final EncodingConfiguration retrievedEncodingConfig = pathlingContext.getEncodingConfiguration();
-    final TerminologyConfiguration retrievedTerminologyConfig = pathlingContext.getTerminologyConfiguration();
+    final EncodingConfiguration retrievedEncodingConfig =
+        pathlingContext.getEncodingConfiguration();
+    final TerminologyConfiguration retrievedTerminologyConfig =
+        pathlingContext.getTerminologyConfiguration();
     final QueryConfiguration retrievedQueryConfig = pathlingContext.getQueryConfiguration();
 
     // Verify encoding configuration matches
@@ -636,21 +625,22 @@ public class PathlingContextTest {
   @Test
   void testTerminologyConfigurationWithNonConfigurableFactory() {
     // Create a mock terminology service factory that uses default implementation
-    final TerminologyServiceFactory mockFactory = mock(
-        TerminologyServiceFactory.class, withSettings().serializable());
+    final TerminologyServiceFactory mockFactory =
+        mock(TerminologyServiceFactory.class, withSettings().serializable());
 
     // Mock uses default method which throws IllegalStateException
     when(mockFactory.getConfiguration()).thenCallRealMethod();
 
     // Create context using createInternal (which bypasses builder validations)
-    final PathlingContext pathlingContext = PathlingContext.createInternal(
-        spark, FhirEncoders.forR4().getOrCreate(), mockFactory);
+    final PathlingContext pathlingContext =
+        PathlingContext.createInternal(spark, FhirEncoders.forR4().getOrCreate(), mockFactory);
 
     // Verify default implementation throws expected exception
-    final IllegalStateException ex = assertThrows(IllegalStateException.class,
-        pathlingContext::getTerminologyConfiguration);
+    final IllegalStateException ex =
+        assertThrows(IllegalStateException.class, pathlingContext::getTerminologyConfiguration);
 
-    assertTrue(ex.getMessage().contains("does not support configuration access"),
+    assertTrue(
+        ex.getMessage().contains("does not support configuration access"),
         "Expected error message to contain 'does not support configuration access', but was: "
             + ex.getMessage());
   }

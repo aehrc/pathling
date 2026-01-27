@@ -36,17 +36,13 @@ import org.apache.spark.sql.Row;
  */
 class CatalogSink implements DataSink {
 
-  @Nonnull
-  private final PathlingContext context;
+  @Nonnull private final PathlingContext context;
 
-  @Nonnull
-  private final SaveMode saveMode;
+  @Nonnull private final SaveMode saveMode;
 
-  @Nonnull
-  private final Optional<String> schema;
+  @Nonnull private final Optional<String> schema;
 
-  @Nonnull
-  private final Optional<String> format;
+  @Nonnull private final Optional<String> format;
 
   /**
    * Constructs a CatalogSink with the specified PathlingContext and default import mode.
@@ -80,7 +76,9 @@ class CatalogSink implements DataSink {
    * @param saveMode the SaveMode to use when writing data
    * @param schema the schema to qualify the table names, if any
    */
-  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
+  CatalogSink(
+      @Nonnull final PathlingContext context,
+      @Nonnull final SaveMode saveMode,
       @Nonnull final String schema) {
     this.context = context;
     this.saveMode = saveMode;
@@ -96,8 +94,11 @@ class CatalogSink implements DataSink {
    * @param schema the schema to qualify the table names, if any
    * @param format the format to use when writing data
    */
-  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
-      @Nonnull final String schema, @Nonnull final String format) {
+  CatalogSink(
+      @Nonnull final PathlingContext context,
+      @Nonnull final SaveMode saveMode,
+      @Nonnull final String schema,
+      @Nonnull final String format) {
     this.context = context;
     this.saveMode = saveMode;
     this.schema = Optional.of(schema);
@@ -114,7 +115,8 @@ class CatalogSink implements DataSink {
         case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tableName, saveMode);
         case OVERWRITE -> {
           if (format.isPresent() && "delta".equals(format.get())) {
-            // This is to work around a bug relating to Delta tables not being able to be overwritten,
+            // This is to work around a bug relating to Delta tables not being able to be
+            // overwritten,
             // due to their inability to handle the truncate operation that Spark performs when
             // overwriting a table.
             context.getSpark().sql("DROP TABLE IF EXISTS " + tableName);
@@ -138,8 +140,10 @@ class CatalogSink implements DataSink {
     }
   }
 
-  private void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tableName, @Nonnull final SaveMode saveMode) {
+  private void writeDataset(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String tableName,
+      @Nonnull final SaveMode saveMode) {
     final DataFrameWriter<Row> writer = dataset.write();
 
     // Apply save mode if it has a Spark equivalent.
@@ -154,12 +158,11 @@ class CatalogSink implements DataSink {
   /**
    * @param resourceType the resource type to get the table name for
    * @return the name of the table for the given resource type, qualified by the specified schema if
-   * one is provided
+   *     one is provided
    */
   @Nonnull
   private String getTableName(@Nonnull final String resourceType) {
-    return schema.map(s -> String.join(".", s, resourceType))
-        .orElse(resourceType);
+    return schema.map(s -> String.join(".", s, resourceType)).orElse(resourceType);
   }
 
   /**
@@ -178,5 +181,4 @@ class CatalogSink implements DataSink {
       return false;
     }
   }
-
 }

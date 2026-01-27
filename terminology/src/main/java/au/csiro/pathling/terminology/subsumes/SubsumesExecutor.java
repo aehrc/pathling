@@ -40,16 +40,14 @@ import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
  *
  * @author John Grimes
  * @see <a
- * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+ *     href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
  */
-public class SubsumesExecutor implements
-    TerminologyOperation<Parameters, ConceptSubsumptionOutcome> {
+public class SubsumesExecutor
+    implements TerminologyOperation<Parameters, ConceptSubsumptionOutcome> {
 
-  @Nonnull
-  private final TerminologyClient terminologyClient;
+  @Nonnull private final TerminologyClient terminologyClient;
 
-  @Nonnull
-  private final SubsumesParameters parameters;
+  @Nonnull private final SubsumesParameters parameters;
 
   /**
    * Creates a new SubsumesExecutor with the specified terminology client and parameters.
@@ -57,7 +55,8 @@ public class SubsumesExecutor implements
    * @param terminologyClient the terminology client to use for subsumption testing
    * @param parameters the parameters for the subsumption test
    */
-  public SubsumesExecutor(@Nonnull final TerminologyClient terminologyClient,
+  public SubsumesExecutor(
+      @Nonnull final TerminologyClient terminologyClient,
       @Nonnull final SubsumesParameters parameters) {
     this.terminologyClient = terminologyClient;
     this.parameters = parameters;
@@ -80,8 +79,9 @@ public class SubsumesExecutor implements
     }
 
     // If both versions are present, they must be equal.
-    if (!(codingA.getVersion() == null || codingB.getVersion() == null || codingA.getVersion()
-        .equals(codingB.getVersion()))) {
+    if (!(codingA.getVersion() == null
+        || codingB.getVersion() == null
+        || codingA.getVersion().equals(codingB.getVersion()))) {
       return Optional.of(NOTSUBSUMED);
     }
 
@@ -99,16 +99,14 @@ public class SubsumesExecutor implements
     final ImmutableCoding codingA = parameters.codingA();
     final ImmutableCoding codingB = parameters.codingB();
     final String resolvedSystem = codingA.getSystem();
-    final String resolvedVersion = codingA.getVersion() != null
-                                   ? codingA.getVersion()
-                                   : codingB.getVersion();
+    final String resolvedVersion =
+        codingA.getVersion() != null ? codingA.getVersion() : codingB.getVersion();
 
     return terminologyClient.buildSubsumes(
         required(CodeType::new, codingA.getCode()),
         required(CodeType::new, codingB.getCode()),
         required(UriType::new, resolvedSystem),
-        TerminologyParameters.optional(StringType::new, resolvedVersion)
-    );
+        TerminologyParameters.optional(StringType::new, resolvedVersion));
   }
 
   @Override
@@ -122,5 +120,4 @@ public class SubsumesExecutor implements
   public ConceptSubsumptionOutcome invalidRequestFallback() {
     return NOTSUBSUMED;
   }
-
 }

@@ -44,43 +44,29 @@ import org.apache.spark.sql.Row;
  */
 final class DeltaSink implements DataSink {
 
-  /**
-   * The Pathling context to use.
-   */
-  @Nonnull
-  private final PathlingContext context;
+  /** The Pathling context to use. */
+  @Nonnull private final PathlingContext context;
 
-  /**
-   * The path to write the Delta database to.
-   */
-  @Nonnull
-  private final String path;
+  /** The path to write the Delta database to. */
+  @Nonnull private final String path;
 
-  /**
-   * The save mode to use when writing data.
-   */
-  @Nonnull
-  private final SaveMode saveMode;
+  /** The save mode to use when writing data. */
+  @Nonnull private final SaveMode saveMode;
 
-  /**
-   * A function that maps resource type to file name.
-   */
-  @Nonnull
-  private final UnaryOperator<String> fileNameMapper;
+  /** A function that maps resource type to file name. */
+  @Nonnull private final UnaryOperator<String> fileNameMapper;
 
   /**
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
    * @param fileNameMapper a function that maps resource type to file name
-   *
    */
   DeltaSink(
       @Nonnull final PathlingContext context,
       @Nonnull final String path,
       @Nonnull final SaveMode saveMode,
-      @Nonnull final UnaryOperator<String> fileNameMapper
-  ) {
+      @Nonnull final UnaryOperator<String> fileNameMapper) {
     this.context = context;
     this.path = path;
     this.saveMode = saveMode;
@@ -101,7 +87,9 @@ final class DeltaSink implements DataSink {
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
    */
-  DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path,
+  DeltaSink(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
       @Nonnull final SaveMode saveMode) {
     // By default, name the files using the resource type alone.
     this(context, path, saveMode, UnaryOperator.identity());
@@ -111,8 +99,7 @@ final class DeltaSink implements DataSink {
   public void write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
-      final String fileName = String.join(".", fileNameMapper.apply(resourceType),
-          "parquet");
+      final String fileName = String.join(".", fileNameMapper.apply(resourceType), "parquet");
       final String tablePath = safelyJoinPaths(path, fileName);
 
       switch (saveMode) {
@@ -148,10 +135,11 @@ final class DeltaSink implements DataSink {
    * @param tablePath the path to write the Delta table to
    * @param saveMode the save mode to use for writing
    */
-  private static void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tablePath, @Nonnull final SaveMode saveMode) {
-    final var writer = dataset.write()
-        .format("delta");
+  private static void writeDataset(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String tablePath,
+      @Nonnull final SaveMode saveMode) {
+    final var writer = dataset.write().format("delta");
 
     // Apply save mode if it has a Spark equivalent
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
@@ -167,7 +155,8 @@ final class DeltaSink implements DataSink {
    */
   static void merge(@Nonnull final DeltaTable table, @Nonnull final Dataset<Row> dataset) {
     // Perform a merge operation where we match on the 'id' column.
-    table.as("original")
+    table
+        .as("original")
         .merge(dataset.as("updates"), "original.id = updates.id")
         .whenMatched()
         .updateAll()
@@ -219,8 +208,9 @@ final class DeltaSink implements DataSink {
    */
   @Nonnull
   private FileSystem getFileSystem(@Nonnull final String location) {
-    @Nullable final Configuration hadoopConfiguration = context.getSpark()
-        .sparkContext().hadoopConfiguration();
+    @Nullable
+    final Configuration hadoopConfiguration =
+        context.getSpark().sparkContext().hadoopConfiguration();
     requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouseLocation;
     try {
@@ -233,5 +223,4 @@ final class DeltaSink implements DataSink {
     requireNonNull(warehouseLocation);
     return warehouseLocation;
   }
-
 }

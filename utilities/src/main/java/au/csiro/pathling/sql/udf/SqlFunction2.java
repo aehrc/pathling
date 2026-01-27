@@ -26,6 +26,4 @@ import org.apache.spark.sql.api.java.UDF2;
  * @param <T2> the type of the second argument.
  * @param <R> the type of the result.
  */
-public interface SqlFunction2<T1, T2, R> extends SqlFunction, UDF2<T1, T2, R> {
-
-}
+public interface SqlFunction2<T1, T2, R> extends SqlFunction, UDF2<T1, T2, R> {}

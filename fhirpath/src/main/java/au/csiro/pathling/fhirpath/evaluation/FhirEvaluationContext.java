@@ -29,13 +29,14 @@ import java.util.Optional;
 
 /**
  * An implementation of {@link EvaluationContext} for FHIRPath evaluation.
- * <p>
- * This context provides all the components needed for FHIRPath expression evaluation:
+ *
+ * <p>This context provides all the components needed for FHIRPath expression evaluation:
+ *
  * <ul>
- *   <li>Resource and input context for the current evaluation</li>
- *   <li>Variable resolution through an {@link EnvironmentVariableResolver}</li>
- *   <li>Function resolution through a {@link FunctionRegistry}</li>
- *   <li>Resource resolution through a {@link ResourceResolver}</li>
+ *   <li>Resource and input context for the current evaluation
+ *   <li>Variable resolution through an {@link EnvironmentVariableResolver}
+ *   <li>Function resolution through a {@link FunctionRegistry}
+ *   <li>Resource resolution through a {@link ResourceResolver}
  * </ul>
  *
  * @param inputContext the current input context (focus) for the evaluation
@@ -47,13 +48,13 @@ public record FhirEvaluationContext(
     @Nonnull Collection inputContext,
     @Nonnull EnvironmentVariableResolver variableResolver,
     @Nonnull FunctionRegistry functionRegistry,
-    @Nonnull ResourceResolver resourceResolver
-) implements EvaluationContext {
+    @Nonnull ResourceResolver resourceResolver)
+    implements EvaluationContext {
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Delegates to the underlying {@link ResourceResolver}.
+   *
+   * <p>Delegates to the underlying {@link ResourceResolver}.
    */
   @Nonnull
   @Override
@@ -63,8 +64,8 @@ public record FhirEvaluationContext(
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Delegates to the underlying {@link FunctionRegistry}.
+   *
+   * <p>Delegates to the underlying {@link FunctionRegistry}.
    */
   @Nonnull
   @Override
@@ -74,20 +75,21 @@ public record FhirEvaluationContext(
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Delegates to the underlying {@link EnvironmentVariableResolver}.
+   *
+   * <p>Delegates to the underlying {@link EnvironmentVariableResolver}.
    */
   @Nonnull
   @Override
   public Collection resolveVariable(@Nonnull final String name) {
-    return variableResolver.get(name)
+    return variableResolver
+        .get(name)
         .orElseThrow(() -> new IllegalArgumentException("Unknown variable: " + name));
   }
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Returns the input context directly.
+   *
+   * <p>Returns the input context directly.
    */
   @Override
   @Nonnull

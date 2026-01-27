@@ -16,17 +16,16 @@ public class PathlingJavaApp {
     PathlingContext pc = PathlingContext.create();
     final QueryableDataSource data = pc.read().ndjson("/tmp/ndjson");
 
-    final FhirView view = FhirView.ofResource("Observation")
-        .select(
-            columns(
-                column("patient_id", "getResourceKey()")
-            ),
-            forEach("code.coding",
-                column("code_system", "system"),
-                column("code_code", "code"),
-                column("code_display", "display")
-            )
-        ).build();
+    final FhirView view =
+        FhirView.ofResource("Observation")
+            .select(
+                columns(column("patient_id", "getResourceKey()")),
+                forEach(
+                    "code.coding",
+                    column("code_system", "system"),
+                    column("code_code", "code"),
+                    column("code_display", "display")))
+            .build();
 
     final Dataset<Row> result = data.view(view).execute();
 

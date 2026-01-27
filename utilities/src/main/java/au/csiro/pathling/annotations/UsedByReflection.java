@@ -30,6 +30,4 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface UsedByReflection {
-
-}
+public @interface UsedByReflection {}

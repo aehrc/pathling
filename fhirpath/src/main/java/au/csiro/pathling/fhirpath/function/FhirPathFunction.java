@@ -28,6 +28,4 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Nonnull
-public @interface FhirPathFunction {
-
-}
+public @interface FhirPathFunction {}

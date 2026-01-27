@@ -38,15 +38,13 @@ import org.hl7.fhir.r4.model.UriType;
  *
  * @author John Grimes
  * @see <a
- * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
+ *     href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
  */
 public class ValidateCodeExecutor implements TerminologyOperation<Parameters, Boolean> {
 
-  @Nonnull
-  private final TerminologyClient terminologyClient;
+  @Nonnull private final TerminologyClient terminologyClient;
 
-  @Nonnull
-  private final ValidateCodeParameters parameters;
+  @Nonnull private final ValidateCodeParameters parameters;
 
   /**
    * Creates a new ValidateCodeExecutor with the specified terminology client and parameters.
@@ -54,7 +52,8 @@ public class ValidateCodeExecutor implements TerminologyOperation<Parameters, Bo
    * @param terminologyClient the terminology client to use for code validation
    * @param parameters the parameters for the validation
    */
-  public ValidateCodeExecutor(@Nonnull final TerminologyClient terminologyClient,
+  public ValidateCodeExecutor(
+      @Nonnull final TerminologyClient terminologyClient,
       @Nonnull final ValidateCodeParameters parameters) {
     this.terminologyClient = terminologyClient;
     this.parameters = parameters;
@@ -77,10 +76,10 @@ public class ValidateCodeExecutor implements TerminologyOperation<Parameters, Bo
     final String codeSystemUrl = parameters.valueSetUrl();
     final ImmutableCoding coding = parameters.coding();
     return terminologyClient.buildValidateCode(
-        required(UriType::new, codeSystemUrl), required(UriType::new, coding.getSystem()),
+        required(UriType::new, codeSystemUrl),
+        required(UriType::new, coding.getSystem()),
         optional(StringType::new, coding.getVersion()),
-        required(CodeType::new, coding.getCode())
-    );
+        required(CodeType::new, coding.getCode()));
   }
 
   @Override
@@ -94,5 +93,4 @@ public class ValidateCodeExecutor implements TerminologyOperation<Parameters, Bo
   public Boolean invalidRequestFallback() {
     return false;
   }
-
 }

@@ -30,6 +30,5 @@ import java.util.ArrayList;
  */
 public class TranslationList extends ArrayList<Translation> {
 
-  @Serial
-  private static final long serialVersionUID = 6661704514488108566L;
+  @Serial private static final long serialVersionUID = 6661704514488108566L;
 }

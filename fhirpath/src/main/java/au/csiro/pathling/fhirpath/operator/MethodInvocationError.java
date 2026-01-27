@@ -26,8 +26,7 @@ import java.io.Serial;
  */
 public class MethodInvocationError extends RuntimeException {
 
-  @Serial
-  private static final long serialVersionUID = -1161837506294342552L;
+  @Serial private static final long serialVersionUID = -1161837506294342552L;
 
   /**
    * Creates a new MethodInvocationError.

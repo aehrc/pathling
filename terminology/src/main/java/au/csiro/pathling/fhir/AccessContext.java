@@ -27,8 +27,4 @@ import java.time.Instant;
  * @param expiryTime the time at which the access token expires
  */
 record AccessContext(
-    @Nonnull ClientCredentialsResponse clientCredentialsResponse,
-    @Nonnull Instant expiryTime
-) {
-
-}
+    @Nonnull ClientCredentialsResponse clientCredentialsResponse, @Nonnull Instant expiryTime) {}

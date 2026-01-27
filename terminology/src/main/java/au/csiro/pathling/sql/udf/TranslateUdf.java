@@ -46,52 +46,35 @@ import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import scala.collection.Seq;
 import scala.reflect.ClassTag;
 
-/**
- * The implementation of the 'translate()' udf.
- */
+/** The implementation of the 'translate()' udf. */
 @Slf4j
-public class TranslateUdf implements SqlFunction,
-    SqlFunction5<Object, String, Boolean, Seq<String>, String, Row[]> {
+public class TranslateUdf
+    implements SqlFunction, SqlFunction5<Object, String, Boolean, Seq<String>, String, Row[]> {
 
-  @Serial
-  private static final long serialVersionUID = 7605853352299165569L;
+  @Serial private static final long serialVersionUID = 7605853352299165569L;
 
-  /**
-   * Set of valid equivalence codes for translation.
-   */
-  public static final Set<String> VALID_EQUIVALENCE_CODES = Stream.of(
-          ConceptMapEquivalence.values())
-      .map(ConceptMapEquivalence::toCode)
-      .filter(Objects::nonNull)
-      .collect(Collectors.toUnmodifiableSet());
+  /** Set of valid equivalence codes for translation. */
+  public static final Set<String> VALID_EQUIVALENCE_CODES =
+      Stream.of(ConceptMapEquivalence.values())
+          .map(ConceptMapEquivalence::toCode)
+          .filter(Objects::nonNull)
+          .collect(Collectors.toUnmodifiableSet());
 
+  /** Default set of equivalences used for translation. */
+  public static final Set<String> DEFAULT_EQUIVALENCES =
+      ImmutableSet.of(ConceptMapEquivalence.EQUIVALENT.toCode());
 
-  /**
-   * Default set of equivalences used for translation.
-   */
-  public static final Set<String> DEFAULT_EQUIVALENCES = ImmutableSet.of(
-      ConceptMapEquivalence.EQUIVALENT.toCode());
-
-  /**
-   * The name of the translate UDF function.
-   */
+  /** The name of the translate UDF function. */
   public static final String FUNCTION_NAME = "translate_coding";
 
-  /**
-   * The return type of the translate UDF function.
-   */
+  /** The return type of the translate UDF function. */
   public static final DataType RETURN_TYPE = DataTypes.createArrayType(CodingSchema.DATA_TYPE);
 
-  /**
-   * The default value for the reverse parameter.
-   */
+  /** The default value for the reverse parameter. */
   public static final boolean PARAM_REVERSE_DEFAULT = false;
 
-  /**
-   * The terminology service factory used to create terminology services.
-   */
-  @Nonnull
-  private final TerminologyServiceFactory terminologyServiceFactory;
+  /** The terminology service factory used to create terminology services. */
+  @Nonnull private final TerminologyServiceFactory terminologyServiceFactory;
 
   /**
    * Creates a new TranslateUdf with the specified terminology service factory.
@@ -111,7 +94,6 @@ public class TranslateUdf implements SqlFunction,
   public DataType getReturnType() {
     return RETURN_TYPE;
   }
-
 
   /**
    * Validates that the given equivalence code is valid.
@@ -141,21 +123,20 @@ public class TranslateUdf implements SqlFunction,
    * @return a stream of translated codings, or null if no translation is possible
    */
   @Nullable
-  protected Stream<Coding> doCall(@Nullable final Stream<Coding> codings,
-      @Nullable final String conceptMapUri, @Nullable final Boolean reverse,
+  protected Stream<Coding> doCall(
+      @Nullable final Stream<Coding> codings,
+      @Nullable final String conceptMapUri,
+      @Nullable final Boolean reverse,
       @Nullable final String[] equivalences,
       @Nullable final String target) {
     if (codings == null || conceptMapUri == null) {
       return null;
     }
 
-    final boolean resolvedReverse = reverse != null
-                                    ? reverse
-                                    : PARAM_REVERSE_DEFAULT;
+    final boolean resolvedReverse = reverse != null ? reverse : PARAM_REVERSE_DEFAULT;
 
-    final Set<String> includeEquivalences = (equivalences == null)
-                                            ? DEFAULT_EQUIVALENCES
-                                            : toValidSetOfEquivalenceCodes(equivalences);
+    final Set<String> includeEquivalences =
+        (equivalences == null) ? DEFAULT_EQUIVALENCES : toValidSetOfEquivalenceCodes(equivalences);
 
     if (includeEquivalences.isEmpty()) {
       return Stream.empty();
@@ -163,8 +144,11 @@ public class TranslateUdf implements SqlFunction,
 
     final TerminologyService terminologyService = terminologyServiceFactory.build();
     return validCodings(codings)
-        .flatMap(coding ->
-            terminologyService.translate(coding, conceptMapUri, resolvedReverse, target).stream())
+        .flatMap(
+            coding ->
+                terminologyService
+                    .translate(coding, conceptMapUri, resolvedReverse, target)
+                    .stream())
         .filter(entry -> includeEquivalences.contains(entry.getEquivalence().toCode()))
         .map(Translation::getConcept)
         .map(ImmutableCoding::of)
@@ -174,16 +158,22 @@ public class TranslateUdf implements SqlFunction,
 
   @Nullable
   @Override
-  public Row[] call(@Nullable final Object codingRowOrArray, @Nullable final String conceptMapUri,
-      @Nullable final Boolean reverse, @Nullable final Seq<String> equivalences,
+  public Row[] call(
+      @Nullable final Object codingRowOrArray,
+      @Nullable final String conceptMapUri,
+      @Nullable final Boolean reverse,
+      @Nullable final Seq<String> equivalences,
       @Nullable final String target) {
 
     //noinspection RedundantCast
     return encodeMany(
-        doCall(decodeOneOrMany(codingRowOrArray), conceptMapUri, reverse,
+        doCall(
+            decodeOneOrMany(codingRowOrArray),
+            conceptMapUri,
+            reverse,
             nonNull(equivalences)
-            ? (String[]) equivalences.toArray(ClassTag.apply(String.class))
-            : null,
+                ? (String[]) equivalences.toArray(ClassTag.apply(String.class))
+                : null,
             target));
   }
 
@@ -195,5 +185,4 @@ public class TranslateUdf implements SqlFunction,
         .map(TranslateUdf::checkValidEquivalenceCode)
         .collect(Collectors.toUnmodifiableSet());
   }
-
 }

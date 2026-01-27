@@ -23,9 +23,9 @@ import java.util.function.Function;
 
 /**
  * Interface for building DatasetEvaluator instances with specific context.
- * <p>
- * This interface abstracts the creation of evaluators from factories, allowing for
- * caching and other optimizations.
+ *
+ * <p>This interface abstracts the creation of evaluators from factories, allowing for caching and
+ * other optimizations.
  */
 @FunctionalInterface
 public interface ResolverBuilder {
@@ -37,6 +37,5 @@ public interface ResolverBuilder {
    * @return the created DatasetEvaluator
    */
   @Nonnull
-  DatasetEvaluator create(
-      @Nonnull Function<RuntimeContext, DatasetEvaluator> evaluatorFactory);
+  DatasetEvaluator create(@Nonnull Function<RuntimeContext, DatasetEvaluator> evaluatorFactory);
 }

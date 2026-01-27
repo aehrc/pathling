@@ -34,23 +34,14 @@ import java.util.function.UnaryOperator;
  */
 public class DataSinkBuilder {
 
-  /**
-   * The Pathling context to use for writing data.
-   */
-  @Nonnull
-  private final PathlingContext context;
+  /** The Pathling context to use for writing data. */
+  @Nonnull private final PathlingContext context;
 
-  /**
-   * The data source containing the data to write.
-   */
-  @Nonnull
-  private final DataSource source;
+  /** The data source containing the data to write. */
+  @Nonnull private final DataSource source;
 
-  /**
-   * The save mode to use when writing data.
-   */
-  @Nonnull
-  private SaveMode saveMode = SaveMode.ERROR_IF_EXISTS;
+  /** The save mode to use when writing data. */
+  @Nonnull private SaveMode saveMode = SaveMode.ERROR_IF_EXISTS;
 
   /**
    * @param context the Pathling context to use for writing data
@@ -90,10 +81,11 @@ public class DataSinkBuilder {
    * @param path the directory to write the files to
    * @param fileNameMapper a function that maps a resource type to a file name
    */
-  public void ndjson(@Nullable final String path,
-      @Nullable final UnaryOperator<String> fileNameMapper) {
-    new NdjsonSink(context, checkArgumentNotNull(path), saveMode,
-        checkArgumentNotNull(fileNameMapper)).write(source);
+  public void ndjson(
+      @Nullable final String path, @Nullable final UnaryOperator<String> fileNameMapper) {
+    new NdjsonSink(
+            context, checkArgumentNotNull(path), saveMode, checkArgumentNotNull(fileNameMapper))
+        .write(source);
   }
 
   /**
@@ -113,10 +105,10 @@ public class DataSinkBuilder {
    * @param path the directory to write the files to
    * @param fileNameMapper a function that maps a resource type to a file name
    */
-  public void parquet(@Nullable final String path,
-      @Nullable final UnaryOperator<String> fileNameMapper) {
-    new ParquetSink(checkArgumentNotNull(path), saveMode,
-        checkArgumentNotNull(fileNameMapper)).write(source);
+  public void parquet(
+      @Nullable final String path, @Nullable final UnaryOperator<String> fileNameMapper) {
+    new ParquetSink(checkArgumentNotNull(path), saveMode, checkArgumentNotNull(fileNameMapper))
+        .write(source);
   }
 
   /**
@@ -134,12 +126,12 @@ public class DataSinkBuilder {
    * @param path the directory to write the files to
    * @param fileNameMapper a function that maps a resource type to a file name
    */
-  public void delta(@Nullable final String path,
-      @Nullable final UnaryOperator<String> fileNameMapper) {
-    new DeltaSink(context, checkArgumentNotNull(path), saveMode,
-        checkArgumentNotNull(fileNameMapper)).write(source);
+  public void delta(
+      @Nullable final String path, @Nullable final UnaryOperator<String> fileNameMapper) {
+    new DeltaSink(
+            context, checkArgumentNotNull(path), saveMode, checkArgumentNotNull(fileNameMapper))
+        .write(source);
   }
-
 
   /**
    * Writes the data in the data source to tables within the Spark catalog, named according to the
@@ -148,7 +140,6 @@ public class DataSinkBuilder {
   public void tables() {
     new CatalogSink(context, saveMode).write(source);
   }
-
 
   /**
    * Writes the data in the data source to tables within the Spark catalog, named according to the
@@ -168,9 +159,7 @@ public class DataSinkBuilder {
    * @param format the table format to use (e.g., "delta", "parquet")
    */
   public void tables(@Nullable final String schema, @Nullable final String format) {
-    new CatalogSink(context, saveMode, checkArgumentNotNull(schema),
-        checkArgumentNotNull(format)).write(source);
+    new CatalogSink(context, saveMode, checkArgumentNotNull(schema), checkArgumentNotNull(format))
+        .write(source);
   }
-
-
 }

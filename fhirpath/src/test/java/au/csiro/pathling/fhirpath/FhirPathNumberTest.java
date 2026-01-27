@@ -28,15 +28,15 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/**
- * Tests for {@link FhirPathNumber}.
- */
+/** Tests for {@link FhirPathNumber}. */
 class FhirPathNumberTest {
 
   @ParameterizedTest
   @MethodSource("significantFiguresTestCases")
   void testCountSignificantFigures(final String input, final int expectedSigFigs) {
-    assertEquals(expectedSigFigs, FhirPathNumber.countSignificantFigures(input),
+    assertEquals(
+        expectedSigFigs,
+        FhirPathNumber.countSignificantFigures(input),
         "Significant figures for '" + input + "'");
   }
 
@@ -73,9 +73,9 @@ class FhirPathNumberTest {
 
         // Zero - decimal places determine precision for zero
         // Returns 0 for "0", 1 for "0.0", 2 for "0.00" etc.
-        Arguments.of("0", 0),      // No decimal precision
-        Arguments.of("0.0", 1),    // 1 decimal place
-        Arguments.of("0.00", 2),   // 2 decimal places
+        Arguments.of("0", 0), // No decimal precision
+        Arguments.of("0.0", 1), // 1 decimal place
+        Arguments.of("0.00", 2), // 2 decimal places
 
         // Exponential notation - count mantissa digits
         Arguments.of("1e2", 1),
@@ -84,8 +84,7 @@ class FhirPathNumberTest {
         Arguments.of("1.5e2", 2),
         Arguments.of("1.23e4", 3),
         Arguments.of("1e-2", 1),
-        Arguments.of("1.0e-2", 2)
-    );
+        Arguments.of("1.0e-2", 2));
   }
 
   @ParameterizedTest
@@ -95,11 +94,23 @@ class FhirPathNumberTest {
 
     // Use compareTo() for BigDecimal comparison since equals() considers scale
     // (e.g., 5E+1 is numerically equal to 50, but not equal via equals())
-    assertEquals(0, new BigDecimal(expectedLower).compareTo(number.getLowerBoundary()),
-        "Lower boundary for '" + input + "': expected " + expectedLower + " but was "
+    assertEquals(
+        0,
+        new BigDecimal(expectedLower).compareTo(number.getLowerBoundary()),
+        "Lower boundary for '"
+            + input
+            + "': expected "
+            + expectedLower
+            + " but was "
             + number.getLowerBoundary());
-    assertEquals(0, new BigDecimal(expectedUpper).compareTo(number.getUpperBoundary()),
-        "Upper boundary for '" + input + "': expected " + expectedUpper + " but was "
+    assertEquals(
+        0,
+        new BigDecimal(expectedUpper).compareTo(number.getUpperBoundary()),
+        "Upper boundary for '"
+            + input
+            + "': expected "
+            + expectedUpper
+            + " but was "
             + number.getUpperBoundary());
   }
 
@@ -146,8 +157,7 @@ class FhirPathNumberTest {
         // Zero
         Arguments.of("0", "-0.5", "0.5"),
         Arguments.of("0.0", "-0.05", "0.05"),
-        Arguments.of("0.00", "-0.005", "0.005")
-    );
+        Arguments.of("0.00", "-0.005", "0.005"));
   }
 
   @Test
@@ -217,8 +227,8 @@ class FhirPathNumberTest {
   @MethodSource("fractionalPartTestCases")
   void testHasFractionalPart(final String input, final boolean expectedHasFractional) {
     final FhirPathNumber number = FhirPathNumber.parse(input);
-    assertEquals(expectedHasFractional, number.hasFractionalPart(),
-        "hasFractionalPart for '" + input + "'");
+    assertEquals(
+        expectedHasFractional, number.hasFractionalPart(), "hasFractionalPart for '" + input + "'");
   }
 
   static Stream<Arguments> fractionalPartTestCases() {
@@ -236,15 +246,15 @@ class FhirPathNumberTest {
         Arguments.of("100", false),
         Arguments.of("0", false),
         Arguments.of("-5", false),
-        Arguments.of("1.0", false),      // 1.0 = 1, no fractional part
-        Arguments.of("100.0", false),    // 100.0 = 100, no fractional part
-        Arguments.of("100.00", false),   // 100.00 = 100, no fractional part
+        Arguments.of("1.0", false), // 1.0 = 1, no fractional part
+        Arguments.of("100.0", false), // 100.0 = 100, no fractional part
+        Arguments.of("100.00", false), // 100.00 = 100, no fractional part
 
         // Exponential notation
-        Arguments.of("1e2", false),      // 100, no fractional part
-        Arguments.of("1.5e2", false),    // 150, no fractional part
-        Arguments.of("1.5e-1", true),    // 0.15, has fractional part
-        Arguments.of("5e-1", true)       // 0.5, has fractional part
-    );
+        Arguments.of("1e2", false), // 100, no fractional part
+        Arguments.of("1.5e2", false), // 150, no fractional part
+        Arguments.of("1.5e-1", true), // 0.15, has fractional part
+        Arguments.of("5e-1", true) // 0.5, has fractional part
+        );
   }
 }

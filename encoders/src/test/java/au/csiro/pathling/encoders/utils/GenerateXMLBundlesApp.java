@@ -35,16 +35,12 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
-
-/**
- * Helper application, which converts JSON bundles to XML bundles.
- */
+/** Helper application, which converts JSON bundles to XML bundles. */
 @Slf4j
 public class GenerateXMLBundlesApp {
 
   private static final String JSON_BUNDLES_DIR = "encoders/src/test/resources/data/bundles/R4/json";
   private static final String XML_BUNDLES_DIR = "encoders/src/test/resources/data/bundles/R4/xml";
-
 
   private final FhirContext fhirContext = FhirContext.forR4();
 
@@ -62,17 +58,18 @@ public class GenerateXMLBundlesApp {
       stream
           .filter(not(Files::isDirectory))
           .filter(p -> p.getFileName().toString().endsWith(".json"))
-          .forEach(p -> {
-            try {
-              final IBaseResource resource = jsonParser.parseResource(Files.readString(p));
-              final String xmlFileName = p.getFileName().toString().replace(".json", ".xml");
-              Files.writeString(Path.of(XML_BUNDLES_DIR, xmlFileName),
-                  xmlParser.encodeResourceToString(resource));
-            } catch (final IOException e) {
-              log.error("Error processing file: {}", p, e);
-            }
-          });
+          .forEach(
+              p -> {
+                try {
+                  final IBaseResource resource = jsonParser.parseResource(Files.readString(p));
+                  final String xmlFileName = p.getFileName().toString().replace(".json", ".xml");
+                  Files.writeString(
+                      Path.of(XML_BUNDLES_DIR, xmlFileName),
+                      xmlParser.encodeResourceToString(resource));
+                } catch (final IOException e) {
+                  log.error("Error processing file: {}", p, e);
+                }
+              });
     }
   }
 }
-

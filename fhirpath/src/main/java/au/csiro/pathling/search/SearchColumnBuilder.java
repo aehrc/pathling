@@ -41,18 +41,20 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Builds SparkSQL Column expressions from FHIR Search queries or FHIRPath expressions.
- * <p>
- * This builder creates Column expressions that can be applied to Pathling-encoded FHIR resource
+ *
+ * <p>This builder creates Column expressions that can be applied to Pathling-encoded FHIR resource
  * datasets. Columns are created eagerly (SparkSQL Column expressions are built at creation time),
  * allowing them to be created without requiring a SparkSession or actual data.
- * <p>
- * The builder supports creating filter columns from:
+ *
+ * <p>The builder supports creating filter columns from:
+ *
  * <ul>
- *   <li>FHIR Search queries ({@link #fromSearch}, {@link #fromQueryString})</li>
- *   <li>FHIRPath expressions ({@link #fromExpression})</li>
+ *   <li>FHIR Search queries ({@link #fromSearch}, {@link #fromQueryString})
+ *   <li>FHIRPath expressions ({@link #fromExpression})
  * </ul>
- * <p>
- * Usage example:
+ *
+ * <p>Usage example:
+ *
  * <pre>{@code
  * // Create builder with default registry
  * SearchColumnBuilder builder = SearchColumnBuilder.withDefaultRegistry(fhirContext);
@@ -73,34 +75,23 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 public class SearchColumnBuilder {
 
-  /**
-   * Resource path for the bundled R4 search parameters.
-   */
+  /** Resource path for the bundled R4 search parameters. */
   private static final String R4_REGISTRY_RESOURCE = "/fhir/R4/search-parameters.json";
 
-  /**
-   * The FHIR context for resource definitions.
-   */
-  @Nonnull
-  FhirContext fhirContext;
+  /** The FHIR context for resource definitions. */
+  @Nonnull FhirContext fhirContext;
 
-  /**
-   * The search parameter registry for looking up parameter definitions.
-   */
-  @Nonnull
-  SearchParameterRegistry registry;
+  /** The search parameter registry for looking up parameter definitions. */
+  @Nonnull SearchParameterRegistry registry;
 
-  /**
-   * The FHIRPath parser for parsing expressions.
-   */
-  @Nonnull
-  Parser parser;
+  /** The FHIRPath parser for parsing expressions. */
+  @Nonnull Parser parser;
 
   /**
    * Creates a builder with the default bundled search parameter registry for FHIR R4.
-   * <p>
-   * This method requires an R4 FhirContext and uses the bundled R4 search parameters from the HL7
-   * FHIR specification.
+   *
+   * <p>This method requires an R4 FhirContext and uses the bundled R4 search parameters from the
+   * HL7 FHIR specification.
    *
    * @param fhirContext the FHIR context (must be R4)
    * @return a new builder with the default R4 registry
@@ -113,8 +104,8 @@ public class SearchColumnBuilder {
           "Default registry requires FHIR R4 context, but got: "
               + fhirContext.getVersion().getVersion());
     }
-    try (final InputStream is = SearchColumnBuilder.class.getResourceAsStream(
-        R4_REGISTRY_RESOURCE)) {
+    try (final InputStream is =
+        SearchColumnBuilder.class.getResourceAsStream(R4_REGISTRY_RESOURCE)) {
       if (is == null) {
         throw new IllegalStateException(
             "Search parameters resource not found: " + R4_REGISTRY_RESOURCE);
@@ -134,15 +125,14 @@ public class SearchColumnBuilder {
    */
   @Nonnull
   public static SearchColumnBuilder withRegistry(
-      @Nonnull final FhirContext fhirContext,
-      @Nonnull final SearchParameterRegistry registry) {
+      @Nonnull final FhirContext fhirContext, @Nonnull final SearchParameterRegistry registry) {
     return new SearchColumnBuilder(fhirContext, registry, new Parser());
   }
 
   /**
    * Creates a filter Column from a FHIR search query.
-   * <p>
-   * Multiple criteria in the search are combined with AND logic.
+   *
+   * <p>Multiple criteria in the search are combined with AND logic.
    *
    * @param resourceType the resource type to filter
    * @param search the FHIR search query
@@ -153,8 +143,7 @@ public class SearchColumnBuilder {
    */
   @Nonnull
   public Column fromSearch(
-      @Nonnull final ResourceType resourceType,
-      @Nonnull final FhirSearch search) {
+      @Nonnull final ResourceType resourceType, @Nonnull final FhirSearch search) {
 
     // If there are no criteria, return a column that matches all resources
     if (search.getCriteria().isEmpty()) {
@@ -173,8 +162,8 @@ public class SearchColumnBuilder {
 
   /**
    * Creates a filter Column from a FHIR search query string.
-   * <p>
-   * The query string should be in standard URL query format without the leading '?'.
+   *
+   * <p>The query string should be in standard URL query format without the leading '?'.
    *
    * @param resourceType the resource type to filter
    * @param queryString the query string (e.g., "gender=male&amp;birthdate=ge1990")
@@ -185,16 +174,15 @@ public class SearchColumnBuilder {
    */
   @Nonnull
   public Column fromQueryString(
-      @Nonnull final ResourceType resourceType,
-      @Nonnull final String queryString) {
+      @Nonnull final ResourceType resourceType, @Nonnull final String queryString) {
     return fromSearch(resourceType, FhirSearch.fromQueryString(queryString));
   }
 
   /**
    * Creates a filter Column from a FHIRPath boolean expression.
-   * <p>
-   * The expression should evaluate to a boolean value. Resources where the expression evaluates to
-   * true will be included in the filtered result.
+   *
+   * <p>The expression should evaluate to a boolean value. Resources where the expression evaluates
+   * to true will be included in the filtered result.
    *
    * @param resourceType the resource type to filter
    * @param fhirPathExpression the FHIRPath expression (must evaluate to boolean)
@@ -202,8 +190,7 @@ public class SearchColumnBuilder {
    */
   @Nonnull
   public Column fromExpression(
-      @Nonnull final ResourceType resourceType,
-      @Nonnull final String fhirPathExpression) {
+      @Nonnull final ResourceType resourceType, @Nonnull final String fhirPathExpression) {
 
     // Parse the FHIRPath expression
     final FhirPath fhirPath = parser.parse(fhirPathExpression);
@@ -218,13 +205,14 @@ public class SearchColumnBuilder {
 
   /**
    * Creates a SingleResourceEvaluator in flat schema mode with EMPTY cross-resource strategy.
-   * <p>
-   * This evaluator generates Column references that work directly on flat Pathling-encoded datasets
-   * without requiring schema wrapping/unwrapping. Column expressions are generated as direct column
-   * access (e.g., {@code col("name")} instead of {@code col("Patient").getField("name")}).
-   * <p>
-   * Cross-resource references (e.g., paths that reference foreign resources) are handled using the
-   * EMPTY strategy, which returns empty collections with correct type information. This allows
+   *
+   * <p>This evaluator generates Column references that work directly on flat Pathling-encoded
+   * datasets without requiring schema wrapping/unwrapping. Column expressions are generated as
+   * direct column access (e.g., {@code col("name")} instead of {@code
+   * col("Patient").getField("name")}).
+   *
+   * <p>Cross-resource references (e.g., paths that reference foreign resources) are handled using
+   * the EMPTY strategy, which returns empty collections with correct type information. This allows
    * search parameters with cross-resource paths to evaluate gracefully.
    *
    * @param resourceType the resource type
@@ -232,16 +220,15 @@ public class SearchColumnBuilder {
    */
   @Nonnull
   private SingleResourceEvaluator createEvaluator(@Nonnull final ResourceType resourceType) {
-    return SingleResourceEvaluatorBuilder
-        .create(resourceType, fhirContext)
+    return SingleResourceEvaluatorBuilder.create(resourceType, fhirContext)
         .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
         .build();
   }
 
   /**
    * Builds a filter expression for a single search criterion.
-   * <p>
-   * For polymorphic search parameters with multiple expressions, each expression is evaluated
+   *
+   * <p>For polymorphic search parameters with multiple expressions, each expression is evaluated
    * separately and the filter results are combined with OR logic.
    *
    * @param resourceType the resource type
@@ -256,15 +243,17 @@ public class SearchColumnBuilder {
       @Nonnull final SingleResourceEvaluator evaluator) {
 
     // Look up the parameter definition
-    final SearchParameterDefinition paramDef = registry
-        .getParameter(resourceType, criterion.getParameterCode())
-        .orElseThrow(() -> new UnknownSearchParameterException(
-            criterion.getParameterCode(), resourceType));
+    final SearchParameterDefinition paramDef =
+        registry
+            .getParameter(resourceType, criterion.getParameterCode())
+            .orElseThrow(
+                () ->
+                    new UnknownSearchParameterException(
+                        criterion.getParameterCode(), resourceType));
 
     // Build filter for each expression and combine with OR
     return paramDef.expressions().stream()
-        .map(expression -> buildExpressionFilter(
-            paramDef.type(), criterion, expression, evaluator))
+        .map(expression -> buildExpressionFilter(paramDef.type(), criterion, expression, evaluator))
         .reduce(Column::or)
         .orElse(lit(false));
   }
@@ -293,9 +282,13 @@ public class SearchColumnBuilder {
     final ColumnRepresentation valueColumn = result.getColumn();
 
     // Get FHIR type from collection - fail if not available
-    final FHIRDefinedType fhirType = result.getFhirType()
-        .orElseThrow(() -> new InvalidSearchParameterException(
-            "Cannot determine FHIR type for expression: " + expression));
+    final FHIRDefinedType fhirType =
+        result
+            .getFhirType()
+            .orElseThrow(
+                () ->
+                    new InvalidSearchParameterException(
+                        "Cannot determine FHIR type for expression: " + expression));
 
     // Get the appropriate filter for the parameter type, modifier, and FHIR type
     final SearchFilter filter = getFilterForType(paramType, criterion.getModifier(), fhirType);
@@ -325,8 +318,9 @@ public class SearchColumnBuilder {
     // Validate FHIR type is allowed for this search parameter type
     if (!type.isAllowedFhirType(fhirType)) {
       throw new InvalidSearchParameterException(
-          String.format("FHIR type '%s' is not valid for search parameter type '%s'. "
-              + "Allowed types: %s", fhirType.toCode(), type, type.getAllowedFhirTypes()));
+          String.format(
+              "FHIR type '%s' is not valid for search parameter type '%s'. " + "Allowed types: %s",
+              fhirType.toCode(), type, type.getAllowedFhirTypes()));
     }
 
     // Delegate to enum constant's createFilter() implementation

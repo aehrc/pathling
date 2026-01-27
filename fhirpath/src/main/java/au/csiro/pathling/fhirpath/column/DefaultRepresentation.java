@@ -46,8 +46,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @AllArgsConstructor
 public class DefaultRepresentation extends ColumnRepresentation {
 
-  private static final DefaultRepresentation EMPTY_REPRESENTATION = new DefaultRepresentation(
-      functions.lit(null));
+  private static final DefaultRepresentation EMPTY_REPRESENTATION =
+      new DefaultRepresentation(functions.lit(null));
 
   /**
    * Gets the empty representation.
@@ -59,10 +59,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
     return EMPTY_REPRESENTATION;
   }
 
-  /**
-   * The column value represented by this object.
-   */
-
+  /** The column value represented by this object. */
   @Setter(AccessLevel.PROTECTED)
   @Nonnull
   private Column value;
@@ -83,14 +80,13 @@ public class DefaultRepresentation extends ColumnRepresentation {
     }
   }
 
-
   /**
    * Creates a new {@link ColumnRepresentation} that represents a binary column as a base64 encoded
    * string.
    *
    * @param column a column containing binary data
    * @return A new {@link ColumnRepresentation} representing the binary data as a base64 encoded
-   * string.
+   *     string.
    */
   @Nonnull
   public static ColumnRepresentation fromBinaryColumn(@Nonnull final Column column) {
@@ -108,8 +104,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
   public DefaultRepresentation vectorize(
       @Nonnull final UnaryOperator<Column> arrayExpression,
       @Nonnull final UnaryOperator<Column> singularExpression) {
-    return copyOf(
-        ValueFunctions.ifArray(value, arrayExpression, singularExpression));
+    return copyOf(ValueFunctions.ifArray(value, arrayExpression, singularExpression));
   }
 
   @Override
@@ -126,8 +121,8 @@ public class DefaultRepresentation extends ColumnRepresentation {
 
   @Override
   @Nonnull
-  public ColumnRepresentation traverse(@Nonnull final String fieldName,
-      @Nonnull final Optional<FHIRDefinedType> fhirType) {
+  public ColumnRepresentation traverse(
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
     @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
     if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
@@ -143,5 +138,4 @@ public class DefaultRepresentation extends ColumnRepresentation {
   public ColumnRepresentation getField(@Nonnull final String fieldName) {
     return copyOf(value.getField(fieldName));
   }
-
 }

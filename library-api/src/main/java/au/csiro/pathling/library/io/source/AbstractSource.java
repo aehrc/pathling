@@ -36,17 +36,11 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public abstract class AbstractSource implements QueryableDataSource {
 
-  /**
-   * The Pathling context that provides access to dependencies such as the Spark session.
-   */
-  @Nonnull
-  protected final PathlingContext context;
+  /** The Pathling context that provides access to dependencies such as the Spark session. */
+  @Nonnull protected final PathlingContext context;
 
-  /**
-   * The unified query context holding executors for view and search queries.
-   */
-  @Nonnull
-  protected final QueryContext queryContext;
+  /** The unified query context holding executors for view and search queries. */
+  @Nonnull protected final QueryContext queryContext;
 
   /**
    * Constructs an AbstractSource with the specified PathlingContext.
@@ -69,10 +63,7 @@ public abstract class AbstractSource implements QueryableDataSource {
   public FhirViewQuery view(@Nullable final String subjectResource) {
     requireNonNull(subjectResource);
     return new FhirViewQuery(
-        subjectResource,
-        queryContext.getViewExecutor()::buildQuery,
-        queryContext.getGson()
-    );
+        subjectResource, queryContext.getViewExecutor()::buildQuery, queryContext.getGson());
   }
 
   @Nonnull
@@ -80,10 +71,8 @@ public abstract class AbstractSource implements QueryableDataSource {
   public FhirViewQuery view(@Nullable final FhirView view) {
     requireNonNull(view);
     return new FhirViewQuery(
-        view.getResource(),
-        queryContext.getViewExecutor()::buildQuery,
-        queryContext.getGson()
-    ).view(view);
+            view.getResource(), queryContext.getViewExecutor()::buildQuery, queryContext.getGson())
+        .view(view);
   }
 
   @Nonnull
@@ -92,9 +81,6 @@ public abstract class AbstractSource implements QueryableDataSource {
     requireNonNull(resourceType);
     final ResourceType type = ResourceType.fromCode(resourceType);
     return new FhirSearchQuery(
-        type,
-        search -> queryContext.getSearchExecutor().execute(type, search)
-    );
+        type, search -> queryContext.getSearchExecutor().execute(type, search));
   }
-
 }

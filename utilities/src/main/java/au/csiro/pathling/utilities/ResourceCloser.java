@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.utilities;
 
-
 import static org.apache.hadoop.shaded.org.apache.commons.io.IOUtils.closeQuietly;
 
 import jakarta.annotation.Nonnull;
@@ -35,9 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ResourceCloser implements Closeable {
 
-  @Nonnull
-  private final List<Closeable> resourcesToClose;
-
+  @Nonnull private final List<Closeable> resourcesToClose;
 
   /**
    * Constructs a new {@link ResourceCloser} with provided resources to close.
@@ -68,7 +65,8 @@ public class ResourceCloser implements Closeable {
     synchronized (resourcesToClose) {
       for (final Closeable closeable : resourcesToClose) {
         log.debug("Closing resource: {} in: {}", closeable, this);
-        closeQuietly(closeable,
+        closeQuietly(
+            closeable,
             ex -> log.warn("Ignoring an error while closing resource: {}", closeable, ex));
       }
     }

@@ -34,7 +34,4 @@ public record ClientCredentialsResponse(
     @Nullable String tokenType,
     int expiresIn,
     @Nullable String refreshToken,
-    @Nullable String scope
-) {
-
-}
+    @Nullable String scope) {}

@@ -26,8 +26,7 @@ import lombok.Value;
 @Value(staticConstructor = "of")
 class FunctionPredicate implements Predicate<TestCase> {
 
-  @Nonnull
-  String function;
+  @Nonnull String function;
 
   @Override
   public boolean test(final TestCase testCase) {

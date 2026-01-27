@@ -41,14 +41,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Unit tests for {@link ElementMatcher} implementations.
- * <p>
- * Tests matching logic in isolation using simple DataFrames without full FHIR resources.
+ *
+ * <p>Tests matching logic in isolation using simple DataFrames without full FHIR resources.
  */
 @SpringBootUnitTest
 class ElementMatcherTest {
 
-  @Autowired
-  SparkSession spark;
+  @Autowired SparkSession spark;
 
   // ========== TokenMatcher tests ==========
 
@@ -65,15 +64,13 @@ class ElementMatcherTest {
         Arguments.of("other", "male", false),
         // Empty string
         Arguments.of("", "", true),
-        Arguments.of("male", "", false)
-    );
+        Arguments.of("male", "", false));
   }
 
   @ParameterizedTest(name = "TokenMatcher(code): \"{0}\" matches \"{1}\" = {2}")
   @MethodSource("tokenMatcherCases")
   void testTokenMatcher(final String element, final String searchValue, final boolean expected) {
-    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING())
-        .toDF("value");
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING()).toDF("value");
 
     final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CODE);
     final Column result = matcher.match(col("value"), searchValue);
@@ -102,21 +99,19 @@ class ElementMatcherTest {
         Arguments.of("Jones", "Smith", false),
         Arguments.of("Brown", "Bro", true),
         Arguments.of("Brown", "Brown", true),
-        Arguments.of("Brown", "Browning", false),  // search longer than element
+        Arguments.of("Brown", "Browning", false), // search longer than element
         // No match - not a prefix
         Arguments.of("Smith", "mith", false),
         Arguments.of("McSmith", "Smith", false),
         // Empty string
-        Arguments.of("Smith", "", true),  // empty string matches everything as prefix
-        Arguments.of("", "", true)
-    );
+        Arguments.of("Smith", "", true), // empty string matches everything as prefix
+        Arguments.of("", "", true));
   }
 
   @ParameterizedTest(name = "StringMatcher: \"{0}\" matches \"{1}\" = {2}")
   @MethodSource("stringMatcherCases")
   void testStringMatcher(final String element, final String searchValue, final boolean expected) {
-    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING())
-        .toDF("value");
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING()).toDF("value");
 
     final StringMatcher matcher = new StringMatcher();
     final Column result = matcher.match(col("value"), searchValue);
@@ -146,16 +141,14 @@ class ElementMatcherTest {
         // Empty string
         Arguments.of("", "", true),
         Arguments.of("Smith", "", false),
-        Arguments.of("", "Smith", false)
-    );
+        Arguments.of("", "Smith", false));
   }
 
   @ParameterizedTest(name = "ExactStringMatcher: \"{0}\" matches \"{1}\" = {2}")
   @MethodSource("exactStringMatcherCases")
-  void testExactStringMatcher(final String element, final String searchValue,
-      final boolean expected) {
-    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING())
-        .toDF("value");
+  void testExactStringMatcher(
+      final String element, final String searchValue, final boolean expected) {
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING()).toDF("value");
 
     final ExactStringMatcher matcher = new ExactStringMatcher();
     final Column result = matcher.match(col("value"), searchValue);
@@ -204,50 +197,49 @@ class ElementMatcherTest {
         Arguments.of("2013-01-14", "2013-01-13T23:59:59", false),
 
         // ========== ne prefix - no overlap ==========
-        Arguments.of("2023-01-15", "ne2023-01-15", false),   // same day = overlap exists
-        Arguments.of("2023-01-15", "ne2023-01-14", true),    // different day = no overlap
-        Arguments.of("2023-01-15", "ne2023-01-16", true),    // different day = no overlap
-        Arguments.of("2023-01-15", "ne2023-02", true),       // different month = no overlap
-        Arguments.of("2023-01-15", "ne2023-01", false),      // same month = overlap exists
-        Arguments.of("2023-01-15", "ne2024", true),          // different year = no overlap
+        Arguments.of("2023-01-15", "ne2023-01-15", false), // same day = overlap exists
+        Arguments.of("2023-01-15", "ne2023-01-14", true), // different day = no overlap
+        Arguments.of("2023-01-15", "ne2023-01-16", true), // different day = no overlap
+        Arguments.of("2023-01-15", "ne2023-02", true), // different month = no overlap
+        Arguments.of("2023-01-15", "ne2023-01", false), // same month = overlap exists
+        Arguments.of("2023-01-15", "ne2024", true), // different year = no overlap
 
         // ========== gt prefix - resource ends after parameter ==========
-        Arguments.of("2023-01-15", "gt2023-01-14", true),    // 15 ends after 14
-        Arguments.of("2023-01-15", "gt2023-01-15", false),   // 15 does not end after 15
-        Arguments.of("2023-01-15", "gt2023-01-16", false),   // 15 does not end after 16
-        Arguments.of("2023-01-15", "gt2023-01", false),      // day doesn't end after month containing it
-        Arguments.of("2023-02-01", "gt2023-01", true),       // Feb 1 ends after Jan
+        Arguments.of("2023-01-15", "gt2023-01-14", true), // 15 ends after 14
+        Arguments.of("2023-01-15", "gt2023-01-15", false), // 15 does not end after 15
+        Arguments.of("2023-01-15", "gt2023-01-16", false), // 15 does not end after 16
+        Arguments.of("2023-01-15", "gt2023-01", false), // day doesn't end after month containing it
+        Arguments.of("2023-02-01", "gt2023-01", true), // Feb 1 ends after Jan
 
         // ========== ge prefix - resource starts at or after parameter start ==========
-        Arguments.of("2023-01-15", "ge2023-01-14", true),    // 15 >= 14
-        Arguments.of("2023-01-15", "ge2023-01-15", true),    // 15 >= 15
-        Arguments.of("2023-01-15", "ge2023-01-16", false),   // 15 not >= 16
-        Arguments.of("2023-01-15", "ge2023-01", true),       // 15 starts after month start
-        Arguments.of("2023-01-01", "ge2023-01", true),       // 1st starts at month start
-        Arguments.of("2022-12-31", "ge2023-01", false),      // Dec 31 before Jan start
+        Arguments.of("2023-01-15", "ge2023-01-14", true), // 15 >= 14
+        Arguments.of("2023-01-15", "ge2023-01-15", true), // 15 >= 15
+        Arguments.of("2023-01-15", "ge2023-01-16", false), // 15 not >= 16
+        Arguments.of("2023-01-15", "ge2023-01", true), // 15 starts after month start
+        Arguments.of("2023-01-01", "ge2023-01", true), // 1st starts at month start
+        Arguments.of("2022-12-31", "ge2023-01", false), // Dec 31 before Jan start
 
         // ========== lt prefix - resource starts before parameter ==========
-        Arguments.of("2023-01-15", "lt2023-01-16", true),    // 15 < 16
-        Arguments.of("2023-01-15", "lt2023-01-15", false),   // 15 not < 15
-        Arguments.of("2023-01-15", "lt2023-01-14", false),   // 15 not < 14
-        Arguments.of("2023-01-15", "lt2023-02", true),       // 15 starts before Feb
-        Arguments.of("2023-01-15", "lt2023-01", false),      // 15 not before Jan start
+        Arguments.of("2023-01-15", "lt2023-01-16", true), // 15 < 16
+        Arguments.of("2023-01-15", "lt2023-01-15", false), // 15 not < 15
+        Arguments.of("2023-01-15", "lt2023-01-14", false), // 15 not < 14
+        Arguments.of("2023-01-15", "lt2023-02", true), // 15 starts before Feb
+        Arguments.of("2023-01-15", "lt2023-01", false), // 15 not before Jan start
 
         // ========== le prefix - resource ends at or before parameter end ==========
-        Arguments.of("2023-01-15", "le2023-01-16", true),    // 15 ends <= 16 end
-        Arguments.of("2023-01-15", "le2023-01-15", true),    // 15 ends <= 15 end
-        Arguments.of("2023-01-15", "le2023-01-14", false),   // 15 ends not <= 14 end
-        Arguments.of("2023-01-15", "le2023-01", true),       // 15 ends within Jan
-        Arguments.of("2023-01-31", "le2023-01", true),       // last day ends at month end
-        Arguments.of("2023-02-01", "le2023-01", false)       // Feb 1 ends after Jan
-    );
+        Arguments.of("2023-01-15", "le2023-01-16", true), // 15 ends <= 16 end
+        Arguments.of("2023-01-15", "le2023-01-15", true), // 15 ends <= 15 end
+        Arguments.of("2023-01-15", "le2023-01-14", false), // 15 ends not <= 14 end
+        Arguments.of("2023-01-15", "le2023-01", true), // 15 ends within Jan
+        Arguments.of("2023-01-31", "le2023-01", true), // last day ends at month end
+        Arguments.of("2023-02-01", "le2023-01", false) // Feb 1 ends after Jan
+        );
   }
 
   @ParameterizedTest(name = "DateMatcher: \"{0}\" matches \"{1}\" = {2}")
   @MethodSource("dateMatcherCases")
   void testDateMatcher(final String element, final String searchValue, final boolean expected) {
-    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING())
-        .toDF("value");
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING()).toDF("value");
 
     final DateMatcher matcher = DateMatcher.forScalarDates();
     final Column result = matcher.match(col("value"), searchValue);
@@ -264,40 +256,40 @@ class ElementMatcherTest {
     return Stream.of(
         // ========== eq prefix (default) - range-based matching ==========
         // "100" (3 sig figs) matches range [99.5, 100.5)
-        Arguments.of(new BigDecimal("100"), "100", true),       // exact match - within range
-        Arguments.of(new BigDecimal("99.7"), "100", true),      // within [99.5, 100.5)
-        Arguments.of(new BigDecimal("100.4"), "100", true),     // within [99.5, 100.5)
-        Arguments.of(new BigDecimal("99.4"), "100", false),     // below 99.5
-        Arguments.of(new BigDecimal("100.5"), "100", false),    // at upper boundary (exclusive)
-        Arguments.of(new BigDecimal("100.6"), "100", false),    // above 100.5
+        Arguments.of(new BigDecimal("100"), "100", true), // exact match - within range
+        Arguments.of(new BigDecimal("99.7"), "100", true), // within [99.5, 100.5)
+        Arguments.of(new BigDecimal("100.4"), "100", true), // within [99.5, 100.5)
+        Arguments.of(new BigDecimal("99.4"), "100", false), // below 99.5
+        Arguments.of(new BigDecimal("100.5"), "100", false), // at upper boundary (exclusive)
+        Arguments.of(new BigDecimal("100.6"), "100", false), // above 100.5
 
         // "100.00" (5 sig figs) matches range [99.995, 100.005)
-        Arguments.of(new BigDecimal("100"), "100.00", true),      // within range
-        Arguments.of(new BigDecimal("99.999"), "100.00", true),   // within range
-        Arguments.of(new BigDecimal("100.004"), "100.00", true),  // within range
-        Arguments.of(new BigDecimal("99.99"), "100.00", false),   // outside range
-        Arguments.of(new BigDecimal("100.01"), "100.00", false),  // outside range
+        Arguments.of(new BigDecimal("100"), "100.00", true), // within range
+        Arguments.of(new BigDecimal("99.999"), "100.00", true), // within range
+        Arguments.of(new BigDecimal("100.004"), "100.00", true), // within range
+        Arguments.of(new BigDecimal("99.99"), "100.00", false), // outside range
+        Arguments.of(new BigDecimal("100.01"), "100.00", false), // outside range
 
         // "0.75" (2 sig figs) matches range [0.745, 0.755)
         Arguments.of(new BigDecimal("0.75"), "0.75", true),
         Arguments.of(new BigDecimal("0.75"), "eq0.75", true),
-        Arguments.of(new BigDecimal("0.749"), "0.75", true),      // within [0.745, 0.755)
-        Arguments.of(new BigDecimal("0.744"), "0.75", false),     // outside range
-        Arguments.of(new BigDecimal("0.755"), "0.75", false),     // at upper boundary (exclusive)
+        Arguments.of(new BigDecimal("0.749"), "0.75", true), // within [0.745, 0.755)
+        Arguments.of(new BigDecimal("0.744"), "0.75", false), // outside range
+        Arguments.of(new BigDecimal("0.755"), "0.75", false), // at upper boundary (exclusive)
 
         // Negative values: "-5.5" (2 sig figs) matches range [-5.55, -5.45)
         Arguments.of(new BigDecimal("-5.5"), "-5.5", true),
-        Arguments.of(new BigDecimal("-5.52"), "-5.5", true),      // within range
-        Arguments.of(new BigDecimal("-5.48"), "-5.5", true),      // within range
-        Arguments.of(new BigDecimal("-5.56"), "-5.5", false),     // outside range
-        Arguments.of(new BigDecimal("-5.44"), "-5.5", false),     // outside range
+        Arguments.of(new BigDecimal("-5.52"), "-5.5", true), // within range
+        Arguments.of(new BigDecimal("-5.48"), "-5.5", true), // within range
+        Arguments.of(new BigDecimal("-5.56"), "-5.5", false), // outside range
+        Arguments.of(new BigDecimal("-5.44"), "-5.5", false), // outside range
 
         // ========== ne prefix - outside range ==========
-        Arguments.of(new BigDecimal("100"), "ne100", false),      // within [99.5, 100.5) - no match
-        Arguments.of(new BigDecimal("99.4"), "ne100", true),      // outside range - matches
-        Arguments.of(new BigDecimal("100.5"), "ne100", true),     // at upper boundary - matches
-        Arguments.of(new BigDecimal("0.75"), "ne0.75", false),    // within range
-        Arguments.of(new BigDecimal("0.76"), "ne0.75", true),     // outside range
+        Arguments.of(new BigDecimal("100"), "ne100", false), // within [99.5, 100.5) - no match
+        Arguments.of(new BigDecimal("99.4"), "ne100", true), // outside range - matches
+        Arguments.of(new BigDecimal("100.5"), "ne100", true), // at upper boundary - matches
+        Arguments.of(new BigDecimal("0.75"), "ne0.75", false), // within range
+        Arguments.of(new BigDecimal("0.76"), "ne0.75", true), // outside range
 
         // ========== gt prefix - greater than (exact semantics) ==========
         Arguments.of(new BigDecimal("0.75"), "gt0.5", true),
@@ -336,29 +328,28 @@ class ElementMatcherTest {
 
         // ========== Scientific notation with range semantics ==========
         // "1e2" (1 sig fig) matches range [50, 150)
-        Arguments.of(new BigDecimal("100"), "1e2", true),         // exact value
-        Arguments.of(new BigDecimal("50"), "1e2", true),          // at lower boundary (inclusive)
-        Arguments.of(new BigDecimal("149"), "1e2", true),         // within range
-        Arguments.of(new BigDecimal("49"), "1e2", false),         // below lower boundary
-        Arguments.of(new BigDecimal("150"), "1e2", false),        // at upper boundary (exclusive)
+        Arguments.of(new BigDecimal("100"), "1e2", true), // exact value
+        Arguments.of(new BigDecimal("50"), "1e2", true), // at lower boundary (inclusive)
+        Arguments.of(new BigDecimal("149"), "1e2", true), // within range
+        Arguments.of(new BigDecimal("49"), "1e2", false), // below lower boundary
+        Arguments.of(new BigDecimal("150"), "1e2", false), // at upper boundary (exclusive)
 
         // "1e-3" (1 sig fig) matches range [0.0005, 0.0015)
-        Arguments.of(new BigDecimal("0.001"), "1e-3", true),      // exact value
-        Arguments.of(new BigDecimal("0.0005"), "1e-3", true),     // at lower boundary
-        Arguments.of(new BigDecimal("0.0014"), "1e-3", true),     // within range
+        Arguments.of(new BigDecimal("0.001"), "1e-3", true), // exact value
+        Arguments.of(new BigDecimal("0.0005"), "1e-3", true), // at lower boundary
+        Arguments.of(new BigDecimal("0.0014"), "1e-3", true), // within range
 
         // Scientific notation with exact semantics
-        Arguments.of(new BigDecimal("1000"), "gt1e2", true),      // 1000 > 100
-        Arguments.of(new BigDecimal("50"), "lt1e2", true)         // 50 < 100
-    );
+        Arguments.of(new BigDecimal("1000"), "gt1e2", true), // 1000 > 100
+        Arguments.of(new BigDecimal("50"), "lt1e2", true) // 50 < 100
+        );
   }
 
   @ParameterizedTest(name = "NumberMatcher(DECIMAL): {0} matches \"{1}\" = {2}")
   @MethodSource("numberMatcherCases")
-  void testNumberMatcher(final BigDecimal element, final String searchValue,
-      final boolean expected) {
-    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.DECIMAL())
-        .toDF("value");
+  void testNumberMatcher(
+      final BigDecimal element, final String searchValue, final boolean expected) {
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.DECIMAL()).toDF("value");
 
     // Use DECIMAL type for the existing tests (range-based semantics for eq/ne)
     final NumberMatcher matcher = new NumberMatcher(FHIRDefinedType.DECIMAL);
@@ -374,26 +365,26 @@ class ElementMatcherTest {
   static Stream<Arguments> integerNumberMatcherCases() {
     return Stream.of(
         // ========== eq prefix - exact match for integers ==========
-        Arguments.of(100, "100", true),          // exact match
-        Arguments.of(100, "eq100", true),        // explicit eq prefix
-        Arguments.of(99, "100", false),          // not equal
-        Arguments.of(101, "100", false),         // not equal
-        Arguments.of(100, "100.0", true),        // 100.0 has no fractional part -> exact match
-        Arguments.of(99, "100.0", false),        // not equal
+        Arguments.of(100, "100", true), // exact match
+        Arguments.of(100, "eq100", true), // explicit eq prefix
+        Arguments.of(99, "100", false), // not equal
+        Arguments.of(101, "100", false), // not equal
+        Arguments.of(100, "100.0", true), // 100.0 has no fractional part -> exact match
+        Arguments.of(99, "100.0", false), // not equal
 
         // Search with fractional value -> no integer can match
-        Arguments.of(100, "100.5", false),       // fractional search -> no matches
-        Arguments.of(100, "99.5", false),        // fractional search -> no matches
-        Arguments.of(1, "0.5", false),           // fractional search -> no matches
+        Arguments.of(100, "100.5", false), // fractional search -> no matches
+        Arguments.of(100, "99.5", false), // fractional search -> no matches
+        Arguments.of(1, "0.5", false), // fractional search -> no matches
 
         // ========== ne prefix - not equal for integers ==========
-        Arguments.of(100, "ne100", false),       // equal -> not a match
-        Arguments.of(99, "ne100", true),         // not equal -> matches
-        Arguments.of(101, "ne100", true),        // not equal -> matches
+        Arguments.of(100, "ne100", false), // equal -> not a match
+        Arguments.of(99, "ne100", true), // not equal -> matches
+        Arguments.of(101, "ne100", true), // not equal -> matches
 
         // Search with fractional value -> all integers match ne
-        Arguments.of(100, "ne100.5", true),      // all integers ne fractional
-        Arguments.of(1, "ne0.5", true),          // all integers ne fractional
+        Arguments.of(100, "ne100.5", true), // all integers ne fractional
+        Arguments.of(1, "ne0.5", true), // all integers ne fractional
 
         // ========== Comparison prefixes - same as decimal (exact semantics) ==========
         Arguments.of(100, "gt99", true),
@@ -403,16 +394,14 @@ class ElementMatcherTest {
         Arguments.of(100, "lt101", true),
         Arguments.of(100, "lt100", false),
         Arguments.of(100, "le100", true),
-        Arguments.of(100, "le99", false)
-    );
+        Arguments.of(100, "le99", false));
   }
 
   @ParameterizedTest(name = "NumberMatcher(INTEGER): {0} matches \"{1}\" = {2}")
   @MethodSource("integerNumberMatcherCases")
-  void testIntegerNumberMatcher(final Integer element, final String searchValue,
-      final boolean expected) {
-    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.INT())
-        .toDF("value");
+  void testIntegerNumberMatcher(
+      final Integer element, final String searchValue, final boolean expected) {
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.INT()).toDF("value");
 
     // Use INTEGER type for integer tests (exact match semantics for eq/ne)
     final NumberMatcher matcher = new NumberMatcher(FHIRDefinedType.INTEGER);
@@ -432,48 +421,57 @@ class ElementMatcherTest {
         Arguments.of("2023-01-15", "2023-06-30", "2023-01", true),
         Arguments.of("2023-01-15", "2023-06-30", "2023", true),
         // Period partially overlaps search range
-        Arguments.of("2023-01-15", "2023-06-30", "2023-06-15", true),  // overlaps end
-        Arguments.of("2023-01-15", "2023-06-30", "2023-01-15", true),  // overlaps start (same day as Period start)
+        Arguments.of("2023-01-15", "2023-06-30", "2023-06-15", true), // overlaps end
+        Arguments.of(
+            "2023-01-15",
+            "2023-06-30",
+            "2023-01-15",
+            true), // overlaps start (same day as Period start)
         // Period does not overlap search range
         Arguments.of("2023-01-15", "2023-06-30", "2022-12-01", false),
         Arguments.of("2023-01-15", "2023-06-30", "2023-07-01", false),
 
         // ========== ne prefix - no overlap ==========
-        Arguments.of("2023-01-15", "2023-06-30", "ne2023-03-15", false),  // overlap exists
-        Arguments.of("2023-01-15", "2023-06-30", "ne2022-12-01", true),   // no overlap
-        Arguments.of("2023-01-15", "2023-06-30", "ne2023-07-01", true),   // no overlap
+        Arguments.of("2023-01-15", "2023-06-30", "ne2023-03-15", false), // overlap exists
+        Arguments.of("2023-01-15", "2023-06-30", "ne2022-12-01", true), // no overlap
+        Arguments.of("2023-01-15", "2023-06-30", "ne2023-07-01", true), // no overlap
 
         // ========== ge prefix - resource starts at or after parameter start ==========
-        Arguments.of("2023-06-01", "2023-12-31", "ge2023-06-01", true),   // starts at same time
-        Arguments.of("2023-06-01", "2023-12-31", "ge2023-05-01", true),   // starts after
-        Arguments.of("2023-06-01", "2023-12-31", "ge2023-07-01", false),  // starts before
+        Arguments.of("2023-06-01", "2023-12-31", "ge2023-06-01", true), // starts at same time
+        Arguments.of("2023-06-01", "2023-12-31", "ge2023-05-01", true), // starts after
+        Arguments.of("2023-06-01", "2023-12-31", "ge2023-07-01", false), // starts before
 
         // ========== le prefix - resource ends at or before parameter end ==========
-        Arguments.of("2023-01-01", "2023-06-30", "le2023-06-30", true),   // ends at same time
-        Arguments.of("2023-01-01", "2023-06-30", "le2023-07-31", true),   // ends before
-        Arguments.of("2023-01-01", "2023-06-30", "le2023-05-31", false),  // ends after
+        Arguments.of("2023-01-01", "2023-06-30", "le2023-06-30", true), // ends at same time
+        Arguments.of("2023-01-01", "2023-06-30", "le2023-07-31", true), // ends before
+        Arguments.of("2023-01-01", "2023-06-30", "le2023-05-31", false), // ends after
 
         // ========== gt prefix - resource ends after parameter ==========
-        Arguments.of("2023-01-01", "2023-12-31", "gt2023-06-30", true),   // ends after Jun 30
-        Arguments.of("2023-01-01", "2023-06-30", "gt2023-06-30", false),  // ends at Jun 30
-        Arguments.of("2023-01-01", "2023-06-30", "gt2023-12-31", false),  // ends before Dec 31
+        Arguments.of("2023-01-01", "2023-12-31", "gt2023-06-30", true), // ends after Jun 30
+        Arguments.of("2023-01-01", "2023-06-30", "gt2023-06-30", false), // ends at Jun 30
+        Arguments.of("2023-01-01", "2023-06-30", "gt2023-12-31", false), // ends before Dec 31
 
         // ========== lt prefix - resource starts before parameter ==========
-        Arguments.of("2023-01-01", "2023-06-30", "lt2023-06-01", true),   // starts before Jun 1
-        Arguments.of("2023-06-01", "2023-12-31", "lt2023-06-01", false),  // starts at Jun 1
-        Arguments.of("2023-06-01", "2023-12-31", "lt2023-01-01", false)   // starts after Jan 1
-    );
+        Arguments.of("2023-01-01", "2023-06-30", "lt2023-06-01", true), // starts before Jun 1
+        Arguments.of("2023-06-01", "2023-12-31", "lt2023-06-01", false), // starts at Jun 1
+        Arguments.of("2023-06-01", "2023-12-31", "lt2023-01-01", false) // starts after Jan 1
+        );
   }
 
   @ParameterizedTest(name = "DateMatcher(Period): [{0}, {1}] matches \"{2}\" = {3}")
   @MethodSource("periodMatcherCases")
-  void testPeriodMatcher(final String periodStart, final String periodEnd,
-      final String searchValue, final boolean expected) {
+  void testPeriodMatcher(
+      final String periodStart,
+      final String periodEnd,
+      final String searchValue,
+      final boolean expected) {
     // Create a DataFrame with a Period-like struct (start, end as strings)
-    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
-        .select(struct(lit(periodStart).as("start"), lit(periodEnd).as("end")).as("period"));
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(lit(periodStart).as("start"), lit(periodEnd).as("end")).as("period"));
 
-    final DateMatcher matcher = DateMatcher.forPeriod();  // isPeriodType = true
+    final DateMatcher matcher = DateMatcher.forPeriod(); // isPeriodType = true
     final Column result = matcher.match(col("period"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -485,34 +483,41 @@ class ElementMatcherTest {
   static Stream<Arguments> periodNullBoundaryMatcherCases() {
     return Stream.of(
         // Open-ended future (null end = positive infinity)
-        Arguments.of("2024-01-01", null, "gt2023-12-31", true),   // ends after Dec 31 (infinity > anything)
-        Arguments.of("2024-01-01", null, "gt2025-12-31", true),   // still ends after (infinity)
-        Arguments.of("2024-01-01", null, "le2023-12-31", false),  // doesn't end <= Dec 31
+        Arguments.of(
+            "2024-01-01", null, "gt2023-12-31", true), // ends after Dec 31 (infinity > anything)
+        Arguments.of("2024-01-01", null, "gt2025-12-31", true), // still ends after (infinity)
+        Arguments.of("2024-01-01", null, "le2023-12-31", false), // doesn't end <= Dec 31
 
         // Open-ended past (null start = negative infinity)
-        Arguments.of(null, "2022-12-31", "lt2023-01-01", true),   // starts before Jan 1 (-infinity < anything)
-        Arguments.of(null, "2022-12-31", "lt2020-01-01", true),   // still starts before (-infinity)
-        Arguments.of(null, "2022-12-31", "ge2023-01-01", false),  // doesn't start >= Jan 1
+        Arguments.of(
+            null, "2022-12-31", "lt2023-01-01", true), // starts before Jan 1 (-infinity < anything)
+        Arguments.of(null, "2022-12-31", "lt2020-01-01", true), // still starts before (-infinity)
+        Arguments.of(null, "2022-12-31", "ge2023-01-01", false), // doesn't start >= Jan 1
 
         // Both null (infinite range - overlaps with any eq, but ge/le have specific semantics)
-        Arguments.of(null, null, "2023-06-15", true),   // eq: infinite range overlaps with anything
+        Arguments.of(null, null, "2023-06-15", true), // eq: infinite range overlaps with anything
         Arguments.of(null, null, "ge2023-01-01", false), // ge: -infinity is NOT >= 2023-01-01
-        Arguments.of(null, null, "le2023-12-31", false)  // le: +infinity is NOT <= 2023-12-31
-    );
+        Arguments.of(null, null, "le2023-12-31", false) // le: +infinity is NOT <= 2023-12-31
+        );
   }
 
   @ParameterizedTest(name = "DateMatcher(Period null): [{0}, {1}] matches \"{2}\" = {3}")
   @MethodSource("periodNullBoundaryMatcherCases")
-  void testPeriodMatcherWithNullBoundaries(final String periodStart, final String periodEnd,
-      final String searchValue, final boolean expected) {
+  void testPeriodMatcherWithNullBoundaries(
+      final String periodStart,
+      final String periodEnd,
+      final String searchValue,
+      final boolean expected) {
     // Create a DataFrame with a Period-like struct with potentially null boundaries
     final Column startCol = periodStart != null ? lit(periodStart) : lit(null).cast("string");
     final Column endCol = periodEnd != null ? lit(periodEnd) : lit(null).cast("string");
 
-    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
-        .select(struct(startCol.as("start"), endCol.as("end")).as("period"));
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(startCol.as("start"), endCol.as("end")).as("period"));
 
-    final DateMatcher matcher = DateMatcher.forPeriod();  // isPeriodType = true
+    final DateMatcher matcher = DateMatcher.forPeriod(); // isPeriodType = true
     final Column result = matcher.match(col("period"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -526,32 +531,36 @@ class ElementMatcherTest {
         // Code only (any system)
         Arguments.of("http://example.org", "male", "male", true),
         Arguments.of("http://example.org", "female", "male", false),
-        Arguments.of(null, "male", "male", true),  // null system still matches
+        Arguments.of(null, "male", "male", true), // null system still matches
 
         // System and code
         Arguments.of("http://example.org", "male", "http://example.org|male", true),
-        Arguments.of("http://other.org", "male", "http://example.org|male", false),  // wrong system
-        Arguments.of("http://example.org", "female", "http://example.org|male", false),  // wrong code
+        Arguments.of("http://other.org", "male", "http://example.org|male", false), // wrong system
+        Arguments.of(
+            "http://example.org", "female", "http://example.org|male", false), // wrong code
 
         // Explicit no system (|code)
         Arguments.of(null, "male", "|male", true),
-        Arguments.of("http://example.org", "male", "|male", false),  // has system, should not match
+        Arguments.of("http://example.org", "male", "|male", false), // has system, should not match
 
         // System only (system|)
         Arguments.of("http://example.org", "male", "http://example.org|", true),
-        Arguments.of("http://example.org", "female", "http://example.org|", true),  // any code
-        Arguments.of("http://other.org", "male", "http://example.org|", false)  // wrong system
-    );
+        Arguments.of("http://example.org", "female", "http://example.org|", true), // any code
+        Arguments.of("http://other.org", "male", "http://example.org|", false) // wrong system
+        );
   }
 
-  @ParameterizedTest(name = "TokenMatcher(Coding): system=\"{0}\", code=\"{1}\" matches \"{2}\" = {3}")
+  @ParameterizedTest(
+      name = "TokenMatcher(Coding): system=\"{0}\", code=\"{1}\" matches \"{2}\" = {3}")
   @MethodSource("tokenCodingMatcherCases")
-  void testTokenCodingMatcher(final String system, final String code,
-      final String searchValue, final boolean expected) {
+  void testTokenCodingMatcher(
+      final String system, final String code, final String searchValue, final boolean expected) {
     // Create a DataFrame with a Coding-like struct
     final Column systemCol = system != null ? lit(system) : lit(null).cast("string");
-    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
-        .select(struct(systemCol.as("system"), lit(code).as("code")).as("coding"));
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(systemCol.as("system"), lit(code).as("code")).as("coding"));
 
     final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CODING);
     final Column result = matcher.match(col("coding"), searchValue);
@@ -567,7 +576,7 @@ class ElementMatcherTest {
         // Value only (any system)
         Arguments.of("http://hospital.org/mrn", "12345", "12345", true),
         Arguments.of("http://hospital.org/mrn", "67890", "12345", false),
-        Arguments.of(null, "12345", "12345", true),  // null system still matches
+        Arguments.of(null, "12345", "12345", true), // null system still matches
 
         // System and value
         Arguments.of("http://hospital.org/mrn", "12345", "http://hospital.org/mrn|12345", true),
@@ -575,18 +584,20 @@ class ElementMatcherTest {
 
         // Explicit no system (|value)
         Arguments.of(null, "12345", "|12345", true),
-        Arguments.of("http://hospital.org/mrn", "12345", "|12345", false)
-    );
+        Arguments.of("http://hospital.org/mrn", "12345", "|12345", false));
   }
 
-  @ParameterizedTest(name = "TokenMatcher(Identifier): system=\"{0}\", value=\"{1}\" matches \"{2}\" = {3}")
+  @ParameterizedTest(
+      name = "TokenMatcher(Identifier): system=\"{0}\", value=\"{1}\" matches \"{2}\" = {3}")
   @MethodSource("tokenIdentifierMatcherCases")
-  void testTokenIdentifierMatcher(final String system, final String value,
-      final String searchValue, final boolean expected) {
+  void testTokenIdentifierMatcher(
+      final String system, final String value, final String searchValue, final boolean expected) {
     // Create a DataFrame with an Identifier-like struct
     final Column systemCol = system != null ? lit(system) : lit(null).cast("string");
-    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
-        .select(struct(systemCol.as("system"), lit(value).as("value")).as("identifier"));
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(systemCol.as("system"), lit(value).as("value")).as("identifier"));
 
     final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.IDENTIFIER);
     final Column result = matcher.match(col("identifier"), searchValue);
@@ -603,17 +614,18 @@ class ElementMatcherTest {
         Arguments.of("555-1234", "555-1234", true),
         Arguments.of("555-1234", "555-5678", false),
         Arguments.of("test@example.com", "test@example.com", true),
-        Arguments.of("test@example.com", "other@example.com", false)
-    );
+        Arguments.of("test@example.com", "other@example.com", false));
   }
 
   @ParameterizedTest(name = "TokenMatcher(ContactPoint): value=\"{0}\" matches \"{1}\" = {2}")
   @MethodSource("tokenContactPointMatcherCases")
-  void testTokenContactPointMatcher(final String value, final String searchValue,
-      final boolean expected) {
+  void testTokenContactPointMatcher(
+      final String value, final String searchValue, final boolean expected) {
     // Create a DataFrame with a ContactPoint-like struct
-    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
-        .select(struct(lit(value).as("value")).as("telecom"));
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(lit(value).as("value")).as("telecom"));
 
     final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CONTACTPOINT);
     final Column result = matcher.match(col("telecom"), searchValue);
@@ -630,17 +642,17 @@ class ElementMatcherTest {
         Arguments.of(true, "false", false),
         Arguments.of(false, "false", true),
         Arguments.of(false, "true", false),
-        Arguments.of(true, "TRUE", true),  // case-insensitive
-        Arguments.of(false, "FALSE", true)  // case-insensitive
-    );
+        Arguments.of(true, "TRUE", true), // case-insensitive
+        Arguments.of(false, "FALSE", true) // case-insensitive
+        );
   }
 
   @ParameterizedTest(name = "TokenMatcher(Boolean): {0} matches \"{1}\" = {2}")
   @MethodSource("tokenBooleanMatcherCases")
-  void testTokenBooleanMatcher(final boolean element, final String searchValue,
-      final boolean expected) {
-    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.BOOLEAN())
-        .toDF("active");
+  void testTokenBooleanMatcher(
+      final boolean element, final String searchValue, final boolean expected) {
+    final Dataset<Row> df =
+        spark.createDataset(List.of(element), Encoders.BOOLEAN()).toDF("active");
 
     final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.BOOLEAN);
     final Column result = matcher.match(col("active"), searchValue);
@@ -656,42 +668,58 @@ class ElementMatcherTest {
         // Code matches first coding
         Arguments.of("http://loinc.org", "12345-6", null, null, "12345-6", true),
         // Code matches second coding
-        Arguments.of("http://loinc.org", "12345-6", "http://snomed.info/sct", "123456", "123456", true),
+        Arguments.of(
+            "http://loinc.org", "12345-6", "http://snomed.info/sct", "123456", "123456", true),
         // System|code matches first coding
         Arguments.of("http://loinc.org", "12345-6", null, null, "http://loinc.org|12345-6", true),
         // System|code matches second coding
-        Arguments.of("http://loinc.org", "12345-6", "http://snomed.info/sct", "123456",
-            "http://snomed.info/sct|123456", true),
+        Arguments.of(
+            "http://loinc.org",
+            "12345-6",
+            "http://snomed.info/sct",
+            "123456",
+            "http://snomed.info/sct|123456",
+            true),
         // No match
         Arguments.of("http://loinc.org", "12345-6", null, null, "99999-9", false),
         // Wrong system
-        Arguments.of("http://loinc.org", "12345-6", null, null, "http://other.org|12345-6", false)
-    );
+        Arguments.of("http://loinc.org", "12345-6", null, null, "http://other.org|12345-6", false));
   }
 
-  @ParameterizedTest(name = "TokenMatcher(CodeableConcept): coding1=[{0},{1}], coding2=[{2},{3}] matches \"{4}\" = {5}")
+  @ParameterizedTest(
+      name =
+          "TokenMatcher(CodeableConcept): coding1=[{0},{1}], coding2=[{2},{3}] matches \"{4}\" ="
+              + " {5}")
   @MethodSource("tokenCodeableConceptMatcherCases")
-  void testTokenCodeableConceptMatcher(final String system1, final String code1,
-      final String system2, final String code2,
-      final String searchValue, final boolean expected) {
+  void testTokenCodeableConceptMatcher(
+      final String system1,
+      final String code1,
+      final String system2,
+      final String code2,
+      final String searchValue,
+      final boolean expected) {
     // Create a CodeableConcept with one or two codings
 
-    final Column coding1 = struct(
-        (system1 != null ? lit(system1) : lit(null).cast("string")).as("system"),
-        lit(code1).as("code"));
+    final Column coding1 =
+        struct(
+            (system1 != null ? lit(system1) : lit(null).cast("string")).as("system"),
+            lit(code1).as("code"));
 
     final Column codingArray;
     if (system2 != null || code2 != null) {
-      final Column coding2 = struct(
-          (system2 != null ? lit(system2) : lit(null).cast("string")).as("system"),
-          lit(code2).as("code"));
+      final Column coding2 =
+          struct(
+              (system2 != null ? lit(system2) : lit(null).cast("string")).as("system"),
+              lit(code2).as("code"));
       codingArray = org.apache.spark.sql.functions.array(coding1, coding2);
     } else {
       codingArray = org.apache.spark.sql.functions.array(coding1);
     }
 
-    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
-        .select(struct(codingArray.as("coding")).as("codeableConcept"));
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(codingArray.as("coding")).as("codeableConcept"));
 
     final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CODEABLECONCEPT);
     final Column result = matcher.match(col("codeableConcept"), searchValue);
@@ -707,12 +735,12 @@ class ElementMatcherTest {
     return Stream.of(
         // ========== eq prefix (default) - range-based matching ==========
         // "5.4" (2 sig figs) matches range [5.35, 5.45)
-        Arguments.of(new BigDecimal("5.4"), "5.4", true),       // exact match
-        Arguments.of(new BigDecimal("5.4"), "eq5.4", true),     // explicit eq prefix
-        Arguments.of(new BigDecimal("5.38"), "5.4", true),      // within [5.35, 5.45)
-        Arguments.of(new BigDecimal("5.44"), "5.4", true),      // within [5.35, 5.45)
-        Arguments.of(new BigDecimal("5.34"), "5.4", false),     // below 5.35
-        Arguments.of(new BigDecimal("5.45"), "5.4", false),     // at upper boundary (exclusive)
+        Arguments.of(new BigDecimal("5.4"), "5.4", true), // exact match
+        Arguments.of(new BigDecimal("5.4"), "eq5.4", true), // explicit eq prefix
+        Arguments.of(new BigDecimal("5.38"), "5.4", true), // within [5.35, 5.45)
+        Arguments.of(new BigDecimal("5.44"), "5.4", true), // within [5.35, 5.45)
+        Arguments.of(new BigDecimal("5.34"), "5.4", false), // below 5.35
+        Arguments.of(new BigDecimal("5.45"), "5.4", false), // at upper boundary (exclusive)
 
         // "100" (3 sig figs) matches range [99.5, 100.5)
         Arguments.of(new BigDecimal("100"), "100", true),
@@ -722,9 +750,9 @@ class ElementMatcherTest {
         Arguments.of(new BigDecimal("100.5"), "100", false),
 
         // ========== ne prefix - outside range ==========
-        Arguments.of(new BigDecimal("5.4"), "ne5.4", false),    // within range
-        Arguments.of(new BigDecimal("5.3"), "ne5.4", true),     // outside range
-        Arguments.of(new BigDecimal("5.5"), "ne5.4", true),     // outside range
+        Arguments.of(new BigDecimal("5.4"), "ne5.4", false), // within range
+        Arguments.of(new BigDecimal("5.3"), "ne5.4", true), // outside range
+        Arguments.of(new BigDecimal("5.5"), "ne5.4", true), // outside range
 
         // ========== gt prefix - greater than (exact semantics) ==========
         Arguments.of(new BigDecimal("5.5"), "gt5.4", true),
@@ -744,17 +772,18 @@ class ElementMatcherTest {
         // ========== le prefix - less or equal (exact semantics) ==========
         Arguments.of(new BigDecimal("5.3"), "le5.4", true),
         Arguments.of(new BigDecimal("5.4"), "le5.4", true),
-        Arguments.of(new BigDecimal("5.5"), "le5.4", false)
-    );
+        Arguments.of(new BigDecimal("5.5"), "le5.4", false));
   }
 
   @ParameterizedTest(name = "QuantityMatcher: value={0} matches \"{1}\" = {2}")
   @MethodSource("quantityValueMatcherCases")
-  void testQuantityValueMatcher(final BigDecimal value, final String searchValue,
-      final boolean expected) {
+  void testQuantityValueMatcher(
+      final BigDecimal value, final String searchValue, final boolean expected) {
     // Create a DataFrame with a Quantity-like struct containing just 'value' field
-    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
-        .select(struct(lit(value).as("value")).as("quantity"));
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(lit(value).as("value")).as("quantity"));
 
     final QuantityMatcher matcher = new QuantityMatcher();
     final Column result = matcher.match(col("quantity"), searchValue);
@@ -771,98 +800,207 @@ class ElementMatcherTest {
     return Stream.of(
         // ========== value|system|code - full match ==========
         // Match: value in range, system equals, code equals
-        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", null,
-            "70|http://unitsofmeasure.org|kg", true),
+        Arguments.of(
+            new BigDecimal("70"),
+            "http://unitsofmeasure.org",
+            "kg",
+            null,
+            "70|http://unitsofmeasure.org|kg",
+            true),
         // No match: wrong system
-        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", null,
-            "70|http://other.org|kg", false),
+        Arguments.of(
+            new BigDecimal("70"),
+            "http://unitsofmeasure.org",
+            "kg",
+            null,
+            "70|http://other.org|kg",
+            false),
         // No match: wrong code
-        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", null,
-            "70|http://unitsofmeasure.org|g", false),
+        Arguments.of(
+            new BigDecimal("70"),
+            "http://unitsofmeasure.org",
+            "kg",
+            null,
+            "70|http://unitsofmeasure.org|g",
+            false),
         // No match: wrong value
-        Arguments.of(new BigDecimal("80"), "http://unitsofmeasure.org", "kg", null,
-            "70|http://unitsofmeasure.org|kg", false),
+        Arguments.of(
+            new BigDecimal("80"),
+            "http://unitsofmeasure.org",
+            "kg",
+            null,
+            "70|http://unitsofmeasure.org|kg",
+            false),
         // Match: system and code match even if unit field differs
-        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "Kilogram",
-            "70|http://unitsofmeasure.org|kg", true),
+        Arguments.of(
+            new BigDecimal("70"),
+            "http://unitsofmeasure.org",
+            "kg",
+            "Kilogram",
+            "70|http://unitsofmeasure.org|kg",
+            true),
 
         // ========== value||code - matches code OR unit, any system ==========
         // Code matches, unit is different
-        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "kilogram",
-            "70||kg", true),  // code matches
+        Arguments.of(
+            new BigDecimal("70"),
+            "http://unitsofmeasure.org",
+            "kg",
+            "kilogram",
+            "70||kg",
+            true), // code matches
         // Unit matches, code is different
-        Arguments.of(new BigDecimal("70"), "http://other.org", "lbs", "kg",
-            "70||kg", true),  // unit matches, any system
+        Arguments.of(
+            new BigDecimal("70"),
+            "http://other.org",
+            "lbs",
+            "kg",
+            "70||kg",
+            true), // unit matches, any system
         // Neither code nor unit match
-        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "mg", "milligram",
-            "70||kg", false),  // neither code nor unit matches
+        Arguments.of(
+            new BigDecimal("70"),
+            "http://unitsofmeasure.org",
+            "mg",
+            "milligram",
+            "70||kg",
+            false), // neither code nor unit matches
         // Both code and unit match
-        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "kg",
-            "70||kg", true),  // both code and unit match
+        Arguments.of(
+            new BigDecimal("70"),
+            "http://unitsofmeasure.org",
+            "kg",
+            "kg",
+            "70||kg",
+            true), // both code and unit match
         // Null system, code matches
-        Arguments.of(new BigDecimal("70"), null, "kg", "kilogram",
-            "70||kg", true),  // code matches, null system
+        Arguments.of(
+            new BigDecimal("70"),
+            null,
+            "kg",
+            "kilogram",
+            "70||kg",
+            true), // code matches, null system
         // Null system, unit matches
-        Arguments.of(new BigDecimal("70"), null, "lbs", "kg",
-            "70||kg", true),  // unit matches, null system
+        Arguments.of(
+            new BigDecimal("70"), null, "lbs", "kg", "70||kg", true), // unit matches, null system
         // Null code and unit, search for code
-        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", null, null,
-            "70||kg", false),  // no code or unit to match
+        Arguments.of(
+            new BigDecimal("70"),
+            "http://unitsofmeasure.org",
+            null,
+            null,
+            "70||kg",
+            false), // no code or unit to match
 
         // ========== value|| - any system, any code (equivalent to value-only) ==========
-        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "kilogram",
-            "70||", true),
-        Arguments.of(new BigDecimal("70"), null, null, null,
-            "70||", true),
-        Arguments.of(new BigDecimal("70"), "http://other.org", "mg", "milligram",
-            "70||", true),  // any system and code
+        Arguments.of(
+            new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "kilogram", "70||", true),
+        Arguments.of(new BigDecimal("70"), null, null, null, "70||", true),
+        Arguments.of(
+            new BigDecimal("70"),
+            "http://other.org",
+            "mg",
+            "milligram",
+            "70||",
+            true), // any system and code
 
         // ========== value only - no system/code constraints ==========
-        Arguments.of(new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "kilogram",
-            "70", true),
-        Arguments.of(new BigDecimal("70"), null, null, null,
-            "70", true),
+        Arguments.of(
+            new BigDecimal("70"), "http://unitsofmeasure.org", "kg", "kilogram", "70", true),
+        Arguments.of(new BigDecimal("70"), null, null, null, "70", true),
 
         // ========== with prefixes on value|system|code ==========
-        Arguments.of(new BigDecimal("80"), "http://unitsofmeasure.org", "kg", "kilogram",
-            "gt70|http://unitsofmeasure.org|kg", true),
-        Arguments.of(new BigDecimal("60"), "http://unitsofmeasure.org", "kg", "kilogram",
-            "gt70|http://unitsofmeasure.org|kg", false),  // value not > 70
-        Arguments.of(new BigDecimal("80"), "http://other.org", "kg", "kilogram",
-            "gt70|http://unitsofmeasure.org|kg", false),  // wrong system
+        Arguments.of(
+            new BigDecimal("80"),
+            "http://unitsofmeasure.org",
+            "kg",
+            "kilogram",
+            "gt70|http://unitsofmeasure.org|kg",
+            true),
+        Arguments.of(
+            new BigDecimal("60"),
+            "http://unitsofmeasure.org",
+            "kg",
+            "kilogram",
+            "gt70|http://unitsofmeasure.org|kg",
+            false), // value not > 70
+        Arguments.of(
+            new BigDecimal("80"),
+            "http://other.org",
+            "kg",
+            "kilogram",
+            "gt70|http://unitsofmeasure.org|kg",
+            false), // wrong system
 
         // ========== with prefixes on value||code ==========
-        Arguments.of(new BigDecimal("80"), "http://unitsofmeasure.org", "kg", "kilogram",
-            "gt70||kg", true),  // any system, code matches
-        Arguments.of(new BigDecimal("80"), null, "lbs", "kg",
-            "gt70||kg", true),  // null system, unit matches
-        Arguments.of(new BigDecimal("60"), "http://unitsofmeasure.org", "kg", "kilogram",
-            "gt70||kg", false),  // value not > 70
-        Arguments.of(new BigDecimal("80"), "http://other.org", "lbs", "milligram",
-            "gt70||kg", false),  // neither code nor unit matches
-        Arguments.of(new BigDecimal("70.25"), "http://unitsofmeasure.org", "kg", "kilogram",
-            "ge70||kg", true),  // value >= 70, code matches
-        Arguments.of(new BigDecimal("69.75"), "http://unitsofmeasure.org", "kg", "kilogram",
-            "ge70||kg", false)  // value < 70
-    );
+        Arguments.of(
+            new BigDecimal("80"),
+            "http://unitsofmeasure.org",
+            "kg",
+            "kilogram",
+            "gt70||kg",
+            true), // any system, code matches
+        Arguments.of(
+            new BigDecimal("80"), null, "lbs", "kg", "gt70||kg", true), // null system, unit matches
+        Arguments.of(
+            new BigDecimal("60"),
+            "http://unitsofmeasure.org",
+            "kg",
+            "kilogram",
+            "gt70||kg",
+            false), // value not > 70
+        Arguments.of(
+            new BigDecimal("80"),
+            "http://other.org",
+            "lbs",
+            "milligram",
+            "gt70||kg",
+            false), // neither code nor unit matches
+        Arguments.of(
+            new BigDecimal("70.25"),
+            "http://unitsofmeasure.org",
+            "kg",
+            "kilogram",
+            "ge70||kg",
+            true), // value >= 70, code matches
+        Arguments.of(
+            new BigDecimal("69.75"),
+            "http://unitsofmeasure.org",
+            "kg",
+            "kilogram",
+            "ge70||kg",
+            false) // value < 70
+        );
   }
 
-  @ParameterizedTest(name = "QuantityMatcher: value={0}, system={1}, code={2}, unit={3} matches \"{4}\" = {5}")
+  @ParameterizedTest(
+      name = "QuantityMatcher: value={0}, system={1}, code={2}, unit={3} matches \"{4}\" = {5}")
   @MethodSource("quantitySystemCodeMatcherCases")
-  void testQuantitySystemCodeMatcher(final BigDecimal value, final String system, final String code,
-      final String unit, final String searchValue, final boolean expected) {
+  void testQuantitySystemCodeMatcher(
+      final BigDecimal value,
+      final String system,
+      final String code,
+      final String unit,
+      final String searchValue,
+      final boolean expected) {
     // Create a DataFrame with a full Quantity-like struct
     // Include canonicalized fields (set to null) since the matcher references them
     // for UCUM system searches. With null canonical values, it falls back to standard matching.
-    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
-        .select(struct(
-            lit(value).as("value"),
-            lit(system).as("system"),
-            lit(code).as("code"),
-            lit(unit).as("unit"),
-            lit(null).cast("struct<value:decimal(38,0),scale:int>").as("_value_canonicalized"),
-            lit(null).cast("string").as("_code_canonicalized")
-        ).as("quantity"));
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(
+                struct(
+                        lit(value).as("value"),
+                        lit(system).as("system"),
+                        lit(code).as("code"),
+                        lit(unit).as("unit"),
+                        lit(null)
+                            .cast("struct<value:decimal(38,0),scale:int>")
+                            .as("_value_canonicalized"),
+                        lit(null).cast("string").as("_code_canonicalized"))
+                    .as("quantity"));
 
     final QuantityMatcher matcher = new QuantityMatcher();
     final Column result = matcher.match(col("quantity"), searchValue);
@@ -919,20 +1057,19 @@ class ElementMatcherTest {
 
         // Resource has 500 mg, canonical = (0.5, "g")
         // Search for ge0.5 g -> 0.5 >= 0.5, should match
-        Arguments.of(new BigDecimal("500"), "mg", "ge0.5|http://unitsofmeasure.org|g", true)
-    );
+        Arguments.of(new BigDecimal("500"), "mg", "ge0.5|http://unitsofmeasure.org|g", true));
   }
 
   @ParameterizedTest(name = "QuantityMatcher UCUM: value={0}, code={1} matches \"{2}\" = {3}")
   @MethodSource("quantityUcumNormalizationCases")
-  void testQuantityUcumNormalization(final BigDecimal value, final String code,
-      final String searchValue, final boolean expected) {
+  void testQuantityUcumNormalization(
+      final BigDecimal value, final String code, final String searchValue, final boolean expected) {
     // Use QuantityEncoding.encodeLiteral() which properly handles UCUM canonicalization
     final FhirPathQuantity quantity = FhirPathQuantity.ofUcum(value, code);
     final Column quantityColumn = QuantityEncoding.encodeLiteral(quantity);
 
-    final Dataset<Row> df = spark.createDataset(List.of(1), Encoders.INT())
-        .select(quantityColumn.as("quantity"));
+    final Dataset<Row> df =
+        spark.createDataset(List.of(1), Encoders.INT()).select(quantityColumn.as("quantity"));
 
     final QuantityMatcher matcher = new QuantityMatcher();
     final Column result = matcher.match(col("quantity"), searchValue);

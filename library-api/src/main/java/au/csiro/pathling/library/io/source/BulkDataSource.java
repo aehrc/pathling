@@ -30,8 +30,7 @@ import org.apache.spark.sql.Row;
 
 /**
  * A data source that reads data from a FHIR Bulk Data endpoint. This source uses the FHIR Bulk Data
- * Export API to download resources as NDJSON files, which are then read using
- * {@link NdjsonSource}.
+ * Export API to download resources as NDJSON files, which are then read using {@link NdjsonSource}.
  *
  * @see <a href="https://github.com/aehrc/fhir-bulk-java">FHIR Bulk Client for Java</a>
  * @see <a href="https://hl7.org/fhir/uv/bulkdata/">FHIR Bulk Data Access Implementation Guide</a>
@@ -39,19 +38,17 @@ import org.apache.spark.sql.Row;
 @Slf4j
 public class BulkDataSource extends AbstractSource {
 
-  @Nonnull
-  private final NdjsonSource ndjsonSource;
+  @Nonnull private final NdjsonSource ndjsonSource;
 
   /**
    * Creates a new bulk data source using the provided client configuration.
    *
    * @param context the Pathling context
    * @param client the configured {@link BulkExportClient} that specifies the endpoint and export
-   * parameters
+   *     parameters
    * @throws RuntimeException if the export fails or the source cannot be initialized
    */
-  BulkDataSource(@Nonnull final PathlingContext context,
-      @Nonnull final BulkExportClient client) {
+  BulkDataSource(@Nonnull final PathlingContext context, @Nonnull final BulkExportClient client) {
     super(context);
 
     // Execute the export to the specified output directory
@@ -62,8 +59,8 @@ public class BulkDataSource extends AbstractSource {
     this.ndjsonSource = new NdjsonSource(context, client.getOutputDir());
   }
 
-  private BulkDataSource(@Nonnull final PathlingContext context,
-      @Nonnull final NdjsonSource ndjsonSource) {
+  private BulkDataSource(
+      @Nonnull final PathlingContext context, @Nonnull final NdjsonSource ndjsonSource) {
     super(context);
     this.ndjsonSource = ndjsonSource;
   }
@@ -90,5 +87,4 @@ public class BulkDataSource extends AbstractSource {
   public QueryableDataSource cache() {
     return map(Dataset::cache);
   }
-
 }

@@ -41,14 +41,16 @@ public class ParquetSource extends FileSource {
    * @param path the path to the Parquet file or directory
    */
   ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
-    super(context, path,
+    super(
+        context,
+        path,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
         FileSource::resourceNameWithQualifierMapper,
         // Assume the "parquet" file extension.
         PARQUET_FILE_EXTENSION,
         context.getSpark().read().format(PARQUET_READ_FORMAT),
-        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData);
   }
@@ -61,13 +63,18 @@ public class ParquetSource extends FileSource {
    * @param path the path to the Parquet file or directory
    * @param fileNameMapper a function that maps a file name to a set of resource types
    */
-  ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+  ParquetSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
-    super(context, path, fileNameMapper, PARQUET_FILE_EXTENSION,
+    super(
+        context,
+        path,
+        fileNameMapper,
+        PARQUET_FILE_EXTENSION,
         context.getSpark().read().format(PARQUET_READ_FORMAT),
-        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData);
   }
-
 }

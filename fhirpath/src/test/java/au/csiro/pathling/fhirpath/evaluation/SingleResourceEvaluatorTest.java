@@ -31,9 +31,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Tests for {@link SingleResourceEvaluator} and related classes.
- */
+/** Tests for {@link SingleResourceEvaluator} and related classes. */
 class SingleResourceEvaluatorTest {
 
   private FhirContext fhirContext;
@@ -50,9 +48,8 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void create_createsEvaluator() {
-      final SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
-          .create(ResourceType.PATIENT, fhirContext)
-          .build();
+      final SingleResourceEvaluator evaluator =
+          SingleResourceEvaluatorBuilder.create(ResourceType.PATIENT, fhirContext).build();
 
       assertNotNull(evaluator);
       assertEquals(ResourceType.PATIENT, evaluator.getSubjectResource());
@@ -60,22 +57,20 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void defaultCrossResourceStrategy_isFail() {
-      final SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
-          .create(ResourceType.PATIENT, fhirContext)
-          .build();
+      final SingleResourceEvaluator evaluator =
+          SingleResourceEvaluatorBuilder.create(ResourceType.PATIENT, fhirContext).build();
 
       // Attempting to evaluate an expression that references a foreign resource should fail
       final FhirPath fhirPath = parser.parse("Observation");
-      assertThrows(UnsupportedOperationException.class,
-          () -> evaluator.evaluate(fhirPath));
+      assertThrows(UnsupportedOperationException.class, () -> evaluator.evaluate(fhirPath));
     }
 
     @Test
     void emptyStrategy_allowsForeignResourceReferences() {
-      final SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
-          .create(ResourceType.PATIENT, fhirContext)
-          .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
-          .build();
+      final SingleResourceEvaluator evaluator =
+          SingleResourceEvaluatorBuilder.create(ResourceType.PATIENT, fhirContext)
+              .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
+              .build();
 
       // Evaluating an expression that references a foreign resource should not throw
       final FhirPath fhirPath = parser.parse("Observation");
@@ -93,9 +88,8 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void evaluate_simpleFieldPath_returnsCollection() {
-      final SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
-          .create(ResourceType.PATIENT, fhirContext)
-          .build();
+      final SingleResourceEvaluator evaluator =
+          SingleResourceEvaluatorBuilder.create(ResourceType.PATIENT, fhirContext).build();
 
       final FhirPath fhirPath = parser.parse("Patient.name");
       final Collection result = evaluator.evaluate(fhirPath);
@@ -107,9 +101,8 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void evaluate_subjectResourcePath_returnsSubjectResource() {
-      final SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
-          .create(ResourceType.PATIENT, fhirContext)
-          .build();
+      final SingleResourceEvaluator evaluator =
+          SingleResourceEvaluatorBuilder.create(ResourceType.PATIENT, fhirContext).build();
 
       final FhirPath fhirPath = parser.parse("Patient");
       final Collection result = evaluator.evaluate(fhirPath);
@@ -121,9 +114,8 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void evaluate_nestedPath_returnsCorrectType() {
-      final SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
-          .create(ResourceType.PATIENT, fhirContext)
-          .build();
+      final SingleResourceEvaluator evaluator =
+          SingleResourceEvaluatorBuilder.create(ResourceType.PATIENT, fhirContext).build();
 
       final FhirPath fhirPath = parser.parse("Patient.name.family");
       final Collection result = evaluator.evaluate(fhirPath);
@@ -135,9 +127,8 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void evaluate_booleanExpression_returnsBooleanCollection() {
-      final SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
-          .create(ResourceType.PATIENT, fhirContext)
-          .build();
+      final SingleResourceEvaluator evaluator =
+          SingleResourceEvaluatorBuilder.create(ResourceType.PATIENT, fhirContext).build();
 
       final FhirPath fhirPath = parser.parse("Patient.active");
       final Collection result = evaluator.evaluate(fhirPath);
@@ -153,16 +144,15 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void failStrategy_throwsOnForeignResource() {
-      final SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
-          .create(ResourceType.PATIENT, fhirContext)
-          .withCrossResourceStrategy(CrossResourceStrategy.FAIL)
-          .build();
+      final SingleResourceEvaluator evaluator =
+          SingleResourceEvaluatorBuilder.create(ResourceType.PATIENT, fhirContext)
+              .withCrossResourceStrategy(CrossResourceStrategy.FAIL)
+              .build();
 
       final FhirPath fhirPath = parser.parse("Observation");
 
-      final UnsupportedOperationException exception = assertThrows(
-          UnsupportedOperationException.class,
-          () -> evaluator.evaluate(fhirPath));
+      final UnsupportedOperationException exception =
+          assertThrows(UnsupportedOperationException.class, () -> evaluator.evaluate(fhirPath));
 
       assertTrue(exception.getMessage().contains("Observation"));
       assertTrue(exception.getMessage().contains("Patient"));
@@ -170,10 +160,10 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void emptyStrategy_returnEmptyCollectionForForeignResource() {
-      final SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
-          .create(ResourceType.PATIENT, fhirContext)
-          .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
-          .build();
+      final SingleResourceEvaluator evaluator =
+          SingleResourceEvaluatorBuilder.create(ResourceType.PATIENT, fhirContext)
+              .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
+              .build();
 
       final FhirPath fhirPath = parser.parse("Observation");
       final Collection result = evaluator.evaluate(fhirPath);
@@ -186,15 +176,15 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void subjectResource_resolvedRegardlessOfStrategy() {
-      final SingleResourceEvaluator evaluatorFail = SingleResourceEvaluatorBuilder
-          .create(ResourceType.PATIENT, fhirContext)
-          .withCrossResourceStrategy(CrossResourceStrategy.FAIL)
-          .build();
+      final SingleResourceEvaluator evaluatorFail =
+          SingleResourceEvaluatorBuilder.create(ResourceType.PATIENT, fhirContext)
+              .withCrossResourceStrategy(CrossResourceStrategy.FAIL)
+              .build();
 
-      final SingleResourceEvaluator evaluatorEmpty = SingleResourceEvaluatorBuilder
-          .create(ResourceType.PATIENT, fhirContext)
-          .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
-          .build();
+      final SingleResourceEvaluator evaluatorEmpty =
+          SingleResourceEvaluatorBuilder.create(ResourceType.PATIENT, fhirContext)
+              .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
+              .build();
 
       final FhirPath fhirPath = parser.parse("Patient");
 
@@ -214,8 +204,8 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void defaultResolver_resolveSubjectResource_returnsResourceCollection() {
-      final ResourceResolver resolver = new FhirResourceResolver(
-          ResourceType.PATIENT, fhirContext, CrossResourceStrategy.FAIL);
+      final ResourceResolver resolver =
+          new FhirResourceResolver(ResourceType.PATIENT, fhirContext, CrossResourceStrategy.FAIL);
 
       final var result = resolver.resolveSubjectResource();
 
@@ -225,8 +215,8 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void defaultResolver_resolveResource_subjectCode_returnsResource() {
-      final ResourceResolver resolver = new FhirResourceResolver(
-          ResourceType.PATIENT, fhirContext, CrossResourceStrategy.FAIL);
+      final ResourceResolver resolver =
+          new FhirResourceResolver(ResourceType.PATIENT, fhirContext, CrossResourceStrategy.FAIL);
 
       final var result = resolver.resolveResource("Patient");
 
@@ -236,17 +226,17 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void defaultResolver_resolveResource_foreignCode_failStrategy_throws() {
-      final ResourceResolver resolver = new FhirResourceResolver(
-          ResourceType.PATIENT, fhirContext, CrossResourceStrategy.FAIL);
+      final ResourceResolver resolver =
+          new FhirResourceResolver(ResourceType.PATIENT, fhirContext, CrossResourceStrategy.FAIL);
 
-      assertThrows(UnsupportedOperationException.class,
-          () -> resolver.resolveResource("Observation"));
+      assertThrows(
+          UnsupportedOperationException.class, () -> resolver.resolveResource("Observation"));
     }
 
     @Test
     void defaultResolver_resolveResource_foreignCode_emptyStrategy_returnsEmptyCollection() {
-      final ResourceResolver resolver = new FhirResourceResolver(
-          ResourceType.PATIENT, fhirContext, CrossResourceStrategy.EMPTY);
+      final ResourceResolver resolver =
+          new FhirResourceResolver(ResourceType.PATIENT, fhirContext, CrossResourceStrategy.EMPTY);
 
       final var result = resolver.resolveResource("Observation");
 
@@ -259,10 +249,10 @@ class SingleResourceEvaluatorTest {
       // Unknown/invalid FHIR resource codes return Optional.empty() regardless of strategy
       // This allows the parser to distinguish between field names (e.g., "CustomField")
       // and cross-resource references
-      final ResourceResolver resolverEmpty = new FhirResourceResolver(
-          ResourceType.PATIENT, fhirContext, CrossResourceStrategy.EMPTY);
-      final ResourceResolver resolverFail = new FhirResourceResolver(
-          ResourceType.PATIENT, fhirContext, CrossResourceStrategy.FAIL);
+      final ResourceResolver resolverEmpty =
+          new FhirResourceResolver(ResourceType.PATIENT, fhirContext, CrossResourceStrategy.EMPTY);
+      final ResourceResolver resolverFail =
+          new FhirResourceResolver(ResourceType.PATIENT, fhirContext, CrossResourceStrategy.FAIL);
 
       assertTrue(resolverEmpty.resolveResource("UnknownType").isEmpty());
       assertTrue(resolverFail.resolveResource("UnknownType").isEmpty());
@@ -270,8 +260,8 @@ class SingleResourceEvaluatorTest {
 
     @Test
     void defaultResolver_getSubjectResource_returnsConfiguredType() {
-      final ResourceResolver resolver = new FhirResourceResolver(
-          ResourceType.CONDITION, fhirContext, CrossResourceStrategy.FAIL);
+      final ResourceResolver resolver =
+          new FhirResourceResolver(ResourceType.CONDITION, fhirContext, CrossResourceStrategy.FAIL);
 
       assertEquals(ResourceType.CONDITION, resolver.getSubjectResource());
     }

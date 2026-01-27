@@ -46,14 +46,12 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class DecimalCollection extends Collection implements Comparable, Numeric, StringCoercible,
-    Materializable {
+public class DecimalCollection extends Collection
+    implements Comparable, Numeric, StringCoercible, Materializable {
 
-  /**
-   * The Spark SQL decimal type used for FHIR decimal values.
-   */
-  public static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
-      .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
+  /** The Spark SQL decimal type used for FHIR decimal values. */
+  public static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE =
+      DataTypes.createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
 
   /**
    * Creates a new DecimalCollection.
@@ -64,7 +62,8 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
    * @param definition the node definition
    * @param extensionMapColumn the extension map column
    */
-  protected DecimalCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  protected DecimalCollection(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<NodeDefinition> definition,
@@ -80,10 +79,15 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
    * @return A new instance of {@link DecimalCollection}
    */
   @Nonnull
-  public static DecimalCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static DecimalCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new DecimalCollection(columnRepresentation, Optional.of(FhirPathType.DECIMAL),
-        Optional.of(FHIRDefinedType.DECIMAL), definition, Optional.empty());
+    return new DecimalCollection(
+        columnRepresentation,
+        Optional.of(FhirPathType.DECIMAL),
+        Optional.of(FHIRDefinedType.DECIMAL),
+        definition,
+        Optional.empty());
   }
 
   /**
@@ -135,20 +139,23 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
     if (value.precision() > DecimalCollection.getDecimalType().precision()) {
       throw new InvalidUserInputError(
           "Decimal literal exceeded maximum precision supported ("
-              + DecimalCollection.getDecimalType()
-              .precision() + "): " + literal);
+              + DecimalCollection.getDecimalType().precision()
+              + "): "
+              + literal);
     }
     if (value.scale() > DecimalCollection.getDecimalType().scale()) {
       throw new InvalidUserInputError(
-          "Decimal literal exceeded maximum scale supported (" + DecimalCollection.getDecimalType()
-              .scale() + "): " + literal);
+          "Decimal literal exceeded maximum scale supported ("
+              + DecimalCollection.getDecimalType().scale()
+              + "): "
+              + literal);
     }
     return value;
   }
 
   /**
    * @return the {@link org.apache.spark.sql.types.DataType} used for representing decimal values in
-   * Spark
+   *     Spark
    */
   public static org.apache.spark.sql.types.DecimalType getDecimalType() {
     return DECIMAL_TYPE;
@@ -162,8 +169,8 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
    */
   @Nonnull
   public DecimalCollection normalizeDecimalType() {
-    final Column normalizedArray = getColumn().plural().getValue()
-        .cast(DataTypes.createArrayType(DECIMAL_TYPE));
+    final Column normalizedArray =
+        getColumn().plural().getValue().cast(DataTypes.createArrayType(DECIMAL_TYPE));
     return (DecimalCollection) copyWithColumn(normalizedArray);
   }
 
@@ -199,9 +206,10 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
   @Nonnull
   public StringCollection asStringPath() {
     // Convert the decimal to a singular string using a UDF to ensure correct formatting.
-    return asSingular().map(
-        cr -> cr.callUdf(DecimalToLiteral.FUNCTION_NAME, DefaultRepresentation.empty()),
-        StringCollection::build);
+    return asSingular()
+        .map(
+            cr -> cr.callUdf(DecimalToLiteral.FUNCTION_NAME, DefaultRepresentation.empty()),
+            StringCollection::build);
   }
 
   @Nonnull
@@ -216,7 +224,6 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
     return Numeric.defaultNegate(this);
   }
 
-
   @Override
   @Nonnull
   public Column toExternalValue() {
@@ -227,7 +234,8 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
 
   @Override
   public boolean convertibleTo(@Nonnull final Collection other) {
-    return other.getType()
+    return other
+        .getType()
         .filter(FhirPathType.QUANTITY::equals)
         .map(t -> true)
         .orElseGet(() -> super.convertibleTo(other));
@@ -236,7 +244,8 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
   @Override
   @Nonnull
   public Collection castAs(@Nonnull final Collection other) {
-    return other.getType()
+    return other
+        .getType()
         .filter(FhirPathType.QUANTITY::equals)
         .map(t -> (Collection) QuantityCollection.fromNumeric(this.getColumn()))
         .orElseGet(() -> super.castAs(other));

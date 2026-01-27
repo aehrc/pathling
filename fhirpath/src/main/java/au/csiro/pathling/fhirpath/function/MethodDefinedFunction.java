@@ -33,14 +33,12 @@ import java.util.stream.Stream;
  * @author Piotr Szul
  * @author John Grimes
  */
-public record MethodDefinedFunction(String name, Method method) implements
-    NamedFunction {
+public record MethodDefinedFunction(String name, Method method) implements NamedFunction {
 
   @Override
   @Nonnull
   public Collection invoke(@Nonnull final FunctionInput functionInput) {
-    return FunctionParameterResolver.fromFunctionInput(functionInput)
-        .bind(method).invoke();
+    return FunctionParameterResolver.fromFunctionInput(functionInput).bind(method).invoke();
   }
 
   /**
@@ -64,7 +62,8 @@ public record MethodDefinedFunction(String name, Method method) implements
   public static List<NamedFunction> build(@Nonnull final Class<?> clazz) {
     return Stream.of(clazz.getDeclaredMethods())
         .filter(m -> m.getAnnotation(FhirPathFunction.class) != null)
-        .map(MethodDefinedFunction::build).collect(Collectors.toUnmodifiableList());
+        .map(MethodDefinedFunction::build)
+        .collect(Collectors.toUnmodifiableList());
   }
 
   /**
@@ -75,8 +74,7 @@ public record MethodDefinedFunction(String name, Method method) implements
    */
   @Nonnull
   public static Map<String, NamedFunction> mapOf(@Nonnull final Class<?> clazz) {
-    return build(clazz).stream().collect(Collectors.toUnmodifiableMap(NamedFunction::name,
-        Function.identity()));
+    return build(clazz).stream()
+        .collect(Collectors.toUnmodifiableMap(NamedFunction::name, Function.identity()));
   }
-
 }

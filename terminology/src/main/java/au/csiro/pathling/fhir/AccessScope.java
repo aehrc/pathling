@@ -28,9 +28,4 @@ import jakarta.annotation.Nullable;
  * @param scope the scope of access requested, or null if no specific scope is requested
  */
 record AccessScope(
-    @Nonnull String tokenEndpoint,
-    @Nonnull String clientId,
-    @Nullable String scope
-) {
-
-}
+    @Nonnull String tokenEndpoint, @Nonnull String clientId, @Nullable String scope) {}

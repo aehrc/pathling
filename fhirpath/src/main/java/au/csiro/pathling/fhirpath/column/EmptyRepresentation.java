@@ -26,15 +26,15 @@ import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
- * A column representation that represents an empty/null value. Unlike
- * {@link DefaultRepresentation#empty()}, this representation handles all operations gracefully
- * without attempting to access Spark columns that would cause errors.
- * <p>
- * This is used for cross-resource references that don't exist in single-resource evaluation.
+ * A column representation that represents an empty/null value. Unlike {@link
+ * DefaultRepresentation#empty()}, this representation handles all operations gracefully without
+ * attempting to access Spark columns that would cause errors.
+ *
+ * <p>This is used for cross-resource references that don't exist in single-resource evaluation.
  * When a FHIRPath expression references a resource that isn't the subject resource, this
  * representation ensures all field accesses return null values instead of throwing errors.
- * <p>
- * All traversal and field access operations return another EmptyRepresentation, ensuring that
+ *
+ * <p>All traversal and field access operations return another EmptyRepresentation, ensuring that
  * any chain of operations on an empty resource returns null.
  */
 public class EmptyRepresentation extends ColumnRepresentation {
@@ -95,8 +95,8 @@ public class EmptyRepresentation extends ColumnRepresentation {
 
   @Override
   @Nonnull
-  public ColumnRepresentation traverse(@Nonnull final String fieldName,
-      @Nonnull final Optional<FHIRDefinedType> fhirType) {
+  public ColumnRepresentation traverse(
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
     // Traversing an empty representation returns another empty representation
     return this;
   }

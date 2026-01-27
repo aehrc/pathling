@@ -38,13 +38,11 @@ public class FhirEncoderBuilder {
   private static final boolean DEFAULT_ENABLE_EXTENSIONS = false;
   private static final int DEFAULT_MAX_NESTING_LEVEL = 0;
 
-  @Nonnull
-  private final FhirVersionEnum fhirVersion;
+  @Nonnull private final FhirVersionEnum fhirVersion;
 
   private int maxNestingLevel;
 
-  @Nonnull
-  private Set<String> openTypes;
+  @Nonnull private Set<String> openTypes;
 
   private boolean enableExtensions;
 

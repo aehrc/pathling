@@ -26,8 +26,7 @@ import java.io.Serial;
  */
 public class CollectionConstructionError extends RuntimeException {
 
-  @Serial
-  private static final long serialVersionUID = -1560019566754143491L;
+  @Serial private static final long serialVersionUID = -1560019566754143491L;
 
   /**
    * Creates a new CollectionConstructionError.
@@ -38,5 +37,4 @@ public class CollectionConstructionError extends RuntimeException {
   public CollectionConstructionError(final String message, final Throwable cause) {
     super(message, cause);
   }
-
 }

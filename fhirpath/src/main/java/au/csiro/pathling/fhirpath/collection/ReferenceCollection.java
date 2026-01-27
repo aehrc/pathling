@@ -48,8 +48,10 @@ public class ReferenceCollection extends Collection {
    * @param definition the node definition
    * @param extensionMapColumn the extension map column
    */
-  protected ReferenceCollection(@Nonnull final ColumnRepresentation column,
-      @Nonnull final Optional<FhirPathType> type, @Nonnull final Optional<FHIRDefinedType> fhirType,
+  protected ReferenceCollection(
+      @Nonnull final ColumnRepresentation column,
+      @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(column, type, fhirType, definition, extensionMapColumn);
@@ -58,12 +60,13 @@ public class ReferenceCollection extends Collection {
   /**
    * @param typeSpecifier The type specifier to filter by
    * @return a {@link Collection} containing the keys of the references in this collection, suitable
-   * for joining with resource keys
+   *     for joining with resource keys
    */
   @Nonnull
   public Collection getKeyCollection(@Nonnull final Optional<TypeSpecifier> typeSpecifier) {
     return typeSpecifier
-        // If a type was specified, create a regular expression that matches references of this type.
+        // If a type was specified, create a regular expression that matches references of this
+        // type.
         .map(ts -> ts.toFhirType().toCode() + "/.+")
         // Get a ColumnTransform that filters the reference column based on the regular expression.
         .map(this::keyFilter)
@@ -79,44 +82,49 @@ public class ReferenceCollection extends Collection {
 
   @Nonnull
   private ColumnTransform keyFilter(@Nonnull final String pattern) {
-    return col -> col.traverse(REFERENCE_ELEMENT_NAME, Optional.of(FHIRDefinedType.STRING))
-        .like(pattern);
+    return col ->
+        col.traverse(REFERENCE_ELEMENT_NAME, Optional.of(FHIRDefinedType.STRING)).like(pattern);
   }
 
   /**
    * Performs a limited resolution of this Reference, extracting type information only.
-   * <p>
-   * This implementation:
+   *
+   * <p>This implementation:
+   *
    * <ul>
-   *   <li>Returns type information from {@code Reference.type} field (priority) or parsed reference string</li>
-   *   <li>Supports the {@code is} operator for type checking</li>
-   *   <li>Does NOT support traversal (throws error on field access)</li>
-   *   <li>Does NOT perform actual resource resolution/joining</li>
-   * </ul>
-   * <p>
-   * Type extraction:
-   * <ul>
-   *   <li>If {@code Reference.type} field is present, it is used regardless of reference format</li>
-   *   <li>If {@code Reference.type} is absent, type is parsed from {@code Reference.reference}</li>
-   *   <li>Type field always takes precedence over parsed type from reference string</li>
-   * </ul>
-   * <p>
-   * Supported reference formats (when type field is absent):
-   * <ul>
-   *   <li>Relative: {@code Patient/123}</li>
-   *   <li>Absolute: {@code http://example.org/fhir/Patient/123}</li>
-   *   <li>Canonical: {@code http://hl7.org/fhir/ValueSet/my-valueset}</li>
-   * </ul>
-   * <p>
-   * Returns empty when type cannot be determined:
-   * <ul>
-   *   <li>Contained references without type field: {@code #local-id}</li>
-   *   <li>Logical references without type field (identifier-only)</li>
-   *   <li>Malformed reference strings</li>
+   *   <li>Returns type information from {@code Reference.type} field (priority) or parsed reference
+   *       string
+   *   <li>Supports the {@code is} operator for type checking
+   *   <li>Does NOT support traversal (throws error on field access)
+   *   <li>Does NOT perform actual resource resolution/joining
    * </ul>
    *
-   * @return A {@link ResolvedReferenceCollection} containing type information, or
-   * {@link EmptyCollection} if type cannot be determined
+   * <p>Type extraction:
+   *
+   * <ul>
+   *   <li>If {@code Reference.type} field is present, it is used regardless of reference format
+   *   <li>If {@code Reference.type} is absent, type is parsed from {@code Reference.reference}
+   *   <li>Type field always takes precedence over parsed type from reference string
+   * </ul>
+   *
+   * <p>Supported reference formats (when type field is absent):
+   *
+   * <ul>
+   *   <li>Relative: {@code Patient/123}
+   *   <li>Absolute: {@code http://example.org/fhir/Patient/123}
+   *   <li>Canonical: {@code http://hl7.org/fhir/ValueSet/my-valueset}
+   * </ul>
+   *
+   * <p>Returns empty when type cannot be determined:
+   *
+   * <ul>
+   *   <li>Contained references without type field: {@code #local-id}
+   *   <li>Logical references without type field (identifier-only)
+   *   <li>Malformed reference strings
+   * </ul>
+   *
+   * @return A {@link ResolvedReferenceCollection} containing type information, or {@link
+   *     EmptyCollection} if type cannot be determined
    * @see <a href="https://build.fhir.org/fhirpath.html#functions">FHIRPath resolve() function</a>
    * @see <a href="https://hl7.org/fhir/R4/references.html">FHIR Resource References</a>
    */
@@ -126,8 +134,8 @@ public class ReferenceCollection extends Collection {
     final ColumnRepresentation typeColumn = getColumn().getField(TYPE_ELEMENT_NAME);
 
     // Extract type information using ReferenceValue
-    final ColumnRepresentation extractedType = ReferenceValue.of(referenceColumn, typeColumn)
-        .extractType();
+    final ColumnRepresentation extractedType =
+        ReferenceValue.of(referenceColumn, typeColumn).extractType();
 
     // Remove null values (unresolvable references) from the extracted type column
     final ColumnRepresentation filteredType = extractedType.removeNulls();
@@ -135,5 +143,4 @@ public class ReferenceCollection extends Collection {
     // Return a ResolvedReferenceCollection with dynamic type information
     return ResolvedReferenceCollection.build(filteredType);
   }
-
 }

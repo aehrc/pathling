@@ -29,23 +29,21 @@ import java.util.stream.StreamSupport;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
-abstract class EncodeMapPartitions<T extends IBaseResource> implements
-    MapPartitionsFunction<String, T> {
+abstract class EncodeMapPartitions<T extends IBaseResource>
+    implements MapPartitionsFunction<String, T> {
 
-  @Serial
-  private static final long serialVersionUID = -189338116652852324L;
+  @Serial private static final long serialVersionUID = -189338116652852324L;
 
-  @Nonnull
-  protected final FhirVersionEnum fhirVersion;
+  @Nonnull protected final FhirVersionEnum fhirVersion;
 
-  @Nonnull
-  protected final String inputMimeType;
+  @Nonnull protected final String inputMimeType;
 
-  @Nonnull
-  protected final Class<T> resourceClass;
+  @Nonnull protected final Class<T> resourceClass;
 
-  protected EncodeMapPartitions(@Nonnull final FhirVersionEnum fhirVersion,
-      @Nonnull final String inputMimeType, @Nonnull final Class<T> resourceClass) {
+  protected EncodeMapPartitions(
+      @Nonnull final FhirVersionEnum fhirVersion,
+      @Nonnull final String inputMimeType,
+      @Nonnull final Class<T> resourceClass) {
     this.fhirVersion = fhirVersion;
     this.inputMimeType = inputMimeType;
     this.resourceClass = resourceClass;
@@ -70,9 +68,8 @@ abstract class EncodeMapPartitions<T extends IBaseResource> implements
     final ResourceParser parser = ResourceParser.build(fhirVersion, inputMimeType);
 
     final Iterable<String> iterable = () -> iterator;
-    final Stream<IBaseResource> parsedResources = StreamSupport.stream(iterable.spliterator(),
-            false)
-        .map(parser::parse);
+    final Stream<IBaseResource> parsedResources =
+        StreamSupport.stream(iterable.spliterator(), false).map(parser::parse);
     return (Iterator<T>) processResources(parsedResources).iterator();
   }
 }

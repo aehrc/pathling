@@ -26,7 +26,6 @@ import org.apache.spark.sql.Column;
  */
 public interface ColumnComparator extends ColumnEquality {
 
-  
   /**
    * Creates a less-than comparison between two columns.
    *

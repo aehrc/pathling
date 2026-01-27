@@ -21,12 +21,12 @@ import jakarta.annotation.Nonnull;
 
 /**
  * Thrown when a search parameter configuration is invalid.
- * <p>
- * This can occur when:
+ *
+ * <p>This can occur when:
+ *
  * <ul>
- *   <li>The FHIR type of the element does not match the allowed types for the search parameter
- *   type</li>
- *   <li>The FHIR type cannot be determined from the FHIRPath expression result</li>
+ *   <li>The FHIR type of the element does not match the allowed types for the search parameter type
+ *   <li>The FHIR type cannot be determined from the FHIRPath expression result
  * </ul>
  *
  * @see <a href="https://hl7.org/fhir/search.html">FHIR Search</a>

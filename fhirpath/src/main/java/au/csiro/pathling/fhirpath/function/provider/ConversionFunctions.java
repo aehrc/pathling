@@ -39,27 +39,31 @@ import org.apache.spark.sql.functions;
 
 /**
  * Contains functions for converting values between types.
- * <p>
- * This implementation provides 16 FHIRPath conversion functions:
+ *
+ * <p>This implementation provides 16 FHIRPath conversion functions:
+ *
  * <ul>
- *   <li>8 conversion functions: toBoolean, toInteger, toDecimal, toString, toDate, toDateTime, toTime, toQuantity</li>
- *   <li>8 validation functions: convertsToBoolean, convertsToInteger, convertsToDecimal, convertsToString, convertsToDate, convertsToDateTime, convertsToTime, convertsToQuantity</li>
+ *   <li>8 conversion functions: toBoolean, toInteger, toDecimal, toString, toDate, toDateTime,
+ *       toTime, toQuantity
+ *   <li>8 validation functions: convertsToBoolean, convertsToInteger, convertsToDecimal,
+ *       convertsToString, convertsToDate, convertsToDateTime, convertsToTime, convertsToQuantity
  * </ul>
- * <p>
- * <b>Note:</b> The toLong() and convertsToLong() functions are not implemented as they are marked
- * as STU (Standard for Trial Use) in the FHIRPath specification and are not yet finalized.
- * When these functions are finalized in the FHIRPath specification, they can be added following
- * the same pattern as the other conversion functions.
- * <p>
- * The actual conversion and validation logic is delegated to package-private helper classes:
+ *
+ * <p><b>Note:</b> The toLong() and convertsToLong() functions are not implemented as they are
+ * marked as STU (Standard for Trial Use) in the FHIRPath specification and are not yet finalized.
+ * When these functions are finalized in the FHIRPath specification, they can be added following the
+ * same pattern as the other conversion functions.
+ *
+ * <p>The actual conversion and validation logic is delegated to package-private helper classes:
+ *
  * <ul>
- *   <li>{@link ConversionLogic} - handles type conversion orchestration and logic</li>
- *   <li>{@link ValidationLogic} - handles conversion validation orchestration and logic</li>
+ *   <li>{@link ConversionLogic} - handles type conversion orchestration and logic
+ *   <li>{@link ValidationLogic} - handles conversion validation orchestration and logic
  * </ul>
  *
  * @author Piotr Szul
  * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
- * Conversion</a>
+ *     Conversion</a>
  */
 @UtilityClass
 @SuppressWarnings("unused")
@@ -75,8 +79,8 @@ public class ConversionFunctions {
    *
    * @param input The input collection
    * @return A {@link BooleanCollection} containing the converted value or empty
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#tobooleanboolean">FHIRPath
-   * Specification - toBoolean</a>
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#tobooleanboolean">FHIRPath Specification
+   *     - toBoolean</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -91,8 +95,8 @@ public class ConversionFunctions {
    *
    * @param input The input collection
    * @return An {@link IntegerCollection} containing the converted value or empty
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#toIntegerinteger">FHIRPath
-   * Specification - toInteger</a>
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#toIntegerinteger">FHIRPath Specification
+   *     - toInteger</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -107,8 +111,8 @@ public class ConversionFunctions {
    *
    * @param input The input collection
    * @return A {@link DecimalCollection} containing the converted value or empty
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#todecimaldecimal">FHIRPath
-   * Specification - toDecimal</a>
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#todecimaldecimal">FHIRPath Specification
+   *     - toDecimal</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -122,8 +126,8 @@ public class ConversionFunctions {
    *
    * @param input The input collection
    * @return A {@link StringCollection} containing the converted value or empty
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#tostringstring">FHIRPath Specification
-   * - toString</a>
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#tostringstring">FHIRPath Specification -
+   *     toString</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -138,7 +142,7 @@ public class ConversionFunctions {
    * @param input The input collection
    * @return A {@link DateCollection} containing the converted value or empty
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * toDate</a>
+   *     toDate</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -153,7 +157,7 @@ public class ConversionFunctions {
    * @param input The input collection
    * @return A {@link DateTimeCollection} containing the converted value or empty
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * toDateTime</a>
+   *     toDateTime</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -168,7 +172,7 @@ public class ConversionFunctions {
    * @param input The input collection
    * @return A {@link TimeCollection} containing the converted value or empty
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * toTime</a>
+   *     toTime</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -179,36 +183,38 @@ public class ConversionFunctions {
 
   /**
    * Converts the input to a Quantity value. Per FHIRPath specification:
+   *
    * <ul>
-   *   <li>Boolean: true → 1.0 '1', false → 0.0 '1'</li>
-   *   <li>Integer/Decimal: Convert to Quantity with default unitCode '1'</li>
-   *   <li>Quantity: returns as-is</li>
-   *   <li>String: Parse as FHIRPath quantity literal (e.g., "10 'mg'", "4 days")</li>
-   *   <li>All other inputs → empty</li>
+   *   <li>Boolean: true → 1.0 '1', false → 0.0 '1'
+   *   <li>Integer/Decimal: Convert to Quantity with default unitCode '1'
+   *   <li>Quantity: returns as-is
+   *   <li>String: Parse as FHIRPath quantity literal (e.g., "10 'mg'", "4 days")
+   *   <li>All other inputs → empty
    * </ul>
-   * <p>
-   * The optional {@code unitCode} parameter specifies a target unitCode for conversion. If provided, the
-   * function converts the quantity to the target unitCode using UCUM conversion rules. Returns the
-   * converted quantity if conversion is successful, or empty if units are incompatible or
-   * conversion is not possible.
-   * <p>
-   * <b>UCUM Conversion:</b> Full UCUM unitCode conversion is supported for compatible units (e.g., 'kg'
-   * to 'g', 'wk' to 'd', 'cm' to 'mm'). Incompatible units (e.g., mass to length) return empty.
-   * <p>
-   * <b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are supported
-   * via {@code CalendarDurationUnit.conversionFactorTo}. If any specific enhancements remain, see issue #2505.
+   *
+   * <p>The optional {@code unitCode} parameter specifies a target unitCode for conversion. If
+   * provided, the function converts the quantity to the target unitCode using UCUM conversion
+   * rules. Returns the converted quantity if conversion is successful, or empty if units are
+   * incompatible or conversion is not possible.
+   *
+   * <p><b>UCUM Conversion:</b> Full UCUM unitCode conversion is supported for compatible units
+   * (e.g., 'kg' to 'g', 'wk' to 'd', 'cm' to 'mm'). Incompatible units (e.g., mass to length)
+   * return empty.
+   *
+   * <p><b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are
+   * supported via {@code CalendarDurationUnit.conversionFactorTo}. If any specific enhancements
+   * remain, see issue #2505.
    *
    * @param input The input collection
    * @param unit Optional target unitCode for conversion (null if not specified)
    * @return A {@link QuantityCollection} containing the converted value or empty
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * toQuantity</a>
+   *     toQuantity</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
-  public Collection toQuantity(@Nonnull final Collection input,
-      @Nullable final Collection unit) {
+  public Collection toQuantity(@Nonnull final Collection input, @Nullable final Collection unit) {
     // First convert to Quantity using standard conversion
     final Collection converted = ConversionLogic.performConversion(input, FhirPathType.QUANTITY);
     // If unitCode provided and result is QuantityCollection, apply unitCode conversion
@@ -229,9 +235,9 @@ public class ConversionFunctions {
    *
    * @param input The input collection
    * @return A {@link BooleanCollection} containing {@code true} if convertible, {@code false}
-   * otherwise, or empty for empty input
+   *     otherwise, or empty for empty input
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToBoolean</a>
+   *     convertsToBoolean</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -245,9 +251,9 @@ public class ConversionFunctions {
    *
    * @param input The input collection
    * @return A {@link BooleanCollection} containing {@code true} if convertible, {@code false}
-   * otherwise, or empty for empty input
+   *     otherwise, or empty for empty input
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToInteger</a>
+   *     convertsToInteger</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -261,9 +267,9 @@ public class ConversionFunctions {
    *
    * @param input The input collection
    * @return A {@link BooleanCollection} containing {@code true} if convertible, {@code false}
-   * otherwise, or empty for empty input
+   *     otherwise, or empty for empty input
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToDecimal</a>
+   *     convertsToDecimal</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -277,9 +283,9 @@ public class ConversionFunctions {
    *
    * @param input The input collection
    * @return A {@link BooleanCollection} containing {@code true} if convertible, {@code false}
-   * otherwise, or empty for empty input
+   *     otherwise, or empty for empty input
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToString</a>
+   *     convertsToString</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -293,9 +299,9 @@ public class ConversionFunctions {
    *
    * @param input The input collection
    * @return A {@link BooleanCollection} containing {@code true} if convertible, {@code false}
-   * otherwise, or empty for empty input
+   *     otherwise, or empty for empty input
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToDate</a>
+   *     convertsToDate</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -309,9 +315,9 @@ public class ConversionFunctions {
    *
    * @param input The input collection
    * @return A {@link BooleanCollection} containing {@code true} if convertible, {@code false}
-   * otherwise, or empty for empty input
+   *     otherwise, or empty for empty input
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToDateTime</a>
+   *     convertsToDateTime</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -325,9 +331,9 @@ public class ConversionFunctions {
    *
    * @param input The input collection
    * @return A {@link BooleanCollection} containing {@code true} if convertible, {@code false}
-   * otherwise, or empty for empty input
+   *     otherwise, or empty for empty input
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToTime</a>
+   *     convertsToTime</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
@@ -338,43 +344,42 @@ public class ConversionFunctions {
 
   /**
    * Checks if the input can be converted to a Quantity value.
-   * <p>
-   * The optional {@code unitCode} parameter specifies a target unitCode for validation. If
+   *
+   * <p>The optional {@code unitCode} parameter specifies a target unitCode for validation. If
    * provided, the function returns true if the input can be converted to a Quantity AND the
    * quantity can be converted to the target unitCode (either via exact match or UCUM conversion).
    * Returns false if units are incompatible or conversion is not possible.
-   * <p>
-   * <b>UCUM Conversion:</b> Full UCUM unitCode conversion checking is supported for compatible
+   *
+   * <p><b>UCUM Conversion:</b> Full UCUM unitCode conversion checking is supported for compatible
    * units (e.g., 'kg' to 'g', 'wk' to 'd', 'cm' to 'mm'). Incompatible units (e.g., mass to length)
    * return false.
-   * <p>
-   * <b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are
+   *
+   * <p><b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are
    * supported.
    *
    * @param input The input collection
    * @param unit Optional target unitCode for validation (null if not specified)
    * @return A {@link BooleanCollection} containing {@code true} if convertible, {@code false}
-   * otherwise, or empty for empty input
+   *     otherwise, or empty for empty input
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToQuantity</a>
+   *     convertsToQuantity</a>
    */
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
-  public Collection convertsToQuantity(@Nonnull final Collection input,
-      @Nullable final Collection unit) {
-    final Collection canConvertToQuantity = ValidationLogic.performValidation(input,
-        FhirPathType.QUANTITY);
+  public Collection convertsToQuantity(
+      @Nonnull final Collection input, @Nullable final Collection unit) {
+    final Collection canConvertToQuantity =
+        ValidationLogic.performValidation(input, FhirPathType.QUANTITY);
 
     // Only evaluate if unitCode is provided
-    @Nullable final Collection converted =
-        unit != null
-        ? ConversionLogic.performConversion(input, FhirPathType.QUANTITY)
-        : null;
+    @Nullable
+    final Collection converted =
+        unit != null ? ConversionLogic.performConversion(input, FhirPathType.QUANTITY) : null;
 
     if (unit != null && converted instanceof final QuantityCollection quantityCollection) {
-      final Collection canConvertToUnit = quantityCollection.convertibleToUnit(
-          requireNonNull(unit));
+      final Collection canConvertToUnit =
+          quantityCollection.convertibleToUnit(requireNonNull(unit));
       return canConvertToQuantity.mapColumn(
           c -> functions.coalesce(canConvertToUnit.getColumnValue(), c));
     } else {

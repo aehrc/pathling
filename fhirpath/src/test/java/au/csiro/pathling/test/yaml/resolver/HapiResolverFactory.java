@@ -37,8 +37,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value(staticConstructor = "of")
 public class HapiResolverFactory implements Function<RuntimeContext, DatasetEvaluator> {
 
-  @Nonnull
-  IBaseResource resource;
+  @Nonnull IBaseResource resource;
 
   @Override
   @Nonnull
@@ -46,16 +45,15 @@ public class HapiResolverFactory implements Function<RuntimeContext, DatasetEval
     final ResourceType resourceType = ResourceType.fromCode(resource.fhirType());
 
     // Create flat dataset using FHIR encoders
-    final Dataset<Row> resourceDS = rt.getSpark().createDataset(
-        List.of(resource),
-        rt.getFhirEncoders().of(resource.fhirType())
-    ).toDF();
+    final Dataset<Row> resourceDS =
+        rt.getSpark()
+            .createDataset(List.of(resource), rt.getFhirEncoders().of(resource.fhirType()))
+            .toDF();
 
     // Build DatasetEvaluator using the builder
     // Use EMPTY strategy for cross-resource references to return empty collections
     // rather than throwing exceptions (matching the behavior expected by tests)
-    return DatasetEvaluatorBuilder
-        .create(resourceType, rt.getFhirContext())
+    return DatasetEvaluatorBuilder.create(resourceType, rt.getFhirContext())
         .withDataset(resourceDS)
         .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
         .build();

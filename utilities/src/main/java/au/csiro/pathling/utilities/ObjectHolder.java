@@ -47,9 +47,7 @@ public interface ObjectHolder<C extends Serializable, V> {
    */
   V getOrCreate(@Nonnull final C config);
 
-  /**
-   * Destroys all the instances stored the underlying scope.
-   */
+  /** Destroys all the instances stored the underlying scope. */
   void reset();
 
   /**
@@ -60,13 +58,10 @@ public interface ObjectHolder<C extends Serializable, V> {
    */
   class SingletonHolder<C extends Serializable, V> implements ObjectHolder<C, V>, Closeable {
 
-    @Nonnull
-    private final Function<C, V> constructor;
+    @Nonnull private final Function<C, V> constructor;
 
-    @Nullable
-    private C configuration;
-    @Nullable
-    private V instance;
+    @Nullable private C configuration;
+    @Nullable private V instance;
 
     /**
      * The default priority of the shutdown hook. This is set to be executed after the SparkContext
@@ -87,7 +82,8 @@ public interface ObjectHolder<C extends Serializable, V> {
         instance = constructor.apply(config);
         configuration = config;
       } else {
-        check(configuration.equals(config),
+        check(
+            configuration.equals(config),
             "Attempt to create SingletonHolder with different configuration");
       }
       return requireNonNull(instance);
@@ -124,12 +120,13 @@ public interface ObjectHolder<C extends Serializable, V> {
    * @return the singleton holder.
    */
   static <C extends Serializable, V> ObjectHolder<C, V> singleton(
-      @Nonnull final Function<C, V> constructor, final boolean closeOnShutdown,
+      @Nonnull final Function<C, V> constructor,
+      final boolean closeOnShutdown,
       final int shutdownHookPriority) {
     final SingletonHolder<C, V> singletonHolder = new SingletonHolder<>(constructor);
     if (closeOnShutdown) {
-      ShutdownHookManager.get().addShutdownHook(() -> closeQuietly(singletonHolder),
-          shutdownHookPriority);
+      ShutdownHookManager.get()
+          .addShutdownHook(() -> closeQuietly(singletonHolder), shutdownHookPriority);
     }
     return singletonHolder;
   }

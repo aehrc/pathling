@@ -28,25 +28,26 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Matches elements using FHIR numeric search semantics.
- * <p>
- * FHIR numeric search uses implicit range semantics based on significant figures for equality
+ *
+ * <p>FHIR numeric search uses implicit range semantics based on significant figures for equality
  * comparisons. For example, searching for "100" (3 significant figures) matches any value in the
  * range [99.5, 100.5).
- * <p>
- * For integer types (integer, positiveInt, unsignedInt), the eq prefix uses exact match semantics
- * when the search value has no fractional part, and returns no matches when the search value has a
- * non-zero fractional part.
- * <p>
- * Comparison prefixes (gt, ge, lt, le) use exact value semantics without implicit ranges.
- * <p>
- * Supported prefixes:
+ *
+ * <p>For integer types (integer, positiveInt, unsignedInt), the eq prefix uses exact match
+ * semantics when the search value has no fractional part, and returns no matches when the search
+ * value has a non-zero fractional part.
+ *
+ * <p>Comparison prefixes (gt, ge, lt, le) use exact value semantics without implicit ranges.
+ *
+ * <p>Supported prefixes:
+ *
  * <ul>
- *   <li>{@code eq} (default) - value is within the implicit range (or exact match for integers)</li>
- *   <li>{@code ne} - value is outside the implicit range (or not equal for integers)</li>
- *   <li>{@code gt} - value greater than search value (exact)</li>
- *   <li>{@code ge} - value greater than or equal to search value (exact)</li>
- *   <li>{@code lt} - value less than search value (exact)</li>
- *   <li>{@code le} - value less than or equal to search value (exact)</li>
+ *   <li>{@code eq} (default) - value is within the implicit range (or exact match for integers)
+ *   <li>{@code ne} - value is outside the implicit range (or not equal for integers)
+ *   <li>{@code gt} - value greater than search value (exact)
+ *   <li>{@code ge} - value greater than or equal to search value (exact)
+ *   <li>{@code lt} - value less than search value (exact)
+ *   <li>{@code le} - value less than or equal to search value (exact)
  * </ul>
  *
  * @see <a href="https://hl7.org/fhir/search.html#number">FHIR Number Search</a>
@@ -54,14 +55,10 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class NumberMatcher implements ElementMatcher {
 
-  private static final Set<FHIRDefinedType> INTEGER_TYPES = Set.of(
-      FHIRDefinedType.INTEGER,
-      FHIRDefinedType.POSITIVEINT,
-      FHIRDefinedType.UNSIGNEDINT
-  );
+  private static final Set<FHIRDefinedType> INTEGER_TYPES =
+      Set.of(FHIRDefinedType.INTEGER, FHIRDefinedType.POSITIVEINT, FHIRDefinedType.UNSIGNEDINT);
 
-  @Nonnull
-  private final FHIRDefinedType fhirType;
+  @Nonnull private final FHIRDefinedType fhirType;
 
   /**
    * Creates a NumberMatcher for the specified FHIR type.
@@ -103,9 +100,9 @@ public class NumberMatcher implements ElementMatcher {
 
   /**
    * Matches integer types using exact match semantics.
-   * <p>
-   * If the search value has a non-zero fractional part, no matches are possible (returns false). If
-   * the search value has no fractional part, exact match semantics are used.
+   *
+   * <p>If the search value has a non-zero fractional part, no matches are possible (returns false).
+   * If the search value has no fractional part, exact match semantics are used.
    *
    * @param element the column to match against
    * @param numberValue the numeric search value (without prefix)
@@ -113,7 +110,8 @@ public class NumberMatcher implements ElementMatcher {
    * @return a Column expression for the match condition
    */
   @Nonnull
-  private Column matchIntegerType(@Nonnull final Column element,
+  private Column matchIntegerType(
+      @Nonnull final Column element,
       @Nonnull final String numberValue,
       @Nonnull final SearchPrefix prefix) {
     final FhirPathNumber searchNumber = FhirPathNumber.parse(numberValue);
@@ -135,8 +133,8 @@ public class NumberMatcher implements ElementMatcher {
 
   /**
    * Matches using range semantics based on significant figures.
-   * <p>
-   * Delegates to {@link NumericMatchingSupport} for the actual comparison logic.
+   *
+   * <p>Delegates to {@link NumericMatchingSupport} for the actual comparison logic.
    *
    * @param element the column to match against
    * @param numberValue the numeric search value (without prefix)
@@ -144,7 +142,8 @@ public class NumberMatcher implements ElementMatcher {
    * @return a Column expression for the match condition
    */
   @Nonnull
-  private Column matchWithRangeSemantics(@Nonnull final Column element,
+  private Column matchWithRangeSemantics(
+      @Nonnull final Column element,
       @Nonnull final String numberValue,
       @Nonnull final SearchPrefix prefix) {
     return NumericMatchingSupport.matchWithRangeSemantics(element, numberValue, prefix);
@@ -152,8 +151,8 @@ public class NumberMatcher implements ElementMatcher {
 
   /**
    * Matches using exact value semantics (infinite precision).
-   * <p>
-   * Delegates to {@link NumericMatchingSupport} for the actual comparison logic.
+   *
+   * <p>Delegates to {@link NumericMatchingSupport} for the actual comparison logic.
    *
    * @param element the column to match against
    * @param numberValue the numeric search value (without prefix)
@@ -161,7 +160,8 @@ public class NumberMatcher implements ElementMatcher {
    * @return a Column expression for the match condition
    */
   @Nonnull
-  private Column matchWithExactSemantics(@Nonnull final Column element,
+  private Column matchWithExactSemantics(
+      @Nonnull final Column element,
       @Nonnull final String numberValue,
       @Nonnull final SearchPrefix prefix) {
     return NumericMatchingSupport.matchWithExactSemantics(element, numberValue, prefix);

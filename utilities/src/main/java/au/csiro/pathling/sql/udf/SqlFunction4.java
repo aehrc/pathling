@@ -28,6 +28,4 @@ import org.apache.spark.sql.api.java.UDF4;
  * @param <T4> the type of the fourth argument.
  * @param <R> the type of the result.
  */
-public interface SqlFunction4<T1, T2, T3, T4, R> extends SqlFunction, UDF4<T1, T2, T3, T4, R> {
-
-}
+public interface SqlFunction4<T1, T2, T3, T4, R> extends SqlFunction, UDF4<T1, T2, T3, T4, R> {}

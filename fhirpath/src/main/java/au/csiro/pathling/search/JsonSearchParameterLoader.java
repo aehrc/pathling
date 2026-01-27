@@ -39,11 +39,11 @@ import org.hl7.fhir.r4.model.SearchParameter;
 
 /**
  * Loads search parameter definitions from a FHIR Bundle JSON file.
- * <p>
- * Parses the JSON using HAPI FHIR's parser and transforms each SearchParameter into
- * {@link SearchParameterDefinition} entries mapped by resource type.
- * <p>
- * This is an internal implementation class. Use {@link SearchParameterRegistry} factory methods
+ *
+ * <p>Parses the JSON using HAPI FHIR's parser and transforms each SearchParameter into {@link
+ * SearchParameterDefinition} entries mapped by resource type.
+ *
+ * <p>This is an internal implementation class. Use {@link SearchParameterRegistry} factory methods
  * for creating registries.
  *
  * @see SearchParameterDefinition
@@ -51,8 +51,7 @@ import org.hl7.fhir.r4.model.SearchParameter;
  */
 class JsonSearchParameterLoader {
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
   /**
    * Creates a loader with the specified FHIR context.
@@ -109,9 +108,9 @@ class JsonSearchParameterLoader {
 
   /**
    * Processes a list of SearchParameter objects into registry format.
-   * <p>
-   * This method is static because it doesn't require a FhirContext - the SearchParameter
-   * objects are already parsed.
+   *
+   * <p>This method is static because it doesn't require a FhirContext - the SearchParameter objects
+   * are already parsed.
    *
    * @param searchParameters the search parameters to process
    * @return map of resource type to map of parameter code to definition
@@ -155,17 +154,19 @@ class JsonSearchParameterLoader {
       return;
     }
 
-    final List<ResourceType> bases = sp.getBase().stream()
-        .map(baseCode -> {
-          try {
-            return ResourceType.fromCode(baseCode.getCode());
-          } catch (final FHIRException e) {
-            // Skip unknown resource types (e.g., new R5 resources)
-            return null;
-          }
-        })
-        .filter(Objects::nonNull)
-        .toList();
+    final List<ResourceType> bases =
+        sp.getBase().stream()
+            .map(
+                baseCode -> {
+                  try {
+                    return ResourceType.fromCode(baseCode.getCode());
+                  } catch (final FHIRException e) {
+                    // Skip unknown resource types (e.g., new R5 resources)
+                    return null;
+                  }
+                })
+            .filter(Objects::nonNull)
+            .toList();
 
     if (bases.isEmpty()) {
       return;
@@ -181,8 +182,7 @@ class JsonSearchParameterLoader {
 
       final SearchParameterDefinition def = new SearchParameterDefinition(code, type, expressions);
 
-      result.computeIfAbsent(resourceType, k -> new HashMap<>())
-          .put(code, def);
+      result.computeIfAbsent(resourceType, k -> new HashMap<>()).put(code, def);
     }
   }
 

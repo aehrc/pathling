@@ -35,38 +35,25 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 
-/**
- * The implementation of the 'designation()' udf.
- */
+/** The implementation of the 'designation()' udf. */
 @Slf4j
-public class DesignationUdf implements SqlFunction,
-    SqlFunction3<Row, Row, String, String[]> {
+public class DesignationUdf implements SqlFunction, SqlFunction3<Row, Row, String, String[]> {
 
-  @Serial
-  private static final long serialVersionUID = -4123584679085357391L;
+  @Serial private static final long serialVersionUID = -4123584679085357391L;
 
-  /**
-   * The name of the designation UDF function.
-   */
+  /** The name of the designation UDF function. */
   public static final String FUNCTION_NAME = "designation";
 
-  /**
-   * The return type of the designation UDF function, which is an array of strings.
-   */
+  /** The return type of the designation UDF function, which is an array of strings. */
   public static final DataType RETURN_TYPE = DataTypes.createArrayType(DataTypes.StringType);
 
-  /**
-   * The property code used to identify designations in the terminology service.
-   */
+  /** The property code used to identify designations in the terminology service. */
   public static final String DESIGNATION_PROPERTY_CODE = Designation.PROPERTY_CODE;
 
   private static final String[] EMPTY_RESULT = new String[0];
 
-  /**
-   * The terminology service factory used to create terminology services.
-   */
-  @Nonnull
-  private final TerminologyServiceFactory terminologyServiceFactory;
+  /** The terminology service factory used to create terminology services. */
+  @Nonnull private final TerminologyServiceFactory terminologyServiceFactory;
 
   /**
    * Creates a new DesignationUdf with the specified terminology service factory.
@@ -88,8 +75,7 @@ public class DesignationUdf implements SqlFunction,
   }
 
   /**
-   * Looks up designations for the given coding and optional use, filtering by language if
-   * provided.
+   * Looks up designations for the given coding and optional use, filtering by language if provided.
    *
    * @param coding the coding to look up designations for
    * @param use the optional use of the designation
@@ -97,8 +83,8 @@ public class DesignationUdf implements SqlFunction,
    * @return an array of designation values, or an empty array if no valid designations are found
    */
   @Nullable
-  protected String[] doCall(@Nullable final Coding coding,
-      @Nullable final Coding use, @Nullable final String language) {
+  protected String[] doCall(
+      @Nullable final Coding coding, @Nullable final Coding use, @Nullable final String language) {
     if (coding == null) {
       return null;
     }
@@ -117,8 +103,8 @@ public class DesignationUdf implements SqlFunction,
 
   @Nullable
   @Override
-  public String[] call(@Nullable final Row codingRow, @Nullable final Row use,
-      @Nullable final String language) {
+  public String[] call(
+      @Nullable final Row codingRow, @Nullable final Row use, @Nullable final String language) {
     return doCall(decode(codingRow), decode(use), language);
   }
 }

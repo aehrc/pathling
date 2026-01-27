@@ -29,12 +29,13 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Builder for creating {@link DatasetEvaluator} instances.
- * <p>
- * This builder provides a fluent API for configuring and creating evaluators that combine
- * FHIRPath expression evaluation with a Spark Dataset. It uses {@link SingleResourceEvaluatorBuilder}
- * internally to create the underlying evaluator.
+ *
+ * <p>This builder provides a fluent API for configuring and creating evaluators that combine
+ * FHIRPath expression evaluation with a Spark Dataset. It uses {@link
+ * SingleResourceEvaluatorBuilder} internally to create the underlying evaluator.
  *
  * <h2>Usage Example</h2>
+ *
  * <pre>{@code
  * DatasetEvaluator evaluator = DatasetEvaluatorBuilder
  *     .create(ResourceType.PATIENT, fhirContext)
@@ -50,29 +51,21 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public class DatasetEvaluatorBuilder {
 
-  @Nonnull
-  private final ResourceType subjectResource;
+  @Nonnull private final ResourceType subjectResource;
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
   private Dataset<Row> dataset;
 
-  @Nonnull
-  private Map<String, Collection> variables = Map.of();
+  @Nonnull private Map<String, Collection> variables = Map.of();
 
-  @Nonnull
-  private FunctionRegistry functionRegistry = StaticFunctionRegistry.getInstance();
+  @Nonnull private FunctionRegistry functionRegistry = StaticFunctionRegistry.getInstance();
 
-  @Nonnull
-  private CrossResourceStrategy crossResourceStrategy = CrossResourceStrategy.FAIL;
+  @Nonnull private CrossResourceStrategy crossResourceStrategy = CrossResourceStrategy.FAIL;
 
-  /**
-   * Private constructor. Use factory methods to create instances.
-   */
+  /** Private constructor. Use factory methods to create instances. */
   private DatasetEvaluatorBuilder(
-      @Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirContext fhirContext) {
+      @Nonnull final ResourceType subjectResource, @Nonnull final FhirContext fhirContext) {
     this.subjectResource = subjectResource;
     this.fhirContext = fhirContext;
   }
@@ -86,16 +79,15 @@ public class DatasetEvaluatorBuilder {
    */
   @Nonnull
   public static DatasetEvaluatorBuilder create(
-      @Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirContext fhirContext) {
+      @Nonnull final ResourceType subjectResource, @Nonnull final FhirContext fhirContext) {
     return new DatasetEvaluatorBuilder(subjectResource, fhirContext);
   }
 
   /**
    * Sets the dataset to evaluate against.
-   * <p>
-   * The dataset should have a flat schema where resource fields are top-level columns
-   * (e.g., id, name, gender, birthDate, ...).
+   *
+   * <p>The dataset should have a flat schema where resource fields are top-level columns (e.g., id,
+   * name, gender, birthDate, ...).
    *
    * @param dataset the Spark Dataset containing the resource data
    * @return this builder for method chaining
@@ -108,8 +100,8 @@ public class DatasetEvaluatorBuilder {
 
   /**
    * Sets the variables available during FHIRPath evaluation.
-   * <p>
-   * Default is an empty map.
+   *
+   * <p>Default is an empty map.
    *
    * @param variables the variables map
    * @return this builder for method chaining
@@ -122,8 +114,8 @@ public class DatasetEvaluatorBuilder {
 
   /**
    * Sets the function registry for resolving FHIRPath functions.
-   * <p>
-   * Default is {@link StaticFunctionRegistry#getInstance()}.
+   *
+   * <p>Default is {@link StaticFunctionRegistry#getInstance()}.
    *
    * @param functionRegistry the function registry
    * @return this builder for method chaining
@@ -137,8 +129,8 @@ public class DatasetEvaluatorBuilder {
 
   /**
    * Sets the strategy for handling cross-resource references.
-   * <p>
-   * Default is {@link CrossResourceStrategy#FAIL}.
+   *
+   * <p>Default is {@link CrossResourceStrategy#FAIL}.
    *
    * @param crossResourceStrategy the cross-resource strategy
    * @return this builder for method chaining
@@ -162,12 +154,12 @@ public class DatasetEvaluatorBuilder {
       throw new IllegalStateException("Dataset must be set before building DatasetEvaluator");
     }
 
-    final SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
-        .create(subjectResource, fhirContext)
-        .withCrossResourceStrategy(crossResourceStrategy)
-        .withFunctionRegistry(functionRegistry)
-        .withVariables(variables)
-        .build();
+    final SingleResourceEvaluator evaluator =
+        SingleResourceEvaluatorBuilder.create(subjectResource, fhirContext)
+            .withCrossResourceStrategy(crossResourceStrategy)
+            .withFunctionRegistry(functionRegistry)
+            .withVariables(variables)
+            .build();
 
     return new DatasetEvaluator(evaluator, dataset);
   }

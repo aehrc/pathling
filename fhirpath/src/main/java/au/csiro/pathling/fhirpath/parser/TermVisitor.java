@@ -41,8 +41,7 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitInvocationTerm(
-      @Nullable final InvocationTermContext ctx) {
+  public FhirPath visitInvocationTerm(@Nullable final InvocationTermContext ctx) {
     return new InvocationVisitor(true).visit(requireNonNull(ctx).invocation());
   }
 
@@ -54,12 +53,13 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitExternalConstantTerm(
-      @Nullable final ExternalConstantTermContext ctx) {
-    final ExternalConstantContext constantContext = requireNonNull(
-        requireNonNull(ctx).externalConstant());
-    String term = Optional.ofNullable((ParseTree) constantContext.identifier())
-        .orElse(constantContext.STRING()).getText();
+  public FhirPath visitExternalConstantTerm(@Nullable final ExternalConstantTermContext ctx) {
+    final ExternalConstantContext constantContext =
+        requireNonNull(requireNonNull(ctx).externalConstant());
+    String term =
+        Optional.ofNullable((ParseTree) constantContext.identifier())
+            .orElse(constantContext.STRING())
+            .getText();
     requireNonNull(term);
 
     // Trim any backticks or single quotes from the start and end of the term.
@@ -71,8 +71,7 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitParenthesizedTerm(
-      @Nullable final ParenthesizedTermContext ctx) {
+  public FhirPath visitParenthesizedTerm(@Nullable final ParenthesizedTermContext ctx) {
     return new Visitor().visit(requireNonNull(ctx).expression());
   }
 }

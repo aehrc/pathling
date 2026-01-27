@@ -25,10 +25,7 @@ import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@YamlTestConfiguration(
-    config = "fhirpath-ptl/config.yaml",
-    resourceBase = "fhirpath-ptl/resources"
-)
+@YamlTestConfiguration(config = "fhirpath-ptl/config.yaml", resourceBase = "fhirpath-ptl/resources")
 public class YamlFhirPathTest extends YamlCachedTestBase {
 
   @YamlTest("fhirpath-ptl/cases/math.yaml")

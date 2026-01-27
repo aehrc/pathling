@@ -45,18 +45,16 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import scala.Predef;
 
-
 /**
  * Describes the representation of a {@link au.csiro.pathling.fhirpath.collection.Collection} within
  * a {@link org.apache.spark.sql.Dataset}.
- * <p>
- * Also provides operations for transforming and manipulating the representation.
+ *
+ * <p>Also provides operations for transforming and manipulating the representation.
  *
  * @author Piotr Szul
  * @author John Grimes
  */
 public abstract class ColumnRepresentation {
-
 
   /**
    * Wrapper on the Spark SQL functions object to allow easier access to functions in Java.
@@ -70,14 +68,13 @@ public abstract class ColumnRepresentation {
     return functions.get(arrayColumn, lit(index));
   }
 
-  /**
-   * Error message used when expecting a singular collection but finding multiple elements.
-   */
-  public static final String DEF_NOT_SINGULAR_ERROR = "Expecting a collection with a single element but it has many.";
+  /** Error message used when expecting a singular collection but finding multiple elements. */
+  public static final String DEF_NOT_SINGULAR_ERROR =
+      "Expecting a collection with a single element but it has many.";
 
   /**
-   * Create a new {@link ColumnRepresentation} from the result of a function that takes two
-   * {@link Column} operands and returns a single {@link Column} result.
+   * Create a new {@link ColumnRepresentation} from the result of a function that takes two {@link
+   * Column} operands and returns a single {@link Column} result.
    *
    * @param left The left operand
    * @param right The right operand
@@ -85,7 +82,8 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} representing the result of the function
    */
   @Nonnull
-  public static ColumnRepresentation binaryOperator(@Nonnull final ColumnRepresentation left,
+  public static ColumnRepresentation binaryOperator(
+      @Nonnull final ColumnRepresentation left,
       @Nonnull final ColumnRepresentation right,
       @Nonnull final BinaryOperator<Column> operator) {
     return new DefaultRepresentation(operator.apply(left.getValue(), right.getValue()));
@@ -113,18 +111,17 @@ public abstract class ColumnRepresentation {
 
   /**
    * Create a new {@link ColumnRepresentation} from a new {@link Column}.
-   * <p>
-   * This method preserves the representation type - a {@link ResourceRepresentation} will
-   * return a new {@link ResourceRepresentation}, and a {@link DefaultRepresentation} will
-   * return a new {@link DefaultRepresentation}. This is important for maintaining correct
-   * behavior when transforming columns in different schema contexts.
+   *
+   * <p>This method preserves the representation type - a {@link ResourceRepresentation} will return
+   * a new {@link ResourceRepresentation}, and a {@link DefaultRepresentation} will return a new
+   * {@link DefaultRepresentation}. This is important for maintaining correct behavior when
+   * transforming columns in different schema contexts.
    *
    * @param newValue The new {@link Column} to represent
    * @return A new {@link ColumnRepresentation} representing the new column
    */
   @Nonnull
   public abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
-
 
   /**
    * Maps the current {@link ColumnRepresentation} using a lambda function.
@@ -189,8 +186,8 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} representing the result of the traversal
    */
   @Nonnull
-  public abstract ColumnRepresentation traverse(@Nonnull final String fieldName,
-      @Nonnull final Optional<FHIRDefinedType> fhirType);
+  public abstract ColumnRepresentation traverse(
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType);
 
   /**
    * Converts the current {@link ColumnRepresentation} to a string value.
@@ -211,25 +208,20 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation toArray() {
-    return vectorize(
-        UnaryOperator.identity(),
-        c -> when(c.isNotNull(), array(c))
-    );
+    return vectorize(UnaryOperator.identity(), c -> when(c.isNotNull(), array(c)));
   }
 
   /**
-   * Returns the current {@link ColumnRepresentation} or a literal value if the current one is
-   * null.
+   * Returns the current {@link ColumnRepresentation} or a literal value if the current one is null.
    *
    * @param value The literal value to return if the current {@link ColumnRepresentation} is null
    * @return The current {@link ColumnRepresentation} or the literal value if the current one is
-   * null
+   *     null
    */
   @Nonnull
   public ColumnRepresentation orElse(@Nonnull final Object value) {
     return copyOf(coalesce(getValue(), lit(value)));
   }
-
 
   /**
    * Returns a singular value from the current {@link ColumnRepresentation}.
@@ -241,7 +233,6 @@ public abstract class ColumnRepresentation {
     return singular(null);
   }
 
-
   /**
    * Returns a singular value from the current {@link ColumnRepresentation}.
    *
@@ -251,32 +242,32 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation singular(@Nullable final String errorMessage) {
     return vectorize(
-        c -> when(c.isNull().or(size(c).leq(1)), getAt(c, 0))
-            .otherwise(raise_error(lit(nonNull(errorMessage)
-                                       ? errorMessage
-                                       : DEF_NOT_SINGULAR_ERROR))),
-        UnaryOperator.identity()
-    );
+        c ->
+            when(c.isNull().or(size(c).leq(1)), getAt(c, 0))
+                .otherwise(
+                    raise_error(
+                        lit(nonNull(errorMessage) ? errorMessage : DEF_NOT_SINGULAR_ERROR))),
+        UnaryOperator.identity());
   }
 
   /**
    * Creates a Column expression that enforces the singularity constraint. This should be called
    * when a singular value is required but will not be directly used, to ensure the constraint is
    * checked during evaluation.
-   * <p>
-   * The returned Column evaluates to null if the constraint is satisfied, or raises an error if the
-   * collection has multiple elements.
+   *
+   * <p>The returned Column evaluates to null if the constraint is satisfied, or raises an error if
+   * the collection has multiple elements.
    *
    * @return A Column that enforces singularity and evaluates to null
    */
   @Nonnull
   public Column ensureSingular() {
     return vectorize(
-        arrayColumn -> when(size(arrayColumn).gt(1),
-            raise_error(lit(DEF_NOT_SINGULAR_ERROR)))
-            .otherwise(lit(null)),
-        singularColumn -> lit(null)
-    ).getValue();
+            arrayColumn ->
+                when(size(arrayColumn).gt(1), raise_error(lit(DEF_NOT_SINGULAR_ERROR)))
+                    .otherwise(lit(null)),
+            singularColumn -> lit(null))
+        .getValue();
   }
 
   /**
@@ -291,10 +282,8 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation plural() {
     return vectorize(
         a -> when(a.isNotNull(), a).otherwise(array()),
-        c -> when(c.isNotNull(), array(c)).otherwise(array())
-    );
+        c -> when(c.isNotNull(), array(c)).otherwise(array()));
   }
-
 
   /**
    * Applies a mapping column to this column representation.
@@ -317,8 +306,7 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation filter(@Nonnull final UnaryOperator<Column> lambda) {
     return vectorize(
         c -> functions.filter(c, lambda::apply),
-        c -> when(c.isNotNull(), when(lambda.apply(c), c))
-    );
+        c -> when(c.isNotNull(), when(lambda.apply(c), c)));
   }
 
   /**
@@ -330,7 +318,6 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation negate() {
     return map(Column::unary_$minus);
   }
-
 
   /**
    * Checks if the current {@link ColumnRepresentation} matches a regular expression.
@@ -350,24 +337,19 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation removeNulls() {
-    return vectorize(
-        c -> functions.filter(c, Column::isNotNull),
-        UnaryOperator.identity()
-    );
+    return vectorize(c -> functions.filter(c, Column::isNotNull), UnaryOperator.identity());
   }
 
   /**
    * Converts empty arrays to nulls in the current {@link ColumnRepresentation}.
    *
    * @return A new {@link ColumnRepresentation} when all empty collections are represented as NULLs
-   * regardless of their arity.
+   *     regardless of their arity.
    */
   @Nonnull
   public ColumnRepresentation normaliseNull() {
     return vectorize(
-        c -> when(c.isNull().or(size(c).equalTo(0)), null).otherwise(c),
-        UnaryOperator.identity()
-    );
+        c -> when(c.isNull().or(size(c).equalTo(0)), null).otherwise(c), UnaryOperator.identity());
   }
 
   /**
@@ -390,9 +372,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation transform(final UnaryOperator<Column> lambda) {
     return vectorize(
-        c -> functions.transform(c, lambda::apply),
-        c -> when(c.isNotNull(), lambda.apply(c))
-    );
+        c -> functions.transform(c, lambda::apply), c -> when(c.isNotNull(), lambda.apply(c)));
   }
 
   /**
@@ -404,14 +384,14 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} that is aggregated
    */
   @Nonnull
-  public ColumnRepresentation aggregate(@Nonnull final Object zeroValue,
-      final BinaryOperator<Column> aggregator) {
+  public ColumnRepresentation aggregate(
+      @Nonnull final Object zeroValue, final BinaryOperator<Column> aggregator) {
 
     return vectorize(
-        c -> when(c.isNull(), zeroValue)
-            .otherwise(functions.aggregate(c, lit(zeroValue), aggregator::apply)),
-        c -> when(c.isNull(), zeroValue).otherwise(c)
-    );
+        c ->
+            when(c.isNull(), zeroValue)
+                .otherwise(functions.aggregate(c, lit(zeroValue), aggregator::apply)),
+        c -> when(c.isNull(), zeroValue).otherwise(c));
     // This is OK because: aggregator(zero, x) == x
   }
 
@@ -435,10 +415,8 @@ public abstract class ColumnRepresentation {
     // we need to use `element_at()` here are `getItem()` does not support column arguments
     // NOTE: `element_at()` is 1-indexed as opposed to `getItem()` which is 0-indexed
     return vectorize(
-        c -> when(c.isNull().or(size(c).equalTo(0)), null)
-            .otherwise(element_at(c, size(c))),
-        UnaryOperator.identity()
-    );
+        c -> when(c.isNull().or(size(c).equalTo(0)), null).otherwise(element_at(c, size(c))),
+        UnaryOperator.identity());
   }
 
   /**
@@ -449,11 +427,8 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation count() {
     return vectorize(
-        c -> when(c.isNull(), 0).otherwise(size(c)),
-        c -> when(c.isNull(), 0).otherwise(1)
-    );
+        c -> when(c.isNull(), 0).otherwise(size(c)), c -> when(c.isNull(), 0).otherwise(1));
   }
-
 
   /**
    * Checks if the current {@link ColumnRepresentation} is empty.
@@ -462,11 +437,8 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation isEmpty() {
-    return vectorize(
-        c -> when(c.isNotNull(), size(c).equalTo(0)).otherwise(true),
-        Column::isNull);
+    return vectorize(c -> when(c.isNotNull(), size(c).equalTo(0)).otherwise(true), Column::isNull);
   }
-
 
   /**
    * Gets the boolean value of the current {@link ColumnRepresentation}. Returns `true` for
@@ -477,10 +449,8 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation toBoolean() {
     return vectorize(
-        a -> when(size(a).notEqual(0), lit(true)),
-        s -> when(s.isNotNull(), lit(true)));
+        a -> when(size(a).notEqual(0), lit(true)), s -> when(s.isNotNull(), lit(true)));
   }
-
 
   /**
    * Joins the current {@link ColumnRepresentation} with a separator.
@@ -496,9 +466,11 @@ public abstract class ColumnRepresentation {
     // but Java cannot perform that expansion automatically. To replicate it, we use
     // `Predef.wrapRefArray(...)` to convert the Java array into a Scala `ArraySeq`, then call
     // `.toSeq()` to obtain the immutable `Seq[Column]` expected by the Scala method.
-    return vectorize(c -> Column$.MODULE$.fn("array_join",
-            Predef.wrapRefArray(
-                new Column[]{getValue(), separator.getValue()}).toSeq()),
+    return vectorize(
+        c ->
+            Column$.MODULE$.fn(
+                "array_join",
+                Predef.wrapRefArray(new Column[] {getValue(), separator.getValue()}).toSeq()),
         UnaryOperator.identity());
   }
 
@@ -591,12 +563,14 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} that is the result of the UDF call
    */
   @Nonnull
-  public ColumnRepresentation transformWithUdf(@Nonnull final String udfName,
-      @Nonnull final ColumnRepresentation... args) {
-    return transform(c -> callUDF(udfName,
-        Stream.concat(Stream.of(c), Stream.of(args).map(ColumnRepresentation::getValue))
-            .toArray(Column[]::new)));
-
+  public ColumnRepresentation transformWithUdf(
+      @Nonnull final String udfName, @Nonnull final ColumnRepresentation... args) {
+    return transform(
+        c ->
+            callUDF(
+                udfName,
+                Stream.concat(Stream.of(c), Stream.of(args).map(ColumnRepresentation::getValue))
+                    .toArray(Column[]::new)));
   }
 
   /**
@@ -608,11 +582,14 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} that is the result of the UDF call
    */
   @Nonnull
-  public ColumnRepresentation callUdf(@Nonnull final String udfName,
-      @Nonnull final ColumnRepresentation... args) {
-    return copyOf(callUDF(udfName,
-        Stream.concat(Stream.of(getValue()), Stream.of(args).map(ColumnRepresentation::getValue))
-            .toArray(Column[]::new)));
+  public ColumnRepresentation callUdf(
+      @Nonnull final String udfName, @Nonnull final ColumnRepresentation... args) {
+    return copyOf(
+        callUDF(
+            udfName,
+            Stream.concat(
+                    Stream.of(getValue()), Stream.of(args).map(ColumnRepresentation::getValue))
+                .toArray(Column[]::new)));
   }
 
   /**
@@ -623,10 +600,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation elementCast(@Nonnull final DataType dataType) {
-    return vectorize(
-        a -> a.cast(DataTypes.createArrayType(dataType)),
-        s -> s.cast(dataType)
-    );
+    return vectorize(a -> a.cast(DataTypes.createArrayType(dataType)), s -> s.cast(dataType));
   }
 
   /**
@@ -639,7 +613,6 @@ public abstract class ColumnRepresentation {
     return elementCast(DataTypes.StringType);
   }
 
-
   /**
    * Checks if the current {@link ColumnRepresentation} contains to another one using a specified
    * comparator. If the tested element is NULL the result is also NULL. If the tested collection is
@@ -650,15 +623,18 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} that is the result of the check
    */
   @Nonnull
-  public ColumnRepresentation contains(@Nonnull final ColumnRepresentation element,
+  public ColumnRepresentation contains(
+      @Nonnull final ColumnRepresentation element,
       @Nonnull final BinaryOperator<Column> comparator) {
     return vectorize(
-        a -> when(element.getValue().isNotNull(),
-            coalesce(exists(a, e -> comparator.apply(e, element.getValue())),
-                lit(false))),
-        c -> when(element.getValue().isNotNull(),
-            coalesce(comparator.apply(c, element.getValue()), lit(false)))
-    );
+        a ->
+            when(
+                element.getValue().isNotNull(),
+                coalesce(exists(a, e -> comparator.apply(e, element.getValue())), lit(false))),
+        c ->
+            when(
+                element.getValue().isNotNull(),
+                coalesce(comparator.apply(c, element.getValue()), lit(false))));
   }
 
   /**
@@ -670,11 +646,15 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation traverseChoice(@Nonnull final ElementDefinition... definitions) {
-    return transform(c -> coalesce(Stream.of(definitions)
-        .map(
-            ed -> this.copyOf(c)
-                .traverse(ed.getElementName(), ed.getFhirType())
-                .getValue()
-        ).toArray(Column[]::new)));
+    return transform(
+        c ->
+            coalesce(
+                Stream.of(definitions)
+                    .map(
+                        ed ->
+                            this.copyOf(c)
+                                .traverse(ed.getElementName(), ed.getFhirType())
+                                .getValue())
+                    .toArray(Column[]::new)));
   }
 }

@@ -41,70 +41,78 @@ class EncodingContextTest {
   @Test
   void testCorrectNestingLevels() {
 
-    final RuntimeResourceDefinition patientDefinition = fhirContext
-        .getResourceDefinition(Patient.class);
+    final RuntimeResourceDefinition patientDefinition =
+        fhirContext.getResourceDefinition(Patient.class);
 
-    final RuntimeResourceDefinition conditionDefinition = fhirContext
-        .getResourceDefinition(Condition.class);
+    final RuntimeResourceDefinition conditionDefinition =
+        fhirContext.getResourceDefinition(Condition.class);
 
     // start with a new context
-    EncodingContext.runWithContext(() -> {
-
-      assertEquals(0, EncodingContext.currentNestingLevel(patientDefinition));
-      assertEquals(0, EncodingContext.currentNestingLevel(conditionDefinition));
-
-      // Enter Patient
-      EncodingContext.withDefinition(patientDefinition, () -> {
-        assertEquals(1, EncodingContext.currentNestingLevel(patientDefinition));
-        assertEquals(0, EncodingContext.currentNestingLevel(conditionDefinition));
-
-        // Enter Patient
-        EncodingContext.withDefinition(patientDefinition, () -> {
-          assertEquals(2, EncodingContext.currentNestingLevel(patientDefinition));
+    EncodingContext.runWithContext(
+        () -> {
+          assertEquals(0, EncodingContext.currentNestingLevel(patientDefinition));
           assertEquals(0, EncodingContext.currentNestingLevel(conditionDefinition));
 
-          // Enter Condition
-          EncodingContext.withDefinition(conditionDefinition, () -> {
-            assertEquals(2, EncodingContext.currentNestingLevel(patientDefinition));
-            assertEquals(1, EncodingContext.currentNestingLevel(conditionDefinition));
-            return null;
-          });
-          assertEquals(2, EncodingContext.currentNestingLevel(patientDefinition));
+          // Enter Patient
+          EncodingContext.withDefinition(
+              patientDefinition,
+              () -> {
+                assertEquals(1, EncodingContext.currentNestingLevel(patientDefinition));
+                assertEquals(0, EncodingContext.currentNestingLevel(conditionDefinition));
+
+                // Enter Patient
+                EncodingContext.withDefinition(
+                    patientDefinition,
+                    () -> {
+                      assertEquals(2, EncodingContext.currentNestingLevel(patientDefinition));
+                      assertEquals(0, EncodingContext.currentNestingLevel(conditionDefinition));
+
+                      // Enter Condition
+                      EncodingContext.withDefinition(
+                          conditionDefinition,
+                          () -> {
+                            assertEquals(2, EncodingContext.currentNestingLevel(patientDefinition));
+                            assertEquals(
+                                1, EncodingContext.currentNestingLevel(conditionDefinition));
+                            return null;
+                          });
+                      assertEquals(2, EncodingContext.currentNestingLevel(patientDefinition));
+                      assertEquals(0, EncodingContext.currentNestingLevel(conditionDefinition));
+                      return null;
+                    });
+                assertEquals(1, EncodingContext.currentNestingLevel(patientDefinition));
+                assertEquals(0, EncodingContext.currentNestingLevel(conditionDefinition));
+                return null;
+              });
+          assertEquals(0, EncodingContext.currentNestingLevel(patientDefinition));
           assertEquals(0, EncodingContext.currentNestingLevel(conditionDefinition));
           return null;
         });
-        assertEquals(1, EncodingContext.currentNestingLevel(patientDefinition));
-        assertEquals(0, EncodingContext.currentNestingLevel(conditionDefinition));
-        return null;
-      });
-      assertEquals(0, EncodingContext.currentNestingLevel(patientDefinition));
-      assertEquals(0, EncodingContext.currentNestingLevel(conditionDefinition));
-      return null;
-    });
   }
-
 
   @Test
   void testFailsWithoutContext() {
 
-    final RuntimeResourceDefinition patientDefinition = fhirContext
-        .getResourceDefinition(Patient.class);
+    final RuntimeResourceDefinition patientDefinition =
+        fhirContext.getResourceDefinition(Patient.class);
 
-    assertThrows(AssertionError.class,
+    assertThrows(
+        AssertionError.class,
         () -> EncodingContext.currentNestingLevel(patientDefinition),
         "Current EncodingContext does not exists.");
   }
-
 
   @SuppressWarnings("ReturnOfNull")
   @Test
   void testFailsWhenNestedContextIsCreated() {
 
-    EncodingContext.runWithContext(() -> {
-      assertThrows(AssertionError.class, () -> EncodingContext.runWithContext(() -> null),
-          "There should be no current context");
-      return null;
-    });
+    EncodingContext.runWithContext(
+        () -> {
+          assertThrows(
+              AssertionError.class,
+              () -> EncodingContext.runWithContext(() -> null),
+              "There should be no current context");
+          return null;
+        });
   }
-
 }

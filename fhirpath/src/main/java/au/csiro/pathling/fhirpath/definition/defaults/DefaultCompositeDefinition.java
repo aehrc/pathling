@@ -46,9 +46,7 @@ public class DefaultCompositeDefinition implements ElementDefinition {
   @Override
   @Nonnull
   public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
-    return children.stream()
-        .filter(child -> child.getName().equals(name))
-        .findFirst();
+    return children.stream().filter(child -> child.getName().equals(name)).findFirst();
   }
 
   @Override
@@ -66,10 +64,11 @@ public class DefaultCompositeDefinition implements ElementDefinition {
    * @return a new DefaultCompositeDefinition for a backbone element
    */
   @Nonnull
-  public static DefaultCompositeDefinition backbone(@Nonnull final String name,
-      @Nonnull final List<ChildDefinition> children, final int cardinality) {
-    return new DefaultCompositeDefinition(name, children, cardinality,
-        FHIRDefinedType.BACKBONEELEMENT);
+  public static DefaultCompositeDefinition backbone(
+      @Nonnull final String name,
+      @Nonnull final List<ChildDefinition> children,
+      final int cardinality) {
+    return new DefaultCompositeDefinition(
+        name, children, cardinality, FHIRDefinedType.BACKBONEELEMENT);
   }
-
 }

@@ -24,13 +24,13 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Factory interface for creating search filters for a specific search parameter type.
- * <p>
- * Each search parameter type (TOKEN, STRING, DATE, NUMBER) implements this interface
- * to create the appropriate {@link ElementMatcher} for that type, validate modifiers,
- * and handle FHIR type variations (e.g., Period vs DateTime for DATE).
- * <p>
- * This enables the Open/Closed Principle: new search parameter types can be added
- * by implementing this interface without modifying existing code.
+ *
+ * <p>Each search parameter type (TOKEN, STRING, DATE, NUMBER) implements this interface to create
+ * the appropriate {@link ElementMatcher} for that type, validate modifiers, and handle FHIR type
+ * variations (e.g., Period vs DateTime for DATE).
+ *
+ * <p>This enables the Open/Closed Principle: new search parameter types can be added by
+ * implementing this interface without modifying existing code.
  */
 @FunctionalInterface
 public interface MatcherFactory {

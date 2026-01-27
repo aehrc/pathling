@@ -27,10 +27,8 @@ import org.hl7.fhir.r4.model.Enumerations;
 @Value(staticConstructor = "of")
 public class FhirTypedLiteral {
 
-  @Nonnull
-  Enumerations.FHIRDefinedType type;
-  @Nullable
-  String literal;
+  @Nonnull Enumerations.FHIRDefinedType type;
+  @Nullable String literal;
 
   @Nonnull
   public String getTag() {
@@ -118,5 +116,4 @@ public class FhirTypedLiteral {
   public static FhirTypedLiteral toQuantity(@Nullable final String literal) {
     return of(Enumerations.FHIRDefinedType.QUANTITY, literal);
   }
-
 }

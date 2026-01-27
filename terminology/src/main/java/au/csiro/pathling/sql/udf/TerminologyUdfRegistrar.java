@@ -24,9 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.spark.sql.SparkSession;
 
-/**
- * The {@link SqlFunctionRegistrar} for terminology UDFs.
- */
+/** The {@link SqlFunctionRegistrar} for terminology UDFs. */
 public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
 
   /**
@@ -35,7 +33,8 @@ public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
    * @param tsf the terminology service factory to use for UDF creation
    */
   public TerminologyUdfRegistrar(@Nonnull final TerminologyServiceFactory tsf) {
-    super(List.of(),
+    super(
+        List.of(),
         ImmutableList.<SqlFunction2<?, ?, ?>>builder()
             .add(new DisplayUdf(tsf))
             .add(new MemberOfUdf(tsf))
@@ -55,7 +54,8 @@ public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
    * @param spark the session to configure.
    * @param terminologyServiceFactory the {@link TerminologyServiceFactory} to use for the UDFs.
    */
-  public static void registerUdfs(@Nonnull final SparkSession spark,
+  public static void registerUdfs(
+      @Nonnull final SparkSession spark,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     new TerminologyUdfRegistrar(terminologyServiceFactory).configure(spark);
   }

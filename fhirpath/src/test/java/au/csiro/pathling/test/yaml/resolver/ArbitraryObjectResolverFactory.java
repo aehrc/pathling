@@ -46,40 +46,39 @@ import org.apache.spark.sql.types.StructType;
 @Value(staticConstructor = "of")
 public class ArbitraryObjectResolverFactory implements Function<RuntimeContext, DatasetEvaluator> {
 
-  @Nonnull
-  Map<Object, Object> subjectOM;
+  @Nonnull Map<Object, Object> subjectOM;
 
   @Override
   @Nonnull
   public DatasetEvaluator apply(final RuntimeContext rt) {
-    final String subjectResourceCode = Optional.ofNullable(subjectOM.get("resourceType"))
-        .map(String.class::cast)
-        .orElse("Test");
+    final String subjectResourceCode =
+        Optional.ofNullable(subjectOM.get("resourceType")).map(String.class::cast).orElse("Test");
 
     // Create definition from YAML
-    final DefaultResourceDefinition subjectDefinition = (DefaultResourceDefinition) YamlSupport
-        .yamlToDefinition(subjectResourceCode, subjectOM);
+    final DefaultResourceDefinition subjectDefinition =
+        (DefaultResourceDefinition) YamlSupport.yamlToDefinition(subjectResourceCode, subjectOM);
     final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition);
 
     // Create flat Dataset with YAML schema
     final String subjectOMJson = YamlSupport.omToJson(subjectOM);
     log.trace("subjectOMJson: \n{}", subjectOMJson);
-    final Dataset<Row> inputDS = rt.getSpark().read().schema(subjectSchema)
-        .json(rt.getSpark().createDataset(List.of(subjectOMJson), Encoders.STRING()));
+    final Dataset<Row> inputDS =
+        rt.getSpark()
+            .read()
+            .schema(subjectSchema)
+            .json(rt.getSpark().createDataset(List.of(subjectOMJson), Encoders.STRING()));
 
     log.trace("Yaml definition: {}", subjectDefinition);
     log.trace("Subject schema: {}", subjectSchema.treeString());
 
     // Create DefinitionResourceResolver
-    final ResourceResolver resolver = DefinitionResourceResolver.of(
-        subjectResourceCode,
-        DefaultDefinitionContext.of(subjectDefinition));
+    final ResourceResolver resolver =
+        DefinitionResourceResolver.of(
+            subjectResourceCode, DefaultDefinitionContext.of(subjectDefinition));
 
     // Create evaluator with resolver
-    final SingleResourceEvaluator evaluator = SingleResourceEvaluator.of(
-        resolver,
-        StaticFunctionRegistry.getInstance(),
-        Map.of());
+    final SingleResourceEvaluator evaluator =
+        SingleResourceEvaluator.of(resolver, StaticFunctionRegistry.getInstance(), Map.of());
 
     return new DatasetEvaluator(evaluator, inputDS);
   }

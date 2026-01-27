@@ -24,9 +24,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-/**
- * Tests for {@link SearchPrefix}.
- */
+/** Tests for {@link SearchPrefix}. */
 class SearchPrefixTest {
 
   static Stream<Arguments> prefixParsingCases() {
@@ -79,21 +77,20 @@ class SearchPrefixTest {
         // Scientific notation
         Arguments.of("1e2", SearchPrefix.EQ, "1e2"),
         Arguments.of("gt1e-3", SearchPrefix.GT, "1e-3"),
-        Arguments.of("le5e10", SearchPrefix.LE, "5e10")
-    );
+        Arguments.of("le5e10", SearchPrefix.LE, "5e10"));
   }
 
   @ParameterizedTest(name = "fromValue(\"{0}\") = {1}")
   @MethodSource("prefixParsingCases")
-  void testFromValue(final String value, final SearchPrefix expectedPrefix,
-      final String ignoredExpectedValue) {
+  void testFromValue(
+      final String value, final SearchPrefix expectedPrefix, final String ignoredExpectedValue) {
     assertEquals(expectedPrefix, SearchPrefix.fromValue(value));
   }
 
   @ParameterizedTest(name = "stripPrefix(\"{0}\") = \"{2}\"")
   @MethodSource("prefixParsingCases")
-  void testStripPrefix(final String value, final SearchPrefix ignoredPrefix,
-      final String expectedValue) {
+  void testStripPrefix(
+      final String value, final SearchPrefix ignoredPrefix, final String expectedValue) {
     assertEquals(expectedValue, SearchPrefix.stripPrefix(value));
   }
 }

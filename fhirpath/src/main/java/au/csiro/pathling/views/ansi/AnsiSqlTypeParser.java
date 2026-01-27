@@ -27,14 +27,11 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.spark.sql.types.DataType;
 
-/**
- * Parser for ANSI SQL type hints that produces Spark SQL DataTypes.
- */
+/** Parser for ANSI SQL type hints that produces Spark SQL DataTypes. */
 @Slf4j
 public class AnsiSqlTypeParser {
 
-  private AnsiSqlTypeParser() {
-  }
+  private AnsiSqlTypeParser() {}
 
   /**
    * Parse an ANSI SQL type string and convert it to a Spark SQL DataType.
@@ -59,5 +56,4 @@ public class AnsiSqlTypeParser {
     // Visit the parse tree to convert to Spark SQL DataType
     return new AnsiSqlToSparkDataTypeVisitor().visit(parser.sqlType());
   }
-
 }

@@ -34,7 +34,6 @@ import org.apache.spark.sql.Column;
  */
 public interface Comparable extends Equatable {
 
-
   /**
    * Gets the column comparator for this comparable object.
    *
@@ -48,58 +47,47 @@ public interface Comparable extends Equatable {
 
   /**
    * Get a function that can take two Comparable paths and return a {@link Column} that contains a
-   * comparison condition. The type of condition is controlled by supplying a
-   * {@link ComparisonOperation}.
+   * comparison condition. The type of condition is controlled by supplying a {@link
+   * ComparisonOperation}.
    *
    * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
-   * @return A {@link Function} that takes a Comparable as its parameter, and returns a
-   * {@link ColumnRepresentation}
+   * @return A {@link Function} that takes a Comparable as its parameter, and returns a {@link
+   *     ColumnRepresentation}
    */
   @Nonnull
   default Function<Comparable, ColumnRepresentation> getComparison(
       @Nonnull final ComparisonOperation operation) {
     return target -> {
-
-      final Column columnResult = operation.comparisonFunction.apply(getComparator(),
-          getColumn().singular("Comparison requires singular left operand").getValue(),
-          target.getColumn().singular("Comparison requires singular right operand").getValue()
-      );
+      final Column columnResult =
+          operation.comparisonFunction.apply(
+              getComparator(),
+              getColumn().singular("Comparison requires singular left operand").getValue(),
+              target.getColumn().singular("Comparison requires singular right operand").getValue());
       return new DefaultRepresentation(columnResult);
     };
   }
 
-  /**
-   * Represents a type of comparison operation.
-   */
+  /** Represents a type of comparison operation. */
   enum ComparisonOperation {
 
-    /**
-     * The less than or equal to operation.
-     */
+    /** The less than or equal to operation. */
     LESS_THAN_OR_EQUAL_TO("<=", ColumnComparator::lessThanOrEqual),
 
-    /**
-     * The less than operation.
-     */
+    /** The less than operation. */
     LESS_THAN("<", ColumnComparator::lessThan),
 
-    /**
-     * The greater than or equal to operation.
-     */
+    /** The greater than or equal to operation. */
     GREATER_THAN_OR_EQUAL_TO(">=", ColumnComparator::greaterThanOrEqual),
 
-    /**
-     * The greater than operation.
-     */
+    /** The greater than operation. */
     GREATER_THAN(">", ColumnComparator::greaterThan);
 
-    @Nonnull
-    private final String fhirPath;
+    @Nonnull private final String fhirPath;
 
-    @Nonnull
-    private final TriFunction<ColumnComparator, Column, Column, Column> comparisonFunction;
+    @Nonnull private final TriFunction<ColumnComparator, Column, Column, Column> comparisonFunction;
 
-    ComparisonOperation(@Nonnull final String fhirPath,
+    ComparisonOperation(
+        @Nonnull final String fhirPath,
         @Nonnull final TriFunction<ColumnComparator, Column, Column, Column> comparisonFunction) {
       this.fhirPath = fhirPath;
       this.comparisonFunction = comparisonFunction;

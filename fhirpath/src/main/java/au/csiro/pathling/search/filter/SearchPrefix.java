@@ -24,45 +24,33 @@ import java.util.regex.Pattern;
 
 /**
  * Represents comparison prefixes for ordered search parameters (date, number, quantity).
- * <p>
- * FHIR search values can be prefixed with comparison operators like "ge" (greater or equal), "lt"
- * (less than), etc. If no prefix is specified, "eq" (equals) is assumed.
- * <p>
- * This enum handles only prefix extraction. Value validation is the responsibility of the
+ *
+ * <p>FHIR search values can be prefixed with comparison operators like "ge" (greater or equal),
+ * "lt" (less than), etc. If no prefix is specified, "eq" (equals) is assumed.
+ *
+ * <p>This enum handles only prefix extraction. Value validation is the responsibility of the
  * type-specific matchers (DateMatcher, NumberMatcher, etc.).
  *
  * @see <a href="https://hl7.org/fhir/search.html#prefix">FHIR Search Prefixes</a>
  */
 public enum SearchPrefix {
 
-  /**
-   * Equals - the value matches the search value.
-   */
+  /** Equals - the value matches the search value. */
   EQ("eq"),
 
-  /**
-   * Not equals - the value does not match the search value.
-   */
+  /** Not equals - the value does not match the search value. */
   NE("ne"),
 
-  /**
-   * Greater than - the value is greater than the search value.
-   */
+  /** Greater than - the value is greater than the search value. */
   GT("gt"),
 
-  /**
-   * Greater or equal - the value is greater than or equal to the search value.
-   */
+  /** Greater or equal - the value is greater than or equal to the search value. */
   GE("ge"),
 
-  /**
-   * Less than - the value is less than the search value.
-   */
+  /** Less than - the value is less than the search value. */
   LT("lt"),
 
-  /**
-   * Less or equal - the value is less than or equal to the search value.
-   */
+  /** Less or equal - the value is less than or equal to the search value. */
   LE("le");
 
   /**
@@ -73,15 +61,13 @@ public enum SearchPrefix {
       Pattern.compile("^(eq|ne|gt|ge|lt|le)", Pattern.CASE_INSENSITIVE);
 
   /**
-   * Holds both the extracted prefix and the remaining value portion after prefix removal.
-   * This is used internally to avoid executing the regex pattern twice when both are needed.
+   * Holds both the extracted prefix and the remaining value portion after prefix removal. This is
+   * used internally to avoid executing the regex pattern twice when both are needed.
    */
   public static class ParsedValue {
-    @Nonnull
-    public final SearchPrefix prefix;
+    @Nonnull public final SearchPrefix prefix;
 
-    @Nonnull
-    public final String value;
+    @Nonnull public final String value;
 
     private ParsedValue(@Nonnull final SearchPrefix prefix, @Nonnull final String value) {
       this.prefix = prefix;
@@ -89,8 +75,7 @@ public enum SearchPrefix {
     }
   }
 
-  @Nonnull
-  private final String code;
+  @Nonnull private final String code;
 
   SearchPrefix(@Nonnull final String code) {
     this.code = code;
@@ -108,9 +93,9 @@ public enum SearchPrefix {
 
   /**
    * Parses both the prefix and value from a search string in a single operation.
-   * <p>
-   * This method is more efficient than calling {@link #fromValue(String)} and
-   * {@link #stripPrefix(String)} separately, as it executes the regex pattern only once.
+   *
+   * <p>This method is more efficient than calling {@link #fromValue(String)} and {@link
+   * #stripPrefix(String)} separately, as it executes the regex pattern only once.
    *
    * @param value the search value, possibly prefixed
    * @return a ParsedValue containing both the extracted prefix and the remaining value
@@ -120,10 +105,8 @@ public enum SearchPrefix {
     final Matcher matcher = PREFIX_PATTERN.matcher(value);
     if (matcher.find()) {
       final String prefixCode = matcher.group(1).toLowerCase();
-      final SearchPrefix prefix = Arrays.stream(values())
-          .filter(p -> p.code.equals(prefixCode))
-          .findFirst()
-          .orElse(EQ);
+      final SearchPrefix prefix =
+          Arrays.stream(values()).filter(p -> p.code.equals(prefixCode)).findFirst().orElse(EQ);
       return new ParsedValue(prefix, value.substring(matcher.end()));
     }
     return new ParsedValue(EQ, value);
@@ -131,8 +114,8 @@ public enum SearchPrefix {
 
   /**
    * Extracts the prefix from a search value.
-   * <p>
-   * If the value starts with a recognized prefix (e.g., "ge2023-01-15" or "gt0.8"), returns the
+   *
+   * <p>If the value starts with a recognized prefix (e.g., "ge2023-01-15" or "gt0.8"), returns the
    * corresponding prefix. If no prefix is present, returns {@link #EQ} as the default.
    *
    * @param value the search value, possibly prefixed
@@ -145,9 +128,9 @@ public enum SearchPrefix {
 
   /**
    * Removes the prefix from a search value, returning the value portion.
-   * <p>
-   * If the value has a prefix (e.g., "ge2023-01-15"), returns the value part ("2023-01-15"). If no
-   * prefix is present, returns the original value unchanged.
+   *
+   * <p>If the value has a prefix (e.g., "ge2023-01-15"), returns the value part ("2023-01-15"). If
+   * no prefix is present, returns the original value unchanged.
    *
    * @param value the search value, possibly prefixed
    * @return the value portion without the prefix

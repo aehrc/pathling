@@ -61,27 +61,28 @@ import org.hl7.fhir.r4.model.UuidType;
  */
 public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclaration> {
 
-  private static final Map<String, ValueType> typeMap = new Builder<String, ValueType>()
-      .put("Base64Binary", new ValueType(Base64BinaryType.class, String.class))
-      .put("Boolean", new ValueType(BooleanType.class, Boolean.class))
-      .put("Canonical", new ValueType(CanonicalType.class, String.class))
-      .put("Code", new ValueType(CodeType.class, String.class))
-      .put("Date", new ValueType(DateType.class, String.class))
-      .put("DateTime", new ValueType(DateTimeType.class, String.class))
-      .put("Decimal", new ValueType(DecimalType.class, BigDecimal.class))
-      .put("Id", new ValueType(IdType.class, String.class))
-      .put("Instant", new ValueType(InstantType.class, String.class))
-      .put("Integer", new ValueType(IntegerType.class, int.class))
-      .put("Integer64", new ValueType(IntegerType.class, Long.class))
-      .put("Oid", new ValueType(OidType.class, String.class))
-      .put("String", new ValueType(StringType.class, String.class))
-      .put("PositiveInt", new ValueType(PositiveIntType.class, int.class))
-      .put("Time", new ValueType(TimeType.class, String.class))
-      .put("UnsignedInt", new ValueType(UnsignedIntType.class, int.class))
-      .put("Uri", new ValueType(UriType.class, String.class))
-      .put("Url", new ValueType(UrlType.class, String.class))
-      .put("Uuid", new ValueType(UuidType.class, String.class))
-      .build();
+  private static final Map<String, ValueType> typeMap =
+      new Builder<String, ValueType>()
+          .put("Base64Binary", new ValueType(Base64BinaryType.class, String.class))
+          .put("Boolean", new ValueType(BooleanType.class, Boolean.class))
+          .put("Canonical", new ValueType(CanonicalType.class, String.class))
+          .put("Code", new ValueType(CodeType.class, String.class))
+          .put("Date", new ValueType(DateType.class, String.class))
+          .put("DateTime", new ValueType(DateTimeType.class, String.class))
+          .put("Decimal", new ValueType(DecimalType.class, BigDecimal.class))
+          .put("Id", new ValueType(IdType.class, String.class))
+          .put("Instant", new ValueType(InstantType.class, String.class))
+          .put("Integer", new ValueType(IntegerType.class, int.class))
+          .put("Integer64", new ValueType(IntegerType.class, Long.class))
+          .put("Oid", new ValueType(OidType.class, String.class))
+          .put("String", new ValueType(StringType.class, String.class))
+          .put("PositiveInt", new ValueType(PositiveIntType.class, int.class))
+          .put("Time", new ValueType(TimeType.class, String.class))
+          .put("UnsignedInt", new ValueType(UnsignedIntType.class, int.class))
+          .put("Uri", new ValueType(UriType.class, String.class))
+          .put("Url", new ValueType(UrlType.class, String.class))
+          .put("Uuid", new ValueType(UuidType.class, String.class))
+          .build();
 
   @Override
   public ConstantDeclaration read(final JsonReader in) throws IOException {
@@ -99,8 +100,8 @@ public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclarat
 
     // Extract the value of the constant from the JSON object.
     final IBase value;
-    final List<String> valueKeys = jsonObject.keySet().stream()
-        .filter(key -> key.startsWith("value")).toList();
+    final List<String> valueKeys =
+        jsonObject.keySet().stream().filter(key -> key.startsWith("value")).toList();
     if (valueKeys.size() != 1) {
       throw new InvalidUserInputError("Constant must have one value");
     }
@@ -125,13 +126,15 @@ public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclarat
   }
 
   @Nonnull
-  private static IBase getValue(@Nonnull final JsonObject jsonObject,
-      @Nonnull final String valueKey, @Nonnull final ValueType valueType) {
+  private static IBase getValue(
+      @Nonnull final JsonObject jsonObject,
+      @Nonnull final String valueKey,
+      @Nonnull final ValueType valueType) {
     final IBase value;
     try {
       // Get the constructor of the value type class.
-      final Constructor<? extends IBase> constructor = valueType.typeClass()
-          .getDeclaredConstructor(valueType.inputClass());
+      final Constructor<? extends IBase> constructor =
+          valueType.typeClass().getDeclaredConstructor(valueType.inputClass());
       final Object valueObject;
       // Determine the input class and get the value accordingly.
       if (valueType.inputClass() == Boolean.class) {
@@ -147,8 +150,10 @@ public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclarat
       }
       // Create a new instance of the value type with the extracted value.
       value = constructor.newInstance(valueObject);
-    } catch (final NoSuchMethodException | InvocationTargetException | InstantiationException |
-                   IllegalAccessException e) {
+    } catch (final NoSuchMethodException
+        | InvocationTargetException
+        | InstantiationException
+        | IllegalAccessException e) {
       // Throw a runtime exception if the value cannot be instantiated.
       throw new ConstantConstructionException(e);
     }
@@ -156,9 +161,6 @@ public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclarat
     return value;
   }
 
-  private record ValueType(@Nonnull Class<? extends IBase> typeClass,
-                           @Nonnull Class<?> inputClass) {
-
-  }
-
+  private record ValueType(
+      @Nonnull Class<? extends IBase> typeClass, @Nonnull Class<?> inputClass) {}
 }

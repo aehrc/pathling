@@ -27,8 +27,7 @@ import java.io.Serial;
  */
 public class UnsupportedFhirPathFeatureError extends InvalidUserInputError {
 
-  @Serial
-  private static final long serialVersionUID = 3463869194525010650L;
+  @Serial private static final long serialVersionUID = 3463869194525010650L;
 
   /**
    * Creates a new UnsupportedFhirPathFeatureError with the specified message.
@@ -38,5 +37,4 @@ public class UnsupportedFhirPathFeatureError extends InvalidUserInputError {
   public UnsupportedFhirPathFeatureError(final String message) {
     super(message);
   }
-
 }

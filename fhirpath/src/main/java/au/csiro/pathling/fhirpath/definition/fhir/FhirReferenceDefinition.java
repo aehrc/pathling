@@ -36,13 +36,13 @@ import org.hl7.fhir.r4.model.Reference;
  */
 class FhirReferenceDefinition extends FhirElementDefinition implements ElementDefinition {
 
-
   private final List<Class<? extends IBaseResource>> resourceTypes;
 
-
-  protected FhirReferenceDefinition(@Nonnull final RuntimeChildChoiceDefinition childDefinition,
+  protected FhirReferenceDefinition(
+      @Nonnull final RuntimeChildChoiceDefinition childDefinition,
       @Nonnull final String elementName) {
-    super(requireNonNull(childDefinition.getChildElementDefinitionByDatatype(Reference.class)),
+    super(
+        requireNonNull(childDefinition.getChildElementDefinitionByDatatype(Reference.class)),
         childDefinition,
         elementName);
     resourceTypes = childDefinition.getResourceTypes();
@@ -59,5 +59,4 @@ class FhirReferenceDefinition extends FhirElementDefinition implements ElementDe
       @Nonnull final BaseRuntimeElementDefinition<?> elementDefinition) {
     return FHIRDefinedType.REFERENCE.toCode().equals(elementDefinition.getName());
   }
-
 }

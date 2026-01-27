@@ -39,5 +39,4 @@ public class ConstantDeclarationTypeAdapterFactory implements TypeAdapterFactory
     }
     return (TypeAdapter<T>) new ConstantDeclarationTypeAdapter();
   }
-
 }

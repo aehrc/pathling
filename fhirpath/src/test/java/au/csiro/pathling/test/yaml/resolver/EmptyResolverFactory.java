@@ -21,9 +21,9 @@ import au.csiro.pathling.fhirpath.definition.defaults.DefaultDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceTag;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
-import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DefinitionResourceResolver;
 import au.csiro.pathling.fhirpath.evaluation.ResourceResolver;
+import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import java.util.Map;
 import java.util.function.Function;
@@ -50,19 +50,17 @@ public class EmptyResolverFactory implements Function<RuntimeContext, DatasetEva
   public DatasetEvaluator apply(final RuntimeContext runtimeContext) {
     final String resourceCode = "Empty";
     final DefaultResourceTag subjectResourceTag = DefaultResourceTag.of(resourceCode);
-    final DefaultResourceDefinition resourceDefinition = DefaultResourceDefinition.of(
-        subjectResourceTag);
+    final DefaultResourceDefinition resourceDefinition =
+        DefaultResourceDefinition.of(subjectResourceTag);
 
     // Create resolver using DefinitionResourceResolver
-    final ResourceResolver resolver = DefinitionResourceResolver.of(
-        resourceCode,
-        DefaultDefinitionContext.of(resourceDefinition));
+    final ResourceResolver resolver =
+        DefinitionResourceResolver.of(
+            resourceCode, DefaultDefinitionContext.of(resourceDefinition));
 
     // Create the evaluator with the resolver
-    final SingleResourceEvaluator evaluator = SingleResourceEvaluator.of(
-        resolver,
-        StaticFunctionRegistry.getInstance(),
-        Map.of());
+    final SingleResourceEvaluator evaluator =
+        SingleResourceEvaluator.of(resolver, StaticFunctionRegistry.getInstance(), Map.of());
 
     // Create and return DatasetEvaluator with empty dataset
     return new DatasetEvaluator(evaluator, runtimeContext.getSpark().emptyDataFrame());

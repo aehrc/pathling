@@ -36,79 +36,45 @@ import lombok.Getter;
 @Getter
 public enum BinaryOperatorType {
 
-  /**
-   * Logical AND operator.
-   */
+  /** Logical AND operator. */
   AND("and", new BooleanOperator(BooleanOperatorType.AND)),
-  /**
-   * Logical OR operator.
-   */
+  /** Logical OR operator. */
   OR("or", new BooleanOperator(BooleanOperatorType.OR)),
-  /**
-   * Logical exclusive OR operator.
-   */
+  /** Logical exclusive OR operator. */
   XOR("xor", new BooleanOperator(BooleanOperatorType.XOR)),
-  /**
-   * Logical implication operator.
-   */
+  /** Logical implication operator. */
   IMPLIES("implies", new BooleanOperator(BooleanOperatorType.IMPLIES)),
-  /**
-   * Equality comparison operator.
-   */
+  /** Equality comparison operator. */
   EQUALS("=", new EqualityOperator(EqualityOperation.EQUALS)),
-  /**
-   * Inequality comparison operator.
-   */
+  /** Inequality comparison operator. */
   NOT_EQUALS("!=", new EqualityOperator(EqualityOperation.NOT_EQUALS)),
-  /**
-   * Less than or equal to comparison operator.
-   */
+  /** Less than or equal to comparison operator. */
   LESS_THAN_OR_EQUAL_TO("<=", new ComparisonOperator(ComparisonOperation.LESS_THAN_OR_EQUAL_TO)),
-  /**
-   * Less than comparison operator.
-   */
+  /** Less than comparison operator. */
   LESS_THAN("<", new ComparisonOperator(ComparisonOperation.LESS_THAN)),
-  /**
-   * Greater than or equal to comparison operator.
-   */
-  GREATER_THAN_OR_EQUAL_TO(">=",
-      new ComparisonOperator(ComparisonOperation.GREATER_THAN_OR_EQUAL_TO)),
-  /**
-   * Greater than comparison operator.
-   */
+  /** Greater than or equal to comparison operator. */
+  GREATER_THAN_OR_EQUAL_TO(
+      ">=", new ComparisonOperator(ComparisonOperation.GREATER_THAN_OR_EQUAL_TO)),
+  /** Greater than comparison operator. */
   GREATER_THAN(">", new ComparisonOperator(ComparisonOperation.GREATER_THAN)),
-  /**
-   * Arithmetic addition operator.
-   */
+  /** Arithmetic addition operator. */
   ADDITION("+", new MathOperator(MathOperation.ADDITION)),
-  /**
-   * Arithmetic subtraction operator.
-   */
+  /** Arithmetic subtraction operator. */
   SUBTRACTION("-", new MathOperator(MathOperation.SUBTRACTION)),
-  /**
-   * Arithmetic multiplication operator.
-   */
+  /** Arithmetic multiplication operator. */
   MULTIPLICATION("*", new MathOperator(MathOperation.MULTIPLICATION)),
-  /**
-   * Arithmetic division operator.
-   */
+  /** Arithmetic division operator. */
   DIVISION("/", new MathOperator(MathOperation.DIVISION)),
-  /**
-   * Arithmetic modulus operator.
-   */
+  /** Arithmetic modulus operator. */
   MODULUS("mod", new MathOperator(MathOperation.MODULUS)),
-  /**
-   * Union operator.
-   */
+  /** Union operator. */
   UNION("|", new UnionOperator());
 
   private final String symbol;
 
   private final FhirPathBinaryOperator instance;
 
-  /**
-   * Mapping of operator symbols to instances of those operators.
-   */
+  /** Mapping of operator symbols to instances of those operators. */
   private static final Map<String, BinaryOperatorType> SYMBOL_TO_TYPE;
 
   static {
@@ -153,7 +119,7 @@ public enum BinaryOperatorType {
   // #10: in, contains
   // #11: and
   // #12: xor, or
-  // #13: implies  
+  // #13: implies
 
   private static final Map<String, Integer> PRECEDENCE =
       new ImmutableMap.Builder<String, Integer>()
@@ -187,11 +153,11 @@ public enum BinaryOperatorType {
    * Compares the precedence of two operators. The result is negative if {@code op1} higher
    * precedence than {@code op2}, zero if they have the same precedence, and positive if {@code op1}
    * has lower precedence than {@code op2}.
-   * <p>
-   * Operators with higher precedence are evaluated before operators with lower and can be used in
-   * expressions without parentheses.
-   * <p>
-   * For example, {@code comparePrecedence("*", "+")} returns a negative value because the
+   *
+   * <p>Operators with higher precedence are evaluated before operators with lower and can be used
+   * in expressions without parentheses.
+   *
+   * <p>For example, {@code comparePrecedence("*", "+")} returns a negative value because the
    * multiplication operator has higher precedence than the addition operator. This means that the
    * expression {@code 1 + 2 * 3} is evaluated as {@code 1 + (2 * 3)}.
    *
@@ -199,8 +165,7 @@ public enum BinaryOperatorType {
    * @param op2 the symbol of the second operator
    * @return an integer representing the relative precedence of the two operators
    */
-  public static int comparePrecedence(@Nonnull final String op1,
-      @Nonnull final String op2) {
+  public static int comparePrecedence(@Nonnull final String op1, @Nonnull final String op2) {
     return PRECEDENCE.get(op1) - PRECEDENCE.get(op2);
   }
 }

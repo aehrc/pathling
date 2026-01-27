@@ -45,16 +45,13 @@ import org.hl7.fhir.r4.model.UriType;
  *
  * @author John Grimes
  * @see <a
- * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+ *     href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
  */
-public class LookupExecutor implements
-    TerminologyOperation<Parameters, PropertyOrDesignationList> {
+public class LookupExecutor implements TerminologyOperation<Parameters, PropertyOrDesignationList> {
 
-  @Nonnull
-  private final TerminologyClient terminologyClient;
+  @Nonnull private final TerminologyClient terminologyClient;
 
-  @Nonnull
-  private final LookupParameters parameters;
+  @Nonnull private final LookupParameters parameters;
 
   /**
    * Creates a new LookupExecutor with the specified terminology client and parameters.
@@ -62,7 +59,8 @@ public class LookupExecutor implements
    * @param terminologyClient the terminology client to use for lookup operations
    * @param parameters the parameters for the lookup operation
    */
-  public LookupExecutor(@Nonnull final TerminologyClient terminologyClient,
+  public LookupExecutor(
+      @Nonnull final TerminologyClient terminologyClient,
       @Nonnull final LookupParameters parameters) {
     this.terminologyClient = terminologyClient;
     this.parameters = parameters;
@@ -90,8 +88,7 @@ public class LookupExecutor implements
         TerminologyParameters.optional(StringType::new, coding.getVersion()),
         TerminologyParameters.required(CodeType::new, coding.getCode()),
         TerminologyParameters.optional(CodeType::new, parameters.property()),
-        TerminologyParameters.optional(StringType::new, parameters.acceptLanguage())
-    );
+        TerminologyParameters.optional(StringType::new, parameters.acceptLanguage()));
   }
 
   @Override
@@ -108,17 +105,15 @@ public class LookupExecutor implements
 
   @Nonnull
   private static PropertyOrDesignationList toPropertiesAndDesignations(
-      @Nonnull final Parameters parameters,
-      @Nullable final String propertyCode) {
+      @Nonnull final Parameters parameters, @Nullable final String propertyCode) {
 
     return (Designation.PROPERTY_CODE.equals(propertyCode))
-           ? toDesignations(parameters)
-           : toProperties(parameters, propertyCode);
+        ? toDesignations(parameters)
+        : toProperties(parameters, propertyCode);
   }
 
   @Nonnull
-  private static PropertyOrDesignationList toDesignations(
-      @Nonnull final Parameters parameters) {
+  private static PropertyOrDesignationList toDesignations(@Nonnull final Parameters parameters) {
     return ParametersUtils.toDesignations(parameters)
         .map(Designation::ofPart)
         .collect(new PropertyOrDesignationListCollector());
@@ -128,12 +123,11 @@ public class LookupExecutor implements
   private static PropertyOrDesignationList toProperties(
       @Nonnull final Parameters parameters, @Nullable final String propertyCode) {
     return ParametersUtils.toProperties(parameters)
-        .flatMap(part -> nonNull(part.getSubproperty())
-                         ? part.getSubproperty().stream()
-                         : Stream.of(part))
+        .flatMap(
+            part ->
+                nonNull(part.getSubproperty()) ? part.getSubproperty().stream() : Stream.of(part))
         .map(part -> Property.of(part.getCode().getValue(), requireNonNull(part.getValue())))
         .filter(property -> isNull(propertyCode) || propertyCode.equals(property.getCode()))
         .collect(new PropertyOrDesignationListCollector());
   }
-
 }

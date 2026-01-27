@@ -25,8 +25,8 @@ import org.apache.spark.sql.Column;
 /**
  * Matches elements using case-sensitive exact equality for the :exact modifier on string search
  * parameters.
- * <p>
- * Per FHIR specification, the :exact modifier on string search requires an exact, case-sensitive
+ *
+ * <p>Per FHIR specification, the :exact modifier on string search requires an exact, case-sensitive
  * match of the entire value.
  *
  * @see <a href="https://hl7.org/fhir/search.html#string">String Search</a>

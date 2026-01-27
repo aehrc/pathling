@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.test;
 
-
 import au.csiro.pathling.UnitTestDependencies;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -30,6 +29,4 @@ import org.springframework.test.context.ActiveProfiles;
 @Retention(RetentionPolicy.RUNTIME)
 @SpringBootTest(classes = UnitTestDependencies.class)
 @ActiveProfiles({"unit-test"})
-public @interface SpringBootUnitTest {
-
-}
+public @interface SpringBootUnitTest {}

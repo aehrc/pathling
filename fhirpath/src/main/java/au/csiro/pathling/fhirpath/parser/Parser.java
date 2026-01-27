@@ -35,7 +35,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
  */
 @Getter
 public class Parser {
-  
+
   /**
    * Parses a FHIRPath expression.
    *
@@ -64,5 +64,4 @@ public class Parser {
     parser.addErrorListener(new ParserErrorListener());
     return parser;
   }
-
 }

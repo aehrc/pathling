@@ -34,9 +34,7 @@ import lombok.Value;
 @FunctionalInterface
 public interface FhirPath {
 
-  /**
-   * A special FHIRPath that doesn't do anything.
-   */
+  /** A special FHIRPath that doesn't do anything. */
   FhirPath NULL = new This();
 
   /**
@@ -56,10 +54,8 @@ public interface FhirPath {
    */
   default FhirPath andThen(@Nonnull final FhirPath after) {
     return nullPath().equals(after)
-           ? this
-           : new Composite(
-               Stream.concat(asStream(), after.asStream())
-                   .toList());
+        ? this
+        : new Composite(Stream.concat(asStream(), after.asStream()).toList());
   }
 
   /**
@@ -133,15 +129,13 @@ public interface FhirPath {
     };
   }
 
-  /**
-   * Implementation of FHIRPath that represents the identity transformation.
-   */
+  /** Implementation of FHIRPath that represents the identity transformation. */
   @Value
   class This implements FhirPath {
 
     @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+    public Collection apply(
+        @Nonnull final Collection input, @Nonnull final EvaluationContext context) {
       return input;
     }
 
@@ -179,8 +173,8 @@ public interface FhirPath {
     }
 
     @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+    public Collection apply(
+        @Nonnull final Collection input, @Nonnull final EvaluationContext context) {
       return elements.stream()
           .reduce(input, (acc, element) -> element.apply(acc, context), (a, b) -> b);
     }
@@ -194,9 +188,7 @@ public interface FhirPath {
     @Nonnull
     @Override
     public String toExpression() {
-      return elements.stream()
-          .map(FhirPath::toTermExpression)
-          .collect(Collectors.joining("."));
+      return elements.stream().map(FhirPath::toTermExpression).collect(Collectors.joining("."));
     }
   }
 }

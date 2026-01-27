@@ -40,26 +40,17 @@ import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
  */
 public interface TerminologyService {
 
-  /**
-   * Represent a single translation of a code.
-   */
+  /** Represent a single translation of a code. */
   @Value(staticConstructor = "of")
   class Translation implements Serializable {
 
-    @Serial
-    private static final long serialVersionUID = -7551505530196865478L;
+    @Serial private static final long serialVersionUID = -7551505530196865478L;
 
-    /**
-     * The equivalence relationship for this translation.
-     */
-    @Nonnull
-    ConceptMapEquivalence equivalence;
+    /** The equivalence relationship for this translation. */
+    @Nonnull ConceptMapEquivalence equivalence;
 
-    /**
-     * The translated concept.
-     */
-    @Nonnull
-    Coding concept;
+    /** The translated concept. */
+    @Nonnull Coding concept;
 
     @Override
     public boolean equals(final Object o) {
@@ -71,8 +62,8 @@ public interface TerminologyService {
         return false;
       }
       final Translation that = (Translation) o;
-      return equivalence == that.equivalence && ImmutableCoding.of(concept)
-          .equals(ImmutableCoding.of(that.concept));
+      return equivalence == that.equivalence
+          && ImmutableCoding.of(concept).equals(ImmutableCoding.of(that.concept));
     }
 
     @Override
@@ -80,7 +71,6 @@ public interface TerminologyService {
       // We override this method because Coding does not have a sane hashCode method.
       return Objects.hash(equivalence, ImmutableCoding.of(concept));
     }
-
   }
 
   /**
@@ -103,13 +93,14 @@ public interface TerminologyService {
    * @param coding the code to translate.
    * @param conceptMapUrl the url of the concept map to use for translation.
    * @param reverse if this is true, then the operation should return all the codes that might be
-   * mapped to this code.
+   *     mapped to this code.
    * @param target identifies the value set in which a translation is sought. If null all known
-   * translations are returned.
+   *     translations are returned.
    * @return the list of translations.
    */
   @Nonnull
-  List<Translation> translate(@Nonnull Coding coding,
+  List<Translation> translate(
+      @Nonnull Coding coding,
       @Nonnull String conceptMapUrl,
       boolean reverse,
       @Nullable String target);
@@ -123,71 +114,58 @@ public interface TerminologyService {
    * @param codingA the left code to be tested.
    * @param codingB the right code to be tested.
    * @return {@link ConceptSubsumptionOutcome} representing the relation between codingA (left code)
-   * and codingB (right code).
+   *     and codingB (right code).
    */
   @Nonnull
   ConceptSubsumptionOutcome subsumes(@Nonnull Coding codingA, @Nonnull Coding codingB);
 
   /**
-   * Gets additional details about the concept, including designations and properties. Abstracts
-   * the
+   * Gets additional details about the concept, including designations and properties. Abstracts the
    * <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
    * operation.
    *
    * @param coding the coding to lookup.
    * @param propertyCode the code of the propertyCode to lookup. If not null only the properties
-   * with matching codes are returned.
+   *     with matching codes are returned.
    * @param acceptLanguage the preferred language for display and other localised properties.
    * @return the list of properties and/or designations.
    */
   @Nonnull
-  List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String propertyCode,
-      @Nullable String acceptLanguage);
+  List<PropertyOrDesignation> lookup(
+      @Nonnull Coding coding, @Nullable String propertyCode, @Nullable String acceptLanguage);
 
   /**
-   * Gets additional details about the concept, including designations and properties. Abstracts
-   * the
+   * Gets additional details about the concept, including designations and properties. Abstracts the
    * <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
    * operation.
    *
    * @param coding the coding to lookup.
    * @param propertyCode the code of the propertyCode to lookup. If not null only the properties
-   * with matching codes are returned.
+   *     with matching codes are returned.
    * @return the list of properties and/or designations.
    */
   @Nonnull
-  default List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String propertyCode) {
+  default List<PropertyOrDesignation> lookup(
+      @Nonnull final Coding coding, @Nullable final String propertyCode) {
     return lookup(coding, propertyCode, null);
   }
 
-  /**
-   * Common interface for properties and designations
-   */
+  /** Common interface for properties and designations */
   interface PropertyOrDesignation extends Serializable {
     // marker interface
   }
 
-  /**
-   * The representation of the property of a concept.
-   */
+  /** The representation of the property of a concept. */
   @Value(staticConstructor = "of")
   class Property implements PropertyOrDesignation {
 
-    @Serial
-    private static final long serialVersionUID = 8827691056493768863L;
+    @Serial private static final long serialVersionUID = 8827691056493768863L;
 
-    /**
-     * The property code.
-     */
-    @Nonnull
-    String code;
+    /** The property code. */
+    @Nonnull String code;
 
-    /**
-     * The property value.
-     */
-    @Nonnull
-    Type value;
+    /** The property value. */
+    @Nonnull Type value;
 
     /**
      * Gets the string representation of the property value.
@@ -222,40 +200,25 @@ public interface TerminologyService {
       }
       return value.equalsDeep(property.value);
     }
-
   }
 
-  /**
-   * The representation of a designation of a concept.
-   */
+  /** The representation of a designation of a concept. */
   @Value(staticConstructor = "of")
   class Designation implements PropertyOrDesignation {
 
-    @Serial
-    private static final long serialVersionUID = -809107979219801186L;
+    @Serial private static final long serialVersionUID = -809107979219801186L;
 
-    /**
-     * The code of the designation properties
-     */
+    /** The code of the designation properties */
     public static final String PROPERTY_CODE = "designation";
 
-    /**
-     * The use code for this designation.
-     */
-    @Nullable
-    Coding use;
+    /** The use code for this designation. */
+    @Nullable Coding use;
 
-    /**
-     * The language code for this designation.
-     */
-    @Nullable
-    String language;
+    /** The language code for this designation. */
+    @Nullable String language;
 
-    /**
-     * The display value of this designation.
-     */
-    @Nonnull
-    String value;
+    /** The display value of this designation. */
+    @Nonnull String value;
 
     @Override
     public int hashCode() {
@@ -275,9 +238,7 @@ public interface TerminologyService {
 
       final Designation that = (Designation) o;
 
-      if (use != null
-          ? !use.equalsDeep(that.use)
-          : that.use != null) {
+      if (use != null ? !use.equalsDeep(that.use) : that.use != null) {
         return false;
       }
       if (!Objects.equals(language, that.language)) {
@@ -294,10 +255,10 @@ public interface TerminologyService {
      */
     @Nonnull
     public static Designation ofPart(@Nonnull final DesignationPart part) {
-      return of(part.getUse(),
+      return of(
+          part.getUse(),
           Optional.ofNullable(part.getLanguage()).map(StringType::getValue).orElse(null),
           part.getValue().getValue());
     }
   }
-
 }

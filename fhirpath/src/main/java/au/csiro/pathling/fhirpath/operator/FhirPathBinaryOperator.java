@@ -41,12 +41,13 @@ public interface FhirPathBinaryOperator {
 
   /**
    * Invokes this operator with unevaluated operand paths.
-   * <p>
-   * This method allows operators to control when and how their operands are evaluated.
-   * The default implementation evaluates both paths and delegates to {@link #invoke(BinaryOperatorInput)}.
-   * <p>
-   * Operators with special evaluation needs (e.g., type operators that need to extract
-   * type specifiers at evaluation time) can override this method.
+   *
+   * <p>This method allows operators to control when and how their operands are evaluated. The
+   * default implementation evaluates both paths and delegates to {@link
+   * #invoke(BinaryOperatorInput)}.
+   *
+   * <p>Operators with special evaluation needs (e.g., type operators that need to extract type
+   * specifiers at evaluation time) can override this method.
    *
    * @param context the evaluation context
    * @param input the input collection
@@ -84,8 +85,8 @@ public interface FhirPathBinaryOperator {
    * @return A pair of collections that can be reconciled to a common type
    */
   @Nonnull
-  static Pair<Collection, Collection> reconcileTypes(@Nonnull final Collection left,
-      @Nonnull final Collection right) {
+  static Pair<Collection, Collection> reconcileTypes(
+      @Nonnull final Collection left, @Nonnull final Collection right) {
     // finds if left and right elements can be reconciled to a common type
     if (right.convertibleTo(left)) {
       return Pair.of(left, right.castAs(left));

@@ -22,14 +22,11 @@ import jakarta.annotation.Nonnull;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
-/**
- * Represents a FHIR resource tag.
- */
+/** Represents a FHIR resource tag. */
 @Value(staticConstructor = "of")
 public class FhirResourceTag implements ResourceTag {
 
-  @Nonnull
-  ResourceType resourceType;
+  @Nonnull ResourceType resourceType;
 
   @Override
   @Nonnull

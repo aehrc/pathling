@@ -40,8 +40,8 @@ public class RequestRetryHandler extends DefaultHttpRequestRetryHandler {
   }
 
   @Override
-  public boolean retryRequest(final IOException exception, final int executionCount,
-      final HttpContext context) {
+  public boolean retryRequest(
+      final IOException exception, final int executionCount, final HttpContext context) {
     log.debug("Problem issuing terminology request, retrying", exception);
     return super.retryRequest(exception, executionCount, context);
   }

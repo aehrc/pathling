@@ -38,16 +38,17 @@ public class DeltaSource extends FileSource {
    * @param path the path to the Delta table directory
    */
   DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
-    super(context, path,
+    super(
+        context,
+        path,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
         FileSource::resourceNameWithQualifierMapper,
         // Delta tables store data in parquet format internally, so we use the parquet extension.
         "parquet",
         context.getSpark().read().format("delta"),
-        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData);
   }
-
 }

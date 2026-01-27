@@ -28,13 +28,14 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 /**
  * Parses FHIRPath union expressions from search parameter definitions and maps them to resource
  * types.
- * <p>
- * Search parameters can have union expressions like:
+ *
+ * <p>Search parameters can have union expressions like:
+ *
  * <pre>
  * Patient.name.given | Practitioner.name.given
  * </pre>
- * <p>
- * This parser splits such expressions and groups them by resource type. Unqualified expressions
+ *
+ * <p>This parser splits such expressions and groups them by resource type. Unqualified expressions
  * (those not starting with a resource name) are included for ALL base resources, as they are meant
  * to work in the context of any resource.
  *
@@ -48,11 +49,12 @@ public final class FhirPathUnionParser {
 
   /**
    * Splits a FHIRPath union expression and maps parts to resource types.
-   * <p>
-   * For each base resource type:
+   *
+   * <p>For each base resource type:
+   *
    * <ul>
-   *   <li>Includes all expressions qualified with that resource type</li>
-   *   <li>Includes ALL unqualified expressions (they work in context of any resource)</li>
+   *   <li>Includes all expressions qualified with that resource type
+   *   <li>Includes ALL unqualified expressions (they work in context of any resource)
    * </ul>
    *
    * @param expression the full expression (may contain | unions)
@@ -61,26 +63,24 @@ public final class FhirPathUnionParser {
    */
   @Nonnull
   public static Map<ResourceType, List<String>> parse(
-      @Nonnull final String expression,
-      @Nonnull final List<ResourceType> bases) {
+      @Nonnull final String expression, @Nonnull final List<ResourceType> bases) {
 
     final List<String> parts = splitUnion(expression);
 
     // Separate qualified and unqualified expressions
-    final List<String> unqualified = parts.stream()
-        .filter(p -> !isQualified(p))
-        .toList();
+    final List<String> unqualified = parts.stream().filter(p -> !isQualified(p)).toList();
 
-    final Map<ResourceType, List<String>> qualified = parts.stream()
-        .filter(FhirPathUnionParser::isQualified)
-        .collect(Collectors.groupingBy(FhirPathUnionParser::extractResourceType));
+    final Map<ResourceType, List<String>> qualified =
+        parts.stream()
+            .filter(FhirPathUnionParser::isQualified)
+            .collect(Collectors.groupingBy(FhirPathUnionParser::extractResourceType));
 
     // For each base: combine qualified + all unqualified
     final Map<ResourceType, List<String>> result = new EnumMap<>(ResourceType.class);
     for (final ResourceType base : bases) {
       final List<String> exprs = new ArrayList<>();
       exprs.addAll(qualified.getOrDefault(base, List.of()));
-      exprs.addAll(unqualified);  // ALL unqualified added to every resource
+      exprs.addAll(unqualified); // ALL unqualified added to every resource
       if (!exprs.isEmpty()) {
         result.put(base, List.copyOf(exprs));
       }
@@ -90,8 +90,8 @@ public final class FhirPathUnionParser {
 
   /**
    * Splits expression by | respecting parentheses nesting.
-   * <p>
-   * Example: {@code "A | (B | C).first() | D"} → {@code ["A", "(B | C).first()", "D"]}
+   *
+   * <p>Example: {@code "A | (B | C).first() | D"} → {@code ["A", "(B | C).first()", "D"]}
    *
    * @param expression the expression to split
    * @return list of individual expression parts
@@ -118,15 +118,13 @@ public final class FhirPathUnionParser {
     }
     parts.add(current.toString().trim());
 
-    return parts.stream()
-        .filter(s -> !s.isEmpty())
-        .toList();
+    return parts.stream().filter(s -> !s.isEmpty()).toList();
   }
 
   /**
    * Checks if expression is qualified (starts with uppercase = resource name).
-   * <p>
-   * Handles expressions wrapped in parentheses like {@code (Patient.name)}.
+   *
+   * <p>Handles expressions wrapped in parentheses like {@code (Patient.name)}.
    *
    * @param expr the expression to check
    * @return true if the expression starts with a resource name
@@ -138,8 +136,8 @@ public final class FhirPathUnionParser {
 
   /**
    * Extracts resource type from a qualified expression.
-   * <p>
-   * Example: {@code "Patient.name.given"} → {@code PATIENT}
+   *
+   * <p>Example: {@code "Patient.name.given"} → {@code PATIENT}
    *
    * @param expr the qualified expression
    * @return the resource type

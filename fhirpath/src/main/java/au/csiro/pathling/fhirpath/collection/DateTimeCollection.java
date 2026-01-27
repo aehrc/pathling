@@ -42,8 +42,8 @@ import org.hl7.fhir.r4.model.InstantType;
  *
  * @author John Grimes
  */
-public class DateTimeCollection extends Collection implements StringCoercible, Materializable,
-    DateTimeComparable {
+public class DateTimeCollection extends Collection
+    implements StringCoercible, Materializable, DateTimeComparable {
 
   private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
@@ -56,7 +56,8 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
    * @param definition the node definition
    * @param extensionMapColumn the extension map column
    */
-  protected DateTimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  protected DateTimeCollection(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
@@ -72,10 +73,15 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
    * @return A new instance of {@link DateTimeCollection}
    */
   @Nonnull
-  public static DateTimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static DateTimeCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new DateTimeCollection(columnRepresentation, Optional.of(FhirPathType.DATETIME),
-        Optional.of(FHIRDefinedType.DATETIME), definition, Optional.empty());
+    return new DateTimeCollection(
+        columnRepresentation,
+        Optional.of(FhirPathType.DATETIME),
+        Optional.of(FHIRDefinedType.DATETIME),
+        definition,
+        Optional.empty());
   }
 
   /**
@@ -98,8 +104,7 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
   @UsedByReflection
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final DateTimeType value) {
-    return DateTimeCollection.build(
-        DefaultRepresentation.literal(value.getValueAsString()));
+    return DateTimeCollection.build(DefaultRepresentation.literal(value.getValueAsString()));
   }
 
   /**
@@ -111,16 +116,15 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
   @UsedByReflection
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final InstantType value) {
-    final Timestamp timestamp = new Timestamp(
-        value.getValue().toInstant().toEpochMilli());
+    final Timestamp timestamp = new Timestamp(value.getValue().toInstant().toEpochMilli());
     final ColumnRepresentation column = new DefaultRepresentation(functions.lit(timestamp));
     return new DateTimeCollection(
         column,
         Optional.of(FhirPathType.DATETIME),
         Optional.of(FHIRDefinedType.INSTANT),
-        Optional.empty(), Optional.empty());
+        Optional.empty(),
+        Optional.empty());
   }
-
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
@@ -145,8 +149,7 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
     final ColumnRepresentation valueColumn;
     final Optional<FHIRDefinedType> fhirType = getFhirType();
     if (fhirType.isPresent() && fhirType.get() == FHIRDefinedType.INSTANT) {
-      valueColumn = getColumn().call(
-          c -> date_format(c, SPARK_FHIRPATH_DATETIME_FORMAT));
+      valueColumn = getColumn().call(c -> date_format(c, SPARK_FHIRPATH_DATETIME_FORMAT));
     } else {
       valueColumn = getColumn();
     }

@@ -44,8 +44,8 @@ class DesignationUdfTest extends AbstractTerminologyTestBase {
   @BeforeEach
   void setUp() {
     terminologyService = mock(TerminologyService.class);
-    final TerminologyServiceFactory terminologyServiceFactory = mock(
-        TerminologyServiceFactory.class);
+    final TerminologyServiceFactory terminologyServiceFactory =
+        mock(TerminologyServiceFactory.class);
     when(terminologyServiceFactory.build()).thenReturn(terminologyService);
     designationUdf = new DesignationUdf(terminologyServiceFactory);
   }
@@ -55,7 +55,6 @@ class DesignationUdfTest extends AbstractTerminologyTestBase {
     assertNull(designationUdf.call(null, encode(CODING_D), null));
     verifyNoMoreInteractions(terminologyService);
   }
-
 
   @Test
   void testResultEmptyWhenInvalidUse() {
@@ -68,8 +67,8 @@ class DesignationUdfTest extends AbstractTerminologyTestBase {
   @Test
   void testResultEmptyIfNoDesignations() {
     assertArrayEquals(EMPTY, designationUdf.call(encode(CODING_A), encode(CODING_D), null));
-    assertArrayEquals(EMPTY,
-        designationUdf.call(encode(CODING_BB_VERSION1), encode(CODING_E), "en"));
+    assertArrayEquals(
+        EMPTY, designationUdf.call(encode(CODING_BB_VERSION1), encode(CODING_E), "en"));
 
     verify(terminologyService).lookup(deepEq(CODING_A), eq("designation"));
     verify(terminologyService).lookup(deepEq(CODING_BB_VERSION1), eq("designation"));
@@ -87,10 +86,11 @@ class DesignationUdfTest extends AbstractTerminologyTestBase {
         .withDesignation(CODING_BB_VERSION1, null, "fr", "BB1_?_fr")
         .done();
 
-    assertArrayEquals(new String[]{"A_C_en"},
-        designationUdf.call(encode(CODING_A), encode(CODING_C), "en"));
+    assertArrayEquals(
+        new String[] {"A_C_en"}, designationUdf.call(encode(CODING_A), encode(CODING_C), "en"));
 
-    assertArrayEquals(new String[]{"BB1_E_fr.0", "BB1_E_fr.1"},
+    assertArrayEquals(
+        new String[] {"BB1_E_fr.0", "BB1_E_fr.1"},
         designationUdf.call(encode(CODING_BB_VERSION1), encode(CODING_E), "fr"));
   }
 
@@ -105,13 +105,14 @@ class DesignationUdfTest extends AbstractTerminologyTestBase {
         .withDesignation(CODING_AA_VERSION1, null, null, "AA1_?_??")
         .done();
 
-    assertArrayEquals(new String[]{"AA1_E_en", "AA1_E_fr", "AA1_E_??"},
+    assertArrayEquals(
+        new String[] {"AA1_E_en", "AA1_E_fr", "AA1_E_??"},
         designationUdf.call(encode(CODING_AA_VERSION1), encode(CODING_E), null));
-    assertArrayEquals(new String[]{"AA1_?_en", "AA1_D_en", "AA1_E_en"},
+    assertArrayEquals(
+        new String[] {"AA1_?_en", "AA1_D_en", "AA1_E_en"},
         designationUdf.call(encode(CODING_AA_VERSION1), null, "en"));
     assertArrayEquals(
-        new String[]{"AA1_?_en", "AA1_D_en", "AA1_E_en", "AA1_E_fr", "AA1_E_??", "AA1_?_??"},
+        new String[] {"AA1_?_en", "AA1_D_en", "AA1_E_en", "AA1_E_fr", "AA1_E_??", "AA1_?_??"},
         designationUdf.call(encode(CODING_AA_VERSION1), null, null));
   }
-
 }

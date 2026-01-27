@@ -28,18 +28,16 @@ import org.apache.spark.sql.Column;
 
 /**
  * Dependencies and logic relating to the traversal of FHIRPath expressions.
- * <p>
- * This context holds an evaluator for FHIRPath expressions and the current input context
- * for expression evaluation.
+ *
+ * <p>This context holds an evaluator for FHIRPath expressions and the current input context for
+ * expression evaluation.
  *
  * @param evaluator an evaluator for FHIRPath expressions (produces Column expressions)
  * @param inputContext the initial context for evaluation
  * @author Piotr Szul
  */
 public record ProjectionContext(
-    @Nonnull SingleResourceEvaluator evaluator,
-    @Nonnull Collection inputContext
-) {
+    @Nonnull SingleResourceEvaluator evaluator, @Nonnull Collection inputContext) {
 
   /**
    * Creates a new ProjectionContext with a different input context.
@@ -55,12 +53,11 @@ public record ProjectionContext(
   /**
    * Creates a new ProjectionContext with the current input context collection with the value set to
    * null.
-   * <p>
-   * This is useful for creating stub contexts when determining result schemas without evaluating
-   * actual data, or when no input data is available.
-   * </p>
-   * This is different from {@link #withEmptyInput()} in that it preserves the type of the input
-   * context collection, but replaces the underlying data with an empty representation.
+   *
+   * <p>This is useful for creating stub contexts when determining result schemas without evaluating
+   * actual data, or when no input data is available. This is different from {@link
+   * #withEmptyInput()} in that it preserves the type of the input context collection, but replaces
+   * the underlying data with an empty representation.
    *
    * @return a new ProjectionContext with an empty input context
    */
@@ -71,11 +68,10 @@ public record ProjectionContext(
 
   /**
    * Creates a new ProjectionContext with the input context replaced by a new column.
-   * <p>
-   * This is a convenience method that wraps the column in a new input context while preserving
+   *
+   * <p>This is a convenience method that wraps the column in a new input context while preserving
    * other context properties. It is particularly useful when transforming input data during
    * projection evaluation.
-   * </p>
    *
    * @param inputColumn the new input column to use
    * @return a new ProjectionContext with the specified input column
@@ -87,10 +83,9 @@ public record ProjectionContext(
 
   /**
    * Creates a new ProjectionContext with an empty input context.
-   * <p>
-   * This is useful for creating stub contexts when determining result schemas without evaluating
+   *
+   * <p>This is useful for creating stub contexts when determining result schemas without evaluating
    * actual data, or when no input data is available.
-   * </p>
    *
    * @return a new ProjectionContext with an empty input context
    */
@@ -98,7 +93,6 @@ public record ProjectionContext(
   public ProjectionContext withEmptyInput() {
     return withInputContext(EmptyCollection.getInstance());
   }
-
 
   /**
    * Evaluates the given FHIRPath path and returns the result as a collection.
@@ -113,26 +107,21 @@ public record ProjectionContext(
 
   /**
    * Creates a unary operator that evaluates a FHIRPath expression on a given column.
-   * <p>
-   * This method returns a function that takes a column as input, evaluates the specified FHIRPath
-   * expression using that column as the input context, and returns the resulting column value. This
-   * is particularly useful for creating reusable transformations that can be applied to multiple
-   * columns or used in higher-order operations like tree traversal.
-   * </p>
-   * <p>
-   * Example use case: Creating a traversal operation for recursive tree structures where the same
-   * FHIRPath expression needs to be evaluated on each node.
-   * </p>
+   *
+   * <p>This method returns a function that takes a column as input, evaluates the specified
+   * FHIRPath expression using that column as the input context, and returns the resulting column
+   * value. This is particularly useful for creating reusable transformations that can be applied to
+   * multiple columns or used in higher-order operations like tree traversal.
+   *
+   * <p>Example use case: Creating a traversal operation for recursive tree structures where the
+   * same FHIRPath expression needs to be evaluated on each node.
    *
    * @param path the FHIRPath expression to evaluate
    * @return a unary operator that takes a column and returns the result of evaluating the
-   * expression on that column
+   *     expression on that column
    */
   @Nonnull
   public UnaryOperator<Column> asColumnOperator(@Nonnull final FhirPath path) {
-    return c -> withInputColumn(c)
-        .evalExpression(path)
-        .getColumnValue();
+    return c -> withInputColumn(c).evalExpression(path).getColumnValue();
   }
-
 }

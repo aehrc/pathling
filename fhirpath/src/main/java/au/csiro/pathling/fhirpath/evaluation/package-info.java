@@ -17,23 +17,25 @@
 
 /**
  * Provides simplified FHIRPath evaluation infrastructure for single-resource scenarios.
- * <p>
- * This package contains classes for evaluating FHIRPath expressions against a single FHIR
- * resource type without requiring a {@link au.csiro.pathling.io.source.DataSource}. The
- * evaluator produces {@link au.csiro.pathling.fhirpath.collection.Collection} objects
- * containing Spark SQL Column expressions that can be applied to datasets.
+ *
+ * <p>This package contains classes for evaluating FHIRPath expressions against a single FHIR
+ * resource type without requiring a {@link au.csiro.pathling.io.source.DataSource}. The evaluator
+ * produces {@link au.csiro.pathling.fhirpath.collection.Collection} objects containing Spark SQL
+ * Column expressions that can be applied to datasets.
  *
  * <h2>Key Classes</h2>
+ *
  * <ul>
  *   <li>{@link au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator} - Main evaluator
- *       class</li>
- *   <li>{@link au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluatorBuilder} - Builder
- *       for creating evaluator instances</li>
+ *       class
+ *   <li>{@link au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluatorBuilder} - Builder for
+ *       creating evaluator instances
  *   <li>{@link au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy} - Defines how
- *       cross-resource references are handled</li>
+ *       cross-resource references are handled
  * </ul>
  *
  * <h2>Usage Example</h2>
+ *
  * <pre>{@code
  * // Create evaluator for single-resource evaluation
  * SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
@@ -50,20 +52,22 @@
  * }</pre>
  *
  * <h2>Comparison with FhirPathEvaluator</h2>
- * <p>
- * Use {@link au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator} when:
+ *
+ * <p>Use {@link au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator} when:
+ *
  * <ul>
- *   <li>You only need Column expressions without dataset views</li>
- *   <li>You don't have or need a DataSource</li>
- *   <li>You're building filter expressions for later application</li>
- *   <li>Cross-resource references should be handled gracefully (empty results)</li>
+ *   <li>You only need Column expressions without dataset views
+ *   <li>You don't have or need a DataSource
+ *   <li>You're building filter expressions for later application
+ *   <li>Cross-resource references should be handled gracefully (empty results)
  * </ul>
- * <p>
- * Use {@link au.csiro.pathling.fhirpath.execution.FhirPathEvaluator} when:
+ *
+ * <p>Use {@link au.csiro.pathling.fhirpath.execution.FhirPathEvaluator} when:
+ *
  * <ul>
- *   <li>You need to execute queries against actual data</li>
- *   <li>You need the {@code createView()} functionality</li>
- *   <li>You're working with multiple resource types and joins</li>
+ *   <li>You need to execute queries against actual data
+ *   <li>You need the {@code createView()} functionality
+ *   <li>You're working with multiple resource types and joins
  * </ul>
  *
  * @see au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator

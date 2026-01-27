@@ -30,8 +30,8 @@ import lombok.Value;
 
 /**
  * Utility class for handling FHIRPath time values with partial precision.
- * <p>
- * This class can parse FHIRPath time strings, determine their precision, and compute lower and
+ *
+ * <p>This class can parse FHIRPath time strings, determine their precision, and compute lower and
  * upper boundary Instants based on that precision. The time is always based on the Java epoch date
  * (1970-01-01).
  */
@@ -39,19 +39,14 @@ import lombok.Value;
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class FhirPathTime {
 
-  /**
-   * Regular expression for a FHIR time string.
-   */
+  /** Regular expression for a FHIR time string. */
   public static final String TIME_FORMAT =
       "(?<hours>\\d\\d)(:(?<minutes>\\d\\d)(:(?<seconds>\\d\\d)(\\.(?<frac>\\d+))?)?)?";
 
-  private static final Pattern TIME_REGEX =
-      Pattern.compile("^" + TIME_FORMAT + "$");
+  private static final Pattern TIME_REGEX = Pattern.compile("^" + TIME_FORMAT + "$");
 
-  @Nonnull
-  Instant value;
-  @Nonnull
-  TemporalPrecision precision;
+  @Nonnull Instant value;
+  @Nonnull TemporalPrecision precision;
 
   /**
    * Parse a FHIR time string into a FhirPathTime object.
@@ -91,18 +86,10 @@ public class FhirPathTime {
     }
     // Build a parseable time string with defaults for missing components
     final String parseableTime =
-        (hoursGroup != null
-         ? hoursGroup
-         : "00") +
-            (minutesGroup != null
-             ? ":" + minutesGroup
-             : ":00") +
-            (secondsGroup != null
-             ? ":" + secondsGroup
-             : ":00") +
-            (fracGroup != null
-             ? "." + fracGroup
-             : "");
+        (hoursGroup != null ? hoursGroup : "00")
+            + (minutesGroup != null ? ":" + minutesGroup : ":00")
+            + (secondsGroup != null ? ":" + secondsGroup : ":00")
+            + (fracGroup != null ? "." + fracGroup : "");
     return fromLocalTime(LocalTime.parse(parseableTime), precision);
   }
 
@@ -118,14 +105,14 @@ public class FhirPathTime {
 
   /**
    * Gets the upper boundary for this time value based on its precision.
-   * <p>
-   * For example:
-   * </p>
+   *
+   * <p>For example:
+   *
    * <ul>
-   *   <li>{@code 12} (HOUR precision) -> 12:59:59.999999999</li>
-   *   <li>{@code 12:30} (MINUTE precision) -> 12:30:59.999999999</li>
-   *   <li>{@code 12:30:45} (SECOND precision) -> 12:30:45.000000000</li>
-   *   <li>{@code 12:30:45.123} (FRACS precision) -> 12:30:45.123</li>
+   *   <li>{@code 12} (HOUR precision) -> 12:59:59.999999999
+   *   <li>{@code 12:30} (MINUTE precision) -> 12:30:59.999999999
+   *   <li>{@code 12:30:45} (SECOND precision) -> 12:30:45.000000000
+   *   <li>{@code 12:30:45.123} (FRACS precision) -> 12:30:45.123
    * </ul>
    *
    * @return the upper boundary as an Instant
@@ -135,7 +122,7 @@ public class FhirPathTime {
     return switch (precision) {
       case FRACS, SECOND -> value;
       default ->
-        // Add one unit, subtract one nanosecond
+          // Add one unit, subtract one nanosecond
           value.plus(1, precision.getChronoUnit()).minusNanos(1);
     };
   }
@@ -148,16 +135,14 @@ public class FhirPathTime {
    * @return a new FhirPathTime
    */
   @Nonnull
-  public static FhirPathTime fromLocalTime(@Nonnull final LocalTime localTime,
-      @Nonnull final TemporalPrecision precision) {
+  public static FhirPathTime fromLocalTime(
+      @Nonnull final LocalTime localTime, @Nonnull final TemporalPrecision precision) {
     if (!precision.isTimeBased()) {
       throw new IllegalArgumentException("Precision must be time-based for FhirPathTime");
     }
-    final Instant instant = localTime.atDate(LocalDate.ofEpochDay(0))
-        .toInstant(ZoneOffset.UTC);
+    final Instant instant = localTime.atDate(LocalDate.ofEpochDay(0)).toInstant(ZoneOffset.UTC);
     return new FhirPathTime(instant, precision);
   }
-
 
   /**
    * Checks if given string represents a valid FHIRPath time value.
@@ -174,4 +159,3 @@ public class FhirPathTime {
     }
   }
 }
-

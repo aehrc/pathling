@@ -57,7 +57,8 @@ public class PersistentCachingTerminologyService extends CachingTerminologyServi
    * @param configuration the HTTP client caching configuration
    * @param resourcesToClose additional resources to close when this service is closed
    */
-  public PersistentCachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
+  public PersistentCachingTerminologyService(
+      @Nonnull final TerminologyClient terminologyClient,
       @Nonnull final HttpClientCachingConfiguration configuration,
       @Nonnull final Closeable... resourcesToClose) {
     super(terminologyClient, configuration, resourcesToClose);
@@ -66,38 +67,38 @@ public class PersistentCachingTerminologyService extends CachingTerminologyServi
   @Override
   protected EmbeddedCacheManager buildCacheManager() {
     final GlobalConfigurationBuilder globalConfigBuilder = new GlobalConfigurationBuilder();
-    globalConfigBuilder.serialization()
+    globalConfigBuilder
+        .serialization()
         .marshaller(new JavaSerializationMarshaller())
         .allowList()
         .addRegexp(".*");
-    globalConfigBuilder.metrics()
-        .gauges(false)
-        .histograms(false);
+    globalConfigBuilder.metrics().gauges(false).histograms(false);
     final GlobalConfiguration globalConfig = globalConfigBuilder.build();
     return new DefaultCacheManager(globalConfig);
   }
 
   @Override
   protected <T extends Serializable> Cache<Integer, TerminologyResult<T>> buildCache(
-      @Nonnull final EmbeddedCacheManager cacheManager, @Nonnull final String cacheName,
+      @Nonnull final EmbeddedCacheManager cacheManager,
+      @Nonnull final String cacheName,
       @Nonnull final Class<T> valueType) {
     final String storagePath = configuration.getStoragePath();
     final String dataLocation = Path.of(requireNonNull(storagePath), DATA_DIRECTORY).toString();
     final String indexLocation = Path.of(storagePath, INDEX_DIRECTORY).toString();
 
-    final Configuration cacheConfig = new ConfigurationBuilder()
-        .memory()
-        .maxCount(configuration.getMaxEntries())
-        .whenFull(EvictionStrategy.REMOVE)
-        .persistence()
-        .addSoftIndexFileStore()
-        .dataLocation(dataLocation)
-        .indexLocation(indexLocation)
-        .async()
-        .build();
+    final Configuration cacheConfig =
+        new ConfigurationBuilder()
+            .memory()
+            .maxCount(configuration.getMaxEntries())
+            .whenFull(EvictionStrategy.REMOVE)
+            .persistence()
+            .addSoftIndexFileStore()
+            .dataLocation(dataLocation)
+            .indexLocation(indexLocation)
+            .async()
+            .build();
 
     cacheManager.defineConfiguration(cacheName, cacheConfig);
     return cacheManager.getCache(cacheName);
   }
-
 }

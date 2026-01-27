@@ -28,20 +28,17 @@ import lombok.Value;
 /**
  * Represents a FHIR search query consisting of one or more search criteria. Multiple criteria are
  * combined with AND logic.
- * <p>
- * Note: The resource type is not part of the search query itself, but is passed separately to the
- * executor.
+ *
+ * <p>Note: The resource type is not part of the search query itself, but is passed separately to
+ * the executor.
  *
  * @see <a href="https://hl7.org/fhir/search.html">FHIR Search</a>
  */
 @Value
 public class FhirSearch {
 
-  /**
-   * The search criteria. Multiple criteria are combined with AND logic.
-   */
-  @Nonnull
-  List<SearchCriterion> criteria;
+  /** The search criteria. Multiple criteria are combined with AND logic. */
+  @Nonnull List<SearchCriterion> criteria;
 
   /**
    * Creates a new builder for constructing a FhirSearch.
@@ -55,14 +52,14 @@ public class FhirSearch {
 
   /**
    * Parses a FHIR search query string into a FhirSearch.
-   * <p>
-   * The query string should be in standard URL query format without the leading '?'. Values are
+   *
+   * <p>The query string should be in standard URL query format without the leading '?'. Values are
    * expected to be URL-encoded per RFC 3986.
-   * <p>
-   * Multiple values for the same parameter (comma-separated) are combined with OR logic within a
+   *
+   * <p>Multiple values for the same parameter (comma-separated) are combined with OR logic within a
    * single criterion. Repeated parameters create separate criteria combined with AND logic.
-   * <p>
-   * FHIR escape sequences are supported: {@code \,} for literal comma, {@code \\} for literal
+   *
+   * <p>FHIR escape sequences are supported: {@code \,} for literal comma, {@code \\} for literal
    * backslash.
    *
    * @param queryString the query string (e.g., "gender=male&amp;birthdate=ge1990")
@@ -113,11 +110,12 @@ public class FhirSearch {
 
   /**
    * Splits a value on commas, respecting FHIR backslash escape sequences.
-   * <p>
-   * Escape rules:
+   *
+   * <p>Escape rules:
+   *
    * <ul>
-   *   <li>{@code \,} - literal comma (not a delimiter)</li>
-   *   <li>{@code \\} - literal backslash</li>
+   *   <li>{@code \,} - literal comma (not a delimiter)
+   *   <li>{@code \\} - literal backslash
    * </ul>
    *
    * @param value the decoded value to split
@@ -158,9 +156,7 @@ public class FhirSearch {
     return result;
   }
 
-  /**
-   * Builder for constructing FhirSearch instances.
-   */
+  /** Builder for constructing FhirSearch instances. */
   public static class Builder {
 
     private final List<SearchCriterion> criteria = new ArrayList<>();
@@ -174,8 +170,8 @@ public class FhirSearch {
      * @return this builder
      */
     @Nonnull
-    public Builder criterion(@Nonnull final String parameterCodeWithModifier,
-        @Nonnull final String... values) {
+    public Builder criterion(
+        @Nonnull final String parameterCodeWithModifier, @Nonnull final String... values) {
       return criterion(parameterCodeWithModifier, Arrays.asList(values));
     }
 
@@ -188,8 +184,8 @@ public class FhirSearch {
      * @return this builder
      */
     @Nonnull
-    public Builder criterion(@Nonnull final String parameterCodeWithModifier,
-        @Nonnull final List<String> values) {
+    public Builder criterion(
+        @Nonnull final String parameterCodeWithModifier, @Nonnull final List<String> values) {
       final String[] parts = parseParameterCode(parameterCodeWithModifier);
       criteria.add(SearchCriterion.of(parts[0], parts[1], values));
       return this;
@@ -218,11 +214,11 @@ public class FhirSearch {
     private String[] parseParameterCode(@Nonnull final String parameterCodeWithModifier) {
       final int colonIndex = parameterCodeWithModifier.indexOf(':');
       if (colonIndex == -1) {
-        return new String[]{parameterCodeWithModifier, null};
+        return new String[] {parameterCodeWithModifier, null};
       }
-      return new String[]{
-          parameterCodeWithModifier.substring(0, colonIndex),
-          parameterCodeWithModifier.substring(colonIndex + 1)
+      return new String[] {
+        parameterCodeWithModifier.substring(0, colonIndex),
+        parameterCodeWithModifier.substring(colonIndex + 1)
       };
     }
 

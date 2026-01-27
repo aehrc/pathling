@@ -35,8 +35,8 @@ import org.apache.spark.sql.functions;
 
 /**
  * Pathling-specific SQL functions that extend Spark SQL functionality.
- * <p>
- * This interface provides utility functions for working with Spark SQL columns in the context of
+ *
+ * <p>This interface provides utility functions for working with Spark SQL columns in the context of
  * FHIR data processing. These functions handle common operations like pruning annotations, safely
  * concatenating maps, and collecting maps during aggregation.
  */
@@ -44,7 +44,7 @@ import org.apache.spark.sql.functions;
 public class SqlFunctions {
 
   private static final String FHIR_INSTANT_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
-  
+
   /**
    * Formats a TIMESTAMP column to a string in FHIR instant format. Always returns UTC time as Spark
    * TIMESTAMP does not preserve the original timezone.
@@ -54,14 +54,13 @@ public class SqlFunctions {
    */
   @Nonnull
   public static Column toFhirInstant(@Nonnull final Column col) {
-    return functions.date_format(functions.to_utc_timestamp(col, functions.current_timezone()),
-        FHIR_INSTANT_FORMAT);
+    return functions.date_format(
+        functions.to_utc_timestamp(col, functions.current_timezone()), FHIR_INSTANT_FORMAT);
   }
 
   /**
-   * Deduplicates an array using custom equality comparator.
-   * Implements manual deduplication with aggregate() for types requiring
-   * custom equality semantics (Quantity, Coding, temporal types).
+   * Deduplicates an array using custom equality comparator. Implements manual deduplication with
+   * aggregate() for types requiring custom equality semantics (Quantity, Coding, temporal types).
    *
    * @param arrayColumn the array column to deduplicate
    * @param equalityComparator a function that compares two elements for equality
@@ -69,24 +68,23 @@ public class SqlFunctions {
    */
   @Nonnull
   public static Column arrayDistinctWithEquality(
-      @Nonnull final Column arrayColumn,
-      @Nonnull final BinaryOperator<Column> equalityComparator) {
+      @Nonnull final Column arrayColumn, @Nonnull final BinaryOperator<Column> equalityComparator) {
 
     final Column emptyTypedArray = filter(arrayColumn, x -> lit(false));
 
     return aggregate(
         arrayColumn,
         emptyTypedArray,
-        (acc, elem) -> when(
-            not(exists(acc, x -> ifnull(equalityComparator.apply(x, elem), lit(false)))),
-            concat(acc, array(elem))
-        ).otherwise(acc)
-    );
+        (acc, elem) ->
+            when(
+                    not(exists(acc, x -> ifnull(equalityComparator.apply(x, elem), lit(false)))),
+                    concat(acc, array(elem)))
+                .otherwise(acc));
   }
 
   /**
-   * Merges and deduplicates two arrays using custom equality comparator.
-   * Concatenates the arrays and then deduplicates using the provided equality function.
+   * Merges and deduplicates two arrays using custom equality comparator. Concatenates the arrays
+   * and then deduplicates using the provided equality function.
    *
    * @param leftArray the left array column
    * @param rightArray the right array column

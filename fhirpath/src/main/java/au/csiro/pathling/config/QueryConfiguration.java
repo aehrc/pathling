@@ -34,8 +34,7 @@ public class QueryConfiguration {
    * Setting this option to {@code true} will enable additional logging relating to the query plan
    * used to execute queries.
    */
-  @Builder.Default
-  private boolean explainQueries = false;
+  @Builder.Default private boolean explainQueries = false;
 
   /**
    * Maximum depth for self-referencing structure traversals in repeat operations. Controls how
@@ -44,5 +43,4 @@ public class QueryConfiguration {
   @Min(0)
   @Builder.Default
   private int maxUnboundTraversalDepth = 10;
-
 }

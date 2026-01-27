@@ -24,18 +24,19 @@ import java.util.Optional;
 
 /**
  * Represents a UCUM (Unified Code for Units of Measure) unit.
- * <p>
- * UCUM is an international standard for representing units of measure in a machine-readable form.
- * This record encapsulates a UCUM unit code and provides methods for converting between compatible
- * UCUM units using the UCUM conversion service.
- * <p>
- * Examples of UCUM codes include:
+ *
+ * <p>UCUM is an international standard for representing units of measure in a machine-readable
+ * form. This record encapsulates a UCUM unit code and provides methods for converting between
+ * compatible UCUM units using the UCUM conversion service.
+ *
+ * <p>Examples of UCUM codes include:
+ *
  * <ul>
- *   <li>"mg" - milligram</li>
- *   <li>"kg" - kilogram</li>
- *   <li>"mL" - milliliter</li>
- *   <li>"s" - second</li>
- *   <li>"ms" - millisecond</li>
+ *   <li>"mg" - milligram
+ *   <li>"kg" - kilogram
+ *   <li>"mL" - milliliter
+ *   <li>"s" - second
+ *   <li>"ms" - millisecond
  * </ul>
  *
  * @param code the UCUM unit code (e.g., "mg", "kg", "mL")
@@ -47,9 +48,8 @@ public record UcumUnit(@Nonnull String code) implements FhirPathUnit {
    * unit is specified in FHIRPath quantity literals.
    */
   public static final UcumUnit ONE = new UcumUnit("1");
-  /**
-   * The system URI for UCUM units.
-   */
+
+  /** The system URI for UCUM units. */
   public static final String UCUM_SYSTEM_URI = "http://unitsofmeasure.org";
 
   /**
@@ -66,34 +66,36 @@ public record UcumUnit(@Nonnull String code) implements FhirPathUnit {
   /**
    * Converts a value from this UCUM unit to the target UCUM unit. Handles both multiplicative
    * conversions (e.g., mg → kg) and additive conversions (e.g., Celsius → Kelvin).
-   * <p>
-   * This method uses the UCUM conversion service to determine if the two units are compatible and
-   * perform the conversion. Units are compatible if they measure the same dimension (e.g., both
+   *
+   * <p>This method uses the UCUM conversion service to determine if the two units are compatible
+   * and perform the conversion. Units are compatible if they measure the same dimension (e.g., both
    * measure mass, length, or time).
-   * <p>
-   * Examples of valid conversions:
+   *
+   * <p>Examples of valid conversions:
+   *
    * <ul>
-   *   <li>1000 mg → 1 kg (mass, multiplicative)</li>
-   *   <li>1 mL → 0.001 L (volume, multiplicative)</li>
-   *   <li>1000 s → 1000000 ms (time, multiplicative)</li>
-   *   <li>0 Cel → 273.15 K (temperature, additive)</li>
-   *   <li>100 Cel → 373.15 K (temperature, additive)</li>
+   *   <li>1000 mg → 1 kg (mass, multiplicative)
+   *   <li>1 mL → 0.001 L (volume, multiplicative)
+   *   <li>1000 s → 1000000 ms (time, multiplicative)
+   *   <li>0 Cel → 273.15 K (temperature, additive)
+   *   <li>100 Cel → 373.15 K (temperature, additive)
    * </ul>
-   * <p>
-   * Examples of invalid conversions that return empty:
+   *
+   * <p>Examples of invalid conversions that return empty:
+   *
    * <ul>
-   *   <li>mg → mL (mass vs volume)</li>
-   *   <li>s → kg (time vs mass)</li>
+   *   <li>mg → mL (mass vs volume)
+   *   <li>s → kg (time vs mass)
    * </ul>
    *
    * @param value the value to convert
    * @param targetUnit the target UCUM unit to convert to
    * @return an Optional containing the converted value if conversion is possible, or empty if the
-   * units are incompatible
+   *     units are incompatible
    */
   @Nonnull
-  public Optional<BigDecimal> convertValue(@Nonnull final BigDecimal value,
-      @Nonnull final UcumUnit targetUnit) {
+  public Optional<BigDecimal> convertValue(
+      @Nonnull final BigDecimal value, @Nonnull final UcumUnit targetUnit) {
     return Optional.ofNullable(Ucum.convertValue(value, code(), targetUnit.code()));
   }
 

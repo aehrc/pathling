@@ -35,45 +35,28 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Coding;
 
-
-/**
- * A scheme for representing {@link Coding} objects within Spark SQL.
- */
+/** A scheme for representing {@link Coding} objects within Spark SQL. */
 public interface CodingSchema {
 
-  /**
-   * Field name for the id property.
-   */
+  /** Field name for the id property. */
   String ID_FIELD = "id";
 
-  /**
-   * Field name for the system property.
-   */
-
+  /** Field name for the system property. */
   String SYSTEM_FIELD = "system";
-  /**
-   * Field name for the version property.
-   */
+
+  /** Field name for the version property. */
   String VERSION_FIELD = "version";
 
-  /**
-   * Field name for the code property.
-   */
+  /** Field name for the code property. */
   String CODE_FIELD = "code";
 
-  /**
-   * Field name for the display property.
-   */
+  /** Field name for the display property. */
   String DISPLAY_FIELD = "display";
 
-  /**
-   * Field name for the userSelected property.
-   */
+  /** Field name for the userSelected property. */
   String USER_SELECTED_FIELD = "userSelected";
 
-  /**
-   * Field name for the fid property.
-   */
+  /** Field name for the fid property. */
   String FID_FIELD = "_fid";
 
   /**
@@ -84,49 +67,35 @@ public interface CodingSchema {
     final Metadata metadata = new MetadataBuilder().build();
     final StructField id = new StructField(ID_FIELD, DataTypes.StringType, true, metadata);
     final StructField system = new StructField(SYSTEM_FIELD, DataTypes.StringType, true, metadata);
-    final StructField version = new StructField(VERSION_FIELD, DataTypes.StringType, true,
-        metadata);
+    final StructField version =
+        new StructField(VERSION_FIELD, DataTypes.StringType, true, metadata);
     final StructField code = new StructField(CODE_FIELD, DataTypes.StringType, true, metadata);
-    final StructField display = new StructField(DISPLAY_FIELD, DataTypes.StringType, true,
-        metadata);
-    final StructField userSelected = new StructField(USER_SELECTED_FIELD, DataTypes.BooleanType,
-        true,
-        metadata);
-    final StructField fid = new StructField(FID_FIELD, DataTypes.IntegerType, true,
-        metadata);
-    return new StructType(new StructField[]{id, system, version, code, display, userSelected, fid});
+    final StructField display =
+        new StructField(DISPLAY_FIELD, DataTypes.StringType, true, metadata);
+    final StructField userSelected =
+        new StructField(USER_SELECTED_FIELD, DataTypes.BooleanType, true, metadata);
+    final StructField fid = new StructField(FID_FIELD, DataTypes.IntegerType, true, metadata);
+    return new StructType(
+        new StructField[] {id, system, version, code, display, userSelected, fid});
   }
 
-  /**
-   * A {@link StructType} for a Coding.
-   */
+  /** A {@link StructType} for a Coding. */
   StructType DATA_TYPE = codingStructType();
 
-  /**
-   * Index of the system field in the Coding struct.
-   */
+  /** Index of the system field in the Coding struct. */
   int SYSTEM_INDEX = DATA_TYPE.fieldIndex(SYSTEM_FIELD);
 
-  /**
-   * Index of the version field in the Coding struct.
-   */
+  /** Index of the version field in the Coding struct. */
   int VERSION_INDEX = DATA_TYPE.fieldIndex(VERSION_FIELD);
 
-  /**
-   * Index of the code field in the Coding struct.
-   */
+  /** Index of the code field in the Coding struct. */
   int CODE_INDEX = DATA_TYPE.fieldIndex(CODE_FIELD);
 
-  /**
-   * Index of the display field in the Coding struct.
-   */
+  /** Index of the display field in the Coding struct. */
   int DISPLAY_INDEX = DATA_TYPE.fieldIndex(DISPLAY_FIELD);
 
-  /**
-   * Index of the userSelected field in the Coding struct.
-   */
+  /** Index of the userSelected field in the Coding struct. */
   int USER_SELECTED_INDEX = DATA_TYPE.fieldIndex(USER_SELECTED_FIELD);
-
 
   /**
    * Encodes a Coding to a Row (spark SQL compatible type)
@@ -139,11 +108,15 @@ public interface CodingSchema {
     if (coding == null) {
       return null;
     } else {
-      final Boolean userSelected = coding.hasUserSelected()
-                                   ? coding.getUserSelected()
-                                   : null;
-      return RowFactory.create(coding.getId(), coding.getSystem(), coding.getVersion(),
-          coding.getCode(), coding.getDisplay(), userSelected, null /* _fid */);
+      final Boolean userSelected = coding.hasUserSelected() ? coding.getUserSelected() : null;
+      return RowFactory.create(
+          coding.getId(),
+          coding.getSystem(),
+          coding.getVersion(),
+          coding.getCode(),
+          coding.getDisplay(),
+          userSelected,
+          null /* _fid */);
     }
   }
 
@@ -177,9 +150,7 @@ public interface CodingSchema {
    */
   @Nullable
   static List<Row> encodeList(@Nullable final List<Coding> codings) {
-    return codings == null
-           ? null
-           : codings.stream().map(CodingSchema::encode).toList();
+    return codings == null ? null : codings.stream().map(CodingSchema::encode).toList();
   }
 
   /**
@@ -191,9 +162,7 @@ public interface CodingSchema {
   @Nullable
   static Row[] encodeListToArray(@Nullable final List<Coding> codings) {
     final List<Row> encoded = encodeList(codings);
-    return encoded == null
-           ? null
-           : encoded.toArray(new Row[0]);
+    return encoded == null ? null : encoded.toArray(new Row[0]);
   }
 
   /**
@@ -208,8 +177,12 @@ public interface CodingSchema {
    * @return a struct column representing a Coding
    */
   @Nonnull
-  static Column toStruct(@Nonnull final Column id, @Nonnull final Column system,
-      @Nonnull final Column version, @Nonnull final Column code, @Nonnull final Column display,
+  static Column toStruct(
+      @Nonnull final Column id,
+      @Nonnull final Column system,
+      @Nonnull final Column version,
+      @Nonnull final Column code,
+      @Nonnull final Column display,
       @Nonnull final Column userSelected) {
     return functions.struct(
         id.as(ID_FIELD),
@@ -218,16 +191,12 @@ public interface CodingSchema {
         code.as(CODE_FIELD),
         display.as(DISPLAY_FIELD),
         userSelected.as(USER_SELECTED_FIELD),
-        lit(null).as(FID_FIELD)
-    );
+        lit(null).as(FID_FIELD));
   }
-
 
   @Nonnull
   private static Column userSelectedToLiteral(@Nonnull final Coding coding) {
-    return coding.hasUserSelected()
-           ? lit(coding.getUserSelected())
-           : lit(null);
+    return coding.hasUserSelected() ? lit(coding.getUserSelected()) : lit(null);
   }
 
   /**
@@ -239,8 +208,13 @@ public interface CodingSchema {
   @Nonnull
   static Column toLiteralColumn(@Nullable final Coding coding) {
     return nonNull(coding)
-           ? toStruct(lit(coding.getId()), lit(coding.getSystem()), lit(coding.getVersion()),
-        lit(coding.getCode()), lit(coding.getDisplay()), userSelectedToLiteral(coding))
-           : lit(null);
+        ? toStruct(
+            lit(coding.getId()),
+            lit(coding.getSystem()),
+            lit(coding.getVersion()),
+            lit(coding.getCode()),
+            lit(coding.getDisplay()),
+            userSelectedToLiteral(coding))
+        : lit(null);
   }
 }

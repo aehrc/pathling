@@ -24,9 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-/**
- * Tests for {@link TokenSearchValue} parsing.
- */
+/** Tests for {@link TokenSearchValue} parsing. */
 class TokenSearchValueTest {
 
   @Test
@@ -111,9 +109,8 @@ class TokenSearchValueTest {
   void testRequiresSimpleCodeFailsWithSystem() {
     final TokenSearchValue result = TokenSearchValue.parse("http://example.org|ABC123");
 
-    final IllegalArgumentException exception = assertThrows(
-        IllegalArgumentException.class,
-        result::requiresSimpleCode);
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, result::requiresSimpleCode);
 
     assertTrue(exception.getMessage().contains("System|code syntax is not supported"));
     assertTrue(exception.getMessage().contains("http://example.org"));
@@ -123,9 +120,8 @@ class TokenSearchValueTest {
   void testRequiresSimpleCodeFailsWithSystemOnly() {
     final TokenSearchValue result = TokenSearchValue.parse("http://example.org|");
 
-    final IllegalArgumentException exception = assertThrows(
-        IllegalArgumentException.class,
-        result::requiresSimpleCode);
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, result::requiresSimpleCode);
 
     assertTrue(exception.getMessage().contains("System|code syntax is not supported"));
   }
@@ -134,9 +130,8 @@ class TokenSearchValueTest {
   void testRequiresSimpleCodeFailsWithNoCode() {
     final TokenSearchValue result = TokenSearchValue.parse("|");
 
-    final IllegalArgumentException exception = assertThrows(
-        IllegalArgumentException.class,
-        result::requiresSimpleCode);
+    final IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, result::requiresSimpleCode);
 
     assertTrue(exception.getMessage().contains("code value is required"));
   }

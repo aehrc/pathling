@@ -39,8 +39,7 @@ import org.apache.spark.sql.SparkSession;
 @Slf4j
 public class FileSystemPersistence {
 
-  private FileSystemPersistence() {
-  }
+  private FileSystemPersistence() {}
 
   /**
    * Joins two paths together, taking care that URLs, Unix-style paths and Windows-style paths are
@@ -70,10 +69,11 @@ public class FileSystemPersistence {
    * @throws IllegalArgumentException if the location URL is malformed
    */
   @Nonnull
-  public static FileSystem getFileSystem(@Nonnull final SparkSession spark,
-      @Nonnull final String location) {
-    @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
-        .hadoopConfiguration();
+  public static FileSystem getFileSystem(
+      @Nonnull final SparkSession spark, @Nonnull final String location) {
+    @Nullable
+    final org.apache.hadoop.conf.Configuration hadoopConfiguration =
+        spark.sparkContext().hadoopConfiguration();
     requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouseLocation;
     try {
@@ -97,18 +97,23 @@ public class FileSystemPersistence {
    * @return the location of the resulting file
    */
   @Nonnull
-  public static String departitionResult(@Nonnull final SparkSession spark,
+  public static String departitionResult(
+      @Nonnull final SparkSession spark,
       @Nonnull final String partitionedLocation,
-      @Nonnull final String departitionedLocation, @Nonnull final String extension) {
-    return departitionResult(getFileSystem(spark, partitionedLocation), partitionedLocation,
-        departitionedLocation, extension);
+      @Nonnull final String departitionedLocation,
+      @Nonnull final String extension) {
+    return departitionResult(
+        getFileSystem(spark, partitionedLocation),
+        partitionedLocation,
+        departitionedLocation,
+        extension);
   }
 
   /**
    * Convert a directory containing a single file partition into a single file.
    *
    * @param partitionedLocation a Hadoop {@link FileSystem} representing the location that both the
-   * partitioned and departitioned files are located in
+   *     partitioned and departitioned files are located in
    * @param partitionedUrl the URL of the partitioned file
    * @param departitionedUrl the desired URL of the resulting file
    * @param extension the file extension used within the partitioned directory
@@ -116,17 +121,20 @@ public class FileSystemPersistence {
    * @throws PersistenceError if there is a problem copying the partition file
    */
   @Nonnull
-  public static String departitionResult(@Nonnull final FileSystem partitionedLocation,
-      @Nonnull final String partitionedUrl, @Nonnull final String departitionedUrl,
+  public static String departitionResult(
+      @Nonnull final FileSystem partitionedLocation,
+      @Nonnull final String partitionedUrl,
+      @Nonnull final String departitionedUrl,
       @Nonnull final String extension) {
     try {
       final Path partitionedPath = new Path(partitionedUrl);
       final FileStatus[] partitionFiles = partitionedLocation.listStatus(partitionedPath);
-      final String targetFile = Arrays.stream(partitionFiles)
-          .map(f -> f.getPath().toString())
-          .filter(f -> f.endsWith("." + extension))
-          .findFirst()
-          .orElseThrow(() -> new IOException("Partition file not found"));
+      final String targetFile =
+          Arrays.stream(partitionFiles)
+              .map(f -> f.getPath().toString())
+              .filter(f -> f.endsWith("." + extension))
+              .findFirst()
+              .orElseThrow(() -> new IOException("Partition file not found"));
       log.info("Renaming result to: {}", departitionedUrl);
       partitionedLocation.rename(new Path(targetFile), new Path(departitionedUrl));
       log.info("Cleaning up: {}", partitionedUrl);
@@ -136,5 +144,4 @@ public class FileSystemPersistence {
     }
     return departitionedUrl;
   }
-
 }

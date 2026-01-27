@@ -31,27 +31,19 @@ import java.util.Set;
 import lombok.Builder;
 import lombok.Data;
 
-/**
- * Represents configuration specific to FHIR encoding.
- */
+/** Represents configuration specific to FHIR encoding. */
 @Data
 @Builder
 public class EncodingConfiguration {
 
-  /**
-   * Controls the maximum depth of nested element data that is encoded upon import.
-   */
+  /** Controls the maximum depth of nested element data that is encoded upon import. */
   @NotNull
   @Min(0)
   @Builder.Default
   private Integer maxNestingLevel = 3;
 
-  /**
-   * Enables support for FHIR extensions.
-   */
-  @NotNull
-  @Builder.Default
-  private boolean enableExtensions = true;
+  /** Enables support for FHIR extensions. */
+  @NotNull @Builder.Default private boolean enableExtensions = true;
 
   /**
    * The list of types that are encoded within open types, such as extensions. This default list was
@@ -59,7 +51,5 @@ public class EncodingConfiguration {
    * US and AU base profiles. In general, you will get the best query performance by encoding your
    * data with the shortest possible list.
    */
-  @NotNull
-  @Builder.Default
-  private Set<String> openTypes = FhirEncoders.STANDARD_OPEN_TYPES;
+  @NotNull @Builder.Default private Set<String> openTypes = FhirEncoders.STANDARD_OPEN_TYPES;
 }

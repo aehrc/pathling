@@ -35,7 +35,7 @@ import org.apache.spark.sql.functions;
  * @author John Grimes
  * @author Piotr Szul
  * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#collections-1">FHIRPath specification -
- * Collections</a>
+ *     Collections</a>
  */
 @UtilityClass
 public class CollectionOperations {
@@ -43,19 +43,19 @@ public class CollectionOperations {
   /**
    * If the left operand is a collection with a single item, this operator returns {@code true} if
    * the item is in the right operand using equality semantics. If the left-hand side of the
-   * operator is empty, the result is empty, if the right-hand side is empty, the result is
-   * {@code false}. If the left operand has multiple items, an exception is thrown.
+   * operator is empty, the result is empty, if the right-hand side is empty, the result is {@code
+   * false}. If the left operand has multiple items, an exception is thrown.
    *
    * @param element The element to check for membership
    * @param collection The collection to check membership within
    * @return A {@link BooleanCollection} representing the result of the operation
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#in-membership">FHIRPath specification -
-   * in (membership)</a>
+   *     in (membership)</a>
    */
   @FhirPathOperator(name = "in")
   @Nonnull
-  public static Collection in(@Nonnull final Collection element,
-      @Nonnull final Collection collection) {
+  public static Collection in(
+      @Nonnull final Collection element, @Nonnull final Collection collection) {
     return executeContains(collection, element);
   }
 
@@ -69,18 +69,18 @@ public class CollectionOperations {
    * @param element The element to check for membership
    * @return A {@link BooleanCollection} representing the result of the operation
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#contains-containership">FHIRPath
-   * specification - contains (containership)</a>
+   *     specification - contains (containership)</a>
    */
   @FhirPathOperator(name = "contains")
   @Nonnull
-  public static Collection contains(@Nonnull final Collection collection,
-      @Nonnull final Collection element) {
+  public static Collection contains(
+      @Nonnull final Collection collection, @Nonnull final Collection element) {
     return executeContains(collection, element);
   }
 
   @Nonnull
-  private static Collection executeContains(@Nonnull final Collection collection,
-      @Nonnull final Collection element) {
+  private static Collection executeContains(
+      @Nonnull final Collection collection, @Nonnull final Collection element) {
     // Check if either operand is an EmptyCollection and handle accordingly.
     final Optional<Collection> returnValue = checkForEmptyOperands(element, collection);
     if (returnValue.isPresent()) {
@@ -91,26 +91,27 @@ public class CollectionOperations {
     // element as is. This allows for type adjustments in cases where the element is not of the
     // same type as the collection.
     // But not the other way around which also should be possible
-    final Collection typeAdjustedElement = element.convertibleTo(collection)
-                                           ? element.castAs(collection)
-                                           : element;
+    final Collection typeAdjustedElement =
+        element.convertibleTo(collection) ? element.castAs(collection) : element;
 
     // The element must be a singular value for the contains operation.
     final ColumnRepresentation singular = typeAdjustedElement.getColumn().singular();
 
     if (!collection.isComparableTo(typeAdjustedElement)) {
 
-      // non-comparable so false or null 
+      // non-comparable so false or null
       // but also should enforce singularity of the element
       final Column columnResult =
-          functions.when(singular.count().getValue().geq(1),
+          functions.when(
+              singular.count().getValue().geq(1),
               // required to enforce singularity check
-              functions.when(collection.getColumn().isEmpty().getValue(), functions.lit(null))
+              functions
+                  .when(collection.getColumn().isEmpty().getValue(), functions.lit(null))
                   .otherwise(functions.lit(false)));
       return BooleanCollection.build(new DefaultRepresentation(columnResult));
     }
 
-    // Use the collection's equality comparator to check if the singular value is contained within 
+    // Use the collection's equality comparator to check if the singular value is contained within
     // the collection.
     final BinaryOperator<Column> comparator =
         (left, right) -> collection.getComparator().equalsTo(left, right);
@@ -121,8 +122,8 @@ public class CollectionOperations {
   }
 
   @Nonnull
-  private static Optional<Collection> checkForEmptyOperands(final @Nonnull Collection element,
-      final @Nonnull Collection collection) {
+  private static Optional<Collection> checkForEmptyOperands(
+      final @Nonnull Collection element, final @Nonnull Collection collection) {
     if (element instanceof EmptyCollection) {
       return Optional.of(EmptyCollection.getInstance());
     } else if (collection instanceof EmptyCollection) {

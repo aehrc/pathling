@@ -32,8 +32,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link SearchParameterRegistry} factory methods.
- * <p>
- * These are "link tests" that verify the factory methods correctly delegate to the loader.
+ *
+ * <p>These are "link tests" that verify the factory methods correctly delegate to the loader.
  * Comprehensive parsing tests are in {@link JsonSearchParameterLoaderTest}.
  */
 class SearchParameterRegistryTest {
@@ -45,7 +45,8 @@ class SearchParameterRegistryTest {
   @Test
   void fromInputStream_createsWorkingRegistry() {
     // Basic smoke test - detailed parsing is tested in JsonSearchParameterLoaderTest
-    final String json = """
+    final String json =
+        """
         {
           "resourceType": "Bundle",
           "entry": [
@@ -62,9 +63,9 @@ class SearchParameterRegistryTest {
         }
         """;
 
-    final SearchParameterRegistry registry = SearchParameterRegistry.fromInputStream(
-        FHIR_CONTEXT,
-        new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
+    final SearchParameterRegistry registry =
+        SearchParameterRegistry.fromInputStream(
+            FHIR_CONTEXT, new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
     final Optional<SearchParameterDefinition> result =
         registry.getParameter(ResourceType.PATIENT, "gender");
@@ -77,16 +78,17 @@ class SearchParameterRegistryTest {
 
   @Test
   void fromInputStream_returnsEmptyForUnknownParameter() {
-    final String json = """
+    final String json =
+        """
         {
           "resourceType": "Bundle",
           "entry": []
         }
         """;
 
-    final SearchParameterRegistry registry = SearchParameterRegistry.fromInputStream(
-        FHIR_CONTEXT,
-        new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
+    final SearchParameterRegistry registry =
+        SearchParameterRegistry.fromInputStream(
+            FHIR_CONTEXT, new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
     assertTrue(registry.getParameter(ResourceType.PATIENT, "unknown").isEmpty());
   }

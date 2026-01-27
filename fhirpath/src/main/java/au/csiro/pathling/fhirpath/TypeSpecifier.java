@@ -35,27 +35,22 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 public class TypeSpecifier {
 
-  /**
-   * The namespace identifier for System types.
-   */
+  /** The namespace identifier for System types. */
   public static final String SYSTEM_NAMESPACE = "System";
 
-  /**
-   * The namespace identifier for FHIR types.
-   */
+  /** The namespace identifier for FHIR types. */
   public static final String FHIR_NAMESPACE = "FHIR";
-  private static final List<String> NAMESPACE_SEARCH_ORDER = List.of(FHIR_NAMESPACE,
-      SYSTEM_NAMESPACE);
-  private static final Map<String, Predicate<String>> NAMESPACE_VALIDATORS = Map.of(
-      FHIR_NAMESPACE, TypeSpecifier::isValidFhirType,
-      SYSTEM_NAMESPACE, TypeSpecifier::isValidSystemType
-  );
 
-  @Nonnull
-  String namespace;
+  private static final List<String> NAMESPACE_SEARCH_ORDER =
+      List.of(FHIR_NAMESPACE, SYSTEM_NAMESPACE);
+  private static final Map<String, Predicate<String>> NAMESPACE_VALIDATORS =
+      Map.of(
+          FHIR_NAMESPACE, TypeSpecifier::isValidFhirType,
+          SYSTEM_NAMESPACE, TypeSpecifier::isValidSystemType);
 
-  @Nonnull
-  String typeName;
+  @Nonnull String namespace;
+
+  @Nonnull String typeName;
 
   /**
    * Creates a new type specifier.
@@ -88,14 +83,12 @@ public class TypeSpecifier {
     return namespace.equals(FHIR_NAMESPACE);
   }
 
-
   /**
    * @return true if this type specifier is a type in System namespace.
    */
   public boolean isSystemType() {
     return SYSTEM_NAMESPACE.equals(namespace);
   }
-
 
   /**
    * Converts this type specifier to a System FHIRPath type.
@@ -127,7 +120,7 @@ public class TypeSpecifier {
 
   /**
    * @return The FHIR resource type represented by this type specifier if a valid FHIR resource
-   * type.
+   *     type.
    */
   @Nonnull
   public Optional<ResourceType> asResourceType() {
@@ -181,5 +174,4 @@ public class TypeSpecifier {
   public String toString() {
     return namespace + "." + typeName;
   }
-
 }

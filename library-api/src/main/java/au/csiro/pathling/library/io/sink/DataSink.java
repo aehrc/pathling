@@ -34,5 +34,4 @@ public interface DataSink {
    * @param source the data source to write
    */
   void write(@Nonnull final DataSource source);
-
 }

@@ -57,15 +57,13 @@ public enum SaveMode {
    */
   MERGE("merge", Optional.empty());
 
-  @Nonnull
-  @Getter
-  private final String code;
+  @Nonnull @Getter private final String code;
 
-  @Nonnull
-  @Getter
-  private final Optional<org.apache.spark.sql.SaveMode> sparkSaveMode;
+  @Nonnull @Getter private final Optional<org.apache.spark.sql.SaveMode> sparkSaveMode;
 
-  SaveMode(@Nonnull final String code, @Nonnull final Optional<org.apache.spark.sql.SaveMode> sparkSaveMode) {
+  SaveMode(
+      @Nonnull final String code,
+      @Nonnull final Optional<org.apache.spark.sql.SaveMode> sparkSaveMode) {
     this.code = code;
     this.sparkSaveMode = sparkSaveMode;
   }
@@ -86,5 +84,4 @@ public enum SaveMode {
     }
     throw new IllegalArgumentException("Unknown import mode: " + code);
   }
-
 }

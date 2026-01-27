@@ -27,14 +27,14 @@ public class MathOperatorsDslTest extends FhirPathDslTestBase {
   @FhirPathTest
   public Stream<DynamicTest> testNumberMathOperations() {
     return builder()
-        .withSubject(sb -> sb
-            .integer("int1", 5)
-            .integer("int2", 2)
-            .decimal("dec1", 5.5)
-            .decimal("dec2", 2.5)
-            .integerArray("intArray", 1, 2, 3)
-            .decimalArray("decArray", 1.1, 2.2, 3.3)
-        )
+        .withSubject(
+            sb ->
+                sb.integer("int1", 5)
+                    .integer("int2", 2)
+                    .decimal("dec1", 5.5)
+                    .decimal("dec2", 2.5)
+                    .integerArray("intArray", 1, 2, 3)
+                    .decimalArray("decArray", 1.1, 2.2, 3.3))
         .group("Integer math operations")
 
         // Integer negation
@@ -66,7 +66,6 @@ public class MathOperatorsDslTest extends FhirPathDslTestBase {
         .testEquals(1, "int1 mod int2", "Integer mod with variables")
         .testEquals(1, "5 mod 2", "Integer mod with literals")
         .testEquals(1, "int1 mod 2", "Integer mod with variable and literal")
-
         .group("Decimal math operations")
 
         // Decimal negation
@@ -93,7 +92,6 @@ public class MathOperatorsDslTest extends FhirPathDslTestBase {
         .testEquals(2.2, "dec1 / dec2", "Decimal division with variables")
         .testEquals(2.2, "5.5 / 2.5", "Decimal division with literals")
         .testEquals(2.2, "dec1 / 2.5", "Decimal division with variable and literal")
-
         .group("Mixed type math operations")
         // Integer and decimal operations
         .testEquals(7.5, "int1 + dec2", "Integer + Decimal")
@@ -101,32 +99,41 @@ public class MathOperatorsDslTest extends FhirPathDslTestBase {
         .testEquals(2.5, "int1 - dec2", "Integer - Decimal")
         .testEquals(12.5, "int1 * dec2", "Integer * Decimal")
         .testEquals(2.0, "int1 / dec2", "Integer / Decimal")
-
         .group("Error cases with collections")
-        .testError("Polarity operator (-) requires a singular operand.",
-            "-intArray", "Polarity with array")
-        .testError("Math operator (+) requires the left operand to be singular.",
-            "intArray + 1", "Addition with array")
-        .testError("Math operator (+) requires the right operand to be singular.",
-            "1 + intArray", "Addition with array")
-        .testError("Math operator (*) requires the left operand to be singular.",
-            "intArray * 2", "Multiplication with array")
-        .testError("Math operator (/) requires the left operand to be singular.",
-            "decArray / 2", "Division with array")
+        .testError(
+            "Polarity operator (-) requires a singular operand.",
+            "-intArray",
+            "Polarity with array")
+        .testError(
+            "Math operator (+) requires the left operand to be singular.",
+            "intArray + 1",
+            "Addition with array")
+        .testError(
+            "Math operator (+) requires the right operand to be singular.",
+            "1 + intArray",
+            "Addition with array")
+        .testError(
+            "Math operator (*) requires the left operand to be singular.",
+            "intArray * 2",
+            "Multiplication with array")
+        .testError(
+            "Math operator (/) requires the left operand to be singular.",
+            "decArray / 2",
+            "Division with array")
         .build();
   }
 
   @FhirPathTest
   public Stream<DynamicTest> testMathWithEmptyArguments() {
     return builder()
-        .withSubject(sb -> sb
-            .integer("integerValue", 10)
-            .integerEmpty("emptyInteger")
-            .decimal("decimalValue", 11.5)
-            .bool("active", true)
-            .string("stringValue", "hello")
-            .stringEmpty("emptyStr")
-        )
+        .withSubject(
+            sb ->
+                sb.integer("integerValue", 10)
+                    .integerEmpty("emptyInteger")
+                    .decimal("decimalValue", 11.5)
+                    .bool("active", true)
+                    .string("stringValue", "hello")
+                    .stringEmpty("emptyStr"))
         .group("Math with empty arguments")
         // unary operations
         .testEmpty("-{}", "Polarity with empty literal")
@@ -148,35 +155,37 @@ public class MathOperatorsDslTest extends FhirPathDslTestBase {
         // error cases
         .testError("2 * true", "Multiplication with boolean literal")
         .testError("2 / active", "Division with boolean literal where active is boolean")
-        .testError("2 + true.where(%resource.active)",
+        .testError(
+            "2 + true.where(%resource.active)",
             "Addition with boolean literal where active is boolean and true")
         .testError("2 - true.where(false)", "Subtraction with boolean literal where false")
-        .testError("2 * true.where({})",
-            "Multiplication with boolean literal where empty collection")
-        .testError("2 / true.where(1 = 2)",
-            "Division with boolean literal where condition is false")
-        .testError("Negation is not supported on Strings",
-            "-emptyStr", "Polarity with empty string collection")
+        .testError(
+            "2 * true.where({})", "Multiplication with boolean literal where empty collection")
+        .testError(
+            "2 / true.where(1 = 2)", "Division with boolean literal where condition is false")
+        .testError(
+            "Negation is not supported on Strings",
+            "-emptyStr",
+            "Polarity with empty string collection")
         .build();
   }
 
   @FhirPathTest
   public Stream<DynamicTest> testStringMathOperations() {
     return builder()
-        .withSubject(sb -> sb
-            .string("str1", "hello")
-            .string("str2", "world")
-            .stringArray("strArray", "one", "two", "three")
-            .stringEmpty("emptyStr")
-            .integer("intValue", 42)
-        )
+        .withSubject(
+            sb ->
+                sb.string("str1", "hello")
+                    .string("str2", "world")
+                    .stringArray("strArray", "one", "two", "three")
+                    .stringEmpty("emptyStr")
+                    .integer("intValue", 42))
         .group("String addition (concatenation)")
         // String concatenation with + operator
         .testEquals("helloworld", "str1 + str2", "String concatenation with variables")
         .testEquals("hello world", "'hello' + ' world'", "String concatenation with literals")
-        .testEquals("hello world", "str1 + ' world'",
-            "String concatenation with variable and literal")
-
+        .testEquals(
+            "hello world", "str1 + ' world'", "String concatenation with variable and literal")
         .group("Unsupported string math operations")
         // Other math operations not supported for strings
         .testError("str1 - str2", "String subtraction not supported")
@@ -186,7 +195,6 @@ public class MathOperatorsDslTest extends FhirPathDslTestBase {
         .testError("str1 mod str2", "String modulo not supported")
         .testError("str1 div str2", "String integer division not supported")
         .testError("-str1", "Unary minus not supported for strings")
-
         .group("String array math operations")
         // Operations with string arrays
         .testError("strArray + str1", "String array addition not supported")

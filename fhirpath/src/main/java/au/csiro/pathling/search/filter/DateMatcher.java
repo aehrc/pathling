@@ -32,31 +32,33 @@ import org.apache.spark.sql.Column;
 
 /**
  * Matches elements using range-based comparisons for date search parameters.
- * <p>
- * Per FHIR specification, date searches are intrinsically range-based. Both the element value and
- * search value represent implicit ranges based on their precision. The search value can be prefixed
- * with a comparison operator (e.g., "ge2023-01-15" for greater-or-equal).
- * <p>
- * This matcher supports both scalar date types (date, dateTime, instant) and Period types. For
+ *
+ * <p>Per FHIR specification, date searches are intrinsically range-based. Both the element value
+ * and search value represent implicit ranges based on their precision. The search value can be
+ * prefixed with a comparison operator (e.g., "ge2023-01-15" for greater-or-equal).
+ *
+ * <p>This matcher supports both scalar date types (date, dateTime, instant) and Period types. For
  * scalar types, UDFs are used to compute precision-aware boundaries. For Period types, the start
  * and end fields are extracted and boundaries computed, with null values treated as negative and
  * positive infinity respectively.
- * <p>
- * Supported prefixes:
+ *
+ * <p>Supported prefixes:
+ *
  * <ul>
- *   <li>{@code eq} (default) - ranges overlap</li>
- *   <li>{@code ne} - ranges do not overlap</li>
- *   <li>{@code gt} - resource ends after parameter</li>
- *   <li>{@code ge} - resource starts at or after parameter start</li>
- *   <li>{@code lt} - resource starts before parameter</li>
- *   <li>{@code le} - resource ends at or before parameter end</li>
+ *   <li>{@code eq} (default) - ranges overlap
+ *   <li>{@code ne} - ranges do not overlap
+ *   <li>{@code gt} - resource ends after parameter
+ *   <li>{@code ge} - resource starts at or after parameter start
+ *   <li>{@code lt} - resource starts before parameter
+ *   <li>{@code le} - resource ends at or before parameter end
  * </ul>
- * <p>
- * Examples of implicit ranges:
+ *
+ * <p>Examples of implicit ranges:
+ *
  * <ul>
- *   <li>Element "2013-01-14" (day precision) → [2013-01-14T00:00:00, 2013-01-15T00:00:00)</li>
- *   <li>Search "2013-01" (month precision) → [2013-01-01T00:00:00, 2013-02-01T00:00:00)</li>
- *   <li>Search "2013-01-14T10:00" (minute precision) → [2013-01-14T10:00:00, 2013-01-14T10:01:00)</li>
+ *   <li>Element "2013-01-14" (day precision) → [2013-01-14T00:00:00, 2013-01-15T00:00:00)
+ *   <li>Search "2013-01" (month precision) → [2013-01-01T00:00:00, 2013-02-01T00:00:00)
+ *   <li>Search "2013-01-14T10:00" (minute precision) → [2013-01-14T10:00:00, 2013-01-14T10:01:00)
  * </ul>
  *
  * @see <a href="https://hl7.org/fhir/search.html#date">Date Search</a>
@@ -68,15 +70,15 @@ public class DateMatcher implements ElementMatcher {
    * Practical minimum timestamp for unbounded Period start. Using year 0001 to avoid Spark
    * timestamp overflow issues with Instant.MIN.
    */
-  private static final Timestamp MIN_TIMESTAMP = Timestamp.from(
-      LocalDateTime.of(1, 1, 1, 0, 0, 0).toInstant(ZoneOffset.UTC));
+  private static final Timestamp MIN_TIMESTAMP =
+      Timestamp.from(LocalDateTime.of(1, 1, 1, 0, 0, 0).toInstant(ZoneOffset.UTC));
 
   /**
    * Practical maximum timestamp for unbounded Period end. Using year 9999 to avoid Spark timestamp
    * overflow issues with Instant.MAX.
    */
-  private static final Timestamp MAX_TIMESTAMP = Timestamp.from(
-      LocalDateTime.of(9999, 12, 31, 23, 59, 59).toInstant(ZoneOffset.UTC));
+  private static final Timestamp MAX_TIMESTAMP =
+      Timestamp.from(LocalDateTime.of(9999, 12, 31, 23, 59, 59).toInstant(ZoneOffset.UTC));
 
   private final boolean isPeriodType;
 
@@ -101,8 +103,8 @@ public class DateMatcher implements ElementMatcher {
   }
 
   /**
-   * Creates a DateMatcher for either scalar date types or Period type.
-   * Prefer using {@link #forScalarDates()} or {@link #forPeriod()} factory methods.
+   * Creates a DateMatcher for either scalar date types or Period type. Prefer using {@link
+   * #forScalarDates()} or {@link #forPeriod()} factory methods.
    *
    * @param isPeriodType true if the element is a Period type, false for scalar date types
    */
@@ -129,12 +131,14 @@ public class DateMatcher implements ElementMatcher {
     if (isPeriodType) {
       // Period: start/end are STRING fields representing dateTime values
       // Apply UDFs to get precision-aware boundaries, coalesce null to infinity
-      resourceLow = coalesce(
-          callUDF(LowBoundaryForDateTime.FUNCTION_NAME, element.getField("start")),
-          lit(MIN_TIMESTAMP));
-      resourceHigh = coalesce(
-          callUDF(HighBoundaryForDateTime.FUNCTION_NAME, element.getField("end")),
-          lit(MAX_TIMESTAMP));
+      resourceLow =
+          coalesce(
+              callUDF(LowBoundaryForDateTime.FUNCTION_NAME, element.getField("start")),
+              lit(MIN_TIMESTAMP));
+      resourceHigh =
+          coalesce(
+              callUDF(HighBoundaryForDateTime.FUNCTION_NAME, element.getField("end")),
+              lit(MAX_TIMESTAMP));
     } else {
       // Scalar date/dateTime/instant: apply UDFs directly to the element
       resourceLow = callUDF(LowBoundaryForDateTime.FUNCTION_NAME, element);
@@ -142,16 +146,19 @@ public class DateMatcher implements ElementMatcher {
     }
 
     // Apply comparison based on prefix
-    final Column comparison = switch (prefix) {
-      case EQ -> resourceLow.leq(lit(paramHigh))
-          .and(lit(paramLow).leq(resourceHigh));  // overlap (current behavior)
-      case NE -> resourceLow.gt(lit(paramHigh))
-          .or(resourceHigh.lt(lit(paramLow)));    // no overlap
-      case GT -> resourceHigh.gt(lit(paramHigh));
-      case GE -> resourceLow.geq(lit(paramLow));
-      case LT -> resourceLow.lt(lit(paramLow));
-      case LE -> resourceHigh.leq(lit(paramHigh));
-    };
+    final Column comparison =
+        switch (prefix) {
+          case EQ ->
+              resourceLow
+                  .leq(lit(paramHigh))
+                  .and(lit(paramLow).leq(resourceHigh)); // overlap (current behavior)
+          case NE ->
+              resourceLow.gt(lit(paramHigh)).or(resourceHigh.lt(lit(paramLow))); // no overlap
+          case GT -> resourceHigh.gt(lit(paramHigh));
+          case GE -> resourceLow.geq(lit(paramLow));
+          case LT -> resourceLow.lt(lit(paramLow));
+          case LE -> resourceHigh.leq(lit(paramHigh));
+        };
 
     // For Period type, ensure the element itself is not null (resource must have a period)
     if (isPeriodType) {

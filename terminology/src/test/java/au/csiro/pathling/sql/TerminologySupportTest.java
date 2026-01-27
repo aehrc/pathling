@@ -36,37 +36,37 @@ class TerminologySupportTest {
   @Test
   void convertsNullAndCsvCodesEnumSet() {
     assertNull(TerminologySupport.parseCsvEquivalences(null));
-    assertEquals(Collections.emptySet(),
-        TerminologySupport.parseCsvEquivalences(""));
-    assertEquals(Collections.emptySet(),
-        TerminologySupport.parseCsvEquivalences("  "));
+    assertEquals(Collections.emptySet(), TerminologySupport.parseCsvEquivalences(""));
+    assertEquals(Collections.emptySet(), TerminologySupport.parseCsvEquivalences("  "));
   }
 
   @Test
   void parseValidCodesToEnumSetIgnoringBlanks() {
-    assertEquals(ImmutableSet.of(WIDER, INEXACT),
+    assertEquals(
+        ImmutableSet.of(WIDER, INEXACT),
         TerminologySupport.parseCsvEquivalences("wider, inexact, , wider "));
   }
 
   @Test
   void throwInvalidUserInputWhenParsingInvalidCodes() {
-    final InvalidUserInputError ex = assertThrows(InvalidUserInputError.class,
-        () -> TerminologySupport.parseCsvEquivalences("wider, invalid"));
+    final InvalidUserInputError ex =
+        assertThrows(
+            InvalidUserInputError.class,
+            () -> TerminologySupport.parseCsvEquivalences("wider, invalid"));
     assertEquals("Unknown ConceptMapEquivalence code 'invalid'", ex.getMessage());
   }
-
 
   @Test
   void convertsNullAndEmptyCodesToEnumSet() {
     assertNull(TerminologySupport.equivalenceCodesToEnum(null));
-    assertEquals(Collections.emptySet(),
-        TerminologySupport.equivalenceCodesToEnum(Collections.emptyList()));
+    assertEquals(
+        Collections.emptySet(), TerminologySupport.equivalenceCodesToEnum(Collections.emptyList()));
   }
-
 
   @Test
   void convertsValidCodesToEnumSet() {
-    assertEquals(ImmutableSet.of(EQUIVALENT, RELATEDTO),
+    assertEquals(
+        ImmutableSet.of(EQUIVALENT, RELATEDTO),
         TerminologySupport.equivalenceCodesToEnum(
             List.of("equivalent", "relatedto", "equivalent")));
   }
@@ -74,8 +74,9 @@ class TerminologySupportTest {
   @Test
   void throwInvalidUserInputWhenConvertingInvalidCode() {
     final List<String> invalid = List.of("invalid");
-    final InvalidUserInputError ex = assertThrows(InvalidUserInputError.class,
-        () -> TerminologySupport.equivalenceCodesToEnum(invalid));
+    final InvalidUserInputError ex =
+        assertThrows(
+            InvalidUserInputError.class, () -> TerminologySupport.equivalenceCodesToEnum(invalid));
 
     assertEquals("Unknown ConceptMapEquivalence code 'invalid'", ex.getMessage());
   }

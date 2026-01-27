@@ -33,8 +33,8 @@ public interface CollectionTransform extends Function<Collection, Collection> {
    * Ensures that the result of the transformation is a singleton boolean collection.
    *
    * @return the {@link CollectionTransform} that is guaranteed to return a singleton boolean
-   * collection (or throws an evaluation error if the input collection cannot be coerced to a
-   * boolean singleton).
+   *     collection (or throws an evaluation error if the input collection cannot be coerced to a
+   *     boolean singleton).
    */
   default CollectionTransform requireBooleanSingleton() {
     return input -> apply(input).asBooleanSingleton();
@@ -44,10 +44,8 @@ public interface CollectionTransform extends Function<Collection, Collection> {
    * @param input the input collection
    * @return a function that applies the transformation and returns the column representation
    */
-  default ColumnTransform toColumnTransformation(
-      @Nonnull final Collection input) {
+  default ColumnTransform toColumnTransformation(@Nonnull final Collection input) {
     // The type of the element Collection needs to be the same as the input.
     return c -> apply(input.copyWith(c)).getColumn();
   }
-
 }

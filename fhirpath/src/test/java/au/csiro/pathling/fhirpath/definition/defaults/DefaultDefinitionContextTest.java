@@ -28,25 +28,25 @@ import org.junit.jupiter.api.Test;
 
 class DefaultDefinitionContextTest {
 
-
   @Test
   void testDefinitions() {
 
-    final ResourceDefinition rs = DefaultResourceDefinition.of(
-        DefaultResourceTag.of("Test"),
-        DefaultPrimitiveDefinition.single("name", FHIRDefinedType.STRING),
-        DefaultPrimitiveDefinition.single("age", FHIRDefinedType.INTEGER),
-        DefaultCompositeDefinition.backbone("address", List.of(
-            DefaultPrimitiveDefinition.single("street", FHIRDefinedType.STRING),
-            DefaultPrimitiveDefinition.single("city", FHIRDefinedType.STRING),
-            DefaultPrimitiveDefinition.single("zip", FHIRDefinedType.STRING)
-        ), 1)
-    );
+    final ResourceDefinition rs =
+        DefaultResourceDefinition.of(
+            DefaultResourceTag.of("Test"),
+            DefaultPrimitiveDefinition.single("name", FHIRDefinedType.STRING),
+            DefaultPrimitiveDefinition.single("age", FHIRDefinedType.INTEGER),
+            DefaultCompositeDefinition.backbone(
+                "address",
+                List.of(
+                    DefaultPrimitiveDefinition.single("street", FHIRDefinedType.STRING),
+                    DefaultPrimitiveDefinition.single("city", FHIRDefinedType.STRING),
+                    DefaultPrimitiveDefinition.single("zip", FHIRDefinedType.STRING)),
+                1));
 
     assertEquals(
         Optional.of(DefaultPrimitiveDefinition.single("age", FHIRDefinedType.INTEGER)),
-        rs.getChildElement("age")
-    );
+        rs.getChildElement("age"));
 
     final DefinitionContext ctx = DefaultDefinitionContext.of(rs);
     assertEquals(rs, ctx.findResourceDefinition("Test"));

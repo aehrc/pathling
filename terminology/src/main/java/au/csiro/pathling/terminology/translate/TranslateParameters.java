@@ -31,13 +31,11 @@ import jakarta.annotation.Nullable;
  * @param target the target system for translation
  * @author John Grimes
  * @see <a
- * href="https://www.hl7.org/fhir/R4/codesystem-operation-translate.html">CodeSystem/$translate</a>
+ *     href="https://www.hl7.org/fhir/R4/codesystem-operation-translate.html">CodeSystem/$translate</a>
  */
 public record TranslateParameters(
     @Nonnull ImmutableCoding coding,
     @Nonnull String conceptMapUrl,
     boolean reverse,
-    @Nullable String target
-) implements TerminologyParameters {
-
-}
+    @Nullable String target)
+    implements TerminologyParameters {}

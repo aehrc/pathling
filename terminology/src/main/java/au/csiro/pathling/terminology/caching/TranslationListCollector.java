@@ -30,14 +30,15 @@ import java.util.stream.Collector;
 
 /**
  * A collector that collects a stream of items into a {@link TranslationList}.
- * <p>
- * This is the same as {@link java.util.stream.Collectors#toList()} except that it returns an
+ *
+ * <p>This is the same as {@link java.util.stream.Collectors#toList()} except that it returns an
  * {@link TranslationList} instead of a generic {@link java.util.List}.
- * <p>
- * We need this because the list implementation needs to be constrained to ensure that it is
+ *
+ * <p>We need this because the list implementation needs to be constrained to ensure that it is
  * serializable for persistent caching purposes.
  */
-public class TranslationListCollector implements Collector<Translation, TranslationList, TranslationList> {
+public class TranslationListCollector
+    implements Collector<Translation, TranslationList, TranslationList> {
 
   @Override
   public Supplier<TranslationList> supplier() {
@@ -66,5 +67,4 @@ public class TranslationListCollector implements Collector<Translation, Translat
   public Set<Characteristics> characteristics() {
     return Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.IDENTITY_FINISH));
   }
-
 }

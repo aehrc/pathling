@@ -42,8 +42,7 @@ public class DatasetSource extends AbstractSource {
    * A map of resource codes to their corresponding datasets. The key is the resource code, and the
    * value is the dataset containing the resource data.
    */
-  @Nonnull
-  protected Map<String, Dataset<Row>> resourceMap = new HashMap<>();
+  @Nonnull protected Map<String, Dataset<Row>> resourceMap = new HashMap<>();
 
   /**
    * Constructs a DatasetSource with the specified PathlingContext.
@@ -54,7 +53,8 @@ public class DatasetSource extends AbstractSource {
     super(context);
   }
 
-  private DatasetSource(@Nonnull final PathlingContext context,
+  private DatasetSource(
+      @Nonnull final PathlingContext context,
       @Nonnull final Map<String, Dataset<Row>> resourceMap) {
     super(context);
     this.resourceMap = resourceMap;
@@ -67,8 +67,8 @@ public class DatasetSource extends AbstractSource {
    * @param dataset the dataset
    * @return this data source, for chaining
    */
-  public DatasetSource dataset(@Nullable final String resourceType,
-      @Nullable final Dataset<Row> dataset) {
+  public DatasetSource dataset(
+      @Nullable final String resourceType, @Nullable final Dataset<Row> dataset) {
     requireNonNull(resourceType);
     requireNonNull(dataset);
     resourceMap.put(resourceType, dataset);
@@ -79,8 +79,8 @@ public class DatasetSource extends AbstractSource {
   @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
     return Optional.ofNullable(resourceMap.get(resourceCode))
-        .orElseThrow(() -> new IllegalArgumentException(
-            "No data found for resource type: " + resourceCode));
+        .orElseThrow(
+            () -> new IllegalArgumentException("No data found for resource type: " + resourceCode));
   }
 
   @Override
@@ -104,5 +104,4 @@ public class DatasetSource extends AbstractSource {
   public QueryableDataSource cache() {
     return map(Dataset::cache);
   }
-
 }

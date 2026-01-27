@@ -26,8 +26,7 @@ import java.util.Optional;
  * A resolver for HL7 FHIR Extensions.
  *
  * @author John Grimes
- * @see <a href="https://build.fhir.org/fhirpath.html#vars">FHIR-specific environment
- * variables</a>
+ * @see <a href="https://build.fhir.org/fhirpath.html#vars">FHIR-specific environment variables</a>
  */
 public class Hl7ExtensionResolver implements EnvironmentVariableResolver {
 
@@ -43,5 +42,4 @@ public class Hl7ExtensionResolver implements EnvironmentVariableResolver {
       return Optional.empty();
     }
   }
-
 }

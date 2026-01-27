@@ -48,5 +48,4 @@ public interface NamedFunction {
   default Collection invoke(@Nonnull final FunctionInput input) {
     throw new UnsupportedOperationException("Not implemented: " + name());
   }
-
 }

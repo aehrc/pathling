@@ -25,8 +25,8 @@ import org.apache.spark.sql.Column;
 
 /**
  * Matches elements using case-insensitive starts-with logic for string search parameters.
- * <p>
- * Per FHIR specification, string search matches if the field equals or starts with the search
+ *
+ * <p>Per FHIR specification, string search matches if the field equals or starts with the search
  * value, using case-insensitive comparison.
  *
  * @see <a href="https://hl7.org/fhir/search.html#string">String Search</a>

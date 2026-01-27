@@ -48,19 +48,15 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
-/**
- * Tests for {@link SearchColumnBuilder}.
- */
+/** Tests for {@link SearchColumnBuilder}. */
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
 @Slf4j
 class SearchColumnBuilderTest {
 
-  @Autowired
-  SparkSession spark;
+  @Autowired SparkSession spark;
 
-  @Autowired
-  FhirEncoders encoders;
+  @Autowired FhirEncoders encoders;
 
   private SearchParameterRegistry registry;
   private SearchColumnBuilder builder;
@@ -77,8 +73,7 @@ class SearchColumnBuilderTest {
 
   @Test
   void withDefaultRegistry_createsBuilderWithR4Registry() {
-    final SearchColumnBuilder defaultBuilder = SearchColumnBuilder.withDefaultRegistry(
-        fhirContext);
+    final SearchColumnBuilder defaultBuilder = SearchColumnBuilder.withDefaultRegistry(fhirContext);
 
     assertNotNull(defaultBuilder);
     assertNotNull(defaultBuilder.getRegistry());
@@ -109,13 +104,15 @@ class SearchColumnBuilderTest {
 
   @Test
   void fromQueryString_unknownParameter_throwsException() {
-    assertThrows(UnknownSearchParameterException.class,
+    assertThrows(
+        UnknownSearchParameterException.class,
         () -> builder.fromQueryString(ResourceType.PATIENT, "unknown-param=value"));
   }
 
   @Test
   void fromQueryString_invalidModifier_throwsException() {
-    assertThrows(InvalidModifierException.class,
+    assertThrows(
+        InvalidModifierException.class,
         () -> builder.fromQueryString(ResourceType.PATIENT, "gender:exact=male"));
   }
 
@@ -123,9 +120,7 @@ class SearchColumnBuilderTest {
 
   @Test
   void fromSearch_createsColumnFromFhirSearch() {
-    final FhirSearch search = FhirSearch.builder()
-        .criterion("gender", "male")
-        .build();
+    final FhirSearch search = FhirSearch.builder().criterion("gender", "male").build();
 
     final Column filterColumn = builder.fromSearch(ResourceType.PATIENT, search);
 
@@ -148,8 +143,7 @@ class SearchColumnBuilderTest {
 
   @Test
   void fromExpression_createsColumnFromFhirPathExpression() {
-    final Column filterColumn = builder.fromExpression(
-        ResourceType.PATIENT, "gender = 'male'");
+    final Column filterColumn = builder.fromExpression(ResourceType.PATIENT, "gender = 'male'");
 
     assertNotNull(filterColumn);
   }
@@ -159,8 +153,7 @@ class SearchColumnBuilderTest {
     final ObjectDataSource dataSource = createPatientDataSource();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
-    final Column filterColumn = builder.fromExpression(
-        ResourceType.PATIENT, "gender = 'male'");
+    final Column filterColumn = builder.fromExpression(ResourceType.PATIENT, "gender = 'male'");
     final Dataset<Row> result = dataset.filter(filterColumn);
 
     final Set<String> resultIds = extractIds(result);
@@ -172,8 +165,7 @@ class SearchColumnBuilderTest {
     final ObjectDataSource dataSource = createPatientDataSourceWithActive();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
-    final Column filterColumn = builder.fromExpression(
-        ResourceType.PATIENT, "active = true");
+    final Column filterColumn = builder.fromExpression(ResourceType.PATIENT, "active = true");
     final Dataset<Row> result = dataset.filter(filterColumn);
 
     final Set<String> resultIds = extractIds(result);
@@ -187,10 +179,8 @@ class SearchColumnBuilderTest {
     final ObjectDataSource dataSource = createPatientDataSourceWithActive();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
-    final Column genderFilter = builder.fromQueryString(
-        ResourceType.PATIENT, "gender=male");
-    final Column activeFilter = builder.fromExpression(
-        ResourceType.PATIENT, "active = true");
+    final Column genderFilter = builder.fromQueryString(ResourceType.PATIENT, "gender=male");
+    final Column activeFilter = builder.fromExpression(ResourceType.PATIENT, "active = true");
 
     // Use standard SparkSQL Column.and() method
     final Column combined = genderFilter.and(activeFilter);
@@ -206,10 +196,8 @@ class SearchColumnBuilderTest {
     final ObjectDataSource dataSource = createPatientDataSource();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
-    final Column maleFilter = builder.fromQueryString(
-        ResourceType.PATIENT, "gender=male");
-    final Column femaleFilter = builder.fromQueryString(
-        ResourceType.PATIENT, "gender=female");
+    final Column maleFilter = builder.fromQueryString(ResourceType.PATIENT, "gender=male");
+    final Column femaleFilter = builder.fromQueryString(ResourceType.PATIENT, "gender=female");
 
     // Use standard SparkSQL Column.or() method
     final Column combined = maleFilter.or(femaleFilter);
@@ -233,22 +221,20 @@ class SearchColumnBuilderTest {
         Arguments.of("gender:not=male", Set.of("2", "4")),
         // Active search
         Arguments.of("active=true", Set.of("1", "3")),
-        Arguments.of("active=false", Set.of("2"))
-    );
+        Arguments.of("active=false", Set.of("2")));
   }
 
   @ParameterizedTest(name = "equivalence test: {0}")
   @MethodSource("equivalenceTestCases")
   void columnBuilder_producesEquivalentResults_toFhirSearchExecutor(
-      final String queryString,
-      final Set<String> expectedIds) {
+      final String queryString, final Set<String> expectedIds) {
 
     final ObjectDataSource dataSource = createPatientDataSourceWithActive();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
     // Execute using FhirSearchExecutor (existing implementation)
-    final FhirSearchExecutor executor = FhirSearchExecutor.withRegistry(
-        fhirContext, dataSource, registry);
+    final FhirSearchExecutor executor =
+        FhirSearchExecutor.withRegistry(fhirContext, dataSource, registry);
     final FhirSearch search = FhirSearch.fromQueryString(queryString);
     final Dataset<Row> executorResult = executor.execute(ResourceType.PATIENT, search);
     final Set<String> executorIds = extractIds(executorResult);
@@ -260,13 +246,13 @@ class SearchColumnBuilderTest {
 
     // Verify both produce the same results
     assertAll(
-        () -> assertEquals(expectedIds, executorIds,
-            "FhirSearchExecutor should return expected IDs"),
-        () -> assertEquals(expectedIds, filterIds,
-            "SearchColumnBuilder should return expected IDs"),
-        () -> assertEquals(executorIds, filterIds,
-            "Both implementations should return identical results")
-    );
+        () ->
+            assertEquals(expectedIds, executorIds, "FhirSearchExecutor should return expected IDs"),
+        () ->
+            assertEquals(expectedIds, filterIds, "SearchColumnBuilder should return expected IDs"),
+        () ->
+            assertEquals(
+                executorIds, filterIds, "Both implementations should return identical results"));
   }
 
   @Test
@@ -275,8 +261,8 @@ class SearchColumnBuilderTest {
     final Dataset<Row> dataset = dataSource.read("Patient");
 
     // Execute using FhirSearchExecutor
-    final FhirSearchExecutor executor = FhirSearchExecutor.withRegistry(
-        fhirContext, dataSource, registry);
+    final FhirSearchExecutor executor =
+        FhirSearchExecutor.withRegistry(fhirContext, dataSource, registry);
     final FhirSearch search = FhirSearch.fromQueryString("gender=male");
     final Dataset<Row> executorResult = executor.execute(ResourceType.PATIENT, search);
 
@@ -295,12 +281,10 @@ class SearchColumnBuilderTest {
     final ObjectDataSource dataSource = createPatientDataSource();
     final Dataset<Row> dataset = dataSource.read("Patient");
 
-    final SearchColumnBuilder defaultBuilder = SearchColumnBuilder.withDefaultRegistry(
-        fhirContext);
+    final SearchColumnBuilder defaultBuilder = SearchColumnBuilder.withDefaultRegistry(fhirContext);
 
     // Use a standard FHIR search parameter
-    final Column filterColumn = defaultBuilder.fromQueryString(
-        ResourceType.PATIENT, "gender=male");
+    final Column filterColumn = defaultBuilder.fromQueryString(ResourceType.PATIENT, "gender=male");
     final Dataset<Row> result = dataset.filter(filterColumn);
 
     final Set<String> resultIds = extractIds(result);

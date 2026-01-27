@@ -33,8 +33,7 @@ import org.jetbrains.annotations.Contract;
  */
 public abstract class Preconditions {
 
-  private Preconditions() {
-  }
+  private Preconditions() {}
 
   /**
    * Ensures the truth of an expression, throwing an {@link AssertionError} with the supplied
@@ -56,7 +55,9 @@ public abstract class Preconditions {
    * @param messageTemplate the message template in the {@link String#format } format
    * @param params the parameters to the message template
    */
-  public static void check(final boolean expression, final @Nonnull String messageTemplate,
+  public static void check(
+      final boolean expression,
+      final @Nonnull String messageTemplate,
       @Nonnull final Object... params) {
     if (!expression) {
       throw new AssertionError(String.format(messageTemplate, params));
@@ -77,8 +78,7 @@ public abstract class Preconditions {
   }
 
   /**
-   * Ensures that an object is not null, throwing an {@link IllegalArgumentException} if it is
-   * null.
+   * Ensures that an object is not null, throwing an {@link IllegalArgumentException} if it is null.
    *
    * @param object the object to check
    * @param <T> the type of the object
@@ -116,14 +116,12 @@ public abstract class Preconditions {
    * @return the unwrapped object
    */
   @Nonnull
-  public static <T> T checkPresent(@Nonnull final Optional<T> object,
-      @Nullable final String message) {
+  public static <T> T checkPresent(
+      @Nonnull final Optional<T> object, @Nullable final String message) {
     try {
       return object.orElseThrow();
     } catch (final NoSuchElementException e) {
-      throw new AssertionError(message == null
-                               ? e.getMessage()
-                               : message);
+      throw new AssertionError(message == null ? e.getMessage() : message);
     }
   }
 
@@ -153,18 +151,16 @@ public abstract class Preconditions {
     }
   }
 
-
   /**
-   * Converts a function which throws a {@link FHIRException} to a function that throws an
-   * {@link InvalidUserInputError} in the same situation.
+   * Converts a function which throws a {@link FHIRException} to a function that throws an {@link
+   * InvalidUserInputError} in the same situation.
    *
    * @param func the function throwing {@link FHIRException}
    * @param <T> the type of the function argument.
    * @param <R> the type of the function result.
    * @return the wrapped function.
    */
-  public static <T, R> Function<T, R> wrapInUserInputError(
-      @Nonnull final Function<T, R> func) {
+  public static <T, R> Function<T, R> wrapInUserInputError(@Nonnull final Function<T, R> func) {
 
     return s -> {
       try {

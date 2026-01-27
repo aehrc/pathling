@@ -26,8 +26,7 @@ import java.io.Serial;
  */
 public class PersistenceError extends RuntimeException {
 
-  @Serial
-  private static final long serialVersionUID = -757932366975899363L;
+  @Serial private static final long serialVersionUID = -757932366975899363L;
 
   /**
    * Creates a new PersistenceError.

@@ -25,16 +25,11 @@ import jakarta.annotation.Nonnull;
 import lombok.Value;
 import lombok.experimental.UtilityClass;
 
-/**
- * Helper FhirPath classes for the FHIRPath parser.
- */
+/** Helper FhirPath classes for the FHIRPath parser. */
 @UtilityClass
 public class ParserPaths {
 
-
-  /**
-   * Special path used to pass values between visitor in the FHIRPath parser.
-   */
+  /** Special path used to pass values between visitor in the FHIRPath parser. */
   public interface ValuePath<T> extends FhirPath {
 
     /**
@@ -42,12 +37,10 @@ public class ParserPaths {
      */
     T getValue();
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    default Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+    default Collection apply(
+        @Nonnull final Collection input, @Nonnull final EvaluationContext context) {
       throw new UnsupportedOperationException("ValuePath cannot be evaluated directly");
     }
 
@@ -58,18 +51,14 @@ public class ParserPaths {
     }
   }
 
-  /**
-   * FHIRPath expression with a type specifier value.
-   */
+  /** FHIRPath expression with a type specifier value. */
   @Value
   public static class TypeSpecifierPath implements ValuePath<TypeSpecifier> {
 
     TypeSpecifier value;
   }
 
-  /**
-   * FHIRPath expression with a type namespace value.
-   */
+  /** FHIRPath expression with a type namespace value. */
   @Value
   public static class TypeNamespacePath implements ValuePath<String> {
 

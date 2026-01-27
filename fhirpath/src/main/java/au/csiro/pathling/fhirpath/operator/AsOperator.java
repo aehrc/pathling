@@ -26,11 +26,11 @@ import jakarta.annotation.Nonnull;
 
 /**
  * Operator for the FHIRPath 'as' type-casting operator.
- * <p>
- * Returns the input collection if it contains a single item of the specified type, or an empty
+ *
+ * <p>Returns the input collection if it contains a single item of the specified type, or an empty
  * collection otherwise. Throws an error if the input contains more than one item.
- * <p>
- * This operator provides the keyword syntax {@code value as Type}, complementing the function
+ *
+ * <p>This operator provides the keyword syntax {@code value as Type}, complementing the function
  * syntax {@code value.as(Type)}.
  *
  * @author Piotr Szul
@@ -62,8 +62,7 @@ public class AsOperator implements FhirPathBinaryOperator {
   @Override
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
     // This method won't be called for type operators since we override invokeWithPaths
-    throw new UnsupportedOperationException(
-        "AsOperator should be invoked via invokeWithPaths()");
+    throw new UnsupportedOperationException("AsOperator should be invoked via invokeWithPaths()");
   }
 
   @Nonnull

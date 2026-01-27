@@ -35,5 +35,4 @@ public interface EnvironmentVariableResolver {
    * @return The variable, if it exists
    */
   Optional<Collection> get(@Nonnull final String name);
-
 }

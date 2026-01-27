@@ -48,8 +48,8 @@ class MemberOfUdfTest extends AbstractTerminologyTestBase {
   @BeforeEach
   void setUp() {
     terminologyService = mock(TerminologyService.class);
-    final TerminologyServiceFactory terminologyServiceFactory = mock(
-        TerminologyServiceFactory.class);
+    final TerminologyServiceFactory terminologyServiceFactory =
+        mock(TerminologyServiceFactory.class);
     when(terminologyServiceFactory.build()).thenReturn(terminologyService);
     memberUdf = new MemberOfUdf(terminologyServiceFactory);
 
@@ -71,7 +71,8 @@ class MemberOfUdfTest extends AbstractTerminologyTestBase {
   @Test
   void testInvalidAndNullCodings() {
     assertFalse(
-        memberUdf.call(encodeMany(INVALID_CODING_0, INVALID_CODING_1, INVALID_CODING_2, null),
+        memberUdf.call(
+            encodeMany(INVALID_CODING_0, INVALID_CODING_1, INVALID_CODING_2, null),
             VALUE_SET_URL_A));
     verifyNoMoreInteractions(terminologyService);
   }

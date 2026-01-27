@@ -23,12 +23,12 @@ import lombok.Getter;
 
 /**
  * Represents a parsed FHIR search number value with precision-aware boundaries.
- * <p>
- * FHIR numeric search uses implicit range semantics based on significant figures. For example,
+ *
+ * <p>FHIR numeric search uses implicit range semantics based on significant figures. For example,
  * searching for "100" (3 significant figures) matches any value in the range [99.5, 100.5). The
  * precision is determined by the number of significant figures in the search value.
- * <p>
- * This class parses numeric search values and computes the lower and upper boundaries for range
+ *
+ * <p>This class parses numeric search values and computes the lower and upper boundaries for range
  * matching.
  *
  * @see <a href="https://hl7.org/fhir/search.html#number">FHIR Search - Number</a>
@@ -36,19 +36,19 @@ import lombok.Getter;
 @Getter
 public class FhirPathNumber {
 
-  @Nonnull
-  private final BigDecimal value;
+  @Nonnull private final BigDecimal value;
 
   private final int significantFigures;
 
-  @Nonnull
-  private final BigDecimal lowerBoundary;
+  @Nonnull private final BigDecimal lowerBoundary;
 
-  @Nonnull
-  private final BigDecimal upperBoundary;
+  @Nonnull private final BigDecimal upperBoundary;
 
-  private FhirPathNumber(@Nonnull final BigDecimal value, final int significantFigures,
-      @Nonnull final BigDecimal lowerBoundary, @Nonnull final BigDecimal upperBoundary) {
+  private FhirPathNumber(
+      @Nonnull final BigDecimal value,
+      final int significantFigures,
+      @Nonnull final BigDecimal lowerBoundary,
+      @Nonnull final BigDecimal upperBoundary) {
     this.value = value;
     this.significantFigures = significantFigures;
     this.lowerBoundary = lowerBoundary;
@@ -84,15 +84,16 @@ public class FhirPathNumber {
 
   /**
    * Counts the number of significant figures in a numeric string.
-   * <p>
-   * Rules:
+   *
+   * <p>Rules:
+   *
    * <ul>
-   *   <li>All non-zero digits are significant</li>
-   *   <li>Zeros between non-zero digits are significant</li>
-   *   <li>Leading zeros are NOT significant</li>
-   *   <li>Trailing zeros after decimal point ARE significant</li>
-   *   <li>For exponential notation, count digits in mantissa only</li>
-   *   <li>For zero with decimal places (e.g., "0.0", "0.00"), count decimal places as precision</li>
+   *   <li>All non-zero digits are significant
+   *   <li>Zeros between non-zero digits are significant
+   *   <li>Leading zeros are NOT significant
+   *   <li>Trailing zeros after decimal point ARE significant
+   *   <li>For exponential notation, count digits in mantissa only
+   *   <li>For zero with decimal places (e.g., "0.0", "0.00"), count decimal places as precision
    * </ul>
    *
    * @param input the string representation of the number
@@ -125,7 +126,7 @@ public class FhirPathNumber {
     final String digitsWithoutDecimal = digits.replace(".", "");
     if (isAllZeros(digitsWithoutDecimal)) {
       if (!hasDecimalPoint) {
-        return 0;  // "0" has no decimal precision -> half unit = 0.5
+        return 0; // "0" has no decimal precision -> half unit = 0.5
       }
       // For "0.0", "0.00", etc., return the number of decimal places
       // This determines the half-unit: "0.0" -> half unit of 0.05, "0.00" -> 0.005
@@ -142,16 +143,14 @@ public class FhirPathNumber {
     }
 
     if (startIndex >= digits.length()) {
-      return 1;  // All zeros - at least 1 significant figure
+      return 1; // All zeros - at least 1 significant figure
     }
 
     // Count from first non-zero to last digit
     return digits.length() - startIndex;
   }
 
-  /**
-   * Checks if a string consists entirely of zeros.
-   */
+  /** Checks if a string consists entirely of zeros. */
   private static boolean isAllZeros(@Nonnull final String digits) {
     if (digits.isEmpty()) {
       return true;
@@ -166,17 +165,17 @@ public class FhirPathNumber {
 
   /**
    * Calculates the half-unit value used for boundary computation.
-   * <p>
-   * The half-unit is 0.5 × 10^(magnitude - significantFigures + 1), where magnitude is the power of
-   * 10 of the most significant digit.
+   *
+   * <p>The half-unit is 0.5 × 10^(magnitude - significantFigures + 1), where magnitude is the power
+   * of 10 of the most significant digit.
    *
    * @param value the numeric value
    * @param significantFigures the number of significant figures
    * @return the half-unit for boundary calculation
    */
   @Nonnull
-  private static BigDecimal calculateHalfUnit(@Nonnull final BigDecimal value,
-      final int significantFigures) {
+  private static BigDecimal calculateHalfUnit(
+      @Nonnull final BigDecimal value, final int significantFigures) {
     if (value.compareTo(BigDecimal.ZERO) == 0) {
       // For zero, use the precision from significant figures
       // "0" (1 sig fig) -> half unit of 0.5
@@ -202,14 +201,15 @@ public class FhirPathNumber {
 
   /**
    * Gets the magnitude (power of 10 of the most significant digit).
-   * <p>
-   * Examples:
+   *
+   * <p>Examples:
+   *
    * <ul>
-   *   <li>100 -> magnitude 2</li>
-   *   <li>50 -> magnitude 1</li>
-   *   <li>5 -> magnitude 0</li>
-   *   <li>0.5 -> magnitude -1</li>
-   *   <li>0.05 -> magnitude -2</li>
+   *   <li>100 -> magnitude 2
+   *   <li>50 -> magnitude 1
+   *   <li>5 -> magnitude 0
+   *   <li>0.5 -> magnitude -1
+   *   <li>0.05 -> magnitude -2
    * </ul>
    *
    * @param value the absolute value (must be positive)
@@ -234,13 +234,14 @@ public class FhirPathNumber {
 
   /**
    * Checks if this number has a non-zero fractional part.
-   * <p>
-   * For example:
+   *
+   * <p>For example:
+   *
    * <ul>
-   *   <li>"1.5" has a fractional part (returns true)</li>
-   *   <li>"1.0" does not have a fractional part (returns false)</li>
-   *   <li>"100" does not have a fractional part (returns false)</li>
-   *   <li>"0.5" has a fractional part (returns true)</li>
+   *   <li>"1.5" has a fractional part (returns true)
+   *   <li>"1.0" does not have a fractional part (returns false)
+   *   <li>"100" does not have a fractional part (returns false)
+   *   <li>"0.5" has a fractional part (returns true)
    * </ul>
    *
    * @return true if the value has a non-zero fractional part
@@ -253,8 +254,11 @@ public class FhirPathNumber {
 
   @Override
   public String toString() {
-    return String.format("FhirPathNumber{value=%s, sigFigs=%d, range=[%s, %s)}",
-        value.toPlainString(), significantFigures,
-        lowerBoundary.toPlainString(), upperBoundary.toPlainString());
+    return String.format(
+        "FhirPathNumber{value=%s, sigFigs=%d, range=[%s, %s)}",
+        value.toPlainString(),
+        significantFigures,
+        lowerBoundary.toPlainString(),
+        upperBoundary.toPlainString());
   }
 }

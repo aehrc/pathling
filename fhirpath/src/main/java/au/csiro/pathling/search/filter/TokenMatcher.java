@@ -34,32 +34,33 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Matches elements using token search semantics for various FHIR types.
- * <p>
- * Token search supports the following syntax:
+ *
+ * <p>Token search supports the following syntax:
+ *
  * <ul>
- *   <li>{@code code} - matches any resource with the given code (any system)</li>
- *   <li>{@code system|code} - matches resources with the given system and code</li>
- *   <li>{@code |code} - matches resources with the given code and no system</li>
- *   <li>{@code system|} - matches any resource with any code in the given system</li>
+ *   <li>{@code code} - matches any resource with the given code (any system)
+ *   <li>{@code system|code} - matches resources with the given system and code
+ *   <li>{@code |code} - matches resources with the given code and no system
+ *   <li>{@code system|} - matches any resource with any code in the given system
  * </ul>
- * <p>
- * Matching logic varies by FHIR type:
+ *
+ * <p>Matching logic varies by FHIR type:
+ *
  * <ul>
- *   <li>{@code Coding} - matches system and code fields</li>
- *   <li>{@code CodeableConcept} - matches any Coding in the coding array</li>
- *   <li>{@code Identifier} - matches system and value fields</li>
- *   <li>{@code ContactPoint} - matches value field only (no system)</li>
- *   <li>{@code code}, {@code uri}, {@code id} - simple string equality</li>
- *   <li>{@code string} - case-insensitive string equality</li>
- *   <li>{@code boolean} - boolean equality</li>
+ *   <li>{@code Coding} - matches system and code fields
+ *   <li>{@code CodeableConcept} - matches any Coding in the coding array
+ *   <li>{@code Identifier} - matches system and value fields
+ *   <li>{@code ContactPoint} - matches value field only (no system)
+ *   <li>{@code code}, {@code uri}, {@code id} - simple string equality
+ *   <li>{@code string} - case-insensitive string equality
+ *   <li>{@code boolean} - boolean equality
  * </ul>
  *
  * @see <a href="https://hl7.org/fhir/search.html#token">Token Search</a>
  */
 public class TokenMatcher implements ElementMatcher {
 
-  @Nonnull
-  private final FHIRDefinedType fhirType;
+  @Nonnull private final FHIRDefinedType fhirType;
 
   /**
    * Creates a TokenMatcher for the specified FHIR type.
@@ -83,8 +84,8 @@ public class TokenMatcher implements ElementMatcher {
       case CODE, URI, ID -> matchSimpleValue(element, token);
       case STRING -> matchStringValue(element, token);
       case BOOLEAN -> matchBoolean(element, token);
-      default -> throw new IllegalArgumentException(
-          "Unsupported FHIR type for token search: " + fhirType);
+      default ->
+          throw new IllegalArgumentException("Unsupported FHIR type for token search: " + fhirType);
     };
   }
 
@@ -97,10 +98,7 @@ public class TokenMatcher implements ElementMatcher {
    */
   @Nonnull
   private Column matchCoding(@Nonnull final Column element, @Nonnull final TokenSearchValue token) {
-    return matchSystemAndCode(
-        element.getField(SYSTEM),
-        element.getField(CODE),
-        token);
+    return matchSystemAndCode(element.getField(SYSTEM), element.getField(CODE), token);
   }
 
   /**
@@ -112,14 +110,13 @@ public class TokenMatcher implements ElementMatcher {
    * @return a boolean column indicating match
    */
   @Nonnull
-  private Column matchCodeableConcept(@Nonnull final Column element,
-      @Nonnull final TokenSearchValue token) {
+  private Column matchCodeableConcept(
+      @Nonnull final Column element, @Nonnull final TokenSearchValue token) {
     final Column codingArray = element.getField(CODING);
     // Match if ANY coding in the array matches
-    return exists(codingArray, coding -> matchSystemAndCode(
-        coding.getField(SYSTEM),
-        coding.getField(CODE),
-        token));
+    return exists(
+        codingArray,
+        coding -> matchSystemAndCode(coding.getField(SYSTEM), coding.getField(CODE), token));
   }
 
   /**
@@ -131,11 +128,11 @@ public class TokenMatcher implements ElementMatcher {
    * @return a boolean column indicating match
    */
   @Nonnull
-  private Column matchIdentifier(@Nonnull final Column element,
-      @Nonnull final TokenSearchValue token) {
+  private Column matchIdentifier(
+      @Nonnull final Column element, @Nonnull final TokenSearchValue token) {
     return matchSystemAndCode(
         element.getField(SYSTEM),
-        element.getField(VALUE),  // Identifier uses 'value', not 'code'
+        element.getField(VALUE), // Identifier uses 'value', not 'code'
         token);
   }
 
@@ -148,8 +145,8 @@ public class TokenMatcher implements ElementMatcher {
    * @return a boolean column indicating match
    */
   @Nonnull
-  private Column matchContactPoint(@Nonnull final Column element,
-      @Nonnull final TokenSearchValue token) {
+  private Column matchContactPoint(
+      @Nonnull final Column element, @Nonnull final TokenSearchValue token) {
     // ContactPoint only matches on value - system|code syntax not applicable
     return element.getField(VALUE).equalTo(lit(token.requiresSimpleCode()));
   }
@@ -163,8 +160,8 @@ public class TokenMatcher implements ElementMatcher {
    * @return a boolean column indicating match
    */
   @Nonnull
-  private Column matchSimpleValue(@Nonnull final Column element,
-      @Nonnull final TokenSearchValue token) {
+  private Column matchSimpleValue(
+      @Nonnull final Column element, @Nonnull final TokenSearchValue token) {
     // Simple types don't have system - just match the code value
     return element.equalTo(lit(token.requiresSimpleCode()));
   }
@@ -178,8 +175,8 @@ public class TokenMatcher implements ElementMatcher {
    * @return a boolean column indicating match
    */
   @Nonnull
-  private Column matchStringValue(@Nonnull final Column element,
-      @Nonnull final TokenSearchValue token) {
+  private Column matchStringValue(
+      @Nonnull final Column element, @Nonnull final TokenSearchValue token) {
     // String type token search is case-insensitive per FHIR spec
     return lower(element).equalTo(lit(token.requiresSimpleCode().toLowerCase()));
   }
@@ -192,8 +189,8 @@ public class TokenMatcher implements ElementMatcher {
    * @return a boolean column indicating match
    */
   @Nonnull
-  private Column matchBoolean(@Nonnull final Column element,
-      @Nonnull final TokenSearchValue token) {
+  private Column matchBoolean(
+      @Nonnull final Column element, @Nonnull final TokenSearchValue token) {
     // Parse the code as boolean (case-insensitive)
     final boolean boolValue = Boolean.parseBoolean(token.requiresSimpleCode());
     return element.equalTo(lit(boolValue));
@@ -208,18 +205,19 @@ public class TokenMatcher implements ElementMatcher {
    * @return a boolean column indicating match
    */
   @Nonnull
-  private Column matchSystemAndCode(@Nonnull final Column systemCol,
+  private Column matchSystemAndCode(
+      @Nonnull final Column systemCol,
       @Nonnull final Column codeCol,
       @Nonnull final TokenSearchValue token) {
 
     // System condition: explicit null check for |code, otherwise match value if present
-    final Optional<Column> systemCondition = token.isExplicitNoSystem()
-        ? Optional.of(systemCol.isNull())
-        : token.getSystem().map(s -> systemCol.equalTo(lit(s)));
+    final Optional<Column> systemCondition =
+        token.isExplicitNoSystem()
+            ? Optional.of(systemCol.isNull())
+            : token.getSystem().map(s -> systemCol.equalTo(lit(s)));
 
     // Code condition: match value if present
-    final Optional<Column> codeCondition = token.getCode()
-        .map(c -> codeCol.equalTo(lit(c)));
+    final Optional<Column> codeCondition = token.getCode().map(c -> codeCol.equalTo(lit(c)));
 
     // Combine all present conditions with AND, or true if no constraints
     return Stream.of(systemCondition, codeCondition)

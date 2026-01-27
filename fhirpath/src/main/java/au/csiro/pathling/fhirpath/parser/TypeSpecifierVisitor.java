@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import static java.util.Objects.nonNull;
+
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -69,8 +71,6 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
 
-import static java.util.Objects.nonNull;
-
 /**
  * A special visitor for the type specifiers arguments in the FHIRPath function invocations.
  *
@@ -80,8 +80,7 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   private final boolean isNamespace;
 
-  @Nullable
-  final String namespace;
+  @Nullable final String namespace;
 
   private TypeSpecifierVisitor(final boolean isNamespace, @Nullable final String namespace) {
     this.isNamespace = isNamespace;
@@ -90,8 +89,8 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   /**
    * Creates a visitor for parsing unqualified type specifiers.
-   * <p>
-   * This is the default visitor used for parsing type specifiers that may or may not have a
+   *
+   * <p>This is the default visitor used for parsing type specifiers that may or may not have a
    * namespace qualifier (e.g., {@code String}, {@code FHIR.Patient}).
    *
    * @return a new visitor instance for unqualified type specifiers
@@ -103,9 +102,9 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   /**
    * Creates a visitor for parsing namespace identifiers.
-   * <p>
-   * This visitor is used when parsing the left-hand side of a qualified type specifier (e.g., the
-   * {@code FHIR} part of {@code FHIR.Patient}).
+   *
+   * <p>This visitor is used when parsing the left-hand side of a qualified type specifier (e.g.,
+   * the {@code FHIR} part of {@code FHIR.Patient}).
    *
    * @return a new visitor instance for namespace identifiers
    */
@@ -116,9 +115,9 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   /**
    * Creates a visitor for parsing type names within a specific namespace.
-   * <p>
-   * This visitor is used when parsing the right-hand side of a qualified type specifier (e.g., the
-   * {@code Patient} part of {@code FHIR.Patient}), where the namespace has already been
+   *
+   * <p>This visitor is used when parsing the right-hand side of a qualified type specifier (e.g.,
+   * the {@code Patient} part of {@code FHIR.Patient}), where the namespace has already been
    * determined.
    *
    * @param namespace the namespace for the type specifier
@@ -129,16 +128,16 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
     return new TypeSpecifierVisitor(false, namespace);
   }
 
-
   /**
    * Visits an identifier context and returns the appropriate type specifier path.
-   * <p>
-   * This method handles both regular and delimited (backtick-quoted) identifiers, and produces
+   *
+   * <p>This method handles both regular and delimited (backtick-quoted) identifiers, and produces
    * different results based on the visitor's state:
+   *
    * <ul>
-   *   <li>If {@code isNamespace} is true, returns a {@link TypeNamespacePath}</li>
-   *   <li>If a {@code namespace} is set, returns a qualified {@link TypeSpecifierPath}</li>
-   *   <li>Otherwise, returns an unqualified {@link TypeSpecifierPath}</li>
+   *   <li>If {@code isNamespace} is true, returns a {@link TypeNamespacePath}
+   *   <li>If a {@code namespace} is set, returns a qualified {@link TypeSpecifierPath}
+   *   <li>Otherwise, returns an unqualified {@link TypeSpecifierPath}
    * </ul>
    *
    * @param ctx the identifier context
@@ -152,24 +151,24 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
       return new TypeNamespacePath(identifier);
     } else {
       return nonNull(namespace)
-             ? new TypeSpecifierPath(new TypeSpecifier(namespace, identifier))
-             : new TypeSpecifierPath(new TypeSpecifier(identifier));
+          ? new TypeSpecifierPath(new TypeSpecifier(namespace, identifier))
+          : new TypeSpecifierPath(new TypeSpecifier(identifier));
     }
   }
 
   /**
    * Visits an invocation expression to parse qualified type specifiers.
-   * <p>
-   * This method handles expressions like {@code FHIR.Patient} or {@code System.String} by:
+   *
+   * <p>This method handles expressions like {@code FHIR.Patient} or {@code System.String} by:
+   *
    * <ol>
-   *   <li>Parsing the left-hand side as a namespace using {@link #namespaceVisitor()}</li>
-   *   <li>Parsing the right-hand side as a type name within that namespace using
-   *       {@link #qualifiedVisitor(String)}</li>
+   *   <li>Parsing the left-hand side as a namespace using {@link #namespaceVisitor()}
+   *   <li>Parsing the right-hand side as a type name within that namespace using {@link
+   *       #qualifiedVisitor(String)}
    * </ol>
-   * <p>
-   * This method should only be called when {@code isNamespace} is false. If called when
-   * {@code isNamespace} is true, it throws an error as nested namespace qualifications are
-   * not valid.
+   *
+   * <p>This method should only be called when {@code isNamespace} is false. If called when {@code
+   * isNamespace} is true, it throws an error as nested namespace qualifications are not valid.
    *
    * @param ctx the invocation expression context
    * @return a qualified type specifier path
@@ -178,8 +177,8 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   public FhirPath visitInvocationExpression(final InvocationExpressionContext ctx) {
     if (!isNamespace) {
-      final TypeNamespacePath typeNamespacePath = (TypeNamespacePath) ctx.expression()
-          .accept(TypeSpecifierVisitor.namespaceVisitor());
+      final TypeNamespacePath typeNamespacePath =
+          (TypeNamespacePath) ctx.expression().accept(TypeSpecifierVisitor.namespaceVisitor());
       final String namespace = typeNamespacePath.getValue();
       return ctx.invocation().accept(TypeSpecifierVisitor.qualifiedVisitor(namespace));
     } else {
@@ -188,26 +187,22 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitIndexerExpression(
-      final IndexerExpressionContext ctx) {
+  public FhirPath visitIndexerExpression(final IndexerExpressionContext ctx) {
     throw newUnexpectedExpressionException("IndexerExpression");
   }
 
   @Override
-  public FhirPath visitPolarityExpression(
-      final PolarityExpressionContext ctx) {
+  public FhirPath visitPolarityExpression(final PolarityExpressionContext ctx) {
     throw newUnexpectedExpressionException("PolarityExpression");
   }
 
   @Override
-  public FhirPath visitAdditiveExpression(
-      final AdditiveExpressionContext ctx) {
+  public FhirPath visitAdditiveExpression(final AdditiveExpressionContext ctx) {
     throw newUnexpectedExpressionException("AdditiveExpression");
   }
 
   @Override
-  public FhirPath visitMultiplicativeExpression(
-      final MultiplicativeExpressionContext ctx) {
+  public FhirPath visitMultiplicativeExpression(final MultiplicativeExpressionContext ctx) {
     throw newUnexpectedExpressionException("MultiplicativeExpression");
   }
 
@@ -227,26 +222,22 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitMembershipExpression(
-      final MembershipExpressionContext ctx) {
+  public FhirPath visitMembershipExpression(final MembershipExpressionContext ctx) {
     throw newUnexpectedExpressionException("MembershipExpression");
   }
 
   @Override
-  public FhirPath visitInequalityExpression(
-      final InequalityExpressionContext ctx) {
+  public FhirPath visitInequalityExpression(final InequalityExpressionContext ctx) {
     throw newUnexpectedExpressionException("InequalityExpression");
   }
 
   @Override
-  public FhirPath visitEqualityExpression(
-      final EqualityExpressionContext ctx) {
+  public FhirPath visitEqualityExpression(final EqualityExpressionContext ctx) {
     throw newUnexpectedExpressionException("EqualityExpression");
   }
 
   @Override
-  public FhirPath visitImpliesExpression(
-      final ImpliesExpressionContext ctx) {
+  public FhirPath visitImpliesExpression(final ImpliesExpressionContext ctx) {
     throw newUnexpectedExpressionException("ImpliesExpression");
   }
 
@@ -271,14 +262,12 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitExternalConstantTerm(
-      final ExternalConstantTermContext ctx) {
+  public FhirPath visitExternalConstantTerm(final ExternalConstantTermContext ctx) {
     throw newUnexpectedExpressionException("ExternalConstantTerm");
   }
 
   @Override
-  public FhirPath visitParenthesizedTerm(
-      final ParenthesizedTermContext ctx) {
+  public FhirPath visitParenthesizedTerm(final ParenthesizedTermContext ctx) {
     throw newUnexpectedExpressionException("ParenthesizedTerm");
   }
 
@@ -338,8 +327,7 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitFunctionInvocation(
-      final FunctionInvocationContext ctx) {
+  public FhirPath visitFunctionInvocation(final FunctionInvocationContext ctx) {
     throw newUnexpectedExpressionException("FunctionInvocation");
   }
 
@@ -379,14 +367,12 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitDateTimePrecision(
-      final DateTimePrecisionContext ctx) {
+  public FhirPath visitDateTimePrecision(final DateTimePrecisionContext ctx) {
     throw newUnexpectedExpressionException("DateTimePrecision");
   }
 
   @Override
-  public FhirPath visitPluralDateTimePrecision(
-      final PluralDateTimePrecisionContext ctx) {
+  public FhirPath visitPluralDateTimePrecision(final PluralDateTimePrecisionContext ctx) {
     throw newUnexpectedExpressionException("PluralDateTimePrecision");
   }
 
@@ -397,8 +383,7 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitQualifiedIdentifier(
-      final QualifiedIdentifierContext ctx) {
+  public FhirPath visitQualifiedIdentifier(final QualifiedIdentifierContext ctx) {
     // A qualified identifier is a sequence of identifiers separated by dots
     // For example: "FHIR.Patient" or "System.String" or just "String"
     // We need to parse this as either a namespace + type or just a type
@@ -425,5 +410,4 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
     return new InvalidUserInputError(
         "Unexpected expression type: " + expressionType + " in type specifier");
   }
-
 }

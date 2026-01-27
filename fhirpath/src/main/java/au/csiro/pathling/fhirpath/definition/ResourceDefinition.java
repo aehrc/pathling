@@ -19,9 +19,7 @@ package au.csiro.pathling.fhirpath.definition;
 
 import jakarta.annotation.Nonnull;
 
-/**
- * Represents a definition of a FHIR-like resource.
- */
+/** Represents a definition of a FHIR-like resource. */
 public interface ResourceDefinition extends NodeDefinition {
 
   /**

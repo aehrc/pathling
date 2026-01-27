@@ -33,23 +33,14 @@ import org.apache.spark.sql.Row;
  */
 final class ParquetSink implements DataSink {
 
-  /**
-   * The path to write the Parquet files to.
-   */
-  @Nonnull
-  private final String path;
+  /** The path to write the Parquet files to. */
+  @Nonnull private final String path;
 
-  /**
-   * The save mode to use when writing data.
-   */
-  @Nonnull
-  private final SaveMode saveMode;
+  /** The save mode to use when writing data. */
+  @Nonnull private final SaveMode saveMode;
 
-  /**
-   * A function that maps resource type to file name.
-   */
-  @Nonnull
-  private final UnaryOperator<String> fileNameMapper;
+  /** A function that maps resource type to file name. */
+  @Nonnull private final UnaryOperator<String> fileNameMapper;
 
   /**
    * @param path the path to write the Parquet files to
@@ -59,8 +50,7 @@ final class ParquetSink implements DataSink {
   ParquetSink(
       @Nonnull final String path,
       @Nonnull final SaveMode saveMode,
-      @Nonnull final UnaryOperator<String> fileNameMapper
-  ) {
+      @Nonnull final UnaryOperator<String> fileNameMapper) {
     this.path = path;
     this.saveMode = saveMode;
     this.fileNameMapper = fileNameMapper;
@@ -79,27 +69,28 @@ final class ParquetSink implements DataSink {
   public void write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
-      final String fileName = String.join(".", fileNameMapper.apply(resourceType),
-          "parquet");
+      final String fileName = String.join(".", fileNameMapper.apply(resourceType), "parquet");
       final String tablePath = safelyJoinPaths(path, fileName);
 
       switch (saveMode) {
         case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
             writeDataset(dataset, tablePath, saveMode);
-        case MERGE -> throw new UnsupportedOperationException(
-            "Merge operation is not supported for Parquet - use Delta if merging is required");
+        case MERGE ->
+            throw new UnsupportedOperationException(
+                "Merge operation is not supported for Parquet - use Delta if merging is required");
       }
     }
   }
 
-  void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tablePath, @Nonnull final SaveMode saveMode) {
+  void writeDataset(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String tablePath,
+      @Nonnull final SaveMode saveMode) {
     final var writer = dataset.write();
-    
+
     // Apply save mode if it has a Spark equivalent
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
-    
+
     writer.parquet(tablePath);
   }
-
 }

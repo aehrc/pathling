@@ -20,9 +20,7 @@ package au.csiro.pathling.search;
 import jakarta.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
-/**
- * Exception thrown when a search parameter is not found in the registry.
- */
+/** Exception thrown when a search parameter is not found in the registry. */
 public class UnknownSearchParameterException extends RuntimeException {
 
   /**
@@ -31,9 +29,11 @@ public class UnknownSearchParameterException extends RuntimeException {
    * @param parameterCode the parameter code that was not found
    * @param resourceType the resource type being searched
    */
-  public UnknownSearchParameterException(@Nonnull final String parameterCode,
-      @Nonnull final ResourceType resourceType) {
-    super(String.format("Unknown search parameter '%s' for resource type '%s'",
-        parameterCode, resourceType.toCode()));
+  public UnknownSearchParameterException(
+      @Nonnull final String parameterCode, @Nonnull final ResourceType resourceType) {
+    super(
+        String.format(
+            "Unknown search parameter '%s' for resource type '%s'",
+            parameterCode, resourceType.toCode()));
   }
 }

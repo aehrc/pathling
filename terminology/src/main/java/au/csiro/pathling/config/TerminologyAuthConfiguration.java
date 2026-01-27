@@ -47,41 +47,22 @@ import org.hibernate.validator.constraints.URL;
 @ValidTerminologyAuthConfiguration
 public class TerminologyAuthConfiguration implements Serializable {
 
-  @Serial
-  private static final long serialVersionUID = 6321330066417583745L;
+  @Serial private static final long serialVersionUID = 6321330066417583745L;
 
-  /**
-   * Enables authentication of requests to the terminology server.
-   */
-  @NotNull
-  @Builder.Default
-  private boolean enabled = false;
+  /** Enables authentication of requests to the terminology server. */
+  @NotNull @Builder.Default private boolean enabled = false;
 
-  /**
-   * An OAuth2 token endpoint for use with the client credentials grant.
-   */
-  @Nullable
-  @URL
-  private String tokenEndpoint;
+  /** An OAuth2 token endpoint for use with the client credentials grant. */
+  @Nullable @URL private String tokenEndpoint;
 
-  /**
-   * A client ID for use with the client credentials grant.
-   */
-  @Nullable
-  private String clientId;
+  /** A client ID for use with the client credentials grant. */
+  @Nullable private String clientId;
 
-  /**
-   * A client secret for use with the client credentials grant.
-   */
-  @Nullable
-  @ToString.Exclude
-  private String clientSecret;
+  /** A client secret for use with the client credentials grant. */
+  @Nullable @ToString.Exclude private String clientSecret;
 
-  /**
-   * A scope value for use with the client credentials grant.
-   */
-  @Nullable
-  private String scope;
+  /** A scope value for use with the client credentials grant. */
+  @Nullable private String scope;
 
   /**
    * The minimum number of seconds that a token should have before expiry when deciding whether to
@@ -92,9 +73,7 @@ public class TerminologyAuthConfiguration implements Serializable {
   @Builder.Default
   private long tokenExpiryTolerance = 120;
 
-  /**
-   * Validation annotation for terminology authentication configuration.
-   */
+  /** Validation annotation for terminology authentication configuration. */
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
   @Constraint(validatedBy = TerminologyAuthConfigValidator.class)
@@ -106,8 +85,9 @@ public class TerminologyAuthConfiguration implements Serializable {
      *
      * @return the error message
      */
-    String message() default "If terminology authentication is enabled, token endpoint, "
-        + "client ID and client secret must be supplied.";
+    String message() default
+        "If terminology authentication is enabled, token endpoint, "
+            + "client ID and client secret must be supplied.";
 
     /**
      * The validation groups.
@@ -122,25 +102,22 @@ public class TerminologyAuthConfiguration implements Serializable {
      * @return the validation payload
      */
     Class<? extends Payload>[] payload() default {};
-
   }
 
-  /**
-   * Validator for terminology authentication configuration.
-   */
-  public static class TerminologyAuthConfigValidator implements
-      ConstraintValidator<ValidTerminologyAuthConfiguration, TerminologyAuthConfiguration> {
+  /** Validator for terminology authentication configuration. */
+  public static class TerminologyAuthConfigValidator
+      implements ConstraintValidator<
+          ValidTerminologyAuthConfiguration, TerminologyAuthConfiguration> {
 
     @Override
-    public boolean isValid(final TerminologyAuthConfiguration value,
-        final ConstraintValidatorContext context) {
+    public boolean isValid(
+        final TerminologyAuthConfiguration value, final ConstraintValidatorContext context) {
       if (value.isEnabled()) {
-        return value.getTokenEndpoint() != null && value.getClientId() != null
+        return value.getTokenEndpoint() != null
+            && value.getClientId() != null
             && value.getClientSecret() != null;
       }
       return true;
     }
-
   }
-
 }

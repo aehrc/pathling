@@ -27,6 +27,4 @@ import org.apache.spark.sql.api.java.UDF3;
  * @param <T3> the type of the third argument.
  * @param <R> the type of the result.
  */
-public interface SqlFunction3<T1, T2, T3, R> extends SqlFunction, UDF3<T1, T2, T3, R> {
-
-}
+public interface SqlFunction3<T1, T2, T3, R> extends SqlFunction, UDF3<T1, T2, T3, R> {}

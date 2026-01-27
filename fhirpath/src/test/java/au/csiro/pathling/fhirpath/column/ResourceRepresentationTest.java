@@ -38,14 +38,11 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-/**
- * Tests for {@link ResourceRepresentation}.
- */
+/** Tests for {@link ResourceRepresentation}. */
 @SpringBootUnitTest
 class ResourceRepresentationTest {
 
-  @Autowired
-  SparkSession spark;
+  @Autowired SparkSession spark;
 
   @Test
   void withIdColumn_createsRepresentationWithIdColumn() {
@@ -91,10 +88,11 @@ class ResourceRepresentationTest {
     final ResourceRepresentation rep = ResourceRepresentation.withIdColumn();
 
     // Apply a transform via vectorize - should use singular expression since resources are singular
-    final ColumnRepresentation vectorized = rep.vectorize(
-        arr -> arr, // array expression (not used)
-        Column::isNotNull // singular expression
-    );
+    final ColumnRepresentation vectorized =
+        rep.vectorize(
+            arr -> arr, // array expression (not used)
+            Column::isNotNull // singular expression
+            );
 
     // The result should be a new ResourceRepresentation
     assertInstanceOf(ResourceRepresentation.class, vectorized);
@@ -144,8 +142,8 @@ class ResourceRepresentationTest {
     final ResourceRepresentation root = ResourceRepresentation.withIdColumn();
     final ColumnRepresentation result = root.traverse("gender");
 
-    assertInstanceOf(DefaultRepresentation.class, result,
-        "traverse() should return a DefaultRepresentation");
+    assertInstanceOf(
+        DefaultRepresentation.class, result, "traverse() should return a DefaultRepresentation");
   }
 
   @Test
@@ -171,8 +169,8 @@ class ResourceRepresentationTest {
     final ResourceRepresentation root = ResourceRepresentation.withIdColumn();
     final ColumnRepresentation genderRep = root.getField("gender");
 
-    assertInstanceOf(DefaultRepresentation.class, genderRep,
-        "getField() should return a DefaultRepresentation");
+    assertInstanceOf(
+        DefaultRepresentation.class, genderRep, "getField() should return a DefaultRepresentation");
 
     // Verify it extracts the correct value
     final String result = dataset.select(genderRep.getValue()).first().getString(0);
@@ -185,8 +183,8 @@ class ResourceRepresentationTest {
 
     final ResourceRepresentation root = ResourceRepresentation.withIdColumn();
     // STRING type should be handled without special processing
-    final ColumnRepresentation genderRep = root.traverse("gender",
-        Optional.of(FHIRDefinedType.CODE));
+    final ColumnRepresentation genderRep =
+        root.traverse("gender", Optional.of(FHIRDefinedType.CODE));
 
     final String result = dataset.select(genderRep.getValue()).first().getString(0);
     assertEquals("male", result);
@@ -196,8 +194,8 @@ class ResourceRepresentationTest {
   void traverse_withBase64BinaryType_appliesBinaryHandling() {
     final ResourceRepresentation root = ResourceRepresentation.withIdColumn();
     // BASE64BINARY should use special handling
-    final ColumnRepresentation binaryRep = root.traverse("data",
-        Optional.of(FHIRDefinedType.BASE64BINARY));
+    final ColumnRepresentation binaryRep =
+        root.traverse("data", Optional.of(FHIRDefinedType.BASE64BINARY));
 
     // The result should be a representation (we can't easily test binary conversion without data)
     assertNotNull(binaryRep);
@@ -264,31 +262,36 @@ class ResourceRepresentationTest {
   // Helper methods to create test datasets
 
   private Dataset<Row> createFlatPatientDataset() {
-    final StructType schema = DataTypes.createStructType(new StructField[]{
-        DataTypes.createStructField("id", DataTypes.StringType, true),
-        DataTypes.createStructField("gender", DataTypes.StringType, true),
-        DataTypes.createStructField("active", DataTypes.BooleanType, true)
-    });
+    final StructType schema =
+        DataTypes.createStructType(
+            new StructField[] {
+              DataTypes.createStructField("id", DataTypes.StringType, true),
+              DataTypes.createStructField("gender", DataTypes.StringType, true),
+              DataTypes.createStructField("active", DataTypes.BooleanType, true)
+            });
 
-    return spark.createDataFrame(
-        java.util.List.of(RowFactory.create("1", "male", true)),
-        schema);
+    return spark.createDataFrame(java.util.List.of(RowFactory.create("1", "male", true)), schema);
   }
 
   private Dataset<Row> createFlatPatientDatasetWithName() {
-    final StructType nameSchema = DataTypes.createStructType(new StructField[]{
-        DataTypes.createStructField("family", DataTypes.StringType, true),
-        DataTypes.createStructField("given", DataTypes.createArrayType(DataTypes.StringType), true)
-    });
+    final StructType nameSchema =
+        DataTypes.createStructType(
+            new StructField[] {
+              DataTypes.createStructField("family", DataTypes.StringType, true),
+              DataTypes.createStructField(
+                  "given", DataTypes.createArrayType(DataTypes.StringType), true)
+            });
 
-    final StructType schema = DataTypes.createStructType(new StructField[]{
-        DataTypes.createStructField("id", DataTypes.StringType, true),
-        DataTypes.createStructField("name", nameSchema, true)
-    });
+    final StructType schema =
+        DataTypes.createStructType(
+            new StructField[] {
+              DataTypes.createStructField("id", DataTypes.StringType, true),
+              DataTypes.createStructField("name", nameSchema, true)
+            });
 
     return spark.createDataFrame(
-        java.util.List.of(RowFactory.create("1", RowFactory.create("Smith", new String[]{"John"}))),
+        java.util.List.of(
+            RowFactory.create("1", RowFactory.create("Smith", new String[] {"John"}))),
         schema);
   }
-
 }

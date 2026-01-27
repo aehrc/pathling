@@ -29,16 +29,16 @@ import org.apache.spark.sql.Column;
 
 /**
  * Provides the functionality of the union operator within FHIRPath, i.e. {@code |}.
- * <p>
- * Merges two collections into a single collection, eliminating any duplicate values using equality
- * semantics. There is no expectation of order in the resulting collection.
- * <p>
- * Type compatibility is determined through FHIRPath type reconciliation. Collections with
+ *
+ * <p>Merges two collections into a single collection, eliminating any duplicate values using
+ * equality semantics. There is no expectation of order in the resulting collection.
+ *
+ * <p>Type compatibility is determined through FHIRPath type reconciliation. Collections with
  * compatible types are merged after type promotion (e.g., Date → DateTime, Integer → Decimal).
- * <p>
- * Equality semantics are determined by the collection's comparator. Types using default SQL
- * equality leverage Spark's native array operations, while types with custom equality
- * (Quantity, Coding, temporal types) use element-wise comparison.
+ *
+ * <p>Equality semantics are determined by the collection's comparator. Types using default SQL
+ * equality leverage Spark's native array operations, while types with custom equality (Quantity,
+ * Coding, temporal types) use element-wise comparison.
  *
  * @author Piotr Szul
  * @see <a href="https://hl7.org/fhirpath/#union-collections">union</a>
@@ -47,8 +47,8 @@ public class UnionOperator extends SameTypeBinaryOperator {
 
   @Nonnull
   @Override
-  protected Collection handleOneEmpty(@Nonnull final Collection nonEmpty,
-      @Nonnull final BinaryOperatorInput input) {
+  protected Collection handleOneEmpty(
+      @Nonnull final Collection nonEmpty, @Nonnull final BinaryOperatorInput input) {
     final Column array = getArrayForUnion(nonEmpty);
     final Column deduplicatedArray = deduplicateArray(array, nonEmpty.getComparator());
     return nonEmpty.copyWithColumn(deduplicatedArray);
@@ -56,8 +56,10 @@ public class UnionOperator extends SameTypeBinaryOperator {
 
   @Nonnull
   @Override
-  protected Collection handleEquivalentTypes(@Nonnull final Collection left,
-      @Nonnull final Collection right, @Nonnull final BinaryOperatorInput input) {
+  protected Collection handleEquivalentTypes(
+      @Nonnull final Collection left,
+      @Nonnull final Collection right,
+      @Nonnull final BinaryOperatorInput input) {
 
     final Column leftArray = getArrayForUnion(left);
     final Column rightArray = getArrayForUnion(right);
@@ -76,8 +78,7 @@ public class UnionOperator extends SameTypeBinaryOperator {
   @Nonnull
   private Column getArrayForUnion(@Nonnull final Collection collection) {
     if (collection instanceof DecimalCollection decimalCollection) {
-      return decimalCollection.normalizeDecimalType()
-          .getColumn().plural().getValue();
+      return decimalCollection.normalizeDecimalType().getColumn().plural().getValue();
     }
     return collection.getColumn().plural().getValue();
   }
@@ -90,8 +91,8 @@ public class UnionOperator extends SameTypeBinaryOperator {
    * @return deduplicated array column
    */
   @Nonnull
-  private Column deduplicateArray(@Nonnull final Column arrayColumn,
-      @Nonnull final ColumnEquality comparator) {
+  private Column deduplicateArray(
+      @Nonnull final Column arrayColumn, @Nonnull final ColumnEquality comparator) {
     if (comparator.usesDefaultSqlEquality()) {
       return array_distinct(arrayColumn);
     } else {
@@ -108,7 +109,8 @@ public class UnionOperator extends SameTypeBinaryOperator {
    * @return merged and deduplicated array column
    */
   @Nonnull
-  private Column unionArrays(@Nonnull final Column leftArray,
+  private Column unionArrays(
+      @Nonnull final Column leftArray,
       @Nonnull final Column rightArray,
       @Nonnull final ColumnEquality comparator) {
     if (comparator.usesDefaultSqlEquality()) {

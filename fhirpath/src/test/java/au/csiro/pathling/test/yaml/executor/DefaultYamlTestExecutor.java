@@ -75,9 +75,7 @@ import scala.collection.mutable.ArraySeq;
 @Slf4j
 public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
-  /**
-   * Shared FHIRPath parser instance used for parsing all FHIRPath expressions.
-   */
+  /** Shared FHIRPath parser instance used for parsing all FHIRPath expressions. */
   private static final Parser PARSER = new Parser();
 
   /**
@@ -85,36 +83,31 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    * and other test configuration. This defines what the test should do and what results are
    * expected.
    */
-  @Nonnull
-  TestCase spec;
+  @Nonnull TestCase spec;
 
   /**
    * Factory function for creating DatasetEvaluator instances from RuntimeContext. This is excluded
    * from equals/hashCode to avoid issues with function comparison. The evaluator factory is used to
    * create the appropriate data context for test execution.
    */
-  @Nonnull
-  @Exclude
-  Function<RuntimeContext, DatasetEvaluator> evaluatorFactory;
+  @Nonnull @Exclude Function<RuntimeContext, DatasetEvaluator> evaluatorFactory;
 
   /**
    * Optional exclusion configuration that defines how this test should behave if it's marked as
    * excluded. Excluded tests may be expected to fail or throw errors. This is excluded from
    * equals/hashCode as it is test execution metadata.
    */
-  @Nonnull
-  @Exclude
-  Optional<ExcludeRule> exclusion;
+  @Nonnull @Exclude Optional<ExcludeRule> exclusion;
 
   /**
    * Executes the test case with the provided resolver builder. This is the main entry point for
    * test execution and handles both normal test execution and excluded test scenarios.
-   * <p>
-   * For excluded tests, this method will catch expected failures or errors and validate that they
-   * match the expected exclusion outcome. If an excluded test passes when it should fail, or fails
-   * in an unexpected way, an AssertionError will be thrown.
-   * <p>
-   * For normal tests, this method delegates to {@link #doCheck(ResolverBuilder)} and allows any
+   *
+   * <p>For excluded tests, this method will catch expected failures or errors and validate that
+   * they match the expected exclusion outcome. If an excluded test passes when it should fail, or
+   * fails in an unexpected way, an AssertionError will be thrown.
+   *
+   * <p>For normal tests, this method delegates to {@link #doCheck(ResolverBuilder)} and allows any
    * exceptions to propagate normally.
    *
    * @param rb the resolver builder used to create the data context for test execution. Must not be
@@ -139,16 +132,14 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       } catch (final Exception e) {
         // Check if this error was expected for excluded tests.
         if (ExcludeRule.OUTCOME_ERROR.equals(outcome)) {
-          log.info("Successfully caught expected error in excluded test: {}",
-              e.getMessage());
+          log.info("Successfully caught expected error in excluded test: {}", e.getMessage());
           return;
         }
         throw e;
       } catch (final AssertionError e) {
         // Check if this failure was expected for excluded tests.
         if (ExcludeRule.OUTCOME_FAILURE.equals(outcome)) {
-          log.info("Successfully caught expected failure in excluded test: {}",
-              e.getMessage());
+          log.info("Successfully caught expected failure in excluded test: {}", e.getMessage());
           return;
         }
         throw e;
@@ -170,12 +161,14 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
   /**
    * Performs the actual test execution logic without exclusion handling. This method determines the
    * type of test case and delegates to the appropriate verification method.
-   * <p>
-   * The three types of test cases handled are:
+   *
+   * <p>The three types of test cases handled are:
+   *
    * <ul>
-   *   <li><strong>Error tests</strong> - {@link #verifyError(DatasetEvaluator)}</li>
-   *   <li><strong>Expression-only tests</strong> - {@link #verifyEvaluation(DatasetEvaluator)}</li>
-   *   <li><strong>Result comparison tests</strong> - {@link #verifyExpectedResult(DatasetEvaluator)}</li>
+   *   <li><strong>Error tests</strong> - {@link #verifyError(DatasetEvaluator)}
+   *   <li><strong>Expression-only tests</strong> - {@link #verifyEvaluation(DatasetEvaluator)}
+   *   <li><strong>Result comparison tests</strong> - {@link
+   *       #verifyExpectedResult(DatasetEvaluator)}
    * </ul>
    *
    * @param rb the resolver builder used to create the DatasetEvaluator. Must not be null.
@@ -213,9 +206,8 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
       // Extract the actual result for error reporting.
       final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
-      final Row resultRow = evaluator.getDataset().select(
-          actualRepresentation.getValue().alias("actual")
-      ).first();
+      final Row resultRow =
+          evaluator.getDataset().select(actualRepresentation.getValue().alias("actual")).first();
       final Object actual = getResult(resultRow, 0);
 
       // Fail the test since we expected an error but got a result.
@@ -229,13 +221,14 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       // An exception was thrown as expected - now validate the error message.
       log.trace("Received expected error: {}", e.toString());
       final String rootCauseMsg = ExceptionUtils.getRootCause(e).getMessage();
-      log.debug("Expected error message: '{}', got: {}", spec.errorMsg(),
-          rootCauseMsg);
+      log.debug("Expected error message: '{}', got: {}", spec.errorMsg(), rootCauseMsg);
 
       // Only check the specific error message if it's not the wildcard ANY_ERROR.
       if (!ANY_ERROR.equals(spec.errorMsg())) {
-        assertTrue(rootCauseMsg.contains(requireNonNull(spec.errorMsg())),
-            String.format("Error message mismatch for expression '%s'. Expected to contain: '%s',"
+        assertTrue(
+            rootCauseMsg.contains(requireNonNull(spec.errorMsg())),
+            String.format(
+                "Error message mismatch for expression '%s'. Expected to contain: '%s',"
                     + " but got: '%s'",
                 spec.expression(), spec.errorMsg(), rootCauseMsg));
       }
@@ -263,9 +256,8 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     log.trace("FhirPath expression: {}", fhirPath);
 
     // Build variable collections if defined
-    final Map<String, Collection> variables = spec.variables() != null
-        ? toVariableCollections(spec.variables())
-        : Map.of();
+    final Map<String, Collection> variables =
+        spec.variables() != null ? toVariableCollections(spec.variables()) : Map.of();
 
     // Evaluate the parsed expression using evaluateToCollection to avoid accessing the dataset.
     // The dataset is only needed for result verification, not evaluation itself.
@@ -276,10 +268,11 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     } else {
       // Create evaluator with variables using the underlying evaluator's resolver
       final var underlyingEvaluator = evaluator.getEvaluator();
-      final var evaluatorWithVariables = au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator.of(
-          underlyingEvaluator.getResourceResolver(),
-          underlyingEvaluator.getFunctionRegistry(),
-          variables);
+      final var evaluatorWithVariables =
+          au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator.of(
+              underlyingEvaluator.getResourceResolver(),
+              underlyingEvaluator.getFunctionRegistry(),
+              variables);
       result = evaluatorWithVariables.evaluate(fhirPath);
     }
     log.trace("Evaluation result: {}", result);
@@ -304,10 +297,13 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
 
     // Create a single row with both actual and expected values for comparison.
-    final Row resultRow = evaluator.getDataset().select(
-        actualRepresentation.getValue().alias("actual"),
-        expectedRepresentation.getValue().alias("expected")
-    ).first();
+    final Row resultRow =
+        evaluator
+            .getDataset()
+            .select(
+                actualRepresentation.getValue().alias("actual"),
+                expectedRepresentation.getValue().alias("expected"))
+            .first();
 
     // Extract the actual values from the Spark Row.
     final Object actualRaw = getResult(resultRow, 0);
@@ -320,16 +316,20 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     if (evalResult instanceof final QuantityCollection qty) {
       if (expectedRaw instanceof String) {
         // YAML test expects string representation - convert Quantity to string
-        final Row stringRow = evaluator.getDataset().select(
-            qty.asStringCollection().getColumn().getValue().alias("string_result")
-        ).first();
+        final Row stringRow =
+            evaluator
+                .getDataset()
+                .select(qty.asStringCollection().getColumn().getValue().alias("string_result"))
+                .first();
         actual = getResult(stringRow, 0);
         expected = expectedRaw;
       } else if (isArrayOfStrings(expectedRaw)) {
         // YAML test expects array of strings - convert Quantity array to string array
-        final Row stringRow = evaluator.getDataset().select(
-            qty.asStringCollection().getColumn().getValue().alias("string_result")
-        ).first();
+        final Row stringRow =
+            evaluator
+                .getDataset()
+                .select(qty.asStringCollection().getColumn().getValue().alias("string_result"))
+                .first();
         actual = getResult(stringRow, 0);
         expected = expectedRaw;
       } else if (actualRaw instanceof Row && expectedRaw instanceof Row) {
@@ -354,8 +354,11 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     log.debug("Comparing results - Expected: {} | Actual: {}", expected, actual);
 
     // Assert that the results match.
-    assertEquals(expected, actual,
-        String.format("Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
+    assertEquals(
+        expected,
+        actual,
+        String.format(
+            "Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
             spec.expression(), expected, actual));
   }
 
@@ -430,22 +433,24 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     final int expectedSize = 10;
     if (quantityRow.size() < expectedSize) {
       throw new IllegalArgumentException(
-          "Expected Quantity row to have " + expectedSize + " fields, but got "
+          "Expected Quantity row to have "
+              + expectedSize
+              + " fields, but got "
               + quantityRow.size());
     }
 
     return java.util.Arrays.asList(
-        quantityRow.isNullAt(0) ? null : quantityRow.get(0),  // id
-        quantityRow.isNullAt(1) ? null : quantityRow.get(1),  // value
-        null,                                                  // value_scale - ignored
-        quantityRow.isNullAt(3) ? null : quantityRow.get(3),  // comparator
-        quantityRow.isNullAt(4) ? null : quantityRow.get(4),  // unit
-        quantityRow.isNullAt(5) ? null : quantityRow.get(5),  // system
-        quantityRow.isNullAt(6) ? null : quantityRow.get(6),  // code
-        null,                                                  // canonicalizedValue - ignored
-        null,                                                  // canonicalizedCode - ignored
-        quantityRow.isNullAt(9) ? null : quantityRow.get(9)   // _fid
-    );
+        quantityRow.isNullAt(0) ? null : quantityRow.get(0), // id
+        quantityRow.isNullAt(1) ? null : quantityRow.get(1), // value
+        null, // value_scale - ignored
+        quantityRow.isNullAt(3) ? null : quantityRow.get(3), // comparator
+        quantityRow.isNullAt(4) ? null : quantityRow.get(4), // unit
+        quantityRow.isNullAt(5) ? null : quantityRow.get(5), // system
+        quantityRow.isNullAt(6) ? null : quantityRow.get(6), // code
+        null, // canonicalizedValue - ignored
+        null, // canonicalizedCode - ignored
+        quantityRow.isNullAt(9) ? null : quantityRow.get(9) // _fid
+        );
   }
 
   @Nonnull
@@ -466,25 +471,23 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     final Object result = requireNonNull(spec.result());
 
     // Handle single-item lists by unwrapping them to the contained value.
-    final Object resultRepresentation = result instanceof final List<?> list && list.size() == 1
-        ? list.getFirst()
-        : result;
+    final Object resultRepresentation =
+        result instanceof final List<?> list && list.size() == 1 ? list.getFirst() : result;
 
     // Convert the YAML representation to a FHIR element definition.
-    final ChildDefinition resultDefinition = YamlSupport.elementFromYaml("result",
-        resultRepresentation);
+    final ChildDefinition resultDefinition =
+        YamlSupport.elementFromYaml("result", resultRepresentation);
 
     // Create a Spark schema from the element definition.
     final StructType resultSchema = YamlSupport.childrenToStruct(List.of(resultDefinition));
 
     // Convert to JSON representation for Spark processing.
-    final String resultJson = YamlSupport.omToJson(
-        Map.of("result", resultRepresentation));
+    final String resultJson = YamlSupport.omToJson(Map.of("result", resultRepresentation));
 
     // Create and return the column representation.
     return new DefaultRepresentation(
-        functions.from_json(functions.lit(resultJson),
-            resultSchema).getField("result")).asCanonical();
+            functions.from_json(functions.lit(resultJson), resultSchema).getField("result"))
+        .asCanonical();
   }
 
   @Override
@@ -494,13 +497,12 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
     // Log different information based on test type.
     if (spec.isError()) {
-      log.info("assertError({}->'{}'}):[{}]", spec.expression(), spec.errorMsg(),
-          spec.description());
+      log.info(
+          "assertError({}->'{}'}):[{}]", spec.expression(), spec.errorMsg(), spec.description());
     } else if (spec.isExpressionOnly()) {
       log.info("assertParseOnly({}):[{}]", spec.expression(), spec.description());
     } else {
-      log.info("assertResult({}=({})):[{}]", spec.result(), spec.expression(),
-          spec.description());
+      log.info("assertResult({}=({})):[{}]", spec.result(), spec.expression(), spec.description());
     }
 
     // Log resolver factory details at debug level.
@@ -510,9 +512,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
   @Override
   @Nonnull
   public String getDescription() {
-    return spec.description() != null
-        ? spec.description()
-        : spec.expression();
+    return spec.description() != null ? spec.description() : spec.expression();
   }
 
   /**
@@ -548,15 +548,11 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
   @Nullable
   private Object getResult(@Nonnull final Row row, final int index) {
     // Check for null values first.
-    final Object actualRaw = row.isNullAt(index)
-        ? null
-        : row.get(index);
+    final Object actualRaw = row.isNullAt(index) ? null : row.get(index);
 
     if (actualRaw instanceof final ArraySeq<?> wrappedArray) {
       // Handle Spark WrappedArray - unwrap single-element arrays.
-      return (wrappedArray.length() == 1
-          ? adjustResultType(wrappedArray.apply(0))
-          : wrappedArray);
+      return (wrappedArray.length() == 1 ? adjustResultType(wrappedArray.apply(0)) : wrappedArray);
     } else {
       // Apply type adjustments to non-array values.
       return adjustResultType(actualRaw);
@@ -567,13 +563,13 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    * Converts a map of variable names and values from the YAML test specification into a map of
    * FHIRPath literal Collections. This method enables YAML-defined variables to be used within
    * FHIRPath expressions during test execution.
-   * <p>
-   * <strong>Limitations:</strong>
-   * </p>
+   *
+   * <p><strong>Limitations:</strong>
+   *
    * <ul>
-   *   <li>Multi-valued (list) variables with more than one element are not supported</li>
-   *   <li>Complex object types are not supported</li>
-   *   <li>Only single-valued variables can be used in FHIRPath expressions</li>
+   *   <li>Multi-valued (list) variables with more than one element are not supported
+   *   <li>Complex object types are not supported
+   *   <li>Only single-valued variables can be used in FHIRPath expressions
    * </ul>
    *
    * @param variables map of variable names to values from YAML specification. May be null (returns
@@ -633,13 +629,15 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       } else if (singleValue instanceof final FhirTypedLiteral typedLiteral) {
         // Handle typed literals (Coding, Quantity, etc.)
         if (typedLiteral.getType() == FHIRDefinedType.QUANTITY) {
-          col = nonNull(typedLiteral.getLiteral())
-              ? QuantityCollection.fromLiteral(typedLiteral.getLiteral())
-              : QuantityCollection.build(DefaultRepresentation.empty());
+          col =
+              nonNull(typedLiteral.getLiteral())
+                  ? QuantityCollection.fromLiteral(typedLiteral.getLiteral())
+                  : QuantityCollection.build(DefaultRepresentation.empty());
         } else if (typedLiteral.getType() == FHIRDefinedType.CODING) {
-          col = nonNull(typedLiteral.getLiteral())
-              ? CodingCollection.fromLiteral(typedLiteral.getLiteral())
-              : CodingCollection.build(DefaultRepresentation.empty());
+          col =
+              nonNull(typedLiteral.getLiteral())
+                  ? CodingCollection.fromLiteral(typedLiteral.getLiteral())
+                  : CodingCollection.build(DefaultRepresentation.empty());
         } else {
           throw new IllegalArgumentException(
               "Unsupported FhirTypedLiteral type for variable: " + key);
@@ -647,8 +645,11 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       } else {
         // Unsupported type - throw an informative error.
         throw new IllegalArgumentException(
-            "Test runner does not support variable type for variable: '" + key + "' (type: "
-                + singleValue.getClass().getSimpleName() + ")");
+            "Test runner does not support variable type for variable: '"
+                + key
+                + "' (type: "
+                + singleValue.getClass().getSimpleName()
+                + ")");
       }
 
       // Add the converted collection to the result map.

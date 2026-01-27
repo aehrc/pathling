@@ -54,42 +54,26 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.PrimitiveType;
 import org.hl7.fhir.r4.model.Type;
 
-/**
- * The implementation of the 'property()' udf.
- */
+/** The implementation of the 'property()' udf. */
 @Slf4j
-public class PropertyUdf implements SqlFunction,
-    SqlFunction3<Row, String, String, Object[]> {
+public class PropertyUdf implements SqlFunction, SqlFunction3<Row, String, String, Object[]> {
 
-  @Serial
-  private static final long serialVersionUID = 7605853352299165569L;
+  @Serial private static final long serialVersionUID = 7605853352299165569L;
   private static final String FUNCTION_BASE_NAME = "property";
 
-  /**
-   * The set of FHIR types allowed for property values.
-   */
+  /** The set of FHIR types allowed for property values. */
   @Nonnull
-  public static final Set<FHIRDefinedType> ALLOWED_FHIR_TYPES = ImmutableSet.of(
-      STRING, CODE, INTEGER, BOOLEAN, DECIMAL, DATETIME, CODING
-  );
+  public static final Set<FHIRDefinedType> ALLOWED_FHIR_TYPES =
+      ImmutableSet.of(STRING, CODE, INTEGER, BOOLEAN, DECIMAL, DATETIME, CODING);
 
-  /**
-   * The FHIR type for the property values.
-   */
-  @Nonnull
-  private final FHIRDefinedType propertyType;
+  /** The FHIR type for the property values. */
+  @Nonnull private final FHIRDefinedType propertyType;
 
-  /**
-   * The terminology service factory used to create terminology services.
-   */
-  @Nonnull
-  private final TerminologyServiceFactory terminologyServiceFactory;
+  /** The terminology service factory used to create terminology services. */
+  @Nonnull private final TerminologyServiceFactory terminologyServiceFactory;
 
-  /**
-   * The default property FHIR type.
-   */
+  /** The default property FHIR type. */
   public static final FHIRDefinedType DEFAULT_PROPERTY_TYPE = STRING;
-
 
   /**
    * Creates a new PropertyUdf with the specified terminology service factory and property type.
@@ -98,7 +82,8 @@ public class PropertyUdf implements SqlFunction,
    * @param propertyType the FHIR type for the property values
    * @throws IllegalArgumentException if the property type is not supported
    */
-  private PropertyUdf(@Nonnull final TerminologyServiceFactory terminologyServiceFactory,
+  private PropertyUdf(
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final FHIRDefinedType propertyType) {
     if (!ALLOWED_FHIR_TYPES.contains(propertyType)) {
       throw new IllegalArgumentException("PropertyUDF does not support type: " + propertyType);
@@ -111,7 +96,6 @@ public class PropertyUdf implements SqlFunction,
   public String getName() {
     return getNameForType(propertyType);
   }
-
 
   @Nonnull
   private DataType geElementType() {
@@ -132,9 +116,7 @@ public class PropertyUdf implements SqlFunction,
     if (value instanceof DateTimeType) {
       return value.primitiveValue();
     } else {
-      return value instanceof PrimitiveType<?>
-             ? ((PrimitiveType<?>) value).getValue()
-             : value;
+      return value instanceof PrimitiveType<?> ? ((PrimitiveType<?>) value).getValue() : value;
     }
   }
 
@@ -152,14 +134,16 @@ public class PropertyUdf implements SqlFunction,
    * @return an array of property values, or null if lookup fails
    */
   @Nullable
-  protected Object[] doCall(@Nullable final Coding coding, @Nullable final String propertyCode,
+  protected Object[] doCall(
+      @Nullable final Coding coding,
+      @Nullable final String propertyCode,
       @Nullable final String acceptLanguage) {
     if (propertyCode == null || !isValidCoding(coding)) {
       return null;
     }
     final TerminologyService terminologyService = terminologyServiceFactory.build();
-    final List<PropertyOrDesignation> result = terminologyService.lookup(
-        requireNonNull(coding), propertyCode, acceptLanguage);
+    final List<PropertyOrDesignation> result =
+        terminologyService.lookup(requireNonNull(coding), propertyCode, acceptLanguage);
 
     return result.stream()
         .filter(Property.class::isInstance)
@@ -185,11 +169,12 @@ public class PropertyUdf implements SqlFunction,
 
   @Nullable
   @Override
-  public Object[] call(@Nullable final Row codingRow, @Nullable final String propertyCode,
+  public Object[] call(
+      @Nullable final Row codingRow,
+      @Nullable final String propertyCode,
       @Nullable final String acceptLanguage) {
-    return encodeArray(doCall(nonNull(codingRow)
-                              ? decode(codingRow)
-                              : null, propertyCode, acceptLanguage));
+    return encodeArray(
+        doCall(nonNull(codingRow) ? decode(codingRow) : null, propertyCode, acceptLanguage));
   }
 
   /**
@@ -247,7 +232,6 @@ public class PropertyUdf implements SqlFunction,
   @Nonnull
   public static List<PropertyUdf> createAll(
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
-    return ALLOWED_FHIR_TYPES.stream().map(t -> forType(terminologyServiceFactory, t))
-        .toList();
+    return ALLOWED_FHIR_TYPES.stream().map(t -> forType(terminologyServiceFactory, t)).toList();
   }
 }

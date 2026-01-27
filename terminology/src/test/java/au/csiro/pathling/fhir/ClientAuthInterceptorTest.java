@@ -49,19 +49,24 @@ import org.mockito.ArgumentMatcher;
 @Slf4j
 class ClientAuthInterceptorTest {
 
-  public static final String TOKEN_URL = "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token";
+  public static final String TOKEN_URL =
+      "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token";
   public static final String CLIENT_ID = "someclient";
   public static final String CLIENT_SECRET = "somesecret";
   public static final String SCOPE = "openid";
   public static final int TOKEN_EXPIRY_TOLERANCE = 0;
-  public static final StringEntity VALID_RESPONSE_BODY = new StringEntity("""
-      {
-        "access_token": "foo",
-        "token_type": "access_token",
-        "expires_in": 1,
-        "refresh_token": "bar",
-        "scope": "openid"
-      }""", StandardCharsets.UTF_8);
+  public static final StringEntity VALID_RESPONSE_BODY =
+      new StringEntity(
+          """
+          {
+            "access_token": "foo",
+            "token_type": "access_token",
+            "expires_in": 1,
+            "refresh_token": "bar",
+            "scope": "openid"
+          }\
+          """,
+          StandardCharsets.UTF_8);
 
   ClientAuthInterceptor interceptor;
   CloseableHttpClient httpClient;
@@ -73,13 +78,14 @@ class ClientAuthInterceptorTest {
     httpClient = mock(CloseableHttpClient.class);
     request = mock(IHttpRequest.class);
     response = mock(CloseableHttpResponse.class);
-    final TerminologyAuthConfiguration configuration = TerminologyAuthConfiguration.builder()
-        .tokenEndpoint(TOKEN_URL)
-        .clientId(CLIENT_ID)
-        .clientSecret(CLIENT_SECRET)
-        .scope(SCOPE)
-        .tokenExpiryTolerance(TOKEN_EXPIRY_TOLERANCE)
-        .build();
+    final TerminologyAuthConfiguration configuration =
+        TerminologyAuthConfiguration.builder()
+            .tokenEndpoint(TOKEN_URL)
+            .clientId(CLIENT_ID)
+            .clientSecret(CLIENT_SECRET)
+            .scope(SCOPE)
+            .tokenExpiryTolerance(TOKEN_EXPIRY_TOLERANCE)
+            .build();
     interceptor = new ClientAuthInterceptor(httpClient, configuration);
   }
 
@@ -90,8 +96,7 @@ class ClientAuthInterceptorTest {
     when(response.getFirstHeader("Content-Type")).thenReturn(contentTypeHeader);
 
     when(response.getEntity()).thenReturn(VALID_RESPONSE_BODY);
-    when(httpClient.execute(argThat(matchesRequest())))
-        .thenReturn(response);
+    when(httpClient.execute(argThat(matchesRequest()))).thenReturn(response);
 
     interceptor.handleClientRequest(request);
     interceptor.handleClientRequest(request);
@@ -107,11 +112,10 @@ class ClientAuthInterceptorTest {
   void missingContentType() throws IOException {
     when(response.getFirstHeader("Content-Type")).thenReturn(null);
     when(response.getEntity()).thenReturn(VALID_RESPONSE_BODY);
-    when(httpClient.execute(argThat(matchesRequest())))
-        .thenReturn(response);
+    when(httpClient.execute(argThat(matchesRequest()))).thenReturn(response);
 
-    final ClientProtocolException error = assertThrows(
-        ClientProtocolException.class, () -> interceptor.handleClientRequest(request));
+    final ClientProtocolException error =
+        assertThrows(ClientProtocolException.class, () -> interceptor.handleClientRequest(request));
     assertEquals("Client credentials response contains no Content-Type header", error.getMessage());
   }
 
@@ -122,12 +126,12 @@ class ClientAuthInterceptorTest {
     when(response.getFirstHeader("Content-Type")).thenReturn(contentTypeHeader);
 
     when(response.getEntity()).thenReturn(VALID_RESPONSE_BODY);
-    when(httpClient.execute(argThat(matchesRequest())))
-        .thenReturn(response);
+    when(httpClient.execute(argThat(matchesRequest()))).thenReturn(response);
 
-    final ClientProtocolException error = assertThrows(
-        ClientProtocolException.class, () -> interceptor.handleClientRequest(request));
-    assertEquals("Invalid response from token endpoint: content type is not application/json",
+    final ClientProtocolException error =
+        assertThrows(ClientProtocolException.class, () -> interceptor.handleClientRequest(request));
+    assertEquals(
+        "Invalid response from token endpoint: content type is not application/json",
         error.getMessage());
   }
 
@@ -137,33 +141,36 @@ class ClientAuthInterceptorTest {
     when(contentTypeHeader.getValue()).thenReturn("application/json");
     when(response.getFirstHeader("Content-Type")).thenReturn(contentTypeHeader);
 
-    final StringEntity bodyWithMissingToken = new StringEntity("""
-        {
-          "token_type": "access_token",
-          "expires_in": 1,
-          "refresh_token": "bar",
-          "scope": "openid"
-        }""", StandardCharsets.UTF_8);
+    final StringEntity bodyWithMissingToken =
+        new StringEntity(
+            """
+            {
+              "token_type": "access_token",
+              "expires_in": 1,
+              "refresh_token": "bar",
+              "scope": "openid"
+            }\
+            """,
+            StandardCharsets.UTF_8);
     when(response.getEntity()).thenReturn(bodyWithMissingToken);
-    when(httpClient.execute(argThat(matchesRequest())))
-        .thenReturn(response);
-    when(httpClient.execute(argThat(matchesRequest())))
-        .thenReturn(response);
+    when(httpClient.execute(argThat(matchesRequest()))).thenReturn(response);
+    when(httpClient.execute(argThat(matchesRequest()))).thenReturn(response);
 
-    final ClientProtocolException error = assertThrows(
-        ClientProtocolException.class, () -> interceptor.handleClientRequest(request));
+    final ClientProtocolException error =
+        assertThrows(ClientProtocolException.class, () -> interceptor.handleClientRequest(request));
     assertEquals("Client credentials grant does not contain access token", error.getMessage());
   }
 
   @Test
   void expiryLessThanTolerance() throws IOException {
-    final TerminologyAuthConfiguration configuration = TerminologyAuthConfiguration.builder()
-        .tokenEndpoint(TOKEN_URL)
-        .clientId(CLIENT_ID)
-        .clientSecret(CLIENT_SECRET)
-        .scope(SCOPE)
-        .tokenExpiryTolerance(10)
-        .build();
+    final TerminologyAuthConfiguration configuration =
+        TerminologyAuthConfiguration.builder()
+            .tokenEndpoint(TOKEN_URL)
+            .clientId(CLIENT_ID)
+            .clientSecret(CLIENT_SECRET)
+            .scope(SCOPE)
+            .tokenExpiryTolerance(10)
+            .build();
     interceptor = new ClientAuthInterceptor(httpClient, configuration);
 
     final Header contentTypeHeader = mock(Header.class);
@@ -171,13 +178,12 @@ class ClientAuthInterceptorTest {
     when(response.getFirstHeader("Content-Type")).thenReturn(contentTypeHeader);
 
     when(response.getEntity()).thenReturn(VALID_RESPONSE_BODY);
-    when(httpClient.execute(argThat(matchesRequest())))
-        .thenReturn(response);
+    when(httpClient.execute(argThat(matchesRequest()))).thenReturn(response);
 
-    final ClientProtocolException error = assertThrows(
-        ClientProtocolException.class, () -> interceptor.handleClientRequest(request));
-    assertEquals("Client credentials grant expiry is less than the tolerance: 1",
-        error.getMessage());
+    final ClientProtocolException error =
+        assertThrows(ClientProtocolException.class, () -> interceptor.handleClientRequest(request));
+    assertEquals(
+        "Client credentials grant expiry is less than the tolerance: 1", error.getMessage());
   }
 
   @AfterEach
@@ -191,21 +197,25 @@ class ClientAuthInterceptorTest {
       if (!(request instanceof final HttpPost post)) {
         return false;
       }
-      final boolean headerMatches = request.getURI().toString().equals(TOKEN_URL)
-          && request.getFirstHeader("Content-Type").getValue()
-          .equals("application/x-www-form-urlencoded")
-          && request.getFirstHeader("Accept").getValue().equals("application/json");
+      final boolean headerMatches =
+          request.getURI().toString().equals(TOKEN_URL)
+              && request
+                  .getFirstHeader("Content-Type")
+                  .getValue()
+                  .equals("application/x-www-form-urlencoded")
+              && request.getFirstHeader("Accept").getValue().equals("application/json");
       final HttpEntity entity = post.getEntity();
       final boolean entityMatches;
       try {
-        entityMatches = entity instanceof UrlEncodedFormEntity
-            && EntityUtils.toString(entity).equals(
-            "grant_type=client_credentials&client_id=someclient&client_secret=somesecret&scope=openid");
+        entityMatches =
+            entity instanceof UrlEncodedFormEntity
+                && EntityUtils.toString(entity)
+                    .equals(
+                        "grant_type=client_credentials&client_id=someclient&client_secret=somesecret&scope=openid");
       } catch (final IOException e) {
         return false;
       }
       return headerMatches && entityMatches;
     };
   }
-
 }

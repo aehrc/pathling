@@ -26,8 +26,8 @@ import java.util.function.Function;
 
 /**
  * Represents parameters that are passed to a terminology operation.
- * <p>
- * Must be {@link Serializable} so that it can be used as a cache key.
+ *
+ * <p>Must be {@link Serializable} so that it can be used as a cache key.
  *
  * @author John Grimes
  */
@@ -42,11 +42,9 @@ public interface TerminologyParameters extends Serializable {
    * @return the converted value, or null if input is null
    */
   @Nullable
-  static <T> T optional(@Nonnull final Function<String, T> converter,
-      @Nullable final String value) {
-    return value != null
-           ? converter.apply(value)
-           : null;
+  static <T> T optional(
+      @Nonnull final Function<String, T> converter, @Nullable final String value) {
+    return value != null ? converter.apply(value) : null;
   }
 
   /**
@@ -59,9 +57,8 @@ public interface TerminologyParameters extends Serializable {
    * @throws NullPointerException if value is null
    */
   @Nonnull
-  static <T> T required(@Nonnull final Function<String, T> converter,
-      @Nullable final String value) {
+  static <T> T required(
+      @Nonnull final Function<String, T> converter, @Nullable final String value) {
     return converter.apply(requireNonNull(value));
   }
-
 }

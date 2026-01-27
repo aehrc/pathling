@@ -26,9 +26,9 @@ import org.apache.spark.sql.Column;
 
 /**
  * Utility class for numeric matching logic used by both NumberMatcher and QuantityMatcher.
- * <p>
- * Provides reusable methods for comparing numeric values with range-based semantics (eq/ne)
- * and exact value semantics (gt/ge/lt/le), based on FHIR search specification.
+ *
+ * <p>Provides reusable methods for comparing numeric values with range-based semantics (eq/ne) and
+ * exact value semantics (gt/ge/lt/le), based on FHIR search specification.
  *
  * @author Generated for code reuse
  */
@@ -40,15 +40,16 @@ public final class NumericMatchingSupport {
 
   /**
    * Matches using range semantics based on significant figures.
-   * <p>
-   * For resource values (treated as points with infinite precision):
+   *
+   * <p>For resource values (treated as points with infinite precision):
+   *
    * <ul>
-   *   <li>EQ: value is within [lower, upper)</li>
-   *   <li>NE: value is outside [lower, upper)</li>
+   *   <li>EQ: value is within [lower, upper)
+   *   <li>NE: value is outside [lower, upper)
    * </ul>
-   * <p>
-   * The range is determined by the precision of the search value. For example, searching
-   * for "100" (3 significant figures) creates a range [99.5, 100.5).
+   *
+   * <p>The range is determined by the precision of the search value. For example, searching for
+   * "100" (3 significant figures) creates a range [99.5, 100.5).
    *
    * @param valueColumn the column to match against
    * @param numericValue the numeric search value (without prefix)
@@ -67,15 +68,15 @@ public final class NumericMatchingSupport {
     return switch (prefix) {
       case EQ -> valueColumn.geq(lit(lowerBoundary)).and(valueColumn.lt(lit(upperBoundary)));
       case NE -> valueColumn.lt(lit(lowerBoundary)).or(valueColumn.geq(lit(upperBoundary)));
-      case GT, GE, LT, LE -> throw new IllegalArgumentException(
-          "Range semantics not supported for prefix: " + prefix);
+      case GT, GE, LT, LE ->
+          throw new IllegalArgumentException("Range semantics not supported for prefix: " + prefix);
     };
   }
 
   /**
    * Matches using exact value semantics (infinite precision).
-   * <p>
-   * Comparison prefixes ignore the implicit range and treat both the search value and resource
+   *
+   * <p>Comparison prefixes ignore the implicit range and treat both the search value and resource
    * value as having arbitrary precision.
    *
    * @param valueColumn the column to match against
@@ -95,8 +96,9 @@ public final class NumericMatchingSupport {
       case GE -> valueColumn.geq(lit(searchNumber));
       case LT -> valueColumn.lt(lit(searchNumber));
       case LE -> valueColumn.leq(lit(searchNumber));
-      case EQ, NE -> throw new IllegalArgumentException(
-          "Exact semantics requires a comparison prefix, got: " + prefix);
+      case EQ, NE ->
+          throw new IllegalArgumentException(
+              "Exact semantics requires a comparison prefix, got: " + prefix);
     };
   }
 }

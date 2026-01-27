@@ -29,19 +29,17 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 /**
  * Evaluator that combines a {@link SingleResourceEvaluator} with a {@link Dataset}, enabling
  * FHIRPath evaluation that returns {@link CollectionDataset} results.
- * <p>
- * This class bridges the gap between the Column-based evaluation provided by
- * {@link SingleResourceEvaluator} and Dataset-aware operations that need both the evaluation result
- * and the underlying data.
- * <p>
- * Use this evaluator when:
+ *
+ * <p>This class bridges the gap between the Column-based evaluation provided by {@link
+ * SingleResourceEvaluator} and Dataset-aware operations that need both the evaluation result and
+ * the underlying data.
+ *
+ * <p>Use this evaluator when:
+ *
  * <ul>
- *   <li>You need to evaluate FHIRPath expressions and get both the result columns and the
- *   dataset</li>
- *   <li>You're working with test scenarios that need to verify expression results against
- *   data</li>
- *   <li>You need {@link CollectionDataset} output for downstream operations like
- *   canonicalization</li>
+ *   <li>You need to evaluate FHIRPath expressions and get both the result columns and the dataset
+ *   <li>You're working with test scenarios that need to verify expression results against data
+ *   <li>You need {@link CollectionDataset} output for downstream operations like canonicalization
  * </ul>
  *
  * @see SingleResourceEvaluator
@@ -51,23 +49,17 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 public class DatasetEvaluator {
 
-  /**
-   * The underlying evaluator that performs FHIRPath expression evaluation.
-   */
-  @Nonnull
-  SingleResourceEvaluator evaluator;
+  /** The underlying evaluator that performs FHIRPath expression evaluation. */
+  @Nonnull SingleResourceEvaluator evaluator;
 
-  /**
-   * The Spark Dataset containing the resource data to evaluate against.
-   */
-  @Nonnull
-  Dataset<Row> dataset;
+  /** The Spark Dataset containing the resource data to evaluate against. */
+  @Nonnull Dataset<Row> dataset;
 
   /**
    * Evaluates a FHIRPath expression with the default input context.
-   * <p>
-   * The default input context is the subject resource, equivalent to calling
-   * {@link #evaluate(FhirPath, Collection)} with the subject resource collection.
+   *
+   * <p>The default input context is the subject resource, equivalent to calling {@link
+   * #evaluate(FhirPath, Collection)} with the subject resource collection.
    *
    * @param fhirPath the FHIRPath expression to evaluate
    * @return the result of the evaluation paired with the dataset
@@ -80,8 +72,8 @@ public class DatasetEvaluator {
 
   /**
    * Evaluates a FHIRPath expression with a custom input context.
-   * <p>
-   * The input context is the collection that the FHIRPath expression operates on. This is
+   *
+   * <p>The input context is the collection that the FHIRPath expression operates on. This is
    * typically used when evaluating expressions in the context of a specific element rather than the
    * resource root.
    *
@@ -90,16 +82,16 @@ public class DatasetEvaluator {
    * @return the result of the evaluation paired with the dataset
    */
   @Nonnull
-  public CollectionDataset evaluate(@Nonnull final FhirPath fhirPath,
-      @Nonnull final Collection inputContext) {
+  public CollectionDataset evaluate(
+      @Nonnull final FhirPath fhirPath, @Nonnull final Collection inputContext) {
     final Collection result = evaluator.evaluate(fhirPath, inputContext);
     return CollectionDataset.of(dataset, result);
   }
 
   /**
    * Evaluates a FHIRPath expression and returns just the Collection result.
-   * <p>
-   * This method is useful when you need the evaluation result without the dataset, such as when
+   *
+   * <p>This method is useful when you need the evaluation result without the dataset, such as when
    * only the column expressions are needed.
    *
    * @param fhirPath the FHIRPath expression to evaluate
@@ -112,8 +104,8 @@ public class DatasetEvaluator {
 
   /**
    * Evaluates a FHIRPath expression and returns just the Collection result.
-   * <p>
-   * This method is useful when you need the evaluation result without the dataset, such as when
+   *
+   * <p>This method is useful when you need the evaluation result without the dataset, such as when
    * only the column expressions are needed.
    *
    * @param fhirPath the FHIRPath expression to evaluate
@@ -121,8 +113,8 @@ public class DatasetEvaluator {
    * @return the evaluation result as a Collection
    */
   @Nonnull
-  public Collection evaluateToCollection(@Nonnull final FhirPath fhirPath,
-      @Nonnull final Collection inputContext) {
+  public Collection evaluateToCollection(
+      @Nonnull final FhirPath fhirPath, @Nonnull final Collection inputContext) {
     return evaluator.evaluate(fhirPath, inputContext);
   }
 
@@ -138,9 +130,9 @@ public class DatasetEvaluator {
 
   /**
    * Returns the default input context (subject resource collection).
-   * <p>
-   * This is the initial input context used when evaluating FHIRPath expressions that start from the
-   * resource root.
+   *
+   * <p>This is the initial input context used when evaluating FHIRPath expressions that start from
+   * the resource root.
    *
    * @return the subject resource collection
    */

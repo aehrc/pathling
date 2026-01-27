@@ -38,7 +38,8 @@ public class PathlingBenchmark {
 
   @Benchmark
   public List<Row> conditionFlat(@Nonnull final PathlingBenchmarkState state) {
-    return state.getNdjsonSource()
+    return state
+        .getNdjsonSource()
         .view("Condition")
         .json(state.getViewDefinitions().get("ConditionFlat"))
         .execute()
@@ -47,7 +48,8 @@ public class PathlingBenchmark {
 
   @Benchmark
   public List<Row> encounterFlat(@Nonnull final PathlingBenchmarkState state) {
-    return state.getNdjsonSource()
+    return state
+        .getNdjsonSource()
         .view("Encounter")
         .json(state.getViewDefinitions().get("EncounterFlat"))
         .execute()
@@ -56,7 +58,8 @@ public class PathlingBenchmark {
 
   @Benchmark
   public List<Row> patientAddresses(@Nonnull final PathlingBenchmarkState state) {
-    return state.getNdjsonSource()
+    return state
+        .getNdjsonSource()
         .view("Patient")
         .json(state.getViewDefinitions().get("PatientAddresses"))
         .execute()
@@ -65,7 +68,8 @@ public class PathlingBenchmark {
 
   @Benchmark
   public List<Row> patientAndContactAddressUnion(@Nonnull final PathlingBenchmarkState state) {
-    return state.getNdjsonSource()
+    return state
+        .getNdjsonSource()
         .view("Patient")
         .json(state.getViewDefinitions().get("PatientAndContactAddressUnion"))
         .execute()
@@ -74,7 +78,8 @@ public class PathlingBenchmark {
 
   @Benchmark
   public List<Row> patientDemographics(@Nonnull final PathlingBenchmarkState state) {
-    return state.getNdjsonSource()
+    return state
+        .getNdjsonSource()
         .view("Patient")
         .json(state.getViewDefinitions().get("PatientDemographics"))
         .execute()
@@ -83,7 +88,8 @@ public class PathlingBenchmark {
 
   @Benchmark
   public List<Row> usCoreBloodPressures(@Nonnull final PathlingBenchmarkState state) {
-    return state.getNdjsonSource()
+    return state
+        .getNdjsonSource()
         .view("Observation")
         .json(state.getViewDefinitions().get("UsCoreBloodPressures"))
         .execute()
@@ -92,11 +98,11 @@ public class PathlingBenchmark {
 
   @Benchmark
   public List<Row> questionnaireResponseFlat(@Nonnull final PathlingBenchmarkState state) {
-    return state.getNdjsonSource()
+    return state
+        .getNdjsonSource()
         .view("QuestionnaireResponse")
         .json(state.getViewDefinitions().get("QuestionnaireResponseFlat"))
         .execute()
         .collectAsList();
   }
-
 }

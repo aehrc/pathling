@@ -29,9 +29,7 @@ import org.apache.spark.sql.Column;
  * @param requestedColumn The column that was requested to be included in the projection.
  */
 public record ProjectedColumn(
-    @Nonnull Collection collection,
-    @Nonnull RequestedColumn requestedColumn
-) {
+    @Nonnull Collection collection, @Nonnull RequestedColumn requestedColumn) {
 
   /**
    * Gets the column value from the collection and aliases it with the requested name. If a SQL type
@@ -42,22 +40,31 @@ public record ProjectedColumn(
   @Nonnull
   public Column getValue() {
     // If a type was asserted for the column, check that the collection is of that type.
-    requestedColumn.type().ifPresent(requestedType ->
-        collection.getFhirType().ifPresent(actualType -> {
-          if (!requestedType.equals(actualType)) {
-            throw new IllegalArgumentException(
-                "Collection " + collection + " has type " + actualType
-                    + ", expected " + requestedType);
-          }
-        })
-    );
-    final Column rawResult = Materializable.getExternalValue(requestedColumn.collection()
-                                                             ? collection.asPlural()
-                                                             : collection.asSingular());
-    return requestedColumn.sqlType()
+    requestedColumn
+        .type()
+        .ifPresent(
+            requestedType ->
+                collection
+                    .getFhirType()
+                    .ifPresent(
+                        actualType -> {
+                          if (!requestedType.equals(actualType)) {
+                            throw new IllegalArgumentException(
+                                "Collection "
+                                    + collection
+                                    + " has type "
+                                    + actualType
+                                    + ", expected "
+                                    + requestedType);
+                          }
+                        }));
+    final Column rawResult =
+        Materializable.getExternalValue(
+            requestedColumn.collection() ? collection.asPlural() : collection.asSingular());
+    return requestedColumn
+        .sqlType()
         .map(rawResult::try_cast)
         .orElse(rawResult)
         .alias(requestedColumn.name());
-
   }
 }

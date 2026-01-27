@@ -39,8 +39,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 @Slf4j
-public class DateCollection extends Collection implements StringCoercible, Materializable,
-    DateTimeComparable {
+public class DateCollection extends Collection
+    implements StringCoercible, Materializable, DateTimeComparable {
 
   /**
    * Creates a new DateCollection.
@@ -51,7 +51,8 @@ public class DateCollection extends Collection implements StringCoercible, Mater
    * @param definition the node definition
    * @param extensionMapColumn the extension map column
    */
-  protected DateCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  protected DateCollection(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
@@ -67,10 +68,15 @@ public class DateCollection extends Collection implements StringCoercible, Mater
    * @return A new instance of {@link DateCollection}
    */
   @Nonnull
-  public static DateCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static DateCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new DateCollection(columnRepresentation, Optional.of(FhirPathType.DATE),
-        Optional.of(FHIRDefinedType.DATE), definition, Optional.empty());
+    return new DateCollection(
+        columnRepresentation,
+        Optional.of(FhirPathType.DATE),
+        Optional.of(FHIRDefinedType.DATE),
+        definition,
+        Optional.empty());
   }
 
   @Nonnull
@@ -115,7 +121,8 @@ public class DateCollection extends Collection implements StringCoercible, Mater
 
   @Override
   public boolean convertibleTo(@Nonnull final Collection other) {
-    return other.getType()
+    return other
+        .getType()
         .filter(FhirPathType.DATETIME::equals)
         .map(t -> true)
         .orElseGet(() -> super.convertibleTo(other));
@@ -124,14 +131,15 @@ public class DateCollection extends Collection implements StringCoercible, Mater
   @Override
   @Nonnull
   public Collection castAs(@Nonnull final Collection other) {
-    return other.getType()
+    return other
+        .getType()
         .filter(FhirPathType.DATETIME::equals)
-        .map(t -> {
-          final Optional<NodeDefinition> definition = getDefinition()
-              .map(d -> (NodeDefinition) d);
-          return (Collection) DateTimeCollection.build(getColumn(), definition);
-        })
+        .map(
+            t -> {
+              final Optional<NodeDefinition> definition =
+                  getDefinition().map(d -> (NodeDefinition) d);
+              return (Collection) DateTimeCollection.build(getColumn(), definition);
+            })
         .orElseGet(() -> super.castAs(other));
   }
-
 }

@@ -29,7 +29,6 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
-
 /**
  * A default implementation of {@link DefinitionContext} that allows for explicit definition of
  * resource types.
@@ -38,8 +37,7 @@ import lombok.Value;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class DefaultDefinitionContext implements DefinitionContext {
 
-  @Nonnull
-  Map<String, ResourceDefinition> resourceDefinitions;
+  @Nonnull Map<String, ResourceDefinition> resourceDefinitions;
 
   @Override
   @Nonnull
@@ -59,10 +57,6 @@ public class DefaultDefinitionContext implements DefinitionContext {
   public static DefaultDefinitionContext of(final ResourceDefinition... resourceDefinitions) {
     return new DefaultDefinitionContext(
         Stream.of(resourceDefinitions)
-            .collect(Collectors.toMap(
-                ResourceDefinition::getResourceCode,
-                Function.identity()
-            ))
-    );
+            .collect(Collectors.toMap(ResourceDefinition::getResourceCode, Function.identity())));
   }
 }

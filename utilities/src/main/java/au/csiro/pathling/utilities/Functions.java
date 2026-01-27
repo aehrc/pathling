@@ -21,9 +21,7 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-/**
- * Utility class containing some functional programming helper functions.
- */
+/** Utility class containing some functional programming helper functions. */
 public interface Functions {
 
   /**
@@ -52,7 +50,6 @@ public interface Functions {
     return a2 -> a1 -> f.apply(a1, a2);
   }
 
-
   /**
    * Returns function that conditionally casts an object to a given class, returning an empty
    * optional if the cast fails.
@@ -62,9 +59,6 @@ public interface Functions {
    * @return the function
    */
   static <T> Function<Object, Optional<T>> maybeCast(final Class<T> clazz) {
-    return o -> clazz.isInstance(o)
-                ? Optional.of(clazz.cast(o))
-                : Optional.empty();
+    return o -> clazz.isInstance(o) ? Optional.of(clazz.cast(o)) : Optional.empty();
   }
-
 }

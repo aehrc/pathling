@@ -33,21 +33,21 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public abstract class QueryHelpers {
 
-  private QueryHelpers() {
-  }
+  private QueryHelpers() {}
 
   /**
    * Creates an empty dataset with the schema of the supplied resource type.
    *
    * @param spark a {@link SparkSession}
    * @param fhirEncoders a {@link FhirEncoders} object
-   * @param resourceType the {@link ResourceType} that will determine the shape of the empty
-   * dataset
+   * @param resourceType the {@link ResourceType} that will determine the shape of the empty dataset
    * @return a new {@link Dataset}
    */
   @Nonnull
-  public static Dataset<Row> createEmptyDataset(@Nonnull final SparkSession spark,
-      @Nonnull final FhirEncoders fhirEncoders, @Nonnull final ResourceType resourceType) {
+  public static Dataset<Row> createEmptyDataset(
+      @Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final ResourceType resourceType) {
     final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
     return spark.emptyDataset(encoder).toDF();
   }

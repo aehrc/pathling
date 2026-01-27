@@ -26,8 +26,7 @@ import java.io.Serial;
  */
 public class ConstantConstructionException extends RuntimeException {
 
-  @Serial
-  private static final long serialVersionUID = -6668286802657345673L;
+  @Serial private static final long serialVersionUID = -6668286802657345673L;
 
   /**
    * Creates a new ConstantConstructionException.

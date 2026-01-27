@@ -52,7 +52,7 @@ public interface Terminology {
    * ValueSet.
    *
    * @param coding a Column containing the struct representation of a Coding or an array of such
-   * structs.
+   *     structs.
    * @param valueSetUrl the identifier for a FHIR ValueSet.
    * @return the Column containing the result of the operation
    */
@@ -67,7 +67,7 @@ public interface Terminology {
    * ValueSet.
    *
    * @param coding a Column containing the struct representation of a Coding or an array of such
-   * structs.
+   *     structs.
    * @param valueSetUrl the column with the identifier for a FHIR ValueSet.
    * @return the Column containing the result of the operation
    */
@@ -77,32 +77,41 @@ public interface Terminology {
   }
 
   /**
-   * Takes a Coding or an array of Codings column as its input.  Returns the Column which contains
-   * an array of Coding value with translation targets from the specified FHIR ConceptMap. There may
-   * be more than one target concept for each input concept.
+   * Takes a Coding or an array of Codings column as its input. Returns the Column which contains an
+   * array of Coding value with translation targets from the specified FHIR ConceptMap. There may be
+   * more than one target concept for each input concept.
    *
    * @param coding a Column containing the struct representation of a Coding or an array of such
-   * structs.
+   *     structs.
    * @param conceptMapUri an identifier for a FHIR ConceptMap.
    * @param reverse the direction to traverse the map - false results in "source to target"
-   * mappings, while true results in "target to source".
+   *     mappings, while true results in "target to source".
    * @param equivalences a collection of translation equivalences (ConceptMapEquivalence) to include
-   * it the result.
-   * @param target identifies the value set in which a translation is sought.  If there's no target
-   * specified, the server should return all known translations.
+   *     it the result.
+   * @param target identifies the value set in which a translation is sought. If there's no target
+   *     specified, the server should return all known translations.
    * @return the Column containing the result of the operation (an array of Coding structs).
    */
   @Nonnull
-  static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      final boolean reverse, @Nullable final Collection<ConceptMapEquivalence> equivalences,
+  static Column translate(
+      @Nonnull final Column coding,
+      @Nonnull final String conceptMapUri,
+      final boolean reverse,
+      @Nullable final Collection<ConceptMapEquivalence> equivalences,
       @Nullable final String target) {
-    return call_udf(TranslateUdf.FUNCTION_NAME, coding, lit(conceptMapUri),
+    return call_udf(
+        TranslateUdf.FUNCTION_NAME,
+        coding,
+        lit(conceptMapUri),
         lit(reverse),
         nonNull(equivalences)
-        ? array(
-            equivalences.stream().distinct().map(ConceptMapEquivalence::toCode).map(functions::lit)
-                .toArray(Column[]::new))
-        : lit(null),
+            ? array(
+                equivalences.stream()
+                    .distinct()
+                    .map(ConceptMapEquivalence::toCode)
+                    .map(functions::lit)
+                    .toArray(Column[]::new))
+            : lit(null),
         lit(target));
   }
 
@@ -110,18 +119,21 @@ public interface Terminology {
    * Translates a coding using a concept map.
    *
    * @param coding a Column containing the struct representation of a Coding, or an array of such
-   * structs
+   *     structs
    * @param conceptMapUri an identifier for a FHIR ConceptMap
    * @param reverse the direction to traverse the map - false results in "source to target"
-   * mappings, while true results in "target to source"
+   *     mappings, while true results in "target to source"
    * @param equivalences a collection of translation equivalences (ConceptMapEquivalence) to include
-   * in the result
+   *     in the result
    * @return the Column containing the result of the operation (an array of Coding structs)
    * @see Terminology#translate(Column, String, boolean, Collection, String)
    */
   @Nonnull
-  static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      final boolean reverse, @Nullable final Collection<ConceptMapEquivalence> equivalences) {
+  static Column translate(
+      @Nonnull final Column coding,
+      @Nonnull final String conceptMapUri,
+      final boolean reverse,
+      @Nullable final Collection<ConceptMapEquivalence> equivalences) {
     return translate(coding, conceptMapUri, reverse, equivalences, null);
   }
 
@@ -131,7 +143,7 @@ public interface Terminology {
    *
    * @param codingA a Column containing a struct representation of a Coding or an array of Codings.
    * @param codingB a Column containing a struct representation of a Coding or an array of *
-   * Codings.
+   *     Codings.
    * @return the Column containing the result of the operation (boolean)
    */
   @Nonnull
@@ -164,14 +176,13 @@ public interface Terminology {
     return display(coding, null);
   }
 
-
   /**
    * Takes a Coding column as its input. Returns the Column, which contains the canonical display
    * name associated with the given code in preferred language when specified.
    *
    * @param coding a Column containing a struct representation of a Coding
    * @param acceptLanguage the optional language preferences for the returned display name.
-   * Overrides the value of {@link TerminologyConfiguration#getAcceptLanguage()}.
+   *     Overrides the value of {@link TerminologyConfiguration#getAcceptLanguage()}.
    * @return the Column containing the result of the operation (String)
    */
   @Nonnull
@@ -190,14 +201,17 @@ public interface Terminology {
    * @param propertyCode the code of the property to retrieve
    * @param propertyType the type of the property to retrieve
    * @param acceptLanguage the optional language preferences for the returned property values.
-   * Overrides the value of {@link TerminologyConfiguration#getAcceptLanguage()}.
+   *     Overrides the value of {@link TerminologyConfiguration#getAcceptLanguage()}.
    * @return the Column containing the result of the operation (array of property values)
    */
   @Nonnull
-  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
-      @Nonnull final FHIRDefinedType propertyType, @Nullable final String acceptLanguage) {
-    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode),
-        lit(acceptLanguage));
+  static Column property_of(
+      @Nonnull final Column coding,
+      @Nonnull final String propertyCode,
+      @Nonnull final FHIRDefinedType propertyType,
+      @Nullable final String acceptLanguage) {
+    return call_udf(
+        PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode), lit(acceptLanguage));
   }
 
   /**
@@ -207,18 +221,23 @@ public interface Terminology {
    * @param propertyCode the code of the property to retrieve
    * @param propertyType the FHIR data type of the property
    * @param acceptLanguage the optional language preferences for the returned property values.
-   * Overrides the value of {@link TerminologyConfiguration#getAcceptLanguage()}.
+   *     Overrides the value of {@link TerminologyConfiguration#getAcceptLanguage()}.
    * @return the Column containing the result of the operation (array of property values)
    * @see Terminology#property_of(Column, String, FHIRDefinedType)
    */
   @Nonnull
-  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
-      @Nullable final String propertyType, @Nullable final String acceptLanguage) {
+  static Column property_of(
+      @Nonnull final Column coding,
+      @Nonnull final String propertyCode,
+      @Nullable final String propertyType,
+      @Nullable final String acceptLanguage) {
 
-    return property_of(coding, propertyCode,
+    return property_of(
+        coding,
+        propertyCode,
         nonNull(propertyType)
-        ? wrapInUserInputError(FHIRDefinedType::fromCode).apply(propertyType)
-        : PropertyUdf.DEFAULT_PROPERTY_TYPE,
+            ? wrapInUserInputError(FHIRDefinedType::fromCode).apply(propertyType)
+            : PropertyUdf.DEFAULT_PROPERTY_TYPE,
         acceptLanguage);
   }
 
@@ -235,7 +254,9 @@ public interface Terminology {
    * @return the Column containing the result of the operation (array of property values)
    */
   @Nonnull
-  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
+  static Column property_of(
+      @Nonnull final Column coding,
+      @Nonnull final String propertyCode,
       @Nonnull final FHIRDefinedType propertyType) {
     return property_of(coding, propertyCode, propertyType, null);
   }
@@ -250,7 +271,9 @@ public interface Terminology {
    * @see Terminology#property_of(Column, String, FHIRDefinedType)
    */
   @Nonnull
-  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
+  static Column property_of(
+      @Nonnull final Column coding,
+      @Nonnull final String propertyCode,
       @Nullable final String propertyType) {
     return property_of(coding, propertyCode, propertyType, null);
   }
@@ -268,7 +291,6 @@ public interface Terminology {
     return property_of(coding, propertyCode, PropertyUdf.DEFAULT_PROPERTY_TYPE);
   }
 
-
   /**
    * Takes a Coding column as its input. Returns the Column, which contains the values of
    * designations (strings) for this coding for the specified use and language. If the language is
@@ -279,11 +301,11 @@ public interface Terminology {
    * @param use a Column containing use the code with the use of the designations
    * @param language the language of the designations
    * @return the Column containing the result of the operation (array of strings with designation
-   * values)
+   *     values)
    */
   @Nonnull
-  static Column designation(@Nonnull final Column coding, @Nonnull final Column use,
-      @Nullable final String language) {
+  static Column designation(
+      @Nonnull final Column coding, @Nonnull final Column use, @Nullable final String language) {
     return call_udf(DesignationUdf.FUNCTION_NAME, coding, use, lit(language));
   }
 
@@ -294,12 +316,12 @@ public interface Terminology {
    * @param use a Column containing a Coding describing the use of the requested designation
    * @param language the language of the requested designation
    * @return the Column containing the result of the operation (array of strings with designation
-   * values)
+   *     values)
    * @see Terminology#designation(Column, Column, String)
    */
   @Nonnull
-  static Column designation(@Nonnull final Column coding, @Nullable final Coding use,
-      @Nullable final String language) {
+  static Column designation(
+      @Nonnull final Column coding, @Nullable final Coding use, @Nullable final String language) {
     return designation(coding, toLiteralColumn(use), language);
   }
 
@@ -309,7 +331,7 @@ public interface Terminology {
    * @param coding a Column containing a struct representation of a Coding
    * @param use a Column containing a Coding describing the use of the requested designation
    * @return the Column containing the result of the operation (array of strings with designation
-   * values)
+   *     values)
    * @see Terminology#designation(Column, Coding, String)
    */
   @Nonnull
@@ -322,7 +344,7 @@ public interface Terminology {
    *
    * @param coding a Column containing a struct representation of a Coding
    * @return the Column containing the result of the operation (array of strings with designation
-   * values)
+   *     values)
    * @see Terminology#designation(Column, Coding, String)
    */
   @Nonnull

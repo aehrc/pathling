@@ -43,11 +43,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Getter
 public class ResourceCollection extends Collection {
 
-  /**
-   * The {@link ResourceDefinition} for this resource type.
-   */
-  @Nonnull
-  private final ResourceDefinition resourceDefinition;
+  /** The {@link ResourceDefinition} for this resource type. */
+  @Nonnull private final ResourceDefinition resourceDefinition;
 
   /**
    * Creates a new ResourceCollection.
@@ -58,12 +55,17 @@ public class ResourceCollection extends Collection {
    * @param definition the node definition
    * @param resourceDefinition the resource definition
    */
-  protected ResourceCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  protected ResourceCollection(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final ResourceDefinition resourceDefinition) {
-    super(columnRepresentation, type, fhirType, definition,
+    super(
+        columnRepresentation,
+        type,
+        fhirType,
+        definition,
         Optional.of(
             columnRepresentation.traverse(ExtensionSupport.EXTENSIONS_FIELD_NAME()).getValue()));
     this.resourceDefinition = resourceDefinition;
@@ -78,7 +80,6 @@ public class ResourceCollection extends Collection {
     }
   }
 
-
   /**
    * Builds a new ResourceCollection from a column representation and resource definition.
    *
@@ -87,16 +88,19 @@ public class ResourceCollection extends Collection {
    * @return a new ResourceCollection
    */
   @Nonnull
-  public static ResourceCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static ResourceCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final ResourceDefinition definition) {
 
     // We use a literal column as the resource value - the actual value is not important.
     // But the non-null value indicates that the resource should be included in any result.
-    return new ResourceCollection(columnRepresentation,
-        Optional.empty(), Optional.empty(), Optional.of(definition),
+    return new ResourceCollection(
+        columnRepresentation,
+        Optional.empty(),
+        Optional.empty(),
+        Optional.of(definition),
         definition);
   }
-
 
   /**
    * Build a new ResourcePath using the supplied {@link ColumnRepresentation}, {@link FhirContext},
@@ -108,19 +112,23 @@ public class ResourceCollection extends Collection {
    * @return A shiny new ResourcePath
    */
   @Nonnull
-  public static ResourceCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static ResourceCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final ResourceType resourceType) {
     // Get the resource definition from HAPI.
-    final ResourceDefinition definition = FhirDefinitionContext.of(fhirContext)
-        .findResourceDefinition(resourceType);
+    final ResourceDefinition definition =
+        FhirDefinitionContext.of(fhirContext).findResourceDefinition(resourceType);
 
     // We use a literal column as the resource value - the actual value is not important.
     // But the non-null value indicates that the resource should be included in any result.
-    return new ResourceCollection(columnRepresentation, Optional.empty(),
-        getFhirType(resourceType), Optional.of(definition), definition);
+    return new ResourceCollection(
+        columnRepresentation,
+        Optional.empty(),
+        getFhirType(resourceType),
+        Optional.of(definition),
+        definition);
   }
-
 
   @Nonnull
   @Override
@@ -131,23 +139,23 @@ public class ResourceCollection extends Collection {
   @Nonnull
   @Override
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
-    return new ResourceCollection(newValue, getType(), getFhirType(), getDefinition(),
-        resourceDefinition);
+    return new ResourceCollection(
+        newValue, getType(), getFhirType(), getDefinition(), resourceDefinition);
   }
 
   /**
    * Returns a column that can be used as a key for joining to this resource type. The key is
    * constructed as "ResourceType/id" (e.g., "Patient/123") to match the format used by FHIR
-   * references. This ensures that {@code getResourceKey()} returns a value compatible with
-   * {@code getReferenceKey()} for joining resources to their references.
+   * references. This ensures that {@code getResourceKey()} returns a value compatible with {@code
+   * getReferenceKey()} for joining resources to their references.
    *
    * @return A collection containing the resource key
    */
   @Nonnull
   public Collection getKeyCollection() {
     final String prefix = resourceDefinition.getResourceCode() + "/";
-    final ColumnRepresentation idColumn = getColumn()
-        .traverse("id", Optional.of(FHIRDefinedType.STRING));
+    final ColumnRepresentation idColumn =
+        getColumn().traverse("id", Optional.of(FHIRDefinedType.STRING));
     return StringCollection.build(idColumn.transform(id -> concat(lit(prefix), id)));
   }
 
@@ -157,7 +165,7 @@ public class ResourceCollection extends Collection {
    *
    * @param type The type of element to return
    * @return A new collection representing just the elements of this collection with the specified
-   * type
+   *     type
    */
   @Nonnull
   @Override
@@ -168,5 +176,4 @@ public class ResourceCollection extends Collection {
         .map(s -> (Collection) this)
         .orElse(EmptyCollection.getInstance());
   }
-
 }

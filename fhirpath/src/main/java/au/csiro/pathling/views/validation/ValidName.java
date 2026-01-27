@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.views.validation;
 
-
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
@@ -31,32 +30,34 @@ import java.lang.annotation.Target;
 
 /**
  * Validation constraint that ensures a field contains a valid name.
- * <p>
- * This constraint enforces that the annotated field contains a string that:
+ *
+ * <p>This constraint enforces that the annotated field contains a string that:
+ *
  * <ul>
- *   <li>Starts with a letter (uppercase or lowercase)</li>
- *   <li>Contains only letters, numbers, and underscores</li>
+ *   <li>Starts with a letter (uppercase or lowercase)
+ *   <li>Contains only letters, numbers, and underscores
  * </ul>
- * <p>
- * This pattern matches the common requirements for identifiers in many programming languages
- * and database systems, ensuring that names are valid across different contexts.
- * <p>
- * The constraint is implemented using the {@link Pattern} annotation with the regular expression
+ *
+ * <p>This pattern matches the common requirements for identifiers in many programming languages and
+ * database systems, ensuring that names are valid across different contexts.
+ *
+ * <p>The constraint is implemented using the {@link Pattern} annotation with the regular expression
  * {@code ^[A-Za-z]\w*$}, which enforces these rules.
- * <p>
- * Usage example:
+ *
+ * <p>Usage example:
+ *
  * <pre>
  * public class MyClass {
  *     &#64;ValidName
  *     private String name;
  * }
  * </pre>
- * <p>
- * This constraint is used for validating column names, constant names, and other identifiers
+ *
+ * <p>This constraint is used for validating column names, constant names, and other identifiers
  * throughout the application to ensure they follow a consistent naming convention.
  */
 @Pattern(regexp = "^[A-Za-z]\\w*$")
-@Constraint(validatedBy = {})  // required, even if no validator class
+@Constraint(validatedBy = {}) // required, even if no validator class
 @Target(FIELD)
 @Retention(RUNTIME)
 @ReportAsSingleViolation
@@ -65,8 +66,8 @@ public @interface ValidName {
 
   /**
    * Error message template to use when the validation fails.
-   * <p>
-   * The default message includes the pattern that the field must match.
+   *
+   * <p>The default message includes the pattern that the field must match.
    *
    * @return the error message template
    */

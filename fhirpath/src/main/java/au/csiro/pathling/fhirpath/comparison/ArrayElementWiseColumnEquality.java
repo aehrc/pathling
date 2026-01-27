@@ -32,19 +32,18 @@ import org.apache.spark.sql.Column;
 /**
  * An implementation of {@link ColumnEquality} that performs element-wise comparison on two array
  * columns by delegating the comparison of individual elements to another {@link ColumnEquality}.
- * <p>
- * For equality operations: - Returns true if all corresponding elements in the arrays are equal -
- * Returns false if any element differs or if arrays have different sizes
- * <p>
- * For inequality operations: - Returns true if any corresponding elements in the arrays are not
+ *
+ * <p>For equality operations: - Returns true if all corresponding elements in the arrays are equal
+ * - Returns false if any element differs or if arrays have different sizes
+ *
+ * <p>For inequality operations: - Returns true if any corresponding elements in the arrays are not
  * equal or if arrays have different sizes - Returns false if all elements are equal
  *
  * @author Piotr Szul
  */
 public class ArrayElementWiseColumnEquality implements ColumnEquality {
 
-  @Nonnull
-  private final ColumnEquality elementComparator;
+  @Nonnull private final ColumnEquality elementComparator;
 
   /**
    * Creates a new ArrayColumnEquality that delegates element comparisons to the provided
@@ -77,19 +76,17 @@ public class ArrayElementWiseColumnEquality implements ColumnEquality {
    * @return a column representing the array comparison result
    */
   @Nonnull
-  private Column performArrayComparison(@Nonnull final Column left, @Nonnull final Column right,
-      final boolean isNotEqual) {
+  private Column performArrayComparison(
+      @Nonnull final Column left, @Nonnull final Column right, final boolean isNotEqual) {
     // Zip the arrays and apply the element comparator to each pair
-    final Column elementComparisons = zip_with(left, right,
-        isNotEqual
-        ? elementComparator::notEqual
-        : elementComparator::equalsTo);
+    final Column elementComparisons =
+        zip_with(
+            left, right, isNotEqual ? elementComparator::notEqual : elementComparator::equalsTo);
 
     // For equality: all elements must be equal (use forall)
     // For inequality: any element can be unequal (use exists with negated comparison)
-    final Column arrayResult = isNotEqual
-                               ? exists(elementComparisons, e -> e)
-                               : forall(elementComparisons, e -> e);
+    final Column arrayResult =
+        isNotEqual ? exists(elementComparisons, e -> e) : forall(elementComparisons, e -> e);
 
     // If arrays have different sizes, they are not equal
     final Column sizeComparison = size(left).equalTo(size(right));
@@ -99,7 +96,6 @@ public class ArrayElementWiseColumnEquality implements ColumnEquality {
             // Handle the case where some elements cannot be compared (null results)
             // For equality: null comparisons default to false (not equal)
             // For inequality: null comparisons default to true (assume not equal)
-            coalesce(arrayResult, lit(isNotEqual))
-        );
+            coalesce(arrayResult, lit(isNotEqual)));
   }
 }

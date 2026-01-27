@@ -53,31 +53,25 @@ public abstract class AbstractTerminologyTestBase {
   public static final String SYSTEM_E = "uuid:systemE";
   public static final String CODE_E = "codeE";
 
-
   public static final Coding CODING_AA = new Coding(SYSTEM_A, CODE_A, "displayAA");
   public static final Coding CODING_AB = new Coding(SYSTEM_A, CODE_B, "displayAB");
 
   public static final String VERSION_1 = "version1";
   public static final String VERSION_2 = "version2";
 
-  public static final Coding CODING_AA_VERSION1 = new Coding(SYSTEM_A, CODE_A,
-      "displayAA").setVersion(
-      VERSION_1);
-  public static final Coding CODING_AB_VERSION1 = new Coding(SYSTEM_A, CODE_B,
-      "displayAB").setVersion(
-      VERSION_1);
-  public static final Coding CODING_AB_VERSION2 = new Coding(SYSTEM_A, CODE_B,
-      "displayAB").setVersion(
-      VERSION_2);
+  public static final Coding CODING_AA_VERSION1 =
+      new Coding(SYSTEM_A, CODE_A, "displayAA").setVersion(VERSION_1);
+  public static final Coding CODING_AB_VERSION1 =
+      new Coding(SYSTEM_A, CODE_B, "displayAB").setVersion(VERSION_1);
+  public static final Coding CODING_AB_VERSION2 =
+      new Coding(SYSTEM_A, CODE_B, "displayAB").setVersion(VERSION_2);
 
-  public static final Coding CODING_AA_DISPLAY1 = new Coding(SYSTEM_A, CODE_A,
-      "displayAA1");
+  public static final Coding CODING_AA_DISPLAY1 = new Coding(SYSTEM_A, CODE_A, "displayAA1");
 
   public static final Coding CODING_BA = new Coding(SYSTEM_B, CODE_A, "displayBA");
   public static final Coding CODING_BB = new Coding(SYSTEM_B, CODE_B, "displayBB");
-  public static final Coding CODING_BB_VERSION1 = new Coding(SYSTEM_B, CODE_B,
-      "displayB").setVersion(
-      VERSION_1);
+  public static final Coding CODING_BB_VERSION1 =
+      new Coding(SYSTEM_B, CODE_B, "displayB").setVersion(VERSION_1);
 
   public static final Coding CODING_A = CODING_AA;
   public static final Coding CODING_B = CODING_BB;
@@ -88,7 +82,6 @@ public abstract class AbstractTerminologyTestBase {
   public static final Coding INVALID_CODING_0 = new Coding(null, null, "");
   public static final Coding INVALID_CODING_1 = new Coding("uuid:system", null, "");
   public static final Coding INVALID_CODING_2 = new Coding(null, "someCode", "");
-
 
   @Nonnull
   public static Row[] asArray(@Nonnull final Coding... codings) {
@@ -102,10 +95,14 @@ public abstract class AbstractTerminologyTestBase {
 
   @Nonnull
   private static <T> Arguments primitiveArguments(
-      final String fhirType, final DataType sqlType,
+      final String fhirType,
+      final DataType sqlType,
       final Function<T, ? extends Type> constructor,
-      final List<T> propertyAValues, final List<T> propertyBValues) {
-    return arguments(fhirType, sqlType,
+      final List<T> propertyAValues,
+      final List<T> propertyBValues) {
+    return arguments(
+        fhirType,
+        sqlType,
         propertyAValues.stream().map(constructor).toList(),
         propertyBValues.stream().map(constructor).toList(),
         propertyAValues,
@@ -115,36 +112,44 @@ public abstract class AbstractTerminologyTestBase {
   @Nonnull
   public static Stream<Arguments> propertyParameters() {
     return Stream.of(
-        primitiveArguments("string", DataTypes.StringType, StringType::new,
+        primitiveArguments(
+            "string",
+            DataTypes.StringType,
+            StringType::new,
             List.of("string_a"),
-            List.of("string_b.0", "string_b.1")
-        ),
-        primitiveArguments("code", DataTypes.StringType, CodeType::new,
+            List.of("string_b.0", "string_b.1")),
+        primitiveArguments(
+            "code",
+            DataTypes.StringType,
+            CodeType::new,
             List.of("code_a"),
-            List.of("code_b.0", "code_b.1")
-        ),
-        primitiveArguments("integer", DataTypes.IntegerType, IntegerType::new,
-            List.of(111),
-            List.of(222, 333)
-        ),
-        primitiveArguments("boolean", DataTypes.BooleanType, BooleanType::new,
+            List.of("code_b.0", "code_b.1")),
+        primitiveArguments(
+            "integer", DataTypes.IntegerType, IntegerType::new, List.of(111), List.of(222, 333)),
+        primitiveArguments(
+            "boolean",
+            DataTypes.BooleanType,
+            BooleanType::new,
             List.of(true),
-            List.of(false, true)
-        ),
-        primitiveArguments("decimal", DecimalCustomCoder.decimalType(), DecimalType::new,
+            List.of(false, true)),
+        primitiveArguments(
+            "decimal",
+            DecimalCustomCoder.decimalType(),
+            DecimalType::new,
             List.of(new BigDecimal("1.11")),
-            List.of(new BigDecimal("2.22"), new BigDecimal("3.33"))
-        ),
-        primitiveArguments("dateTime", DataTypes.StringType, DateTimeType::new,
+            List.of(new BigDecimal("2.22"), new BigDecimal("3.33"))),
+        primitiveArguments(
+            "dateTime",
+            DataTypes.StringType,
+            DateTimeType::new,
             List.of("1999-01-01"),
-            List.of("2222-02-02", "3333-03-03")
-        ),
-        arguments("Coding", CodingSchema.DATA_TYPE,
+            List.of("2222-02-02", "3333-03-03")),
+        arguments(
+            "Coding",
+            CodingSchema.DATA_TYPE,
             List.of(CODING_C),
             List.of(CODING_D, CODING_E),
             CodingSchema.encodeList(List.of(CODING_C)),
-            CodingSchema.encodeList(List.of(CODING_D, CODING_E))
-        )
-    );
+            CodingSchema.encodeList(List.of(CODING_D, CODING_E))));
   }
 }

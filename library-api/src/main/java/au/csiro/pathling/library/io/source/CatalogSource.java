@@ -43,11 +43,9 @@ import org.apache.spark.sql.catalog.Table;
  */
 public class CatalogSource extends AbstractSource {
 
-  @Nonnull
-  private final Optional<String> schema;
+  @Nonnull private final Optional<String> schema;
 
-  @Nonnull
-  private final Optional<UnaryOperator<Dataset<Row>>> transformation;
+  @Nonnull private final Optional<UnaryOperator<Dataset<Row>>> transformation;
 
   /**
    * Constructs a CatalogSource with the specified PathlingContext and an empty schema.
@@ -72,7 +70,8 @@ public class CatalogSource extends AbstractSource {
     this.transformation = Optional.empty(); // No transformation by default
   }
 
-  private CatalogSource(@Nonnull final PathlingContext context,
+  private CatalogSource(
+      @Nonnull final PathlingContext context,
       @Nonnull final Optional<String> schema,
       @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation) {
     super(context);
@@ -85,10 +84,9 @@ public class CatalogSource extends AbstractSource {
   public Dataset<Row> read(@Nullable final String resourceCode) {
     requireNonNull(resourceCode);
     final Dataset<Row> table = context.getSpark().table(getTableName(resourceCode));
-    // If a transformation is provided, apply it to the table. 
+    // If a transformation is provided, apply it to the table.
     // Otherwise, return the table as is.
-    return transformation.map(t -> t.apply(table))
-        .orElse(table);
+    return transformation.map(t -> t.apply(table)).orElse(table);
   }
 
   @Nonnull
@@ -110,12 +108,11 @@ public class CatalogSource extends AbstractSource {
   /**
    * @param resourceType the resource type to get the table name for
    * @return the name of the table for the given resource type, qualified by the specified schema if
-   * one is provided
+   *     one is provided
    */
   @Nonnull
   private String getTableName(@Nonnull final String resourceType) {
-    return schema.map(s -> String.join(".", s, resourceType))
-        .orElse(resourceType);
+    return schema.map(s -> String.join(".", s, resourceType)).orElse(resourceType);
   }
 
   /**
@@ -125,16 +122,19 @@ public class CatalogSource extends AbstractSource {
   private List<Table> getTables() {
     final Catalog catalog = context.getSpark().catalog();
     final Dataset<Table> tablesDataset;
-    // If a schema is provided, use it to list the tables. Otherwise, list tables from the currently 
+    // If a schema is provided, use it to list the tables. Otherwise, list tables from the currently
     // selected schema.
-    tablesDataset = schema.map(dbName -> {
-          try {
-            return catalog.listTables(dbName);
-          } catch (final AnalysisException e) {
-            throw new PersistenceError("Specified schema was not found", e);
-          }
-        })
-        .orElseGet(catalog::listTables);
+    tablesDataset =
+        schema
+            .map(
+                dbName -> {
+                  try {
+                    return catalog.listTables(dbName);
+                  } catch (final AnalysisException e) {
+                    throw new PersistenceError("Specified schema was not found", e);
+                  }
+                })
+            .orElseGet(catalog::listTables);
     return tablesDataset.collectAsList();
   }
 
@@ -148,5 +148,4 @@ public class CatalogSource extends AbstractSource {
   public CatalogSource cache() {
     return map(Dataset::cache);
   }
-
 }

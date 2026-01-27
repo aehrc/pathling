@@ -25,9 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-/**
- * Tests for {@link QuantitySearchValue}.
- */
+/** Tests for {@link QuantitySearchValue}. */
 class QuantitySearchValueTest {
 
   // ========== Value-only parsing tests ==========
@@ -65,8 +63,7 @@ class QuantitySearchValueTest {
 
   @Test
   void parseWithSystemAndCode() {
-    final QuantitySearchValue value = QuantitySearchValue.parse(
-        "5.4|http://unitsofmeasure.org|mg");
+    final QuantitySearchValue value = QuantitySearchValue.parse("5.4|http://unitsofmeasure.org|mg");
 
     assertEquals(SearchPrefix.EQ, value.getPrefix());
     assertEquals("5.4", value.getNumericValue());
@@ -77,8 +74,8 @@ class QuantitySearchValueTest {
 
   @Test
   void parseWithSystemAndCodeWithPrefix() {
-    final QuantitySearchValue value = QuantitySearchValue.parse(
-        "le5.4|http://unitsofmeasure.org|mg");
+    final QuantitySearchValue value =
+        QuantitySearchValue.parse("le5.4|http://unitsofmeasure.org|mg");
 
     assertEquals(SearchPrefix.LE, value.getPrefix());
     assertEquals("5.4", value.getNumericValue());
@@ -93,7 +90,7 @@ class QuantitySearchValueTest {
 
     assertEquals(SearchPrefix.EQ, value.getPrefix());
     assertEquals("5.4", value.getNumericValue());
-    assertEquals(Optional.empty(), value.getSystem());  // empty = no constraint
+    assertEquals(Optional.empty(), value.getSystem()); // empty = no constraint
     assertEquals(Optional.of("mg"), value.getCode());
     assertFalse(value.isValueOnly());
   }
@@ -107,7 +104,7 @@ class QuantitySearchValueTest {
     assertEquals("5.4", value.getNumericValue());
     assertEquals(Optional.empty(), value.getSystem());
     assertEquals(Optional.empty(), value.getCode());
-    assertTrue(value.isValueOnly());  // effectively value-only
+    assertTrue(value.isValueOnly()); // effectively value-only
   }
 
   // ========== Prefix tests ==========
@@ -126,21 +123,22 @@ class QuantitySearchValueTest {
 
   @Test
   void parseInvalidFormatTwoParts() {
-    assertThrows(IllegalArgumentException.class,
-        () -> QuantitySearchValue.parse("5.4|system"));
+    assertThrows(IllegalArgumentException.class, () -> QuantitySearchValue.parse("5.4|system"));
   }
 
   @Test
   void parseInvalidFormatFourParts() {
-    assertThrows(IllegalArgumentException.class,
-        () -> QuantitySearchValue.parse("5.4|system|code|extra"));
+    assertThrows(
+        IllegalArgumentException.class, () -> QuantitySearchValue.parse("5.4|system|code|extra"));
   }
 
   @Test
   void parseInvalidFormatSystemWithoutCode() {
     // System without code is not supported
-    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> QuantitySearchValue.parse("5.4|http://unitsofmeasure.org|"));
+    final IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> QuantitySearchValue.parse("5.4|http://unitsofmeasure.org|"));
 
     assertTrue(exception.getMessage().contains("System without code is not supported"));
   }
@@ -174,7 +172,7 @@ class QuantitySearchValueTest {
     final QuantitySearchValue value = QuantitySearchValue.parse("5.4||mg");
     final String str = value.toString();
 
-    assertFalse(str.contains("system="));  // system is empty, not shown
+    assertFalse(str.contains("system=")); // system is empty, not shown
     assertTrue(str.contains("code='mg'"));
   }
 }

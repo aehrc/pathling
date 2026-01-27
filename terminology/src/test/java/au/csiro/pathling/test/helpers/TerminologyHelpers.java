@@ -22,20 +22,16 @@ import org.hl7.fhir.r4.model.Coding;
 
 public final class TerminologyHelpers {
 
-  private TerminologyHelpers() {
-  }
+  private TerminologyHelpers() {}
 
   public static final String SNOMED_URI = "http://snomed.info/sct";
   public static final String LOINC_URI = "http://loinc.org";
 
-  public static final Coding CODING_LACERATION_OF_FOOT = snomedCoding("284551006",
-      "Laceration of foot");
+  public static final Coding CODING_LACERATION_OF_FOOT =
+      snomedCoding("284551006", "Laceration of foot");
 
   @Nonnull
-  public static Coding snomedCoding(@Nonnull final String code,
-      @Nonnull final String displayName) {
+  public static Coding snomedCoding(@Nonnull final String code, @Nonnull final String displayName) {
     return new Coding(SNOMED_URI, code, displayName);
   }
-
-
 }

@@ -27,8 +27,7 @@ import java.io.Serial;
  */
 public class InvalidUserInputError extends RuntimeException {
 
-  @Serial
-  private static final long serialVersionUID = -5378096951525707512L;
+  @Serial private static final long serialVersionUID = -5378096951525707512L;
 
   /**
    * Creates a new InvalidUserInputError with the specified message.
@@ -57,5 +56,4 @@ public class InvalidUserInputError extends RuntimeException {
   public InvalidUserInputError(final Throwable cause) {
     super(cause);
   }
-
 }

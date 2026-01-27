@@ -28,9 +28,7 @@ class StringsTest {
   @Test
   void testParseCsvList() {
     assertEquals(Collections.emptyList(), Strings.parseCsvList("", Integer::parseInt));
-    assertEquals(Collections.emptyList(),
-        Strings.parseCsvList(", ,, ", Integer::parseInt));
-    assertEquals(Arrays.asList(1, 2, 4),
-        Strings.parseCsvList(", 1, 2, , 4 , ", Integer::parseInt));
+    assertEquals(Collections.emptyList(), Strings.parseCsvList(", ,, ", Integer::parseInt));
+    assertEquals(Arrays.asList(1, 2, 4), Strings.parseCsvList(", 1, 2, , 4 , ", Integer::parseInt));
   }
 }

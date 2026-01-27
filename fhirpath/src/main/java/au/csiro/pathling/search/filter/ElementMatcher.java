@@ -22,10 +22,10 @@ import org.apache.spark.sql.Column;
 
 /**
  * A function that matches a single Column element against a search value.
- * <p>
- * Implementations define the matching logic for different search parameter types (e.g., token,
- * string). The matching logic is independent of array/scalar handling, which is managed by
- * {@link SearchFilter}.
+ *
+ * <p>Implementations define the matching logic for different search parameter types (e.g., token,
+ * string). The matching logic is independent of array/scalar handling, which is managed by {@link
+ * SearchFilter}.
  */
 @FunctionalInterface
 public interface ElementMatcher {

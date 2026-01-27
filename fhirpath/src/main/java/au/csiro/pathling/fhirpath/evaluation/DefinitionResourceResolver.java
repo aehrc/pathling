@@ -27,18 +27,18 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A {@link ResourceResolver} implementation that works with custom definitions.
- * <p>
- * This resolver is designed for scenarios where resources are defined through a
- * {@link DefinitionContext} rather than FHIR's standard resource definitions.
- * It's particularly useful for testing FHIRPath expressions on arbitrary data structures
- * defined in YAML test specifications.
- * <p>
- * Key characteristics:
+ *
+ * <p>This resolver is designed for scenarios where resources are defined through a {@link
+ * DefinitionContext} rather than FHIR's standard resource definitions. It's particularly useful for
+ * testing FHIRPath expressions on arbitrary data structures defined in YAML test specifications.
+ *
+ * <p>Key characteristics:
+ *
  * <ul>
- *   <li>Uses a {@link DefinitionContext} to look up resource definitions</li>
- *   <li>The subject resource is identified by a resource code string</li>
- *   <li>Uses {@link ResourceRepresentation#alwaysPresent()} for flat schema support</li>
- *   <li>Only resolves the subject resource; other resources return empty Optional</li>
+ *   <li>Uses a {@link DefinitionContext} to look up resource definitions
+ *   <li>The subject resource is identified by a resource code string
+ *   <li>Uses {@link ResourceRepresentation#alwaysPresent()} for flat schema support
+ *   <li>Only resolves the subject resource; other resources return empty Optional
  * </ul>
  *
  * @see ResourceResolver
@@ -47,23 +47,17 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value(staticConstructor = "of")
 public class DefinitionResourceResolver implements ResourceResolver {
 
-  /**
-   * The resource code identifying the subject resource (e.g., "Patient", "Test").
-   */
-  @Nonnull
-  String subjectResourceCode;
+  /** The resource code identifying the subject resource (e.g., "Patient", "Test"). */
+  @Nonnull String subjectResourceCode;
 
-  /**
-   * The definition context providing resource definitions.
-   */
-  @Nonnull
-  DefinitionContext definitionContext;
+  /** The definition context providing resource definitions. */
+  @Nonnull DefinitionContext definitionContext;
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Returns the subject resource type. For non-FHIR resources (custom types),
-   * returns {@link ResourceType#NULL}.
+   *
+   * <p>Returns the subject resource type. For non-FHIR resources (custom types), returns {@link
+   * ResourceType#NULL}.
    */
   @Override
   @Nonnull
@@ -78,10 +72,10 @@ public class DefinitionResourceResolver implements ResourceResolver {
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Creates a ResourceCollection for the subject resource using flat schema representation.
-   * Uses {@link ResourceRepresentation#alwaysPresent()} because in single-resource evaluation,
-   * each row represents exactly one resource.
+   *
+   * <p>Creates a ResourceCollection for the subject resource using flat schema representation. Uses
+   * {@link ResourceRepresentation#alwaysPresent()} because in single-resource evaluation, each row
+   * represents exactly one resource.
    */
   @Override
   @Nonnull
@@ -93,9 +87,9 @@ public class DefinitionResourceResolver implements ResourceResolver {
 
   /**
    * {@inheritDoc}
-   * <p>
-   * Only resolves the subject resource. Cross-resource references return empty Optional,
-   * which will cause the FHIRPath evaluation to fall back to field traversal.
+   *
+   * <p>Only resolves the subject resource. Cross-resource references return empty Optional, which
+   * will cause the FHIRPath evaluation to fall back to field traversal.
    */
   @Override
   @Nonnull

@@ -79,5 +79,4 @@ public interface QueryableDataSource extends DataSource {
    * @return a new DataSource with cached datasets
    */
   DataSource cache();
-
 }

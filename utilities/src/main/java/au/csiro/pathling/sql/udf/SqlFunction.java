@@ -38,5 +38,4 @@ public interface SqlFunction {
    * @return the SQL type returned by the UDF.
    */
   DataType getReturnType();
-
 }

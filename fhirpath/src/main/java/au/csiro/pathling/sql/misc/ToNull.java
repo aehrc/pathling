@@ -31,13 +31,10 @@ import org.apache.spark.sql.types.DataTypes;
  */
 public class ToNull implements SqlFunction1<Object, Object> {
 
-  /**
-   * The name of this function when used within SQL.
-   */
+  /** The name of this function when used within SQL. */
   public static final String FUNCTION_NAME = "to_null";
 
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   @Override
   public String getName() {

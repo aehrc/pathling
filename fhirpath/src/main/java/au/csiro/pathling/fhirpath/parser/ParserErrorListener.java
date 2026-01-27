@@ -32,9 +32,13 @@ import org.antlr.v4.runtime.Recognizer;
 public class ParserErrorListener extends BaseErrorListener {
 
   @Override
-  public void syntaxError(@Nullable final Recognizer<?, ?> recognizer,
-      @Nullable final Object offendingSymbol, final int line, final int charPositionInLine,
-      @Nullable final String msg, @Nullable final RecognitionException e) {
+  public void syntaxError(
+      @Nullable final Recognizer<?, ?> recognizer,
+      @Nullable final Object offendingSymbol,
+      final int line,
+      final int charPositionInLine,
+      @Nullable final String msg,
+      @Nullable final RecognitionException e) {
     final StringBuilder sb = new StringBuilder();
     sb.append("Error parsing FHIRPath expression (line: ");
     sb.append(line);
@@ -47,5 +51,4 @@ public class ParserErrorListener extends BaseErrorListener {
     }
     throw new InvalidUserInputError(sb.toString());
   }
-
 }

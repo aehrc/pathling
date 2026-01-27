@@ -26,9 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/**
- * Tests for {@link SearchParameterDefinition}.
- */
+/** Tests for {@link SearchParameterDefinition}. */
 class SearchParameterDefinitionTest {
 
   @Test
@@ -42,11 +40,14 @@ class SearchParameterDefinitionTest {
 
   @Test
   void testMultipleExpressionsConstructor() {
-    final var def = new SearchParameterDefinition("date", DATE, List.of(
-        "Observation.effective.ofType(dateTime)",
-        "Observation.effective.ofType(Period)",
-        "Observation.effective.ofType(instant)"
-    ));
+    final var def =
+        new SearchParameterDefinition(
+            "date",
+            DATE,
+            List.of(
+                "Observation.effective.ofType(dateTime)",
+                "Observation.effective.ofType(Period)",
+                "Observation.effective.ofType(instant)"));
 
     assertEquals("date", def.code());
     assertEquals(DATE, def.type());

@@ -45,5 +45,4 @@ public interface DataSource {
    */
   @Nonnull
   Set<String> getResourceTypes();
-
 }

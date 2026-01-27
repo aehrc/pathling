@@ -25,19 +25,17 @@ import lombok.Value;
 
 /**
  * A ResolverBuilder implementation that caches created DatasetEvaluator instances.
- * <p>
- * This builder wraps a delegate ResolverBuilder and maintains a cache of evaluators
- * keyed by their factory functions. This avoids redundant creation of evaluators
- * when the same factory is used multiple times.
+ *
+ * <p>This builder wraps a delegate ResolverBuilder and maintains a cache of evaluators keyed by
+ * their factory functions. This avoids redundant creation of evaluators when the same factory is
+ * used multiple times.
  */
 @Value(staticConstructor = "of")
 public class CachingResolverBuilder implements ResolverBuilder {
 
-  @Nonnull
-  ResolverBuilder delegate;
+  @Nonnull ResolverBuilder delegate;
 
-  @Nonnull
-  Map<Function<RuntimeContext, DatasetEvaluator>, DatasetEvaluator> cache;
+  @Nonnull Map<Function<RuntimeContext, DatasetEvaluator>, DatasetEvaluator> cache;
 
   @Override
   @Nonnull

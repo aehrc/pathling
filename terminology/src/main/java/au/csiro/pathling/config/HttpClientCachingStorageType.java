@@ -27,18 +27,13 @@ import jakarta.annotation.Nonnull;
  * @author John Grimes
  */
 public enum HttpClientCachingStorageType {
-  /**
-   * The cache is stored in memory, and is reset when the application is restarted.
-   */
+  /** The cache is stored in memory, and is reset when the application is restarted. */
   MEMORY("memory"),
 
-  /**
-   * The cache is stored on disk, and is persisted between application restarts.
-   */
+  /** The cache is stored on disk, and is persisted between application restarts. */
   DISK("disk");
 
-  @Nonnull
-  private final String code;
+  @Nonnull private final String code;
 
   HttpClientCachingStorageType(@Nonnull final String code) {
     this.code = requireNonNull(code);

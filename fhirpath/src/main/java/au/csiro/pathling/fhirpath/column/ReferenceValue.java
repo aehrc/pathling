@@ -28,16 +28,17 @@ import org.apache.spark.sql.Column;
 
 /**
  * Utility class for working with Reference columns in SQL operations.
- * <p>
- * Wraps Reference column operations and provides methods for:
+ *
+ * <p>Wraps Reference column operations and provides methods for:
+ *
  * <ul>
- *   <li>Type extraction from reference strings and type fields</li>
- *   <li>Validation of reference formats and type names</li>
- *   <li>Handling both singular and array reference fields</li>
+ *   <li>Type extraction from reference strings and type fields
+ *   <li>Validation of reference formats and type names
+ *   <li>Handling both singular and array reference fields
  * </ul>
- * <p>
- * This class centralizes all Reference-related SQL column operations, similar to how
- * {@link QuantityValue} handles Quantity operations.
+ *
+ * <p>This class centralizes all Reference-related SQL column operations, similar to how {@link
+ * QuantityValue} handles Quantity operations.
  *
  * @author John Grimes
  */
@@ -45,31 +46,31 @@ public class ReferenceValue {
 
   /**
    * Regex pattern for extracting resource type from reference strings.
-   * <p>
-   * Matches resource types in various reference formats:
+   *
+   * <p>Matches resource types in various reference formats:
+   *
    * <ul>
-   *   <li>Relative: "Patient/123" → "Patient"</li>
-   *   <li>Absolute: "http://example.org/fhir/Patient/123" → "Patient"</li>
-   *   <li>Canonical: "http://hl7.org/fhir/ValueSet/my-valueset" → "ValueSet"</li>
+   *   <li>Relative: "Patient/123" → "Patient"
+   *   <li>Absolute: "http://example.org/fhir/Patient/123" → "Patient"
+   *   <li>Canonical: "http://hl7.org/fhir/ValueSet/my-valueset" → "ValueSet"
    * </ul>
    */
   private static final String REFERENCE_TYPE_PATTERN = "(?:^|/)([A-Z][a-zA-Z]+)(?:/|$|\\|)";
 
   /**
    * Regex pattern for validating FHIR resource type names.
-   * <p>
-   * A valid FHIR resource type name must start with a capital letter followed by one or more
+   *
+   * <p>A valid FHIR resource type name must start with a capital letter followed by one or more
    * letters (e.g., "Patient", "Observation", "ValueSet").
    */
   private static final String FHIR_TYPE_NAME_PATTERN = "^[A-Z][a-zA-Z]+$";
 
-  @Nonnull
-  private final ColumnRepresentation referenceColumn;
+  @Nonnull private final ColumnRepresentation referenceColumn;
 
-  @Nonnull
-  private final ColumnRepresentation typeColumn;
+  @Nonnull private final ColumnRepresentation typeColumn;
 
-  private ReferenceValue(@Nonnull final ColumnRepresentation referenceColumn,
+  private ReferenceValue(
+      @Nonnull final ColumnRepresentation referenceColumn,
       @Nonnull final ColumnRepresentation typeColumn) {
     this.referenceColumn = referenceColumn;
     this.typeColumn = typeColumn;
@@ -83,25 +84,28 @@ public class ReferenceValue {
    * @return a ReferenceValue instance
    */
   @Nonnull
-  public static ReferenceValue of(@Nonnull final ColumnRepresentation referenceColumn,
+  public static ReferenceValue of(
+      @Nonnull final ColumnRepresentation referenceColumn,
       @Nonnull final ColumnRepresentation typeColumn) {
     return new ReferenceValue(referenceColumn, typeColumn);
   }
 
   /**
    * Extracts the resource type from singular reference and type columns.
-   * <p>
-   * Type extraction logic:
+   *
+   * <p>Type extraction logic:
+   *
    * <ol>
-   *   <li>Use {@code type} if present and valid</li>
-   *   <li>Parse resource type from {@code reference} string</li>
-   *   <li>Return null if neither provides a valid type</li>
+   *   <li>Use {@code type} if present and valid
+   *   <li>Parse resource type from {@code reference} string
+   *   <li>Return null if neither provides a valid type
    * </ol>
-   * <p>
-   * Filtering rules:
+   *
+   * <p>Filtering rules:
+   *
    * <ul>
-   *   <li>Exclude contained references (starting with {@code #})</li>
-   *   <li>Validate extracted type matches FHIR resource type pattern</li>
+   *   <li>Exclude contained references (starting with {@code #})
+   *   <li>Validate extracted type matches FHIR resource type pattern
    * </ul>
    *
    * @param reference The Reference.reference column (may contain SQL null values)
@@ -109,37 +113,38 @@ public class ReferenceValue {
    * @return A column containing the extracted type string, or null for unresolvable references
    */
   @Nonnull
-  public static Column extractTypeFromColumns(@Nonnull final Column reference,
-      @Nonnull final Column type) {
+  public static Column extractTypeFromColumns(
+      @Nonnull final Column reference, @Nonnull final Column type) {
     final Column parsedType = regexp_extract(reference, REFERENCE_TYPE_PATTERN, 1);
     final Column extractedType = coalesce(type, parsedType);
     return validateTypeFormat(extractedType);
   }
 
   /**
-   * Extracts the resource type from this Reference, with priority given to the explicit type
-   * field.
-   * <p>
-   * Type extraction logic:
+   * Extracts the resource type from this Reference, with priority given to the explicit type field.
+   *
+   * <p>Type extraction logic:
+   *
    * <ol>
-   *   <li>Use {@code Reference.type} if present and valid</li>
-   *   <li>Parse resource type from {@code Reference.reference} string</li>
-   *   <li>Return null for individual references that cannot be resolved</li>
+   *   <li>Use {@code Reference.type} if present and valid
+   *   <li>Parse resource type from {@code Reference.reference} string
+   *   <li>Return null for individual references that cannot be resolved
    * </ol>
-   * <p>
-   * Handles both singular and array columns - if reference column is an array,
-   * type column is also assumed to be an array.
+   *
+   * <p>Handles both singular and array columns - if reference column is an array, type column is
+   * also assumed to be an array.
    *
    * @return A column representation containing the extracted type string(s)
    */
   @Nonnull
   public ColumnRepresentation extractType() {
-    final UnaryOperator<Column> arrayLogic = refArray ->
-        org.apache.spark.sql.functions.zip_with(refArray, typeColumn.getValue(),
-            ReferenceValue::extractTypeFromColumns);
+    final UnaryOperator<Column> arrayLogic =
+        refArray ->
+            org.apache.spark.sql.functions.zip_with(
+                refArray, typeColumn.getValue(), ReferenceValue::extractTypeFromColumns);
 
-    final UnaryOperator<Column> singularLogic = ref ->
-        extractTypeFromColumns(ref, typeColumn.getValue());
+    final UnaryOperator<Column> singularLogic =
+        ref -> extractTypeFromColumns(ref, typeColumn.getValue());
 
     return referenceColumn.vectorize(arrayLogic, singularLogic);
   }

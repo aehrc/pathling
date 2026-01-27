@@ -27,15 +27,17 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Represents a FHIR search query that can be configured and executed to filter FHIR resources.
- * <p>
- * The query can be configured in multiple ways:
+ *
+ * <p>The query can be configured in multiple ways:
+ *
  * <ul>
- *   <li>Using individual search criteria via {@link #criterion(String, String...)}</li>
- *   <li>Using a URL query string via {@link #queryString(String)}</li>
- *   <li>Using a pre-built {@link FhirSearch} object via {@link #query(FhirSearch)}</li>
+ *   <li>Using individual search criteria via {@link #criterion(String, String...)}
+ *   <li>Using a URL query string via {@link #queryString(String)}
+ *   <li>Using a pre-built {@link FhirSearch} object via {@link #query(FhirSearch)}
  * </ul>
- * <p>
- * Example usage:
+ *
+ * <p>Example usage:
+ *
  * <pre>{@code
  * // Using individual criteria
  * Dataset<Row> patients = dataSource.search("Patient")
@@ -62,17 +64,13 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public class FhirSearchQuery {
 
-  @Nonnull
-  private final ResourceType resourceType;
+  @Nonnull private final ResourceType resourceType;
 
-  @Nonnull
-  private final Function<FhirSearch, Dataset<Row>> executor;
+  @Nonnull private final Function<FhirSearch, Dataset<Row>> executor;
 
-  @Nullable
-  private FhirSearch fhirSearch;
+  @Nullable private FhirSearch fhirSearch;
 
-  @Nullable
-  private FhirSearch.Builder searchBuilder;
+  @Nullable private FhirSearch.Builder searchBuilder;
 
   /**
    * Creates a new FhirSearchQuery instance.
@@ -80,7 +78,8 @@ public class FhirSearchQuery {
    * @param resourceType the FHIR resource type to search
    * @param executor the function responsible for executing the search query
    */
-  public FhirSearchQuery(@Nonnull final ResourceType resourceType,
+  public FhirSearchQuery(
+      @Nonnull final ResourceType resourceType,
       @Nonnull final Function<FhirSearch, Dataset<Row>> executor) {
     this.resourceType = resourceType;
     this.executor = executor;
@@ -88,33 +87,33 @@ public class FhirSearchQuery {
 
   /**
    * Adds a search criterion with the specified parameter code and values.
-   * <p>
-   * The parameter code may include a modifier suffix (e.g., "gender:not" or "family:exact").
+   *
+   * <p>The parameter code may include a modifier suffix (e.g., "gender:not" or "family:exact").
    * Multiple values for the same criterion are combined with OR logic.
-   * <p>
-   * Multiple calls to this method add additional criteria, which are combined with AND logic.
+   *
+   * <p>Multiple calls to this method add additional criteria, which are combined with AND logic.
    *
    * @param parameterCode the search parameter code, optionally with modifier suffix
    * @param values the search values
    * @return this query instance for method chaining
    */
   @Nonnull
-  public FhirSearchQuery criterion(@Nonnull final String parameterCode,
-      @Nonnull final String... values) {
+  public FhirSearchQuery criterion(
+      @Nonnull final String parameterCode, @Nonnull final String... values) {
     getOrCreateBuilder().criterion(parameterCode, values);
     return this;
   }
 
   /**
    * Configures the query using a URL query string.
-   * <p>
-   * The query string should be in standard URL query format without the leading '?'. Values should
-   * be URL-encoded per RFC 3986.
-   * <p>
-   * FHIR escape sequences are supported: {@code \,} for literal comma, {@code \\} for literal
+   *
+   * <p>The query string should be in standard URL query format without the leading '?'. Values
+   * should be URL-encoded per RFC 3986.
+   *
+   * <p>FHIR escape sequences are supported: {@code \,} for literal comma, {@code \\} for literal
    * backslash.
-   * <p>
-   * This method replaces any previously configured criteria or query.
+   *
+   * <p>This method replaces any previously configured criteria or query.
    *
    * @param queryString the URL query string (e.g., "gender=male&amp;birthdate=ge1990")
    * @return this query instance for method chaining
@@ -129,8 +128,8 @@ public class FhirSearchQuery {
 
   /**
    * Configures the query using a pre-built {@link FhirSearch} object.
-   * <p>
-   * This method replaces any previously configured criteria or query.
+   *
+   * <p>This method replaces any previously configured criteria or query.
    *
    * @param search the FHIR search configuration to use
    * @return this query instance for method chaining
@@ -144,8 +143,8 @@ public class FhirSearchQuery {
 
   /**
    * Executes the configured FHIR search query and returns the filtered results.
-   * <p>
-   * If no criteria have been configured, this returns all resources of the specified type.
+   *
+   * <p>If no criteria have been configured, this returns all resources of the specified type.
    *
    * @return a Spark Dataset containing the filtered FHIR resources
    */
@@ -174,7 +173,7 @@ public class FhirSearchQuery {
   private FhirSearch.Builder getOrCreateBuilder() {
     if (searchBuilder == null) {
       searchBuilder = FhirSearch.builder();
-      fhirSearch = null;  // Clear any pre-set search when using builder
+      fhirSearch = null; // Clear any pre-set search when using builder
     }
     return searchBuilder;
   }
@@ -195,5 +194,4 @@ public class FhirSearchQuery {
     // No criteria configured - return empty search (will return all resources)
     return FhirSearch.builder().build();
   }
-
 }

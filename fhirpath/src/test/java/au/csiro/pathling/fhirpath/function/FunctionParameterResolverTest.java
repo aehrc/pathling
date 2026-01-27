@@ -47,6 +47,7 @@ import org.junit.jupiter.api.Test;
 class FunctionParameterResolverTest {
 
   final EvaluationContext evaluationContext = mock(EvaluationContext.class);
+
   {
     final Collection mockInputContext = mock(Collection.class);
     when(evaluationContext.getInputContext()).thenReturn(mockInputContext);
@@ -54,34 +55,35 @@ class FunctionParameterResolverTest {
 
   @Nullable
   @SuppressWarnings("unused")
-  static Collection funcOptionalArg(@Nonnull final Collection input,
-      @Nullable final Collection optionalArgument) {
+  static Collection funcOptionalArg(
+      @Nonnull final Collection input, @Nullable final Collection optionalArgument) {
     return null;
   }
 
   @Nullable
   @SuppressWarnings("unused")
-  static Collection funcRequiredArg(@Nonnull final Collection input,
-      @Nonnull final IntegerCollection requiredArgument) {
+  static Collection funcRequiredArg(
+      @Nonnull final Collection input, @Nonnull final IntegerCollection requiredArgument) {
     return null;
   }
 
   @Nullable
   @SuppressWarnings("unused")
-  static Collection funcAllTypes(@Nonnull final Collection input,
+  static Collection funcAllTypes(
+      @Nonnull final Collection input,
       @Nonnull final Collection collectionArgument,
-      @Nonnull final BooleanCollection booleanArgument, @Nonnull final TerminologyConcepts concepts,
+      @Nonnull final BooleanCollection booleanArgument,
+      @Nonnull final TerminologyConcepts concepts,
       @Nonnull final TypeSpecifier typeSpecifier) {
     return null;
   }
 
   @Nullable
   @SuppressWarnings("unused")
-  public static Collection funcTransform(@Nonnull final Collection input,
-      @Nonnull final CollectionTransform transform) {
+  public static Collection funcTransform(
+      @Nonnull final Collection input, @Nonnull final CollectionTransform transform) {
     return null;
   }
-
 
   @Nullable
   @SuppressWarnings("unused")
@@ -107,7 +109,6 @@ class FunctionParameterResolverTest {
     return null;
   }
 
-
   @Value(staticConstructor = "of")
   static class ConstPath implements FhirPath {
 
@@ -115,8 +116,8 @@ class FunctionParameterResolverTest {
 
     @Nonnull
     @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+    public Collection apply(
+        @Nonnull final Collection input, @Nonnull final EvaluationContext context) {
       return result;
     }
   }
@@ -145,22 +146,23 @@ class FunctionParameterResolverTest {
     // mock codingArgument to return concept when toConcepts() is called
     when(codingArgument.toConcepts()).thenReturn(Optional.of(concepts));
 
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        input,
-        List.of(
-            ConstPath.of(stringArgument),
-            ConstPath.of(booleanArgument),
-            ConstPath.of(codingArgument),
-            new ParserPaths.TypeSpecifierPath(typeSpecifier)
-        ));
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(
+            evaluationContext,
+            input,
+            List.of(
+                ConstPath.of(stringArgument),
+                ConstPath.of(booleanArgument),
+                ConstPath.of(codingArgument),
+                new ParserPaths.TypeSpecifierPath(typeSpecifier)));
     final Method method = getMethod("funcAllTypes");
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(new FunctionInvocation(method, new Object[]{input,
-        stringArgument, booleanRepresentation, concepts, typeSpecifier
-    }
-    ), invocation);
+    assertEquals(
+        new FunctionInvocation(
+            method,
+            new Object[] {input, stringArgument, booleanRepresentation, concepts, typeSpecifier}),
+        invocation);
   }
-
 
   @Test
   void testCollectionTransformArgumentBinding() {
@@ -170,32 +172,28 @@ class FunctionParameterResolverTest {
     final FhirPath transformPath = mock(FhirPath.class);
     when(transformPath.apply(transformArgument, evaluationContext)).thenReturn(transformResult);
 
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        input,
-        List.of(
-            transformPath
-        ));
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(evaluationContext, input, List.of(transformPath));
     final Method method = getMethod("funcTransform");
     final FunctionInvocation invocation = resolver.bind(method);
     assertEquals(method, invocation.method());
     assertEquals(input, invocation.arguments()[0]);
     // test that the transform is bound correctly to the evaluation context
-    assertEquals(transformResult,
+    assertEquals(
+        transformResult,
         ((CollectionTransform) invocation.arguments()[1]).apply(transformArgument));
   }
-
 
   @Test
   void testSpecializedInputType() {
     final Collection input = mock(StringCollection.class);
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        input, List.of());
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(evaluationContext, input, List.of());
     final Method method = getMethod("funcStringCollection");
 
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(new FunctionInvocation(method, new Object[]{input}), invocation);
+    assertEquals(new FunctionInvocation(method, new Object[] {input}), invocation);
   }
-
 
   @Test
   void testConceptsInputType() {
@@ -204,11 +202,11 @@ class FunctionParameterResolverTest {
     // mock codingInput to return concept when toConcepts() is called
     when(codingInput.toConcepts()).thenReturn(Optional.of(concepts));
 
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        codingInput, List.of());
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(evaluationContext, codingInput, List.of());
     final Method method = getMethod("funcConcepts");
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(new FunctionInvocation(method, new Object[]{concepts}), invocation);
+    assertEquals(new FunctionInvocation(method, new Object[] {concepts}), invocation);
   }
 
   @Test
@@ -218,85 +216,83 @@ class FunctionParameterResolverTest {
     // mock codingInput to return concept when toConcepts() is called
     when(inputCollection.asBooleanPath()).thenReturn(booleanRepresentation);
 
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        inputCollection, List.of());
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(evaluationContext, inputCollection, List.of());
     final Method method = getMethod("funcBooleanCollection");
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(new FunctionInvocation(method, new Object[]{booleanRepresentation}), invocation);
+    assertEquals(new FunctionInvocation(method, new Object[] {booleanRepresentation}), invocation);
   }
 
   @Test
   void testOptionalArgNullIfNotProvided() {
     final Collection input = mock(Collection.class);
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        input,
-        List.of());
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(evaluationContext, input, List.of());
     final Method method = getMethod("funcOptionalArg");
 
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(new FunctionInvocation(method, new Object[]{input, null}),
-        invocation);
+    assertEquals(new FunctionInvocation(method, new Object[] {input, null}), invocation);
   }
 
   @Test
   void failsIfRequiredArgIsMissing() {
     final Collection input = mock(Collection.class);
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        input,
-        List.of());
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(evaluationContext, input, List.of());
     final Method method = getMethod("funcRequiredArg");
 
-    final InvalidUserInputError ex = assertThrows(
-        InvalidUserInputError.class, () -> resolver.bind(method));
+    final InvalidUserInputError ex =
+        assertThrows(InvalidUserInputError.class, () -> resolver.bind(method));
     assertEquals(
-        "Function 'funcRequiredArg', argument 0 (IntegerCollection): Parameter is required but no argument was provided",
+        "Function 'funcRequiredArg', argument 0 (IntegerCollection): Parameter is required but no"
+            + " argument was provided",
         ex.getMessage());
   }
 
   @Test
   void failsIfTooManyArgs() {
     final Collection input = mock(Collection.class);
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        input,
-        List.of(mock(FhirPath.class), mock(FhirPath.class)));
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(
+            evaluationContext, input, List.of(mock(FhirPath.class), mock(FhirPath.class)));
     final Method method = getMethod("funcRequiredArg");
 
-    final InvalidUserInputError ex = assertThrows(
-        InvalidUserInputError.class, () -> resolver.bind(method));
+    final InvalidUserInputError ex =
+        assertThrows(InvalidUserInputError.class, () -> resolver.bind(method));
 
-    assertEquals("Function 'funcRequiredArg': Too many arguments provided. Expected 1, got 2",
+    assertEquals(
+        "Function 'funcRequiredArg': Too many arguments provided. Expected 1, got 2",
         ex.getMessage());
   }
-
 
   @Test
   void failsForInvalidFunction() {
     final Collection input = mock(Collection.class);
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        input, List.of());
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(evaluationContext, input, List.of());
     final Method method = getMethod("invalidFunction");
 
-    final AssertionError ex = assertThrows(
-        AssertionError.class, () -> resolver.bind(method));
+    final AssertionError ex = assertThrows(AssertionError.class, () -> resolver.bind(method));
 
     assertEquals(
-        "Function 'invalidFunction' does not accept any parameters and is a not a valid FhirPath function implementation",
+        "Function 'invalidFunction' does not accept any parameters and is a not a valid FhirPath"
+            + " function implementation",
         ex.getMessage());
   }
 
   @Test
   void failsForTypeMismatchInCollection() {
     final IntegerCollection input = mock(IntegerCollection.class);
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        input,
-        List.of());
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(evaluationContext, input, List.of());
     final Method method = getMethod("funcStringCollection");
 
-    final InvalidUserInputError ex = assertThrows(
-        InvalidUserInputError.class, () -> resolver.bind(method));
+    final InvalidUserInputError ex =
+        assertThrows(InvalidUserInputError.class, () -> resolver.bind(method));
 
     assertEquals(
-        "Function 'funcStringCollection', input: Type mismatch: expected StringCollection but got IntegerCollection",
+        "Function 'funcStringCollection', input: Type mismatch: expected StringCollection but got"
+            + " IntegerCollection",
         ex.getMessage());
   }
 
@@ -306,15 +302,16 @@ class FunctionParameterResolverTest {
     // Mock toConcepts to return empty Optional (conversion failure)
     when(codingInput.toConcepts()).thenReturn(Optional.empty());
 
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        codingInput, List.of());
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(evaluationContext, codingInput, List.of());
     final Method method = getMethod("funcConcepts");
 
-    final InvalidUserInputError ex = assertThrows(
-        InvalidUserInputError.class, () -> resolver.bind(method));
+    final InvalidUserInputError ex =
+        assertThrows(InvalidUserInputError.class, () -> resolver.bind(method));
 
     assertEquals(
-        "Function 'funcConcepts', input: Cannot convert collection of type CodingCollection to TerminologyConcepts",
+        "Function 'funcConcepts', input: Cannot convert collection of type CodingCollection to"
+            + " TerminologyConcepts",
         ex.getMessage());
   }
 
@@ -323,16 +320,17 @@ class FunctionParameterResolverTest {
     final Collection input = mock(Collection.class);
     final StringCollection stringCollection = mock(StringCollection.class);
 
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        input,
-        List.of(ConstPath.of(stringCollection)));
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(
+            evaluationContext, input, List.of(ConstPath.of(stringCollection)));
     final Method method = getMethod("funcRequiredArg");
 
-    final InvalidUserInputError ex = assertThrows(
-        InvalidUserInputError.class, () -> resolver.bind(method));
+    final InvalidUserInputError ex =
+        assertThrows(InvalidUserInputError.class, () -> resolver.bind(method));
 
     assertEquals(
-        "Function 'funcRequiredArg', argument 0 (IntegerCollection): Type mismatch: expected IntegerCollection but got StringCollection",
+        "Function 'funcRequiredArg', argument 0 (IntegerCollection): Type mismatch: expected"
+            + " IntegerCollection but got StringCollection",
         ex.getMessage());
   }
 }

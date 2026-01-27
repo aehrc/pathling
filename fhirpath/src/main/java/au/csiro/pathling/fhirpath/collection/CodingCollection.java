@@ -65,16 +65,12 @@ public class CodingCollection extends Collection implements StringCoercible {
             DefaultPrimitiveDefinition.single("version", FHIRDefinedType.STRING),
             DefaultPrimitiveDefinition.single("code", FHIRDefinedType.CODE),
             DefaultPrimitiveDefinition.single("display", FHIRDefinedType.STRING),
-            DefaultPrimitiveDefinition.single("userSelected", FHIRDefinedType.BOOLEAN)
-        ),
+            DefaultPrimitiveDefinition.single("userSelected", FHIRDefinedType.BOOLEAN)),
         cardinality,
-        FHIRDefinedType.CODING
-    );
+        FHIRDefinedType.CODING);
   }
 
-  private static final ElementDefinition LITERAL_DEFINITION =
-      createDefinition("", 1);
-
+  private static final ElementDefinition LITERAL_DEFINITION = createDefinition("", 1);
 
   /**
    * Creates a new CodingCollection.
@@ -85,7 +81,8 @@ public class CodingCollection extends Collection implements StringCoercible {
    * @param definition the node definition
    * @param extensionMapColumn the extension map column
    */
-  protected CodingCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  protected CodingCollection(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
@@ -101,12 +98,16 @@ public class CodingCollection extends Collection implements StringCoercible {
    * @return A new instance of {@link CodingCollection}
    */
   @Nonnull
-  public static CodingCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+  public static CodingCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    return new CodingCollection(columnRepresentation, Optional.of(FhirPathType.CODING),
-        Optional.of(FHIRDefinedType.CODING), definition, Optional.empty());
+    return new CodingCollection(
+        columnRepresentation,
+        Optional.of(FhirPathType.CODING),
+        Optional.of(FHIRDefinedType.CODING),
+        definition,
+        Optional.empty());
   }
-
 
   /**
    * Returns a new instance with the specified column and no definition.
@@ -118,7 +119,6 @@ public class CodingCollection extends Collection implements StringCoercible {
   public static CodingCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return build(columnRepresentation, Optional.of(LITERAL_DEFINITION));
   }
-
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
@@ -143,9 +143,9 @@ public class CodingCollection extends Collection implements StringCoercible {
         lit(coding.getVersion()).cast(DataTypes.StringType).as("version"),
         lit(coding.getCode()).cast(DataTypes.StringType).as("code"),
         lit(coding.getDisplay()).cast(DataTypes.StringType).as("display"),
-        lit(coding.hasUserSelected()
-            ? coding.getUserSelected()
-            : null).cast(DataTypes.BooleanType).as("userSelected"),
+        lit(coding.hasUserSelected() ? coding.getUserSelected() : null)
+            .cast(DataTypes.BooleanType)
+            .as("userSelected"),
         lit(null).cast(DataTypes.IntegerType).as("_fid"));
   }
 
@@ -165,7 +165,7 @@ public class CodingCollection extends Collection implements StringCoercible {
   public Optional<TerminologyConcepts> toConcepts() {
     return Optional.of(TerminologyConcepts.set(this.getColumn(), this));
   }
-  
+
   @Nonnull
   @Override
   public StringCollection asStringPath() {

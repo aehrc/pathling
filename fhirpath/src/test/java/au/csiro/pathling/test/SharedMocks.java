@@ -38,6 +38,5 @@ public class SharedMocks {
     synchronized (MOCKS) {
       MOCKS.values().forEach(Mockito::reset);
     }
-
   }
 }

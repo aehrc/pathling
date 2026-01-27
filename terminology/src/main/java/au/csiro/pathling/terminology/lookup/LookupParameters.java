@@ -30,12 +30,8 @@ import jakarta.annotation.Nullable;
  * @param acceptLanguage the optional language to use for the response
  * @author John Grimes
  * @see <a
- * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+ *     href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
  */
 public record LookupParameters(
-    @Nonnull ImmutableCoding coding,
-    @Nullable String property,
-    @Nullable String acceptLanguage
-) implements TerminologyParameters {
-
-}
+    @Nonnull ImmutableCoding coding, @Nullable String property, @Nullable String acceptLanguage)
+    implements TerminologyParameters {}

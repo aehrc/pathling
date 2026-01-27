@@ -29,15 +29,11 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author John Grimes
  */
 @Getter
-class FhirResourceDefinition extends
-    BaseFhirNodeDefinition<RuntimeResourceDefinition> implements
-    ResourceDefinition {
+class FhirResourceDefinition extends BaseFhirNodeDefinition<RuntimeResourceDefinition>
+    implements ResourceDefinition {
 
-  /**
-   * The HAPI FHIR resource type.
-   */
-  @Nonnull
-  private final ResourceType resourceType;
+  /** The HAPI FHIR resource type. */
+  @Nonnull private final ResourceType resourceType;
 
   @Override
   @Nonnull
@@ -49,7 +45,8 @@ class FhirResourceDefinition extends
    * @param resourceType The {@link ResourceType} that describes this resource
    * @param definition The HAPI {@link RuntimeResourceDefinition} for this resource
    */
-  public FhirResourceDefinition(@Nonnull final ResourceType resourceType,
+  public FhirResourceDefinition(
+      @Nonnull final ResourceType resourceType,
       @Nonnull final RuntimeResourceDefinition definition) {
     super(definition);
     this.resourceType = resourceType;

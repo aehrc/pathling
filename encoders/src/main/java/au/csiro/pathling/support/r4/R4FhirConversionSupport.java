@@ -38,13 +38,10 @@ import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
 
-/**
- * {@link FhirConversionSupport} implementation for FHIR R4.
- */
+/** {@link FhirConversionSupport} implementation for FHIR R4. */
 public class R4FhirConversionSupport extends FhirConversionSupport {
 
-  @Serial
-  private static final long serialVersionUID = -367070946615790595L;
+  @Serial private static final long serialVersionUID = -367070946615790595L;
 
   @Override
   public String fhirType(final IBase base) {
@@ -52,14 +49,11 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
     return base.fhirType();
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   @Nonnull
   public <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(
-      @Nonnull final IBaseBundle bundle,
-      @Nonnull final Class<T> resourceClass) {
+      @Nonnull final IBaseBundle bundle, @Nonnull final Class<T> resourceClass) {
     final Bundle r4Bundle = (Bundle) bundle;
 
     return r4Bundle.getEntry().stream()
@@ -85,9 +79,7 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
     FhirTraversal.processRecursive(resource, R4FhirConversionSupport::resolveURNReference);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Nonnull
   @Override
   public IBaseBundle resolveReferences(@Nonnull final IBaseBundle bundle) {
@@ -97,5 +89,4 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
         .forEach(R4FhirConversionSupport::resolveURNReferences);
     return r4Bundle;
   }
-
 }

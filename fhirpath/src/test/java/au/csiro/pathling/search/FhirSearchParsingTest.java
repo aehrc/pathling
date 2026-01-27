@@ -30,9 +30,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-/**
- * Tests for {@link FhirSearch#fromQueryString(String)} parsing.
- */
+/** Tests for {@link FhirSearch#fromQueryString(String)} parsing. */
 class FhirSearchParsingTest {
 
   // ========== Basic Parsing ==========
@@ -97,7 +95,8 @@ class FhirSearchParsingTest {
   @Test
   void fromQueryString_urlEncodedPipe() {
     // code=http://loinc.org|123 (URL encoded)
-    final String encoded = "code=" + URLEncoder.encode("http://loinc.org|123", StandardCharsets.UTF_8);
+    final String encoded =
+        "code=" + URLEncoder.encode("http://loinc.org|123", StandardCharsets.UTF_8);
     final FhirSearch search = FhirSearch.fromQueryString(encoded);
 
     assertEquals(1, search.getCriteria().size());
@@ -146,14 +145,13 @@ class FhirSearchParsingTest {
         // \\, - backslash-backslash followed by comma: literal backslash, then delimiter
         Arguments.of("escaped backslash before comma", "code=a\\\\,b", List.of("a\\", "b")),
         // Complex: a\,b\\c,d -> ["a,b\c", "d"]
-        Arguments.of("multiple escape sequences", "code=a\\,b\\\\c,d", List.of("a,b\\c", "d"))
-    );
+        Arguments.of("multiple escape sequences", "code=a\\,b\\\\c,d", List.of("a,b\\c", "d")));
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("fhirEscapingTestCases")
-  void fromQueryString_fhirEscaping(final String name, final String queryString,
-      final List<String> expectedValues) {
+  void fromQueryString_fhirEscaping(
+      final String name, final String queryString, final List<String> expectedValues) {
     final FhirSearch search = FhirSearch.fromQueryString(queryString);
 
     assertEquals(1, search.getCriteria().size());
@@ -235,9 +233,11 @@ class FhirSearchParsingTest {
   @Test
   void fromQueryString_complexExample() {
     // Real-world example with multiple features
-    final String queryString = "code=" + URLEncoder.encode("http://loinc.org|8867-4", StandardCharsets.UTF_8)
-        + "&value-quantity=lt60,gt100"
-        + "&date=ge2022-01-01";
+    final String queryString =
+        "code="
+            + URLEncoder.encode("http://loinc.org|8867-4", StandardCharsets.UTF_8)
+            + "&value-quantity=lt60,gt100"
+            + "&date=ge2022-01-01";
 
     final FhirSearch search = FhirSearch.fromQueryString(queryString);
 

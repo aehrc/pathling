@@ -29,24 +29,26 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 /**
  * Represents a FHIR resource at the root level of a flat schema dataset where top-level fields are
  * accessed directly via {@code col(fieldName)} rather than through nested struct access.
- * <p>
- * This representation is used when generating SparkSQL Column expressions that work directly on
+ *
+ * <p>This representation is used when generating SparkSQL Column expressions that work directly on
  * Pathling-encoded flat datasets, eliminating the need for schema wrapping/unwrapping operations.
- * <p>
- * The representation holds an "existence column" (typically the {@code id} column) that can be used
- * to check whether a resource exists. Key behaviors:
+ *
+ * <p>The representation holds an "existence column" (typically the {@code id} column) that can be
+ * used to check whether a resource exists. Key behaviors:
+ *
  * <ul>
  *   <li>{@link #getValue()} returns the existence column - this represents whether the resource
- *       exists (non-NULL for valid resources, NULL for empty collections)</li>
- *   <li>{@link #getExistenceColumn()} returns the id column for existence checks</li>
+ *       exists (non-NULL for valid resources, NULL for empty collections)
+ *   <li>{@link #getExistenceColumn()} returns the id column for existence checks
  *   <li>{@link #vectorize(UnaryOperator, UnaryOperator)} applies the singular expression and
- *       returns a new ResourceRepresentation (resources are always singular)</li>
- *   <li>{@link #flatten()} returns {@code this} unchanged since resources are already flat</li>
- *   <li>{@link #traverse(String)} returns a {@link DefaultRepresentation} with
- *       {@code col(fieldName)} - subsequent traversals use {@code getField()}</li>
+ *       returns a new ResourceRepresentation (resources are always singular)
+ *   <li>{@link #flatten()} returns {@code this} unchanged since resources are already flat
+ *   <li>{@link #traverse(String)} returns a {@link DefaultRepresentation} with {@code
+ *       col(fieldName)} - subsequent traversals use {@code getField()}
  * </ul>
- * <p>
- * Example column generation differences:
+ *
+ * <p>Example column generation differences:
+ *
  * <pre>
  * Expression          | Nested Schema                              | Resource (Flat) Schema
  * --------------------|--------------------------------------------|--------------------------
@@ -61,18 +63,14 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @EqualsAndHashCode(callSuper = false)
 public final class ResourceRepresentation extends ColumnRepresentation {
 
-  /**
-   * Default name for the existence column (resource id).
-   */
+  /** Default name for the existence column (resource id). */
   public static final String DEFAULT_EXISTENCE_COLUMN = "id";
 
   /**
    * The existence column that represents whether a resource exists. This is typically the id column
    * - non-NULL for valid resources, NULL for empty collections.
    */
-  @Nonnull
-  @Getter
-  private final Column existenceColumn;
+  @Nonnull @Getter private final Column existenceColumn;
 
   /**
    * Private constructor for creating instances with a specific existence column.
@@ -96,8 +94,8 @@ public final class ResourceRepresentation extends ColumnRepresentation {
 
   /**
    * Creates a ResourceRepresentation using the standard id column as the existence column.
-   * <p>
-   * This is the most common factory method for creating instances that work with standard
+   *
+   * <p>This is the most common factory method for creating instances that work with standard
    * Pathling-encoded flat datasets where {@code col("id")} represents resource existence.
    *
    * @return a new ResourceRepresentation with {@code col("id")} as existence column
@@ -109,11 +107,11 @@ public final class ResourceRepresentation extends ColumnRepresentation {
 
   /**
    * Creates a ResourceRepresentation for contexts where each row represents exactly one resource.
-   * <p>
-   * This factory method uses {@code lit(true)} as the existence column, meaning all field
-   * accesses are unconditional. This is appropriate for single-resource evaluation contexts
-   * where every row in the dataset represents a valid resource, even if the resource doesn't
-   * have an {@code id} element defined.
+   *
+   * <p>This factory method uses {@code lit(true)} as the existence column, meaning all field
+   * accesses are unconditional. This is appropriate for single-resource evaluation contexts where
+   * every row in the dataset represents a valid resource, even if the resource doesn't have an
+   * {@code id} element defined.
    *
    * @return a new ResourceRepresentation with {@code lit(true)} as existence column
    */
@@ -124,11 +122,11 @@ public final class ResourceRepresentation extends ColumnRepresentation {
 
   /**
    * Returns the existence column as the value for this representation.
-   * <p>
-   * In flat schema, there is no single column representing the whole resource structure. However,
-   * the existence column (typically the id column) serves as a value that indicates whether the
-   * resource exists (non-NULL) or not (NULL). This is used when operations like
-   * {@code asSingular()} need to materialize a column value for the resource.
+   *
+   * <p>In flat schema, there is no single column representing the whole resource structure.
+   * However, the existence column (typically the id column) serves as a value that indicates
+   * whether the resource exists (non-NULL) or not (NULL). This is used when operations like {@code
+   * asSingular()} need to materialize a column value for the resource.
    *
    * @return the existence column
    */
@@ -153,11 +151,11 @@ public final class ResourceRepresentation extends ColumnRepresentation {
   /**
    * Applies the singular expression to the existence column and returns a new
    * ResourceRepresentation.
-   * <p>
-   * In flat schema, resources are inherently singular (one row = one resource), so the singular
+   *
+   * <p>In flat schema, resources are inherently singular (one row = one resource), so the singular
    * expression is always applied (not the array expression). The result is a new
-   * ResourceRepresentation with the transformed column, ensuring subsequent operations (like
-   * {@link #traverse(String)}) continue to use ResourceRepresentation behavior.
+   * ResourceRepresentation with the transformed column, ensuring subsequent operations (like {@link
+   * #traverse(String)}) continue to use ResourceRepresentation behavior.
    *
    * @param arrayExpression the expression to apply for array values (not used)
    * @param singularExpression the expression to apply for singular values
@@ -176,10 +174,10 @@ public final class ResourceRepresentation extends ColumnRepresentation {
 
   /**
    * Flattens this representation.
-   * <p>
-   * Since flat schema representation is already "flat" (fields accessed directly as columns), this
-   * returns the representation unchanged. Operations that need a column value should traverse to a
-   * specific field first.
+   *
+   * <p>Since flat schema representation is already "flat" (fields accessed directly as columns),
+   * this returns the representation unchanged. Operations that need a column value should traverse
+   * to a specific field first.
    *
    * @return this ResourceRepresentation unchanged
    */
@@ -192,17 +190,17 @@ public final class ResourceRepresentation extends ColumnRepresentation {
 
   /**
    * Traverses from the root to a top-level field in the flat schema.
-   * <p>
-   * Unlike nested schema traversal where we use {@code col("ResourceType").getField(fieldName)},
+   *
+   * <p>Unlike nested schema traversal where we use {@code col("ResourceType").getField(fieldName)},
    * this method creates a direct column reference using {@code col(fieldName)}.
-   * <p>
-   * When the existence column has been modified (e.g., via filtering with {@code where()}), the
+   *
+   * <p>When the existence column has been modified (e.g., via filtering with {@code where()}), the
    * field access is conditional on the existence column being non-null. For the default case
    * (existence column is {@code col("id")}), the field is accessed directly without additional null
    * checks.
-   * <p>
-   * The returned representation is a {@link DefaultRepresentation}, so subsequent traversals will
-   * use the standard {@code getField()} method for nested access.
+   *
+   * <p>The returned representation is a {@link DefaultRepresentation}, so subsequent traversals
+   * will use the standard {@code getField()} method for nested access.
    *
    * @param fieldName the name of the field to traverse to
    * @return a {@link DefaultRepresentation} wrapping the field access
@@ -218,8 +216,8 @@ public final class ResourceRepresentation extends ColumnRepresentation {
 
   /**
    * Traverses from the root to a top-level field in the flat schema, with FHIR type awareness.
-   * <p>
-   * This method delegates to {@link #traverse(String)} for the actual traversal, then applies
+   *
+   * <p>This method delegates to {@link #traverse(String)} for the actual traversal, then applies
    * type-specific handling for special FHIR types like base64Binary.
    *
    * @param fieldName the name of the field to traverse to
@@ -228,8 +226,8 @@ public final class ResourceRepresentation extends ColumnRepresentation {
    */
   @Override
   @Nonnull
-  public ColumnRepresentation traverse(@Nonnull final String fieldName,
-      @Nonnull final Optional<FHIRDefinedType> fhirType) {
+  public ColumnRepresentation traverse(
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
     if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
       // If the field is a base64Binary, represent it using binary column handling
       return DefaultRepresentation.fromBinaryColumn(traverse(fieldName).getValue());
@@ -239,9 +237,9 @@ public final class ResourceRepresentation extends ColumnRepresentation {
 
   /**
    * Gets a top-level field from the flat schema without flattening.
-   * <p>
-   * Similar to {@link #traverse(String)} but does not apply removeNulls() or flatten(), preserving
-   * the nested structure of the field.
+   *
+   * <p>Similar to {@link #traverse(String)} but does not apply removeNulls() or flatten(),
+   * preserving the nested structure of the field.
    *
    * @param fieldName the name of the field to get
    * @return a {@link DefaultRepresentation} wrapping the field access
@@ -252,5 +250,4 @@ public final class ResourceRepresentation extends ColumnRepresentation {
     return new DefaultRepresentation(
         functions.when(existenceColumn.isNotNull(), functions.col(fieldName)));
   }
-
 }

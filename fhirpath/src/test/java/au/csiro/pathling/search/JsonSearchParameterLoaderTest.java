@@ -30,9 +30,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- * Tests for {@link JsonSearchParameterLoader}.
- */
+/** Tests for {@link JsonSearchParameterLoader}. */
 class JsonSearchParameterLoaderTest {
 
   private JsonSearchParameterLoader loader;
@@ -44,7 +42,8 @@ class JsonSearchParameterLoaderTest {
 
   @Test
   void load_simpleParameter() {
-    final String json = """
+    final String json =
+        """
         {
           "resourceType": "Bundle",
           "entry": [
@@ -74,7 +73,8 @@ class JsonSearchParameterLoaderTest {
 
   @Test
   void load_multiResourceParameter() {
-    final String json = """
+    final String json =
+        """
         {
           "resourceType": "Bundle",
           "entry": [
@@ -108,7 +108,8 @@ class JsonSearchParameterLoaderTest {
 
   @Test
   void load_polymorphicParameter() {
-    final String json = """
+    final String json =
+        """
         {
           "resourceType": "Bundle",
           "entry": [
@@ -131,14 +132,15 @@ class JsonSearchParameterLoaderTest {
     final SearchParameterDefinition def = result.get(ResourceType.OBSERVATION).get("date");
     assertNotNull(def);
     assertEquals(SearchParameterType.DATE, def.type());
-    assertEquals(List.of(
-        "Observation.effective.ofType(dateTime)",
-        "Observation.effective.ofType(Period)"), def.expressions());
+    assertEquals(
+        List.of("Observation.effective.ofType(dateTime)", "Observation.effective.ofType(Period)"),
+        def.expressions());
   }
 
   @Test
   void load_unqualifiedExpression() {
-    final String json = """
+    final String json =
+        """
         {
           "resourceType": "Bundle",
           "entry": [
@@ -162,9 +164,9 @@ class JsonSearchParameterLoaderTest {
     final SearchParameterDefinition allergyDef =
         result.get(ResourceType.ALLERGYINTOLERANCE).get("date");
     assertNotNull(allergyDef);
-    assertEquals(List.of(
-        "AllergyIntolerance.recordedDate",
-        "(start | requestedPeriod.start).first()"), allergyDef.expressions());
+    assertEquals(
+        List.of("AllergyIntolerance.recordedDate", "(start | requestedPeriod.start).first()"),
+        allergyDef.expressions());
 
     // Appointment gets only unqualified (no qualified expression for it)
     final SearchParameterDefinition appointmentDef =
@@ -175,7 +177,8 @@ class JsonSearchParameterLoaderTest {
 
   @Test
   void load_skipsParametersWithoutExpression() {
-    final String json = """
+    final String json =
+        """
         {
           "resourceType": "Bundle",
           "entry": [
@@ -194,13 +197,16 @@ class JsonSearchParameterLoaderTest {
     final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
         loader.load(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
-    assertTrue(result.isEmpty() || result.get(ResourceType.PATIENT) == null
-        || result.get(ResourceType.PATIENT).get("no-expression") == null);
+    assertTrue(
+        result.isEmpty()
+            || result.get(ResourceType.PATIENT) == null
+            || result.get(ResourceType.PATIENT).get("no-expression") == null);
   }
 
   @Test
   void load_allParameterTypes() {
-    final String json = """
+    final String json =
+        """
         {
           "resourceType": "Bundle",
           "entry": [
@@ -256,21 +262,24 @@ class JsonSearchParameterLoaderTest {
     final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
         loader.load(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
-    assertEquals(SearchParameterType.STRING,
-        result.get(ResourceType.PATIENT).get("string-param").type());
-    assertEquals(SearchParameterType.TOKEN,
-        result.get(ResourceType.PATIENT).get("token-param").type());
-    assertEquals(SearchParameterType.DATE,
-        result.get(ResourceType.PATIENT).get("date-param").type());
-    assertEquals(SearchParameterType.NUMBER,
+    assertEquals(
+        SearchParameterType.STRING, result.get(ResourceType.PATIENT).get("string-param").type());
+    assertEquals(
+        SearchParameterType.TOKEN, result.get(ResourceType.PATIENT).get("token-param").type());
+    assertEquals(
+        SearchParameterType.DATE, result.get(ResourceType.PATIENT).get("date-param").type());
+    assertEquals(
+        SearchParameterType.NUMBER,
         result.get(ResourceType.RISKASSESSMENT).get("number-param").type());
-    assertEquals(SearchParameterType.QUANTITY,
+    assertEquals(
+        SearchParameterType.QUANTITY,
         result.get(ResourceType.OBSERVATION).get("quantity-param").type());
   }
 
   @Test
   void load_emptyBundle() {
-    final String json = """
+    final String json =
+        """
         {
           "resourceType": "Bundle",
           "entry": []
@@ -285,7 +294,8 @@ class JsonSearchParameterLoaderTest {
 
   @Test
   void load_multipleParametersForSameResource() {
-    final String json = """
+    final String json =
+        """
         {
           "resourceType": "Bundle",
           "entry": [

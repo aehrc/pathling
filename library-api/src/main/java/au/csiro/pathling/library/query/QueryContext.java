@@ -26,22 +26,19 @@ import jakarta.annotation.Nonnull;
 
 /**
  * Unified context for executing FHIR queries against a data source.
- * <p>
- * This class encapsulates the executors for both FHIR View and FHIR Search queries, providing a
+ *
+ * <p>This class encapsulates the executors for both FHIR View and FHIR Search queries, providing a
  * single point of configuration for query execution.
  *
  * @author Piotr Szul
  */
 public class QueryContext {
 
-  @Nonnull
-  private final FhirViewExecutor viewExecutor;
+  @Nonnull private final FhirViewExecutor viewExecutor;
 
-  @Nonnull
-  private final FhirSearchExecutor searchExecutor;
+  @Nonnull private final FhirSearchExecutor searchExecutor;
 
-  @Nonnull
-  private final Gson gson;
+  @Nonnull private final Gson gson;
 
   /**
    * Creates a new QueryContext with the specified dependencies.
@@ -49,17 +46,12 @@ public class QueryContext {
    * @param context the Pathling context providing configuration and dependencies
    * @param dataSource the data source to query against
    */
-  public QueryContext(@Nonnull final PathlingContext context,
-      @Nonnull final DataSource dataSource) {
-    this.viewExecutor = new FhirViewExecutor(
-        context.getFhirContext(),
-            dataSource,
-        context.getQueryConfiguration()
-    );
-    this.searchExecutor = FhirSearchExecutor.withDefaultRegistry(
-        context.getFhirContext(),
-        dataSource
-    );
+  public QueryContext(
+      @Nonnull final PathlingContext context, @Nonnull final DataSource dataSource) {
+    this.viewExecutor =
+        new FhirViewExecutor(context.getFhirContext(), dataSource, context.getQueryConfiguration());
+    this.searchExecutor =
+        FhirSearchExecutor.withDefaultRegistry(context.getFhirContext(), dataSource);
     this.gson = context.getGson();
   }
 
@@ -92,5 +84,4 @@ public class QueryContext {
   public Gson getGson() {
     return gson;
   }
-
 }

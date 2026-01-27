@@ -87,7 +87,6 @@ class AnsiSqlTypeParserTest {
         Arguments.of("TIMESTAMP(4) WITHOUT TIME ZONE", DataTypes.TimestampNTZType),
         Arguments.of("TIMESTAMP WITH TIME ZONE", DataTypes.TimestampType),
         Arguments.of("TIMESTAMP(4) WITH TIME ZONE", DataTypes.TimestampType),
-
         Arguments.of("INTERVAL", DataTypes.StringType),
 
         // Simple complex types
@@ -96,23 +95,26 @@ class AnsiSqlTypeParserTest {
         Arguments.of("ARRAY<VARCHAR(10)>", DataTypes.createArrayType(DataTypes.StringType)),
 
         // Complex ROW types
-        Arguments.of("ROW(Id INTEGER, namE VARCHAR)",
-            DataTypes.createStructType(new StructField[]{
-                DataTypes.createStructField("Id", DataTypes.IntegerType, true),
-                DataTypes.createStructField("namE", DataTypes.StringType, true)
-            })),
+        Arguments.of(
+            "ROW(Id INTEGER, namE VARCHAR)",
+            DataTypes.createStructType(
+                new StructField[] {
+                  DataTypes.createStructField("Id", DataTypes.IntegerType, true),
+                  DataTypes.createStructField("namE", DataTypes.StringType, true)
+                })),
 
         // Nested complex types
-        Arguments.of("ARRAY<ROW(id INTEGER, values ARRAY<DECIMAL(10,2)>)>",
+        Arguments.of(
+            "ARRAY<ROW(id INTEGER, values ARRAY<DECIMAL(10,2)>)>",
             DataTypes.createArrayType(
-                DataTypes.createStructType(new StructField[]{
-                    DataTypes.createStructField("id", DataTypes.IntegerType, true),
-                    DataTypes.createStructField("values",
-                        DataTypes.createArrayType(DataTypes.createDecimalType(10, 2)),
-                        true)
-                })
-            ))
-    );
+                DataTypes.createStructType(
+                    new StructField[] {
+                      DataTypes.createStructField("id", DataTypes.IntegerType, true),
+                      DataTypes.createStructField(
+                          "values",
+                          DataTypes.createArrayType(DataTypes.createDecimalType(10, 2)),
+                          true)
+                    }))));
   }
 
   @ParameterizedTest
@@ -124,11 +126,11 @@ class AnsiSqlTypeParserTest {
 
   @Test
   void testParseInvalidType() {
-    final InvalidUserInputError ex = assertThrows(InvalidUserInputError.class,
-        () -> AnsiSqlTypeParser.parseType("INVALID_TYPE"));
+    final InvalidUserInputError ex =
+        assertThrows(
+            InvalidUserInputError.class, () -> AnsiSqlTypeParser.parseType("INVALID_TYPE"));
     final String expectedMsgPrefix = "Error parsing ANSI SQL type: mismatched input 'INVALID_TYPE'";
-    assertEquals(expectedMsgPrefix,
-        ex.getMessage().substring(0, expectedMsgPrefix.length()));
+    assertEquals(expectedMsgPrefix, ex.getMessage().substring(0, expectedMsgPrefix.length()));
   }
 
   @Test
@@ -141,5 +143,4 @@ class AnsiSqlTypeParserTest {
     assertEquals(DataTypes.IntegerType, lowerResult);
     assertEquals(DataTypes.IntegerType, mixedResult);
   }
-
 }

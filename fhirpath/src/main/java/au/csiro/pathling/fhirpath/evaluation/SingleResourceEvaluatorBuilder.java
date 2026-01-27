@@ -27,14 +27,15 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Builder for creating {@link SingleResourceEvaluator} instances.
- * <p>
- * This builder provides a fluent API for configuring and creating evaluators for single-resource
+ *
+ * <p>This builder provides a fluent API for configuring and creating evaluators for single-resource
  * FHIRPath evaluation. It uses flat schema representation where columns are accessed directly
  * (e.g., {@code col("name")}).
  *
  * <h2>Usage Examples</h2>
  *
  * <h3>Creating an evaluator for FHIR Search, filter building:</h3>
+ *
  * <pre>{@code
  * SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
  *     .create(ResourceType.PATIENT, fhirContext)
@@ -46,6 +47,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * }</pre>
  *
  * <h3>Creating an evaluator with custom function registry:</h3>
+ *
  * <pre>{@code
  * SingleResourceEvaluator evaluator = SingleResourceEvaluatorBuilder
  *     .create(ResourceType.OBSERVATION, fhirContext)
@@ -58,41 +60,34 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public class SingleResourceEvaluatorBuilder {
 
-  @Nonnull
-  private final ResourceType subjectResource;
+  @Nonnull private final ResourceType subjectResource;
 
-  @Nonnull
-  private final FhirContext fhirContext;
+  @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull
-  private CrossResourceStrategy crossResourceStrategy = CrossResourceStrategy.FAIL;
+  @Nonnull private CrossResourceStrategy crossResourceStrategy = CrossResourceStrategy.FAIL;
 
-  @Nonnull
-  private FunctionRegistry functionRegistry = StaticFunctionRegistry.getInstance();
+  @Nonnull private FunctionRegistry functionRegistry = StaticFunctionRegistry.getInstance();
 
-  @Nonnull
-  private Map<String, Collection> variables = Map.of();
+  @Nonnull private Map<String, Collection> variables = Map.of();
 
-  /**
-   * Private constructor. Use factory methods to create instances.
-   */
+  /** Private constructor. Use factory methods to create instances. */
   private SingleResourceEvaluatorBuilder(
-      @Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirContext fhirContext) {
+      @Nonnull final ResourceType subjectResource, @Nonnull final FhirContext fhirContext) {
     this.subjectResource = subjectResource;
     this.fhirContext = fhirContext;
   }
 
   /**
    * Creates a builder for the specified resource type.
-   * <p>
-   * Column references are generated as direct column access (e.g., {@code col("name")}),
+   *
+   * <p>Column references are generated as direct column access (e.g., {@code col("name")}),
    * suitable for Pathling-encoded flat datasets.
-   * <p>
-   * This is suitable for:
+   *
+   * <p>This is suitable for:
+   *
    * <ul>
-   *   <li>Building FHIR Search filter columns</li>
-   *   <li>Creating filter expressions for flat datasets</li>
+   *   <li>Building FHIR Search filter columns
+   *   <li>Creating filter expressions for flat datasets
    * </ul>
    *
    * @param subjectResource the subject resource type
@@ -101,15 +96,14 @@ public class SingleResourceEvaluatorBuilder {
    */
   @Nonnull
   public static SingleResourceEvaluatorBuilder create(
-      @Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirContext fhirContext) {
+      @Nonnull final ResourceType subjectResource, @Nonnull final FhirContext fhirContext) {
     return new SingleResourceEvaluatorBuilder(subjectResource, fhirContext);
   }
 
   /**
    * Sets the strategy for handling cross-resource references.
-   * <p>
-   * Default is {@link CrossResourceStrategy#FAIL}.
+   *
+   * <p>Default is {@link CrossResourceStrategy#FAIL}.
    *
    * @param crossResourceStrategy the cross-resource strategy
    * @return this builder for method chaining
@@ -123,8 +117,8 @@ public class SingleResourceEvaluatorBuilder {
 
   /**
    * Sets the function registry for resolving FHIRPath functions.
-   * <p>
-   * Default is {@link StaticFunctionRegistry#getInstance()}.
+   *
+   * <p>Default is {@link StaticFunctionRegistry#getInstance()}.
    *
    * @param functionRegistry the function registry
    * @return this builder for method chaining
@@ -138,8 +132,8 @@ public class SingleResourceEvaluatorBuilder {
 
   /**
    * Sets the variables available during FHIRPath evaluation.
-   * <p>
-   * Default is an empty map.
+   *
+   * <p>Default is an empty map.
    *
    * @param variables the variables map
    * @return this builder for method chaining
@@ -158,10 +152,8 @@ public class SingleResourceEvaluatorBuilder {
    */
   @Nonnull
   public SingleResourceEvaluator build() {
-    final ResourceResolver resolver = new FhirResourceResolver(
-        subjectResource,
-        fhirContext,
-        crossResourceStrategy);
+    final ResourceResolver resolver =
+        new FhirResourceResolver(subjectResource, fhirContext, crossResourceStrategy);
     return new SingleResourceEvaluator(resolver, functionRegistry, variables);
   }
 }

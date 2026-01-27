@@ -54,10 +54,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Slf4j
 public class Projection {
 
-
-  /**
-   * Defines constraints that can be applied to projection results.
-   */
+  /** Defines constraints that can be applied to projection results. */
   public enum ProjectionConstraint {
     /**
      * Indicates that the result will be returned in a form that supports the representation of
@@ -72,35 +69,20 @@ public class Projection {
     FLAT
   }
 
-  /**
-   * The resource type that the projection is based upon.
-   */
-  @Nonnull
-  ResourceType subjectResource;
+  /** The resource type that the projection is based upon. */
+  @Nonnull ResourceType subjectResource;
 
-  /**
-   * The constants that are available to the expressions within the projection.
-   */
-  @Nonnull
-  List<ConstantDeclaration> constants;
+  /** The constants that are available to the expressions within the projection. */
+  @Nonnull List<ConstantDeclaration> constants;
 
-  /**
-   * The clause that defines the columns to be included in the projection.
-   */
-  @Nonnull
-  ProjectionClause selection;
+  /** The clause that defines the columns to be included in the projection. */
+  @Nonnull ProjectionClause selection;
 
-  /**
-   * The clause that defines the rows to be included in the projection.
-   */
-  @Nonnull
-  Optional<ProjectionClause> where;
+  /** The clause that defines the rows to be included in the projection. */
+  @Nonnull Optional<ProjectionClause> where;
 
-  /**
-   * A constraint on the result of the projection, such as whether it must be flat.
-   */
-  @Nonnull
-  ProjectionConstraint constraint;
+  /** A constraint on the result of the projection, such as whether it must be flat. */
+  @Nonnull ProjectionConstraint constraint;
 
   /**
    * Creates a new unconstrained Projection.
@@ -110,7 +92,8 @@ public class Projection {
    * @param selection the clause that defines the columns to be included
    * @param where the clause that defines the rows to be included
    */
-  public Projection(@Nonnull final ResourceType subjectResource,
+  public Projection(
+      @Nonnull final ResourceType subjectResource,
       @Nonnull final List<ConstantDeclaration> constants,
       @Nonnull final ProjectionClause selection,
       @Nonnull final Optional<ProjectionClause> where) {
@@ -125,11 +108,10 @@ public class Projection {
    * @return The dataset that represents the result of the projection
    */
   public Dataset<Row> execute(
-      @Nonnull final Dataset<Row> dataset,
-      @Nonnull final SingleResourceEvaluator evaluator) {
+      @Nonnull final Dataset<Row> dataset, @Nonnull final SingleResourceEvaluator evaluator) {
     // Prepare dependencies for evaluation.
-    final ProjectionContext projectionContext = new ProjectionContext(
-        evaluator, evaluator.getDefaultInputContext());
+    final ProjectionContext projectionContext =
+        new ProjectionContext(evaluator, evaluator.getDefaultInputContext());
 
     // Evaluate the selection clause.
     final ProjectionResult projectionResult = selection.evaluate(projectionContext);
@@ -138,32 +120,35 @@ public class Projection {
     final Optional<Column> filterColumn = evaluateFilters(projectionContext);
 
     // Apply the filter column to the unfiltered dataset.
-    final Dataset<Row> filteredResult = filterColumn
-        .map(dataset::filter)
-        .orElse(dataset);
+    final Dataset<Row> filteredResult = filterColumn.map(dataset::filter).orElse(dataset);
 
-    // Convert the intermediate struct representation in the result column to a regular row, using 
+    // Convert the intermediate struct representation in the result column to a regular row, using
     // the inline function.
-    final Dataset<Row> inlinedResult = filteredResult
-        .select(inline(projectionResult.getResultColumn()));
+    final Dataset<Row> inlinedResult =
+        filteredResult.select(inline(projectionResult.getResultColumn()));
 
     // Get the list of column names from the data type of the column that we just inlined.
     final StructType schema = filteredResult.select(projectionResult.getResultColumn()).schema();
     final ArrayType arrayType = (ArrayType) schema.fields()[0].dataType();
     final StructType structType = (StructType) arrayType.elementType();
-    final List<String> columnNames = Arrays.stream(structType.fields())
-        .map(StructField::name)
-        .toList();
+    final List<String> columnNames =
+        Arrays.stream(structType.fields()).map(StructField::name).toList();
     // Bind the result collections to the columns in the projection result.
-    final List<Collection> boundResults = IntStream.range(0, columnNames.size())
-        .mapToObj(i -> projectionResult.getResults().get(i).collection()
-            .copyWith(new
-                DefaultRepresentation(inlinedResult.col(columnNames.get(i)))))
-        .toList();
+    final List<Collection> boundResults =
+        IntStream.range(0, columnNames.size())
+            .mapToObj(
+                i ->
+                    projectionResult
+                        .getResults()
+                        .get(i)
+                        .collection()
+                        .copyWith(new DefaultRepresentation(inlinedResult.col(columnNames.get(i)))))
+            .toList();
 
-    final Column[] renderedColumns = IntStream.range(0, columnNames.size())
-        .mapToObj(i -> renderColumn(boundResults.get(i), columnNames.get(i)))
-        .toArray(Column[]::new);
+    final Column[] renderedColumns =
+        IntStream.range(0, columnNames.size())
+            .mapToObj(i -> renderColumn(boundResults.get(i), columnNames.get(i)))
+            .toArray(Column[]::new);
     // Select the columns from the inlined result.
     return inlinedResult.select(renderedColumns);
   }
@@ -180,12 +165,12 @@ public class Projection {
     final Collection finalResult;
     if (FLAT.equals(constraint)) {
       // If we are constrained to a flat result, we need to coerce the collection to a string.
-      finalResult = Optional.of(collection)
-          .flatMap(maybeCast(StringCoercible.class))
-          .map(StringCoercible::asStringPath)
-          .orElseThrow(
-              () -> new InvalidUserInputError(
-                  "Cannot render one of the columns in flat mode"));
+      finalResult =
+          Optional.of(collection)
+              .flatMap(maybeCast(StringCoercible.class))
+              .map(StringCoercible::asStringPath)
+              .orElseThrow(
+                  () -> new InvalidUserInputError("Cannot render one of the columns in flat mode"));
     } else {
       // Otherwise, we can use the collection as-is.
       finalResult = collection;
@@ -193,7 +178,7 @@ public class Projection {
     // re-alias the column
     return finalResult.getColumn().getValue().alias(name);
   }
-  
+
   /**
    * Evaluates the where clause and returns a column that can be used to filter the result.
    *
@@ -202,29 +187,32 @@ public class Projection {
    */
   @Nonnull
   private Optional<Column> evaluateFilters(@Nonnull final ProjectionContext context) {
-    return where.flatMap(whereSelection -> {
-      final List<ProjectedColumn> whereResult = whereSelection.evaluate(context).getResults();
-      final boolean isValidFilter = whereResult.stream()
-          .allMatch(cr -> cr.collection() instanceof BooleanCollection);
-      if (!isValidFilter) {
-        throw new IllegalArgumentException("Filter must be a boolean expression");
-      }
-      return whereResult.stream()
-          .map(cr -> cr.collection().asSingular().getColumn().getValue())
-          .reduce(Column::and);
-    });
+    return where.flatMap(
+        whereSelection -> {
+          final List<ProjectedColumn> whereResult = whereSelection.evaluate(context).getResults();
+          final boolean isValidFilter =
+              whereResult.stream().allMatch(cr -> cr.collection() instanceof BooleanCollection);
+          if (!isValidFilter) {
+            throw new IllegalArgumentException("Filter must be a boolean expression");
+          }
+          return whereResult.stream()
+              .map(cr -> cr.collection().asSingular().getColumn().getValue())
+              .reduce(Column::and);
+        });
   }
 
   @Override
   public String toString() {
-    return "Projection{" +
-        "subjectResource=" + subjectResource +
-        ", constants=[" + constants.stream()
-        .map(ConstantDeclaration::toString)
-        .collect(Collectors.joining(", ")) +
-        "], selection=" + selection +
-        where.map(w -> ", where=" + w).orElse("") +
-        ", constraint=" + constraint +
-        '}';
+    return "Projection{"
+        + "subjectResource="
+        + subjectResource
+        + ", constants=["
+        + constants.stream().map(ConstantDeclaration::toString).collect(Collectors.joining(", "))
+        + "], selection="
+        + selection
+        + where.map(w -> ", where=" + w).orElse("")
+        + ", constraint="
+        + constraint
+        + '}';
   }
 }

@@ -65,9 +65,9 @@ public interface ColumnEquality {
   }
 
   /**
-   * Indicates whether this comparator uses default SQL equality semantics.
-   * When true, Spark's native array operations (array_union, array_distinct) can be used.
-   * When false, custom element-wise comparison is required.
+   * Indicates whether this comparator uses default SQL equality semantics. When true, Spark's
+   * native array operations (array_union, array_distinct) can be used. When false, custom
+   * element-wise comparison is required.
    *
    * @return true if this comparator uses default SQL equality, false otherwise
    */

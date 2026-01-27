@@ -36,17 +36,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class WhereClause {
 
-  /**
-   * The FHIRPath expression for the filter.
-   */
+  /** The FHIRPath expression for the filter. */
   @NotNull
   @SerializedName("path")
   String expression;
 
-  /**
-   * An optional human-readable description of the filter.
-   */
-  @Nullable
-  String description;
-
+  /** An optional human-readable description of the filter. */
+  @Nullable String description;
 }

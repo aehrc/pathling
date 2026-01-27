@@ -25,6 +25,4 @@ import java.util.function.Function;
  *
  * @author John Grimes
  */
-public interface ColumnTransform extends Function<ColumnRepresentation, ColumnRepresentation> {
-
-}
+public interface ColumnTransform extends Function<ColumnRepresentation, ColumnRepresentation> {}

@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.utilities;
 
-
 import jakarta.annotation.Nonnull;
 import java.util.Iterator;
 import java.util.stream.Stream;
@@ -42,8 +41,6 @@ public class Streams {
   @Nonnull
   public static <T> Stream<T> streamOf(@Nonnull final Iterator<T> iterator) {
     final Iterable<T> iterable = () -> iterator;
-    return StreamSupport
-        .stream(iterable.spliterator(), false);
+    return StreamSupport.stream(iterable.spliterator(), false);
   }
-
 }

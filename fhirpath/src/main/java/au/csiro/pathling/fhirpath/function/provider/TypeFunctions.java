@@ -32,16 +32,15 @@ import jakarta.annotation.Nonnull;
  */
 public class TypeFunctions {
 
-  private TypeFunctions() {
-  }
+  private TypeFunctions() {}
 
   /**
-   * Returns true collection if the input collection contains a single item of the given type or a subclass
-   * thereof. Returns false collection if the input contains a single item that is not of the specified type.
-   * Returns empty if the input collection is empty. Throws an error if the input collection
-   * contains more than one item.
-   * <p>
-   * The type argument is an identifier that must resolve to the name of a type in a model. For
+   * Returns true collection if the input collection contains a single item of the given type or a
+   * subclass thereof. Returns false collection if the input contains a single item that is not of
+   * the specified type. Returns empty if the input collection is empty. Throws an error if the
+   * input collection contains more than one item.
+   *
+   * <p>The type argument is an identifier that must resolve to the name of a type in a model. For
    * implementations with compile-time typing, this requires special-case handling when processing
    * the argument to treat it as a type specifier rather than an identifier expression.
    *
@@ -53,8 +52,8 @@ public class TypeFunctions {
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
-  public static Collection is(@Nonnull final Collection input,
-      @Nonnull final TypeSpecifier typeSpecifier) {
+  public static Collection is(
+      @Nonnull final Collection input, @Nonnull final TypeSpecifier typeSpecifier) {
     return input.isOfType(typeSpecifier);
   }
 
@@ -63,8 +62,8 @@ public class TypeFunctions {
    * subclass thereof. Returns empty collection if the input contains a single item that is not of
    * the specified type. Returns empty if the input collection is empty. Throws an error if the
    * input collection contains more than one item.
-   * <p>
-   * The type argument is an identifier that must resolve to the name of a type in a model. For
+   *
+   * <p>The type argument is an identifier that must resolve to the name of a type in a model. For
    * implementations with compile-time typing, this requires special-case handling when processing
    * the argument to treat it as a type specifier rather than an identifier expression.
    *
@@ -76,9 +75,8 @@ public class TypeFunctions {
   @FhirPathFunction
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
-  public static Collection as(@Nonnull final Collection input,
-      @Nonnull final TypeSpecifier typeSpecifier) {
+  public static Collection as(
+      @Nonnull final Collection input, @Nonnull final TypeSpecifier typeSpecifier) {
     return input.asType(typeSpecifier);
   }
-
 }

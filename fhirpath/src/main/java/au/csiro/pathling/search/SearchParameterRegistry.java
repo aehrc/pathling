@@ -28,9 +28,9 @@ import org.hl7.fhir.r4.model.SearchParameter;
 
 /**
  * Registry for FHIR search parameter definitions.
- * <p>
- * This is a pure data holder that maps resource types to their available search parameters.
- * Use the static factory methods to create instances.
+ *
+ * <p>This is a pure data holder that maps resource types to their available search parameters. Use
+ * the static factory methods to create instances.
  *
  * @see SearchParameterDefinition
  * @see #fromInputStream(FhirContext, InputStream)
@@ -38,13 +38,12 @@ import org.hl7.fhir.r4.model.SearchParameter;
  */
 public class SearchParameterRegistry {
 
-  @Nonnull
-  private final Map<ResourceType, Map<String, SearchParameterDefinition>> parameters;
+  @Nonnull private final Map<ResourceType, Map<String, SearchParameterDefinition>> parameters;
 
   /**
    * Creates a registry with pre-loaded parameters.
-   * <p>
-   * This constructor is for subclasses (e.g., test registries) that provide static parameters.
+   *
+   * <p>This constructor is for subclasses (e.g., test registries) that provide static parameters.
    *
    * @param parameters the pre-loaded parameter map
    */
@@ -63,8 +62,7 @@ public class SearchParameterRegistry {
    */
   @Nonnull
   public static SearchParameterRegistry fromInputStream(
-      @Nonnull final FhirContext fhirContext,
-      @Nonnull final InputStream inputStream) {
+      @Nonnull final FhirContext fhirContext, @Nonnull final InputStream inputStream) {
     return new SearchParameterRegistry(
         new JsonSearchParameterLoader(fhirContext).load(inputStream));
   }
@@ -91,9 +89,7 @@ public class SearchParameterRegistry {
    */
   @Nonnull
   public Optional<SearchParameterDefinition> getParameter(
-      @Nonnull final ResourceType resourceType,
-      @Nonnull final String code) {
-    return Optional.ofNullable(parameters.get(resourceType))
-        .map(params -> params.get(code));
+      @Nonnull final ResourceType resourceType, @Nonnull final String code) {
+    return Optional.ofNullable(parameters.get(resourceType)).map(params -> params.get(code));
   }
 }

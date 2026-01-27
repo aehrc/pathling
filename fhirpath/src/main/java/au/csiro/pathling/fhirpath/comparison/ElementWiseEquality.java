@@ -32,5 +32,4 @@ public interface ElementWiseEquality extends ColumnEquality {
   default ColumnEquality asArrayComparator() {
     return new ArrayElementWiseColumnEquality(this);
   }
-
 }

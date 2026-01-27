@@ -52,7 +52,6 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
     return !identifier.isEmpty() && Character.isUpperCase(identifier.charAt(0));
   }
 
-
   private final boolean isRoot;
 
   public InvocationVisitor(final boolean isRoot) {
@@ -64,8 +63,10 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   private static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
-    return "ofType".equals(functionName) || "getReferenceKey".equals(functionName)
-        || "is".equals(functionName) || "as".equals(functionName);
+    return "ofType".equals(functionName)
+        || "getReferenceKey".equals(functionName)
+        || "is".equals(functionName)
+        || "as".equals(functionName);
   }
 
   /**
@@ -77,8 +78,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitMemberInvocation(
-      @Nullable final MemberInvocationContext ctx) {
+  public FhirPath visitMemberInvocation(@Nullable final MemberInvocationContext ctx) {
     final String fhirPath = requireNonNull(ctx).getText();
     if (isRoot && canBeResourceType(fhirPath)) {
       return new Resource(fhirPath);
@@ -96,49 +96,43 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitFunctionInvocation(
-      @Nullable final FunctionInvocationContext ctx) {
+  public FhirPath visitFunctionInvocation(@Nullable final FunctionInvocationContext ctx) {
 
     final String functionIdentifier = requireNonNull(ctx).function().identifier().getText();
     @Nullable final ParamListContext paramList = ctx.function().paramList();
 
-    // NOTE: Here we assume that a function is either a type specifier function 
-    // (and all the arguments are type specifiers) or regular function 
+    // NOTE: Here we assume that a function is either a type specifier function
+    // (and all the arguments are type specifiers) or regular function
     // (none of the arguments are type specifiers).
     final FhirPathVisitor<FhirPath> paramListVisitor =
         isTypeSpecifierFunction(functionIdentifier)
-        ? TypeSpecifierVisitor.defaultVisitor()
-        : new Visitor();
+            ? TypeSpecifierVisitor.defaultVisitor()
+            : new Visitor();
 
-    final List<FhirPath> arguments = Optional.ofNullable(paramList)
-        .map(ParamListContext::expression)
-        .map(p -> p.stream()
-            .map(paramListVisitor::visit)
-            .toList()
-        ).orElse(Collections.emptyList());
+    final List<FhirPath> arguments =
+        Optional.ofNullable(paramList)
+            .map(ParamListContext::expression)
+            .map(p -> p.stream().map(paramListVisitor::visit).toList())
+            .orElse(Collections.emptyList());
 
     return new EvalFunction(functionIdentifier, arguments);
   }
 
   @Override
   @Nonnull
-  public FhirPath visitThisInvocation(
-      @Nullable final ThisInvocationContext ctx) {
+  public FhirPath visitThisInvocation(@Nullable final ThisInvocationContext ctx) {
     return Paths.thisPath();
   }
 
   @Override
   @Nonnull
-  public FhirPath visitIndexInvocation(
-      @Nullable final IndexInvocationContext ctx) {
+  public FhirPath visitIndexInvocation(@Nullable final IndexInvocationContext ctx) {
     throw new UnsupportedFhirPathFeatureError("$index is not supported");
   }
 
   @Override
   @Nonnull
-  public FhirPath visitTotalInvocation(
-      @Nullable final TotalInvocationContext ctx) {
+  public FhirPath visitTotalInvocation(@Nullable final TotalInvocationContext ctx) {
     throw new UnsupportedFhirPathFeatureError("$total is not supported");
   }
-
 }

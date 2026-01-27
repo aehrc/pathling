@@ -21,9 +21,9 @@ import jakarta.annotation.Nonnull;
 
 /**
  * Thrown when an invalid or unsupported modifier is used with a search parameter.
- * <p>
- * Per FHIR specification, servers SHALL reject any search request that contains a search parameter
- * with an unsupported modifier.
+ *
+ * <p>Per FHIR specification, servers SHALL reject any search request that contains a search
+ * parameter with an unsupported modifier.
  *
  * @see <a href="https://hl7.org/fhir/search.html#modifiers">FHIR Search Modifiers</a>
  */
@@ -35,10 +35,12 @@ public class InvalidModifierException extends RuntimeException {
    * @param modifier the invalid modifier
    * @param parameterType the search parameter type
    */
-  public InvalidModifierException(@Nonnull final String modifier,
-      @Nonnull final SearchParameterType parameterType) {
-    super(String.format("Modifier '%s' is not supported for search parameter type %s",
-        modifier, parameterType));
+  public InvalidModifierException(
+      @Nonnull final String modifier, @Nonnull final SearchParameterType parameterType) {
+    super(
+        String.format(
+            "Modifier '%s' is not supported for search parameter type %s",
+            modifier, parameterType));
   }
 
   /**

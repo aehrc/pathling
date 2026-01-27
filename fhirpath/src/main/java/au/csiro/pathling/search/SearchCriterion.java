@@ -30,23 +30,14 @@ import lombok.Value;
 @Value
 public class SearchCriterion {
 
-  /**
-   * The search parameter code (e.g., "gender").
-   */
-  @Nonnull
-  String parameterCode;
+  /** The search parameter code (e.g., "gender"). */
+  @Nonnull String parameterCode;
 
-  /**
-   * The search modifier (e.g., "not", "exact"), or null if no modifier.
-   */
-  @Nullable
-  String modifier;
+  /** The search modifier (e.g., "not", "exact"), or null if no modifier. */
+  @Nullable String modifier;
 
-  /**
-   * The search values. Multiple values are combined with OR logic.
-   */
-  @Nonnull
-  List<String> values;
+  /** The search values. Multiple values are combined with OR logic. */
+  @Nonnull List<String> values;
 
   /**
    * Creates a search criterion with the given parameter code and values (no modifier).
@@ -56,8 +47,8 @@ public class SearchCriterion {
    * @return the search criterion
    */
   @Nonnull
-  public static SearchCriterion of(@Nonnull final String parameterCode,
-      @Nonnull final String... values) {
+  public static SearchCriterion of(
+      @Nonnull final String parameterCode, @Nonnull final String... values) {
     return new SearchCriterion(parameterCode, null, Arrays.asList(values));
   }
 
@@ -69,8 +60,8 @@ public class SearchCriterion {
    * @return the search criterion
    */
   @Nonnull
-  public static SearchCriterion of(@Nonnull final String parameterCode,
-      @Nonnull final List<String> values) {
+  public static SearchCriterion of(
+      @Nonnull final String parameterCode, @Nonnull final List<String> values) {
     return new SearchCriterion(parameterCode, null, values);
   }
 
@@ -83,7 +74,8 @@ public class SearchCriterion {
    * @return the search criterion
    */
   @Nonnull
-  public static SearchCriterion of(@Nonnull final String parameterCode,
+  public static SearchCriterion of(
+      @Nonnull final String parameterCode,
       @Nullable final String modifier,
       @Nonnull final String... values) {
     return new SearchCriterion(parameterCode, modifier, Arrays.asList(values));
@@ -98,7 +90,8 @@ public class SearchCriterion {
    * @return the search criterion
    */
   @Nonnull
-  public static SearchCriterion of(@Nonnull final String parameterCode,
+  public static SearchCriterion of(
+      @Nonnull final String parameterCode,
       @Nullable final String modifier,
       @Nonnull final List<String> values) {
     return new SearchCriterion(parameterCode, modifier, values);

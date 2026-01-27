@@ -22,10 +22,10 @@ import java.util.List;
 
 /**
  * Represents the definition of a FHIR search parameter.
- * <p>
- * For polymorphic search parameters (e.g., Observation.effective which can be dateTime, Period,
- * Timing, or instant), multiple FHIRPath expressions can be specified. Each expression is
- * evaluated separately and the filter results are combined with OR logic.
+ *
+ * <p>For polymorphic search parameters (e.g., Observation.effective which can be dateTime, Period,
+ * Timing, or instant), multiple FHIRPath expressions can be specified. Each expression is evaluated
+ * separately and the filter results are combined with OR logic.
  *
  * @param code the code that identifies this search parameter (e.g., "gender")
  * @param type the type of the search parameter
@@ -33,10 +33,7 @@ import java.util.List;
  * @see <a href="https://hl7.org/fhir/searchparameter.html">SearchParameter</a>
  */
 public record SearchParameterDefinition(
-    @Nonnull String code,
-    @Nonnull SearchParameterType type,
-    @Nonnull List<String> expressions
-) {
+    @Nonnull String code, @Nonnull SearchParameterType type, @Nonnull List<String> expressions) {
 
   /**
    * Compact constructor that ensures the expressions list is immutable.
@@ -51,15 +48,16 @@ public record SearchParameterDefinition(
 
   /**
    * Creates a search parameter definition with a single expression.
-   * <p>
-   * This is a convenience constructor for simple search parameters that have only one FHIRPath
+   *
+   * <p>This is a convenience constructor for simple search parameters that have only one FHIRPath
    * expression.
    *
    * @param code the parameter code
    * @param type the parameter type
    * @param expression the FHIRPath expression
    */
-  public SearchParameterDefinition(@Nonnull final String code,
+  public SearchParameterDefinition(
+      @Nonnull final String code,
       @Nonnull final SearchParameterType type,
       @Nonnull final String expression) {
     this(code, type, List.of(expression));

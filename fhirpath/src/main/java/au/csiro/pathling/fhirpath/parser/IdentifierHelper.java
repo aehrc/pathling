@@ -23,8 +23,8 @@ import jakarta.annotation.Nonnull;
 
 /**
  * Helper class for extracting identifier values from FHIRPath parser contexts.
- * <p>
- * This class handles both regular identifiers and delimited identifiers (enclosed in backticks),
+ *
+ * <p>This class handles both regular identifiers and delimited identifiers (enclosed in backticks),
  * properly unescaping and unquoting delimited identifiers according to FHIRPath rules.
  *
  * @author Piotr Szul
@@ -37,16 +37,17 @@ public final class IdentifierHelper {
 
   /**
    * Extracts the identifier value from an {@link IdentifierContext}.
-   * <p>
-   * If the identifier is delimited (enclosed in backticks), it will be unquoted and unescaped
+   *
+   * <p>If the identifier is delimited (enclosed in backticks), it will be unquoted and unescaped
    * according to FHIRPath string literal rules. Regular identifiers are returned as-is.
-   * <p>
-   * Examples:
+   *
+   * <p>Examples:
+   *
    * <ul>
-   *   <li>{@code Patient} → {@code "Patient"}</li>
-   *   <li>{@code `Patient`} → {@code "Patient"}</li>
-   *   <li>{@code `field-name`} → {@code "field-name"}</li>
-   *   <li>{@code `value\nwith\nnewlines`} → {@code "value\nwith\nnewlines"}</li>
+   *   <li>{@code Patient} → {@code "Patient"}
+   *   <li>{@code `Patient`} → {@code "Patient"}
+   *   <li>{@code `field-name`} → {@code "field-name"}
+   *   <li>{@code `value\nwith\nnewlines`} → {@code "value\nwith\nnewlines"}
    * </ul>
    *
    * @param ctx the identifier context from the parser
@@ -56,7 +57,7 @@ public final class IdentifierHelper {
   @Nonnull
   public static String getIdentifierValue(@Nonnull final IdentifierContext ctx) {
     return ctx.DELIMITEDIDENTIFIER() != null
-           ? StringLiteral.unquoteFhirIdentifier(ctx.DELIMITEDIDENTIFIER().getText())
-           : ctx.IDENTIFIER().getText();
+        ? StringLiteral.unquoteFhirIdentifier(ctx.DELIMITEDIDENTIFIER().getText())
+        : ctx.IDENTIFIER().getText();
   }
 }

@@ -48,10 +48,7 @@ public class MockTerminologyService implements TerminologyService {
   public static final String BETA_2_GLOBULIN_CODE = "55915-3";
   public static final String FR_LANG_CODE = "fr-FR";
 
-  record SystemAndCode(
-      @Nonnull String system,
-      @Nonnull String code
-  ) {
+  record SystemAndCode(@Nonnull String system, @Nonnull String code) {
 
     @Nonnull
     @Contract("_ -> new")
@@ -62,27 +59,25 @@ public class MockTerminologyService implements TerminologyService {
 
   static class ConceptMap {
 
-    public static final ConceptMap EMPTY = new ConceptMap(Collections.emptyMap(),
-        Collections.emptyMap());
+    public static final ConceptMap EMPTY =
+        new ConceptMap(Collections.emptyMap(), Collections.emptyMap());
 
     private final Map<SystemAndCode, List<Translation>> mappings;
     private final Map<SystemAndCode, List<Translation>> invertedMappings;
 
-    ConceptMap(final Map<SystemAndCode, List<Translation>> mappings,
-        final Map<SystemAndCode, List<Translation>> invertedMappings
-    ) {
+    ConceptMap(
+        final Map<SystemAndCode, List<Translation>> mappings,
+        final Map<SystemAndCode, List<Translation>> invertedMappings) {
       this.mappings = mappings;
       this.invertedMappings = invertedMappings;
     }
 
-    public List<Translation> translate(@Nonnull final Coding coding, final boolean reverse,
-        @Nullable final String target) {
-      return (reverse
-              ? invertedMappings
-              : mappings)
+    public List<Translation> translate(
+        @Nonnull final Coding coding, final boolean reverse, @Nullable final String target) {
+      return (reverse ? invertedMappings : mappings)
           .getOrDefault(SystemAndCode.of(coding), Collections.emptyList()).stream()
-          .filter(c -> (isNull(target) || target.equals(c.getConcept().getSystem())))
-          .toList();
+              .filter(c -> (isNull(target) || target.equals(c.getConcept().getSystem())))
+              .toList();
     }
   }
 
@@ -91,9 +86,7 @@ public class MockTerminologyService implements TerminologyService {
     private final Set<SystemAndCode> members;
 
     ValueSet(final Coding... coding) {
-      members = Stream.of(coding)
-          .map(SystemAndCode::of)
-          .collect(Collectors.toUnmodifiableSet());
+      members = Stream.of(coding).map(SystemAndCode::of).collect(Collectors.toUnmodifiableSet());
     }
 
     boolean contains(@Nonnull final Coding coding) {
@@ -108,34 +101,36 @@ public class MockTerminologyService implements TerminologyService {
   private final Set<Pair<SystemAndCode, SystemAndCode>> subsumes = new HashSet<>();
 
   public MockTerminologyService() {
-    valueSets.put("http://snomed.info/sct?fhir_vs=refset/723264001",
+    valueSets.put(
+        "http://snomed.info/sct?fhir_vs=refset/723264001",
         new ValueSet(new Coding(SNOMED_URI, "368529001", null)));
-    valueSets.put("http://loinc.org/vs/LP14885-5",
+    valueSets.put(
+        "http://loinc.org/vs/LP14885-5",
         new ValueSet(new Coding(LOINC_URI, BETA_2_GLOBULIN_CODE, null)));
 
-    subsumes.add(Pair.of(new SystemAndCode(SNOMED_URI, "107963000"),
-        new SystemAndCode(SNOMED_URI, "63816008")));
+    subsumes.add(
+        Pair.of(
+            new SystemAndCode(SNOMED_URI, "107963000"), new SystemAndCode(SNOMED_URI, "63816008")));
 
-    conceptMap.put("http://snomed.info/sct?fhir_cm=100", new ConceptMap(
-        ImmutableMap.of(
-            new SystemAndCode(SNOMED_URI, "368529001"), List.of(
-                Translation.of(EQUIVALENT,
-                    new Coding(SNOMED_URI, "368529002", null)),
-                Translation.of(RELATEDTO, new Coding(LOINC_URI, "55916-3", null))
-            )
-        ), Collections.emptyMap()));
+    conceptMap.put(
+        "http://snomed.info/sct?fhir_cm=100",
+        new ConceptMap(
+            ImmutableMap.of(
+                new SystemAndCode(SNOMED_URI, "368529001"),
+                List.of(
+                    Translation.of(EQUIVALENT, new Coding(SNOMED_URI, "368529002", null)),
+                    Translation.of(RELATEDTO, new Coding(LOINC_URI, "55916-3", null)))),
+            Collections.emptyMap()));
 
-    conceptMap.put("http://snomed.info/sct?fhir_cm=200", new ConceptMap(
-        Collections.emptyMap(),
-        ImmutableMap.of(
-            new SystemAndCode(LOINC_URI, BETA_2_GLOBULIN_CODE), List.of(
-                Translation.of(RELATEDTO,
-                    new Coding(SNOMED_URI, "368529002", null)),
-                Translation.of(EQUIVALENT, new Coding(LOINC_URI, "55916-3", null))
-            )
-        ))
-    );
-
+    conceptMap.put(
+        "http://snomed.info/sct?fhir_cm=200",
+        new ConceptMap(
+            Collections.emptyMap(),
+            ImmutableMap.of(
+                new SystemAndCode(LOINC_URI, BETA_2_GLOBULIN_CODE),
+                List.of(
+                    Translation.of(RELATEDTO, new Coding(SNOMED_URI, "368529002", null)),
+                    Translation.of(EQUIVALENT, new Coding(LOINC_URI, "55916-3", null))))));
   }
 
   @Override
@@ -145,19 +140,21 @@ public class MockTerminologyService implements TerminologyService {
 
   @Nonnull
   @Override
-  public List<Translation> translate(@Nonnull final Coding coding,
+  public List<Translation> translate(
+      @Nonnull final Coding coding,
       @Nonnull final String conceptMapUrl,
-      final boolean reverse, @Nullable final String target) {
+      final boolean reverse,
+      @Nullable final String target) {
 
-    return conceptMap.getOrDefault(conceptMapUrl, ConceptMap.EMPTY)
+    return conceptMap
+        .getOrDefault(conceptMapUrl, ConceptMap.EMPTY)
         .translate(coding, reverse, target);
-
   }
 
   @Override
   @Nonnull
-  public ConceptSubsumptionOutcome subsumes(@Nonnull final Coding codingA,
-      @Nonnull final Coding codingB) {
+  public ConceptSubsumptionOutcome subsumes(
+      @Nonnull final Coding codingA, @Nonnull final Coding codingB) {
 
     final SystemAndCode systemAndCodeA = SystemAndCode.of(codingA);
     final SystemAndCode systemAndCodeB = SystemAndCode.of(codingB);
@@ -175,47 +172,50 @@ public class MockTerminologyService implements TerminologyService {
 
   @Nonnull
   @Override
-  public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String propertyCode, @Nullable final String acceptLanguage) {
+  public List<PropertyOrDesignation> lookup(
+      @Nonnull final Coding coding,
+      @Nullable final String propertyCode,
+      @Nullable final String acceptLanguage) {
 
-    final Coding snomedCoding = new Coding(SNOMED_URI, "439319006",
-        null);
+    final Coding snomedCoding = new Coding(SNOMED_URI, "439319006", null);
 
-    final Coding loincCoding = new Coding(LOINC_URI, BETA_2_GLOBULIN_CODE,
-        null);
+    final Coding loincCoding = new Coding(LOINC_URI, BETA_2_GLOBULIN_CODE, null);
 
-    final Map<String, String> loincCodingDisplayNames = Map.of(
-        "en", "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis",
-        FR_LANG_CODE, "Bêta-2 globulines [Masse/Volume] Liquide céphalorachidien",
-        "de", "Beta-2-Globulin [Masse/Volumen] in Zerebrospinalflüssigkeit mit Elektrophorese"
-    );
+    final Map<String, String> loincCodingDisplayNames =
+        Map.of(
+            "en",
+            "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis",
+            FR_LANG_CODE,
+            "Bêta-2 globulines [Masse/Volume] Liquide céphalorachidien",
+            "de",
+            "Beta-2-Globulin [Masse/Volumen] in Zerebrospinalflüssigkeit mit Elektrophorese");
 
-    final Coding useDisplay = new Coding("http://terminology.hl7.org/CodeSystem/designation-usage",
-        "display", null);
+    final Coding useDisplay =
+        new Coding("http://terminology.hl7.org/CodeSystem/designation-usage", "display", null);
 
-    final Coding useFullySpecifiedName = new Coding(SNOMED_URI, "900000000000003001",
-        "Fully specified name");
+    final Coding useFullySpecifiedName =
+        new Coding(SNOMED_URI, "900000000000003001", "Fully specified name");
 
     if (SystemAndCode.of(snomedCoding).equals(SystemAndCode.of(coding))) {
       return List.of(
           Property.of("parent", new CodeType("785673007")),
           Property.of("parent", new CodeType("74754006")),
           Designation.of(useDisplay, "en", "Screening for phenothiazine in serum"),
-          Designation.of(useFullySpecifiedName, "en",
-              "Screening for phenothiazine in serum (procedure)")
-      );
+          Designation.of(
+              useFullySpecifiedName, "en", "Screening for phenothiazine in serum (procedure)"));
     } else if (SystemAndCode.of(loincCoding).equals(SystemAndCode.of(coding))) {
       return List.of(
-          Property.of("display", new StringType(
-              loincCodingDisplayNames.get(acceptLanguage != null
-                                          ? acceptLanguage
-                                          : "en"))),
+          Property.of(
+              "display",
+              new StringType(
+                  loincCodingDisplayNames.get(acceptLanguage != null ? acceptLanguage : "en"))),
           Property.of("inactive", new BooleanType(false)),
           Designation.of(useDisplay, "en", loincCodingDisplayNames.get("en")),
           Designation.of(useDisplay, FR_LANG_CODE, loincCodingDisplayNames.get(FR_LANG_CODE)),
-          Designation.of(useFullySpecifiedName, FR_LANG_CODE,
-              "Beta 2 globulin:MCnc:Pt:CSF:Qn:Electrophoresis")
-      );
+          Designation.of(
+              useFullySpecifiedName,
+              FR_LANG_CODE,
+              "Beta 2 globulin:MCnc:Pt:CSF:Qn:Electrophoresis"));
     } else {
       return Collections.emptyList();
     }

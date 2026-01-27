@@ -31,17 +31,13 @@ import lombok.Value;
 @Value(staticConstructor = "of")
 public class DefaultResourceDefinition implements ResourceDefinition {
 
-  @Nonnull
-  DefaultResourceTag resourceTag;
-  @Nonnull
-  List<ChildDefinition> children;
+  @Nonnull DefaultResourceTag resourceTag;
+  @Nonnull List<ChildDefinition> children;
 
   @Override
   @Nonnull
   public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
-    return children.stream()
-        .filter(child -> child.getName().equals(name))
-        .findFirst();
+    return children.stream().filter(child -> child.getName().equals(name)).findFirst();
   }
 
   /**
@@ -53,8 +49,7 @@ public class DefaultResourceDefinition implements ResourceDefinition {
    */
   @Nonnull
   public static DefaultResourceDefinition of(
-      @Nonnull final DefaultResourceTag resourceTag,
-      final ChildDefinition... children) {
+      @Nonnull final DefaultResourceTag resourceTag, final ChildDefinition... children) {
     return DefaultResourceDefinition.of(resourceTag, List.of(children));
   }
 }

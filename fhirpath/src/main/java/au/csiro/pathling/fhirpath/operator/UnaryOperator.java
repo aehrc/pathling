@@ -32,9 +32,7 @@ public interface UnaryOperator {
    *
    * @param input A {@link Collection} object representing the input to the operator
    */
-  record UnaryOperatorInput(@Nonnull Collection input) {
-
-  }
+  record UnaryOperatorInput(@Nonnull Collection input) {}
 
   /**
    * Invokes this operator with the specified input.
@@ -53,5 +51,4 @@ public interface UnaryOperator {
   default String getOperatorName() {
     return this.getClass().getSimpleName();
   }
-
 }

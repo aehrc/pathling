@@ -67,9 +67,7 @@ import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.joda.time.DateTime;
 
-/**
- * Helper class to create data for testing purposes.
- */
+/** Helper class to create data for testing purposes. */
 public class TestData {
 
   public static final Date TEST_DATE = DateTime.parse("2020-05-09T12:13Z").toDate();
@@ -77,14 +75,12 @@ public class TestData {
   public static final java.math.BigDecimal TEST_SMALL_DECIMAL = new java.math.BigDecimal("123.45");
   public static final java.math.BigDecimal TEST_VERY_BIG_DECIMAL =
       new java.math.BigDecimal("1234560123456789.123456");
-  public static final java.math.BigDecimal TEST_VERY_SMALL_DECIMAL = new java.math.BigDecimal(
-      "0.1234567");
-  public static final java.math.BigDecimal TEST_VERY_SMALL_DECIMAL_SCALE_6 = new java.math.BigDecimal(
-      "0.123457");
+  public static final java.math.BigDecimal TEST_VERY_SMALL_DECIMAL =
+      new java.math.BigDecimal("0.1234567");
+  public static final java.math.BigDecimal TEST_VERY_SMALL_DECIMAL_SCALE_6 =
+      new java.math.BigDecimal("0.123457");
 
-  /**
-   * Returns a FHIR Condition for testing purposes.
-   */
+  /** Returns a FHIR Condition for testing purposes. */
   public static Condition newCondition() {
 
     final Condition condition = new Condition();
@@ -107,22 +103,22 @@ public class TestData {
     condition.setSubject(new Reference("Patient/example").setDisplay("Here is a display for you."));
 
     final CodeableConcept verificationStatus = new CodeableConcept();
-    verificationStatus.addCoding(new Coding(ConditionVerStatus.CONFIRMED.getSystem(),
-        ConditionVerStatus.CONFIRMED.toCode(),
-        ConditionVerStatus.CONFIRMED.getDisplay()));
+    verificationStatus.addCoding(
+        new Coding(
+            ConditionVerStatus.CONFIRMED.getSystem(),
+            ConditionVerStatus.CONFIRMED.toCode(),
+            ConditionVerStatus.CONFIRMED.getDisplay()));
     condition.setVerificationStatus(verificationStatus);
 
     // Condition code
     final CodeableConcept code = new CodeableConcept();
-    code.addCoding()
-        .setSystem("http://snomed.info/sct")
-        .setCode("39065001")
-        .setDisplay("Severe");
+    code.addCoding().setSystem("http://snomed.info/sct").setCode("39065001").setDisplay("Severe");
     condition.setSeverity(code);
 
     // Severity code
     final CodeableConcept severity = new CodeableConcept();
-    severity.addCoding()
+    severity
+        .addCoding()
         .setSystem("http://snomed.info/sct")
         .setCode("24484000")
         .setDisplay("Burn of ear")
@@ -140,8 +136,8 @@ public class TestData {
   public static Condition conditionWithReferencesWithIdentifiers() {
     final Condition condition = new Condition();
     condition.setId("withReferencesWithIdentifiers");
-    final Coding typeCoding = new Coding("http://terminology.hl7.org/CodeSystem/v2-0203", "MR",
-        null);
+    final Coding typeCoding =
+        new Coding("http://terminology.hl7.org/CodeSystem/v2-0203", "MR", null);
     final CodeableConcept typeConcept = new CodeableConcept(typeCoding);
     condition.setSubject(
         new Reference("Patient/example")
@@ -151,29 +147,29 @@ public class TestData {
                     .setType(typeConcept)
                     .setSystem("https://fhir.example.com/identifiers/mrn")
                     .setValue("urn:id")
-                    .setAssigner(new Reference("Organization/001"))
-            )
-    );
+                    .setAssigner(new Reference("Organization/001"))));
     return condition;
   }
 
   public static Condition conditionWithIdentifiersWithReferences() {
     final Condition condition = new Condition();
     condition.setId("withIdentifiersWithReferences");
-    final Coding typeCoding = new Coding("http://terminology.hl7.org/CodeSystem/v2-0203", "MR",
-        null);
+    final Coding typeCoding =
+        new Coding("http://terminology.hl7.org/CodeSystem/v2-0203", "MR", null);
     final CodeableConcept typeConcept = new CodeableConcept(typeCoding);
     condition
         .addIdentifier()
         .setType(typeConcept)
         .setSystem("https://fhir.example.com/identifiers/mrn")
         .setValue("urn:id01")
-        .setAssigner(new Reference("Organization/001")
-            .setIdentifier(new Identifier().setValue("urn:id02")
-                .setAssigner(new Reference("Organization/002"))));
+        .setAssigner(
+            new Reference("Organization/001")
+                .setIdentifier(
+                    new Identifier()
+                        .setValue("urn:id02")
+                        .setAssigner(new Reference("Organization/002"))));
     return condition;
   }
-
 
   public static Condition conditionWithVersion() {
     final Condition condition = new Condition();
@@ -182,10 +178,7 @@ public class TestData {
     return condition;
   }
 
-
-  /**
-   * Returns a FHIR Observation for testing purposes.
-   */
+  /** Returns a FHIR Observation for testing purposes. */
   public static Observation newObservation() {
 
     // Observation based on https://www.hl7.org/FHIR/observation-example-bloodpressure.json.html
@@ -232,8 +225,7 @@ public class TestData {
     device.setId("some-device");
 
     final DevicePropertyComponent property = new DevicePropertyComponent();
-    property.setType(
-        new CodeableConcept(new Coding("urn:example:abc", "12345", "Some property")));
+    property.setType(new CodeableConcept(new Coding("urn:example:abc", "12345", "Some property")));
     final Quantity quantity1 = new Quantity(null, 1.0, "http://unitsofmeasure.org", "mm", "mm");
     final Quantity quantity2 = new Quantity(null, 2.0, "http://unitsofmeasure.org", "mm", "mm");
     final List<Quantity> quantities = List.of(quantity1, quantity2);
@@ -244,9 +236,7 @@ public class TestData {
     return device;
   }
 
-  /**
-   * Returns a FHIR Patient for testing purposes.
-   */
+  /** Returns a FHIR Patient for testing purposes. */
   public static Patient newPatient() {
 
     final Patient patient = new Patient();
@@ -257,9 +247,7 @@ public class TestData {
     return patient;
   }
 
-  /**
-   * Returns a FHIR medication to be contained to a medication request for testing purposes.
-   */
+  /** Returns a FHIR medication to be contained to a medication request for testing purposes. */
   public static Medication newMedication() {
 
     final Medication medication = new Medication();
@@ -269,9 +257,7 @@ public class TestData {
     final MedicationIngredientComponent ingredient = new MedicationIngredientComponent();
 
     final CodeableConcept item = new CodeableConcept();
-    item.addCoding()
-        .setSystem("test/ingredient/system")
-        .setCode("test-code");
+    item.addCoding().setSystem("test/ingredient/system").setCode("test-code");
 
     ingredient.setItem(item);
 
@@ -280,9 +266,7 @@ public class TestData {
     return medication;
   }
 
-  /**
-   * Returns a FHIR Provenance to be contained to a medication request for testing purposes.
-   */
+  /** Returns a FHIR Provenance to be contained to a medication request for testing purposes. */
   public static Provenance newProvenance() {
 
     final Provenance provenance = new Provenance();
@@ -291,16 +275,15 @@ public class TestData {
 
     provenance.setTarget(List.of(new Reference("test-target")));
 
-    provenance.getEntityFirstRep()
+    provenance
+        .getEntityFirstRep()
         .setRole(ProvenanceEntityRole.SOURCE)
         .setWhat(new Reference("test-entity"));
 
     return provenance;
   }
 
-  /**
-   * Returns a FHIR medication request for testing purposes.
-   */
+  /** Returns a FHIR medication request for testing purposes. */
   public static MedicationRequest newMedRequest() {
 
     final MedicationRequest medReq = new MedicationRequest();
@@ -322,9 +305,7 @@ public class TestData {
 
     annotation.setText("Test medication note.");
 
-    annotation.setAuthor(
-        new Reference("Provider/example")
-            .setDisplay("Example provider."));
+    annotation.setAuthor(new Reference("Provider/example").setDisplay("Example provider."));
 
     medReq.addNote(annotation);
 
@@ -335,9 +316,7 @@ public class TestData {
     return medReq;
   }
 
-  /**
-   * Returns a FHIR Coverage resource for testing purposes.
-   */
+  /** Returns a FHIR Coverage resource for testing purposes. */
   public static Encounter newEncounter() {
     final Encounter encounter = new Encounter();
 
@@ -349,28 +328,20 @@ public class TestData {
     return encounter;
   }
 
-
-  /**
-   * Returns a FHIR Questionnaire resource for testing purposes.
-   */
+  /** Returns a FHIR Questionnaire resource for testing purposes. */
   public static Questionnaire newQuestionnaire() {
     final Questionnaire questionnaire = new Questionnaire();
     questionnaire.setId("Questionnaire/1");
     final QuestionnaireItemComponent item = questionnaire.addItem();
-    item.addEnableWhen()
-        .setAnswer(new DecimalType(TEST_VERY_SMALL_DECIMAL_SCALE_6));
-    item.addInitial()
-        .setValue(new DecimalType(TEST_VERY_BIG_DECIMAL));
+    item.addEnableWhen().setAnswer(new DecimalType(TEST_VERY_SMALL_DECIMAL_SCALE_6));
+    item.addInitial().setValue(new DecimalType(TEST_VERY_BIG_DECIMAL));
     // This nested item will be discarded on import, as we currently skip recursive elements.
     final QuestionnaireItemComponent nestedItem = item.addItem();
-    nestedItem.addInitial()
-        .setValue(new DecimalType(TEST_SMALL_DECIMAL));
+    nestedItem.addInitial().setValue(new DecimalType(TEST_SMALL_DECIMAL));
     return questionnaire;
   }
 
-  /**
-   * Returns a FHIR QuestionnaireResponse resource for testing purposes.
-   */
+  /** Returns a FHIR QuestionnaireResponse resource for testing purposes. */
   public static QuestionnaireResponse newQuestionnaireResponse() {
     final QuestionnaireResponse questionnaireResponse = new QuestionnaireResponse();
     questionnaireResponse.setId("QuestionnaireResponse/1");
@@ -388,46 +359,46 @@ public class TestData {
     return questionnaireResponse;
   }
 
-
-  private static List<QuestionnaireItemComponent> newNestedItems(final int nestingLevel,
-      final int noChildren, final String parentId) {
+  private static List<QuestionnaireItemComponent> newNestedItems(
+      final int nestingLevel, final int noChildren, final String parentId) {
 
     return IntStream.range(0, noChildren)
-        .mapToObj(i -> {
-          final QuestionnaireItemComponent item = new QuestionnaireItemComponent();
-          final String thisItemId = parentId + i;
-          item.setLinkId("Item/" + thisItemId);
-          if (nestingLevel > 0) {
-            item.setItem(newNestedItems(nestingLevel - 1, noChildren, thisItemId + "."));
-          }
-          return item;
-        }).toList();
+        .mapToObj(
+            i -> {
+              final QuestionnaireItemComponent item = new QuestionnaireItemComponent();
+              final String thisItemId = parentId + i;
+              item.setLinkId("Item/" + thisItemId);
+              if (nestingLevel > 0) {
+                item.setItem(newNestedItems(nestingLevel - 1, noChildren, thisItemId + "."));
+              }
+              return item;
+            })
+        .toList();
   }
 
   /**
    * Returns a FHIR Questionnaire resource with nested Item elements for testing purposes.
    *
    * @param maxNestingLevel the number of nested levels. Zero indicates the the Item element is
-   * present in the Questionnaire but with no nested items.
+   *     present in the Questionnaire but with no nested items.
    * @param noChildren the number of Item elements at each nesting level.
    */
-  public static Questionnaire newNestedQuestionnaire(final int maxNestingLevel,
-      final int noChildren) {
+  public static Questionnaire newNestedQuestionnaire(
+      final int maxNestingLevel, final int noChildren) {
     final Questionnaire questionnaire = new Questionnaire();
     questionnaire.setId("Questionnaire/1");
     questionnaire.setItem(newNestedItems(maxNestingLevel, noChildren, ""));
     return questionnaire;
   }
 
-
   private static QuestionnaireResponseItemAnswerComponent newNestedResponseAnswer(
       final int nestingLevel) {
-    final QuestionnaireResponseItemAnswerComponent answer = new QuestionnaireResponseItemAnswerComponent();
+    final QuestionnaireResponseItemAnswerComponent answer =
+        new QuestionnaireResponseItemAnswerComponent();
     answer.setId("AnswerLevel/" + nestingLevel);
     answer.setItem(Collections.singletonList(newNestedResponseItem(nestingLevel - 1)));
     return answer;
   }
-
 
   private static QuestionnaireResponseItemComponent newNestedResponseItem(final int nestingLevel) {
     final QuestionnaireResponseItemComponent item = new QuestionnaireResponseItemComponent();
@@ -438,7 +409,6 @@ public class TestData {
     }
     return item;
   }
-
 
   public static Condition newConditionWithExtensions() {
 
@@ -474,34 +444,32 @@ public class TestData {
     final Extension nestedExtension = new Extension("uuid:ext4");
     nestedExtension.addExtension(new Extension("uuid:nested", new StringType("nested")));
 
-    conditionWithExtension.setExtension(Arrays.asList(
+    conditionWithExtension.setExtension(
+        Arrays.asList(
             new Extension("uuid:ext1", new StringType("ext1")),
             new Extension("uuid:ext2", new IntegerType(2)),
-            nestedExtension
-        )
-    );
+            nestedExtension));
 
     conditionWithExtension.setMeta(new Meta().setVersionId("MetVersion"));
 
     conditionWithExtension.setOnset(new Range());
-    conditionWithExtension
-        .setSeverity(new CodeableConcept().addCoding(new Coding("sys", "code", "name")));
+    conditionWithExtension.setSeverity(
+        new CodeableConcept().addCoding(new Coding("sys", "code", "name")));
 
     final Identifier identifier = conditionWithExtension.getIdentifierFirstRep();
     identifier.setId("uuid:identifier1");
 
-    identifier.setExtension(Arrays.asList(
+    identifier.setExtension(
+        Arrays.asList(
             new Extension("uuid:ext10", new StringType("ext10")),
-            new Extension("uuid:ext11", new IntegerType(11))
-        )
-    );
+            new Extension("uuid:ext11", new IntegerType(11))));
 
     final ConditionStageComponent stage = conditionWithExtension.getStageFirstRep();
-    stage.getType().setExtension(
-        Collections.singletonList(new Extension("uuid:ext12", new StringType("ext12")))
-    );
+    stage
+        .getType()
+        .setExtension(
+            Collections.singletonList(new Extension("uuid:ext12", new StringType("ext12"))));
 
     return conditionWithExtension;
   }
-
 }

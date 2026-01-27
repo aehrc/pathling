@@ -31,20 +31,17 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  * @param <T> the type of resource to encode
  * @author John Grimes
  */
-class DecodeResourceMapPartitions<T extends IBaseResource> implements
-    MapPartitionsFunction<T, String> {
+class DecodeResourceMapPartitions<T extends IBaseResource>
+    implements MapPartitionsFunction<T, String> {
 
-  @Serial
-  private static final long serialVersionUID = -13742787546282853L;
+  @Serial private static final long serialVersionUID = -13742787546282853L;
 
-  @Nonnull
-  protected final FhirVersionEnum fhirVersion;
+  @Nonnull protected final FhirVersionEnum fhirVersion;
 
-  @Nonnull
-  protected final String outputMimeType;
+  @Nonnull protected final String outputMimeType;
 
-  public DecodeResourceMapPartitions(@Nonnull final FhirVersionEnum fhirVersion,
-      @Nonnull final String outputMimeType) {
+  public DecodeResourceMapPartitions(
+      @Nonnull final FhirVersionEnum fhirVersion, @Nonnull final String outputMimeType) {
     this.fhirVersion = fhirVersion;
     this.outputMimeType = outputMimeType;
   }
@@ -53,9 +50,6 @@ class DecodeResourceMapPartitions<T extends IBaseResource> implements
   public Iterator<String> call(final Iterator<T> iterator) {
     final ResourceParser parser = ResourceParser.build(fhirVersion, outputMimeType);
     final Iterable<T> iterable = () -> iterator;
-    return StreamSupport.stream(iterable.spliterator(), false)
-        .map(parser::encode)
-        .iterator();
+    return StreamSupport.stream(iterable.spliterator(), false).map(parser::encode).iterator();
   }
-
 }

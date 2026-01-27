@@ -35,36 +35,23 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 
-/**
- * The implementation of the 'display()' udf.
- */
+/** The implementation of the 'display()' udf. */
 @Slf4j
-public class DisplayUdf implements SqlFunction,
-    SqlFunction2<Row, String, String> {
+public class DisplayUdf implements SqlFunction, SqlFunction2<Row, String, String> {
 
-  @Serial
-  private static final long serialVersionUID = 7605853352299165569L;
+  @Serial private static final long serialVersionUID = 7605853352299165569L;
 
-  /**
-   * The property code used to identify display names in the terminology service.
-   */
+  /** The property code used to identify display names in the terminology service. */
   public static final String DISPLAY_PROPERTY_CODE = "display";
 
-  /**
-   * The name of the display UDF function.
-   */
+  /** The name of the display UDF function. */
   public static final String FUNCTION_NAME = "display";
 
-  /**
-   * The return type of the display UDF function, which is a string.
-   */
+  /** The return type of the display UDF function, which is a string. */
   public static final DataType RETURN_TYPE = DataTypes.StringType;
 
-  /**
-   * The terminology service factory used to create terminology services.
-   */
-  @Nonnull
-  private final TerminologyServiceFactory terminologyServiceFactory;
+  /** The terminology service factory used to create terminology services. */
+  @Nonnull private final TerminologyServiceFactory terminologyServiceFactory;
 
   /**
    * Creates a new DisplayUdf with the specified terminology service factory.
@@ -98,14 +85,15 @@ public class DisplayUdf implements SqlFunction,
       return null;
     }
     final TerminologyService terminologyService = terminologyServiceFactory.build();
-    final List<PropertyOrDesignation> result = terminologyService.lookup(
-        coding, DISPLAY_PROPERTY_CODE, acceptLanguage);
+    final List<PropertyOrDesignation> result =
+        terminologyService.lookup(coding, DISPLAY_PROPERTY_CODE, acceptLanguage);
 
-    final Optional<Property> maybeDisplayName = result.stream()
-        .filter(Property.class::isInstance)
-        .map(s -> (Property) s)
-        .filter(p -> DISPLAY_PROPERTY_CODE.equals(p.getCode()))
-        .findFirst();
+    final Optional<Property> maybeDisplayName =
+        result.stream()
+            .filter(Property.class::isInstance)
+            .map(s -> (Property) s)
+            .filter(p -> DISPLAY_PROPERTY_CODE.equals(p.getCode()))
+            .findFirst();
 
     return maybeDisplayName.map(Property::getValueAsString).orElse(null);
   }
