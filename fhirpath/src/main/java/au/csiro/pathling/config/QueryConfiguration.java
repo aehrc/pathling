@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@ import lombok.Data;
  * Represents configuration that controls the behaviour of query executors.
  *
  * @author Piotr Szul
+ * @author John Grimes
  */
 @Data
 @Builder
@@ -35,6 +36,12 @@ public class QueryConfiguration {
    * used to execute queries.
    */
   @Builder.Default private boolean explainQueries = false;
+
+  /**
+   * This controls whether the built-in caching within Spark is used for query results. It may be
+   * useful to turn this off for large datasets in memory-constrained environments.
+   */
+  @Builder.Default private boolean cacheResults = true;
 
   /**
    * Maximum depth for self-referencing structure traversals in repeat operations. Controls how

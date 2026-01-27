@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -206,13 +206,13 @@ public class Literals {
    *
    * @param literalValue the numeric value as a string
    * @param unit the unit of measurement
-   * @param isUCUM whether the unit is a UCUM unit
+   * @param isUcum whether the unit is a UCUM unit
    * @return a new quantity literal instance
    * @throws UnsupportedOperationException always, as quantity literals are not supported
    */
   public static LiteralPath quantityLiteral(
-      @Nonnull final String literalValue, @Nonnull final String unit, final boolean isUCUM) {
-    return isUCUM
+      @Nonnull final String literalValue, @Nonnull final String unit, final boolean isUcum) {
+    return isUcum
         ? ucumQuantityLiteral(String.format("%s %s", literalValue, unit))
         : calendarDurationLiteral(String.format("%s %s", literalValue, unit));
   }

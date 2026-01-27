@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,7 @@ import static java.util.function.Predicate.not;
 
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.Unmodifiable;
@@ -36,15 +36,19 @@ public abstract class Strings {
   private Strings() {}
 
   /**
+   * Removes surrounding single quotes from a string.
+   *
    * @param value a String surrounded by single quotes
    * @return the unquoted String
    */
   @Nonnull
   public static String unSingleQuote(@Nonnull final String value) {
-    return value.replaceAll("^'|'$", "");
+    return value.replaceAll("(?:^')|(?:'$)", "");
   }
 
   /**
+   * Removes surrounding tick quotes from a string.
+   *
    * @param value a String surrounded by tick quotes
    * @return the unquoted String
    */
@@ -54,11 +58,15 @@ public abstract class Strings {
   }
 
   /**
+   * Generates a short random string for use as a column alias.
+   *
    * @return a short, random String for use as a column alias
    */
   @Nonnull
   public static String randomAlias() {
-    final int randomNumber = Math.abs(new Random().nextInt());
+    // Use ThreadLocalRandom to avoid creating new Random instances and to handle the edge case
+    // where nextInt() returns Integer.MIN_VALUE (which would overflow with Math.abs()).
+    final int randomNumber = ThreadLocalRandom.current().nextInt(0, Integer.MAX_VALUE);
     return "@" + Integer.toString(randomNumber, Character.MAX_RADIX);
   }
 

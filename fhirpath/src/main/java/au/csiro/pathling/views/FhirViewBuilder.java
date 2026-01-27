@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,6 +53,8 @@ import org.hl7.fhir.instance.model.api.IBase;
  */
 public class FhirViewBuilder {
 
+  @Nullable private String name;
+
   @Nullable private String resource;
 
   @Nonnull private final List<ConstantDeclaration> constant = new ArrayList<>();
@@ -60,6 +62,19 @@ public class FhirViewBuilder {
   @Nonnull private final List<SelectClause> select = new ArrayList<>();
 
   @Nonnull private final List<WhereClause> where = new ArrayList<>();
+
+  /**
+   * Sets the name for this view.
+   *
+   * <p>This is an optional field that provides a computer-friendly name for the view.
+   *
+   * @param name the name for the view
+   * @return this builder instance for method chaining
+   */
+  public FhirViewBuilder name(@Nullable final String name) {
+    this.name = name;
+    return this;
+  }
 
   /**
    * Sets the FHIR resource type for this view.
@@ -176,6 +191,6 @@ public class FhirViewBuilder {
    */
   public FhirView build() {
     checkArgument(resource != null, "Resource must be set");
-    return new FhirView(resource, constant, select, where);
+    return new FhirView(name, resource, constant, select, where);
   }
 }

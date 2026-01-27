@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -212,6 +212,14 @@ public class FhirView {
   public static SelectClause unionAll(@Nonnull final SelectClause... selects) {
     return SelectClause.builder().unionAll(selects).build();
   }
+
+  /**
+   * A computer-friendly name for the view.
+   *
+   * @see <a
+   *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.name">ViewDefinition.name</a>
+   */
+  @Nullable String name;
 
   /**
    * The FHIR resource that the view is based upon, e.g. 'Patient' or 'Observation'.

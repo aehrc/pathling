@@ -17,9 +17,10 @@ import os
 from tempfile import TemporaryDirectory
 
 from flask import Response
-from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, Row
 from pytest import fixture
+
+from pathling.datasource import DataSource
 
 
 @fixture(scope="function", autouse=True)
@@ -350,3 +351,80 @@ def test_datasource_search_with_list_values(ndjson_test_data_dir, pathling_ctx):
     # Verify it returns all patients (both male and female).
     assert isinstance(result, DataFrame)
     assert result.count() == 9
+
+
+# Tests for WriteDetails return value from write operations.
+
+
+def test_ndjson_write_returns_details(
+    ndjson_test_data_dir, func_temp_dir, pathling_ctx
+):
+    """Verify that ndjson write returns WriteDetails with file information."""
+    result = pathling_ctx.read.ndjson(ndjson_test_data_dir).write.ndjson(func_temp_dir)
+
+    # Verify result is a WriteDetails object with file_infos.
+    assert result is not None
+    assert hasattr(result, "file_infos")
+    assert len(result.file_infos) > 0
+
+    # Verify each file_info has the expected attributes.
+    for file_info in result.file_infos:
+        assert hasattr(file_info, "fhir_resource_type")
+        assert hasattr(file_info, "absolute_url")
+        assert file_info.fhir_resource_type is not None
+        assert file_info.absolute_url is not None
+
+    # Verify that expected resource types are present.
+    resource_types = {fi.fhir_resource_type for fi in result.file_infos}
+    assert "Patient" in resource_types
+    assert "Condition" in resource_types
+
+
+def test_parquet_write_returns_details(
+    parquet_test_data_dir, func_temp_dir, pathling_ctx
+):
+    """Verify that parquet write returns WriteDetails with file information."""
+    result = pathling_ctx.read.parquet(parquet_test_data_dir).write.parquet(
+        func_temp_dir
+    )
+
+    # Verify result is a WriteDetails object with file_infos.
+    assert result is not None
+    assert hasattr(result, "file_infos")
+    assert len(result.file_infos) > 0
+
+    # Verify each file_info has the expected attributes.
+    for file_info in result.file_infos:
+        assert hasattr(file_info, "fhir_resource_type")
+        assert hasattr(file_info, "absolute_url")
+
+
+def test_delta_write_returns_details(delta_test_data_dir, func_temp_dir, pathling_ctx):
+    """Verify that delta write returns WriteDetails with file information."""
+    result = pathling_ctx.read.delta(delta_test_data_dir).write.delta(func_temp_dir)
+
+    # Verify result is a WriteDetails object with file_infos.
+    assert result is not None
+    assert hasattr(result, "file_infos")
+    assert len(result.file_infos) > 0
+
+    # Verify each file_info has the expected attributes.
+    for file_info in result.file_infos:
+        assert hasattr(file_info, "fhir_resource_type")
+        assert hasattr(file_info, "absolute_url")
+
+
+def test_tables_write_returns_details(ndjson_test_data_dir, pathling_ctx):
+    """Verify that tables write returns WriteDetails with file information."""
+    # Re-use the existing "test" schema to avoid conflicts.
+    result = pathling_ctx.read.ndjson(ndjson_test_data_dir).write.tables(schema="test")
+
+    # Verify result is a WriteDetails object with file_infos.
+    assert result is not None
+    assert hasattr(result, "file_infos")
+    assert len(result.file_infos) > 0
+
+    # Verify each file_info has the expected attributes.
+    for file_info in result.file_infos:
+        assert hasattr(file_info, "fhir_resource_type")
+        assert hasattr(file_info, "absolute_url")

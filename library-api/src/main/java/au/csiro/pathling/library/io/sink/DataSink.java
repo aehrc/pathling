@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ package au.csiro.pathling.library.io.sink;
 
 import au.csiro.pathling.io.source.DataSource;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 
 /**
  * Represents a data sink that knows how to read data from a {@link DataSource} and write it to some
@@ -32,6 +33,8 @@ public interface DataSink {
    * Write the data from the source to the sink.
    *
    * @param source the data source to write
+   * @return Information about the write operation or null if no details are captured.
    */
-  void write(@Nonnull final DataSource source);
+  @Nullable
+  WriteDetails write(@Nonnull final DataSource source);
 }

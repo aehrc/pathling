@@ -16,10 +16,10 @@
 spark_dependencies <- function(spark_version, scala_version, ...) {
   spark_info <- pathling_spark_info()
   sparklyr::spark_dependency(
-      packages = c(
-          paste0("au.csiro.pathling:library-runtime:", pathling_version()),
-          paste0("io.delta:delta-spark_", spark_info$scala_version, ":", spark_info$delta_version)
-      )
+    packages = c(
+      paste0("au.csiro.pathling:library-runtime:", pathling_version()),
+      paste0("io.delta:delta-spark_", spark_info$scala_version, ":", spark_info$delta_version)
+    )
   )
 }
 

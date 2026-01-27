@@ -1,0 +1,64 @@
+# This workflow builds and tests the server module.
+
+name: Test server
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test-server:
+    name: Build and test server
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+          bun: "true"
+          sonar-cache: "true"
+
+      - name: Build and test
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn --batch-mode -U verify \
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -f server/pom.xml \
+          -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.sarifReportPaths=trivy-results.sarif
+        timeout-minutes: 30
+
+      - name: Save test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-surefire-reports
+          path: "server/**/surefire-reports/"
+
+      - name: Save coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage-reports
+          path: |
+            server/**/jacoco.exec
+            server/**/jacoco.xml
+            server/**/target/site/jacoco
+
+      - name: Save built JAR
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-jar
+          path: server/target/server-*.jar

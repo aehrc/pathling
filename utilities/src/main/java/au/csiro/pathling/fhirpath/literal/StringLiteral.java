@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,8 +77,10 @@ public abstract class StringLiteral {
   }
 
   /**
-   * Unquotes a FHIRPath quoted identifier, handling both the tick quotes and any escaped characters
+   * Unquotes a FHIRPath quoted identifier, handling both the tick quotes and any escaped
+   * characters.
    *
+   * @param quotedIdentifier The identifier to unquote
    * @return the unquoted identifier
    */
   @Nonnull

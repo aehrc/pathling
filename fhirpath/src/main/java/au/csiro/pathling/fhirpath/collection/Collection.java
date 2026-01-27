@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -212,6 +212,8 @@ public class Collection implements Equatable {
   }
 
   /**
+   * Gets the collection class for a given FHIR type.
+   *
    * @param fhirType a {@link FHIRDefinedType}
    * @return The subtype of {@link Collection} that represents this type
    */
@@ -497,6 +499,18 @@ public class Collection implements Equatable {
   }
 
   /**
+   * Returns a new collection with the same type and representation, the colum value of which is
+   * computed by the lambda based on the current column value.
+   *
+   * @param columnMapper The lambda to use for mapping
+   * @return A new collection with new values determined by the specified lambda
+   */
+  @Nonnull
+  public Collection mapColumn(@Nonnull final UnaryOperator<Column> columnMapper) {
+    return map(cr -> cr.map(columnMapper));
+  }
+
+  /**
    * Returns the {@link Column} value of this collection.
    *
    * @return The {@link Column} value of this collection
@@ -631,7 +645,7 @@ public class Collection implements Equatable {
   }
 
   /**
-   * This collection can be converted to the other collection type
+   * Checks if this collection can be converted to the other collection type.
    *
    * @param other the other collection
    * @return true if the other collection can be converted to the other collection type
@@ -689,6 +703,8 @@ public class Collection implements Equatable {
   }
 
   /**
+   * Gets a new BooleanCollection representing the Boolean representation of this path.
+   *
    * @return a new {@link Collection} representing the Boolean representation of this path
    */
   @Nonnull

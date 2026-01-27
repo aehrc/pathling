@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,8 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
@@ -106,10 +108,14 @@ class CatalogSink implements DataSink {
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  @Nonnull
+  public WriteDetails write(@Nonnull final DataSource source) {
+    final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String tableName = getTableName(resourceType);
+
+      fileInfos.add(new FileInformation(resourceType, tableName));
 
       switch (saveMode) {
         case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tableName, saveMode);
@@ -136,8 +142,10 @@ class CatalogSink implements DataSink {
             writeDataset(dataset, tableName, SaveMode.ERROR_IF_EXISTS);
           }
         }
+        default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
     }
+    return new WriteDetails(fileInfos);
   }
 
   private void writeDataset(
@@ -156,6 +164,8 @@ class CatalogSink implements DataSink {
   }
 
   /**
+   * Gets the table name for the given resource type.
+   *
    * @param resourceType the resource type to get the table name for
    * @return the name of the table for the given resource type, qualified by the specified schema if
    *     one is provided

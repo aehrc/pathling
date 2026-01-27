@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.library.io;
 
+import jakarta.annotation.Nullable;
 import java.io.Serial;
 
 /**
@@ -34,7 +35,7 @@ public class PersistenceError extends RuntimeException {
    * @param message the error message
    * @param cause the underlying cause
    */
-  public PersistenceError(final String message, final Throwable cause) {
+  public PersistenceError(final String message, @Nullable final Throwable cause) {
     super(message, cause);
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +31,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author John Grimes
  */
 @Slf4j
-public class PathlingVersion {
+public final class PathlingVersion {
 
   private static final String GIT_PROPERTIES_FILE_NAME = "pathling-version.properties";
   private static final String BUILD_VERSION_PROPERTY = "git.build.version";
@@ -61,6 +61,8 @@ public class PathlingVersion {
   }
 
   /**
+   * Returns the POM version of the application.
+   *
    * @return the POM version of the application
    */
   public Optional<String> getBuildVersion() {
@@ -68,6 +70,8 @@ public class PathlingVersion {
   }
 
   /**
+   * Returns a descriptive version including the POM version and Git commit SHA.
+   *
    * @return a descriptive version that includes the POM version and the Git commit SHA at the time
    *     of the build
    */
@@ -78,5 +82,16 @@ public class PathlingVersion {
     final Optional<String> gitShaProperty =
         Optional.ofNullable(gitProperties.getProperty(GIT_SHA_PROPERTY));
     return gitShaProperty.map(sha -> String.format("%s+%s", getBuildVersion().get(), sha));
+  }
+
+  /**
+   * Returns the major version component of the POM version.
+   *
+   * @return the major version component of the POM version
+   * @see <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning 2.0.0</a>
+   */
+  @Nonnull
+  public Optional<String> getMajorVersion() {
+    return getBuildVersion().map(version -> version.split("\\.")[0]);
   }
 }

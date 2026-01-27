@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,22 +18,15 @@
 package au.csiro.pathling.library.io.sink;
 
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
-import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.PersistenceError;
 import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.UnaryOperator;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
@@ -57,6 +50,8 @@ final class DeltaSink implements DataSink {
   @Nonnull private final UnaryOperator<String> fileNameMapper;
 
   /**
+   * Constructs a DeltaSink with a custom file name mapper.
+   *
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
@@ -74,15 +69,8 @@ final class DeltaSink implements DataSink {
   }
 
   /**
-   * @param context the PathlingContext to use
-   * @param path the path to write the Delta database to
-   */
-  DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path) {
-    // By default, name the files using the resource type alone.
-    this(context, path, SaveMode.ERROR_IF_EXISTS, UnaryOperator.identity());
-  }
-
-  /**
+   * Constructs a DeltaSink with default file naming.
+   *
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
@@ -96,27 +84,23 @@ final class DeltaSink implements DataSink {
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  @Nonnull
+  public WriteDetails write(@Nonnull final DataSource source) {
+    final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String fileName = String.join(".", fileNameMapper.apply(resourceType), "parquet");
       final String tablePath = safelyJoinPaths(path, fileName);
 
+      fileInfos.add(new FileInformation(resourceType, tablePath));
+
       switch (saveMode) {
-        case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tablePath, saveMode);
-        case OVERWRITE -> {
-          // This is to work around a bug relating to Delta tables not being able to be overwritten,
-          // due to their inability to handle the truncate operation that Spark performs when
-          // overwriting a table.
-          if (deltaTableExists(tablePath)) {
-            delete(tablePath);
-          }
-          writeDataset(dataset, tablePath, SaveMode.ERROR_IF_EXISTS);
-        }
+        case ERROR_IF_EXISTS, APPEND, IGNORE, OVERWRITE ->
+            writeDataset(dataset, tablePath, saveMode);
         case MERGE -> {
           if (deltaTableExists(tablePath)) {
             // If the table already exists, merge the data in.
-            final DeltaTable table = DeltaTable.forPath(tablePath);
+            final DeltaTable table = DeltaTable.forPath(context.getSpark(), tablePath);
             merge(table, dataset);
           } else {
             // If the table does not exist, create it. If an error occurs here, there must be a
@@ -124,8 +108,10 @@ final class DeltaSink implements DataSink {
             writeDataset(dataset, tablePath, SaveMode.ERROR_IF_EXISTS);
           }
         }
+        default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
     }
+    return new WriteDetails(fileInfos);
   }
 
   /**
@@ -143,6 +129,11 @@ final class DeltaSink implements DataSink {
 
     // Apply save mode if it has a Spark equivalent
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
+
+    // Delta Lake requires explicit schema overwrite permission when using OVERWRITE mode.
+    if (saveMode == SaveMode.OVERWRITE) {
+      writer.option("overwriteSchema", "true");
+    }
 
     writer.save(tablePath);
   }
@@ -166,21 +157,13 @@ final class DeltaSink implements DataSink {
   }
 
   /**
-   * Checks if a Delta table exists at the specified path by attempting to access it via
-   * DeltaTable.forPath. This method catches any exceptions that occur during table access to
-   * determine existence.
+   * Checks if a Delta table exists at the specified path.
    *
    * @param tablePath the path to the table to check
    * @return true if the Delta table exists, false otherwise
    */
-  private static boolean deltaTableExists(@Nonnull final String tablePath) {
-    try {
-      DeltaTable.forPath(tablePath);
-      return true;
-    } catch (final Exception e) {
-      // Table does not exist or is not a Delta table.
-      return false;
-    }
+  private boolean deltaTableExists(@Nonnull final String tablePath) {
+    return DeltaTable.isDeltaTable(context.getSpark(), tablePath);
   }
 
   /**

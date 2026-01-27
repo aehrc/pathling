@@ -17,10 +17,10 @@ import os
 
 from pathling import (
     PathlingContext,
-    to_snomed_coding,
-    property_of,
-    display,
     PropertyType,
+    display,
+    property_of,
+    to_snomed_coding,
 )
 
 HERE = os.path.abspath(os.path.dirname(__file__))

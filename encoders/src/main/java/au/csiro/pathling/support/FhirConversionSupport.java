@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,7 +68,7 @@ public abstract class FhirConversionSupport implements Serializable {
    * Resolves URN references in the given bundle to relative references for resources defined in the
    * bundle. URN references to resources not defined in the bundle are left unchanged. The
    * references are resolved in-place, that is the input bundle is modified. The implementation may
-   * relay on {@link org.hl7.fhir.instance.model.api.IBaseReference@getResource()} being set the
+   * rely on {@link org.hl7.fhir.instance.model.api.IBaseReference#getResource()} being set to the
    * referenced resource.
    *
    * @param bundle the bundle

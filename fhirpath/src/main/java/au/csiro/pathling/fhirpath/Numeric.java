@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,12 +48,16 @@ public interface Numeric {
   Function<Numeric, Collection> getMathOperation(@Nonnull MathOperation operation);
 
   /**
+   * Gets the column representation for this numeric value.
+   *
    * @return a {@link Column} within the dataset containing the values of the nodes
    */
   @Nonnull
   ColumnRepresentation getColumn();
 
   /**
+   * Gets the numeric value column for use in math operations.
+   *
    * @return a {@link Column} that provides a value that can me used in math operations
    */
   @Nonnull

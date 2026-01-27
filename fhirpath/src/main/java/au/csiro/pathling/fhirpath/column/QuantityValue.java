@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,6 +86,10 @@ public class QuantityValue {
    * <p>Provides methods to extract different representations of a Quantity (normalized, original,
    * literal) and to compare two {@link ValueWithUnit} instances using a provided comparator,
    * ensuring that the units are the same.
+   *
+   * @param value the value column
+   * @param unit the unit column
+   * @param system the system column
    */
   public record ValueWithUnit(
       @Nonnull Column value, @Nonnull Column unit, @Nullable Column system) {

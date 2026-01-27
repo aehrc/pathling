@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,7 +46,12 @@ public class Ucum {
 
   public static final String NO_UNIT_CODE = "1";
 
-  /** A record to hold a canonical value and unit pair. */
+  /**
+   * A record to hold a canonical value and unit pair.
+   *
+   * @param value the canonical value
+   * @param unit the canonical unit code
+   */
   public record ValueWithUnit(@Nonnull BigDecimal value, @Nonnull String unit) {}
 
   private static final UCUMService service;
@@ -58,6 +63,11 @@ public class Ucum {
 
   private Ucum() {}
 
+  /**
+   * Returns the shared UCUM service instance.
+   *
+   * @return the UCUM service
+   */
   @Nonnull
   public static UCUMService service() {
     return service;

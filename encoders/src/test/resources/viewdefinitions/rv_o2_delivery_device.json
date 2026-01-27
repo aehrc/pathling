@@ -1,0 +1,56 @@
+{
+  "resourceType": "ViewDefinition",
+  "name": "rv_o2_delivery_device",
+  "resource": "Observation",
+  "status": "draft",
+  "select": [
+    {
+      "column": [
+        {
+          "name": "id",
+          "path": "id",
+          "type": "id",
+          "collection": false
+        },
+        {
+          "name": "subject_id",
+          "path": "subject.getReferenceKey()",
+          "type": "string",
+          "collection": false
+        },
+        {
+          "name": "stay_id",
+          "path": "encounter.getReferenceKey()",
+          "type": "string",
+          "collection": false
+        },
+        {
+          "name": "charttime",
+          "path": "effective.ofType(dateTime)",
+          "type": "dateTime",
+          "collection": false
+        },
+        {
+          "name": "storetime",
+          "path": "issued",
+          "type": "instant",
+          "collection": false
+        },
+        {
+          "name": "value",
+          "path": "value.ofType(string)",
+          "type": "string",
+          "collection": false
+        }
+      ]
+    }
+  ],
+  "where": [
+    {
+      "path": "code.coding.system = 'http://mimic.mit.edu/fhir/mimic/CodeSystem/mimic-chartevents-d-items'"
+    },
+    {
+      "path": "code.coding.code = '226732'"
+    }
+  ]
+}

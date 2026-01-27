@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +55,7 @@ public class ValueFunctions {
    */
   @Nonnull
   private static UnaryOperator<Expression> liftToExpression(
-      @Nonnull UnaryOperator<Column> columExpression) {
+      @Nonnull final UnaryOperator<Column> columExpression) {
     // This needs to be used rather than ExpressionUtils.expression()
     // to correctly unwrap the underlying expression.
     return e -> ColumnConversions$.MODULE$.toRichColumn(columExpression.apply(column(e))).expr();
@@ -146,6 +146,23 @@ public class ValueFunctions {
   }
 
   /**
+   * Returns an empty array when a struct field doesn't exist in the schema, instead of throwing an
+   * error. This is similar to {@link #nullIfMissingField} but returns an empty array instead of
+   * null, making it suitable for use in array concatenation contexts where type compatibility is
+   * required.
+   *
+   * @param value The column expression that may reference a non-existent field
+   * @return A column that resolves to an empty array if the field is not found in the schema, or
+   *     the field's value if the field exists
+   */
+  @Nonnull
+  public static Column emptyArrayIfMissingField(@Nonnull final Column value) {
+    final Expression valueExpr = expression(value);
+    final Expression emptyOrExpr = new UnresolvedEmptyArrayIfMissingField(valueExpr);
+    return column(emptyOrExpr);
+  }
+
+  /**
    * Performs a recursive tree traversal with value extraction at each level.
    *
    * <p>This method implements a depth-first traversal of nested structures, applying a sequence of
@@ -194,7 +211,7 @@ public class ValueFunctions {
       @Nonnull final Column value,
       @Nonnull final UnaryOperator<Column> extractor,
       @Nonnull final List<UnaryOperator<Column>> traversals,
-      int maxDepth) {
+      final int maxDepth) {
 
     final List<Function1<Expression, Expression>> x =
         traversals.stream()

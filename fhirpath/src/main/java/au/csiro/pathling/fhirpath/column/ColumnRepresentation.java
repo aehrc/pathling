@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,7 +64,7 @@ public abstract class ColumnRepresentation {
    * @return the column at the specified index
    */
   @Nonnull
-  public static Column getAt(@Nonnull final Column arrayColumn, int index) {
+  public static Column getAt(@Nonnull final Column arrayColumn, final int index) {
     return functions.get(arrayColumn, lit(index));
   }
 
@@ -121,7 +121,7 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} representing the new column
    */
   @Nonnull
-  public abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
+  protected abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
 
   /**
    * Maps the current {@link ColumnRepresentation} using a lambda function.
@@ -168,16 +168,6 @@ public abstract class ColumnRepresentation {
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
-   * field within the current representation. The results can be nested.
-   *
-   * @param fieldName The name of the field to traverse to
-   * @return A new {@link ColumnRepresentation} representing the result of the traversal
-   */
-  @Nonnull
-  public abstract ColumnRepresentation getField(@Nonnull final String fieldName);
-
-  /**
-   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
    * field within the current representation. This method also takes the FHIR type of the field into
    * account to return a more specific representation.
    *
@@ -188,6 +178,16 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public abstract ColumnRepresentation traverse(
       @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType);
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
+   * field within the current representation. The results can be nested.
+   *
+   * @param fieldName The name of the field to traverse to
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public abstract ColumnRepresentation getField(@Nonnull final String fieldName);
 
   /**
    * Converts the current {@link ColumnRepresentation} to a string value.

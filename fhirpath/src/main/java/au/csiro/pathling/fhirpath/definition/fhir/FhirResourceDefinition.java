@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,11 +20,14 @@ package au.csiro.pathling.fhirpath.definition.fhir;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
 import lombok.Getter;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Encapsulates the FHIR definitions for a resource.
+ * Encapsulates the FHIR definitions for a resource. Supports both standard FHIR resource types and
+ * custom resource types (like ViewDefinition) that are registered with HAPI but not part of the
+ * standard FHIR specification.
  *
  * @author John Grimes
  */
@@ -32,23 +35,40 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 class FhirResourceDefinition extends BaseFhirNodeDefinition<RuntimeResourceDefinition>
     implements ResourceDefinition {
 
-  /** The HAPI FHIR resource type. */
-  @Nonnull private final ResourceType resourceType;
+  /** The resource tag containing the resource code and optional ResourceType enum. */
+  @Nonnull private final FhirResourceTag resourceTag;
 
   @Override
   @Nonnull
   public FhirResourceTag getResourceTag() {
-    return FhirResourceTag.of(resourceType);
+    return resourceTag;
   }
 
   /**
-   * @param resourceType The {@link ResourceType} that describes this resource
-   * @param definition The HAPI {@link RuntimeResourceDefinition} for this resource
+   * Creates a FhirResourceDefinition from a resource code and HAPI definition.
+   *
+   * @param resourceCode the resource code (e.g., "Patient", "ViewDefinition")
+   * @param resourceType the optional ResourceType enum (empty for custom types)
+   * @param definition the HAPI RuntimeResourceDefinition
+   */
+  public FhirResourceDefinition(
+      @Nonnull final String resourceCode,
+      @Nonnull final Optional<ResourceType> resourceType,
+      @Nonnull final RuntimeResourceDefinition definition) {
+    super(definition);
+    this.resourceTag = FhirResourceTag.of(resourceCode, resourceType);
+  }
+
+  /**
+   * Creates a FhirResourceDefinition from a standard FHIR ResourceType.
+   *
+   * @param resourceType the ResourceType that describes this resource
+   * @param definition the HAPI RuntimeResourceDefinition for this resource
    */
   public FhirResourceDefinition(
       @Nonnull final ResourceType resourceType,
       @Nonnull final RuntimeResourceDefinition definition) {
     super(definition);
-    this.resourceType = resourceType;
+    this.resourceTag = FhirResourceTag.of(resourceType);
   }
 }

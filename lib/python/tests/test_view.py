@@ -14,8 +14,8 @@
 #  limitations under the License.
 
 import os
-from unittest.mock import Mock, patch
-from pyspark.sql import Row, DataFrame
+
+from pyspark.sql import Row
 from pytest import fixture
 
 

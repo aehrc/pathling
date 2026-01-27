@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +55,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Converts a {@link FhirView} to an executable Spark SQL query.
@@ -76,6 +75,8 @@ public class FhirViewExecutor {
   @Nonnull private final QueryConfiguration queryConfiguration;
 
   /**
+   * Constructs a new FhirViewExecutor.
+   *
    * @param fhirContext The FHIR context to use for the execution context
    * @param dataset The data source to use for the execution context
    * @param queryConfiguration The query configuration to control query execution behavior
@@ -91,6 +92,8 @@ public class FhirViewExecutor {
   }
 
   /**
+   * Constructs a new FhirViewExecutor with default query configuration.
+   *
    * @param fhirContext The FHIR context to use for the execution context
    * @param dataset The data source to use for the execution context
    */

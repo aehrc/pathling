@@ -13,12 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Any, Optional, Union, Collection
+from typing import Any, Collection, Optional, Union
 
 from py4j.java_gateway import JavaObject
 from pyspark import SparkContext
-from pyspark.sql.column import Column
 from pyspark.sql.classic.column import _to_java_column
+from pyspark.sql.column import Column
 from pyspark.sql.functions import lit
 
 from pathling.coding import Coding

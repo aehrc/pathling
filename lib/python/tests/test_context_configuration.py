@@ -15,9 +15,10 @@
 
 import logging
 import os
+from tempfile import mkdtemp
+
 from pyspark.sql import SparkSession
 from pytest import fixture
-from tempfile import mkdtemp
 
 from pathling import PathlingContext
 from pathling._version import __java_version__
@@ -66,7 +67,7 @@ def test_default_configurations(spark_session):
     # Retrieve EncodingConfiguration
     encoding_config = jpc.getEncodingConfiguration()
     assert encoding_config.getMaxNestingLevel() == 3
-    assert encoding_config.isEnableExtensions() == False
+    assert not encoding_config.isEnableExtensions()
     # Default open types should match STANDARD_OPEN_TYPES
     open_types = set(encoding_config.getOpenTypes())
     expected_types = {
@@ -87,7 +88,7 @@ def test_default_configurations(spark_session):
 
     # Retrieve QueryConfiguration
     query_config = jpc.getQueryConfiguration()
-    assert query_config.isExplainQueries() == False
+    assert not query_config.isExplainQueries()
     assert query_config.getMaxUnboundTraversalDepth() == 10
 
 
@@ -109,11 +110,11 @@ def test_custom_configurations(spark_session):
     # Retrieve EncodingConfiguration and verify custom values
     encoding_config = jpc.getEncodingConfiguration()
     assert encoding_config.getMaxNestingLevel() == 5
-    assert encoding_config.isEnableExtensions() == True
+    assert encoding_config.isEnableExtensions()
     open_types = set(encoding_config.getOpenTypes())
     assert open_types == {"string", "boolean"}
 
     # Retrieve QueryConfiguration and verify custom values
     query_config = jpc.getQueryConfiguration()
-    assert query_config.isExplainQueries() == True
+    assert query_config.isExplainQueries()
     assert query_config.getMaxUnboundTraversalDepth() == 20

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,7 +39,7 @@ public class TerminologyResult<T extends Serializable> implements Serializable {
   @Nullable T data;
 
   /** The ETag returned in the response that generated this value. */
-  @Nullable String eTag;
+  @Nullable String etag;
 
   /** The expiry time in milliseconds since the epoch. */
   @Nullable Long expires;

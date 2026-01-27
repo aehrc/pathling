@@ -16,18 +16,18 @@
 
 import logging
 import os
+from tempfile import TemporaryDirectory
+
 from pyspark.sql import SparkSession
 from pytest import fixture
-from tempfile import TemporaryDirectory
 
 from pathling import PathlingContext
 from pathling._version import (
-    __java_version__,
-    __scala_version__,
     __delta_version__,
     __hadoop_version__,
+    __java_version__,
+    __scala_version__,
 )
-
 from tests.mockserver import MockServer
 
 HERE = os.path.abspath(os.path.dirname(__file__))

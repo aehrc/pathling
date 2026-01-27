@@ -10,7 +10,7 @@ cluster, navigate to the "Compute" section and click on the cluster. Click on
 the "Libraries" tab, and click "Install new".
 
 Pathling has been tested
-on [Databricks Runtime 16.4 LTS](https://docs.databricks.com/aws/en/release-notes/runtime/16.4lts).
+on [Databricks Runtime 17.3 LTS](https://docs.databricks.com/aws/en/release-notes/runtime/17.3lts).
 
 Install the core Pathling functionality by selecting "Maven" as the library
 source and installing

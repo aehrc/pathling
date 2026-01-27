@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,7 +99,7 @@ class ConversionLogic {
    *   <li>YYYY-MM-DDThh:mm:ss.fff - Date with fractional seconds (e.g., "2023-06-15T14:30:45.123")
    * </ul>
    *
-   * Optional timezone: Z for UTC or ±hh:mm offset (e.g., "2023-06-15T14:30:45+10:00")
+   * <p>Optional timezone: Z for UTC or ±hh:mm offset (e.g., "2023-06-15T14:30:45+10:00")
    *
    * <p>Pattern: ^\d{4}(-\d{2}(-\d{2}(T\d{2}(:\d{2}(:\d{2}(\.\d+)?)?)?(Z|[+\-]\d{2}:\d{2})?)?)?)?$
    */
@@ -133,8 +133,8 @@ class ConversionLogic {
    *   <li>Optional unit: Either quoted UCUM code (e.g., "'mg'") or calendar duration unit
    * </ul>
    *
-   * Valid calendar duration units (case-insensitive, singular or plural): year, month, week, day,
-   * hour, minute, second, millisecond
+   * <p>Valid calendar duration units (case-insensitive, singular or plural): year, month, week,
+   * day, hour, minute, second, millisecond
    *
    * <p>Examples: "5", "1.5 'kg'", "3 weeks", "10.5 mg", "-2.5 'cm'"
    *

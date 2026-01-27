@@ -15,7 +15,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple, Callable
+from typing import Callable, List, Optional, Tuple
 
 from py4j.java_gateway import JavaObject, JVMView
 from pyspark.sql import SparkSession

@@ -15,15 +15,15 @@
 
 # noinspection PyPackageRequirements
 
+from typing import TYPE_CHECKING, Optional, Sequence
+
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession
-from typing import Optional, Sequence, TYPE_CHECKING
 
 from pathling._version import (
+    __delta_version__,
     __java_version__,
     __scala_version__,
-    __delta_version__,
-    __hadoop_version__,
 )
 from pathling.fhir import MimeType
 

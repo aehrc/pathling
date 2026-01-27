@@ -15,7 +15,7 @@
 
 import os
 
-from pathling import PathlingContext, to_snomed_coding, display
+from pathling import PathlingContext, display, to_snomed_coding
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 

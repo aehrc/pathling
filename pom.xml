@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>9.1.1-SNAPSHOT</version>
+  <version>9.3.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -87,7 +87,8 @@
     <pathling.logbackVersion>1.5.19</pathling.logbackVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
     <pathling.derbyVersion>10.16.1.1</pathling.derbyVersion>
-    <pathling.bulkExportVersion>1.0.3</pathling.bulkExportVersion>
+    <pathling.bulkExportVersion>1.0.4</pathling.bulkExportVersion>
+    <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
   </properties>
 
   <modules>
@@ -102,6 +103,20 @@
     <module>site</module>
     <module>benchmark</module>
   </modules>
+
+  <repositories>
+    <!-- Required for resolving SNAPSHOT dependencies from Maven Central. -->
+    <repository>
+      <id>central-snapshots</id>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
 
   <dependencyManagement>
     <dependencies>
@@ -235,6 +250,11 @@
         <artifactId>bulk-export</artifactId>
         <version>${pathling.bulkExportVersion}</version>
         <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.fhir</groupId>
+        <artifactId>fhir-auth</artifactId>
+        <version>${pathling.fhirAuthVersion}</version>
       </dependency>
       <!-- Ensure that consistent and correct versions of Jackson and Jersey are used. -->
       <dependency>
@@ -568,6 +588,30 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>compile</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>compile</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
     <pluginManagement>
       <plugins>
@@ -579,7 +623,7 @@
             <source>21</source>
             <target>21</target>
             <compilerArgs>
-              <arg>-Xlint:all,-processing</arg>
+              <arg>-Xlint:all,-processing,-this-escape</arg>
               <arg>-proc:full</arg>
             </compilerArgs>
           </configuration>
@@ -750,6 +794,7 @@
             <detectLinks/>
             <doctitle>Pathling ${project.version} API</doctitle>
             <windowtitle>Pathling ${project.version} API</windowtitle>
+            <excludePackageNames>au.csiro.pathling.fhirpath.parser.generated:au.csiro.pathling.views.ansi.generated</excludePackageNames>
             <bottom>
               <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
             </bottom>
@@ -857,6 +902,41 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-resources-plugin</artifactId>
           <version>3.3.1</version>
+        </plugin>
+        <plugin>
+          <groupId>com.diffplug.spotless</groupId>
+          <artifactId>spotless-maven-plugin</artifactId>
+          <version>2.44.5</version>
+          <configuration>
+            <java>
+              <googleJavaFormat>
+                <version>1.27.0</version>
+                <style>GOOGLE</style>
+                <reflowLongStrings>true</reflowLongStrings>
+                <formatJavadoc>true</formatJavadoc>
+              </googleJavaFormat>
+            </java>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>3.6.0</version>
+          <configuration>
+            <configLocation>config/checkstyle/checkstyle.xml</configLocation>
+            <suppressionsLocation>config/checkstyle/suppressions.xml</suppressionsLocation>
+            <includeTestSourceDirectory>false</includeTestSourceDirectory>
+            <consoleOutput>true</consoleOutput>
+            <failsOnError>true</failsOnError>
+            <failOnViolation>true</failOnViolation>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>com.puppycrawl.tools</groupId>
+              <artifactId>checkstyle</artifactId>
+              <version>10.21.4</version>
+            </dependency>
+          </dependencies>
         </plugin>
       </plugins>
     </pluginManagement>

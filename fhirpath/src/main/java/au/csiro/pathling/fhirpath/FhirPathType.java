@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -130,6 +130,8 @@ public enum FhirPathType {
   }
 
   /**
+   * Checks if the type specifier is a valid FHIRPath type.
+   *
    * @param typeSpecifier a type specifier
    * @return true if the type specifier is a valid FHIRPath type
    */
@@ -143,6 +145,8 @@ public enum FhirPathType {
   }
 
   /**
+   * Gets the FhirPathType for a given FHIR type.
+   *
    * @param fhirType a {@link FHIRDefinedType}
    * @return the corresponding {@link FhirPathType} according to the rules of automatic conversion
    *     within the FHIR spec
@@ -153,6 +157,8 @@ public enum FhirPathType {
   }
 
   /**
+   * Gets the FHIR types that correspond to this FhirPathType.
+   *
    * @return a list of FHIR types that correspond to this FhirPathType
    */
   @Nonnull

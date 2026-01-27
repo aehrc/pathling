@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -150,7 +150,7 @@ public interface TerminologyService {
     return lookup(coding, propertyCode, null);
   }
 
-  /** Common interface for properties and designations */
+  /** Common interface for properties and designations. */
   interface PropertyOrDesignation extends Serializable {
     // marker interface
   }
@@ -208,7 +208,7 @@ public interface TerminologyService {
 
     @Serial private static final long serialVersionUID = -809107979219801186L;
 
-    /** The code of the designation properties */
+    /** The code of the designation properties. */
     public static final String PROPERTY_CODE = "designation";
 
     /** The use code for this designation. */

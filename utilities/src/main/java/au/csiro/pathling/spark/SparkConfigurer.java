@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,12 +20,12 @@ package au.csiro.pathling.spark;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 
-/** Common interface for functions/classes that can configure {@link SparkSession}. */
+/** Common interface for functions/classes that can configure a {@link SparkSession}. */
 @FunctionalInterface
 public interface SparkConfigurer {
 
   /**
-   * Configure some aspect of {@link SparkSession}
+   * Configures some aspect of a {@link SparkSession}.
    *
    * @param spark the {@link SparkSession} to configure.
    */

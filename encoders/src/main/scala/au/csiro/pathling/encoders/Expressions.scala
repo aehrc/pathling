@@ -413,19 +413,28 @@ case class UnresolvedUnnest(value: Expression)
 }
 
 /**
- * Returns null when a struct field doesn't exist in the schema, instead of throwing an error.
- * <p>
- * This expression is essential for handling optional fields in nested structures where a field
- * may not be present in all instances of a struct type. When the specified field is missing
- * from the struct schema, this returns null rather than causing a FIELD_NOT_FOUND analysis error.
- * <p>
- * '''Important:''' This only handles fields that don't exist in the schema. If a field
- * exists but has a null value, that null value is returned normally.
+ * Trait for expressions that return a fallback value when a struct field doesn't exist in the
+ * schema, instead of throwing an error.
  *
- * @param value the expression that may reference a non-existent field
+ * This is essential for handling optional fields in nested structures where a field may not be
+ * present in all instances of a struct type. When the specified field is missing from the struct
+ * schema, implementations return their specific fallback value rather than causing a
+ * FIELD_NOT_FOUND analysis error.
+ *
+ * '''Important:''' This only handles fields that don't exist in the schema. If a field exists
+ * but has a null value, that null value is returned normally.
  */
-case class UnresolvedNullIfMissingField(value: Expression)
+trait UnresolvedFallbackIfMissingField
   extends Expression with UnevaluableCopy with NonSQLExpression {
+
+  /** The expression that may reference a non-existent field. */
+  def value: Expression
+
+  /** The expression to return when the field is not found in the schema. */
+  protected def fallbackExpression: Expression
+
+  /** Creates a copy of this expression with a new value. */
+  protected def copyWithValue(newValue: Expression): UnresolvedFallbackIfMissingField
 
   override def mapChildren(f: Expression => Expression): Expression = {
     try {
@@ -433,12 +442,11 @@ case class UnresolvedNullIfMissingField(value: Expression)
       if (newValue.resolved) {
         newValue
       } else {
-        copy(value = newValue)
+        copyWithValue(newValue)
       }
     } catch {
       case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
-        // If field is not found, return null instead of throwing an error
-        Literal(null)
+        fallbackExpression
     }
   }
 
@@ -451,10 +459,42 @@ case class UnresolvedNullIfMissingField(value: Expression)
   override def toString: String = s"$value"
 
   override def children: Seq[Expression] = value :: Nil
+}
 
-  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+/**
+ * Returns null when a struct field doesn't exist in the schema, instead of throwing an error.
+ *
+ * @param value the expression that may reference a non-existent field
+ */
+case class UnresolvedNullIfMissingField(value: Expression)
+  extends UnresolvedFallbackIfMissingField {
+
+  override protected def fallbackExpression: Expression = Literal(null)
+
+  override protected def copyWithValue(newValue: Expression): UnresolvedFallbackIfMissingField =
+    copy(value = newValue)
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression =
     UnresolvedNullIfMissingField(newChildren.head)
-  }
+}
+
+/**
+ * Returns an empty array when a struct field doesn't exist in the schema, instead of throwing
+ * an error. This is suitable for use in array concatenation contexts where type compatibility
+ * is required.
+ *
+ * @param value the expression that may reference a non-existent field
+ */
+case class UnresolvedEmptyArrayIfMissingField(value: Expression)
+  extends UnresolvedFallbackIfMissingField {
+
+  override protected def fallbackExpression: Expression = CreateArray(Seq.empty)
+
+  override protected def copyWithValue(newValue: Expression): UnresolvedFallbackIfMissingField =
+    copy(value = newValue)
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression =
+    UnresolvedEmptyArrayIfMissingField(newChildren.head)
 }
 
 /**

@@ -1,0 +1,61 @@
+# Runs Trivy security scan with SARIF output, re-running with table format on failure
+# for human-readable output.
+#
+# Author: John Grimes
+
+name: Trivy Security Scan
+description: Run Trivy security scan with SARIF output, table on failure.
+
+inputs:
+  skip-files:
+    description: Files to skip (glob patterns).
+    required: false
+    default: "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock"
+  ignore-unfixed:
+    description: Ignore unfixed vulnerabilities.
+    required: false
+    default: "false"
+  skip-db-update:
+    description: Skip Trivy database updates (use cached DB).
+    required: false
+    default: "false"
+  sarif-output:
+    description: Path for SARIF output file.
+    required: false
+    default: "trivy-results.sarif"
+
+runs:
+  using: composite
+  steps:
+    - name: Run security scan (SARIF output)
+      id: sarif-scan
+      uses: aquasecurity/trivy-action@0.32.0
+      continue-on-error: true
+      env:
+        TRIVY_SKIP_DB_UPDATE: ${{ inputs.skip-db-update }}
+        TRIVY_SKIP_JAVA_DB_UPDATE: ${{ inputs.skip-db-update }}
+      with:
+        scan-type: repo
+        scan-ref: .
+        ignore-unfixed: ${{ inputs.ignore-unfixed }}
+        format: sarif
+        output: ${{ inputs.sarif-output }}
+        skip-files: ${{ inputs.skip-files }}
+        exit-code: "1"
+        severity: MEDIUM,HIGH,CRITICAL
+
+    - name: Run security scan (table output on failure)
+      if: steps.sarif-scan.outcome == 'failure'
+      uses: aquasecurity/trivy-action@0.32.0
+      env:
+        TRIVY_SKIP_DB_UPDATE: ${{ inputs.skip-db-update }}
+        TRIVY_SKIP_JAVA_DB_UPDATE: ${{ inputs.skip-db-update }}
+      with:
+        scan-type: repo
+        scan-ref: .
+        ignore-unfixed: ${{ inputs.ignore-unfixed }}
+        format: table
+        skip-files: ${{ inputs.skip-files }}
+        skip-setup-trivy: true
+        exit-code: "1"
+        severity: MEDIUM,HIGH,CRITICAL

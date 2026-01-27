@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,11 @@
 
 package au.csiro.pathling.config;
 
+import static java.util.Objects.nonNull;
+
+import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.pathling.config.TerminologyAuthConfiguration.ValidTerminologyAuthConfiguration;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintValidator;
@@ -58,8 +62,20 @@ public class TerminologyAuthConfiguration implements Serializable {
   /** A client ID for use with the client credentials grant. */
   @Nullable private String clientId;
 
-  /** A client secret for use with the client credentials grant. */
+  /** A client secret for use with the client credentials grant (symmetric authentication). */
   @Nullable @ToString.Exclude private String clientSecret;
+
+  /**
+   * A private key in JWK format for use with private key JWT authentication (asymmetric
+   * authentication). If provided, this takes precedence over clientSecret.
+   */
+  @Nullable @ToString.Exclude private String privateKeyJwk;
+
+  /**
+   * When true, sends client credentials in the request body instead of using HTTP Basic
+   * authentication. Only applies when using symmetric (client secret) authentication.
+   */
+  @NotNull @Builder.Default private boolean useFormForBasicAuth = false;
 
   /** A scope value for use with the client credentials grant. */
   @Nullable private String scope;
@@ -72,6 +88,26 @@ public class TerminologyAuthConfiguration implements Serializable {
   @Min(0)
   @Builder.Default
   private long tokenExpiryTolerance = 120;
+
+  /**
+   * Converts this configuration to an {@link AuthConfig} for use with the fhir-auth library.
+   *
+   * @return an AuthConfig instance
+   */
+  @Nonnull
+  public AuthConfig toAuthConfig() {
+    return AuthConfig.builder()
+        .enabled(enabled)
+        .useSMART(false)
+        .tokenEndpoint(tokenEndpoint)
+        .clientId(clientId)
+        .clientSecret(clientSecret)
+        .privateKeyJWK(privateKeyJwk)
+        .useFormForBasicAuth(useFormForBasicAuth)
+        .scope(scope)
+        .tokenExpiryTolerance(tokenExpiryTolerance)
+        .build();
+  }
 
   /** Validation annotation for terminology authentication configuration. */
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
@@ -87,7 +123,7 @@ public class TerminologyAuthConfiguration implements Serializable {
      */
     String message() default
         "If terminology authentication is enabled, token endpoint, "
-            + "client ID and client secret must be supplied.";
+            + "client ID and either client secret or private key JWK must be supplied.";
 
     /**
      * The validation groups.
@@ -113,9 +149,9 @@ public class TerminologyAuthConfiguration implements Serializable {
     public boolean isValid(
         final TerminologyAuthConfiguration value, final ConstraintValidatorContext context) {
       if (value.isEnabled()) {
-        return value.getTokenEndpoint() != null
-            && value.getClientId() != null
-            && value.getClientSecret() != null;
+        final boolean hasCredentials =
+            nonNull(value.getClientSecret()) || nonNull(value.getPrivateKeyJwk());
+        return nonNull(value.getTokenEndpoint()) && nonNull(value.getClientId()) && hasCredentials;
       }
       return true;
     }

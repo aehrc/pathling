@@ -1,0 +1,27 @@
+# This workflow packages and releases the Pathling server Helm chart.
+
+name: Release Helm chart (server)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Chart version to release (must match Chart.yaml)"
+        required: true
+  release:
+    types: [published]
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref_name, 'helm-server-v')
+    uses: ./.github/workflows/helm-release.yml
+    with:
+      chart-path: deployment/helm/pathling
+      chart-name: pathling
+      tag-prefix: helm-server-v
+      version: ${{ inputs.version }}
+    secrets:
+      GPG_KEY: ${{ secrets.GPG_KEY }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+    permissions:
+      contents: write

@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -162,6 +162,17 @@ public class FhirEncoders implements Configurable<EncodingConfiguration> {
     this.enableExtensions = enableExtensions;
   }
 
+  /**
+   * Returns a cached FhirEncoders instance for the specified configuration, creating one if it does
+   * not already exist. This method is thread-safe and ensures that encoders with identical
+   * configurations are shared across the application.
+   *
+   * @param fhirVersion the FHIR version to use for encoding
+   * @param maxNestingLevel the maximum nesting level for encoding complex resources
+   * @param openTypes the set of open types to encode with extension values
+   * @param enableExtensions whether to enable extension encoding
+   * @return a FhirEncoders instance configured with the specified parameters
+   */
   public static FhirEncoders getOrCreate(
       @Nonnull final FhirVersionEnum fhirVersion,
       final int maxNestingLevel,
@@ -180,14 +191,30 @@ public class FhirEncoders implements Configurable<EncodingConfiguration> {
   }
 
   /**
-   * Returns the FHIR context for the given version. This is effectively a cache so consuming code
-   * does not need to recreate the context repeatedly.
+   * Returns a cached FhirContext for the given FHIR version. This method is the canonical source
+   * for FhirContext instances within Pathling and should be used instead of creating contexts
+   * directly via {@code FhirContext.forR4()} or similar methods.
+   *
+   * <p>The returned context is thread-safe and is pre-configured with all custom resource types
+   * registered, ensuring HAPI can recognise and parse resources like ViewDefinition.
+   *
+   * <p>Using this method instead of creating fresh FhirContext instances avoids the expensive
+   * initialisation cost that HAPI incurs when scanning and building resource definitions.
    *
    * @param fhirVersion the version of FHIR to use
-   * @return the FhirContext
+   * @return a cached, pre-configured FhirContext
    */
   public static FhirContext contextFor(final FhirVersionEnum fhirVersion) {
-    return FHIR_CONTEXTS.computeIfAbsent(fhirVersion, v -> new FhirContext(fhirVersion));
+    return FHIR_CONTEXTS.computeIfAbsent(
+        fhirVersion,
+        v -> {
+          final FhirContext context = new FhirContext(fhirVersion);
+          for (final Class<? extends IBaseResource> customType :
+              ResourceTypes.CUSTOM_RESOURCE_TYPE_CLASSES.values()) {
+            context.registerCustomType(customType);
+          }
+          return context;
+        });
   }
 
   /**
@@ -270,7 +297,6 @@ public class FhirEncoders implements Configurable<EncodingConfiguration> {
     final RuntimeResourceDefinition definition = context.getResourceDefinition(type);
 
     final int key = type.getName().hashCode();
-
     return (ExpressionEncoder<T>)
         encoderCache.computeIfAbsent(
             key,

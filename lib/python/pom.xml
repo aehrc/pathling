@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>9.1.1-SNAPSHOT</version>
+    <version>9.3.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
@@ -205,6 +205,43 @@
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
+              <!-- Check Python code with ruff linter -->
+              <execution>
+                <id>ruff-check</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>uv</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>run</argument>
+                    <argument>ruff</argument>
+                    <argument>check</argument>
+                    <argument>.</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <!-- Check Python code formatting with ruff -->
+              <execution>
+                <id>ruff-format-check</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>uv</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>run</argument>
+                    <argument>ruff</argument>
+                    <argument>format</argument>
+                    <argument>--check</argument>
+                    <argument>.</argument>
+                  </arguments>
+                </configuration>
+              </execution>
               <!-- Run the Python tests -->
               <execution>
                 <id>python-tests</id>
@@ -400,6 +437,56 @@
                     <argument>--repository</argument>
                     <argument>${pathling.pypi.repository}</argument>
                     <argument>${project.build.directory}/py-dist/*</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>format</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <!-- Format Python code with ruff -->
+              <execution>
+                <id>ruff-format</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>uv</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>run</argument>
+                    <argument>ruff</argument>
+                    <argument>format</argument>
+                    <argument>.</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <!-- Fix Python code issues with ruff -->
+              <execution>
+                <id>ruff-fix</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>uv</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>run</argument>
+                    <argument>ruff</argument>
+                    <argument>check</argument>
+                    <argument>--fix</argument>
+                    <argument>.</argument>
                   </arguments>
                 </configuration>
               </execution>

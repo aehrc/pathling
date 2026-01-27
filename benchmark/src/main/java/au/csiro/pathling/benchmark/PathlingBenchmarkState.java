@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,7 +74,7 @@ public class PathlingBenchmarkState {
           "UsCoreBloodPressures",
           "QuestionnaireResponseFlat");
 
-  /** File extension for JSON view definition files stored as resources */
+  /** File extension for JSON view definition files stored as resources. */
   private static final String JSON_EXTENSION = ".json";
 
   /**

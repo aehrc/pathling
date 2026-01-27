@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@
 package au.csiro.pathling.encoders;
 
 import static org.apache.spark.sql.functions.col;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -32,6 +33,9 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.EncodingConfiguration;
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
+import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -762,5 +766,21 @@ class FhirEncodersTest {
             .withOpenTypes(customConfig.getOpenTypes())
             .getOrCreate()
             .getConfiguration());
+  }
+
+  @Test
+  void contextForRegistersCustomResourceTypes() {
+    // The FhirContext returned by contextFor() should recognise custom resource types like
+    // ViewDefinition. This test verifies that the context has been configured to parse
+    // ViewDefinition resources without throwing a "HAPI-1684: Unknown resource name" error.
+    final FhirContext context = FhirEncoders.contextFor(FhirVersionEnum.R4);
+
+    // Getting the resource definition by name should succeed for ViewDefinition.
+    final RuntimeResourceDefinition definition =
+        assertDoesNotThrow(() -> context.getResourceDefinition("ViewDefinition"));
+
+    // The definition should be for the ViewDefinitionResource class.
+    assertNotNull(definition);
+    assertEquals(ViewDefinitionResource.class, definition.getImplementingClass());
   }
 }

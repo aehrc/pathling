@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,12 +28,15 @@ import java.util.stream.Stream;
 /**
  * A {@link FhirPathBinaryOperator} that is defined using a static method.
  *
+ * @param method the method that implements the operator
  * @author Piotr Szul
  * @author John Grimes
  */
 public record MethodDefinedOperator(Method method) implements FhirPathBinaryOperator {
 
   /**
+   * Invokes the operator with the specified input.
+   *
    * @param operatorInput the input to the operator
    * @return the result of invoking the method defined by this operator
    * @throws MethodInvocationError if the method cannot be invoked due to an error

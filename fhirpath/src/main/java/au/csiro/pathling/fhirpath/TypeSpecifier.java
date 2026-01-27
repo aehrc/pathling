@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,6 +77,8 @@ public class TypeSpecifier {
   }
 
   /**
+   * Checks if this type specifier is a type in FHIR namespace.
+   *
    * @return true if this type specifier is a type in FHIR namespace.
    */
   public boolean isFhirType() {
@@ -84,6 +86,8 @@ public class TypeSpecifier {
   }
 
   /**
+   * Checks if this type specifier is a type in System namespace.
+   *
    * @return true if this type specifier is a type in System namespace.
    */
   public boolean isSystemType() {
@@ -119,6 +123,8 @@ public class TypeSpecifier {
   }
 
   /**
+   * Gets the FHIR resource type represented by this type specifier.
+   *
    * @return The FHIR resource type represented by this type specifier if a valid FHIR resource
    *     type.
    */

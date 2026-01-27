@@ -1,0 +1,82 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "run",
+  "title": "Pathling ViewDefinition Run Operation (Type/Instance Level)",
+  "status": "active",
+  "kind": "operation",
+  "experimental": false,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation executes a SQL on FHIR ViewDefinition against the data within the Pathling server, returning the result as a streaming NDJSON or CSV response. When invoked at the type level (/ViewDefinition/$run), a viewResource parameter must be provided. When invoked at the instance level (/ViewDefinition/[id]/$run), the stored ViewDefinition is used.",
+  "affectsState": false,
+  "code": "run",
+  "system": false,
+  "type": true,
+  "instance": true,
+  "resource": ["Basic"],
+  "parameter": [
+    {
+      "name": "viewResource",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "A ViewDefinition resource that defines the view to execute. Required for type-level invocation, ignored for instance-level invocation where the stored ViewDefinition is used.",
+      "type": "Resource"
+    },
+    {
+      "name": "_format",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "The output format for the view results. Supported values are 'application/x-ndjson' (default) and 'text/csv'.",
+      "type": "code"
+    },
+    {
+      "name": "header",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "For CSV output, whether to include a header row. Defaults to true.",
+      "type": "boolean"
+    },
+    {
+      "name": "patient",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "A patient ID to filter the view results to resources within that patient's compartment.",
+      "type": "id"
+    },
+    {
+      "name": "group",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "A group ID to filter the view results to resources within the compartments of patients in that group.",
+      "type": "id"
+    },
+    {
+      "name": "_since",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Only include resources that have been updated since the specified timestamp.",
+      "type": "instant"
+    },
+    {
+      "name": "_limit",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Maximum number of rows to return in the result.",
+      "type": "integer"
+    },
+    {
+      "name": "resource",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "Inline FHIR resources to use as the data source instead of the server's main data. When provided, the view is executed against these resources rather than the persisted data.",
+      "type": "Resource"
+    }
+  ]
+}

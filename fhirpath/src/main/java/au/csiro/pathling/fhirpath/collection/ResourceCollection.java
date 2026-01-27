@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,8 +73,13 @@ public class ResourceCollection extends Collection {
 
   @Nonnull
   private static Optional<FHIRDefinedType> getFhirType(@Nonnull final ResourceType resourceType) {
+    return getFhirType(resourceType.toCode());
+  }
+
+  @Nonnull
+  private static Optional<FHIRDefinedType> getFhirType(@Nonnull final String resourceCode) {
     try {
-      return Optional.ofNullable(FHIRDefinedType.fromCode(resourceType.toCode()));
+      return Optional.ofNullable(FHIRDefinedType.fromCode(resourceCode));
     } catch (final FHIRException e) {
       return Optional.empty();
     }
@@ -126,6 +131,36 @@ public class ResourceCollection extends Collection {
         columnRepresentation,
         Optional.empty(),
         getFhirType(resourceType),
+        Optional.of(definition),
+        definition);
+  }
+
+  /**
+   * Build a new ResourcePath using the supplied {@link ColumnRepresentation}, {@link FhirContext},
+   * and resource code string. This method supports both standard FHIR resource types and custom
+   * resource types (like ViewDefinition) that are registered with HAPI but not part of the standard
+   * FHIR specification.
+   *
+   * @param columnRepresentation A column representation to use for the resource
+   * @param fhirContext The {@link FhirContext} to use for sourcing the resource definition
+   * @param resourceCode The resource type code (e.g., "Patient", "ViewDefinition")
+   * @return A shiny new ResourcePath
+   */
+  @Nonnull
+  public static ResourceCollection build(
+      @Nonnull final ColumnRepresentation columnRepresentation,
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final String resourceCode) {
+    // Get the resource definition from HAPI.
+    final ResourceDefinition definition =
+        FhirDefinitionContext.of(fhirContext).findResourceDefinition(resourceCode);
+
+    // We use a literal column as the resource value - the actual value is not important.
+    // But the non-null value indicates that the resource should be included in any result.
+    return new ResourceCollection(
+        columnRepresentation,
+        Optional.empty(),
+        getFhirType(resourceCode),
         Optional.of(definition),
         definition);
   }

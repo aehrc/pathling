@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,6 +56,8 @@ public interface TerminologyClient extends Closeable {
   Logger log = LoggerFactory.getLogger(TerminologyClient.class);
 
   /**
+   * Validates a code against a value set.
+   *
    * @param url the URL of the value set to validate against
    * @param system the system of the code to validate
    * @param version the version of the code system to validate against
@@ -90,6 +92,8 @@ public interface TerminologyClient extends Closeable {
       @Nonnull CodeType code);
 
   /**
+   * Translates a code using a concept map.
+   *
    * @param url the URL of the concept map to use for translation
    * @param system the system of the code to translate
    * @param version the version of the code system to translate from
@@ -133,6 +137,8 @@ public interface TerminologyClient extends Closeable {
       @Nullable UriType target);
 
   /**
+   * Tests whether one code subsumes another.
+   *
    * @param codeA the code that will be tested to check if it subsumes codeB
    * @param codeB the code that will be tested to check if it is subsumed by codeA
    * @param system the system of the codes being tested
@@ -168,6 +174,8 @@ public interface TerminologyClient extends Closeable {
       @Nullable StringType version);
 
   /**
+   * Looks up properties and designations for a code.
+   *
    * @param system the system of the code
    * @param version the version of the code system
    * @param code the code to lookup

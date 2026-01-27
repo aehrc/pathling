@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,13 +53,16 @@ import org.hl7.fhir.r4.model.UrlType;
 import org.hl7.fhir.r4.model.UuidType;
 
 /**
- * This adapter is used to deserialize a {@link ConstantDeclaration} from JSON. It looks at the
- * structure and decides which type of value it is, then instantiates the appropriate HAPI class to
- * represent it.
+ * This adapter handles serialisation and deserialisation of {@link ConstantDeclaration} objects.
+ * When reading, it looks at the structure and decides which type of value it is, then instantiates
+ * the appropriate HAPI class to represent it. When writing, it determines the type suffix from the
+ * HAPI class and writes the value in its native JSON type.
  *
  * @author John Grimes
  */
 public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclaration> {
+
+  private static final String VALUE_PREFIX = "value";
 
   private static final Map<String, ValueType> typeMap =
       new Builder<String, ValueType>()
@@ -84,6 +87,16 @@ public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclarat
           .put("Uuid", new ValueType(UuidType.class, String.class))
           .build();
 
+  // Reverse mapping from HAPI class to type name for serialisation.
+  private static final Map<Class<? extends IBase>, String> classToTypeName =
+      typeMap.entrySet().stream()
+          .collect(
+              java.util.stream.Collectors.toMap(
+                  e -> e.getValue().typeClass(),
+                  Map.Entry::getKey,
+                  // Handle duplicate classes (Integer64 uses IntegerType) - keep first.
+                  (a, b) -> a));
+
   @Override
   public ConstantDeclaration read(final JsonReader in) throws IOException {
     // Parse the input JSON.
@@ -101,14 +114,14 @@ public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclarat
     // Extract the value of the constant from the JSON object.
     final IBase value;
     final List<String> valueKeys =
-        jsonObject.keySet().stream().filter(key -> key.startsWith("value")).toList();
+        jsonObject.keySet().stream().filter(key -> key.startsWith(VALUE_PREFIX)).toList();
     if (valueKeys.size() != 1) {
       throw new InvalidUserInputError("Constant must have one value");
     }
 
     // Determine the type of the constant value.
-    final String valueKey = valueKeys.get(0);
-    final String typeName = valueKey.replace("value", "");
+    final String valueKey = valueKeys.getFirst();
+    final String typeName = valueKey.replace(VALUE_PREFIX, "");
     final ValueType valueType = typeMap.get(typeName);
     if (valueType == null) {
       throw new InvalidUserInputError("Unsupported constant type: " + valueKey);
@@ -121,8 +134,46 @@ public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclarat
   }
 
   @Override
-  public void write(final JsonWriter out, final ConstantDeclaration value) throws IOException {
-    throw new UnsupportedOperationException("This adapter does not support writing");
+  public void write(final JsonWriter out, final ConstantDeclaration constant) throws IOException {
+    out.beginObject();
+    out.name("name").value(constant.getName());
+
+    // Determine the type suffix and write the value.
+    final IBase value = constant.getValue();
+    final String typeSuffix = getTypeSuffix(value);
+    out.name(VALUE_PREFIX + typeSuffix);
+    writeValue(out, value);
+
+    out.endObject();
+  }
+
+  /** Gets the type suffix for a FHIR primitive value (e.g., "String", "Boolean", "Integer"). */
+  @Nonnull
+  private static String getTypeSuffix(@Nonnull final IBase value) {
+    final String typeName = classToTypeName.get(value.getClass());
+    if (typeName == null) {
+      throw new InvalidUserInputError(
+          "Unsupported constant type: " + value.getClass().getSimpleName());
+    }
+    return typeName;
+  }
+
+  /**
+   * Writes the primitive value to the JSON output in its native JSON type. Note that
+   * PositiveIntType and UnsignedIntType extend IntegerType, so they are handled by the IntegerType
+   * case.
+   */
+  private static void writeValue(@Nonnull final JsonWriter out, @Nonnull final IBase value)
+      throws IOException {
+    switch (value) {
+      case final BooleanType b -> out.value(b.getValue());
+      case final IntegerType i -> out.value(i.getValue());
+      case final DecimalType d -> out.value(d.getValue());
+      case final org.hl7.fhir.r4.model.PrimitiveType<?> p -> out.value(p.getValueAsString());
+      default ->
+          throw new InvalidUserInputError(
+              "Cannot serialise constant: " + value.getClass().getSimpleName());
+    }
   }
 
   @Nonnull

@@ -18,12 +18,14 @@ from typing import Dict, Sequence, Optional, Callable, Union
 from typing import List, TYPE_CHECKING
 
 from json import dumps, loads
-from py4j.java_gateway import JavaObject
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Sequence
+
 from py4j.java_collections import SetConverter
+from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
 
 from pathling import PathlingContext
-from pathling.core import StringToStringSetMapper, SparkConversionsMixin
+from pathling.core import SparkConversionsMixin, StringToStringSetMapper
 from pathling.fhir import MimeType
 from pathling.spark import Dfs
 

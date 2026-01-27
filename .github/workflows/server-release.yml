@@ -1,0 +1,73 @@
+# This workflow builds and deploys the server Docker image to GHCR.
+
+name: Release server
+
+# This workflow is only run when a release is published with a server-v* tag.
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  release-server:
+    name: Build and push Docker image
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref_name, 'server-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+          bun: "true"
+          sonar-cache: "true"
+
+      # Release won't be possible if there are outstanding vulnerabilities of medium severity or
+      # higher as reported by Trivy.
+      - name: Run security scan
+        uses: ./.github/actions/trivy-scan
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build, test, and push Docker image
+        working-directory: server
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn --batch-mode deploy -Pdocker -Dmaven.deploy.skip \
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.sarifReportPaths=../trivy-results.sarif
+        timeout-minutes: 30
+
+      - name: Save test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-surefire-reports
+          path: "server/**/surefire-reports/"
+
+      - name: Save coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage-reports
+          path: |
+            server/**/jacoco.exec
+            server/**/jacoco.xml
+            server/**/target/site/jacoco

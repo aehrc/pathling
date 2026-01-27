@@ -1,0 +1,90 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "viewdefinition-export",
+  "title": "Pathling ViewDefinition Export Operation",
+  "status": "active",
+  "kind": "operation",
+  "experimental": false,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation executes one or more SQL on FHIR ViewDefinitions against the data within the Pathling server, writing the results to files that can be downloaded asynchronously. Supports NDJSON, CSV, and Parquet output formats.",
+  "affectsState": false,
+  "code": "viewdefinition-export",
+  "system": true,
+  "type": false,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "view",
+      "use": "in",
+      "min": 1,
+      "max": "*",
+      "documentation": "One or more ViewDefinitions to export. Each view produces a separate output file.",
+      "part": [
+        {
+          "name": "name",
+          "use": "in",
+          "min": 0,
+          "max": "1",
+          "documentation": "Optional name for the output. If not provided, the ViewDefinition's resource type will be used with an index suffix.",
+          "type": "string"
+        },
+        {
+          "name": "viewResource",
+          "use": "in",
+          "min": 1,
+          "max": "1",
+          "documentation": "The ViewDefinition resource defining the view to execute.",
+          "type": "Resource"
+        }
+      ]
+    },
+    {
+      "name": "clientTrackingId",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Client-provided tracking identifier for the export request.",
+      "type": "string"
+    },
+    {
+      "name": "_format",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Output format for the exported files. Supported values: 'ndjson' (default), 'csv', 'parquet'.",
+      "type": "code"
+    },
+    {
+      "name": "header",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "For CSV output, whether to include a header row. Defaults to true.",
+      "type": "boolean"
+    },
+    {
+      "name": "patient",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "Patient ID(s) to filter the view results to resources within those patients' compartments.",
+      "type": "id"
+    },
+    {
+      "name": "group",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "Group ID(s) to filter the view results to resources within the compartments of patients in those groups.",
+      "type": "id"
+    },
+    {
+      "name": "_since",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Only include resources that have been updated since the specified timestamp.",
+      "type": "instant"
+    }
+  ]
+}

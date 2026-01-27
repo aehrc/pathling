@@ -68,42 +68,51 @@ Examples of the types of questions that can be answered include:
 See [Terminology functions](https://pathling.csiro.au/docs/libraries/terminology)
 for more information.
 
-### What happened to the server and some of the query functionality?
+### Server
 
-As part of the version 8 release, we took the decision to significantly change
-the focus and scope of Pathling with the purpose of rebuilding it around
-the [SQL on FHIR](https://sql-on-fhir.org) specification.
+Pathling Server is a FHIR R4 analytics server that exposes a range of
+functionality for use by applications and implements:
 
-This will mean that the server implementation will be temporarily removed. It
-will also mean that the scope
-of [FHIRPath functions](https://pathling.csiro.au/docs/fhirpath) will be
-temporarily reduced to the minimal FHIRPath subset defined within the SQL on
-FHIR [Shareable View Definition](https://sql-on-fhir.org/ig/latest/StructureDefinition-ShareableViewDefinition.html)
-specification (with the exception of the terminology functions).
+- **SQL on FHIR**:
+  [Run](https://pathling.csiro.au/docs/server/operations/view-run) view
+  definitions to
+  preview tabular projections of FHIR data,
+  then [export](https://pathling.csiro.au/docs/server/operations/view-export) to
+  NDJSON, CSV, or Parquet
+- **Bulk Data Access
+  **: [Export data](https://pathling.csiro.au/docs/server/operations/export) at
+  system,
+  patient, or group level using the FHIR Bulk Data Access specification
+- **Bulk Import
+  **: [Import data](https://pathling.csiro.au/docs/server/operations/import)
+  from NDJSON,
+  Parquet, or Delta Lake sources,
+  or [sync with another FHIR server](https://pathling.csiro.au/docs/server/deployment/synchronization)
+  that supports bulk export
+- **[Bulk Submit](https://pathling.csiro.au/docs/server/operations/bulk-submit)
+  **: An experimental
+  implementation of the new Bulk Submit proposal
+- **[FHIRPath Search](https://pathling.csiro.au/docs/server/operations/search)
+  **: Query resources using
+  FHIRPath expressions
+- **[CRUD Operations](https://pathling.csiro.au/docs/server/operations/crud)**:
+  Create, read, update, and
+  delete resources
 
-We have released this functionality as version 8, and we have spawned three work
-streams to build upon this new foundation:
+The server is distributed as a Docker image. It
+supports [authentication](https://pathling.csiro.au/docs/server/authorization)
+and also can be scaled
+over a cluster
+on [Kubernetes](https://pathling.csiro.au/docs/server/deployment/kubernetes) or
+other
+Apache Spark clustering solutions.
 
-- Implementation of a new server focused upon
-  the [Bulk Data Access IG](https://hl7.org/fhir/uv/bulkdata/) and the draft SQL
-  on FHIR server API. This server will not include the aggregate or extract
-  operations.
-- Expansion of the scope of the FHIRPath implementation to achieve full or close
-  to full coverage of the FHIRPath spec.
-- Implementation of [Parquet on FHIR](https://github.com/aehrc/parquet-on-fhir)
-  as the new schema for lossless persistence of FHIR data for analytics.
-
-We think that this is the best way to align Pathling to user needs, and also to
-make sure that the code base is sustainable going forwards.
-
-If you are a current user of the server, aggregate or extract operations, please
-continue using the [v7.x series](https://pathling.csiro.au/docs/7.2.0). We are
-happy to continue maintaining and accepting contributions to this series as
-requested by users, but will be focusing our enhancement efforts on v8.
+See [Server](https://pathling.csiro.au/docs/server) for installation and
+configuration details.
 
 ## Artifact signing
 
-Published Maven artifacts are signed with the following GPG key:
+Published Maven artifacts and Helm charts are signed with the following GPG key:
 
 - **Key ID**: `ED48678D`
 - **Fingerprint**: `F814 751C 64B5 F5E7 08A8 C73F C3C6 291F ED48 678D`

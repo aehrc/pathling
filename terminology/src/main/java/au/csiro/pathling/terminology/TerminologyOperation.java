@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,6 +59,8 @@ public interface TerminologyOperation<R, T> {
   T extractResult(@Nonnull final R response);
 
   /**
+   * Returns the fallback result for invalid requests.
+   *
    * @return the result that should be returned to the user if the terminology server returns a 400
    *     series response
    */

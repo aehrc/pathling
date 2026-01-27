@@ -10,18 +10,39 @@ on:
     branches:
       - "release/*"
 
-env:
-  # The add-exports and add-opens flags are required for Java 21
-  MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
-
-permissions:
-  id-token: write
-
 jobs:
+  detect-changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      ui: ${{ steps.filter.outputs.ui }}
+      server: ${{ steps.filter.outputs.server }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # Compare against the merge base to detect all changes on the release branch.
+          base: main
+          filters: |
+            ui:
+              - 'ui/**'
+            server:
+              - 'server/**'
+
   pre-release:
     name: Pre-release to Maven Central
     environment: maven-central
     runs-on: ubuntu-latest
+    needs: detect-changes
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,61 +50,15 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
         with:
-          java-version: 21
-          distribution: "zulu"
-          
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-
-      - name: Set up R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: "4.1.3"
-          use-public-rspm: true
-
-      - name: Set up Pandoc
-        uses: r-lib/actions/setup-pandoc@v2
-
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-
-
-      - name: Cache Python packages
-        uses: actions/cache@v4
-        with:
-          path: /home/runner/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements/dev.txt', 'lib/python/requirements/package.txt') }}
-
-      - name: Cache R packages
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/Library
-          key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
-          restore-keys: r-packages-${{ runner.os }}-
-
-      - name: Cache SonarQube packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-
-      - name: Install TinyTeX and libcurl
-        # These are required for building the R package documentation.
-        run: |
-          wget -qO- "https://yihui.org/tinytex/install-bin-unix.sh" | sh
-          echo "$HOME/bin" >> $GITHUB_PATH
-          sudo apt-get install -y libcurl4-openssl-dev
+          java: "true"
+          r: "true"
+          r-pandoc: "true"
+          python: "true"
+          bun: "true"
+          sonar-cache: "true"
 
       - name: Install GPG key
         env:
@@ -103,23 +78,12 @@ jobs:
             }]
 
       - name: Run security scan
-        uses: aquasecurity/trivy-action@0.32.0
-        env:
-          # We update the database separately within the `update-trivy` workflow.
-          TRIVY_SKIP_DB_UPDATE: true
-          TRIVY_SKIP_JAVA_DB_UPDATE: true
+        uses: ./.github/actions/trivy-scan
         with:
-          scan-type: repo
-          scan-ref: .
-          ignore-unfixed: true
-          format: sarif
-          output: trivy-results.sarif
-          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/sof-js/package-lock.json,licenses/**/*,site/package-lock.json
+          skip-db-update: "true"
 
       - name: Run deploy goal (pre-release)
         env:
-          PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
-          PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
           R_KEEP_PKG_SOURCE: yes
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -132,54 +96,14 @@ jobs:
           -pl '!benchmark' -Pdocs,mavenPreRelease,check
         timeout-minutes: 60
 
-      - name: Save test reports
-        uses: actions/upload-artifact@v4
+      - name: Upload test artifacts
+        if: always()
+        uses: ./.github/actions/upload-test-artifacts
         with:
-          name: surefire-reports
-          path: "**/surefire-reports/"
-
-      - name: Save coverage reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-reports
-          path: |
-            **/jacoco.xml
-            **/target/site/jacoco
-            **/target/site/jacoco-aggregate
-            lib/python/**/coverage.xml
-
-      - name: Save built JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: jars
-          path: |
-            utilities/target/utilities-*.jar
-            encoders/target/encoders-*.jar
-            terminology/target/terminology-*.jar
-            fhirpath/target/fhirpath-*.jar
-            library-api/target/library-api-*.jar
-            library-runtime/target/library-runtime-*.jar
-            lib/python/target/python-*.jar
-            lib/R/target/r-*.jar
-          if-no-files-found: "error"
-
-      - name: Save Python wheel
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-wheel
-          path: lib/python/target/py-dist/pathling-*.whl
-
-      - name: Save R package
-        uses: actions/upload-artifact@v4
-        with:
-          name: r-package
-          path: lib/R/target/pathling_*.tar.gz
-
-      - name: Save site
-        uses: actions/upload-artifact@v4
-        with:
-          name: site
-          path: site/target/site/
+          include-jars: "true"
+          include-python: "true"
+          include-r: "true"
+          include-site: "true"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -189,3 +113,16 @@ jobs:
 
       - name: Upload SQL on FHIR test report to S3
         run: aws s3 cp fhirpath/target/fhir-view-compliance-test.json s3://pathling-benchmark/test-reports/${{ github.ref }}/sof-test-results.json
+
+  test-ui:
+    name: Test UI
+    needs: [detect-changes, pre-release]
+    if: needs.detect-changes.outputs.ui == 'true'
+    uses: ./.github/workflows/ui-test.yml
+
+  test-server:
+    name: Test server
+    needs: [detect-changes, pre-release]
+    if: needs.detect-changes.outputs.server == 'true'
+    uses: ./.github/workflows/server-test.yml
+    secrets: inherit

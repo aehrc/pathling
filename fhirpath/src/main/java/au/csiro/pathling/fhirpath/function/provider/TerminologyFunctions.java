@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,7 +98,7 @@ public abstract class TerminologyFunctions {
    *   <li>DateTime
    * </ul>
    *
-   * Both the {@code code} and the {@code type} of the property must be present within a lookup
+   * <p>Both the {@code code} and the {@code type} of the property must be present within a lookup
    * response in order for it to be returned by this function. If there are no matches, the function
    * will return an empty collection.
    *
@@ -204,7 +204,7 @@ public abstract class TerminologyFunctions {
    * members of the value set.
    *
    * @param input The input collection of Codings or CodeableConcepts
-   * @param valueSetURL The URL of the ValueSet to check membership against
+   * @param valueSetUrl The URL of the ValueSet to check membership against
    * @return A collection of boolean values
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#memberof">Pathling
    *     documentation - memberOf</a>
@@ -212,8 +212,8 @@ public abstract class TerminologyFunctions {
   @FhirPathFunction
   @Nonnull
   public static BooleanCollection memberOf(
-      @Nonnull final TerminologyConcepts input, @Nonnull final StringCollection valueSetURL) {
-    return BooleanCollection.build(input.apply("member_of", valueSetURL.getColumn().singular()));
+      @Nonnull final TerminologyConcepts input, @Nonnull final StringCollection valueSetUrl) {
+    return BooleanCollection.build(input.apply("member_of", valueSetUrl.getColumn().singular()));
   }
 
   /**

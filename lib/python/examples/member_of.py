@@ -17,9 +17,9 @@ import os
 
 from pathling import (
     PathlingContext,
-    to_snomed_coding,
-    to_ecl_value_set,
     member_of,
+    to_ecl_value_set,
+    to_snomed_coding,
 )
 
 HERE = os.path.abspath(os.path.dirname(__file__))

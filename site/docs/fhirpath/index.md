@@ -1,4 +1,5 @@
 ---
+sidebar_position: 1
 description: Pathling implements FHIRPath functionality to aid in querying and constructing views over FHIR data.
 ---
 
@@ -8,309 +9,196 @@ Pathling leverages the [FHIRPath](https://hl7.org/fhirpath/)
 language in order to abstract away some of the complexity of navigating and
 interacting with FHIR data structures.
 
-Pathling implements the minimal FHIRPath subset within
+Pathling implements the FHIRPath subset within
 the [Sharable View Definition](https://sql-on-fhir.org/ig/latest/StructureDefinition-ShareableViewDefinition.html#required-fhirpath-expressionsfunctions)
 profile of
-the [SQL on FHIR view definition](https://sql-on-fhir.org/ig/latest/StructureDefinition-ViewDefinition.html).
+the [SQL on FHIR view definition](https://sql-on-fhir.org/ig/latest/StructureDefinition-ViewDefinition.html),
+plus additional terminology and utility functions.
 
-## Functions
+## Supported language features
 
-The following functions have been implemented in Pathling in addition to the
-standard set of functions within the specification.
+### Path navigation
 
-The notation used to describe the type signature of each function is as follows:
-
-```
-[input type] -> [function name]([argument name]: [argument type], ...): [return type]
-```
-
-### designation
+Pathling supports standard
+FHIRPath [path navigation](https://hl7.org/fhirpath/#path-selection) using dot
+notation:
 
 ```
-collection<Coding -> designation(use: Coding, language: String) : collection<String>
+Patient.name.given
+Observation.code.coding.system
 ```
 
-When invoked on a collection of [Coding](#coding) elements, returns
-a collection of designation values from
-the [lookup](https://www.hl7.org/fhir/codesystem-operation-lookup.html)
-operation. This can be used to retrieve synonyms, language translations and more
-from the underlying terminology.
-
-If the `use` parameter is specified, designation values are filtered to only
-those with a matching use. If the `language` parameter is specified, designation
-values are filtered to only those with a matching language. If both are
-specified, designation values must match both the specified use and language.
-
-See [Display, Definition and Designations](https://www.hl7.org/fhir/codesystem.html#designations)
-in the FHIR specification for more information.
-
-Example:
+Array indexing is supported using bracket notation:
 
 ```
-// Retrieve SNOMED CT synonyms.
-Condition.code.coding.designation(http://snomed.info/sct|900000000000013009)
+Patient.name[0].given
 ```
 
-:::note
-The `designation` function is a terminology function, which means that it
-requires a
-configured [terminology service](https://hl7.org/fhir/R4/terminology-service.html).
-See [Terminology functions](/docs/libraries/terminology) for
-details.
-:::
-
-:::note
-The `designation` function is not within the FHIRPath specification, and is
-currently unique to the Pathling implementation.
-:::
-
-### display
-
-```
-collection<Coding> -> display(language?: String) : collection<String>
-```
-
-When invoked on a [Coding](#coding), returns the preferred display
-term, according to the terminology server.
-
-The optional `language` parameter can be used to specify the preferred language
-for the display name. It overrides the default value set in the configuration.
-See [Multi-language support](/docs/libraries/terminology#multi-language-support)
-for details.
-
-Example:
-
-```
-// With no argument
-Condition.code.display()
-
-// Prefer German language.
-Condition.code.display("de")
-```
-
-:::note
-The `display` function is a terminology function, which means that it requires
-a configured
-[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Terminology functions](/docs/libraries/terminology) for details.
-:::
-
-:::note
-The `display` function is not within the FHIRPath specification, and is
-currently unique to the Pathling implementation.
-:::
-
-### memberOf
-
-```
-collection<Coding|CodeableConcept> -> memberOf() : collection<Boolean>
-```
-
-The `memberOf` function can be invoked on a collection of
-[Coding](#coding) or
-[CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept)
-values, returning a collection of Boolean values
-based on whether each concept is a member of the
-[ValueSet](https://hl7.org/fhir/R4/valueset.html) with the specified
-[url](https://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.url).
-
-For a `CodeableConcept`, the function will return `true` if any of
-the codings are members of the value set.
-
-:::note
-The `memberOf` function is a terminology function, which means that it requires
-a configured
-[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Terminology functions](/docs/libraries/terminology) for details.
-:::
-
-See also:
-[Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
-
-### property
-
-```
-collection<Coding> -> property(code: String, type: String = 'string', language?: String) : collection<String|Integer|DateTime|Decimal|Coding>
-```
-
-When invoked on a [Coding](#coding), returns any matching property
-values, using the specified `name` and `type` parameters.
-
-The `type` parameter has these possible values:
-
-- `string` (default)
-- `code`
-- `Coding`
-- `integer`
-- `boolean`
-- `DateTime`
-
-Both the `code` and the `type` of the property must be present within a
-[lookup](https://www.hl7.org/fhir/codesystem-operation-lookup.html) response in
-order for it to be returned by this function. If there are no matches, the
-function will return an empty collection.
-
-The optional `language` parameter can be used to specify the preferred language
-for the returned property values. It overrides the default value set in the
-configuration. See
-[Multi-language support](/docs/libraries/terminology#multi-language-support)
-for details.
+The `$this` special variable is supported for referring to the current context
+within expressions.
 
-See [Properties](https://www.hl7.org/fhir/codesystem.html#properties)
-in the FHIR specification for more information.
+### Literals
 
-Example:
+Pathling supports the
+following [literal types](https://hl7.org/fhirpath/#literals):
 
-```
-// Select the code-typed property "parent".
-Condition.code.coding.property('parent', 'code')
+| Type     | Syntax                     | Examples               |
+| -------- | -------------------------- | ---------------------- |
+| Boolean  | `true`, `false`            | `active = true`        |
+| String   | Single quotes with escapes | `'hello'`, `'it\'s'`   |
+| Integer  | Whole numbers              | `123`, `-45`           |
+| Decimal  | Numbers with decimal point | `3.14`, `-0.5`         |
+| Date     | `@` prefix, ISO 8601       | `@2023-01-15`          |
+| DateTime | `@` prefix, ISO 8601       | `@2023-01-15T14:30:00` |
+| Time     | `@T` prefix                | `@T14:30:00`           |
+| Quantity | Number with unit           | `10 'mg'`, `4 days`    |
 
-// Select the "parent" property, preferring the German language.
-Condition.code.coding.property('parent', 'code', 'de')
-```
-
-:::note
-The `property` function is a terminology function, which means that it requires
-a configured
-[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Terminology functions](/docs/libraries/terminology) for details.
-:::
+### Operators
 
-:::note
-The `property` function is not within the FHIRPath specification, and is
-currently unique to the Pathling implementation.
-:::
+See [Operators](https://hl7.org/fhirpath/#operators) in the FHIRPath
+specification for detailed semantics.
 
-### subsumes
+#### Comparison operators
 
-```
-collection<Coding|CodeableConcept> -> subsumes(code: Coding|CodeableConcept) : collection<Boolean>
-```
+| Operator | Description              |
+| -------- | ------------------------ |
+| `=`      | Equality                 |
+| `!=`     | Inequality               |
+| `<`      | Less than                |
+| `<=`     | Less than or equal to    |
+| `>`      | Greater than             |
+| `>=`     | Greater than or equal to |
 
-This function takes a collection of [Coding](#coding) or
-[CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept)
-elements as input, and another collection as the argument. The result is a
-collection with a Boolean value for each source concept, each value being true
-if the concept subsumes any of the concepts within the argument collection, and
-false otherwise.
+#### Boolean operators
 
-Example:
+| Operator  | Description         |
+| --------- | ------------------- |
+| `and`     | Logical AND         |
+| `or`      | Logical OR          |
+| `xor`     | Exclusive OR        |
+| `implies` | Logical implication |
+
+#### Arithmetic operators
+
+| Operator | Description    |
+| -------- | -------------- |
+| `+`      | Addition       |
+| `-`      | Subtraction    |
+| `*`      | Multiplication |
+| `/`      | Division       |
+| `mod`    | Modulus        |
+
+Unary `+` and `-` are also supported for numeric values.
+
+#### String operators
+
+| Operator | Description          |
+| -------- | -------------------- |
+| `&`      | String concatenation |
+
+#### Collection operators
 
-```
-Patient.reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|770581008)
-```
-
-:::note
-The `subsumes` function is a terminology function, which means that it requires
-a configured
-[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Terminology functions](/docs/libraries/terminology) for details.
-:::
-
-See also:
-[Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
-
-### subsumedBy
-
-```
-collection<Coding|CodeableConcept> -> subsumedBy(code: Coding|CodeableConcept) : collection<Boolean>
-```
-
-The `subsumedBy` function is the inverse of the [subsumes](#subsumes) function,
-examining whether each input concept is _subsumed by_ any of the argument
-concepts.
-
-Example:
-
-```
-Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|73211009)
-```
-
-:::note
-The `subsumedBy` function is a terminology function, which means that it
-requires a configured
-[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Terminology functions](/docs/libraries/terminology) for details.
-:::
-
-See also:
-[Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
-
-### translate
-
-```
-collection<Coding|CodeableConcept> -> translate(conceptMapUrl: String, reverse: Boolean = false, equivalence: String = 'equivalent', target?: String) : collection<Coding>
-```
-
-When invoked on a [Coding](#coding), returns any
-matching concepts using the ConceptMap specified using `conceptMapUrl`.
-
-The `reverse` parameter controls the direction to traverse the map - `false`
-results in "source to target" mappings, while `true` results in "target to
-source".
-
-The `equivalence` parameter is a comma-delimited set of values from
-the [ConceptMapEquivalence](https://www.hl7.org/fhir/R4/valueset-concept-map-equivalence.html)
-ValueSet, and is used to filter the mappings returned to only those that have an
-equivalence value in this list.
-
-The `target` parameter identifies the value set in which a translation is
-sought &mdash; a scope for the translation.
-
-Example:
-
-```
-Condition.code.coding.translate('https://csiro.au/fhir/ConceptMap/some-map', true, 'equivalent,wider').display
-```
-
-:::note
-The `translate` function is a terminology function, which means that it requires
-a configured
-[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Terminology functions](/docs/libraries/terminology) for details.
-:::
-
-:::note
-The `translate` function is not within the FHIRPath specification, and is
-currently unique to the Pathling implementation.
-:::
-
-## Data types
-
-Pathling implements the following additions in the area of data types.
-
-### Coding
-
-A [Coding](https://hl7.org/fhir/R4/datatypes.html#Coding) is a representation of
-a defined concept using a symbol from a defined
-[code system](https://hl7.org/fhir/R4/codesystem.html) - see
-[Using Codes in resources](https://hl7.org/fhir/R4/terminologies.html) for more
-details.
-
-The Coding literal comprises a minimum of `system` and `code`, as well as
-optional `version`, `display`, `userSelected` components:
-
-```
-<system>|<code>[|<version>][|<display>[|<userSelected>]]]
-```
-
-Not all code systems require the use of a version to unambiguously specify a
-code - see
-[Versioning Code Systems](https://hl7.org/fhir/R4/codesystem.html#versioning).
-
-You can also optionally single-quote each of the components within the Coding
-literal, in cases where certain characters might otherwise confuse the parser.
-
-Examples:
-
-```
-http://snomed.info/sct|52101004
-http://snomed.info/sct|52101004||Present
-http://terminology.hl7.org/CodeSystem/condition-category|problem-list-item|4.0.1|'Problem List Item'
-http://snomed.info/sct|'397956004 |Prosthetic arthroplasty of the hip|: 363704007 |Procedure site| = ( 24136001 |Hip joint structure|: 272741003 |Laterality| =  7771000 |Left| )'
-```
-
-:::note
-The Coding literal is not within the FHIRPath specification, and is currently
-unique to the Pathling implementation.
-:::
+| Operator   | Description                         |
+| ---------- | ----------------------------------- |
+| `\|`       | Union of two collections            |
+| `in`       | Test if element is in collection    |
+| `contains` | Test if collection contains element |
+
+#### Type operators
+
+| Operator | Description   |
+| -------- | ------------- |
+| `is`     | Type checking |
+| `as`     | Type casting  |
+
+### Standard functions
+
+The following standard FHIRPath functions are implemented. See
+[Functions](https://hl7.org/fhirpath/#functions) in the FHIRPath specification
+for detailed semantics.
+
+#### Existence functions
+
+| Function            | Description                                                                        |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| `exists(criteria?)` | Returns `true` if the collection has any elements, optionally filtered by criteria |
+| `empty()`           | Returns `true` if the collection is empty                                          |
+
+#### Filtering and projection functions
+
+| Function          | Description                              |
+| ----------------- | ---------------------------------------- |
+| `where(criteria)` | Filter collection by criteria expression |
+| `ofType(type)`    | Filter collection by type                |
+
+#### Subsetting functions
+
+| Function  | Description                                 |
+| --------- | ------------------------------------------- |
+| `first()` | Returns the first element of the collection |
+
+#### Boolean functions
+
+| Function | Description      |
+| -------- | ---------------- |
+| `not()`  | Boolean negation |
+
+#### String functions
+
+| Function           | Description                          |
+| ------------------ | ------------------------------------ |
+| `join(separator?)` | Join strings with optional separator |
+
+#### Type functions
+
+| Function   | Description                                 |
+| ---------- | ------------------------------------------- |
+| `is(type)` | Type checking (equivalent to `is` operator) |
+| `as(type)` | Type casting (equivalent to `as` operator)  |
+
+#### Conversion functions
+
+| Function            | Description                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| `toBoolean()`       | Convert to Boolean                                           |
+| `toInteger()`       | Convert to Integer                                           |
+| `toDecimal()`       | Convert to Decimal                                           |
+| `toString()`        | Convert to String                                            |
+| `toDate()`          | Convert to Date                                              |
+| `toDateTime()`      | Convert to DateTime                                          |
+| `toTime()`          | Convert to Time                                              |
+| `toQuantity(unit?)` | Convert to Quantity with optional unit conversion using UCUM |
+
+| Function                    | Description                      |
+| --------------------------- | -------------------------------- |
+| `convertsToBoolean()`       | Check if convertible to Boolean  |
+| `convertsToInteger()`       | Check if convertible to Integer  |
+| `convertsToDecimal()`       | Check if convertible to Decimal  |
+| `convertsToString()`        | Check if convertible to String   |
+| `convertsToDate()`          | Check if convertible to Date     |
+| `convertsToDateTime()`      | Check if convertible to DateTime |
+| `convertsToTime()`          | Check if convertible to Time     |
+| `convertsToQuantity(unit?)` | Check if convertible to Quantity |
+
+### Limitations
+
+The following FHIRPath features are **not currently supported**:
+
+- **Equivalence operators**: `~` and `!~`
+- **Lambda expressions**
+- **Aggregate functions**: `count()`, `sum()`, `avg()`, `min()`, `max()`
+- **Special variables**: `$index`, `$total`
+- **Quantity arithmetic**: Math operations on Quantity types
+- **DateTime arithmetic**: DateTime math operations
+- **Full `resolve()`**: Traversal of resolved references
+
+## Additional functions
+
+Pathling also supports additional functions beyond the standard FHIRPath specification:
+
+- [FHIR-specific functions](fhir-functions.md) - Functions defined in the FHIR
+  specification for use with FHIR data, including `extension`, `resolve`,
+  `memberOf`, `subsumes`, and `subsumedBy`.
+- [Extension functions](extension-functions.md) - Functions unique to Pathling,
+  including terminology functions like `designation`, `display`, `property`, and
+  `translate`, plus the Coding literal data type.

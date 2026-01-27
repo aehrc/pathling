@@ -15,9 +15,10 @@
 
 import logging
 import os
+from tempfile import mkdtemp
+
 from pyspark.sql import SparkSession
 from pytest import fixture
-from tempfile import mkdtemp
 
 from pathling import PathlingContext
 from pathling._version import __java_version__

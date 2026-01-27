@@ -1,0 +1,97 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "import-pnp",
+  "title": "Pathling Ping and Pull Import Operation",
+  "status": "active",
+  "kind": "operation",
+  "experimental": false,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation allows bulk FHIR data to be imported via a ping and pull workflow, where the server fetches data from a remote FHIR bulk export endpoint, aligned with the SMART Bulk Data Import proposal (Ping and Pull Approach).",
+  "affectsState": true,
+  "code": "import-pnp",
+  "system": true,
+  "type": false,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "exportUrl",
+      "use": "in",
+      "min": 1,
+      "max": "1",
+      "documentation": "The base URL of the FHIR bulk export endpoint to import data from (e.g. https://example.org/fhir/$export or https://example.org/fhir/$export?_type=Patient)",
+      "type": "url"
+    },
+    {
+      "name": "exportType",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "The type of bulk export being requested. Possible values are 'dynamic' (default) or 'static'. Dynamic exports include data as of the time the export completes, whilst static exports include data as of the time the export is initiated.",
+      "type": "code"
+    },
+    {
+      "name": "saveMode",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Controls how data is merged with existing resources. Possible values are 'error' (fail if resources exist), 'overwrite' (delete and replace all existing resources; default), 'append' (add new resources without modifying existing), 'ignore' (skip if resources exist), and 'merge' (match by ID and update or add as appropriate). This parameter is an extension to the SMART Bulk Data Import proposal that is specific to the Pathling implementation.",
+      "type": "code"
+    },
+    {
+      "name": "inputFormat",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "The MIME type of the input files. Supported values are 'application/fhir+ndjson' (default) and 'application/vnd.apache.parquet'.",
+      "type": "code"
+    },
+    {
+      "name": "_type",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "Resource types to include in the export. When omitted, all supported resource types are exported. This parameter is passed through to the remote bulk export endpoint.",
+      "type": "string"
+    },
+    {
+      "name": "_since",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Export resources that were modified after this timestamp. This parameter is passed through to the remote bulk export endpoint.",
+      "type": "instant"
+    },
+    {
+      "name": "_until",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Export resources that were modified before this timestamp. This parameter is passed through to the remote bulk export endpoint.",
+      "type": "instant"
+    },
+    {
+      "name": "_elements",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "Elements to include in the export output. This experimental parameter is passed through to the remote bulk export endpoint.",
+      "type": "string"
+    },
+    {
+      "name": "_typeFilter",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "FHIR search queries to filter resources during export (e.g., 'Patient?active=true'). This parameter is passed through to the remote bulk export endpoint.",
+      "type": "string"
+    },
+    {
+      "name": "includeAssociatedData",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "Pre-defined sets of associated data to include in the export (e.g., 'LatestProvenanceResources'). This experimental parameter is passed through to the remote bulk export endpoint.",
+      "type": "code"
+    }
+  ]
+}

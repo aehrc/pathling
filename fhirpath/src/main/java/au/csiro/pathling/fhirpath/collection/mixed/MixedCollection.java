@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.collection.mixed;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.UnsupportedRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
+import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Getter;
@@ -31,6 +32,9 @@ import lombok.Getter;
  */
 @Getter
 public abstract class MixedCollection extends Collection {
+
+  /** The description used for unsupported operation error messages. */
+  @Nonnull private final String unsupportedDescription;
 
   /**
    * Creates a new MixedCollection with an unsupported description.
@@ -44,6 +48,7 @@ public abstract class MixedCollection extends Collection {
         Optional.empty(),
         Optional.empty(),
         Optional.empty());
+    this.unsupportedDescription = unsupportedDescription;
   }
 
   /** Creates a new MixedCollection with a default unsupported description. */
@@ -74,5 +79,69 @@ public abstract class MixedCollection extends Collection {
     throw new UnsupportedOperationException(
         "Direct traversal of polymorphic collections is not supported."
             + " Please use 'ofType()' to specify the type of element to traverse.");
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Mixed collections cannot be converted to singular form because they have no concrete type.
+   * Use {@code ofType()} to resolve the collection to a specific type first.
+   *
+   * @throws UnsupportedOperationException always, with a message indicating how to resolve the
+   *     collection
+   */
+  @Nonnull
+  @Override
+  public Collection asSingular() {
+    throw new UnsupportedOperationException(
+        "Representation of this path is not supported: " + unsupportedDescription);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Mixed collections cannot be converted to singular form because they have no concrete type.
+   * Use {@code ofType()} to resolve the collection to a specific type first.
+   *
+   * @throws UnsupportedOperationException always, with a message indicating how to resolve the
+   *     collection
+   */
+  @Nonnull
+  @Override
+  public Collection asSingular(@Nonnull final String errorMessage) {
+    throw new UnsupportedOperationException(
+        "Representation of this path is not supported: " + unsupportedDescription);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Mixed collections cannot be converted to plural form because they have no concrete type. Use
+   * {@code ofType()} to resolve the collection to a specific type first.
+   *
+   * @throws UnsupportedOperationException always, with a message indicating how to resolve the
+   *     collection
+   */
+  @Nonnull
+  @Override
+  public Collection asPlural() {
+    throw new UnsupportedOperationException(
+        "Representation of this path is not supported: " + unsupportedDescription);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Mixed collections cannot be mapped because they have no concrete type to reconstruct. Use
+   * {@code ofType()} to resolve the collection to a specific type first.
+   *
+   * @throws UnsupportedOperationException always, with a message indicating how to resolve the
+   *     collection
+   */
+  @Nonnull
+  @Override
+  public Collection map(@Nonnull final ColumnTransform mapper) {
+    throw new UnsupportedOperationException(
+        "Representation of this path is not supported: " + unsupportedDescription);
   }
 }

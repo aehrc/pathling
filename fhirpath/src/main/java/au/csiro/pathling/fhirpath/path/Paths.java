@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +54,7 @@ public final class Paths {
    *
    * <pre>`where($this.name = 'foo')` is converted to `where(name = 'foo')`</pre>
    *
-   * but:
+   * <p>but:
    *
    * <pre>`where($this = 'foo')` remains `where($this = 'foo')`</pre>
    *

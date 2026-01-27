@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,6 +56,7 @@ import org.apache.spark.sql.types.StructType;
  * @author Piotr Szul
  */
 @Value(staticConstructor = "of")
+@SuppressWarnings({"checkstyle:MemberName", "checkstyle:ParameterName"})
 public class QuantityEncoding {
 
   /** The name of the column containing the numeric value of the quantity. */
@@ -224,6 +225,77 @@ public class QuantityEncoding {
             canonicalizedCode,
             _fid)
         .toStruct();
+  }
+
+  /**
+   * Decodes a FhirPathQuantity from a Row.
+   *
+   * @param row the row to decode
+   * @return the resulting FhirPathQuantity
+   */
+  @Nullable
+  public static FhirPathQuantity decode(@Nullable final Row row) {
+    if (row == null) {
+      return null;
+    }
+    // Extract value with scale handling
+    @Nullable final Integer scale = !row.isNullAt(2) ? row.getInt(2) : null;
+    @Nullable
+    final BigDecimal value =
+        Optional.ofNullable(row.getDecimal(1))
+            .map(
+                bd ->
+                    nonNull(scale) && bd.scale() > scale
+                        ? bd.setScale(scale, RoundingMode.HALF_UP)
+                        : bd)
+            .orElse(null);
+
+    @Nullable final String unit = row.getString(4);
+    @Nullable final String system = row.getString(5);
+    @Nullable final String code = row.getString(6);
+    return FhirPathQuantity.of(value, system, code, unit);
+  }
+
+  /**
+   * Creates the data type for a Quantity struct.
+   *
+   * @return A {@link StructType} for a Quantity
+   */
+  @Nonnull
+  public static StructType dataType() {
+    final Metadata metadata = new MetadataBuilder().build();
+    final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
+    final StructField value =
+        new StructField(
+            VALUE_COLUMN,
+            DataTypes.createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale()),
+            true,
+            metadata);
+    final StructField valueScale =
+        new StructField("value_scale", DataTypes.IntegerType, true, metadata);
+    final StructField comparator =
+        new StructField("comparator", DataTypes.StringType, true, metadata);
+    final StructField unit = new StructField(UNIT_COLUMN, DataTypes.StringType, true, metadata);
+    final StructField system = new StructField(SYSTEM_COLUMN, DataTypes.StringType, true, metadata);
+    final StructField code = new StructField(CODE_COLUMN, DataTypes.StringType, true, metadata);
+    final StructField canonicalizedValue =
+        new StructField(CANONICALIZED_VALUE_COLUMN, FlexiDecimal.DATA_TYPE, true, metadata);
+    final StructField canonicalizedCode =
+        new StructField(CANONICALIZED_CODE_COLUMN, DataTypes.StringType, true, metadata);
+    final StructField fid = new StructField("_fid", DataTypes.IntegerType, true, metadata);
+    return new StructType(
+        new StructField[] {
+          id,
+          value,
+          valueScale,
+          comparator,
+          unit,
+          system,
+          code,
+          canonicalizedValue,
+          canonicalizedCode,
+          fid
+        });
   }
 
   /**

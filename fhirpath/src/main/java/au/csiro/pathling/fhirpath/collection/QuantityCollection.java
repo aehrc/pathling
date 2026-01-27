@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,10 +71,13 @@ public class QuantityCollection extends Collection implements Comparable, String
   private static final ElementDefinition LITERAL_DEFINITION = createDefinition("", 1);
 
   /**
+   * Constructs a new QuantityCollection.
+   *
    * @param columnRepresentation The column representation to use
    * @param type The FHIRPath type
    * @param fhirType The FHIR type
    * @param definition The FHIR definition
+   * @param extensionMapColumn The extension map column
    */
   public QuantityCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,

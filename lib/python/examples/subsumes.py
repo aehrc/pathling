@@ -15,7 +15,7 @@
 
 import os
 
-from pathling import PathlingContext, Coding, to_coding, subsumes
+from pathling import Coding, PathlingContext, subsumes, to_coding
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 

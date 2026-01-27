@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * An abstract representation of a projection of FHIR data, with the ability to select columns,
@@ -87,7 +86,8 @@ public class Projection {
   /**
    * Creates a new unconstrained Projection.
    *
-   * @param subjectResource the resource type that the projection is based upon
+   * @param subjectResource the resource type code that the projection is based upon (e.g.,
+   *     "Patient", "ViewDefinition")
    * @param constants the constants available to expressions within the projection
    * @param selection the clause that defines the columns to be included
    * @param where the clause that defines the rows to be included

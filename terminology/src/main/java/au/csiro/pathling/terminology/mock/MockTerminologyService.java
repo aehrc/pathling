@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,6 +41,11 @@ import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.jetbrains.annotations.Contract;
 
+/**
+ * A mock implementation of {@link TerminologyService} for testing purposes.
+ *
+ * @author John Grimes
+ */
 public class MockTerminologyService implements TerminologyService {
 
   public static final String SNOMED_URI = "http://snomed.info/sct";
@@ -100,6 +105,7 @@ public class MockTerminologyService implements TerminologyService {
   private final Map<String, ConceptMap> conceptMap = new HashMap<>();
   private final Set<Pair<SystemAndCode, SystemAndCode>> subsumes = new HashSet<>();
 
+  /** Creates a new mock terminology service with pre-configured test data. */
   public MockTerminologyService() {
     valueSets.put(
         "http://snomed.info/sct?fhir_vs=refset/723264001",

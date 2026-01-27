@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Any, Callable, Sequence, Tuple, Optional, Union
+from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
 from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject

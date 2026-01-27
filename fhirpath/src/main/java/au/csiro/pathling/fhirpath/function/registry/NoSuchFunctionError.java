@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,8 @@ public class NoSuchFunctionError extends Exception {
   @Serial private static final long serialVersionUID = 1L;
 
   /**
+   * Constructs a new NoSuchFunctionError with the specified message.
+   *
    * @param message The message to include in the exception
    */
   public NoSuchFunctionError(final String message) {
