@@ -47,18 +47,6 @@ class CatalogSink implements DataSink {
   @Nonnull private final Optional<String> format;
 
   /**
-   * Constructs a CatalogSink with the specified PathlingContext and default import mode.
-   *
-   * @param context the PathlingContext to use
-   */
-  CatalogSink(@Nonnull final PathlingContext context) {
-    this.context = context;
-    this.saveMode = SaveMode.ERROR_IF_EXISTS; // Default import mode
-    this.schema = Optional.empty(); // Schema not specified
-    this.format = Optional.empty(); // Format not specified
-  }
-
-  /**
    * Constructs a CatalogSink with the specified PathlingContext and import mode.
    *
    * @param context the PathlingContext to use

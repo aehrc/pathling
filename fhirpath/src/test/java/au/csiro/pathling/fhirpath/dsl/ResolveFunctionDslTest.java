@@ -511,7 +511,7 @@ public class ResolveFunctionDslTest extends FhirPathDslTestBase {
                                 .string(
                                     "display",
                                     "invalid-empty") // Empty reference and type - should not
-                                                     // resolve
+                        // resolve
                         ))
         .group("Resolve collections - all same type")
         .testTrue(

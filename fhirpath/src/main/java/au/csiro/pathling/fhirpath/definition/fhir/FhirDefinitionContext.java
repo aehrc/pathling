@@ -67,7 +67,8 @@ public class FhirDefinitionContext implements DefinitionContext {
     final String resourceCode = resourceType.toCode();
     final RuntimeResourceDefinition hapiDefinition =
         fhirContext.getResourceDefinition(resourceCode);
-    return new FhirResourceDefinition(resourceCode, Optional.of(resourceType), requireNonNull(hapiDefinition));
+    return new FhirResourceDefinition(
+        resourceCode, Optional.of(resourceType), requireNonNull(hapiDefinition));
   }
 
   /**

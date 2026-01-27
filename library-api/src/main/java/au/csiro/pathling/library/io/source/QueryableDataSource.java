@@ -18,7 +18,6 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
-import au.csiro.pathling.library.query.FhirSearchQuery;
 import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
@@ -62,15 +61,6 @@ public interface QueryableDataSource extends DataSource {
    */
   @Nonnull
   FhirViewQuery view(@Nullable FhirView view);
-
-  /**
-   * Creates a FHIR search query for the specified resource type.
-   *
-   * @param resourceType the resource type code (e.g., "Patient", "Observation")
-   * @return a configurable {@link FhirSearchQuery}
-   */
-  @Nonnull
-  FhirSearchQuery search(@Nonnull String resourceType);
 
   /**
    * Applies a transformation to each dataset within this data source.

@@ -121,7 +121,7 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} representing the new column
    */
   @Nonnull
-  protected abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
+  public abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
 
   /**
    * Maps the current {@link ColumnRepresentation} using a lambda function.

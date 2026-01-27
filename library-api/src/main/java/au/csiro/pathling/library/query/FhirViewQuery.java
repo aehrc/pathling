@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +23,6 @@ import au.csiro.pathling.views.FhirView;
 import com.google.gson.Gson;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.function.Function;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
@@ -39,13 +38,11 @@ import org.apache.spark.sql.Row;
  * </ul>
  *
  * @author John Grimes
+ * @see QueryBuilder
  * @see FhirView
+ * @see QueryDispatcher
  */
-public class FhirViewQuery {
-
-  @Nonnull private final String subjectResource;
-
-  @Nonnull private final Function<FhirView, Dataset<Row>> executor;
+public class FhirViewQuery extends QueryBuilder {
 
   @Nonnull private final Gson gson;
 
@@ -54,16 +51,15 @@ public class FhirViewQuery {
   /**
    * Creates a new FhirViewQuery instance.
    *
+   * @param dispatcher the query dispatcher responsible for executing the view query
    * @param subjectResource the primary FHIR resource type being queried
-   * @param executor the function responsible for executing the view query
    * @param gson the Gson instance used for JSON serialization/deserialization
    */
   public FhirViewQuery(
+      @Nonnull final QueryDispatcher dispatcher,
       @Nonnull final String subjectResource,
-      @Nonnull final Function<FhirView, Dataset<Row>> executor,
       @Nonnull final Gson gson) {
-    this.subjectResource = subjectResource;
-    this.executor = executor;
+    super(dispatcher, subjectResource);
     this.gson = gson;
   }
 
@@ -110,29 +106,20 @@ public class FhirViewQuery {
   /**
    * Executes the configured FHIR view query and returns the results.
    *
-   * <p>This method dispatches the configured view to the executor for execution against the FHIR
-   * data source. The result is a Spark Dataset containing rows of extracted data according to the
-   * view's select clauses and filtering conditions.
+   * <p>This method dispatches the configured view to the query dispatcher for execution against the
+   * FHIR data source. The result is a Spark Dataset containing rows of extracted data according to
+   * the view's select clauses and filtering conditions.
    *
    * @return a Spark Dataset containing the query results
    * @throws IllegalStateException if no view has been configured using {@link #json(String)} or
    *     {@link #view(FhirView)}
    */
   @Nonnull
+  @Override
   public Dataset<Row> execute() {
     if (fhirView == null) {
       throw new IllegalStateException("No view has been set");
     }
-    return executor.apply(fhirView);
-  }
-
-  /**
-   * Gets the subject resource type for this query.
-   *
-   * @return the subject resource type
-   */
-  @Nonnull
-  public String getSubjectResource() {
-    return subjectResource;
+    return dispatcher.dispatch(fhirView);
   }
 }

@@ -33,7 +33,7 @@ import lombok.Getter;
  *   <li>{@code system|} - matches any resource with any code in the given system
  * </ul>
  *
- * System and code use {@link Optional} semantics:
+ * <p>System and code use {@link Optional} semantics:
  *
  * <ul>
  *   <li>{@code Optional.empty()} - no constraint for that field

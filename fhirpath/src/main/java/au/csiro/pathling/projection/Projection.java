@@ -43,6 +43,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * An abstract representation of a projection of FHIR data, with the ability to select columns,

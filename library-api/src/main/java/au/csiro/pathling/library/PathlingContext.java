@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,9 +23,9 @@ import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
-import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.sql.PathlingUdfConfigurer;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
@@ -50,9 +50,7 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A class designed to provide access to selected Pathling functionality from a language library
@@ -109,7 +107,7 @@ public class PathlingContext {
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.queryConfiguration = queryConfiguration;
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
-    PathlingUdfConfigurer.registerUDFs(spark);
+    PathlingUdfConfigurer.registerUdfs(spark);
     gson = buildGson();
   }
 
@@ -397,7 +395,7 @@ public class PathlingContext {
    * Takes a dataframe with string representations of FHIR resources and encodes the resources of
    * the given type as a Spark dataframe.
    *
-   * @param stringResourcesDF the dataframe with the string representation of the resources.
+   * @param stringResourcesDf the dataframe with the string representation of the resources.
    * @param resourceName the name of the resources to encode.
    * @param inputMimeType the mime type of the encoding for the input strings.
    * @param maybeColumnName the name of the column in the input dataframe that contains the resource
@@ -406,18 +404,52 @@ public class PathlingContext {
    */
   @Nonnull
   public Dataset<Row> encode(
-      @Nonnull final Dataset<Row> stringResourcesDF,
+      @Nonnull final Dataset<Row> stringResourcesDf,
       @Nonnull final String resourceName,
       @Nonnull final String inputMimeType,
       @Nullable final String maybeColumnName) {
 
     final Dataset<String> stringResources =
-        (nonNull(maybeColumnName) ? stringResourcesDF.select(maybeColumnName) : stringResourcesDF)
+        (nonNull(maybeColumnName) ? stringResourcesDf.select(maybeColumnName) : stringResourcesDf)
             .as(Encoders.STRING());
 
     final RuntimeResourceDefinition definition =
         FhirEncoders.contextFor(fhirVersion).getResourceDefinition(resourceName);
     return encode(stringResources, definition.getImplementingClass(), inputMimeType).toDF();
+  }
+
+  /**
+   * Takes a dataframe with string representations of FHIR resources and encodes the resources of
+   * the given type as a Spark dataframe.
+   *
+   * @param stringResourcesDf the dataframe with the string representation of the resources. The
+   *     dataframe must have a single column of type string.
+   * @param resourceName the name of the resources to encode.
+   * @param inputMimeType the mime type of the encoding for the input strings.
+   * @return the dataframe with Spark encoded resources.
+   */
+  @Nonnull
+  public Dataset<Row> encode(
+      @Nonnull final Dataset<Row> stringResourcesDf,
+      @Nonnull final String resourceName,
+      @Nonnull final String inputMimeType) {
+
+    return encode(stringResourcesDf, resourceName, inputMimeType, null);
+  }
+
+  /**
+   * Takes a dataframe with JSON representations of FHIR resources and encodes the resources of the
+   * given type as a Spark dataframe.
+   *
+   * @param stringResourcesDf the dataframe with the JSON representation of the resources. The
+   *     dataframe must have a single column of type string.
+   * @param resourceName the name of the resources to encode.
+   * @return the dataframe with Spark encoded resources.
+   */
+  @Nonnull
+  public Dataset<Row> encode(
+      @Nonnull final Dataset<Row> stringResourcesDf, @Nonnull final String resourceName) {
+    return encode(stringResourcesDf, resourceName, FHIR_JSON);
   }
 
   /**
@@ -443,44 +475,11 @@ public class PathlingContext {
 
     final ExpressionEncoder<T> encoder = fhirEncoders.of(resourceClass);
     final Dataset<T> typedResources = resources.as(encoder);
+
     final MapPartitionsFunction<T, String> mapper =
         new DecodeResourceMapPartitions<>(fhirVersion, outputMimeType);
 
     return typedResources.mapPartitions(mapper, Encoders.STRING());
-  }
-
-  /**
-   * Takes a dataframe with string representations of FHIR resources and encodes the resources of
-   * the given type as a Spark dataframe.
-   *
-   * @param stringResourcesDF the dataframe with the string representation of the resources. The
-   *     dataframe must have a single column of type string.
-   * @param resourceName the name of the resources to encode.
-   * @param inputMimeType the mime type of the encoding for the input strings.
-   * @return the dataframe with Spark encoded resources.
-   */
-  @Nonnull
-  public Dataset<Row> encode(
-      @Nonnull final Dataset<Row> stringResourcesDF,
-      @Nonnull final String resourceName,
-      @Nonnull final String inputMimeType) {
-
-    return encode(stringResourcesDF, resourceName, inputMimeType, null);
-  }
-
-  /**
-   * Takes a dataframe with JSON representations of FHIR resources and encodes the resources of the
-   * given type as a Spark dataframe.
-   *
-   * @param stringResourcesDF the dataframe with the JSON representation of the resources. The
-   *     dataframe must have a single column of type string.
-   * @param resourceName the name of the resources to encode.
-   * @return the dataframe with Spark encoded resources.
-   */
-  @Nonnull
-  public Dataset<Row> encode(
-      @Nonnull final Dataset<Row> stringResourcesDF, @Nonnull final String resourceName) {
-    return encode(stringResourcesDF, resourceName, FHIR_JSON);
   }
 
   /**
@@ -507,7 +506,7 @@ public class PathlingContext {
    * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataframe.
    *
-   * @param stringBundlesDF the dataframe with the string representation of the resources
+   * @param stringBundlesDf the dataframe with the string representation of the resources
    * @param resourceName the name of the resources to encode
    * @param inputMimeType the MIME type of the input strings
    * @param maybeColumnName the name of the column in the input dataframe that contains the bundle
@@ -516,13 +515,13 @@ public class PathlingContext {
    */
   @Nonnull
   public Dataset<Row> encodeBundle(
-      @Nonnull final Dataset<Row> stringBundlesDF,
+      @Nonnull final Dataset<Row> stringBundlesDf,
       @Nonnull final String resourceName,
       @Nonnull final String inputMimeType,
       @Nullable final String maybeColumnName) {
 
     final Dataset<String> stringResources =
-        (nonNull(maybeColumnName) ? stringBundlesDF.select(maybeColumnName) : stringBundlesDF)
+        (nonNull(maybeColumnName) ? stringBundlesDf.select(maybeColumnName) : stringBundlesDf)
             .as(Encoders.STRING());
 
     final RuntimeResourceDefinition definition =
@@ -534,7 +533,7 @@ public class PathlingContext {
    * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataframe.
    *
-   * @param stringBundlesDF the dataframe with the string representation of the bundles. The
+   * @param stringBundlesDf the dataframe with the string representation of the bundles. The
    *     dataframe must have a single column of type string.
    * @param resourceName the name of the resources to encode
    * @param inputMimeType the MIME type of the input strings
@@ -542,28 +541,30 @@ public class PathlingContext {
    */
   @Nonnull
   public Dataset<Row> encodeBundle(
-      @Nonnull final Dataset<Row> stringBundlesDF,
+      @Nonnull final Dataset<Row> stringBundlesDf,
       @Nonnull final String resourceName,
       @Nonnull final String inputMimeType) {
-    return encodeBundle(stringBundlesDF, resourceName, inputMimeType, null);
+    return encodeBundle(stringBundlesDf, resourceName, inputMimeType, null);
   }
 
   /**
    * Takes a dataframe with JSON representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataframe.
    *
-   * @param stringBundlesDF the dataframe with the JSON representation of the resources. The
+   * @param stringBundlesDf the dataframe with the JSON representation of the resources. The
    *     dataframe must have a single column of type string.
    * @param resourceName the name of the resources to encode
    * @return a Spark dataframe containing the encoded resources
    */
   @Nonnull
   public Dataset<Row> encodeBundle(
-      @Nonnull final Dataset<Row> stringBundlesDF, @Nonnull final String resourceName) {
-    return encodeBundle(stringBundlesDF, resourceName, FHIR_JSON);
+      @Nonnull final Dataset<Row> stringBundlesDf, @Nonnull final String resourceName) {
+    return encodeBundle(stringBundlesDf, resourceName, FHIR_JSON);
   }
 
   /**
+   * Creates a new DataSourceBuilder for reading FHIR data from various sources.
+   *
    * @return a new {@link DataSourceBuilder} that can be used to read from a variety of different
    *     data sources
    */
@@ -573,6 +574,8 @@ public class PathlingContext {
   }
 
   /**
+   * Gets the version of the Pathling library.
+   *
    * @return the version of the Pathling library
    */
   @Nonnull
@@ -587,15 +590,7 @@ public class PathlingContext {
    * @return true if the resource type is supported, false otherwise
    */
   public boolean isResourceTypeSupported(@Nonnull final String resourceType) {
-    if (EncoderBuilder.UNSUPPORTED_RESOURCES().contains(resourceType)) {
-      return false;
-    }
-    try {
-      final ResourceType match = ResourceType.fromCode(resourceType);
-      return match != null;
-    } catch (final FHIRException e) {
-      return false;
-    }
+    return ResourceTypes.isSupported(resourceType);
   }
 
   /**
@@ -607,29 +602,7 @@ public class PathlingContext {
    */
   @Nonnull
   public Optional<String> matchSupportedResourceType(@Nonnull final String resourceTypeString) {
-    if (EncoderBuilder.UNSUPPORTED_RESOURCES().contains(resourceTypeString)) {
-      return Optional.empty();
-    }
-
-    try {
-      // Try exact match first.
-      final ResourceType exactMatch = ResourceType.fromCode(resourceTypeString);
-      if (exactMatch != null) {
-        return Optional.of(exactMatch.toCode());
-      }
-    } catch (final FHIRException ignored) {
-      // Continue to case-insensitive search
-    }
-
-    // Try case-insensitive match.
-    for (final ResourceType resourceType : ResourceType.values()) {
-      if (resourceTypeString.equalsIgnoreCase(resourceType.toCode())
-          && !EncoderBuilder.UNSUPPORTED_RESOURCES().contains(resourceType.toCode())) {
-        return Optional.ofNullable(resourceType.toCode());
-      }
-    }
-
-    return Optional.empty();
+    return ResourceTypes.matchSupportedResourceType(resourceTypeString);
   }
 
   @Nonnull
@@ -648,7 +621,8 @@ public class PathlingContext {
   @Nonnull
   private static TerminologyServiceFactory getTerminologyServiceFactory(
       @Nonnull final TerminologyConfiguration configuration) {
-    final FhirVersionEnum fhirVersion = FhirContext.forR4().getVersion().getVersion();
-    return new DefaultTerminologyServiceFactory(fhirVersion, configuration);
+    // Pathling only supports FHIR R4, so we use the version enum directly to avoid creating another
+    // FhirContext.
+    return new DefaultTerminologyServiceFactory(FhirVersionEnum.R4, configuration);
   }
 }

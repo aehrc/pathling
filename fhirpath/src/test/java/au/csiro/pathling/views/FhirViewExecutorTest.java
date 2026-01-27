@@ -34,8 +34,7 @@ class FhirViewExecutorTest {
     final FhirView view = FhirView.ofResource("Patient").build();
 
     final FhirViewExecutor executor =
-        new FhirViewExecutor(
-            mock(FhirContext.class), mock(SparkSession.class), mock(DataSource.class));
+        new FhirViewExecutor(mock(FhirContext.class), mock(DataSource.class));
 
     final ConstraintViolationException ex =
         assertThrows(ConstraintViolationException.class, () -> executor.buildQuery(view));

@@ -165,45 +165,4 @@ final class DeltaSink implements DataSink {
   private boolean deltaTableExists(@Nonnull final String tablePath) {
     return DeltaTable.isDeltaTable(context.getSpark(), tablePath);
   }
-
-  /**
-   * Deletes the Delta table at the specified URL.
-   *
-   * @param tableUrl the URL of the Delta table to delete
-   */
-  private void delete(@Nonnull final String tableUrl) {
-    try {
-      final Path tablePath = new Path(tableUrl);
-      final FileSystem fileSystem = getFileSystem(path);
-      if (fileSystem.exists(tablePath)) {
-        fileSystem.delete(tablePath, true);
-      }
-    } catch (final IOException e) {
-      throw new PersistenceError("Failed to delete table: " + tableUrl, e);
-    }
-  }
-
-  /**
-   * Get a Hadoop {@link FileSystem} for the given location.
-   *
-   * @param location the location URL to be accessed
-   * @return the {@link FileSystem} for the given location
-   */
-  @Nonnull
-  private FileSystem getFileSystem(@Nonnull final String location) {
-    @Nullable
-    final Configuration hadoopConfiguration =
-        context.getSpark().sparkContext().hadoopConfiguration();
-    requireNonNull(hadoopConfiguration);
-    @Nullable final FileSystem warehouseLocation;
-    try {
-      warehouseLocation = FileSystem.get(new URI(location), hadoopConfiguration);
-    } catch (final IOException e) {
-      throw new PersistenceError("Problem accessing location: " + location, e);
-    } catch (final URISyntaxException e) {
-      throw new PersistenceError("Problem parsing URL: " + location, e);
-    }
-    requireNonNull(warehouseLocation);
-    return warehouseLocation;
-  }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,15 +19,16 @@ package au.csiro.pathling.library.io.source;
 
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
-import au.csiro.pathling.library.query.FhirSearchQuery;
+import au.csiro.pathling.library.query.DefaultQueryDispatcher;
 import au.csiro.pathling.library.query.FhirViewQuery;
-import au.csiro.pathling.library.query.QueryContext;
+import au.csiro.pathling.library.query.QueryDispatcher;
 import au.csiro.pathling.views.FhirView;
+import au.csiro.pathling.views.FhirViewExecutor;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Provides common functionality for all queryable data sources.
@@ -39,17 +40,30 @@ public abstract class AbstractSource implements QueryableDataSource {
   /** The Pathling context that provides access to dependencies such as the Spark session. */
   @Nonnull protected final PathlingContext context;
 
-  /** The unified query context holding executors for view and search queries. */
-  @Nonnull protected final QueryContext queryContext;
+  /** The dispatcher used to execute queries against the data source. */
+  @Nonnull protected final QueryDispatcher dispatcher;
 
   /**
    * Constructs an AbstractSource with the specified PathlingContext.
    *
    * @param context the PathlingContext to use
    */
+  @SuppressWarnings("this-escape")
   protected AbstractSource(@Nonnull final PathlingContext context) {
     this.context = context;
-    this.queryContext = new QueryContext(context, this);
+    // The 'this' escape is safe because buildDispatcher() only stores the reference in
+    // FhirViewExecutor; no methods are called on 'this' until after construction completes.
+    dispatcher = buildDispatcher(context, this);
+  }
+
+  @Nonnull
+  private QueryDispatcher buildDispatcher(
+      final @Nonnull PathlingContext context, final DataSource dataSource) {
+    final FhirViewExecutor viewExecutor =
+        new FhirViewExecutor(context.getFhirContext(), dataSource, context.getQueryConfiguration());
+
+    // Build the dispatcher using the executors.
+    return new DefaultQueryDispatcher(viewExecutor);
   }
 
   @Nonnull
@@ -62,25 +76,13 @@ public abstract class AbstractSource implements QueryableDataSource {
   @Override
   public FhirViewQuery view(@Nullable final String subjectResource) {
     requireNonNull(subjectResource);
-    return new FhirViewQuery(
-        subjectResource, queryContext.getViewExecutor()::buildQuery, queryContext.getGson());
+    return new FhirViewQuery(dispatcher, subjectResource, context.getGson());
   }
 
   @Nonnull
   @Override
   public FhirViewQuery view(@Nullable final FhirView view) {
     requireNonNull(view);
-    return new FhirViewQuery(
-            view.getResource(), queryContext.getViewExecutor()::buildQuery, queryContext.getGson())
-        .view(view);
-  }
-
-  @Nonnull
-  @Override
-  public FhirSearchQuery search(@Nonnull final String resourceType) {
-    requireNonNull(resourceType);
-    final ResourceType type = ResourceType.fromCode(resourceType);
-    return new FhirSearchQuery(
-        type, search -> queryContext.getSearchExecutor().execute(type, search));
+    return new FhirViewQuery(dispatcher, view.getResource(), context.getGson()).view(view);
   }
 }

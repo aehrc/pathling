@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,8 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * A class for making FHIR data in Delta tables on the filesystem available for query. It is assumed
@@ -37,7 +39,7 @@ public class DeltaSource extends FileSource {
    * @param context the PathlingContext to use
    * @param path the path to the Delta table directory
    */
-  DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
+  public DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
     super(
         context,
         path,
@@ -49,6 +51,30 @@ public class DeltaSource extends FileSource {
         context.getSpark().read().format("delta"),
         // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
-        (sourceData, resourceType) -> sourceData);
+        (sourceData, resourceType) -> sourceData,
+        resourceType -> true);
+  }
+
+  /**
+   * Constructs a DeltaSource with the specified PathlingContext and map of resource types to Delta
+   * table paths.
+   *
+   * @param context the PathlingContext to use
+   * @param files a map where keys are resource type names and values are collections of Delta table
+   *     paths
+   */
+  public DeltaSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Collection<String>> files) {
+    super(
+        context,
+        files,
+        // Delta tables store data in parquet format internally, so we use the parquet extension.
+        "parquet",
+        context.getSpark().read().format("delta"),
+        // Apply no transformations on the data - we assume it has already been processed using the
+        // Pathling FHIR encoders.
+        (sourceData, resourceType) -> sourceData,
+        resourceType -> true);
   }
 }

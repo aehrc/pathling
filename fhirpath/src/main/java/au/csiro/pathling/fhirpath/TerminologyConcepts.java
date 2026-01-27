@@ -63,7 +63,7 @@ public sealed interface TerminologyConcepts
   /** Represents a collection of codings. which should be treated as independent concepts. */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  class Set implements TerminologyConcepts {
+  final class Set implements TerminologyConcepts {
 
     ColumnRepresentation codings;
     CodingCollection codingTemplate;
@@ -91,7 +91,7 @@ public sealed interface TerminologyConcepts
    */
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
   @Value
-  class Union implements TerminologyConcepts {
+  final class Union implements TerminologyConcepts {
 
     ColumnRepresentation codingUnion;
     CodingCollection codingTemplate;

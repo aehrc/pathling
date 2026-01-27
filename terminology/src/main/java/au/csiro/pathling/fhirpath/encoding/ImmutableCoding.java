@@ -75,7 +75,7 @@ public class ImmutableCoding implements Serializable {
    */
   @Nonnull
   public static ImmutableCoding of(@Nonnull final Coding coding) {
-    return ImmutableCoding.of(
+    return new ImmutableCoding(
         coding.getSystem(),
         coding.getVersion(),
         coding.getCode(),
@@ -94,7 +94,7 @@ public class ImmutableCoding implements Serializable {
   @Nonnull
   public static ImmutableCoding of(
       @Nonnull final String system, @Nonnull final String code, @Nonnull final String display) {
-    return ImmutableCoding.of(system, null, code, display, null);
+    return new ImmutableCoding(system, null, code, display, null);
   }
 
   /**
@@ -104,7 +104,7 @@ public class ImmutableCoding implements Serializable {
    */
   @Nonnull
   public static ImmutableCoding empty() {
-    return ImmutableCoding.of(null, null, null, null, null);
+    return new ImmutableCoding(null, null, null, null, null);
   }
 
   @Override

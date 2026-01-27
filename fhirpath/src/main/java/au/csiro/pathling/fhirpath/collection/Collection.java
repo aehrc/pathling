@@ -472,18 +472,6 @@ public class Collection implements Equatable {
   }
 
   /**
-   * Returns a new collection with the same type and representation, the colum value of which is
-   * computed by the lambda based on the current column value.
-   *
-   * @param columnMapper The lambda to use for mapping
-   * @return A new collection with new values determined by the specified lambda
-   */
-  @Nonnull
-  public Collection mapColumn(@Nonnull final UnaryOperator<Column> columnMapper) {
-    return map(cr -> cr.map(columnMapper));
-  }
-
-  /**
    * Returns a new collection with new values determined by the specified lambda.
    *
    * @param mapper The lambda to use for mapping

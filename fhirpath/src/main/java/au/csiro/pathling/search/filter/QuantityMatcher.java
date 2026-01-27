@@ -75,9 +75,10 @@ import org.apache.spark.sql.Column;
  *   <li>{@code le} - value less than or equal to search value
  * </ul>
  *
+ * <p>See SPEC_CLARIFICATIONS.md in the project root for interpretation details on format validation
+ * and UCUM normalization behavior.
+ *
  * @see <a href="https://hl7.org/fhir/search.html#quantity">FHIR Quantity Search</a>
- *     <p>See SPEC_CLARIFICATIONS.md in the project root for interpretation details on format
- *     validation and UCUM normalization behavior.
  */
 public class QuantityMatcher implements ElementMatcher {
 

@@ -42,9 +42,9 @@ import java.util.Optional;
  *   <li>{@code Optional.of("value")} - must match exact value
  * </ul>
  *
+ * <p>See SPEC_CLARIFICATIONS.md in the project root for format validation details and rationale.
+ *
  * @see <a href="https://hl7.org/fhir/search.html#quantity">FHIR Quantity Search</a>
- *     <p>See SPEC_CLARIFICATIONS.md in the project root for format validation details and
- *     rationale.
  */
 public class QuantitySearchValue {
 
