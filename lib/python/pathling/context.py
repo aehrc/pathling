@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -193,7 +193,7 @@ class PathlingContext:
                 SparkSession.builder.config(
                     "spark.jars.packages",
                     f"au.csiro.pathling:library-runtime:{__java_version__},"
-                    f"io.delta:delta-spark_{__scala_version__}:{__delta_version__},"
+                    f"io.delta:delta-spark_{__scala_version__}:{__delta_version__},",
                 )
                 .config(
                     "spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension"
@@ -208,7 +208,9 @@ class PathlingContext:
             if enable_remote_debugging:
                 suspend_option = "y" if debug_suspend else "n"
                 debug_options = f"-agentlib:jdwp=transport=dt_socket,server=y,suspend={suspend_option},address={debug_port}"
-                spark_builder = spark_builder.config("spark.driver.extraJavaOptions", debug_options)
+                spark_builder = spark_builder.config(
+                    "spark.driver.extraJavaOptions", debug_options
+                )
 
             return spark_builder.getOrCreate()
 
@@ -369,7 +371,6 @@ class PathlingContext:
                 df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
             )
         )
-
 
     @property
     def read(self) -> "DataSources":

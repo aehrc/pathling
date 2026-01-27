@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -46,7 +46,7 @@ def test_bulk_client(pathling_ctx, mock_server, temp_dir):
         result = BulkExportClient.for_system(
             pathling_ctx.spark,
             fhir_endpoint_url=mock_server.url("/fhir"),
-            output_dir=output_dir
+            output_dir=output_dir,
         ).export()
 
         assert os.path.isdir(output_dir)
@@ -58,5 +58,7 @@ def test_bulk_client(pathling_ctx, mock_server, temp_dir):
         assert 1 == len(result.results)
         file_result = result.results[0]
         assert 12 == file_result.size
-        assert os.path.join(output_dir, "Patient.0000.ndjson") == file_result.destination
+        assert (
+            os.path.join(output_dir, "Patient.0000.ndjson") == file_result.destination
+        )
         assert mock_server.url("/download") == file_result.source

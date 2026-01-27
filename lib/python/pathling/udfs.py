@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -37,7 +37,7 @@ def _coding_to_java_column(coding: Optional[CodingArg]) -> JavaObject:
 
 
 def _ensure_collection(
-    collection_or_value: Optional[Union[Any, Collection[Any]]]
+    collection_or_value: Optional[Union[Any, Collection[Any]]],
 ) -> Optional[Collection[Any]]:
     return (
         collection_or_value

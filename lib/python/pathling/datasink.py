@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -17,6 +17,7 @@ from typing import Callable, Optional
 
 from pathling.core import SparkConversionsMixin, StringMapper
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from pathling.datasource import DataSource
 
@@ -92,9 +93,7 @@ class DataSinks(SparkConversionsMixin):
         """
         self._datasinks.saveMode(save_mode).parquet(path)
 
-    def delta(
-        self, path: str, save_mode: Optional[str] = SaveMode.OVERWRITE
-    ) -> None:
+    def delta(self, path: str, save_mode: Optional[str] = SaveMode.OVERWRITE) -> None:
         """
         Writes the data to a directory of Delta files.
 

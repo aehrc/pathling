@@ -70,8 +70,18 @@ def test_default_configurations(spark_session):
     # Default open types should match STANDARD_OPEN_TYPES
     open_types = set(encoding_config.getOpenTypes())
     expected_types = {
-        "boolean", "code", "date", "dateTime", "decimal", "integer",
-        "string", "Coding", "CodeableConcept", "Address", "Identifier", "Reference"
+        "boolean",
+        "code",
+        "date",
+        "dateTime",
+        "decimal",
+        "integer",
+        "string",
+        "Coding",
+        "CodeableConcept",
+        "Address",
+        "Identifier",
+        "Reference",
     }
     assert open_types == expected_types
 
@@ -90,7 +100,7 @@ def test_custom_configurations(spark_session):
         enable_extensions=True,
         enabled_open_types=["string", "boolean"],
         explain_queries=True,
-        max_unbound_traversal_depth=20
+        max_unbound_traversal_depth=20,
     )
 
     # Get Java PathlingContext instance

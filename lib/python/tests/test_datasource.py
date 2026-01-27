@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -26,7 +26,7 @@ from pytest import fixture
 def func_temp_dir(temp_dir):
     """
     Fixture to create a temporary directory for each test function.
-    :param temp_dir: 
+    :param temp_dir:
     :return: existing temporary directory for each test function.
     """
     temp_ndjson_dir = TemporaryDirectory(dir=temp_dir, prefix="function")
@@ -88,8 +88,10 @@ def bulk_server(mock_server, ndjson_test_data_dir):
         return dict(
             transactionTime="1970-01-01T00:00:00.000Z",
             output=[
-                dict(type=resource, url=mock_server.url(f"/download/{resource}"), count=1) for
-                resource in ["Patient", "Condition"]
+                dict(
+                    type=resource, url=mock_server.url(f"/download/{resource}"), count=1
+                )
+                for resource in ["Patient", "Condition"]
             ],
         )
 
@@ -232,9 +234,7 @@ def test_datasource_tables_schema(ndjson_test_data_dir, pathling_ctx):
 def test_datasource_bulk_with_temp_dir(pathling_ctx, bulk_server):
     # !!! this directory cannot exist for the datasource to work
     with bulk_server.run():
-        data_source = pathling_ctx.read.bulk(
-            fhir_endpoint_url=bulk_server.url("/fhir")
-        )
+        data_source = pathling_ctx.read.bulk(fhir_endpoint_url=bulk_server.url("/fhir"))
         result = ndjson_query(data_source)
         assert result.columns == list(ResultRow)
         assert result.collect() == [
@@ -248,7 +248,7 @@ def test_datasource_bulk_with_existing_dir(pathling_ctx, bulk_server, func_temp_
         data_source = pathling_ctx.read.bulk(
             fhir_endpoint_url=bulk_server.url("/fhir"),
             output_dir=func_temp_dir,
-            overwrite=True  # default anyway, but explicit for clarity
+            overwrite=True,  # default anyway, but explicit for clarity
         )
         result = ndjson_query(data_source)
         assert result.columns == list(ResultRow)
@@ -258,29 +258,23 @@ def test_datasource_bulk_with_existing_dir(pathling_ctx, bulk_server, func_temp_
 
 
 def ndjson_query(data_source: DataSource) -> DataFrame:
-    return data_source.view(
-        resource='Condition',
-        select=[
-            {
-                'column': [
-                    {'path': 'id', 'name': 'id'}
-                ]
-            }
-        ]
-    ).groupby().count()
+    return (
+        data_source.view(
+            resource="Condition", select=[{"column": [{"path": "id", "name": "id"}]}]
+        )
+        .groupby()
+        .count()
+    )
 
 
 def bundles_query(data_source: DataSource) -> DataFrame:
-    return data_source.view(
-        resource='Patient',
-        select=[
-            {
-                'column': [
-                    {'path': 'id', 'name': 'id'}
-                ]
-            }
-        ]
-    ).groupby().count()
+    return (
+        data_source.view(
+            resource="Patient", select=[{"column": [{"path": "id", "name": "id"}]}]
+        )
+        .groupby()
+        .count()
+    )
 
 
 def parquet_query(data_source: DataSource) -> DataFrame:
@@ -338,7 +332,9 @@ def test_datasource_search_with_multiple_criteria(ndjson_test_data_dir, pathling
     data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
 
     # Search with multiple criteria.
-    result = data_source.search("Patient", criteria={"gender": "male", "active": "true"})
+    result = data_source.search(
+        "Patient", criteria={"gender": "male", "active": "true"}
+    )
 
     # Verify it returns a DataFrame.
     assert isinstance(result, DataFrame)

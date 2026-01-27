@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -40,11 +40,11 @@ class Dfs:
     def get_temp_dir_path(self, prefix: str = "tmp-app", qualified=True) -> str:
         """
         Returns a unique path for a temporary directory in Spark's filesystem.
-    
-        The path is constructed by appending a UUID to the base temporary directory, 
+
+        The path is constructed by appending a UUID to the base temporary directory,
         ensuring uniqueness for each call.
         The directory itself is not created, only the path is returned.
-        
+
         :param prefix: String to insert between the base directory and the UUID (default: "tmp-app").
         :param qualified: If True, returns a fully qualified Hadoop path; if False, returns a raw path string.
         :return: String representing the unique temporary directory path.
@@ -54,8 +54,14 @@ class Dfs:
             raise ValueError("`hadoop.tmp.dir` must be set in Hadoop configuration.")
         uuid_suffix = str(uuid.uuid4())
         base_tmp_path = self._jvm.org.apache.hadoop.fs.Path(base_tmp_dir)
-        tmp_path = self._jvm.org.apache.hadoop.fs.Path(base_tmp_path, f"{prefix}-{uuid_suffix}")
-        return self._fs.makeQualified(tmp_path).toString() if qualified else tmp_path.toString()
+        tmp_path = self._jvm.org.apache.hadoop.fs.Path(
+            base_tmp_path, f"{prefix}-{uuid_suffix}"
+        )
+        return (
+            self._fs.makeQualified(tmp_path).toString()
+            if qualified
+            else tmp_path.toString()
+        )
 
     def exists(self, path: str) -> bool:
         """

@@ -1,12 +1,12 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #  Unless required by applicable law or agreed to in writing, software
 #  distributed under the License is distributed on an "AS IS" BASIS,
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,6 +26,7 @@ class FileResult:
     """
     Represents the result of a single file export operation.
     """
+
     source: str
     """
     The source URL of the exported file.
@@ -45,6 +46,7 @@ class ExportResult:
     """
     Represents the result of a bulk export operation.
     """
+
     transaction_time: datetime
     """
     The time at which the transaction was processed at the server.
@@ -56,30 +58,29 @@ class ExportResult:
     """
 
     @classmethod
-    def from_java(cls, java_result: JavaObject) -> 'ExportResult':
+    def from_java(cls, java_result: JavaObject) -> "ExportResult":
         """
         Create an ExportResult from a Java export result object.
-        
+
         :param java_result: The Java export result object
         :return: A Python ExportResult object
         """
         # Convert transaction time from Java Instant to Python datetime
         transaction_time = datetime.fromtimestamp(
-            java_result.getTransactionTime().toEpochMilli() / 1000.0, tz=timezone.utc)
+            java_result.getTransactionTime().toEpochMilli() / 1000.0, tz=timezone.utc
+        )
 
         # Convert file results
         file_results = [
             FileResult(
                 source=str(java_file_result.getSource()),
                 destination=str(java_file_result.getDestination()),
-                size=java_file_result.getSize())
+                size=java_file_result.getSize(),
+            )
             for java_file_result in java_result.getResults()
         ]
 
-        return cls(
-            transaction_time=transaction_time,
-            results=file_results
-        )
+        return cls(transaction_time=transaction_time, results=file_results)
 
 
 class BulkExportClient:
@@ -90,7 +91,7 @@ class BulkExportClient:
     def __init__(self, java_client):
         """
         Create a new BulkExportClient that wraps a Java BulkExportClient.
-        
+
         :param java_client: The Java BulkExportClient instance to wrap
         """
         self._java_client = java_client
@@ -98,27 +99,33 @@ class BulkExportClient:
     def export(self) -> ExportResult:
         """
         Export data from the FHIR server.
-        
+
         :return: The result of the export operation as a Python ExportResult object
         """
         java_result = self._java_client.export()
         return ExportResult.from_java(java_result)
 
     @classmethod
-    def _configure_builder(cls, jvm, builder, fhir_endpoint_url: str, output_dir: str,
-                           output_format: str = "application/fhir+ndjson",
-                           since: Optional[datetime] = None,
-                           types: Optional[List[str]] = None,
-                           elements: Optional[List[str]] = None,
-                           include_associated_data: Optional[List[str]] = None,
-                           type_filters: Optional[List[str]] = None,
-                           output_extension: str = "ndjson",
-                           timeout: Optional[int] = None,
-                           max_concurrent_downloads: int = 10,
-                           auth_config: Optional[dict] = None):
+    def _configure_builder(
+        cls,
+        jvm,
+        builder,
+        fhir_endpoint_url: str,
+        output_dir: str,
+        output_format: str = "application/fhir+ndjson",
+        since: Optional[datetime] = None,
+        types: Optional[List[str]] = None,
+        elements: Optional[List[str]] = None,
+        include_associated_data: Optional[List[str]] = None,
+        type_filters: Optional[List[str]] = None,
+        output_extension: str = "ndjson",
+        timeout: Optional[int] = None,
+        max_concurrent_downloads: int = 10,
+        auth_config: Optional[dict] = None,
+    ):
         """
         Configure common builder parameters.
-        
+
         :param jvm: The JVM instance
         :param builder: The builder instance to configure
         :param fhir_endpoint_url: The URL of the FHIR server
@@ -157,11 +164,13 @@ class BulkExportClient:
             if since.tzinfo is None:
                 raise ValueError("datetime must include timezone information")
             # Format with microsecond precision and timezone offset
-            instant_str = since.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]  # Truncate to milliseconds
+            instant_str = since.strftime("%Y-%m-%dT%H:%M:%S.%f")[
+                :-3
+            ]  # Truncate to milliseconds
             if since.utcoffset() is None:
-                instant_str += 'Z'
+                instant_str += "Z"
             else:
-                offset = since.strftime('%z')
+                offset = since.strftime("%z")
                 # Insert colon in timezone offset
                 instant_str += f"{offset[:3]}:{offset[3:]}"
             java_instant = jvm.java.time.Instant.parse(instant_str)
@@ -192,33 +201,33 @@ class BulkExportClient:
             auth_builder.tokenExpiryTolerance(120)
 
             # Map Python config to Java builder methods
-            if 'enabled' in auth_config:
-                auth_builder.enabled(auth_config['enabled'])
-            if 'use_smart' in auth_config:
-                auth_builder.useSMART(auth_config['use_smart'])
-            if 'token_endpoint' in auth_config:
-                auth_builder.tokenEndpoint(auth_config['token_endpoint'])
-            if 'client_id' in auth_config:
-                auth_builder.clientId(auth_config['client_id'])
-            if 'client_secret' in auth_config:
-                auth_builder.clientSecret(auth_config['client_secret'])
-            if 'private_key_jwk' in auth_config:
-                auth_builder.privateKeyJWK(auth_config['private_key_jwk'])
-            if 'use_form_for_basic_auth' in auth_config:
-                auth_builder.useFormForBasicAuth(auth_config['use_form_for_basic_auth'])
-            if 'scope' in auth_config:
-                auth_builder.scope(auth_config['scope'])
-            if 'token_expiry_tolerance' in auth_config:
-                auth_builder.tokenExpiryTolerance(auth_config['token_expiry_tolerance'])
+            if "enabled" in auth_config:
+                auth_builder.enabled(auth_config["enabled"])
+            if "use_smart" in auth_config:
+                auth_builder.useSMART(auth_config["use_smart"])
+            if "token_endpoint" in auth_config:
+                auth_builder.tokenEndpoint(auth_config["token_endpoint"])
+            if "client_id" in auth_config:
+                auth_builder.clientId(auth_config["client_id"])
+            if "client_secret" in auth_config:
+                auth_builder.clientSecret(auth_config["client_secret"])
+            if "private_key_jwk" in auth_config:
+                auth_builder.privateKeyJWK(auth_config["private_key_jwk"])
+            if "use_form_for_basic_auth" in auth_config:
+                auth_builder.useFormForBasicAuth(auth_config["use_form_for_basic_auth"])
+            if "scope" in auth_config:
+                auth_builder.scope(auth_config["scope"])
+            if "token_expiry_tolerance" in auth_config:
+                auth_builder.tokenExpiryTolerance(auth_config["token_expiry_tolerance"])
 
             auth_config_obj = auth_builder.build()
             builder.withAuthConfig(auth_config_obj)
 
     @classmethod
-    def for_system(cls, spark, *args, **kwargs) -> 'BulkExportClient':
+    def for_system(cls, spark, *args, **kwargs) -> "BulkExportClient":
         """
         Create a builder for a system-level export.
-        
+
         :param spark: The SparkSession instance
         :param fhir_endpoint_url: The URL of the FHIR server to export from
         :param output_dir: The directory to write the output files to
@@ -239,11 +248,18 @@ class BulkExportClient:
         return cls(builder.build())
 
     @classmethod
-    def for_group(cls, spark, fhir_endpoint_url: str, output_dir: str,
-                  group_id: str, *args, **kwargs) -> 'BulkExportClient':
+    def for_group(
+        cls,
+        spark,
+        fhir_endpoint_url: str,
+        output_dir: str,
+        group_id: str,
+        *args,
+        **kwargs,
+    ) -> "BulkExportClient":
         """
         Create a builder for a group-level export.
-        
+
         :param spark: The SparkSession instance
         :param fhir_endpoint_url: The URL of the FHIR server to export from
         :param output_dir: The directory to write the output files to
@@ -262,15 +278,24 @@ class BulkExportClient:
         """
         # Pass group_id directly to groupBuilder
         builder, jvm = cls._create_builder(spark, lambda bc: bc.groupBuilder(group_id))
-        cls._configure_builder(jvm, builder, fhir_endpoint_url, output_dir, *args, **kwargs)
+        cls._configure_builder(
+            jvm, builder, fhir_endpoint_url, output_dir, *args, **kwargs
+        )
         return cls(builder.build())
 
     @classmethod
-    def for_patient(cls, spark, fhir_endpoint_url: str, output_dir: str,
-                    patients: Optional[List[str]] = None, *args, **kwargs) -> 'BulkExportClient':
+    def for_patient(
+        cls,
+        spark,
+        fhir_endpoint_url: str,
+        output_dir: str,
+        patients: Optional[List[str]] = None,
+        *args,
+        **kwargs,
+    ) -> "BulkExportClient":
         """
         Create a builder for a patient-level export.
-        
+
         :param spark: The SparkSession instance
         :param fhir_endpoint_url: The URL of the FHIR server to export from
         :param output_dir: The directory to write the output files to
@@ -292,19 +317,21 @@ class BulkExportClient:
             for patient in patients:
                 ref = jvm.au.csiro.fhir.model.Reference.of(patient)
                 builder.withPatient(ref)
-        cls._configure_builder(jvm, builder, fhir_endpoint_url, output_dir, *args, **kwargs)
+        cls._configure_builder(
+            jvm, builder, fhir_endpoint_url, output_dir, *args, **kwargs
+        )
         return cls(builder.build())
 
     @classmethod
-    def _create_builder(cls,
-                        spark: SparkSession,
-                        factory_f: Callable[[JavaObject], JavaObject]) -> Tuple[
-        JavaObject, JVMView]:
-
+    def _create_builder(
+        cls, spark: SparkSession, factory_f: Callable[[JavaObject], JavaObject]
+    ) -> Tuple[JavaObject, JVMView]:
         jvm: JVMView = spark._jvm
         client_class = jvm.au.csiro.fhir.export.BulkExportClient
         builder: JavaObject = factory_f(client_class)
         builder = builder.withFileStoreFactory(
-            jvm.au.csiro.filestore.hdfs.HdfsFileStoreFactory(spark._jsc.sc().hadoopConfiguration())
+            jvm.au.csiro.filestore.hdfs.HdfsFileStoreFactory(
+                spark._jsc.sc().hadoopConfiguration()
+            )
         )
         return (builder, jvm)
