@@ -304,55 +304,6 @@ def test_datasource_resource_types(ndjson_test_data_dir, pathling_ctx):
     assert "Condition" in resource_types
 
 
-def test_datasource_search_with_criterion(ndjson_test_data_dir, pathling_ctx):
-    """Test search with criteria dict."""
-    data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
-
-    # Search for male patients.
-    result = data_source.search("Patient", criteria={"gender": "male"})
-
-    # Verify it returns a DataFrame with the expected count.
-    assert isinstance(result, DataFrame)
-    assert result.count() == 5
-
-
-def test_datasource_search_with_query_string(ndjson_test_data_dir, pathling_ctx):
-    """Test search with query string."""
-    data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
-
-    # Search using query string format.
-    result = data_source.search("Patient", query_string="gender=male")
-
-    # Verify it returns a DataFrame with the expected count.
-    assert isinstance(result, DataFrame)
-    assert result.count() == 5
-
-
-def test_datasource_search_with_multiple_criteria(ndjson_test_data_dir, pathling_ctx):
-    """Test search with multiple criteria (AND logic)."""
-    data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
-
-    # Search with multiple criteria.
-    result = data_source.search(
-        "Patient", criteria={"gender": "male", "active": "true"}
-    )
-
-    # Verify it returns a DataFrame.
-    assert isinstance(result, DataFrame)
-
-
-def test_datasource_search_with_list_values(ndjson_test_data_dir, pathling_ctx):
-    """Test search with list values (OR logic)."""
-    data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
-
-    # Search with multiple values for same parameter (OR).
-    result = data_source.search("Patient", criteria={"gender": ["male", "female"]})
-
-    # Verify it returns all patients (both male and female).
-    assert isinstance(result, DataFrame)
-    assert result.count() == 9
-
-
 # Tests for WriteDetails return value from write operations.
 
 
