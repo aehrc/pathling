@@ -102,36 +102,37 @@ StorageType <- list(
 #' spark <- pathling_spark(pc)
 #' }
 pathling_connect <- function(
-    spark = NULL,
-    max_nesting_level = 3,
-    enable_extensions = FALSE,
-    enabled_open_types = c(
-      "boolean", "code", "date", "dateTime", "decimal", "integer",
-      "string", "Coding", "CodeableConcept", "Address", "Identifier", "Reference"
-    ),
-    enable_terminology = TRUE,
-    terminology_server_url = "https://tx.ontoserver.csiro.au/fhir",
-    terminology_verbose_request_logging = FALSE,
-    terminology_socket_timeout = 60000,
-    max_connections_total = 32,
-    max_connections_per_route = 16,
-    terminology_retry_enabled = TRUE,
-    terminology_retry_count = 2,
-    enable_cache = TRUE,
-    cache_max_entries = 200000,
-    cache_storage_type = StorageType$MEMORY,
-    cache_storage_path = NULL,
-    cache_default_expiry = 600,
-    cache_override_expiry = NULL,
-    token_endpoint = NULL,
-    enable_auth = FALSE,
-    client_id = NULL,
-    client_secret = NULL,
-    scope = NULL,
-    token_expiry_tolerance = 120,
-    accept_language = NULL,
-    explain_queries = FALSE,
-    max_unbound_traversal_depth = 10) {
+  spark = NULL,
+  max_nesting_level = 3,
+  enable_extensions = FALSE,
+  enabled_open_types = c(
+    "boolean", "code", "date", "dateTime", "decimal", "integer",
+    "string", "Coding", "CodeableConcept", "Address", "Identifier", "Reference"
+  ),
+  enable_terminology = TRUE,
+  terminology_server_url = "https://tx.ontoserver.csiro.au/fhir",
+  terminology_verbose_request_logging = FALSE,
+  terminology_socket_timeout = 60000,
+  max_connections_total = 32,
+  max_connections_per_route = 16,
+  terminology_retry_enabled = TRUE,
+  terminology_retry_count = 2,
+  enable_cache = TRUE,
+  cache_max_entries = 200000,
+  cache_storage_type = StorageType$MEMORY,
+  cache_storage_path = NULL,
+  cache_default_expiry = 600,
+  cache_override_expiry = NULL,
+  token_endpoint = NULL,
+  enable_auth = FALSE,
+  client_id = NULL,
+  client_secret = NULL,
+  scope = NULL,
+  token_expiry_tolerance = 120,
+  accept_language = NULL,
+  explain_queries = FALSE,
+  max_unbound_traversal_depth = 10
+) {
   spark_info <- pathling_spark_info()
 
 
