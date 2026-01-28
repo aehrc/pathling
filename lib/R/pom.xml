@@ -255,6 +255,7 @@
               <arguments>
                 <argument>-e</argument>
                 <argument>
+cat(sprintf("Using styler version: %s\n", packageVersion("styler")))                  
 result &lt;- rbind(styler::style_dir("R", dry = "on"), styler::style_dir("tests/testthat", dry = "on"))
 if (any(result$changed)) {
   cat("The following files need formatting:\n")
