@@ -27,6 +27,4 @@ import java.util.Map;
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
-<<<<<<< HEAD:terminology/src/main/java/au/csiro/pathling/fhir/AccessScope.java
-record AccessScope(
-    @Nonnull String tokenEndpoint, @Nonnull String clientId, @Nullable String scope) {}
+public record SubmissionMetadata(@Nullable Map<String, String> values) {}

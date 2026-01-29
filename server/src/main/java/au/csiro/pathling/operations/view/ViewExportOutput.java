@@ -27,6 +27,4 @@ import java.util.List;
  * @param fileUrls the list of file URLs (absolute paths) for this view's output
  * @author John Grimes
  */
-<<<<<<< HEAD:terminology/src/main/java/au/csiro/pathling/fhir/AccessContext.java
-record AccessContext(
-    @Nonnull ClientCredentialsResponse clientCredentialsResponse, @Nonnull Instant expiryTime) {}
+public record ViewExportOutput(@Nonnull String name, @Nonnull List<String> fileUrls) {}

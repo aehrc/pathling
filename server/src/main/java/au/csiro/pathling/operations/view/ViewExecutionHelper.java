@@ -211,7 +211,7 @@ public class ViewExecutionHelper {
       throws IOException {
 
     final FhirViewExecutor executor =
-        new FhirViewExecutor(fhirContext, sparkSession, dataSource, serverConfiguration.getQuery());
+        new FhirViewExecutor(fhirContext, dataSource, serverConfiguration.getQuery());
     Dataset<Row> result;
     try {
       result = executor.buildQuery(view);

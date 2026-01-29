@@ -178,7 +178,7 @@ public class ViewDefinitionExportExecutor {
 
     // Execute the view query.
     final FhirViewExecutor executor =
-        new FhirViewExecutor(fhirContext, sparkSession, dataSource, serverConfiguration.getQuery());
+        new FhirViewExecutor(fhirContext, dataSource, serverConfiguration.getQuery());
 
     final Dataset<Row> result;
     try {
