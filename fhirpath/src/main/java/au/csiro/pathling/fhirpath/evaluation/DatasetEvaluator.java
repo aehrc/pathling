@@ -24,7 +24,6 @@ import jakarta.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Evaluator that combines a {@link SingleResourceEvaluator} with a {@link Dataset}, enabling
@@ -119,13 +118,16 @@ public class DatasetEvaluator {
   }
 
   /**
-   * Returns the subject resource type for this evaluator.
+   * Returns the subject resource code for this evaluator.
    *
-   * @return the subject resource type
+   * <p>This method supports both standard FHIR resource types (e.g., "Patient", "Observation") and
+   * custom resource types (e.g., "ViewDefinition").
+   *
+   * @return the subject resource type code
    */
   @Nonnull
-  public ResourceType getSubjectResource() {
-    return evaluator.getSubjectResource();
+  public String getSubjectResourceCode() {
+    return evaluator.getSubjectResourceCode();
   }
 
   /**

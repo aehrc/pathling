@@ -20,8 +20,10 @@ package au.csiro.pathling.fhirpath.evaluation;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
+import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -51,11 +53,13 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public class DatasetEvaluatorBuilder {
 
-  @Nonnull private final ResourceType subjectResource;
+  @Nonnull private final String subjectResourceCode;
 
   @Nonnull private final FhirContext fhirContext;
 
-  private Dataset<Row> dataset;
+  @Nullable private Dataset<Row> dataset;
+
+  @Nullable private DataSource dataSource;
 
   @Nonnull private Map<String, Collection> variables = Map.of();
 
@@ -65,9 +69,25 @@ public class DatasetEvaluatorBuilder {
 
   /** Private constructor. Use factory methods to create instances. */
   private DatasetEvaluatorBuilder(
-      @Nonnull final ResourceType subjectResource, @Nonnull final FhirContext fhirContext) {
-    this.subjectResource = subjectResource;
+      @Nonnull final String subjectResourceCode, @Nonnull final FhirContext fhirContext) {
+    this.subjectResourceCode = subjectResourceCode;
     this.fhirContext = fhirContext;
+  }
+
+  /**
+   * Creates a builder for the specified resource type code.
+   *
+   * <p>This method supports both standard FHIR resource types (e.g., "Patient", "Observation") and
+   * custom resource types registered with HAPI (e.g., "ViewDefinition").
+   *
+   * @param subjectResourceCode the subject resource type code
+   * @param fhirContext the FHIR context
+   * @return a new builder
+   */
+  @Nonnull
+  public static DatasetEvaluatorBuilder create(
+      @Nonnull final String subjectResourceCode, @Nonnull final FhirContext fhirContext) {
+    return new DatasetEvaluatorBuilder(subjectResourceCode, fhirContext);
   }
 
   /**
@@ -80,7 +100,7 @@ public class DatasetEvaluatorBuilder {
   @Nonnull
   public static DatasetEvaluatorBuilder create(
       @Nonnull final ResourceType subjectResource, @Nonnull final FhirContext fhirContext) {
-    return new DatasetEvaluatorBuilder(subjectResource, fhirContext);
+    return new DatasetEvaluatorBuilder(subjectResource.toCode(), fhirContext);
   }
 
   /**
@@ -89,12 +109,33 @@ public class DatasetEvaluatorBuilder {
    * <p>The dataset should have a flat schema where resource fields are top-level columns (e.g., id,
    * name, gender, birthDate, ...).
    *
+   * <p>Either this method or {@link #withDataSource(DataSource)} must be called before {@link
+   * #build()}.
+   *
    * @param dataset the Spark Dataset containing the resource data
    * @return this builder for method chaining
    */
   @Nonnull
   public DatasetEvaluatorBuilder withDataset(@Nonnull final Dataset<Row> dataset) {
     this.dataset = dataset;
+    return this;
+  }
+
+  /**
+   * Sets the data source to read the dataset from.
+   *
+   * <p>When a DataSource is provided, the dataset will be read from it using the subject resource
+   * code during {@link #build()}. This is a convenient alternative to calling
+   * `dataSource.read(resourceCode)` and then using {@link #withDataset(Dataset)}.
+   *
+   * <p>Either this method or {@link #withDataset(Dataset)} must be called before {@link #build()}.
+   *
+   * @param dataSource the data source to read the dataset from
+   * @return this builder for method chaining
+   */
+  @Nonnull
+  public DatasetEvaluatorBuilder withDataSource(@Nonnull final DataSource dataSource) {
+    this.dataSource = dataSource;
     return this;
   }
 
@@ -145,22 +186,42 @@ public class DatasetEvaluatorBuilder {
   /**
    * Builds the {@link DatasetEvaluator} with the configured options.
    *
+   * <p>If a DataSource was provided via {@link #withDataSource(DataSource)}, the dataset will be
+   * read from it. Otherwise, the dataset must have been provided via {@link #withDataset(Dataset)}.
+   *
    * @return a new DatasetEvaluator instance
-   * @throws IllegalStateException if the dataset has not been set
+   * @throws IllegalStateException if neither dataset nor dataSource has been set
    */
   @Nonnull
   public DatasetEvaluator build() {
-    if (dataset == null) {
-      throw new IllegalStateException("Dataset must be set before building DatasetEvaluator");
-    }
+    // Resolve the dataset, either from the provided dataSource or from the directly set dataset.
+    final Dataset<Row> resolvedDataset = resolveDataset();
 
     final SingleResourceEvaluator evaluator =
-        SingleResourceEvaluatorBuilder.create(subjectResource, fhirContext)
+        SingleResourceEvaluatorBuilder.create(subjectResourceCode, fhirContext)
             .withCrossResourceStrategy(crossResourceStrategy)
             .withFunctionRegistry(functionRegistry)
             .withVariables(variables)
             .build();
 
-    return new DatasetEvaluator(evaluator, dataset);
+    return new DatasetEvaluator(evaluator, resolvedDataset);
+  }
+
+  /**
+   * Resolves the dataset to use for evaluation.
+   *
+   * @return the resolved dataset
+   * @throws IllegalStateException if neither dataset nor dataSource has been set
+   */
+  @Nonnull
+  private Dataset<Row> resolveDataset() {
+    if (dataset != null) {
+      return dataset;
+    }
+    if (dataSource != null) {
+      return dataSource.read(subjectResourceCode);
+    }
+    throw new IllegalStateException(
+        "Either dataset or dataSource must be set before building DatasetEvaluator");
   }
 }

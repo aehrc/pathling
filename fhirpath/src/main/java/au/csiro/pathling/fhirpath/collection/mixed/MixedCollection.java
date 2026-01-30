@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.collection.mixed;
 
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.UnsupportedRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
@@ -76,57 +77,9 @@ public abstract class MixedCollection extends Collection {
     // This should technically result in unchecked traversal, but we don't currently have a way
     // of implementing this.
     // See: https://hl7.org/fhirpath/#paths-and-polymorphic-items
-    throw new UnsupportedOperationException(
+    throw new UnsupportedFhirPathFeatureError(
         "Direct traversal of polymorphic collections is not supported."
             + " Please use 'ofType()' to specify the type of element to traverse.");
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * <p>Mixed collections cannot be converted to singular form because they have no concrete type.
-   * Use {@code ofType()} to resolve the collection to a specific type first.
-   *
-   * @throws UnsupportedOperationException always, with a message indicating how to resolve the
-   *     collection
-   */
-  @Nonnull
-  @Override
-  public Collection asSingular() {
-    throw new UnsupportedOperationException(
-        "Representation of this path is not supported: " + unsupportedDescription);
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * <p>Mixed collections cannot be converted to singular form because they have no concrete type.
-   * Use {@code ofType()} to resolve the collection to a specific type first.
-   *
-   * @throws UnsupportedOperationException always, with a message indicating how to resolve the
-   *     collection
-   */
-  @Nonnull
-  @Override
-  public Collection asSingular(@Nonnull final String errorMessage) {
-    throw new UnsupportedOperationException(
-        "Representation of this path is not supported: " + unsupportedDescription);
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * <p>Mixed collections cannot be converted to plural form because they have no concrete type. Use
-   * {@code ofType()} to resolve the collection to a specific type first.
-   *
-   * @throws UnsupportedOperationException always, with a message indicating how to resolve the
-   *     collection
-   */
-  @Nonnull
-  @Override
-  public Collection asPlural() {
-    throw new UnsupportedOperationException(
-        "Representation of this path is not supported: " + unsupportedDescription);
   }
 
   /**

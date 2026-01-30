@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.view;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.compartment.GroupMemberService;
@@ -217,7 +218,7 @@ public class ViewExecutionHelper {
       result = executor.buildQuery(view);
     } catch (final ConstraintViolationException e) {
       throw new InvalidRequestException("Invalid ViewDefinition: " + e.getMessage());
-    } catch (final UnsupportedOperationException e) {
+    } catch (final UnsupportedOperationException | UnsupportedFhirPathFeatureError e) {
       // Thrown when a FHIRPath expression is not supported, such as accessing a choice element
       // without specifying the type via ofType().
       throw new InvalidRequestException("Unsupported expression: " + e.getMessage());
@@ -434,30 +435,32 @@ public class ViewExecutionHelper {
   @Nullable
   private Object convertValue(
       @Nullable final Object value, @Nonnull final org.apache.spark.sql.types.DataType dataType) {
-    if (value == null) {
-      return null;
-    }
-    // Handle nested struct.
-    if (value instanceof final Row nestedRow && dataType instanceof final StructType structType) {
-      final Map<String, Object> nested = new LinkedHashMap<>();
-      final StructField[] fields = structType.fields();
-      for (int i = 0; i < fields.length; i++) {
-        final Object nestedValue = nestedRow.get(i);
-        if (nestedValue != null) {
-          nested.put(fields[i].name(), convertValue(nestedValue, fields[i].dataType()));
+    return switch (value) {
+      case null -> null;
+
+      // Handle nested struct.
+      case final Row nestedRow when dataType instanceof final StructType structType -> {
+        final Map<String, Object> nested = new LinkedHashMap<>();
+        final StructField[] fields = structType.fields();
+        for (int i = 0; i < fields.length; i++) {
+          final Object nestedValue = nestedRow.get(i);
+          if (nestedValue != null) {
+            nested.put(fields[i].name(), convertValue(nestedValue, fields[i].dataType()));
+          }
         }
+        yield nested;
       }
-      return nested;
-    }
-    // Handle array.
-    if (value instanceof final scala.collection.Seq<?> seq) {
-      final List<?> list = CollectionConverters.asJava(seq);
-      if (dataType instanceof final ArrayType arrayType) {
-        return list.stream().map(item -> convertValue(item, arrayType.elementType())).toList();
+
+      // Handle array.
+      case final scala.collection.Seq<?> seq -> {
+        final List<?> list = CollectionConverters.asJava(seq);
+        if (dataType instanceof final ArrayType arrayType) {
+          yield list.stream().map(item -> convertValue(item, arrayType.elementType())).toList();
+        }
+        yield list;
       }
-      return list;
-    }
-    return value;
+      default -> value;
+    };
   }
 
   /** Converts a Spark Row to a list of values for CSV output. */

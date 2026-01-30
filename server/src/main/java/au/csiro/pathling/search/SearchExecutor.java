@@ -26,9 +26,8 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators;
-import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
@@ -40,7 +39,6 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -124,16 +122,14 @@ public class SearchExecutor implements IBundleProvider {
     }
 
     // Create a FHIRPath evaluator for the subject resource type.
-    final FhirPathEvaluator evaluator =
-        FhirPathEvaluators.createSingle(
-            subjectResourceCode,
-            fhirContext,
-            StaticFunctionRegistry.getInstance(),
-            Map.of(),
-            dataSource);
+    // This supports both standard FHIR resource types and custom types like ViewDefinition.
+    final DatasetEvaluator evaluator =
+        DatasetEvaluatorBuilder.create(subjectResourceCode, fhirContext)
+            .withDataset(flatDataset)
+            .build();
 
     // Get the input context for FHIRPath evaluation.
-    final ResourceCollection inputContext = evaluator.createDefaultInputContext();
+    final ResourceCollection inputContext = evaluator.getDefaultInputContext();
 
     // Parse and evaluate each filter expression, building up a combined filter column.
     // This captures the AND/OR conditions possible through the FHIR API.
@@ -152,7 +148,7 @@ public class SearchExecutor implements IBundleProvider {
         final FhirPath fhirPath = parser.parse(expression);
 
         // Evaluate the expression against the input context.
-        final Collection filterResult = evaluator.evaluate(fhirPath, inputContext);
+        final Collection filterResult = evaluator.evaluateToCollection(fhirPath, inputContext);
 
         // Convert to boolean using FHIRPath boolean context semantics.
         final Column filterValue = filterResult.asBooleanSingleton().getColumn().getValue();
@@ -176,7 +172,7 @@ public class SearchExecutor implements IBundleProvider {
     // the filter. The evaluator's dataset has the standardized structure with columns compatible
     // with the filter column.
     final String filterIdAlias = randomAlias();
-    final Dataset<Row> evaluatorDataset = evaluator.createInitialDataset();
+    final Dataset<Row> evaluatorDataset = evaluator.getDataset();
     final Dataset<Row> filteredIds =
         evaluatorDataset
             .select(evaluatorDataset.col("id").alias(filterIdAlias))

@@ -29,7 +29,6 @@ import java.util.Map;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Evaluates FHIRPath expressions against a single FHIR resource type without requiring a
@@ -125,13 +124,16 @@ public class SingleResourceEvaluator {
   }
 
   /**
-   * Returns the subject resource type for this evaluator.
+   * Returns the subject resource code for this evaluator.
    *
-   * @return the subject resource type
+   * <p>This method supports both standard FHIR resource types (e.g., "Patient", "Observation") and
+   * custom resource types (e.g., "ViewDefinition").
+   *
+   * @return the subject resource type code
    */
   @Nonnull
-  public ResourceType getSubjectResource() {
-    return resourceResolver.getSubjectResource();
+  public String getSubjectResourceCode() {
+    return resourceResolver.getSubjectResourceCode();
   }
 
   /**

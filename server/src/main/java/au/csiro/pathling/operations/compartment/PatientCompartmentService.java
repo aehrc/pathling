@@ -24,9 +24,8 @@ import static org.apache.spark.sql.functions.lit;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators;
-import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
+import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
@@ -191,13 +190,18 @@ public class PatientCompartmentService {
       return rowDataset.filter(lit(false));
     }
 
+    // Read the resource data from the data source.
+    final org.apache.spark.sql.Dataset<org.apache.spark.sql.Row> resourceDataset =
+        dataSource.read(resourceType);
+
     // Create a FHIRPath evaluator for this resource type.
-    final FhirPathEvaluator evaluator =
-        FhirPathEvaluators.createSingle(
-            resourceType, fhirContext, StaticFunctionRegistry.getInstance(), Map.of(), dataSource);
+    final DatasetEvaluator evaluator =
+        DatasetEvaluatorBuilder.create(resourceType, fhirContext)
+            .withDataset(resourceDataset)
+            .build();
 
     // Get the input context for FHIRPath evaluation.
-    final ResourceCollection inputContext = evaluator.createDefaultInputContext();
+    final ResourceCollection inputContext = evaluator.getDefaultInputContext();
 
     // Build OR filter across all compartment paths using FHIRPath evaluation.
     Column filter = lit(false);
@@ -213,7 +217,7 @@ public class PatientCompartmentService {
 
     // Apply the filter to the evaluator's dataset and extract matching IDs.
     final org.apache.spark.sql.Dataset<org.apache.spark.sql.Row> evaluatorDataset =
-        evaluator.createInitialDataset();
+        evaluator.getDataset();
     final org.apache.spark.sql.Dataset<org.apache.spark.sql.Row> matchingIds =
         evaluatorDataset.filter(safeFilter).select(evaluatorDataset.col("id"));
 
@@ -242,7 +246,7 @@ public class PatientCompartmentService {
   private Column buildPathFilter(
       @Nonnull final String path,
       @Nonnull final Set<String> patientIds,
-      @Nonnull final FhirPathEvaluator evaluator,
+      @Nonnull final DatasetEvaluator evaluator,
       @Nonnull final ResourceCollection inputContext) {
     try {
       // Build a boolean FHIRPath expression that checks if any reference matches.
@@ -271,7 +275,7 @@ public class PatientCompartmentService {
       final FhirPath fhirPath = parser.parse(expression);
 
       // Evaluate the FHIRPath expression - this returns a boolean collection.
-      final Collection result = evaluator.evaluate(fhirPath, inputContext);
+      final Collection result = evaluator.evaluateToCollection(fhirPath, inputContext);
 
       // Get the boolean column.
       final Column boolColumn = result.getColumn().getValue();

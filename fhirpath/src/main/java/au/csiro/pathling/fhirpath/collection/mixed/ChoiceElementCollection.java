@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -35,7 +36,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 /** A collection representing a choice element in FHIR. */
 @Value
 @EqualsAndHashCode(callSuper = false)
-public class ChoiceElementCollection extends MixedCollection {
+public class ChoiceElementCollection extends MixedCollection implements Materializable {
 
   /** The definition of this choice element. */
   @Nonnull ChoiceDefinition choiceDefinition;

@@ -23,7 +23,6 @@ import au.csiro.pathling.fhirpath.definition.DefinitionContext;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Value;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A {@link ResourceResolver} implementation that works with custom definitions.
@@ -56,18 +55,13 @@ public class DefinitionResourceResolver implements ResourceResolver {
   /**
    * {@inheritDoc}
    *
-   * <p>Returns the subject resource type. For non-FHIR resources (custom types), returns {@link
-   * ResourceType#NULL}.
+   * <p>Returns the subject resource code. Supports both standard FHIR resource types (e.g.,
+   * "Patient") and custom types defined in the definition context.
    */
   @Override
   @Nonnull
-  public ResourceType getSubjectResource() {
-    try {
-      return ResourceType.fromCode(subjectResourceCode);
-    } catch (final Exception e) {
-      // For non-FHIR resource types (custom definitions), return NULL
-      return ResourceType.NULL;
-    }
+  public String getSubjectResourceCode() {
+    return subjectResourceCode;
   }
 
   /**

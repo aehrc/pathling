@@ -60,7 +60,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public class SingleResourceEvaluatorBuilder {
 
-  @Nonnull private final ResourceType subjectResource;
+  @Nonnull private final String subjectResourceCode;
 
   @Nonnull private final FhirContext fhirContext;
 
@@ -72,9 +72,35 @@ public class SingleResourceEvaluatorBuilder {
 
   /** Private constructor. Use factory methods to create instances. */
   private SingleResourceEvaluatorBuilder(
-      @Nonnull final ResourceType subjectResource, @Nonnull final FhirContext fhirContext) {
-    this.subjectResource = subjectResource;
+      @Nonnull final String subjectResourceCode, @Nonnull final FhirContext fhirContext) {
+    this.subjectResourceCode = subjectResourceCode;
     this.fhirContext = fhirContext;
+  }
+
+  /**
+   * Creates a builder for the specified resource type code.
+   *
+   * <p>Column references are generated as direct column access (e.g., {@code col("name")}),
+   * suitable for Pathling-encoded flat datasets.
+   *
+   * <p>This is suitable for:
+   *
+   * <ul>
+   *   <li>Building FHIR Search filter columns
+   *   <li>Creating filter expressions for flat datasets
+   * </ul>
+   *
+   * <p>This method supports both standard FHIR resource types (e.g., "Patient", "Observation") and
+   * custom resource types registered with HAPI (e.g., "ViewDefinition").
+   *
+   * @param subjectResourceCode the subject resource type code
+   * @param fhirContext the FHIR context
+   * @return a new builder
+   */
+  @Nonnull
+  public static SingleResourceEvaluatorBuilder create(
+      @Nonnull final String subjectResourceCode, @Nonnull final FhirContext fhirContext) {
+    return new SingleResourceEvaluatorBuilder(subjectResourceCode, fhirContext);
   }
 
   /**
@@ -97,7 +123,7 @@ public class SingleResourceEvaluatorBuilder {
   @Nonnull
   public static SingleResourceEvaluatorBuilder create(
       @Nonnull final ResourceType subjectResource, @Nonnull final FhirContext fhirContext) {
-    return new SingleResourceEvaluatorBuilder(subjectResource, fhirContext);
+    return new SingleResourceEvaluatorBuilder(subjectResource.toCode(), fhirContext);
   }
 
   /**
@@ -153,7 +179,7 @@ public class SingleResourceEvaluatorBuilder {
   @Nonnull
   public SingleResourceEvaluator build() {
     final ResourceResolver resolver =
-        new FhirResourceResolver(subjectResource, fhirContext, crossResourceStrategy);
+        new FhirResourceResolver(subjectResourceCode, fhirContext, crossResourceStrategy);
     return new SingleResourceEvaluator(resolver, functionRegistry, variables);
   }
 }

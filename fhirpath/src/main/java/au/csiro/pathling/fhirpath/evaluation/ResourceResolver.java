@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.evaluation;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Interface for resolving FHIR resources during single-resource FHIRPath evaluation.
@@ -40,15 +39,17 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public interface ResourceResolver {
 
   /**
-   * Returns the subject resource type for this resolver.
+   * Returns the subject resource code for this resolver.
    *
-   * <p>The subject resource is the primary resource type being queried, such as Patient in a query
-   * starting with {@code Patient.name.given}.
+   * <p>The subject resource is the primary resource type being queried, such as "Patient" in a
+   * query starting with {@code Patient.name.given}. This method supports both standard FHIR
+   * resource types (e.g., "Patient", "Observation") and custom resource types (e.g.,
+   * "ViewDefinition").
    *
-   * @return the subject resource type
+   * @return the subject resource type code
    */
   @Nonnull
-  ResourceType getSubjectResource();
+  String getSubjectResourceCode();
 
   /**
    * Resolves the subject resource for this context.
