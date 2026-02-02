@@ -34,6 +34,8 @@ jobs:
     needs: detect-changes
     permissions:
       contents: read
+    outputs:
+      pathling-version: ${{ steps.get-version.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -48,6 +50,13 @@ jobs:
           r: "true"
           python: "true"
           sonar-cache: "true"
+
+      - name: Get project version
+        id: get-version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Pathling version: $VERSION"
 
       - name: Run install goal
         env:
@@ -81,3 +90,6 @@ jobs:
     if: needs.detect-changes.outputs.server == 'true'
     uses: ./.github/workflows/server-test.yml
     secrets: inherit
+    with:
+      download-library-jars: true
+      pathling-version: ${{ needs.build-and-test.outputs.pathling-version }}

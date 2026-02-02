@@ -4,6 +4,16 @@ name: Test server
 
 on:
   workflow_call:
+    inputs:
+      download-library-jars:
+        description: 'Download and install library JARs from build-and-test job'
+        required: false
+        type: boolean
+        default: false
+      pathling-version:
+        description: 'Pathling library version (required when download-library-jars is true)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -26,6 +36,47 @@ jobs:
           java: "true"
           bun: "true"
           sonar-cache: "true"
+
+      - name: Download library JARs
+        if: ${{ inputs.download-library-jars }}
+        uses: actions/download-artifact@v4
+        with:
+          name: jars
+          path: downloaded-jars
+
+      - name: Install Pathling JARs to local Maven repo
+        if: ${{ inputs.download-library-jars }}
+        env:
+          VERSION: ${{ inputs.pathling-version }}
+        run: |
+          echo "Installing Pathling JARs version: $VERSION"
+
+          # Install library-runtime (main compile dependency)
+          mvn install:install-file \
+            -Dfile="downloaded-jars/library-runtime/target/library-runtime-${VERSION}.jar" \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=library-runtime \
+            -Dversion="$VERSION" \
+            -Dpackaging=jar \
+            -DgeneratePom=true
+
+          # Install utilities test-jar (test scope dependency)
+          mvn install:install-file \
+            -Dfile="downloaded-jars/utilities/target/utilities-${VERSION}-tests.jar" \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=utilities \
+            -Dversion="$VERSION" \
+            -Dpackaging=test-jar \
+            -DgeneratePom=true
+
+          # Install fhirpath test-jar (test scope dependency)
+          mvn install:install-file \
+            -Dfile="downloaded-jars/fhirpath/target/fhirpath-${VERSION}-tests.jar" \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=fhirpath \
+            -Dversion="$VERSION" \
+            -Dpackaging=test-jar \
+            -DgeneratePom=true
 
       - name: Build and test
         env:
