@@ -316,6 +316,7 @@ public class ExportOperationUtil {
         webTestClient
             .get()
             .uri(pollUrl)
+            .header("Accept", "application/fhir+json")
             .exchange()
             .expectStatus()
             .is2xxSuccessful()
