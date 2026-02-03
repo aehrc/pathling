@@ -54,7 +54,7 @@ public abstract class Strings {
    */
   @Nonnull
   public static String unTickQuote(@Nonnull final String value) {
-    return value.replaceAll("^`|`$", "");
+    return value.replaceAll("(?:^`)|(?:`$)", "");
   }
 
   /**
