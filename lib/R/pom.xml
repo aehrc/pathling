@@ -225,6 +225,8 @@
                 <argument>-e</argument>
                 <argument>installed.packages()[,c("Package","Version")]</argument>
                 <argument>-e</argument>
+                <argument>sessionInfo()</argument>
+                <argument>-e</argument>
                 <argument>sparklyr::spark_install(version='${pathling.Rapi.sparkVersion}', hadoop_version='${pathling.Rapi.hadoopMajorVersion}')</argument>
               </arguments>
             </configuration>
