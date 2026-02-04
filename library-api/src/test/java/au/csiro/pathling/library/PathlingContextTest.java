@@ -38,6 +38,7 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.search.UnknownSearchParameterException;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -643,5 +644,95 @@ public class PathlingContextTest {
         ex.getMessage().contains("does not support configuration access"),
         "Expected error message to contain 'does not support configuration access', but was: "
             + ex.getMessage());
+  }
+
+  // ========== searchToColumn tests ==========
+
+  @Test
+  void searchToColumn_singleParameter() {
+    final PathlingContext pathling = PathlingContext.create(spark);
+    final Column genderFilter = pathling.searchToColumn("Patient", "gender=male");
+
+    assertNotNull(genderFilter);
+  }
+
+  @Test
+  void searchToColumn_multipleParameters() {
+    final PathlingContext pathling = PathlingContext.create(spark);
+    final Column combinedFilter = pathling.searchToColumn("Patient", "gender=male&active=true");
+
+    assertNotNull(combinedFilter);
+  }
+
+  @Test
+  void searchToColumn_datePrefix() {
+    final PathlingContext pathling = PathlingContext.create(spark);
+    final Column dateFilter = pathling.searchToColumn("Patient", "birthdate=ge1990-01-01");
+
+    assertNotNull(dateFilter);
+  }
+
+  @Test
+  void searchToColumn_combineWithAnd() {
+    final PathlingContext pathling = PathlingContext.create(spark);
+
+    final Column genderFilter = pathling.searchToColumn("Patient", "gender=male");
+    final Column activeFilter = pathling.searchToColumn("Patient", "active=true");
+    final Column combined = genderFilter.and(activeFilter);
+
+    assertNotNull(combined);
+  }
+
+  @Test
+  void searchToColumn_combineWithOr() {
+    final PathlingContext pathling = PathlingContext.create(spark);
+
+    final Column maleFilter = pathling.searchToColumn("Patient", "gender=male");
+    final Column femaleFilter = pathling.searchToColumn("Patient", "gender=female");
+    final Column combined = maleFilter.or(femaleFilter);
+
+    assertNotNull(combined);
+  }
+
+  @Test
+  void searchToColumn_applyToDataFrame() {
+    final Dataset<String> bundlesDF =
+        spark.read().option("wholetext", true).textFile(TEST_DATA_URL + "/bundles/R4/json");
+
+    final PathlingContext pathling = PathlingContext.create(spark);
+    final Dataset<Row> patientsDataframe =
+        pathling.encodeBundle(bundlesDF.toDF(), "Patient", PathlingContext.FHIR_JSON);
+
+    // Create filter and apply it
+    final Column genderFilter = pathling.searchToColumn("Patient", "gender=male");
+    final Dataset<Row> filteredPatients = patientsDataframe.filter(genderFilter);
+
+    // Should return fewer patients than the original dataset
+    assertTrue(filteredPatients.count() <= patientsDataframe.count());
+  }
+
+  @Test
+  void searchToColumn_emptyQueryMatchesAllResources() {
+    final Dataset<String> bundlesDF =
+        spark.read().option("wholetext", true).textFile(TEST_DATA_URL + "/bundles/R4/json");
+
+    final PathlingContext pathling = PathlingContext.create(spark);
+    final Dataset<Row> patientsDataframe =
+        pathling.encodeBundle(bundlesDF.toDF(), "Patient", PathlingContext.FHIR_JSON);
+
+    final Column emptyFilter = pathling.searchToColumn("Patient", "");
+    final Dataset<Row> filteredPatients = patientsDataframe.filter(emptyFilter);
+
+    // Empty filter should match all resources
+    assertEquals(patientsDataframe.count(), filteredPatients.count());
+  }
+
+  @Test
+  void searchToColumn_invalidParameter_throwsException() {
+    final PathlingContext pathling = PathlingContext.create(spark);
+
+    assertThrows(
+        UnknownSearchParameterException.class,
+        () -> pathling.searchToColumn("Patient", "invalid-param=value"));
   }
 }

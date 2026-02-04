@@ -18,7 +18,7 @@
 from typing import TYPE_CHECKING, Optional, Sequence
 
 from py4j.java_gateway import JavaObject
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import Column, DataFrame, SparkSession
 
 from pathling._version import (
     __delta_version__,
@@ -380,3 +380,38 @@ class PathlingContext:
         from pathling.datasource import DataSources
 
         return DataSources(self)
+
+    def search_to_column(self, resource_type: str, search_expression: str) -> Column:
+        """
+        Converts a FHIR search expression to a boolean filter column.
+
+        This method takes a FHIR search query string and returns a PySpark Column
+        that can be used to filter a DataFrame of FHIR resources. The resulting
+        Column evaluates to true for resources that match the search criteria.
+
+        Example usage::
+
+            pc = PathlingContext.create(spark)
+
+            # Single parameter
+            gender_filter = pc.search_to_column("Patient", "gender=male")
+
+            # Multiple parameters (AND)
+            combined_filter = pc.search_to_column("Patient", "gender=male&birthdate=ge1990-01-01")
+
+            # Combine with Pythonic operators
+            filter1 = pc.search_to_column("Patient", "gender=male")
+            filter2 = pc.search_to_column("Patient", "active=true")
+            combined = filter1 & filter2
+
+            # Apply to DataFrame
+            patients = datasource.read("Patient")
+            filtered = patients.filter(combined)
+
+        :param resource_type: the FHIR resource type (e.g., "Patient", "Observation")
+        :param search_expression: URL query string format (e.g., "gender=male&birthdate=ge1990")
+        :return: a PySpark Column representing the boolean filter condition
+        :raises: IllegalArgumentException if the search expression contains unknown parameters
+        """
+        jcolumn = self._jpc.searchToColumn(resource_type, search_expression)
+        return Column(jcolumn)

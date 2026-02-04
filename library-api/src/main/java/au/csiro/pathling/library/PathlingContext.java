@@ -27,6 +27,7 @@ import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
+import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.sql.PathlingUdfConfigurer;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
@@ -45,12 +46,14 @@ import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A class designed to provide access to selected Pathling functionality from a language library
@@ -603,6 +606,41 @@ public class PathlingContext {
   @Nonnull
   public Optional<String> matchSupportedResourceType(@Nonnull final String resourceTypeString) {
     return ResourceTypes.matchSupportedResourceType(resourceTypeString);
+  }
+
+  /**
+   * Converts a FHIR search expression to a boolean filter column.
+   *
+   * <p>This method takes a FHIR search query string and returns a Spark Column that can be used to
+   * filter a DataFrame of FHIR resources. The resulting Column evaluates to true for resources that
+   * match the search criteria.
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * PathlingContext pc = PathlingContext.create(spark);
+   *
+   * // Single parameter
+   * Column genderFilter = pc.searchToColumn("Patient", "gender=male");
+   *
+   * // Multiple parameters (AND)
+   * Column combinedFilter = pc.searchToColumn("Patient", "gender=male&birthdate=ge1990-01-01");
+   *
+   * // Apply to DataFrame
+   * Dataset<Row> patients = dataSource.read("Patient");
+   * Dataset<Row> filtered = patients.filter(combinedFilter);
+   * }</pre>
+   *
+   * @param resourceType the FHIR resource type (e.g., "Patient", "Observation")
+   * @param searchExpression URL query string format (e.g., "gender=male&amp;birthdate=ge1990")
+   * @return a Spark Column representing the boolean filter condition
+   * @throws IllegalArgumentException if the search expression contains unknown parameters
+   */
+  @Nonnull
+  public Column searchToColumn(
+      @Nonnull final String resourceType, @Nonnull final String searchExpression) {
+    final SearchColumnBuilder builder = SearchColumnBuilder.withDefaultRegistry(getFhirContext());
+    return builder.fromQueryString(ResourceType.fromCode(resourceType), searchExpression);
   }
 
   @Nonnull
