@@ -31,7 +31,7 @@ Suggests:
     testthat(>= 3.2.1.1), lintr, styler
 Config/testthat/edition: 3
 RoxygenNote: 7.2.3
-SystemRequirements: Spark: 3.5.x
+SystemRequirements: Spark: 4.0.x
 Config/pathling/Version: %pathling.version%
 Config/pathling/SparkVersion: %pathling.Rapi.sparkVersion%
 Config/pathling/ScalaVersion: %pathling.Rapi.scalaVersion%
