@@ -219,9 +219,9 @@
                 <argument>-e</argument>
                 <argument>Sys.setenv(CXX11="clang++", CXX11STD="-std=c++11", CXXFLAGS="-std=c++11")</argument>
                 <argument>-e</argument>
-                <argument>install.packages("devtools")</argument>
+                <argument>install.packages("devtools", type="source")</argument>
                 <argument>-e</argument>
-                <argument>devtools::install_dev_deps()</argument>
+                <argument>devtools::install_dev_deps(type="source")</argument>
                 <argument>-e</argument>
                 <argument>sparklyr::spark_install(version='${pathling.Rapi.sparkVersion}', hadoop_version='${pathling.Rapi.hadoopMajorVersion}')</argument>
               </arguments>
