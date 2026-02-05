@@ -29,7 +29,7 @@ runs:
   steps:
     - name: Run security scan (SARIF output)
       id: sarif-scan
-      uses: aquasecurity/trivy-action@0.32.0
+      uses: aquasecurity/trivy-action@0.33.1
       continue-on-error: true
       env:
         TRIVY_SKIP_DB_UPDATE: ${{ inputs.skip-db-update }}
@@ -43,10 +43,11 @@ runs:
         skip-files: ${{ inputs.skip-files }}
         exit-code: "1"
         severity: MEDIUM,HIGH,CRITICAL
+        version: 'v0.69.0'
 
     - name: Run security scan (table output on failure)
       if: steps.sarif-scan.outcome == 'failure'
-      uses: aquasecurity/trivy-action@0.32.0
+      uses: aquasecurity/trivy-action@0.31.1
       env:
         TRIVY_SKIP_DB_UPDATE: ${{ inputs.skip-db-update }}
         TRIVY_SKIP_JAVA_DB_UPDATE: ${{ inputs.skip-db-update }}
@@ -59,3 +60,4 @@ runs:
         skip-setup-trivy: true
         exit-code: "1"
         severity: MEDIUM,HIGH,CRITICAL
+        version: 'v0.69.0'
