@@ -116,6 +116,12 @@
       <groupId>io.github.fhnaumann</groupId>
       <artifactId>ucumate-core</artifactId>
       <version>1.0.8</version>
+      <exclusions>
+        <exclusion>
+          <groupId>io.github.fhnaumann</groupId>
+          <artifactId>ucumate-test-utils</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>

@@ -15,18 +15,33 @@ operations.
 ## Background
 
 Earlier versions of Pathling included a server component with custom operations
-like `$aggregate` and `$extract` for analytics queries. While these were
-powerful, they were Pathling-specific and didn't interoperate with other
-systems.
+like [aggregate](/docs/7.2.0/server/operations/aggregate)
+and [extract](/docs/7.2.0/server/operations/extract) for analytics queries.
+While these were powerful, they were Pathling-specific and didn't interoperate
+with other systems.
 
-With the [v8.0.0 release](https://github.com/aehrc/pathling/releases/tag/v8.0.0),
-we removed the server to focus on the core libraries. Now the server is back,
-rebuilt with a standards-based approach and versioned independently from the
-libraries (starting at 1.0.0).
+Following this, we spent about two years working with international
+collaborators to come up with a new standards-based approach to FHIR
+analytics: [SQL on FHIR](https://sql-on-fhir.org/). This work incorporated many
+learnings from our early work on Pathling. With the publication of the SQL on
+FHIR view specification we have a solid foundation on which to build solutions
+that work across different implementations. We even wrote
+a [paper](https://www.nature.com/articles/s41746-025-01708-w) about it.
+
+Of course we were excited to not just add support for SQL on FHIR to Pathling,
+but to completely reimagine its functionality based on the new architecture.
+With
+the [v8.0.0 release](https://github.com/aehrc/pathling/releases/tag/v8.0.0), we
+removed the server to focus on a refreshed set of core libraries based on SQL on
+FHIR.
+
+And now the server is back, rebuilt with a standards-based approach and
+versioned independently from the libraries (starting at 1.0.0).
 
 The new server exclusively depends on the `library-runtime` module, which
 provides a much looser coupling to the core Pathling libraries. This makes the
-server lighter and more maintainable.
+server lighter and more maintainable, and allows it to evolve independently
+of the libraries.
 
 ## What is Pathling server?
 
@@ -38,18 +53,17 @@ supports both single-node and cluster deployments.
 
 ## SQL on FHIR
 
-The headline feature is support for the
-[SQL on FHIR](https://sql-on-fhir.org/) specification.
-This replaces the previous `$aggregate` and `$extract` operations with a
-standards-based approach that works across implementations—ViewDefinitions
-created for Pathling will work on any SQL on FHIR compliant system.
+The headline feature is support for the SQL on FHIR specification. This replaces
+the previous `aggregate` and `extract` operations with a standards-based
+approach that works across implementations — view definitions created for
+Pathling will work on any SQL on FHIR-compliant system.
 
-ViewDefinitions are portable, declarative definitions that specify how to
-flatten hierarchical FHIR resources into rows and columns.
+Views are portable, declarative definitions that specify how to flatten
+hierarchical FHIR resources into rows and columns.
 
-### ViewDefinitions
+### View definitions
 
-A ViewDefinition specifies which resource type to query and how to extract
+A view definition specifies which resource type to query and how to extract
 columns using FHIRPath expressions:
 
 ```json
@@ -61,11 +75,26 @@ columns using FHIRPath expressions:
     "select": [
         {
             "column": [
-                { "name": "id", "path": "id" },
-                { "name": "family", "path": "name.first().family" },
-                { "name": "given", "path": "name.first().given.first()" },
-                { "name": "gender", "path": "gender" },
-                { "name": "birth_date", "path": "birthDate" }
+                {
+                    "name": "id",
+                    "path": "id"
+                },
+                {
+                    "name": "family",
+                    "path": "name.first().family"
+                },
+                {
+                    "name": "given",
+                    "path": "name.first().given.first()"
+                },
+                {
+                    "name": "gender",
+                    "path": "gender"
+                },
+                {
+                    "name": "birth_date",
+                    "path": "birthDate"
+                }
             ]
         }
     ]
@@ -74,8 +103,9 @@ columns using FHIRPath expressions:
 
 ### Running views interactively
 
-The `$viewdefinition-run` operation executes a ViewDefinition and returns
-results synchronously. This is ideal for interactive exploration and testing:
+The [$viewdefinition-run](/docs/server/operations/view-run) operation executes a
+ViewDefinition and returns results synchronously. This is ideal for interactive
+exploration and testing:
 
 ```bash
 curl -X POST 'http://localhost:8080/fhir/$viewdefinition-run' \
@@ -116,8 +146,10 @@ You can also request CSV output by setting `Accept: text/csv`.
 
 ### Exporting views at scale
 
-For larger datasets, use `$viewdefinition-export` to run views asynchronously
-and export results to files. This operation supports multiple output formats:
+For larger datasets,
+use [$viewdefinition-export](/docs/server/operations/view-export) to run
+views asynchronously and export results to files. This operation supports
+multiple output formats:
 
 - **NDJSON** – newline-delimited JSON
 - **CSV** – comma-separated values
@@ -159,7 +191,7 @@ Supported formats include:
 | NDJSON  | `application/fhir+ndjson`        |
 | Parquet | `application/vnd.apache.parquet` |
 
-Data can be loaded from Amazon S3 (`s3a://`), HDFS, or the local filesystem.
+Data can be loaded from Amazon S3, HDFS, or the local filesystem.
 
 ```bash
 curl -X POST 'http://localhost:8080/fhir/$import' \
@@ -185,7 +217,7 @@ Import modes control how incoming data interacts with existing resources:
 
 The `$import-pnp` (ping and pull) operation fetches data directly from a FHIR
 server that supports bulk export. Pathling initiates the export, polls for
-completion, downloads the files, and imports them—all in a single operation.
+completion, downloads the files, and imports them — all in a single operation.
 
 This enables scheduled synchronisation with source systems:
 
@@ -207,7 +239,7 @@ curl -X POST 'http://localhost:8080/fhir/$import-pnp' \
 The `$export` operation extracts data from the server using the
 [FHIR Bulk Data Access](https://hl7.org/fhir/uv/bulkdata/) specification.
 Exports can be scoped to the entire system, a specific patient, or members of a
-Group:
+[Group](https://hl7.org/fhir/R4/group.html):
 
 ```bash
 # System-level export
@@ -228,7 +260,8 @@ curl -X GET 'http://localhost:8080/fhir/Group/cohort/$export' \
 
 ## CRUD operations and search
 
-The server supports full CRUD operations on FHIR resources:
+The server supports [CRUD operations](https://hl7.org/fhir/R4/http.html) on FHIR
+resources, including `ViewDefinition` resources:
 
 ```bash
 # Create
@@ -269,18 +302,44 @@ expressions within a single parameter use OR logic.
 
 ## Web interface
 
-A new React-based web interface provides administrative access to the server:
-
-- **Dashboard** – view server information, supported resources, and available
-  operations
-- **Resources** – browse and search FHIR resources using FHIRPath expressions
-- **SQL on FHIR** – execute ViewDefinitions interactively and export results
-- **Import/Export** – manage bulk data operations
-- **Authentication** – SMART on FHIR integration for protected servers
-
-![The SQL on FHIR interface showing a ViewDefinition and tabular results](/assets/images/sql-on-fhir-ui.png)
+A new built-in web interface provides administrative access to the server and an
+easy way to interact with its features.
 
 The UI is served directly by the server and requires no additional deployment.
+It is a [SMART App](https://hl7.org/fhir/smart-app-launch/) and is capable of
+integrating with Pathling servers that
+have [authentication](/docs/server/authorization) enabled.
+
+The Dashboard allows you to view server information, supported resources, and
+available operations.
+
+![Pathling dashboard](./dashboard.png)
+
+The Resources page allows you to browse and search FHIR resources using FHIRPath
+expressions.
+
+![Pathling resources page](./resources.png)
+
+The Import page allows you to import data into the Pathling server from URLs, or
+from a FHIR server that supports bulk export.
+
+![Pathling import page](./import.png)
+
+The Export page allows you to export and download bulk data from the Pathling
+server.
+
+![Pathling export page](./export.png)
+
+The Bulk Submit page allows you to monitor and manage Bulk Submit jobs.
+
+![Pathling Bulk Submit page](./bulk-submit.png)
+
+The SQL on FHIR page allows you to create, run, and export view definitions.
+
+![Pathling SQL on FHIR page](./sql-on-fhir.png)
+
+You can interact with a demonstration server
+at [https://demo.pathling.app](https://demo.pathling.app).
 
 ## Deployment
 
@@ -297,7 +356,8 @@ The FHIR API is available at `http://localhost:8080/fhir` and the web UI at
 
 ### Kubernetes with Helm
 
-For production deployments, use the Helm chart:
+For production deployments, use
+the [Helm chart](https://artifacthub.io/packages/helm/pathling/pathling):
 
 ```bash
 helm repo add pathling https://pathling.csiro.au/helm
@@ -330,9 +390,10 @@ pathling:
 
 ### Caching
 
-A Varnish-based caching layer is available for deployments with high read
-traffic. The cache respects `Cache-Control` headers and can significantly reduce
-load on the server for repeated queries.
+A [cache Helm chart](https://artifacthub.io/packages/helm/pathling/pathling-cache)
+is available for deployments with high read traffic. The cache respects
+`Cache-Control` headers and can significantly reduce load on the server for
+repeated queries.
 
 ## Getting started
 
