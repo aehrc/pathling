@@ -47,7 +47,7 @@ runs:
 
     - name: Run security scan (table output on failure)
       if: steps.sarif-scan.outcome == 'failure'
-      uses: aquasecurity/trivy-action@0.31.1
+      uses: aquasecurity/trivy-action@0.33.1
       env:
         TRIVY_SKIP_DB_UPDATE: ${{ inputs.skip-db-update }}
         TRIVY_SKIP_JAVA_DB_UPDATE: ${{ inputs.skip-db-update }}
