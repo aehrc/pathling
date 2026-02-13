@@ -100,3 +100,114 @@ test_that("fhirpath_to_column raises error for invalid expression", {
     pc_fhirpath_to_column(setup$pc, "Patient", "!!invalid!!")
   )
 })
+
+# ========== pathling_filter tests (FHIRPath) ==========
+
+test_that("pathling_filter returns a tbl_spark with FHIRPath expression", {
+  setup <- search_test_setup()
+  # Filtering by gender should return a tbl_spark with fewer rows.
+  result <- setup$patients_df %>%
+    pathling_filter(setup$pc, "Patient", "gender = 'male'")
+  expect_s3_class(result, "tbl_spark")
+  initial_count <- setup$patients_df %>% sparklyr::sdf_nrow()
+  expect_true(result %>% sparklyr::sdf_nrow() <= initial_count)
+  expect_true(result %>% sparklyr::sdf_nrow() > 0)
+})
+
+test_that("pathling_filter with combined boolean FHIRPath expression", {
+  setup <- search_test_setup()
+  # A combined boolean expression should further restrict rows.
+  result <- setup$patients_df %>%
+    pathling_filter(setup$pc, "Patient", "gender = 'male' and birthDate > @1970-01-01")
+  expect_s3_class(result, "tbl_spark")
+  expect_true(result %>% sparklyr::sdf_nrow() > 0)
+})
+
+test_that("pathling_filter raises error for invalid FHIRPath expression", {
+  setup <- search_test_setup()
+  # An invalid FHIRPath expression should raise an error.
+  expect_error(
+    setup$patients_df %>% pathling_filter(setup$pc, "Patient", "!!invalid!!")
+  )
+})
+
+# ========== pathling_filter tests (search) ==========
+
+test_that("pathling_filter with search type returns a tbl_spark", {
+  setup <- search_test_setup()
+  # Filtering with search syntax should return a tbl_spark with fewer rows.
+  result <- setup$patients_df %>%
+    pathling_filter(setup$pc, "Patient", "gender=male", type = "search")
+  expect_s3_class(result, "tbl_spark")
+  initial_count <- setup$patients_df %>% sparklyr::sdf_nrow()
+  expect_true(result %>% sparklyr::sdf_nrow() <= initial_count)
+  expect_true(result %>% sparklyr::sdf_nrow() > 0)
+})
+
+test_that("pathling_filter with multiple search parameters", {
+  setup <- search_test_setup()
+  # Multiple search parameters combined with & should filter correctly.
+  result <- setup$patients_df %>%
+    pathling_filter(setup$pc, "Patient", "gender=male&birthdate=ge1990-01-01", type = "search")
+  expect_s3_class(result, "tbl_spark")
+})
+
+test_that("pathling_filter with search type raises error for invalid parameter", {
+  setup <- search_test_setup()
+  # An invalid search parameter should raise an error.
+  expect_error(
+    setup$patients_df %>%
+      pathling_filter(setup$pc, "Patient", "invalid-param=value", type = "search")
+  )
+})
+
+# ========== pathling_with_column tests ==========
+
+test_that("pathling_with_column adds a named column", {
+  setup <- search_test_setup()
+  # Adding a column should return a tbl_spark with the new column present.
+  result <- setup$patients_df %>%
+    pathling_with_column(setup$pc, "Patient", "name.given.first()", column = "given_name")
+  expect_s3_class(result, "tbl_spark")
+  expect_true("given_name" %in% colnames(result))
+  # Row count should be preserved.
+  expect_equal(
+    result %>% sparklyr::sdf_nrow(),
+    setup$patients_df %>% sparklyr::sdf_nrow()
+  )
+})
+
+test_that("pathling_with_column supports chained calls", {
+  setup <- search_test_setup()
+  # Chaining multiple pathling_with_column calls should add all columns.
+  result <- setup$patients_df %>%
+    pathling_with_column(setup$pc, "Patient", "name.given.first()", column = "given_name") %>%
+    pathling_with_column(setup$pc, "Patient", "gender", column = "gender_value")
+  expect_s3_class(result, "tbl_spark")
+  expect_true("given_name" %in% colnames(result))
+  expect_true("gender_value" %in% colnames(result))
+})
+
+test_that("pathling_with_column raises error for invalid expression", {
+  setup <- search_test_setup()
+  # An invalid FHIRPath expression should raise an error.
+  expect_error(
+    setup$patients_df %>%
+      pathling_with_column(setup$pc, "Patient", "!!invalid!!", column = "bad")
+  )
+})
+
+# ========== piped combination tests ==========
+
+test_that("pathling_filter and pathling_with_column work together in a pipe", {
+  setup <- search_test_setup()
+  # Filtering then adding a column should work in a single pipe.
+  result <- setup$patients_df %>%
+    pathling_filter(setup$pc, "Patient", "gender = 'male'") %>%
+    pathling_with_column(setup$pc, "Patient", "name.given.first()", column = "given") %>%
+    dplyr::select(id, given)
+  expect_s3_class(result, "tbl_spark")
+  expect_equal(colnames(result), c("id", "given"))
+  # Should have only male patients.
+  expect_true(result %>% sparklyr::sdf_nrow() > 0)
+})

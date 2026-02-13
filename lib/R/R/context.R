@@ -349,3 +349,97 @@ pc_search_to_column <- function(pc, resource_type, search_expression) {
 pc_fhirpath_to_column <- function(pc, resource_type, fhirpath_expression) {
   j_invoke(pc, "fhirPathToColumn", as.character(resource_type), as.character(fhirpath_expression))
 }
+
+#' Filter a DataFrame using a FHIRPath or search expression
+#'
+#' Filters a \code{tbl_spark} using either a FHIRPath boolean expression or a FHIR search query
+#' string, returning a \code{tbl_spark} containing only the matching rows. The DataFrame must be the
+#' first argument to enable piping with \code{\%>\%}.
+#'
+#' @param df A \code{tbl_spark} containing FHIR resource data.
+#' @param pc The PathlingContext object.
+#' @param resource_type A string containing the FHIR resource type code (e.g., "Patient",
+#'   "Observation").
+#' @param expression The filter expression. For \code{type = "fhirpath"}, a FHIRPath boolean
+#'   expression (e.g., "gender = 'male'"). For \code{type = "search"}, a FHIR search query string
+#'   (e.g., "gender=male&birthdate=ge1990-01-01").
+#' @param type The type of expression: \code{"fhirpath"} (default) or \code{"search"}.
+#'
+#' @return A \code{tbl_spark} containing only the rows matching the expression.
+#'
+#' @importFrom sparklyr j_invoke spark_dataframe sdf_register
+#'
+#' @family context functions
+#'
+#' @export
+#'
+#' @examples \dontrun{
+#' pc <- pathling_connect()
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples("ndjson"))
+#' patients <- data_source %>% ds_read("Patient")
+#'
+#' # Filter using a FHIRPath expression.
+#' male_patients <- patients %>%
+#'   pathling_filter(pc, "Patient", "gender = 'male'")
+#'
+#' # Filter using a FHIR search expression.
+#' male_patients <- patients %>%
+#'   pathling_filter(pc, "Patient", "gender=male", type = "search")
+#'
+#' pathling_disconnect(pc)
+#' }
+pathling_filter <- function(df, pc, resource_type, expression, type = "fhirpath") {
+  col <- if (type == "search") {
+    pc_search_to_column(pc, resource_type, expression)
+  } else {
+    pc_fhirpath_to_column(pc, resource_type, expression)
+  }
+  sparklyr::spark_dataframe(df) %>%
+    j_invoke("filter", col) %>%
+    sparklyr::sdf_register()
+}
+
+#' Add a FHIRPath-derived column to a DataFrame
+#'
+#' Evaluates a FHIRPath expression and adds the result as a named column to a \code{tbl_spark},
+#' returning the augmented \code{tbl_spark}. The DataFrame must be the first argument to enable
+#' piping with \code{\%>\%}. Multiple calls can be chained to add several columns.
+#'
+#' @param df A \code{tbl_spark} containing FHIR resource data.
+#' @param pc The PathlingContext object.
+#' @param resource_type A string containing the FHIR resource type code (e.g., "Patient",
+#'   "Observation").
+#' @param expression A FHIRPath expression to evaluate (e.g., "name.given.first()").
+#' @param column The name of the new column to add.
+#'
+#' @return A \code{tbl_spark} with the new column added.
+#'
+#' @importFrom sparklyr j_invoke spark_dataframe sdf_register
+#'
+#' @family context functions
+#'
+#' @export
+#'
+#' @examples \dontrun{
+#' pc <- pathling_connect()
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples("ndjson"))
+#' patients <- data_source %>% ds_read("Patient")
+#'
+#' # Add a single column.
+#' result <- patients %>%
+#'   pathling_with_column(pc, "Patient", "name.given.first()", column = "given_name")
+#'
+#' # Chain multiple columns.
+#' result <- patients %>%
+#'   pathling_with_column(pc, "Patient", "name.given.first()", column = "given_name") %>%
+#'   pathling_with_column(pc, "Patient", "gender", column = "gender_value") %>%
+#'   dplyr::select(id, given_name, gender_value)
+#'
+#' pathling_disconnect(pc)
+#' }
+pathling_with_column <- function(df, pc, resource_type, expression, column) {
+  col <- pc_fhirpath_to_column(pc, resource_type, expression)
+  sparklyr::spark_dataframe(df) %>%
+    j_invoke("withColumn", as.character(column), col) %>%
+    sparklyr::sdf_register()
+}
