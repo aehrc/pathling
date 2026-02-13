@@ -49,6 +49,7 @@ jobs:
           java: "true"
           r: "true"
           python: "true"
+          spark: "true"
           sonar-cache: "true"
 
       - name: Get project version

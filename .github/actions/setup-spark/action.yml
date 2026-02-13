@@ -1,0 +1,49 @@
+# Ensures Apache Spark is available and sets SPARK_HOME. Requires Java and Maven
+# to be set up first (for mvn help:evaluate).
+#
+# Author: John Grimes
+
+name: Setup Spark
+description: >
+  Restores Spark from the GitHub Actions cache, downloading on cache miss.
+  Sets SPARK_HOME for subsequent steps.
+
+runs:
+  using: composite
+  steps:
+    - name: Extract Spark version from POM
+      id: versions
+      shell: bash
+      run: |
+        SPARK_VERSION=$(mvn help:evaluate \
+          -Dexpression=pathling.Rapi.sparkVersion \
+          -pl lib/R -q -DforceStdout)
+        HADOOP_VERSION=$(mvn help:evaluate \
+          -Dexpression=pathling.Rapi.hadoopMajorVersion \
+          -pl lib/R -q -DforceStdout)
+        echo "spark=${SPARK_VERSION}" >> "$GITHUB_OUTPUT"
+        echo "hadoop=${HADOOP_VERSION}" >> "$GITHUB_OUTPUT"
+        echo "Spark version: ${SPARK_VERSION}, Hadoop version: ${HADOOP_VERSION}"
+
+    - name: Restore Spark cache
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/spark
+        key: spark-${{ steps.versions.outputs.spark }}-hadoop${{ steps.versions.outputs.hadoop }}
+
+    - name: Download Spark on cache miss
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        ./.github/scripts/install-spark.sh \
+          "${{ steps.versions.outputs.spark }}" \
+          "${{ steps.versions.outputs.hadoop }}" \
+          ~/spark
+
+    - name: Set SPARK_HOME
+      shell: bash
+      run: |
+        SPARK_HOME="$HOME/spark/spark-${{ steps.versions.outputs.spark }}-bin-hadoop${{ steps.versions.outputs.hadoop }}"
+        echo "SPARK_HOME=${SPARK_HOME}" >> "$GITHUB_ENV"
+        echo "SPARK_HOME set to ${SPARK_HOME}"

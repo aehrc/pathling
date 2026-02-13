@@ -58,6 +58,7 @@ jobs:
           r-pandoc: "true"
           python: "true"
           bun: "true"
+          spark: "true"
           sonar-cache: "true"
 
       - name: Install GPG key

@@ -33,6 +33,7 @@ jobs:
           r-pandoc: "true"
           python: "true"
           bun: "true"
+          spark: "true"
           sonar-cache: "true"
 
       - name: Install GPG key
@@ -128,6 +129,7 @@ jobs:
           r: "true"
           r-pandoc: "true"
           python: "true"
+          spark: "true"
 
       - name: Run deploy goal
         env:

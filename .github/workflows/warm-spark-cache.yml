@@ -1,0 +1,29 @@
+# Keeps the GitHub Actions cache populated with the required Apache Spark
+# distribution. Runs weekly and can be triggered manually when the Spark version
+# changes.
+#
+# Author: John Grimes
+
+name: Warm Spark cache
+
+on:
+  schedule:
+    # Every Sunday at 00:00 UTC.
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+jobs:
+  warm-cache:
+    name: Warm Spark cache
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java and Maven
+        uses: ./.github/actions/setup-java-maven
+        with:
+          java-version: "21"
+
+      - name: Set up Spark
+        uses: ./.github/actions/setup-spark

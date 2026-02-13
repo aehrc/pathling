@@ -58,10 +58,11 @@
     <pathling.Rapi.version.base>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</pathling.Rapi.version.base>
     <pathling.Rapi.version.qualifier/>
     <pathling.Rapi.version>${pathling.Rapi.version.base}${pathling.Rapi.version.qualifier}</pathling.Rapi.version>
-    <!-- 
-      This needs to maintained as the most recent version of Spark that is in the versions manifest
-      of the sparklyr version that we depend upon that is on the archive site. The reason we can't 
-      use the latest from the CDN is that the files drop off the CDN when a new version is released.
+    <!--
+      The Spark version used by the R library. In CI, this is downloaded and
+      cached by the setup-spark action (see .github/actions/setup-spark), which
+      sets SPARK_HOME to bypass the sparklyr download. Locally, sparklyr
+      downloads this version automatically.
     -->
     <pathling.Rapi.sparkVersion>4.0.1</pathling.Rapi.sparkVersion>
     <pathling.Rapi.scalaVersion>${pathling.scalaVersion}</pathling.Rapi.scalaVersion>
@@ -227,7 +228,7 @@
                 <argument>-e</argument>
                 <argument>sessionInfo()</argument>
                 <argument>-e</argument>
-                <argument>sparklyr::spark_install(version='${pathling.Rapi.sparkVersion}', hadoop_version='${pathling.Rapi.hadoopMajorVersion}')</argument>
+                <argument>if (Sys.getenv("SPARK_HOME") == "") sparklyr::spark_install(version='${pathling.Rapi.sparkVersion}', hadoop_version='${pathling.Rapi.hadoopMajorVersion}')</argument>
               </arguments>
             </configuration>
           </execution>

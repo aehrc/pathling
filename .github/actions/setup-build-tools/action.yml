@@ -34,6 +34,10 @@ inputs:
     description: Set up Bun runtime.
     required: false
     default: "false"
+  spark:
+    description: Set up Apache Spark (cached).
+    required: false
+    default: "false"
   sonar-cache:
     description: Enable SonarQube cache.
     required: false
@@ -48,6 +52,10 @@ runs:
       with:
         java-version: ${{ inputs.java-version }}
         enable-sonar-cache: ${{ inputs.sonar-cache }}
+
+    - name: Set up Spark
+      if: inputs.spark == 'true'
+      uses: ./.github/actions/setup-spark
 
     - name: Set up R
       if: inputs.r == 'true'
