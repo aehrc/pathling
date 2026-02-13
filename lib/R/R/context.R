@@ -267,3 +267,43 @@ pathling_disconnect_all <- function() {
   sparklyr::spark_disconnect_all()
   invisible(NULL)
 }
+
+#' Convert a FHIR search expression to a Spark Column
+#'
+#' Converts a FHIR search query string into a Spark Column representing a boolean filter condition.
+#' The returned Column can be used with sparklyr DataFrame operations such as \code{sdf_filter} to
+#' filter resources matching the search criteria.
+#'
+#' @param pc The PathlingContext object.
+#' @param resource_type A string containing the FHIR resource type code (e.g., "Patient",
+#'   "Observation").
+#' @param search_expression A FHIR search query string in URL query format (e.g.,
+#'   "gender=male&birthdate=ge1990-01-01"). An empty string matches all resources.
+#'
+#' @return A Spark Column object (\code{spark_jobj}) representing the boolean filter condition.
+#'
+#' @importFrom sparklyr j_invoke
+#'
+#' @family context functions
+#'
+#' @export
+#'
+#' @examples \dontrun{
+#' pc <- pathling_connect()
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples("ndjson"))
+#' patients <- data_source %>% ds_read("Patient")
+#'
+#' # Filter patients by gender.
+#' gender_filter <- pc_search_to_column(pc, "Patient", "gender=male")
+#' filtered <- sparklyr::spark_dataframe(patients) %>%
+#'   sparklyr::j_invoke("filter", gender_filter) %>%
+#'   sparklyr::sdf_register()
+#'
+#' # Multiple search parameters (AND).
+#' combined_filter <- pc_search_to_column(pc, "Patient", "gender=male&active=true")
+#'
+#' pathling_disconnect(pc)
+#' }
+pc_search_to_column <- function(pc, resource_type, search_expression) {
+  j_invoke(pc, "searchToColumn", as.character(resource_type), as.character(search_expression))
+}
