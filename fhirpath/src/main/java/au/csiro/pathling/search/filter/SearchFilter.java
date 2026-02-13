@@ -91,10 +91,12 @@ public class SearchFilter {
                 value ->
                     valueColumn
                         .vectorize(
-                            arr -> exists(arr, elem -> matcher.match(elem, value)),
-                            // For scalar values, coalesce null to false so NOT(null) -> NOT(false)
-                            // -> true
-                            // This ensures :not matches resources with no value
+                            // Coalesce null to false so NOT(null) -> NOT(false) -> true.
+                            // This ensures :not matches resources with no value, per the FHIR
+                            // specification.
+                            arr ->
+                                coalesce(
+                                    exists(arr, elem -> matcher.match(elem, value)), lit(false)),
                             scalar -> coalesce(matcher.match(scalar, value), lit(false)))
                         .getValue())
             .reduce(Column::or)

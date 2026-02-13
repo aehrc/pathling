@@ -461,6 +461,24 @@ class SearchColumnBuilderTest {
   }
 
   @Test
+  void uriSearch_notModifier_includesNullArrayElements() {
+    // Per FHIR spec, :not "includes resources that have no value for the parameter". For array
+    // columns like CarePlan.instantiatesUri, resources with a null array must be included in
+    // negated results.
+    final ObjectDataSource dataSource = createCarePlanDataSource();
+    final Dataset<Row> dataset = dataSource.read("CarePlan");
+
+    final Column filterColumn =
+        builder.fromQueryString(
+            ResourceType.CAREPLAN, "instantiates-uri:not=http://example.org/protocol/diabetes");
+    final Dataset<Row> result = dataset.filter(filterColumn);
+
+    // cp2 has a different URI, cp3 has no instantiatesUri at all — both should be included.
+    final Set<String> resultIds = extractIds(result);
+    assertEquals(Set.of("cp2", "cp3"), resultIds);
+  }
+
+  @Test
   void uriSearch_fhirDefinedTypeUrl_createsFilter() {
     // CapabilityStatement.url resolves to FHIRDefinedType.URL. Verifies that the search column
     // builder can create a filter for a URI-type search parameter with this FHIR type.
