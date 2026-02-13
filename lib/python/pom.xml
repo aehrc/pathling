@@ -89,6 +89,7 @@
               <executable>uv</executable>
               <arguments>
                 <argument>venv</argument>
+                <argument>--allow-existing</argument>
                 <argument>-p 3.9</argument>
                 <argument>.venv</argument>
               </arguments>
