@@ -1,0 +1,110 @@
+#!/bin/bash
+#
+# Pre-commit hook that formats staged files before commit.
+# Runs appropriate formatters based on file extension.
+#
+
+set -e
+
+# Track if any files were formatted.
+FILES_FORMATTED=0
+
+# Get list of staged files (added, copied, or modified).
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$STAGED_FILES" ]; then
+    exit 0
+fi
+
+# Check if a command exists.
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Format a file and re-stage it if modified.
+format_and_restage() {
+    local file="$1"
+    local original_hash
+    local new_hash
+
+    original_hash=$(git hash-object "$file" 2>/dev/null || echo "")
+
+    # Run the formatter (passed as remaining arguments).
+    shift
+    "$@"
+
+    new_hash=$(git hash-object "$file" 2>/dev/null || echo "")
+
+    if [ "$original_hash" != "$new_hash" ]; then
+        git add "$file"
+        FILES_FORMATTED=1
+        echo "Formatted: $file"
+    fi
+}
+
+# Process each staged file.
+for FILE in $STAGED_FILES; do
+    # Skip if file no longer exists.
+    if [ ! -f "$FILE" ]; then
+        continue
+    fi
+
+    # Get file extension.
+    EXT="${FILE##*.}"
+    BASENAME=$(basename "$FILE")
+
+    case "$EXT" in
+        js|jsx|ts|tsx|json|md|markdown)
+            if ! command_exists prettier; then
+                echo "Error: prettier is not installed. Please install it with: bun add -g prettier"
+                exit 1
+            fi
+            format_and_restage "$FILE" prettier --write "$FILE"
+            ;;
+        yaml|yml)
+            # Skip Helm templates (contain Go template syntax that Prettier cannot parse).
+            if [[ "$FILE" == */templates/*.yaml || "$FILE" == */templates/*.yml ]]; then
+                continue
+            fi
+            if ! command_exists prettier; then
+                echo "Error: prettier is not installed. Please install it with: bun add -g prettier"
+                exit 1
+            fi
+            format_and_restage "$FILE" prettier --write "$FILE"
+            ;;
+        java)
+            if ! command_exists google-java-format; then
+                echo "Error: google-java-format is not installed."
+                echo "Install via Homebrew: brew install google-java-format"
+                exit 1
+            fi
+            format_and_restage "$FILE" google-java-format --replace "$FILE"
+            ;;
+        py)
+            if ! command_exists ruff; then
+                echo "Error: ruff is not installed. Please install it with: uv tool install ruff"
+                exit 1
+            fi
+            format_and_restage "$FILE" ruff format "$FILE"
+            ;;
+        R|r)
+            if ! command_exists Rscript; then
+                echo "Error: Rscript is not installed. Please install R."
+                exit 1
+            fi
+            # Check if styler package is available.
+            if ! Rscript -e "library(styler)" >/dev/null 2>&1; then
+                echo "Error: R styler package is not installed."
+                echo "Install it with: Rscript -e 'install.packages(\"styler\")'"
+                exit 1
+            fi
+            format_and_restage "$FILE" Rscript -e "styler::style_file('$FILE')"
+            ;;
+    esac
+done
+
+if [ $FILES_FORMATTED -eq 1 ]; then
+    echo "Pre-commit hook: formatted and re-staged files."
+fi
+
+exit 0

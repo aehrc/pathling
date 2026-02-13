@@ -271,9 +271,20 @@ This repository uses multiple code formatters:
 
 - [Prettier](https://prettier.io/) for JavaScript/TypeScript code, JSON and YAML
 - [Ruff](https://docs.astral.sh/ruff/) for Python code
+- [google-java-format](https://github.com/google/google-java-format) for Java
+  code
+- [styler](https://styler.r-lib.org/) for R code
 - [EditorConfig](https://editorconfig.org/) for all other languages
 
-Please use the appropriate formatter to reformat your code before pushing.
+A pre-commit hook is provided in the `.githooks` directory that automatically
+formats staged files before each commit. To enable it, configure git to use the
+hooks directory:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This only needs to be run once per clone.
 
 ### Commit messages
 
