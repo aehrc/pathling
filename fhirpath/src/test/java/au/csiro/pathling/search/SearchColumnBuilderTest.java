@@ -38,7 +38,9 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Reference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -332,6 +334,108 @@ class SearchColumnBuilderTest {
     final Patient patient4 = new Patient();
     patient4.setId("4");
     // No gender or active
+
+    return new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3, patient4));
+  }
+
+  // ========== Reference search integration tests ==========
+
+  Stream<Arguments> referenceSearchCases() {
+    return Stream.of(
+        // Single reference match (type-qualified).
+        Arguments.of("subject=Patient/p1", Set.of("obs1", "obs2")),
+        // OR logic with multiple values.
+        Arguments.of("subject=Patient/p1,Patient/p2", Set.of("obs1", "obs2", "obs3")),
+        // Bare ID matching.
+        Arguments.of("subject=p1", Set.of("obs1", "obs2")),
+        // Absolute URL matching.
+        Arguments.of("subject=http://example.org/fhir/Patient/p3", Set.of("obs4")),
+        // :not modifier.
+        Arguments.of("subject:not=Patient/p1", Set.of("obs3", "obs4", "obs5")),
+        // :[type] modifier with bare ID.
+        Arguments.of("subject:Patient=p2", Set.of("obs3")));
+  }
+
+  @ParameterizedTest(name = "reference search: {0}")
+  @MethodSource("referenceSearchCases")
+  void referenceSearch_producesCorrectResults(
+      final String queryString, final Set<String> expectedIds) {
+    final ObjectDataSource dataSource = createObservationDataSource();
+    final Dataset<Row> dataset = dataSource.read("Observation");
+
+    final Column filterColumn = builder.fromQueryString(ResourceType.OBSERVATION, queryString);
+    final Dataset<Row> result = dataset.filter(filterColumn);
+
+    final Set<String> resultIds = extractIds(result);
+    assertEquals(expectedIds, resultIds);
+  }
+
+  @Test
+  void referenceSearch_arrayValuedParameter_matchesAnyElement() {
+    // Patient.generalPractitioner is an array-valued reference. A match on any element should
+    // include the resource.
+    final ObjectDataSource dataSource = createPatientDataSourceWithGP();
+    final Dataset<Row> dataset = dataSource.read("Patient");
+
+    final Column filterColumn =
+        builder.fromQueryString(ResourceType.PATIENT, "general-practitioner=Practitioner/gp1");
+    final Dataset<Row> result = dataset.filter(filterColumn);
+
+    // Patient 1 has gp1 in their array, Patient 2 has gp1 and gp2.
+    final Set<String> resultIds = extractIds(result);
+    assertEquals(Set.of("1", "2"), resultIds);
+  }
+
+  // ========== Data source creation methods ==========
+
+  private ObjectDataSource createObservationDataSource() {
+    // obs1: subject = Patient/p1
+    final Observation obs1 = new Observation();
+    obs1.setId("obs1");
+    obs1.setSubject(new Reference("Patient/p1"));
+
+    // obs2: subject = Patient/p1
+    final Observation obs2 = new Observation();
+    obs2.setId("obs2");
+    obs2.setSubject(new Reference("Patient/p1"));
+
+    // obs3: subject = Patient/p2
+    final Observation obs3 = new Observation();
+    obs3.setId("obs3");
+    obs3.setSubject(new Reference("Patient/p2"));
+
+    // obs4: subject = absolute URL
+    final Observation obs4 = new Observation();
+    obs4.setId("obs4");
+    obs4.setSubject(new Reference("http://example.org/fhir/Patient/p3"));
+
+    // obs5: no subject
+    final Observation obs5 = new Observation();
+    obs5.setId("obs5");
+
+    return new ObjectDataSource(spark, encoders, List.of(obs1, obs2, obs3, obs4, obs5));
+  }
+
+  private ObjectDataSource createPatientDataSourceWithGP() {
+    // Patient 1: generalPractitioner = [Practitioner/gp1]
+    final Patient patient1 = new Patient();
+    patient1.setId("1");
+    patient1.addGeneralPractitioner(new Reference("Practitioner/gp1"));
+
+    // Patient 2: generalPractitioner = [Practitioner/gp1, Practitioner/gp2]
+    final Patient patient2 = new Patient();
+    patient2.setId("2");
+    patient2.addGeneralPractitioner(new Reference("Practitioner/gp1"));
+    patient2.addGeneralPractitioner(new Reference("Practitioner/gp2"));
+
+    // Patient 3: generalPractitioner = [Practitioner/gp3]
+    final Patient patient3 = new Patient();
+    patient3.setId("3");
+    patient3.addGeneralPractitioner(new Reference("Practitioner/gp3"));
+
+    // Patient 4: no generalPractitioner
+    final Patient patient4 = new Patient();
+    patient4.setId("4");
 
     return new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3, patient4));
   }

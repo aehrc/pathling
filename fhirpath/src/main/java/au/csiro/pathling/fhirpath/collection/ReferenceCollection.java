@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.ReferenceValue;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
+import au.csiro.pathling.search.filter.FhirFieldNames;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
@@ -36,7 +37,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class ReferenceCollection extends Collection {
 
-  private static final String REFERENCE_ELEMENT_NAME = "reference";
   private static final String TYPE_ELEMENT_NAME = "type";
 
   /**
@@ -75,9 +75,9 @@ public class ReferenceCollection extends Collection {
         // Apply the filter to the reference column.
         .map(this::filter)
         // Return a StringCollection of the reference elements.s
-        .flatMap(c -> c.traverse(REFERENCE_ELEMENT_NAME))
+        .flatMap(c -> c.traverse(FhirFieldNames.REFERENCE))
         // If no type was specified, return the reference column as is.
-        .or(() -> this.traverse(REFERENCE_ELEMENT_NAME))
+        .or(() -> this.traverse(FhirFieldNames.REFERENCE))
         // If the reference column is not present, return an empty collection.
         .orElse(EmptyCollection.getInstance());
   }
@@ -85,7 +85,7 @@ public class ReferenceCollection extends Collection {
   @Nonnull
   private ColumnTransform keyFilter(@Nonnull final String pattern) {
     return col ->
-        col.traverse(REFERENCE_ELEMENT_NAME, Optional.of(FHIRDefinedType.STRING)).like(pattern);
+        col.traverse(FhirFieldNames.REFERENCE, Optional.of(FHIRDefinedType.STRING)).like(pattern);
   }
 
   /**
@@ -132,7 +132,7 @@ public class ReferenceCollection extends Collection {
    */
   @Nonnull
   public Collection resolve() {
-    final ColumnRepresentation referenceColumn = getColumn().getField(REFERENCE_ELEMENT_NAME);
+    final ColumnRepresentation referenceColumn = getColumn().getField(FhirFieldNames.REFERENCE);
     final ColumnRepresentation typeColumn = getColumn().getField(TYPE_ELEMENT_NAME);
 
     // Extract type information using ReferenceValue

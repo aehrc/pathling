@@ -22,13 +22,16 @@ import au.csiro.pathling.search.filter.ExactStringMatcher;
 import au.csiro.pathling.search.filter.MatcherFactory;
 import au.csiro.pathling.search.filter.NumberMatcher;
 import au.csiro.pathling.search.filter.QuantityMatcher;
+import au.csiro.pathling.search.filter.ReferenceMatcher;
 import au.csiro.pathling.search.filter.SearchFilter;
 import au.csiro.pathling.search.filter.StringMatcher;
 import au.csiro.pathling.search.filter.TokenMatcher;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Set;
+import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Enum representing the types of FHIR search parameters.
@@ -159,9 +162,38 @@ public enum SearchParameterType implements MatcherFactory {
   },
 
   /**
-   * A reference type search parameter matches references to other resources. Not yet implemented.
+   * A reference type search parameter matches references to other resources. Supports the {@code
+   * :not} modifier for negated matching and the {@code :[type]} modifier to constrain the target
+   * resource type of a polymorphic reference.
    */
-  REFERENCE(Set.of()),
+  REFERENCE(Set.of(FHIRDefinedType.REFERENCE)) {
+    @Nonnull
+    @Override
+    public SearchFilter createFilter(
+        @Nullable final String modifier, @Nonnull final FHIRDefinedType fhirType) {
+      if ("not".equals(modifier)) {
+        return new SearchFilter(new ReferenceMatcher(), true);
+      }
+      if (modifier != null) {
+        // Validate that the modifier is a known FHIR resource type name.
+        try {
+          ResourceType.fromCode(modifier);
+        } catch (final FHIRException e) {
+          throw new InvalidModifierException(modifier, this);
+        }
+        final ReferenceMatcher referenceMatcher = new ReferenceMatcher();
+        final String type = modifier;
+        return new SearchFilter(
+            (element, searchValue) -> {
+              // Prepend type to bare ID values; pass through already type-qualified values.
+              final String qualifiedValue =
+                  searchValue.contains("/") ? searchValue : type + "/" + searchValue;
+              return referenceMatcher.match(element, qualifiedValue);
+            });
+      }
+      return new SearchFilter(new ReferenceMatcher());
+    }
+  },
 
   /** A URI type search parameter matches URI values. Not yet implemented. */
   URI(Set.of()),

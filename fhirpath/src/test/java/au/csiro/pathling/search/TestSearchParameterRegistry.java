@@ -20,6 +20,7 @@ package au.csiro.pathling.search;
 import static au.csiro.pathling.search.SearchParameterType.DATE;
 import static au.csiro.pathling.search.SearchParameterType.NUMBER;
 import static au.csiro.pathling.search.SearchParameterType.QUANTITY;
+import static au.csiro.pathling.search.SearchParameterType.REFERENCE;
 import static au.csiro.pathling.search.SearchParameterType.STRING;
 import static au.csiro.pathling.search.SearchParameterType.TOKEN;
 
@@ -38,17 +39,30 @@ public class TestSearchParameterRegistry extends SearchParameterRegistry {
   private static final Map<ResourceType, Map<String, SearchParameterDefinition>> TEST_PARAMETERS =
       Map.of(
           ResourceType.PATIENT,
-              Map.of(
-                  "gender", new SearchParameterDefinition("gender", TOKEN, "Patient.gender"),
-                  "address-use",
-                      new SearchParameterDefinition("address-use", TOKEN, "Patient.address.use"),
-                  "family", new SearchParameterDefinition("family", STRING, "Patient.name.family"),
-                  "birthdate",
-                      new SearchParameterDefinition("birthdate", DATE, "Patient.birthDate"),
-                  "identifier",
-                      new SearchParameterDefinition("identifier", TOKEN, "Patient.identifier"),
-                  "telecom", new SearchParameterDefinition("telecom", TOKEN, "Patient.telecom"),
-                  "active", new SearchParameterDefinition("active", TOKEN, "Patient.active")),
+              Map.ofEntries(
+                  Map.entry(
+                      "gender", new SearchParameterDefinition("gender", TOKEN, "Patient.gender")),
+                  Map.entry(
+                      "address-use",
+                      new SearchParameterDefinition("address-use", TOKEN, "Patient.address.use")),
+                  Map.entry(
+                      "family",
+                      new SearchParameterDefinition("family", STRING, "Patient.name.family")),
+                  Map.entry(
+                      "birthdate",
+                      new SearchParameterDefinition("birthdate", DATE, "Patient.birthDate")),
+                  Map.entry(
+                      "identifier",
+                      new SearchParameterDefinition("identifier", TOKEN, "Patient.identifier")),
+                  Map.entry(
+                      "telecom",
+                      new SearchParameterDefinition("telecom", TOKEN, "Patient.telecom")),
+                  Map.entry(
+                      "active", new SearchParameterDefinition("active", TOKEN, "Patient.active")),
+                  Map.entry(
+                      "general-practitioner",
+                      new SearchParameterDefinition(
+                          "general-practitioner", REFERENCE, "Patient.generalPractitioner"))),
           ResourceType.OBSERVATION,
               Map.of(
                   "code", new SearchParameterDefinition("code", TOKEN, "Observation.code"),
@@ -62,7 +76,9 @@ public class TestSearchParameterRegistry extends SearchParameterRegistry {
                               "Observation.effective.ofType(instant)")),
                   "value-quantity",
                       new SearchParameterDefinition(
-                          "value-quantity", QUANTITY, "Observation.value.ofType(Quantity)")),
+                          "value-quantity", QUANTITY, "Observation.value.ofType(Quantity)"),
+                  "subject",
+                      new SearchParameterDefinition("subject", REFERENCE, "Observation.subject")),
           ResourceType.RISKASSESSMENT,
               Map.of(
                   "probability",

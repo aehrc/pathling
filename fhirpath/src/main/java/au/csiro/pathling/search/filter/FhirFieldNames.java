@@ -55,6 +55,12 @@ public final class FhirFieldNames {
   public static final String CODING = "coding";
 
   /**
+   * Reference field used in Reference type. Contains the literal reference string (e.g.,
+   * "Patient/123" or "http://example.org/fhir/Patient/123").
+   */
+  public static final String REFERENCE = "reference";
+
+  /**
    * Canonicalized value field for Quantity type (internal use). Generated field that stores the
    * UCUM-normalized numeric value for cross-unit matching.
    */

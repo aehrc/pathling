@@ -21,9 +21,13 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import au.csiro.pathling.search.InvalidModifierException;
+import au.csiro.pathling.search.SearchParameterType;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import java.math.BigDecimal;
 import java.util.List;
@@ -34,6 +38,7 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -1076,5 +1081,144 @@ class ElementMatcherTest {
 
     final boolean actual = df.select(result).first().getBoolean(0);
     assertEquals(expected, actual);
+  }
+
+  // ========== ReferenceMatcher tests ==========
+
+  static Stream<Arguments> referenceMatcherCases() {
+    return Stream.of(
+        // Type-qualified ID match against relative reference (exact equality).
+        Arguments.of("Patient/123", "Patient/123", true),
+        // Type-qualified ID match against absolute reference (suffix with boundary).
+        Arguments.of("http://example.org/fhir/Patient/123", "Patient/123", true),
+        // Bare ID matches relative reference.
+        Arguments.of("Patient/123", "123", true),
+        // Bare ID matches absolute reference.
+        Arguments.of("http://example.org/fhir/Patient/123", "123", true),
+        // Absolute URL exact match.
+        Arguments.of(
+            "http://example.org/fhir/Patient/123", "http://example.org/fhir/Patient/123", true),
+        // URN UUID exact match.
+        Arguments.of(
+            "urn:uuid:a4f9d12b-3e7c-4f8a-9b2d-1c6e8f0a3d5b",
+            "urn:uuid:a4f9d12b-3e7c-4f8a-9b2d-1c6e8f0a3d5b",
+            true),
+        // Type mismatch.
+        Arguments.of("Practitioner/123", "Patient/123", false),
+        // ID mismatch.
+        Arguments.of("Patient/456", "Patient/123", false),
+        // Partial type name non-match (APatient/123 should not match Patient/123).
+        Arguments.of("http://example.org/fhir/APatient/123", "Patient/123", false),
+        // Partial ID non-match.
+        Arguments.of("Patient/1234", "123", false),
+        // Different server URL does not match absolute URI search.
+        Arguments.of(
+            "http://other.org/fhir/Patient/123", "http://example.org/fhir/Patient/123", false));
+  }
+
+  @ParameterizedTest(name = "ReferenceMatcher: \"{0}\" matches \"{1}\" = {2}")
+  @MethodSource("referenceMatcherCases")
+  void testReferenceMatcher(
+      final String reference, final String searchValue, final boolean expected) {
+    // Create a DataFrame with a Reference-like struct containing a "reference" field.
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(lit(reference).as("reference")).as("ref"));
+
+    final ReferenceMatcher matcher = new ReferenceMatcher();
+    final Column result = matcher.match(col("ref"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void testReferenceMatcher_nullReferenceField() {
+    // A null reference field should produce a null match result (not true).
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(lit(null).cast("string").as("reference")).as("ref"));
+
+    final ReferenceMatcher matcher = new ReferenceMatcher();
+    final Column result = matcher.match(col("ref"), "Patient/123");
+
+    assertTrue(df.select(result).first().isNullAt(0));
+  }
+
+  // ========== SearchParameterType.REFERENCE createFilter tests ==========
+
+  @Test
+  void referenceCreateFilter_notModifier_returnsNegatedFilter() {
+    // The :not modifier should produce a filter that negates the match result.
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(lit("Patient/123").as("reference")).as("ref"));
+
+    final SearchFilter normalFilter =
+        SearchParameterType.REFERENCE.createFilter(null, FHIRDefinedType.REFERENCE);
+    final SearchFilter negatedFilter =
+        SearchParameterType.REFERENCE.createFilter("not", FHIRDefinedType.REFERENCE);
+
+    final Column normalCol =
+        normalFilter.buildFilter(
+            new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("ref")),
+            List.of("Patient/123"));
+    final Column negatedCol =
+        negatedFilter.buildFilter(
+            new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("ref")),
+            List.of("Patient/123"));
+
+    // Normal filter should match, negated filter should not.
+    assertTrue(df.select(normalCol).first().getBoolean(0));
+    assertTrue(!df.select(negatedCol).first().getBoolean(0));
+  }
+
+  @Test
+  void referenceCreateFilter_typeModifier_prependsTypeToBaraId() {
+    // The :[type] modifier should prepend the type to bare ID search values.
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(lit("Patient/123").as("reference")).as("ref"));
+
+    final SearchFilter filter =
+        SearchParameterType.REFERENCE.createFilter("Patient", FHIRDefinedType.REFERENCE);
+    final Column filterCol =
+        filter.buildFilter(
+            new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("ref")),
+            List.of("123"));
+
+    // "123" should be transformed to "Patient/123" and match.
+    assertTrue(df.select(filterCol).first().getBoolean(0));
+  }
+
+  @Test
+  void referenceCreateFilter_typeModifier_passesQualifiedValuesUnchanged() {
+    // Already type-qualified values should not be modified by the :[type] modifier.
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(struct(lit("Patient/123").as("reference")).as("ref"));
+
+    final SearchFilter filter =
+        SearchParameterType.REFERENCE.createFilter("Patient", FHIRDefinedType.REFERENCE);
+    final Column filterCol =
+        filter.buildFilter(
+            new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("ref")),
+            List.of("Patient/123"));
+
+    // "Patient/123" is already type-qualified and should match.
+    assertTrue(df.select(filterCol).first().getBoolean(0));
+  }
+
+  @Test
+  void referenceCreateFilter_invalidModifier_throwsException() {
+    // An unrecognised modifier should throw InvalidModifierException.
+    assertThrows(
+        InvalidModifierException.class,
+        () -> SearchParameterType.REFERENCE.createFilter("exact", FHIRDefinedType.REFERENCE));
   }
 }
