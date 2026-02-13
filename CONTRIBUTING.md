@@ -5,44 +5,86 @@ Thanks for your interest in contributing to Pathling.
 You can find out a bit more about Pathling by reading the [README](README.md)
 file within this repository.
 
-## Reporting issues
+## Module structure
 
-Issues can be used to:
+The core of Pathling consists of the following modules, which inherit from the
+main `pom.xml` in the root of the repository:
 
-* Report a defect
-* Request a new feature or enhancement
-* Ask a question
+- `utilities` - Utility functions used by different components of Pathling.
+- `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into
+  Spark Datasets.
+- `terminology` - Interact with
+  a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html)
+  from Spark.
+- `fhirpath` - A library that can
+  translate [FHIRPath expressions](https://hl7.org/fhirpath/) into Spark
+  queries.
+- `library-api` - An API that exposes Pathling functionality to language
+  libraries.
+- `library-runtime` - A Spark package that bundles the Pathling Library API and
+  its runtime dependencies for cluster deployment.
 
-New issues will be automatically populated with a template that highlights the
-information that needs to be submitted with an issue that describes a defect. If
-the issue is not related to a defect, please just delete the template and
-replace it with a detailed description of the problem you are trying to solve.
+These modules build upon the core libraries, and are released and versioned
+together with the core. They are also child modules of the main `pom.xml`.
 
-## Creating a pull request
+- `lib/python` - Python language bindings for Pathling.
+- `lib/R` - R language bindings for Pathling.
+- `site` - A website that contains documentation for Pathling.
+- `benchmark` - A benchmark for evaluating the performance of Pathling query
+  execution.
 
-Please communicate with us (preferably through creation of an issue) before
-embarking on any significant work within a pull request. This will prevent
-situations where people are working at cross-purposes.
+The following modules are versioned independently and are **not** children of
+the main `pom.xml`:
 
-Your branch should be named `issue/[GitHub issue #]`.
+- `server` - A FHIR server implementation built on top of the core libraries.
+  See the server [CONTRIBUTING.md](server/CONTRIBUTING.md) for build, test, and
+  deployment instructions.
+- `ui` - A React-based administration interface for Pathling servers, built and
+  rolled into the server Docker image. See the UI
+  [CONTRIBUTING.md](ui/CONTRIBUTING.md) for coding conventions and build
+  instructions.
+- `test-data` - Test data generation utilities used during development.
 
-## Development dependencies
+```mermaid
+graph TD
+    utilities[utilities<br/>Utility functions]
+    encoders[encoders<br/>FHIR data encoders]
+    terminology[terminology<br/>FHIR terminology server]
+    fhirpath[fhirpath<br/>FHIRPath engine]
+    library-api[library-api<br/>Language library API]
+    library-runtime[library-runtime<br/>Spark package bundle]
+    python[lib/python<br/>Python bindings]
+    r[lib/R<br/>R bindings]
+    site[site<br/>Documentation website]
+    benchmark[benchmark<br/>Performance benchmarks]
+    server[server<br/>FHIR server]
+    ui[ui<br/>Admin UI]
+    test-data[test-data<br/>Test data generation]
 
-You will need the following software to build the solution:
-
-* Java 21
-* Maven 3.9+
-* Python 3.9+
-* uv (Python package manager)
-* R 3.5+
-
-To build and install locally, run:
-
+    encoders --> utilities
+    terminology --> utilities
+    terminology --> encoders
+    fhirpath --> terminology
+    library-api --> utilities
+    library-api --> encoders
+    library-api --> terminology
+    library-api --> fhirpath
+    library-runtime --> library-api
+    python --> library-runtime
+    r --> library-runtime
+    server --> library-runtime
+    server --> test-data
+    ui --> server
+    benchmark --> test-data
 ```
-mvn clean install
-```
 
-### Available modules
+The "public API" of Pathling is defined as the public API of the library API
+module.
+
+## Core libraries
+
+The core libraries are defined as the modules that contribute to building the
+library runtime artifact. These are:
 
 - `utilities`
 - `encoders`
@@ -50,66 +92,60 @@ mvn clean install
 - `fhirpath`
 - `library-api`
 - `library-runtime`
-- `lib/python`
-- `lib/R`
-- `site`
-- `benchmark`
-- `server`
 
-### Building and testing the server module
+The Python and R libraries are built on top of this API, as well as the server.
+This API is also provided for users to build their own applications using the
+Pathling functionality.
 
-The `server` module is versioned independently and has its own
-[CONTRIBUTING.md](server/CONTRIBUTING.md) with detailed build, test, and
-deployment instructions.
+You will need the following software to build the core libraries:
 
-### Testing Python and R libraries
+- Java 21
+- Maven 3.9+
+- Python 3.9+
+- uv (Python package manager)
+- R 3.5+
 
-The Python and R libraries depend on both JARs and generated files created by
-the Maven build process. You **cannot** run tests using language-specific tools
-(such as `pytest` or `devtools::test`), install the libraries in editable mode
-(`pip install -e .`), or use them in any way without first building through
-Maven to generate the required files.
+To build and install locally, run:
 
-To test the Python library:
-
-```bash
-mvn test -pl lib/python -am
+```
+mvn clean install -pl library-runtime -am
 ```
 
-To test the R library:
+## Language libraries
 
-```bash
-mvn test -pl lib/R -am
-```
+### Python library
 
-The `-am` flag ensures that all upstream dependencies are built before running
-the tests.
+The Python library is built on top of the core library API and provides Python
+bindings for Pathling functionality. It is designed to be used in Python
+applications that want to leverage Pathling's capabilities for working with FHIR
+data.
 
-#### First-time setup
+You will need the following software to build the Python library:
 
-Before working with the Python or R libraries, you must run a Maven build to
-generate required files (such as `_version.py` for Python). For a complete
-build:
+- Python 3.9+
+- uv (Python package manager)
+
+To build and install the Python library locally, run:
 
 ```bash
 mvn clean install -pl lib/python -am
 ```
 
-or
+### R library
+
+The R library is built on top of the core library API and provides R bindings
+for Pathling functionality. It uses [sparklyr](https://sparklyr.tidyverse.org/)
+to provide an interface for working with Spark and FHIR data in R.
+
+You will need R 3.5+ to build the R library.
+
+To build and install the R library locally, run:
 
 ```bash
 mvn clean install -pl lib/R -am
 ```
 
-After this initial build, you can install the Python library in editable mode
-if needed:
-
-```bash
-cd lib/python
-pip install -e .
-```
-
-#### Clearing the Ivy cache
+### Clearing the Ivy cache
 
 When rebuilding after making changes to upstream modules, you may need to clear
 the local Ivy cache before the changes will be picked up by the Python and R
@@ -128,133 +164,22 @@ mvn clean install -pl lib/python -am
 mvn clean install -pl lib/R -am
 ```
 
-## Versioning and branching
+## Server
 
-All versioning
-follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+The server module is a FHIR server implementation built on top of the core
+libraries. It provides a FHIR-compliant API for querying and manipulating FHIR
+data using Pathling's capabilities.
 
-**Note on major version increments**: In addition to the standard semantic
-versioning rules, Pathling will increment the major version number when moving
-to a new major version of Apache Spark. This is because Spark major version
-changes introduce potential incompatibilities to the environment on which
-Pathling is designed to run, affecting deployment, dependencies, and runtime
-requirements.
+The `server` module is versioned independently and has its own
+[CONTRIBUTING.md](server/CONTRIBUTING.md) with detailed build, test, and
+deployment instructions.
 
-The core of Pathling consists of the following modules, all of which inherit
-from the main `pom.xml` in the root of the repository.
+## Admin UI
 
-- `utilities` - Utility functions used by different components of Pathling.
-- `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into
-  Spark Datasets.
-- `terminology` - Interact with
-  a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html)
-  from Spark.
-- `fhirpath` - A library that can
-  translate [FHIRPath expressions](https://hl7.org/fhirpath/) into Spark
-  queries.
-- `library-api` - An API that exposes Pathling functionality to language
-  libraries.
-- `library-runtime` - A Spark package that bundles the Pathling Library API and
-  its runtime dependencies for cluster deployment.
-- `lib/python` - Python language bindings for Pathling.
-- `lib/R` - R language bindings for Pathling.
-
-```mermaid
-graph TD
-    utilities[utilities<br/>Utility functions]
-    encoders[encoders<br/>FHIR data encoders]
-    terminology[terminology<br/>FHIR terminology server]
-    fhirpath[fhirpath<br/>FHIRPath engine]
-    library-api[library-api<br/>Language library API]
-    library-runtime[library-runtime<br/>Spark package bundle]
-    python[lib/python<br/>Python bindings]
-    r[lib/R<br/>R bindings]
-
-    encoders --> utilities
-    terminology --> utilities
-    terminology --> encoders
-    fhirpath --> terminology
-    library-api --> utilities
-    library-api --> encoders
-    library-api --> terminology
-    library-api --> fhirpath
-    library-runtime --> library-api
-    python --> library-runtime
-    r --> library-runtime
-```
-
-The "public API" of Pathling is defined as the public API of the library API
-module.
-
-Modules outside of this core list are versioned independently of the library
-API, but should still follow the principles of Semantic Versioning based upon
-their public, user-facing interfaces.
-
-The branching strategy is very simple and is based on
-[GitHub Flow](https://guides.github.com/introduction/flow/). There are no
-long-lived branches, all changes are made via pull requests and will be the
-subject of an issue branch that is created from and targeting `main`.
-
-We release frequently, and we will use a short-lived `release/`-prefixed branch
-to aggregate more than one PR into a new version.
-
-The POM versions of the core modules should be on a SNAPSHOT version when
-developing on a release branch. Successful builds of the release branch
-will be published to the Maven Central repository as SNAPSHOT versions.
-
-Maven POM versions on `main` are always release versions. Builds are always
-verified to be green within CI before merging to main. Merging to main
-automatically triggers publishing of artifacts and deployment of the software to
-production environments such as the Pathling website and sandbox instance.
-
-## Commit Message Format
-
-Write commit messages that capture the **objective** of the change, not the
-specific implementation details that can be obtained from the diff.
-
-**Structure**:
-
-```
-<type>: <succinct description of the objective>
-
-<optional body explaining the why and context>
-```
-
-**Types**:
-
-- `fix:` - Bug fixes or resolving warnings/errors
-- `feat:` - New features or enhancements
-- `refactor:` - Code restructuring without changing behavior
-- `docs:` - Documentation updates
-- `test:` - Test-related changes
-- `chore:` - Build, tooling, or dependency updates
-
-**Guidelines**:
-
-- Focus on **why** the change was needed and **what problem** it solves
-- Avoid mentioning specific files, line numbers, or implementation details
-- Keep the first line concise (under 72 characters when possible)
-- Use the body to provide context if the objective isn't obvious
-
-**Examples**:
-
-Good:
-
-```
-fix: Suppress Mockito dynamic agent loading warnings in Java 21
-
-Added JVM flag to suppress warnings about Mockito's inline mock maker
-self-attaching. Updated documentation to record Maven test configuration.
-```
-
-Poor:
-
-```
-fix: Added -XX:+EnableDynamicAgentLoading to pom.xml line 637
-
-Changed the argLine in maven-surefire-plugin configuration.
-Updated CLAUDE.md with new section at lines 102-120.
-```
+The `ui` module is a React-based administration interface for managing Pathling
+FHIR servers. It is built and rolled into the server Docker image. The module
+has its own [CONTRIBUTING.md](ui/CONTRIBUTING.md) with coding conventions,
+testing guidelines, and build instructions.
 
 ## Coding conventions
 
@@ -346,6 +271,109 @@ This repository uses multiple code formatters:
 - [EditorConfig](https://editorconfig.org/) for all other languages
 
 Please use the appropriate formatter to reformat your code before pushing.
+
+### Commit messages
+
+Write commit messages that capture the **objective** of the change, not the
+specific implementation details that can be obtained from the diff.
+
+**Structure**:
+
+```
+<type>: <succinct description of the objective>
+
+<optional body explaining the why and context>
+```
+
+**Types**:
+
+- `fix:` - Bug fixes or resolving warnings/errors
+- `feat:` - New features or enhancements
+- `refactor:` - Code restructuring without changing behavior
+- `docs:` - Documentation updates
+- `test:` - Test-related changes
+- `chore:` - Build, tooling, or dependency updates
+
+**Guidelines**:
+
+- Focus on **why** the change was needed and **what problem** it solves
+- Avoid mentioning specific files, line numbers, or implementation details
+- Keep the first line concise (under 72 characters when possible)
+- Use the body to provide context if the objective isn't obvious
+
+**Examples**:
+
+Good:
+
+```
+fix: Suppress Mockito dynamic agent loading warnings in Java 21
+
+Added JVM flag to suppress warnings about Mockito's inline mock maker
+self-attaching. Updated documentation to record Maven test configuration.
+```
+
+Poor:
+
+```
+fix: Added -XX:+EnableDynamicAgentLoading to pom.xml line 637
+
+Changed the argLine in maven-surefire-plugin configuration.
+Updated CLAUDE.md with new section at lines 102-120.
+```
+
+### Versioning and branching
+
+All versioning
+follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+
+**Note on major version increments**: In addition to the standard semantic
+versioning rules, Pathling will increment the major version number when moving
+to a new major version of Apache Spark. This is because Spark major version
+changes introduce potential incompatibilities to the environment on which
+Pathling is designed to run, affecting deployment, dependencies, and runtime
+requirements.
+
+Modules outside of the core list are versioned independently of the library
+API, but should still follow the principles of Semantic Versioning based upon
+their public, user-facing interfaces.
+
+The branching strategy is very simple and is based on
+[GitHub Flow](https://guides.github.com/introduction/flow/). There are no
+long-lived branches, all changes are made via pull requests and will be the
+subject of an issue branch that is created from and targeting `main`.
+
+We release frequently, and we will use a short-lived `release/`-prefixed branch
+to aggregate more than one PR into a new version.
+
+The POM versions of the core modules should be on a SNAPSHOT version when
+developing on a release branch. Successful builds of the release branch
+will be published to the Maven Central repository as SNAPSHOT versions.
+
+Maven POM versions on `main` are always release versions. Builds are always
+verified to be green within CI before merging to main. Merging to main
+automatically triggers publishing of artifacts and deployment of the software to
+production environments such as the Pathling website and sandbox instance.
+
+## Reporting issues
+
+Issues can be used to:
+
+- Report a defect
+- Request a new feature or enhancement
+- Ask a question
+
+New issues will be automatically populated with a template that highlights the
+information that needs to be submitted with an issue that describes a defect. If
+the issue is not related to a defect, please just delete the template and
+replace it with a detailed description of the problem you are trying to solve.
+
+## Creating a pull request
+
+Please communicate with us (preferably through creation of an issue) before
+embarking on any significant work within a pull request. This will prevent
+situations where people are working at cross-purposes.
+
+Your branch should be named `issue/[GitHub issue #]`.
 
 ## Code of conduct
 

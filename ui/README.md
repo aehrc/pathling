@@ -167,62 +167,10 @@ Test files are in the `e2e/` directory. Mock data fixtures are in
 - Use role-based selectors (`getByRole`, `getByText`)
 - Test complete user flows including error states
 
-## Coding conventions
+## Contributing
 
-### File naming
-
-Use lower camelCase for all TypeScript files (e.g., `useCreate.ts`,
-`bulkExport.ts`, `ErrorBoundary.tsx`).
-
-### Code style
-
-- **No classes** - Use pure functions and React hooks
-- **Functional programming** - Prefer immutability and composition
-- **Local state first** - Use `useState`/`useReducer` before reaching for
-  context
-- **React Context** - Only for state that genuinely needs to be shared across
-  distant components (auth, jobs, toasts)
-- **TanStack Query** - For all server state and data fetching
-- **Custom hooks** - Extract significant logic from components into hooks
-
-### Documentation
-
-All exported functions require JSDoc comments:
-
-```typescript
-/**
- * Fetches a FHIR resource by ID.
- *
- * @param baseUrl - The FHIR server base URL.
- * @param resourceType - The type of resource to fetch.
- * @param id - The resource ID.
- * @param token - Optional authentication token.
- * @returns The requested FHIR resource.
- * @throws {NotFoundError} If the resource does not exist.
- * @throws {UnauthorizedError} If authentication fails.
- */
-export async function read(
-    baseUrl: string,
-    resourceType: string,
-    id: string,
-    token?: string,
-): Promise<Resource> {
-    // ...
-}
-```
-
-## Code quality
-
-- **Linting**: `bun run lint` (ESLint with TypeScript and React plugins)
-- **Formatting**: `bun run format` (Prettier)
-- **Type checking**: TypeScript strict mode with no unused variables or
-  parameters
-
-Run all checks before committing:
-
-```bash
-bun run lint && bun run format:check && bun run test:run
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for coding conventions, static analysis
+configuration, and quality checks.
 
 ## Licence
 
