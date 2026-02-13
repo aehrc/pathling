@@ -26,6 +26,7 @@ import au.csiro.pathling.search.filter.ReferenceMatcher;
 import au.csiro.pathling.search.filter.SearchFilter;
 import au.csiro.pathling.search.filter.StringMatcher;
 import au.csiro.pathling.search.filter.TokenMatcher;
+import au.csiro.pathling.search.filter.UriMatcher;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Set;
@@ -195,8 +196,37 @@ public enum SearchParameterType implements MatcherFactory {
     }
   },
 
-  /** A URI type search parameter matches URI values. Not yet implemented. */
-  URI(Set.of()),
+  /**
+   * A URI type search parameter matches URI values using exact string equality. Supports the {@code
+   * :not} modifier for negated matching, {@code :below} for prefix matching, and {@code :above} for
+   * inverse prefix matching.
+   */
+  URI(
+      Set.of(
+          FHIRDefinedType.URI,
+          FHIRDefinedType.URL,
+          FHIRDefinedType.CANONICAL,
+          FHIRDefinedType.OID,
+          FHIRDefinedType.UUID)) {
+    @Nonnull
+    @Override
+    public SearchFilter createFilter(
+        @Nullable final String modifier, @Nonnull final FHIRDefinedType fhirType) {
+      if ("not".equals(modifier)) {
+        return new SearchFilter(UriMatcher.exact(), true);
+      }
+      if ("below".equals(modifier)) {
+        return new SearchFilter(UriMatcher.below());
+      }
+      if ("above".equals(modifier)) {
+        return new SearchFilter(UriMatcher.above());
+      }
+      if (modifier != null) {
+        throw new InvalidModifierException(modifier, this);
+      }
+      return new SearchFilter(UriMatcher.exact());
+    }
+  },
 
   /** A composite type search parameter combines multiple parameters. Not yet implemented. */
   COMPOSITE(Set.of()),

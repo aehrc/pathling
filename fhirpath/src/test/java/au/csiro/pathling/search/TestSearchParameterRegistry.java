@@ -23,6 +23,7 @@ import static au.csiro.pathling.search.SearchParameterType.QUANTITY;
 import static au.csiro.pathling.search.SearchParameterType.REFERENCE;
 import static au.csiro.pathling.search.SearchParameterType.STRING;
 import static au.csiro.pathling.search.SearchParameterType.TOKEN;
+import static au.csiro.pathling.search.SearchParameterType.URI;
 
 import java.util.List;
 import java.util.Map;
@@ -93,7 +94,14 @@ public class TestSearchParameterRegistry extends SearchParameterRegistry {
                   "recorded-date",
                   new SearchParameterDefinition("recorded-date", DATE, "Condition.recordedDate")),
           ResourceType.AUDITEVENT,
-              Map.of("date", new SearchParameterDefinition("date", DATE, "AuditEvent.recorded")));
+              Map.of("date", new SearchParameterDefinition("date", DATE, "AuditEvent.recorded")),
+          ResourceType.CAREPLAN,
+              Map.of(
+                  "instantiates-uri",
+                  new SearchParameterDefinition(
+                      "instantiates-uri", URI, "CarePlan.instantiatesUri")),
+          ResourceType.CAPABILITYSTATEMENT,
+              Map.of("url", new SearchParameterDefinition("url", URI, "CapabilityStatement.url")));
 
   /** Creates a test registry with hardcoded parameters. */
   public TestSearchParameterRegistry() {

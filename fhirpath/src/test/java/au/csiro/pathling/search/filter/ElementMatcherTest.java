@@ -1221,4 +1221,184 @@ class ElementMatcherTest {
         InvalidModifierException.class,
         () -> SearchParameterType.REFERENCE.createFilter("exact", FHIRDefinedType.REFERENCE));
   }
+
+  // ========== UriMatcher tests (exact matching) ==========
+
+  static Stream<Arguments> uriMatcherExactCases() {
+    return Stream.of(
+        // Exact URL match.
+        Arguments.of(
+            "http://hl7.org/fhir/StructureDefinition/Patient",
+            "http://hl7.org/fhir/StructureDefinition/Patient",
+            true),
+        // URN UUID exact match.
+        Arguments.of(
+            "urn:uuid:53fefa32-fcbb-4ff8-8a92-55ee120877b7",
+            "urn:uuid:53fefa32-fcbb-4ff8-8a92-55ee120877b7",
+            true),
+        // Case mismatch does not match.
+        Arguments.of("http://example.org/fhir", "http://example.org/FHIR", false),
+        // Partial URI does not match (element longer than search value).
+        Arguments.of(
+            "http://example.org/fhir/StructureDefinition/Patient",
+            "http://example.org/fhir",
+            false),
+        // Different URI does not match.
+        Arguments.of("http://example.org/fhir", "http://other.org/fhir", false));
+  }
+
+  @ParameterizedTest(name = "UriMatcher(exact): \"{0}\" matches \"{1}\" = {2}")
+  @MethodSource("uriMatcherExactCases")
+  void testUriMatcherExact(final String element, final String searchValue, final boolean expected) {
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING()).toDF("value");
+
+    final UriMatcher matcher = UriMatcher.exact();
+    final Column result = matcher.match(col("value"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void testUriMatcherExact_nullElement() {
+    // A null element value should produce a null match result (not true).
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of(1), Encoders.INT())
+            .select(lit(null).cast("string").as("value"));
+
+    final UriMatcher matcher = UriMatcher.exact();
+    final Column result = matcher.match(col("value"), "http://example.org");
+
+    assertTrue(df.select(result).first().isNullAt(0));
+  }
+
+  // ========== UriMatcher :below tests ==========
+
+  static Stream<Arguments> uriMatcherBelowCases() {
+    return Stream.of(
+        // Element starts with the search value (prefix match).
+        Arguments.of(
+            "http://example.org/fhir/ValueSet/my-valueset", "http://example.org/fhir/", true),
+        // Non-matching prefix.
+        Arguments.of(
+            "http://other.org/fhir/ValueSet/my-valueset", "http://example.org/fhir/", false),
+        // Exact value matches with :below (element starts with search value trivially).
+        Arguments.of("http://example.org/fhir", "http://example.org/fhir", true),
+        // Trailing slash distinction: element without slash, search with slash.
+        Arguments.of("http://example.org/fhir", "http://example.org/fhir/", false));
+  }
+
+  @ParameterizedTest(name = "UriMatcher(below): \"{0}\" matches \"{1}\" = {2}")
+  @MethodSource("uriMatcherBelowCases")
+  void testUriMatcherBelow(final String element, final String searchValue, final boolean expected) {
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING()).toDF("value");
+
+    final UriMatcher matcher = UriMatcher.below();
+    final Column result = matcher.match(col("value"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== UriMatcher :above tests ==========
+
+  static Stream<Arguments> uriMatcherAboveCases() {
+    return Stream.of(
+        // Element is a prefix of the search value (matches).
+        Arguments.of(
+            "http://example.org/fhir", "http://example.org/fhir/ValueSet/my-valueset", true),
+        // Element is not a prefix of the search value (does not match).
+        Arguments.of(
+            "http://other.org/fhir", "http://example.org/fhir/ValueSet/my-valueset", false),
+        // Exact value matches with :above (search value starts with element trivially).
+        Arguments.of("http://example.org/fhir", "http://example.org/fhir", true));
+  }
+
+  @ParameterizedTest(name = "UriMatcher(above): \"{0}\" matches \"{1}\" = {2}")
+  @MethodSource("uriMatcherAboveCases")
+  void testUriMatcherAbove(final String element, final String searchValue, final boolean expected) {
+    final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING()).toDF("value");
+
+    final UriMatcher matcher = UriMatcher.above();
+    final Column result = matcher.match(col("value"), searchValue);
+
+    final boolean actual = df.select(result).first().getBoolean(0);
+    assertEquals(expected, actual);
+  }
+
+  // ========== SearchParameterType.URI createFilter tests ==========
+
+  @Test
+  void uriCreateFilter_notModifier_returnsNegatedFilter() {
+    // The :not modifier should produce a filter that negates the match result.
+    final Dataset<Row> df =
+        spark.createDataset(List.of("http://example.org"), Encoders.STRING()).toDF("value");
+
+    final SearchFilter normalFilter =
+        SearchParameterType.URI.createFilter(null, FHIRDefinedType.URI);
+    final SearchFilter negatedFilter =
+        SearchParameterType.URI.createFilter("not", FHIRDefinedType.URI);
+
+    final Column normalCol =
+        normalFilter.buildFilter(
+            new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("value")),
+            List.of("http://example.org"));
+    final Column negatedCol =
+        negatedFilter.buildFilter(
+            new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("value")),
+            List.of("http://example.org"));
+
+    // Normal filter should match, negated filter should not.
+    assertTrue(df.select(normalCol).first().getBoolean(0));
+    assertTrue(!df.select(negatedCol).first().getBoolean(0));
+  }
+
+  @Test
+  void uriCreateFilter_belowModifier_returnsPrefixFilter() {
+    // The :below modifier should match when the element starts with the search value.
+    final Dataset<Row> df =
+        spark
+            .createDataset(List.of("http://example.org/fhir/ValueSet/123"), Encoders.STRING())
+            .toDF("value");
+
+    final SearchFilter filter = SearchParameterType.URI.createFilter("below", FHIRDefinedType.URI);
+    final Column filterCol =
+        filter.buildFilter(
+            new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("value")),
+            List.of("http://example.org/fhir/"));
+
+    assertTrue(df.select(filterCol).first().getBoolean(0));
+  }
+
+  @Test
+  void uriCreateFilter_aboveModifier_returnsInversePrefixFilter() {
+    // The :above modifier should match when the element is a prefix of the search value.
+    final Dataset<Row> df =
+        spark.createDataset(List.of("http://example.org/fhir"), Encoders.STRING()).toDF("value");
+
+    final SearchFilter filter = SearchParameterType.URI.createFilter("above", FHIRDefinedType.URI);
+    final Column filterCol =
+        filter.buildFilter(
+            new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("value")),
+            List.of("http://example.org/fhir/ValueSet/123"));
+
+    assertTrue(df.select(filterCol).first().getBoolean(0));
+  }
+
+  @Test
+  void uriCreateFilter_exactModifier_throwsException() {
+    // The :exact modifier is not supported for URI search parameters.
+    assertThrows(
+        InvalidModifierException.class,
+        () -> SearchParameterType.URI.createFilter("exact", FHIRDefinedType.URI));
+  }
+
+  @Test
+  void uriCreateFilter_containsModifier_throwsException() {
+    // The :contains modifier is not supported for URI search parameters.
+    assertThrows(
+        InvalidModifierException.class,
+        () -> SearchParameterType.URI.createFilter("contains", FHIRDefinedType.URI));
+  }
 }

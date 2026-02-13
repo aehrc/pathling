@@ -36,6 +36,8 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.CapabilityStatement;
+import org.hl7.fhir.r4.model.CarePlan;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Observation;
@@ -438,6 +440,73 @@ class SearchColumnBuilderTest {
     patient4.setId("4");
 
     return new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3, patient4));
+  }
+
+  // ========== URI search integration tests ==========
+
+  @Test
+  void uriSearch_fhirDefinedTypeUri_createsFilter() {
+    // CarePlan.instantiatesUri resolves to FHIRDefinedType.URI. Verifies that the search column
+    // builder can create a filter for a URI-type search parameter with this FHIR type.
+    final ObjectDataSource dataSource = createCarePlanDataSource();
+    final Dataset<Row> dataset = dataSource.read("CarePlan");
+
+    final Column filterColumn =
+        builder.fromQueryString(
+            ResourceType.CAREPLAN, "instantiates-uri=http://example.org/protocol/diabetes");
+    final Dataset<Row> result = dataset.filter(filterColumn);
+
+    final Set<String> resultIds = extractIds(result);
+    assertEquals(Set.of("cp1"), resultIds);
+  }
+
+  @Test
+  void uriSearch_fhirDefinedTypeUrl_createsFilter() {
+    // CapabilityStatement.url resolves to FHIRDefinedType.URL. Verifies that the search column
+    // builder can create a filter for a URI-type search parameter with this FHIR type.
+    final ObjectDataSource dataSource = createCapabilityStatementDataSource();
+    final Dataset<Row> dataset = dataSource.read("CapabilityStatement");
+
+    final Column filterColumn =
+        builder.fromQueryString(
+            ResourceType.CAPABILITYSTATEMENT,
+            "url=http://example.org/fhir/CapabilityStatement/server");
+    final Dataset<Row> result = dataset.filter(filterColumn);
+
+    final Set<String> resultIds = extractIds(result);
+    assertEquals(Set.of("cs1"), resultIds);
+  }
+
+  private ObjectDataSource createCarePlanDataSource() {
+    // cp1: instantiatesUri = [http://example.org/protocol/diabetes]
+    final CarePlan cp1 = new CarePlan();
+    cp1.setId("cp1");
+    cp1.addInstantiatesUri("http://example.org/protocol/diabetes");
+
+    // cp2: instantiatesUri = [http://example.org/protocol/cardiac]
+    final CarePlan cp2 = new CarePlan();
+    cp2.setId("cp2");
+    cp2.addInstantiatesUri("http://example.org/protocol/cardiac");
+
+    // cp3: no instantiatesUri
+    final CarePlan cp3 = new CarePlan();
+    cp3.setId("cp3");
+
+    return new ObjectDataSource(spark, encoders, List.of(cp1, cp2, cp3));
+  }
+
+  private ObjectDataSource createCapabilityStatementDataSource() {
+    // cs1: url = http://example.org/fhir/CapabilityStatement/server
+    final CapabilityStatement cs1 = new CapabilityStatement();
+    cs1.setId("cs1");
+    cs1.setUrl("http://example.org/fhir/CapabilityStatement/server");
+
+    // cs2: url = http://example.org/fhir/CapabilityStatement/client
+    final CapabilityStatement cs2 = new CapabilityStatement();
+    cs2.setId("cs2");
+    cs2.setUrl("http://example.org/fhir/CapabilityStatement/client");
+
+    return new ObjectDataSource(spark, encoders, List.of(cs1, cs2));
   }
 
   private Set<String> extractIds(final Dataset<Row> results) {
