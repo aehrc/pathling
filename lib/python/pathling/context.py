@@ -381,6 +381,40 @@ class PathlingContext:
 
         return DataSources(self)
 
+    def fhirpath_to_column(
+        self, resource_type: str, fhirpath_expression: str
+    ) -> Column:
+        """
+        Converts a FHIRPath expression to a PySpark Column.
+
+        This method takes a FHIRPath expression and returns a PySpark Column that
+        can be used in DataFrame operations such as ``filter()`` and ``select()``.
+        Boolean expressions can be used for filtering, while other expressions can
+        be used for value extraction.
+
+        The expression should evaluate to a single value per resource row.
+
+        Example usage::
+
+            pc = PathlingContext.create(spark)
+
+            # Boolean expression for filtering
+            gender_filter = pc.fhirpath_to_column("Patient", "gender = 'male'")
+            filtered = patients.filter(gender_filter)
+
+            # Value expression for selection
+            name_col = pc.fhirpath_to_column("Patient", "name.given.first()")
+            names = patients.select(name_col)
+
+        :param resource_type: the FHIR resource type (e.g., "Patient", "Observation")
+        :param fhirpath_expression: the FHIRPath expression to evaluate
+        :return: a PySpark Column representing the evaluated expression
+        :raises: IllegalArgumentException if the resource type is invalid
+        :raises: Exception if the FHIRPath expression is invalid
+        """
+        jcolumn = self._jpc.fhirPathToColumn(resource_type, fhirpath_expression)
+        return Column(jcolumn)
+
     def search_to_column(self, resource_type: str, search_expression: str) -> Column:
         """
         Converts a FHIR search expression to a boolean filter column.

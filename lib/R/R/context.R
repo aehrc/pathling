@@ -307,3 +307,45 @@ pathling_disconnect_all <- function() {
 pc_search_to_column <- function(pc, resource_type, search_expression) {
   j_invoke(pc, "searchToColumn", as.character(resource_type), as.character(search_expression))
 }
+
+#' Convert a FHIRPath expression to a Spark Column
+#'
+#' Converts a FHIRPath expression into a Spark Column that can be used in DataFrame operations
+#' such as filtering and selection. Boolean expressions can be used for filtering, while other
+#' expressions can be used for value extraction.
+#'
+#' The expression should evaluate to a single value per resource row.
+#'
+#' @param pc The PathlingContext object.
+#' @param resource_type A string containing the FHIR resource type code (e.g., "Patient",
+#'   "Observation").
+#' @param fhirpath_expression A FHIRPath expression to evaluate (e.g., "gender = 'male'",
+#'   "name.given.first()").
+#'
+#' @return A Spark Column object (\code{spark_jobj}) representing the evaluated expression.
+#'
+#' @importFrom sparklyr j_invoke
+#'
+#' @family context functions
+#'
+#' @export
+#'
+#' @examples \dontrun{
+#' pc <- pathling_connect()
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples("ndjson"))
+#' patients <- data_source %>% ds_read("Patient")
+#'
+#' # Boolean expression for filtering.
+#' gender_filter <- pc_fhirpath_to_column(pc, "Patient", "gender = 'male'")
+#' filtered <- sparklyr::spark_dataframe(patients) %>%
+#'   sparklyr::j_invoke("filter", gender_filter) %>%
+#'   sparklyr::sdf_register()
+#'
+#' # Value expression for selection.
+#' name_col <- pc_fhirpath_to_column(pc, "Patient", "name.given.first()")
+#'
+#' pathling_disconnect(pc)
+#' }
+pc_fhirpath_to_column <- function(pc, resource_type, fhirpath_expression) {
+  j_invoke(pc, "fhirPathToColumn", as.character(resource_type), as.character(fhirpath_expression))
+}

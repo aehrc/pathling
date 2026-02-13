@@ -735,4 +735,72 @@ public class PathlingContextTest {
         UnknownSearchParameterException.class,
         () -> pathling.searchToColumn("Patient", "invalid-param=value"));
   }
+
+  // ========== fhirPathToColumn tests ==========
+
+  @Test
+  void fhirPathToColumn_booleanExpression() {
+    // A boolean FHIRPath expression should return a non-null Column.
+    final PathlingContext pathling = PathlingContext.create(spark);
+    final Column genderFilter = pathling.fhirPathToColumn("Patient", "gender = 'male'");
+
+    assertNotNull(genderFilter);
+  }
+
+  @Test
+  void fhirPathToColumn_valueExpression() {
+    // A value FHIRPath expression should return a non-null Column.
+    final PathlingContext pathling = PathlingContext.create(spark);
+    final Column nameColumn = pathling.fhirPathToColumn("Patient", "name.given.first()");
+
+    assertNotNull(nameColumn);
+  }
+
+  @Test
+  void fhirPathToColumn_applyToDataFrameFilter() {
+    // The returned Column should be usable with DataFrame.filter().
+    final Dataset<String> bundlesDF =
+        spark.read().option("wholetext", true).textFile(TEST_DATA_URL + "/bundles/R4/json");
+
+    final PathlingContext pathling = PathlingContext.create(spark);
+    final Dataset<Row> patientsDataframe =
+        pathling.encodeBundle(bundlesDF.toDF(), "Patient", PathlingContext.FHIR_JSON);
+
+    final Column genderFilter = pathling.fhirPathToColumn("Patient", "gender = 'male'");
+    final Dataset<Row> filteredPatients = patientsDataframe.filter(genderFilter);
+
+    assertTrue(filteredPatients.count() <= patientsDataframe.count());
+  }
+
+  @Test
+  void fhirPathToColumn_applyToDataFrameSelect() {
+    // The returned Column should be usable with DataFrame.select().
+    final Dataset<String> bundlesDF =
+        spark.read().option("wholetext", true).textFile(TEST_DATA_URL + "/bundles/R4/json");
+
+    final PathlingContext pathling = PathlingContext.create(spark);
+    final Dataset<Row> patientsDataframe =
+        pathling.encodeBundle(bundlesDF.toDF(), "Patient", PathlingContext.FHIR_JSON);
+
+    final Column nameColumn = pathling.fhirPathToColumn("Patient", "name.given.first()");
+    final Dataset<Row> selectedNames = patientsDataframe.select(nameColumn);
+
+    assertEquals(patientsDataframe.count(), selectedNames.count());
+  }
+
+  @Test
+  void fhirPathToColumn_invalidExpression_throwsException() {
+    // An invalid FHIRPath expression should throw an exception.
+    final PathlingContext pathling = PathlingContext.create(spark);
+
+    assertThrows(Exception.class, () -> pathling.fhirPathToColumn("Patient", "!!invalid!!"));
+  }
+
+  @Test
+  void fhirPathToColumn_invalidResourceType_throwsException() {
+    // An invalid resource type should throw an exception.
+    final PathlingContext pathling = PathlingContext.create(spark);
+
+    assertThrows(Exception.class, () -> pathling.fhirPathToColumn("InvalidResource", "gender"));
+  }
 }

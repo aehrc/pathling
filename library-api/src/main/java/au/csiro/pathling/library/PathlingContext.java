@@ -643,6 +643,42 @@ public class PathlingContext {
     return builder.fromQueryString(ResourceType.fromCode(resourceType), searchExpression);
   }
 
+  /**
+   * Converts a FHIRPath expression to a Spark Column.
+   *
+   * <p>This method takes a FHIRPath expression and returns a Spark Column that can be used in
+   * DataFrame operations such as {@code filter()} and {@code select()}. The expression is evaluated
+   * against the specified resource type using the existing FHIRPath engine.
+   *
+   * <p>The expression should evaluate to a single value per resource row. Boolean expressions can
+   * be used for filtering, while other expressions can be used for value extraction.
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * PathlingContext pc = PathlingContext.create(spark);
+   *
+   * // Boolean expression for filtering
+   * Column genderFilter = pc.fhirPathToColumn("Patient", "gender = 'male'");
+   * Dataset<Row> filtered = patients.filter(genderFilter);
+   *
+   * // Value expression for selection
+   * Column nameColumn = pc.fhirPathToColumn("Patient", "name.given.first()");
+   * Dataset<Row> names = patients.select(nameColumn);
+   * }</pre>
+   *
+   * @param resourceType the FHIR resource type (e.g., "Patient", "Observation")
+   * @param fhirPathExpression the FHIRPath expression to evaluate
+   * @return a Spark Column representing the evaluated expression
+   * @throws IllegalArgumentException if the resource type is invalid
+   */
+  @Nonnull
+  public Column fhirPathToColumn(
+      @Nonnull final String resourceType, @Nonnull final String fhirPathExpression) {
+    final SearchColumnBuilder builder = SearchColumnBuilder.withDefaultRegistry(getFhirContext());
+    return builder.fromExpression(ResourceType.fromCode(resourceType), fhirPathExpression);
+  }
+
   @Nonnull
   private static SparkSession buildDefaultSpark() {
     return SparkSession.builder().appName("Pathling").master("local[*]").getOrCreate();

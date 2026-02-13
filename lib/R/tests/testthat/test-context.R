@@ -65,3 +65,38 @@ test_that("search_to_column raises error for invalid parameter", {
     pc_search_to_column(setup$pc, "Patient", "invalid-param=value")
   )
 })
+
+# ========== pc_fhirpath_to_column tests ==========
+
+test_that("fhirpath_to_column returns a spark_jobj for a boolean expression", {
+  setup <- search_test_setup()
+  # A boolean FHIRPath expression should return a JVM Column object.
+  filter_col <- pc_fhirpath_to_column(setup$pc, "Patient", "gender = 'male'")
+  expect_s3_class(filter_col, "spark_jobj")
+})
+
+test_that("fhirpath_to_column filters a DataFrame correctly", {
+  setup <- search_test_setup()
+  initial_count <- setup$patients_df %>% sparklyr::sdf_nrow()
+  # Filtering with a boolean FHIRPath expression should return fewer or equal rows.
+  gender_filter <- pc_fhirpath_to_column(setup$pc, "Patient", "gender = 'male'")
+  filtered <- sparklyr::spark_dataframe(setup$patients_df) %>%
+    j_invoke("filter", gender_filter) %>%
+    sparklyr::sdf_register()
+  expect_true(filtered %>% sparklyr::sdf_nrow() <= initial_count)
+})
+
+test_that("fhirpath_to_column returns a spark_jobj for a value expression", {
+  setup <- search_test_setup()
+  # A value FHIRPath expression should return a JVM Column object.
+  name_col <- pc_fhirpath_to_column(setup$pc, "Patient", "name.given.first()")
+  expect_s3_class(name_col, "spark_jobj")
+})
+
+test_that("fhirpath_to_column raises error for invalid expression", {
+  setup <- search_test_setup()
+  # An invalid FHIRPath expression should raise an error.
+  expect_error(
+    pc_fhirpath_to_column(setup$pc, "Patient", "!!invalid!!")
+  )
+})

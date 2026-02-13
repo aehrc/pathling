@@ -167,3 +167,34 @@ def test_search_to_column_combined_filters_apply_to_dataframe(
 
     # Should have some results but not more than initial
     assert filtered_patients.count() <= initial_count
+
+
+# ========== fhirpath_to_column tests ==========
+
+
+def test_fhirpath_to_column_boolean_filter(pathling_context, patients_df):
+    """Test that a boolean FHIRPath expression can filter a DataFrame."""
+    initial_count = patients_df.count()
+
+    # A boolean expression should return a Column usable for filtering.
+    gender_filter = pathling_context.fhirpath_to_column("Patient", "gender = 'male'")
+    assert isinstance(gender_filter, Column)
+
+    filtered = patients_df.filter(gender_filter)
+    assert filtered.count() <= initial_count
+
+
+def test_fhirpath_to_column_value_extraction(pathling_context, patients_df):
+    """Test that a value FHIRPath expression can be used with select."""
+    # A value expression should return a Column usable for selection.
+    name_col = pathling_context.fhirpath_to_column("Patient", "name.given.first()")
+    assert isinstance(name_col, Column)
+
+    selected = patients_df.select(name_col)
+    assert selected.count() == patients_df.count()
+
+
+def test_fhirpath_to_column_invalid_expression_raises_exception(pathling_context):
+    """Test that an invalid FHIRPath expression raises an exception."""
+    with pytest.raises(Exception):
+        pathling_context.fhirpath_to_column("Patient", "!!invalid!!")
