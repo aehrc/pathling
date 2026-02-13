@@ -74,7 +74,10 @@ graph TD
     r --> library-runtime
     server --> library-runtime
     server --> test-data
-    ui --> server
+    server --> ui
+    site --> library-api
+    site --> python
+    site --> r
     benchmark --> test-data
 ```
 
