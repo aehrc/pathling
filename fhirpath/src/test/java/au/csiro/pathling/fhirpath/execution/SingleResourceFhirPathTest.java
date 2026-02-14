@@ -47,6 +47,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Coverage;
+import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Device;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -484,6 +485,58 @@ class SingleResourceFhirPathTest {
         .hasClass(BooleanCollection.class)
         .toCanonicalResult()
         .hasRowsUnordered(RowFactory.create("1", true));
+  }
+
+  @Test
+  void testExtensionOnCodingWithinChoiceType() {
+    // Verifies that FHIRPath can retrieve an extension on a Coding nested within a choice type
+    // (valueCodeableConcept). This reproduces the bug reported in issue #2538.
+    final ObjectDataSource dataSource = getChoiceTypeExtensionTestSource();
+
+    final CollectionDataset evalResult =
+        evalExpression(
+            dataSource,
+            ResourceType.OBSERVATION,
+            "value.ofType(CodeableConcept).coding"
+                + ".extension('http://hl7.org/fhir/StructureDefinition/ordinalValue')"
+                + ".value.ofType(decimal)");
+
+    Assertions.assertThat(evalResult)
+        .hasClass(DecimalCollection.class)
+        .toExternalResult()
+        .hasRowsUnordered(RowFactory.create("1", sql_array("42")));
+  }
+
+  @Test
+  void testResourceLevelExtensionAlongsideChoiceTypeExtension() {
+    // Verifies that resource-level extensions still work correctly when the resource also has
+    // extensions on elements nested within choice types.
+    final ObjectDataSource dataSource = getChoiceTypeExtensionTestSource();
+
+    final Dataset<Row> resultDataset =
+        selectExpression(
+            dataSource,
+            ResourceType.OBSERVATION,
+            "extension('uuid:resource-ext').value.ofType(string)");
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(RowFactory.create("1", sql_array("resource-value")));
+  }
+
+  @Nonnull
+  private ObjectDataSource getChoiceTypeExtensionTestSource() {
+    final Coding coding = new Coding("http://example.org", "test-code", "Test Code");
+    coding.addExtension(
+        new Extension("http://hl7.org/fhir/StructureDefinition/ordinalValue", new DecimalType(42)));
+
+    final CodeableConcept valueCodeableConcept = new CodeableConcept();
+    valueCodeableConcept.addCoding(coding);
+
+    final Observation observation = new Observation();
+    observation.addExtension(new Extension("uuid:resource-ext", new StringType("resource-value")));
+    observation.setValue(valueCodeableConcept);
+    observation.setId("Observation/1");
+
+    return new ObjectDataSource(spark, encoders, List.of(observation));
   }
 
   @Nonnull

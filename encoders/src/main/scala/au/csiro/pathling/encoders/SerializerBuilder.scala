@@ -299,10 +299,13 @@ private[encoders] object SerializerBuilderProcessor {
 
     def flattenBase(obj: Base): List[(Int, java.util.List[Extension])] = {
 
+      // Use Property.getValues() directly instead of the hash-based getProperty() lookup.
+      // For choice types (e.g., value[x]), children() returns property names with the [x]
+      // suffix but getProperty() expects the base name without it, causing a hash mismatch
+      // that silently skips the entire subtree.
       val childrenExts = obj.children().asScala
-        .map(p => obj.getProperty(p.getName.hashCode, p.getName, false))
-        .filter(_ != null)
-        .flatMap(_.flatMap(flattenBase))
+        .flatMap(p => p.getValues.asScala)
+        .flatMap(flattenBase)
         .toList
 
       obj match {

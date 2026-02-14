@@ -410,6 +410,30 @@ public class TestData {
     return item;
   }
 
+  /**
+   * Returns a FHIR Observation with a valueCodeableConcept containing a Coding that carries an
+   * extension, plus a resource-level extension. This reproduces the bug where extensions on
+   * elements nested within choice types (e.g., value[x]) are silently dropped during encoding.
+   */
+  public static Observation newObservationWithCodingExtension() {
+    final Observation observation = new Observation();
+    observation.setId("obs-with-coding-ext");
+
+    // Resource-level extension.
+    observation.addExtension(new Extension("uuid:resource-ext", new StringType("resource-value")));
+
+    // valueCodeableConcept with a Coding that has an extension.
+    final Coding coding = new Coding("http://example.org", "test-code", "Test Code");
+    coding.addExtension(
+        new Extension("http://hl7.org/fhir/StructureDefinition/ordinalValue", new DecimalType(42)));
+
+    final CodeableConcept valueCodeableConcept = new CodeableConcept();
+    valueCodeableConcept.addCoding(coding);
+    observation.setValue(valueCodeableConcept);
+
+    return observation;
+  }
+
   public static Condition newConditionWithExtensions() {
 
     // Condition

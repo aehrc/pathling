@@ -301,6 +301,51 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
+  void testEncodeDecodeExtensionOnCodingWithinChoiceType() {
+    // Verifies that extensions on a Coding within a choice type (valueCodeableConcept) survive
+    // serialisation and deserialisation.
+    final ExpressionEncoder<Observation> encoder = fhirEncoders.of(Observation.class);
+    final Observation observation = TestData.newObservationWithCodingExtension();
+    assertSerDeIsIdentity(encoder, observation);
+  }
+
+  @Test
+  void testExtensionMapContainsChoiceTypeChildExtensions() {
+    // Verifies that the _extension map contains entries for both the resource-level extension and
+    // the Coding extension nested within the choice type.
+    final ExpressionEncoder<Observation> encoder = fhirEncoders.of(Observation.class);
+    final Observation observation = TestData.newObservationWithCodingExtension();
+
+    final ExpressionEncoder<Observation> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
+    final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(observation);
+
+    final ExpressionEncoder<Row> rowEncoder =
+        EncoderUtils.defaultResolveAndBind(ExpressionEncoder.apply(encoder.schema()));
+    final Row observationRow = rowEncoder.createDeserializer().apply(serializedRow);
+
+    final Map<Object, Object> extensionMap =
+        observationRow.getJavaMap(observationRow.fieldIndex("_extension"));
+
+    // Resource-level extension.
+    final ArraySeq<?> resourceExtensions =
+        (ArraySeq<?>) extensionMap.get(observationRow.get(observationRow.fieldIndex("_fid")));
+    assertNotNull(resourceExtensions, "Resource-level extensions should be present");
+    assertStringExtension("uuid:resource-ext", "resource-value", (Row) resourceExtensions.apply(0));
+
+    // Coding extension within valueCodeableConcept.
+    final Row valueCodeableConceptRow =
+        observationRow.getStruct(observationRow.fieldIndex("valueCodeableConcept"));
+    final ArraySeq<?> codings =
+        (ArraySeq<?>) valueCodeableConceptRow.get(valueCodeableConceptRow.fieldIndex("coding"));
+    final Row codingRow = (Row) codings.apply(0);
+    final ArraySeq<?> codingExtensions =
+        (ArraySeq<?>) extensionMap.get(codingRow.get(codingRow.fieldIndex("_fid")));
+    assertNotNull(codingExtensions, "Coding extensions within choice type should be present");
+    assertEquals(1, codingExtensions.length());
+  }
+
+  @Test
   void testQuantityCanonicalization() {
     final ExpressionEncoder<Observation> encoder = fhirEncoders.of(Observation.class);
     final Observation observation = TestData.newUcumObservation();
