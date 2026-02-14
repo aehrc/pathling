@@ -39,7 +39,6 @@ import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
-import org.jetbrains.annotations.Contract;
 
 /**
  * A mock implementation of {@link TerminologyService} for testing purposes.
@@ -56,7 +55,6 @@ public class MockTerminologyService implements TerminologyService {
   record SystemAndCode(@Nonnull String system, @Nonnull String code) {
 
     @Nonnull
-    @Contract("_ -> new")
     static SystemAndCode of(@Nonnull final Coding coding) {
       return new SystemAndCode(coding.getSystem(), coding.getCode());
     }

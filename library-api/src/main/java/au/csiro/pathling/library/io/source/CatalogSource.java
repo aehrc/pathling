@@ -36,7 +36,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalog.Catalog;
 import org.apache.spark.sql.catalog.Table;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * A class for making FHIR data in the Spark catalog available for query.
@@ -174,14 +173,14 @@ public class CatalogSource extends AbstractSource {
   }
 
   @Override
-  public CatalogSource map(@NotNull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
+  public CatalogSource map(@Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
     return new CatalogSource(
         context, schema, transformation, Optional.of(operator), filterResourcePredicate);
   }
 
   @Override
-  public @NotNull QueryableDataSource filterByResourceType(
-      @NotNull final Predicate<String> resourceTypePredicate) {
+  public @Nonnull QueryableDataSource filterByResourceType(
+      @Nonnull final Predicate<String> resourceTypePredicate) {
     return new CatalogSource(
         context, schema, transformation, universalOperator, Optional.of(resourceTypePredicate));
   }

@@ -61,7 +61,6 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
-import org.jetbrains.annotations.Unmodifiable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -351,7 +350,7 @@ class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Nonnull
-  private static @Unmodifiable List<Row> toArray(@Nonnull final Coding... codings) {
+  private static List<Row> toArray(@Nonnull final Coding... codings) {
     return Stream.of(codings).map(CodingSchema::encode).toList();
   }
 

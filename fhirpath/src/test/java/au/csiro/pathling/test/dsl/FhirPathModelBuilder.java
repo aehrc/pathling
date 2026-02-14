@@ -32,7 +32,6 @@ import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.jetbrains.annotations.Contract;
 
 @RequiredArgsConstructor
 public class FhirPathModelBuilder {
@@ -219,7 +218,6 @@ public class FhirPathModelBuilder {
    * @param value the FHIRPath quantity literal string
    * @return this builder for chaining
    */
-  @Contract("_, _ -> this")
   @Nonnull
   public FhirPathModelBuilder quantity(@Nonnull final String name, @Nullable final String value) {
     model.put(name, FhirTypedLiteral.toQuantity(value));
@@ -232,7 +230,6 @@ public class FhirPathModelBuilder {
    * @param name the field name
    * @return this builder for chaining
    */
-  @Contract("_ -> this")
   @Nonnull
   @SuppressWarnings("unused")
   public FhirPathModelBuilder quantityEmpty(@Nonnull final String name) {
@@ -253,7 +250,6 @@ public class FhirPathModelBuilder {
    * @param values varargs array of FHIRPath quantity literal strings
    * @return this builder for chaining
    */
-  @Contract("_, _ -> this")
   @Nonnull
   @SuppressWarnings("unused")
   public FhirPathModelBuilder quantityArray(
@@ -275,7 +271,6 @@ public class FhirPathModelBuilder {
     return this;
   }
 
-  @Contract("_, _ -> this")
   @SafeVarargs
   public final FhirPathModelBuilder elementArray(
       final String name, @Nonnull final Consumer<FhirPathModelBuilder>... builders) {

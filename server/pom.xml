@@ -21,7 +21,7 @@
     <pathling.version>9.3.0-SNAPSHOT</pathling.version>
     <pathling.hapiFhirVersion>8.6.0</pathling.hapiFhirVersion>
     <pathling.springBootVersion>3.5.9</pathling.springBootVersion>
-    <pathling.sparkVersion>4.0.1</pathling.sparkVersion>
+    <pathling.sparkVersion>4.0.2</pathling.sparkVersion>
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
     <pathling.deltaVersion>4.0.0</pathling.deltaVersion>

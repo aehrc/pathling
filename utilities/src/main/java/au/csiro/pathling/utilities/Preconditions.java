@@ -24,7 +24,6 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Function;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.jetbrains.annotations.Contract;
 
 /**
  * Static convenience methods for checking the validity of inputs.
@@ -84,7 +83,6 @@ public abstract class Preconditions {
    * @param <T> the type of the object
    * @return the object if it is not null
    */
-  @Contract("null -> fail; !null -> param1")
   @Nonnull
   public static <T> T checkArgumentNotNull(@Nullable final T object) {
     if (object == null) {

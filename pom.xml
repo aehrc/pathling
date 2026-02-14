@@ -71,9 +71,9 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.sparkVersion>4.0.1</pathling.sparkVersion>
+    <pathling.sparkVersion>4.0.2</pathling.sparkVersion>
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
-    <pathling.scalaFullVersion>2.13.15</pathling.scalaFullVersion>
+    <pathling.scalaFullVersion>2.13.16</pathling.scalaFullVersion>
     <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>

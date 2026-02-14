@@ -68,7 +68,7 @@ sc <- spark_connect(master = "local",
                     config = list("sparklyr.shell.conf" = c(
                             "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
                             "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
-                    )), version = "4.0.1")
+                    )), version = "4.0.2")
 
 pc <- pathling_connect(sc)
 ```

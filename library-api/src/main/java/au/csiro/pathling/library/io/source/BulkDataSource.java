@@ -28,7 +28,6 @@ import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * A data source that reads data from a FHIR Bulk Data endpoint. This source uses the FHIR Bulk Data
@@ -82,13 +81,13 @@ public class BulkDataSource extends AbstractSource {
 
   @Override
   public QueryableDataSource map(
-      @NotNull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
+      @Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
     return new BulkDataSource(context, (NdjsonSource) ndjsonSource.map(operator));
   }
 
   @Override
-  public @NotNull QueryableDataSource filterByResourceType(
-      @NotNull final Predicate<String> resourceTypePredicate) {
+  public @Nonnull QueryableDataSource filterByResourceType(
+      @Nonnull final Predicate<String> resourceTypePredicate) {
     return new BulkDataSource(
         context, (NdjsonSource) ndjsonSource.filterByResourceType(resourceTypePredicate));
   }

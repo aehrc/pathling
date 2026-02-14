@@ -64,7 +64,7 @@
       sets SPARK_HOME to bypass the sparklyr download. Locally, sparklyr
       downloads this version automatically.
     -->
-    <pathling.Rapi.sparkVersion>4.0.1</pathling.Rapi.sparkVersion>
+    <pathling.Rapi.sparkVersion>4.0.2</pathling.Rapi.sparkVersion>
     <pathling.Rapi.scalaVersion>${pathling.scalaVersion}</pathling.Rapi.scalaVersion>
     <pathling.Rapi.hadoopMajorVersion>${pathling.hadoopMajorVersion}</pathling.Rapi.hadoopMajorVersion>
     <pathling.Rapi.hadoopVersion>${pathling.hadoopVersion}</pathling.Rapi.hadoopVersion>

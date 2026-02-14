@@ -31,7 +31,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * A class for making FHIR data with Spark datasets available for query.
@@ -105,8 +104,8 @@ public class DatasetSource extends AbstractSource {
   }
 
   @Override
-  public @NotNull QueryableDataSource filterByResourceType(
-      @NotNull final Predicate<String> resourceTypePredicate) {
+  public @Nonnull QueryableDataSource filterByResourceType(
+      @Nonnull final Predicate<String> resourceTypePredicate) {
     final Map<String, Dataset<Row>> filteredMap =
         resourceMap.entrySet().stream()
             .filter(entry -> resourceTypePredicate.test(entry.getKey()))
