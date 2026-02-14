@@ -51,8 +51,12 @@ CVE-2026-22029
 CVE-2026-22030
 
 
-# aircompressor Snappy and LZ4 Java-based decompressor 
-# io.airlift:aircompressor is a Spark SQL dependency. Snappy is the default compression for parquet/delta.
-In the context od the library the the user has full control over compressed content so the attack vector is not applicable.
-In the context of the server the bulk import with parquet format could potentially be used as an attack vector. Needs to be investigated further.
+# aircompressor Snappy/LZ4 decompressor buffer content leakage (fixed in 3.4).
+# Transitive via Spark 4.0.2 → ORC 2.1.4 → aircompressor 2.0.2.
+# Library context: not applicable, user controls all compressed input.
+# Server context: $import with parquet format could trigger the vulnerability, but
+# exploitation requires authenticated import access, a crafted parquet file with
+# malformed Snappy blocks, and useful data in the executor's decompression buffer.
+# Leaked data would be raw byte fragments, not coherent records. Risk is low.
+# See: https://github.com/aehrc/pathling/issues/2540
 CVE-2025-67721
