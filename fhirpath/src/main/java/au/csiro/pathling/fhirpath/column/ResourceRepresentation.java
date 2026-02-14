@@ -39,7 +39,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * <ul>
  *   <li>{@link #getValue()} returns the existence column - this represents whether the resource
  *       exists (non-NULL for valid resources, NULL for empty collections)
- *   <li>{@link #getExistenceColumn()} returns the id column for existence checks
+ *   <li>{@link #existenceColumn} returns the id column for existence checks
  *   <li>{@link #vectorize(UnaryOperator, UnaryOperator)} applies the singular expression and
  *       returns a new ResourceRepresentation (resources are always singular)
  *   <li>{@link #flatten()} returns {@code this} unchanged since resources are already flat

@@ -51,25 +51,6 @@
  * Column filter = result.getColumn().getValue();
  * }</pre>
  *
- * <h2>Comparison with FhirPathEvaluator</h2>
- *
- * <p>Use {@link au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator} when:
- *
- * <ul>
- *   <li>You only need Column expressions without dataset views
- *   <li>You don't have or need a DataSource
- *   <li>You're building filter expressions for later application
- *   <li>Cross-resource references should be handled gracefully (empty results)
- * </ul>
- *
- * <p>Use {@link au.csiro.pathling.fhirpath.execution.FhirPathEvaluator} when:
- *
- * <ul>
- *   <li>You need to execute queries against actual data
- *   <li>You need the {@code createView()} functionality
- *   <li>You're working with multiple resource types and joins
- * </ul>
- *
  * @see au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator
  * @see au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluatorBuilder
  */

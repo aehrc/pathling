@@ -127,7 +127,7 @@ public class StringCollection extends Collection
    * Returns a new instance based upon a literal represented by a {@link StringType}.
    *
    * <p>This is required for the reflection-based instantiation of collections used in {@link
-   * au.csiro.pathling.projection.ProjectionContext#of}.
+   * au.csiro.pathling.projection.ProjectionContext}.
    *
    * @param value The value to use
    * @return A new instance of StringCollection

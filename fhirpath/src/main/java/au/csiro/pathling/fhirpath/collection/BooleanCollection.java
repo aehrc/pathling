@@ -99,7 +99,7 @@ public class BooleanCollection extends Collection implements StringCoercible, Ma
    * Returns a new instance based upon a literal represented by a {@link BooleanType}.
    *
    * <p>This is required for the reflection-based instantiation of collections used in {@link
-   * au.csiro.pathling.projection.ProjectionContext#of}.
+   * au.csiro.pathling.projection.ProjectionContext}.
    *
    * @param value The value to use
    * @return A new instance of {@link BooleanCollection}
