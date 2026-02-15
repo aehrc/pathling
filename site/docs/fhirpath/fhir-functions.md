@@ -36,14 +36,41 @@ Patient.extension('http://hl7.org/fhir/StructureDefinition/patient-birthPlace')
 collection<Reference> -> resolve() : collection<Resource>
 ```
 
-For each Reference in the input collection, returns the resource that the
-reference points to.
+For each Reference in the input collection, returns type information about the
+resource that the reference points to.
 
-:::note
-Pathling has a limited implementation of `resolve()`. It supports type checking
-with the `is` operator but does not perform actual resource resolution or allow
-traversal of resolved references.
-:::
+### How it works
+
+The `resolve()` function extracts resource type information from Reference
+elements using the following priority:
+
+1. Uses the `Reference.type` field if present (highest priority)
+2. Parses the type from the `Reference.reference` string (e.g., `Patient/123` →
+   Patient type)
+3. Returns an empty collection when the type cannot be determined
+
+This supports relative references (`Patient/123`), absolute references
+(`http://example.org/fhir/Patient/123`), and canonical URLs.
+
+### Usage with type operators
+
+The primary use case for `resolve()` is type checking and filtering with the
+`is` and `ofType()` operators:
+
+```
+Encounter.subject.resolve() is Patient
+Patient.generalPractitioner.resolve().ofType(Practitioner)
+Patient.generalPractitioner.where(resolve() is Organization)
+```
+
+### Limitations
+
+The `resolve()` function in Pathling extracts type information only and does
+**not** support field traversal. Attempting to access fields on a resolved
+reference (e.g., `resolve().name`) will result in an error.
+
+For accessing data from referenced resources, use the `reverseResolve()`
+function instead. See [Extension functions](extension-functions.md) for details.
 
 ## memberOf
 
