@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>9.2.0</version>
+    <version>9.4.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>r</artifactId>
@@ -58,12 +58,13 @@
     <pathling.Rapi.version.base>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</pathling.Rapi.version.base>
     <pathling.Rapi.version.qualifier/>
     <pathling.Rapi.version>${pathling.Rapi.version.base}${pathling.Rapi.version.qualifier}</pathling.Rapi.version>
-    <!-- 
-      This needs to maintained as the most recent version of Spark that is in the versions manifest
-      of the sparklyr version that we depend upon that is on the archive site. The reason we can't 
-      use the latest from the CDN is that the files drop off the CDN when a new version is released.
+    <!--
+      The Spark version used by the R library. In CI, this is downloaded and
+      cached by the setup-spark action (see .github/actions/setup-spark), which
+      sets SPARK_HOME to bypass the sparklyr download. Locally, sparklyr
+      downloads this version automatically.
     -->
-    <pathling.Rapi.sparkVersion>4.0.1</pathling.Rapi.sparkVersion>
+    <pathling.Rapi.sparkVersion>4.0.2</pathling.Rapi.sparkVersion>
     <pathling.Rapi.scalaVersion>${pathling.scalaVersion}</pathling.Rapi.scalaVersion>
     <pathling.Rapi.hadoopMajorVersion>${pathling.hadoopMajorVersion}</pathling.Rapi.hadoopMajorVersion>
     <pathling.Rapi.hadoopVersion>${pathling.hadoopVersion}</pathling.Rapi.hadoopVersion>
@@ -219,11 +220,15 @@
                 <argument>-e</argument>
                 <argument>Sys.setenv(CXX11="clang++", CXX11STD="-std=c++11", CXXFLAGS="-std=c++11")</argument>
                 <argument>-e</argument>
-                <argument>install.packages("devtools")</argument>
+                <argument>install.packages("devtools", type="source")</argument>
                 <argument>-e</argument>
-                <argument>devtools::install_dev_deps()</argument>
+                <argument>devtools::install_dev_deps(type="source")</argument>
                 <argument>-e</argument>
-                <argument>sparklyr::spark_install(version='${pathling.Rapi.sparkVersion}', hadoop_version='${pathling.Rapi.hadoopMajorVersion}')</argument>
+                <argument>installed.packages()[,c("Package","Version")]</argument>
+                <argument>-e</argument>
+                <argument>sessionInfo()</argument>
+                <argument>-e</argument>
+                <argument>if (Sys.getenv("SPARK_HOME") == "") sparklyr::spark_install(version='${pathling.Rapi.sparkVersion}', hadoop_version='${pathling.Rapi.hadoopMajorVersion}')</argument>
               </arguments>
             </configuration>
           </execution>
@@ -255,6 +260,7 @@
               <arguments>
                 <argument>-e</argument>
                 <argument>
+cat(sprintf("Using styler version: %s\n", packageVersion("styler")))                  
 result &lt;- rbind(styler::style_dir("R", dry = "on"), styler::style_dir("tests/testthat", dry = "on"))
 if (any(result$changed)) {
   cat("The following files need formatting:\n")

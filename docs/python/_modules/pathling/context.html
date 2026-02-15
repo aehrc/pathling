@@ -89,7 +89,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">py4j.java_gateway</span><span class="w"> </span><span class="kn">import</span> <span class="n">JavaObject</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">SparkSession</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">SparkSession</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling._version</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">__delta_version__</span><span class="p">,</span>
@@ -450,7 +450,76 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.datasource</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataSources</span>
 
-        <span class="k">return</span> <span class="n">DataSources</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">DataSources</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PathlingContext.fhirpath_to_column"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.fhirpath_to_column">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fhirpath_to_column</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">resource_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fhirpath_expression</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Column</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Converts a FHIRPath expression to a PySpark Column.</span>
+
+<span class="sd">        This method takes a FHIRPath expression and returns a PySpark Column that</span>
+<span class="sd">        can be used in DataFrame operations such as ``filter()`` and ``select()``.</span>
+<span class="sd">        Boolean expressions can be used for filtering, while other expressions can</span>
+<span class="sd">        be used for value extraction.</span>
+
+<span class="sd">        The expression should evaluate to a single value per resource row.</span>
+
+<span class="sd">        Example usage::</span>
+
+<span class="sd">            pc = PathlingContext.create(spark)</span>
+
+<span class="sd">            # Boolean expression for filtering</span>
+<span class="sd">            gender_filter = pc.fhirpath_to_column(&quot;Patient&quot;, &quot;gender = &#39;male&#39;&quot;)</span>
+<span class="sd">            filtered = patients.filter(gender_filter)</span>
+
+<span class="sd">            # Value expression for selection</span>
+<span class="sd">            name_col = pc.fhirpath_to_column(&quot;Patient&quot;, &quot;name.given.first()&quot;)</span>
+<span class="sd">            names = patients.select(name_col)</span>
+
+<span class="sd">        :param resource_type: the FHIR resource type (e.g., &quot;Patient&quot;, &quot;Observation&quot;)</span>
+<span class="sd">        :param fhirpath_expression: the FHIRPath expression to evaluate</span>
+<span class="sd">        :return: a PySpark Column representing the evaluated expression</span>
+<span class="sd">        :raises: IllegalArgumentException if the resource type is invalid</span>
+<span class="sd">        :raises: Exception if the FHIRPath expression is invalid</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">jcolumn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">fhirPathToColumn</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">fhirpath_expression</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Column</span><span class="p">(</span><span class="n">jcolumn</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PathlingContext.search_to_column"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.search_to_column">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">search_to_column</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resource_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">search_expression</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Column</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Converts a FHIR search expression to a boolean filter column.</span>
+
+<span class="sd">        This method takes a FHIR search query string and returns a PySpark Column</span>
+<span class="sd">        that can be used to filter a DataFrame of FHIR resources. The resulting</span>
+<span class="sd">        Column evaluates to true for resources that match the search criteria.</span>
+
+<span class="sd">        Example usage::</span>
+
+<span class="sd">            pc = PathlingContext.create(spark)</span>
+
+<span class="sd">            # Single parameter</span>
+<span class="sd">            gender_filter = pc.search_to_column(&quot;Patient&quot;, &quot;gender=male&quot;)</span>
+
+<span class="sd">            # Multiple parameters (AND)</span>
+<span class="sd">            combined_filter = pc.search_to_column(&quot;Patient&quot;, &quot;gender=male&amp;birthdate=ge1990-01-01&quot;)</span>
+
+<span class="sd">            # Combine with Pythonic operators</span>
+<span class="sd">            filter1 = pc.search_to_column(&quot;Patient&quot;, &quot;gender=male&quot;)</span>
+<span class="sd">            filter2 = pc.search_to_column(&quot;Patient&quot;, &quot;active=true&quot;)</span>
+<span class="sd">            combined = filter1 &amp; filter2</span>
+
+<span class="sd">            # Apply to DataFrame</span>
+<span class="sd">            patients = datasource.read(&quot;Patient&quot;)</span>
+<span class="sd">            filtered = patients.filter(combined)</span>
+
+<span class="sd">        :param resource_type: the FHIR resource type (e.g., &quot;Patient&quot;, &quot;Observation&quot;)</span>
+<span class="sd">        :param search_expression: URL query string format (e.g., &quot;gender=male&amp;birthdate=ge1990&quot;)</span>
+<span class="sd">        :return: a PySpark Column representing the boolean filter condition</span>
+<span class="sd">        :raises: IllegalArgumentException if the search expression contains unknown parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">jcolumn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">searchToColumn</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">search_expression</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Column</span><span class="p">(</span><span class="n">jcolumn</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>

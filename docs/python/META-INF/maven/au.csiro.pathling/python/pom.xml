@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>9.2.0</version>
+    <version>9.4.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
@@ -89,6 +89,7 @@
               <executable>uv</executable>
               <arguments>
                 <argument>venv</argument>
+                <argument>--allow-existing</argument>
                 <argument>-p 3.9</argument>
                 <argument>.venv</argument>
               </arguments>

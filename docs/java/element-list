@@ -10,12 +10,11 @@ au.csiro.pathling.fhirpath.collection
 au.csiro.pathling.fhirpath.collection.mixed
 au.csiro.pathling.fhirpath.column
 au.csiro.pathling.fhirpath.comparison
-au.csiro.pathling.fhirpath.context
 au.csiro.pathling.fhirpath.definition
 au.csiro.pathling.fhirpath.definition.defaults
 au.csiro.pathling.fhirpath.definition.fhir
 au.csiro.pathling.fhirpath.encoding
-au.csiro.pathling.fhirpath.execution
+au.csiro.pathling.fhirpath.evaluation
 au.csiro.pathling.fhirpath.function
 au.csiro.pathling.fhirpath.function.provider
 au.csiro.pathling.fhirpath.function.registry
@@ -33,6 +32,8 @@ au.csiro.pathling.library.io.sink
 au.csiro.pathling.library.io.source
 au.csiro.pathling.library.query
 au.csiro.pathling.projection
+au.csiro.pathling.search
+au.csiro.pathling.search.filter
 au.csiro.pathling.sql
 au.csiro.pathling.sql.misc
 au.csiro.pathling.sql.udf

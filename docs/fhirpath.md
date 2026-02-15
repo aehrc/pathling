@@ -105,6 +105,7 @@ The following standard FHIRPath functions are implemented. See [Functions](https
 | ------------------- | ---------------------------------------------------------------------------------- |
 | `exists(criteria?)` | Returns `true` if the collection has any elements, optionally filtered by criteria |
 | `empty()`           | Returns `true` if the collection is empty                                          |
+| `count()`           | Returns the integer count of items in the collection (0 if empty)                  |
 
 #### Filtering and projection functions[​](#filtering-and-projection-functions "Direct link to Filtering and projection functions")
 
@@ -168,11 +169,11 @@ The following FHIRPath features are **not currently supported**:
 
 * **Equivalence operators**: `~` and `!~`
 * **Lambda expressions**
-* **Aggregate functions**: `count()`, `sum()`, `avg()`, `min()`, `max()`
+* **Aggregate functions**: `sum()`, `avg()`, `min()`, `max()`
 * **Special variables**: `$index`, `$total`
 * **Quantity arithmetic**: Math operations on Quantity types
 * **DateTime arithmetic**: DateTime math operations
-* **Full `resolve()`**: Traversal of resolved references
+* **Full resource resolution**: The `resolve()` function extracts type information only and does not support field traversal
 
 ## Additional functions[​](#additional-functions "Direct link to Additional functions")
 

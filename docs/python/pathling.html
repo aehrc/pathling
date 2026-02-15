@@ -80,7 +80,9 @@
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.create"><code class="docutils literal notranslate"><span class="pre">PathlingContext.create()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.encode"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.encode_bundle"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode_bundle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.fhirpath_to_column"><code class="docutils literal notranslate"><span class="pre">PathlingContext.fhirpath_to_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.read"><code class="docutils literal notranslate"><span class="pre">PathlingContext.read</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.search_to_column"><code class="docutils literal notranslate"><span class="pre">PathlingContext.search_to_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.spark"><code class="docutils literal notranslate"><span class="pre">PathlingContext.spark</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.version"><code class="docutils literal notranslate"><span class="pre">PathlingContext.version()</span></code></a></li>
 </ul>
@@ -289,7 +291,9 @@
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.create"><code class="docutils literal notranslate"><span class="pre">PathlingContext.create()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.encode"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.encode_bundle"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode_bundle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.fhirpath_to_column"><code class="docutils literal notranslate"><span class="pre">PathlingContext.fhirpath_to_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.read"><code class="docutils literal notranslate"><span class="pre">PathlingContext.read</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.search_to_column"><code class="docutils literal notranslate"><span class="pre">PathlingContext.search_to_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.spark"><code class="docutils literal notranslate"><span class="pre">PathlingContext.spark</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.version"><code class="docutils literal notranslate"><span class="pre">PathlingContext.version()</span></code></a></li>
 </ul>
@@ -720,10 +724,92 @@ columns</p>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.context.PathlingContext.fhirpath_to_column">
+<span class="sig-name descname"><span class="pre">fhirpath_to_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhirpath_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Column</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.fhirpath_to_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.fhirpath_to_column" title="Permalink to this definition"></a></dt>
+<dd><p>Converts a FHIRPath expression to a PySpark Column.</p>
+<p>This method takes a FHIRPath expression and returns a PySpark Column that
+can be used in DataFrame operations such as <code class="docutils literal notranslate"><span class="pre">filter()</span></code> and <code class="docutils literal notranslate"><span class="pre">select()</span></code>.
+Boolean expressions can be used for filtering, while other expressions can
+be used for value extraction.</p>
+<p>The expression should evaluate to a single value per resource row.</p>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pc</span> <span class="o">=</span> <span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">spark</span><span class="p">)</span>
+
+<span class="c1"># Boolean expression for filtering</span>
+<span class="n">gender_filter</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">fhirpath_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;gender = &#39;male&#39;&quot;</span><span class="p">)</span>
+<span class="n">filtered</span> <span class="o">=</span> <span class="n">patients</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">gender_filter</span><span class="p">)</span>
+
+<span class="c1"># Value expression for selection</span>
+<span class="n">name_col</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">fhirpath_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;name.given.first()&quot;</span><span class="p">)</span>
+<span class="n">names</span> <span class="o">=</span> <span class="n">patients</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">name_col</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resource_type</strong> – the FHIR resource type (e.g., “Patient”, “Observation”)</p></li>
+<li><p><strong>fhirpath_expression</strong> – the FHIRPath expression to evaluate</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a PySpark Column representing the evaluated expression</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p>IllegalArgumentException if the resource type is invalid</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p>Exception if the FHIRPath expression is invalid</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="pathling.context.PathlingContext.read">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#pathling.datasource.DataSources" title="pathling.datasource.DataSources"><span class="pre">DataSources</span></a></em><a class="headerlink" href="#pathling.context.PathlingContext.read" title="Permalink to this definition"></a></dt>
 <dd><p>Provides access to the instance of <code class="xref py py-class docutils literal notranslate"><span class="pre">DataSource</span></code> factory.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.context.PathlingContext.search_to_column">
+<span class="sig-name descname"><span class="pre">search_to_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Column</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.search_to_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.search_to_column" title="Permalink to this definition"></a></dt>
+<dd><p>Converts a FHIR search expression to a boolean filter column.</p>
+<p>This method takes a FHIR search query string and returns a PySpark Column
+that can be used to filter a DataFrame of FHIR resources. The resulting
+Column evaluates to true for resources that match the search criteria.</p>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pc</span> <span class="o">=</span> <span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">spark</span><span class="p">)</span>
+
+<span class="c1"># Single parameter</span>
+<span class="n">gender_filter</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">search_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;gender=male&quot;</span><span class="p">)</span>
+
+<span class="c1"># Multiple parameters (AND)</span>
+<span class="n">combined_filter</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">search_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;gender=male&amp;birthdate=ge1990-01-01&quot;</span><span class="p">)</span>
+
+<span class="c1"># Combine with Pythonic operators</span>
+<span class="n">filter1</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">search_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;gender=male&quot;</span><span class="p">)</span>
+<span class="n">filter2</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">search_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;active=true&quot;</span><span class="p">)</span>
+<span class="n">combined</span> <span class="o">=</span> <span class="n">filter1</span> <span class="o">&amp;</span> <span class="n">filter2</span>
+
+<span class="c1"># Apply to DataFrame</span>
+<span class="n">patients</span> <span class="o">=</span> <span class="n">datasource</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">)</span>
+<span class="n">filtered</span> <span class="o">=</span> <span class="n">patients</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">combined</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resource_type</strong> – the FHIR resource type (e.g., “Patient”, “Observation”)</p></li>
+<li><p><strong>search_expression</strong> – URL query string format (e.g., “gender=male&amp;birthdate=ge1990”)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a PySpark Column representing the boolean filter condition</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p>IllegalArgumentException if the search expression contains unknown parameters</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py property">
@@ -2361,10 +2447,92 @@ columns</p>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.PathlingContext.fhirpath_to_column">
+<span class="sig-name descname"><span class="pre">fhirpath_to_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhirpath_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Column</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.fhirpath_to_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.fhirpath_to_column" title="Permalink to this definition"></a></dt>
+<dd><p>Converts a FHIRPath expression to a PySpark Column.</p>
+<p>This method takes a FHIRPath expression and returns a PySpark Column that
+can be used in DataFrame operations such as <code class="docutils literal notranslate"><span class="pre">filter()</span></code> and <code class="docutils literal notranslate"><span class="pre">select()</span></code>.
+Boolean expressions can be used for filtering, while other expressions can
+be used for value extraction.</p>
+<p>The expression should evaluate to a single value per resource row.</p>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pc</span> <span class="o">=</span> <span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">spark</span><span class="p">)</span>
+
+<span class="c1"># Boolean expression for filtering</span>
+<span class="n">gender_filter</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">fhirpath_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;gender = &#39;male&#39;&quot;</span><span class="p">)</span>
+<span class="n">filtered</span> <span class="o">=</span> <span class="n">patients</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">gender_filter</span><span class="p">)</span>
+
+<span class="c1"># Value expression for selection</span>
+<span class="n">name_col</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">fhirpath_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;name.given.first()&quot;</span><span class="p">)</span>
+<span class="n">names</span> <span class="o">=</span> <span class="n">patients</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">name_col</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resource_type</strong> – the FHIR resource type (e.g., “Patient”, “Observation”)</p></li>
+<li><p><strong>fhirpath_expression</strong> – the FHIRPath expression to evaluate</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a PySpark Column representing the evaluated expression</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p>IllegalArgumentException if the resource type is invalid</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p>Exception if the FHIRPath expression is invalid</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="pathling.PathlingContext.read">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#pathling.DataSources" title="pathling.DataSources"><span class="pre">DataSources</span></a></em><a class="headerlink" href="#pathling.PathlingContext.read" title="Permalink to this definition"></a></dt>
 <dd><p>Provides access to the instance of <a class="reference internal" href="#pathling.DataSource" title="pathling.DataSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataSource</span></code></a> factory.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.PathlingContext.search_to_column">
+<span class="sig-name descname"><span class="pre">search_to_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Column</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.search_to_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.search_to_column" title="Permalink to this definition"></a></dt>
+<dd><p>Converts a FHIR search expression to a boolean filter column.</p>
+<p>This method takes a FHIR search query string and returns a PySpark Column
+that can be used to filter a DataFrame of FHIR resources. The resulting
+Column evaluates to true for resources that match the search criteria.</p>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pc</span> <span class="o">=</span> <span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">spark</span><span class="p">)</span>
+
+<span class="c1"># Single parameter</span>
+<span class="n">gender_filter</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">search_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;gender=male&quot;</span><span class="p">)</span>
+
+<span class="c1"># Multiple parameters (AND)</span>
+<span class="n">combined_filter</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">search_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;gender=male&amp;birthdate=ge1990-01-01&quot;</span><span class="p">)</span>
+
+<span class="c1"># Combine with Pythonic operators</span>
+<span class="n">filter1</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">search_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;gender=male&quot;</span><span class="p">)</span>
+<span class="n">filter2</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">search_to_column</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="s2">&quot;active=true&quot;</span><span class="p">)</span>
+<span class="n">combined</span> <span class="o">=</span> <span class="n">filter1</span> <span class="o">&amp;</span> <span class="n">filter2</span>
+
+<span class="c1"># Apply to DataFrame</span>
+<span class="n">patients</span> <span class="o">=</span> <span class="n">datasource</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">)</span>
+<span class="n">filtered</span> <span class="o">=</span> <span class="n">patients</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">combined</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resource_type</strong> – the FHIR resource type (e.g., “Patient”, “Observation”)</p></li>
+<li><p><strong>search_expression</strong> – URL query string format (e.g., “gender=male&amp;birthdate=ge1990”)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a PySpark Column representing the boolean filter condition</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p>IllegalArgumentException if the search expression contains unknown parameters</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py property">

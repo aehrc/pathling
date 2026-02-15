@@ -1,1 +1,0 @@
-"use strict";(globalThis.webpackChunkpathling_site=globalThis.webpackChunkpathling_site||[]).push([[8146],{9328:t=>{t.exports=JSON.parse('{"metadata":{"permalink":"/blog","page":1,"postsPerPage":10,"totalPages":1,"totalCount":2,"blogDescription":"News and updates from the Pathling project","blogTitle":"Blog"}}')}}]);
