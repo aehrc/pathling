@@ -38,14 +38,6 @@ data_source <- pc %>% pathling_read_ndjson("data/ndjson")
 patients <- data_source %>% ds_read("Patient")
 
 # Filter patients by gender using search syntax.
-gender_filter <- pathling_search_to_column(pc, "Patient", "gender=male")
-sparklyr::spark_dataframe(patients) %>%
-        sparklyr::j_invoke("filter", gender_filter) %>%
-        sparklyr::sdf_register() %>%
-        select(id, gender, name.family) %>%
-        show()
-
-# Alternatively, use the pathling_filter helper.
 patients %>%
         pathling_filter(pc, "Patient", "gender=male", type = "search") %>%
         select(id, gender, name.family) %>%
@@ -1026,16 +1018,8 @@ data_source <- pc %>% pathling_read_ndjson("data/ndjson")
 patients <- data_source %>% ds_read("Patient")
 
 # Filter patients using FHIRPath expression.
-fhirpath_filter <- pathling_fhirpath_to_column(pc, "Patient", "name.family contains 'Smith'")
-sparklyr::spark_dataframe(patients) %>%
-        sparklyr::j_invoke("filter", fhirpath_filter) %>%
-        sparklyr::sdf_register() %>%
-        select(id, name.family) %>%
-        show()
-
-# Alternatively, use the pathling_filter helper.
 patients %>%
-        pathling_filter(pc, "Patient", "name.family contains 'Smith'", type = "fhirpath") %>%
+        pathling_filter(pc, "Patient", "name.family contains 'Smith'") %>%
         select(id, name.family) %>%
         show()
 
