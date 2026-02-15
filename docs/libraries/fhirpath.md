@@ -38,7 +38,7 @@ data_source <- pc %>% pathling_read_ndjson("data/ndjson")
 patients <- data_source %>% ds_read("Patient")
 
 # Filter patients using a boolean FHIRPath expression.
-gender_filter <- pc_fhirpath_to_column(pc, "Patient", "gender = 'male'")
+gender_filter <- pathling_fhirpath_to_column(pc, "Patient", "gender = 'male'")
 sparklyr::spark_dataframe(patients) %>%
         sparklyr::j_invoke("filter", gender_filter) %>%
         sparklyr::sdf_register() %>%
