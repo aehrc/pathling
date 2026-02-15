@@ -1,4 +1,16 @@
-## ADDED Requirements
+## RENAMED Requirements
+
+### Requirement: R library exposes pc_fhirpath_to_column function
+
+**FROM**: `pc_fhirpath_to_column`
+**TO**: `pathling_fhirpath_to_column`
+
+### Requirement: pc_fhirpath_to_column has roxygen2 documentation
+
+**FROM**: `pc_fhirpath_to_column`
+**TO**: `pathling_fhirpath_to_column`
+
+## MODIFIED Requirements
 
 ### Requirement: R library exposes pathling_fhirpath_to_column function
 

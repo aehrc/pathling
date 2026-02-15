@@ -294,17 +294,17 @@ pathling_disconnect_all <- function() {
 #' patients <- data_source %>% ds_read("Patient")
 #'
 #' # Filter patients by gender.
-#' gender_filter <- pc_search_to_column(pc, "Patient", "gender=male")
+#' gender_filter <- pathling_search_to_column(pc, "Patient", "gender=male")
 #' filtered <- sparklyr::spark_dataframe(patients) %>%
 #'   sparklyr::j_invoke("filter", gender_filter) %>%
 #'   sparklyr::sdf_register()
 #'
 #' # Multiple search parameters (AND).
-#' combined_filter <- pc_search_to_column(pc, "Patient", "gender=male&active=true")
+#' combined_filter <- pathling_search_to_column(pc, "Patient", "gender=male&active=true")
 #'
 #' pathling_disconnect(pc)
 #' }
-pc_search_to_column <- function(pc, resource_type, search_expression) {
+pathling_search_to_column <- function(pc, resource_type, search_expression) {
   j_invoke(pc, "searchToColumn", as.character(resource_type), as.character(search_expression))
 }
 
@@ -336,17 +336,17 @@ pc_search_to_column <- function(pc, resource_type, search_expression) {
 #' patients <- data_source %>% ds_read("Patient")
 #'
 #' # Boolean expression for filtering.
-#' gender_filter <- pc_fhirpath_to_column(pc, "Patient", "gender = 'male'")
+#' gender_filter <- pathling_fhirpath_to_column(pc, "Patient", "gender = 'male'")
 #' filtered <- sparklyr::spark_dataframe(patients) %>%
 #'   sparklyr::j_invoke("filter", gender_filter) %>%
 #'   sparklyr::sdf_register()
 #'
 #' # Value expression for selection.
-#' name_col <- pc_fhirpath_to_column(pc, "Patient", "name.given.first()")
+#' name_col <- pathling_fhirpath_to_column(pc, "Patient", "name.given.first()")
 #'
 #' pathling_disconnect(pc)
 #' }
-pc_fhirpath_to_column <- function(pc, resource_type, fhirpath_expression) {
+pathling_fhirpath_to_column <- function(pc, resource_type, fhirpath_expression) {
   j_invoke(pc, "fhirPathToColumn", as.character(resource_type), as.character(fhirpath_expression))
 }
 
@@ -390,9 +390,9 @@ pc_fhirpath_to_column <- function(pc, resource_type, fhirpath_expression) {
 #' }
 pathling_filter <- function(df, pc, resource_type, expression, type = "fhirpath") {
   col <- if (type == "search") {
-    pc_search_to_column(pc, resource_type, expression)
+    pathling_search_to_column(pc, resource_type, expression)
   } else {
-    pc_fhirpath_to_column(pc, resource_type, expression)
+    pathling_fhirpath_to_column(pc, resource_type, expression)
   }
   sparklyr::spark_dataframe(df) %>%
     j_invoke("filter", col) %>%
@@ -438,7 +438,7 @@ pathling_filter <- function(df, pc, resource_type, expression, type = "fhirpath"
 #' pathling_disconnect(pc)
 #' }
 pathling_with_column <- function(df, pc, resource_type, expression, column) {
-  col <- pc_fhirpath_to_column(pc, resource_type, expression)
+  col <- pathling_fhirpath_to_column(pc, resource_type, expression)
   sparklyr::spark_dataframe(df) %>%
     j_invoke("withColumn", as.character(column), col) %>%
     sparklyr::sdf_register()

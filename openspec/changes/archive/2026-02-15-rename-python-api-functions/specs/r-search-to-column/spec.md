@@ -1,4 +1,16 @@
-## ADDED Requirements
+## RENAMED Requirements
+
+### Requirement: Convert FHIR search expression to Spark column
+
+**FROM**: `pc_search_to_column`
+**TO**: `pathling_search_to_column`
+
+### Requirement: Function is exported and documented
+
+**FROM**: `pc_search_to_column`
+**TO**: `pathling_search_to_column`
+
+## MODIFIED Requirements
 
 ### Requirement: Convert FHIR search expression to Spark column
 
