@@ -10,7 +10,7 @@ lazy val root = (project in file("."))
         Resolver.mavenCentral
       ),
       libraryDependencies ++= Seq(
-        "au.csiro.pathling" % "library-runtime" % "9.2.0",
+        "au.csiro.pathling" % "library-runtime" % "9.3.0",
         "org.apache.spark" %% "spark-sql" % "4.0.1"
       ),
       run / fork := true,
