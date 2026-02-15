@@ -28,8 +28,16 @@
 
 The version number needs to be changed in the following places:
 
-- [ ] All POM files (version of the main POM, references to parent in all child
-      POMs)
+- `pom.xml`
+- `terminology/pom.xml`
+- `library-api/pom.xml`
+- `utilities/pom.xml`
+- `encoders/pom.xml`
+- `fhirpath/pom.xml`
+- `lib/python/pom.xml`
+- `lib/R/pom.xml`
+- `site/pom.xml`
+- `library-runtime/pom.xml`
 
 The following should only be updated for release versions, not snapshots:
 
