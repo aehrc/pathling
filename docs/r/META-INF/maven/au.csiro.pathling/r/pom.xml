@@ -260,13 +260,13 @@
               <arguments>
                 <argument>-e</argument>
                 <argument>
-cat(sprintf("Using styler version: %s\n", packageVersion("styler")))                  
-result &lt;- rbind(styler::style_dir("R", dry = "on"), styler::style_dir("tests/testthat", dry = "on"))
-if (any(result$changed)) {
-  cat("The following files need formatting:\n")
-  print(result[result$changed, "file"])
-  stop("Code style check failed. Run 'mvn validate -Pformat -pl lib/R' to fix.")
-}
+                  cat(sprintf("Using styler version: %s\n", packageVersion("styler")))
+                  result &lt;- rbind(styler::style_dir("R", dry = "on"), styler::style_dir("tests/testthat", dry = "on"))
+                  if (any(result$changed)) {
+                  cat("The following files need formatting:\n")
+                  print(result[result$changed, "file"])
+                  stop("Code style check failed. Run 'mvn validate -Pformat -pl lib/R' to fix.")
+                  }
                 </argument>
               </arguments>
             </configuration>
@@ -284,11 +284,11 @@ if (any(result$changed)) {
               <arguments>
                 <argument>-e</argument>
                 <argument>
-lints &lt;- c(lintr::lint_dir("R"), lintr::lint_dir("tests/testthat"))
-if (length(lints) > 0) {
-  print(lints)
-  stop("Linting failed with ", length(lints), " issue(s).")
-}
+                  lints &lt;- c(lintr::lint_dir("R"), lintr::lint_dir("tests/testthat"))
+                  if (length(lints) > 0) {
+                  print(lints)
+                  stop("Linting failed with ", length(lints), " issue(s).")
+                  }
                 </argument>
               </arguments>
             </configuration>
