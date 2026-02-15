@@ -383,6 +383,12 @@
         <artifactId>jakarta.servlet-api</artifactId>
         <version>6.0.0</version>
       </dependency>
+      <!-- Override Spark's Avro version to fix CVE-2025-33042. -->
+      <dependency>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro</artifactId>
+        <version>1.12.1</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
