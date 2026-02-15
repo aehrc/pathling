@@ -183,11 +183,12 @@ agree to comply with the licence terms for these components as part of
 accessing the Software. Other third party software may also be identified in
 separate files distributed with the Software.
 
-* (Apache License, Version 2.0) FHIR Bulk Client (au.csiro.fhir:bulk-export:1.0.3 - https://github.com/aehrc/fhir-bulk-java)
+* (Apache License, Version 2.0) FHIR Bulk Client (au.csiro.fhir:bulk-export:1.0.4 - https://github.com/aehrc/fhir-bulk-java)
+* (Apache License, Version 2.0) FHIR Auth Client for Java (au.csiro.fhir:fhir-auth:1.0.0 - https://github.com/aehrc/fhir-auth-java)
 * (Apache License, Version 2.0) HAPI FHIR - Core Library (ca.uhn.hapi.fhir:hapi-fhir-base:8.6.0 - https://hapifhir.io/)
 * (Apache License, Version 2.0) HAPI FHIR - Client Framework (ca.uhn.hapi.fhir:hapi-fhir-client:8.6.0 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-client)
 * (Apache License, Version 2.0) HAPI FHIR Structures - FHIR R4 (ca.uhn.hapi.fhir:hapi-fhir-structures-r4:8.6.0 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-structures-r4)
-* (Eclipse Public License 1.0) (GNU Lesser General Public License) Logback Classic Module (ch.qos.logback:logback-classic:1.5.18 - http://logback.qos.ch/logback-classic)
+* (Eclipse Public License 1.0) (GNU Lesser General Public License) Logback Classic Module (ch.qos.logback:logback-classic:1.5.25 - http://logback.qos.ch/logback-classic)
 * (Apache License, Version 2.0) WireMock (com.github.tomakehurst:wiremock-jre8-standalone:2.35.2 - http://wiremock.org)
 * (Apache License, Version 2.0) FindBugs-jsr305 (com.google.code.findbugs:jsr305:3.0.2 - http://findbugs.sourceforge.net/)
 * (Apache License, Version 2.0) Gson (com.google.code.gson:gson:2.10 - https://github.com/google/gson/gson)
@@ -213,6 +214,7 @@ separate files distributed with the Software.
 * (Apache License, Version 2.0) Infinispan Commons (org.infinispan:infinispan-commons:15.0.3.Final - http://www.infinispan.org)
 * (Apache License, Version 2.0) Infinispan Component Annotations (org.infinispan:infinispan-component-annotations:15.0.3.Final - http://www.infinispan.org)
 * (Apache License, Version 2.0) Infinispan Core (org.infinispan:infinispan-core:15.0.3.Final - http://www.infinispan.org)
+* (Public Domain) JSON in Java (org.json:json:20231013 - https://github.com/douglascrockford/JSON-java)
 * (Public Domain) JSON in Java (org.json:json:20240303 - https://github.com/douglascrockford/JSON-java)
 * (Eclipse Public License v2.0) JUnit Jupiter API (org.junit.jupiter:junit-jupiter-api:5.11.4 - https://junit.org/junit5/)
 * (Eclipse Public License v2.0) JUnit Jupiter Engine (org.junit.jupiter:junit-jupiter-engine:5.11.4 - https://junit.org/junit5/)
@@ -221,7 +223,8 @@ separate files distributed with the Software.
 * (GNU General Public License (GPL), version 2, with the Classpath exception) JMH Core (org.openjdk.jmh:jmh-core:1.37 - http://openjdk.java.net/projects/code-tools/jmh/jmh-core/)
 * (GNU General Public License (GPL), version 2, with the Classpath exception) JMH Generators: Annotation Processors (org.openjdk.jmh:jmh-generator-annprocess:1.37 - http://openjdk.java.net/projects/code-tools/jmh/jmh-generator-annprocess/)
 * (MIT License) Project Lombok (org.projectlombok:lombok:1.18.38 - https://projectlombok.org)
-* (Apache License, Version 2.0) Scala Library (org.scala-lang:scala-library:2.13.15 - https://www.scala-lang.org/)
+* (Apache License, Version 2.0) Scala Library (org.scala-lang:scala-library:2.13.16 - https://www.scala-lang.org/)
 * (Apache License, Version 2.0) JSONassert (org.skyscreamer:jsonassert:1.5.1 - https://github.com/skyscreamer/JSONassert)
+* (Apache License, Version 2.0) JSONassert (org.skyscreamer:jsonassert:1.5.3 - https://github.com/skyscreamer/JSONassert)
 * (MIT License) SLF4J API Module (org.slf4j:slf4j-api:2.0.17 - http://www.slf4j.org)
 * (Apache License, Version 2.0) spring-boot-starter-test (org.springframework.boot:spring-boot-starter-test:3.4.11 - https://spring.io/projects/spring-boot)
