@@ -294,13 +294,12 @@ pathling_disconnect_all <- function() {
 #' patients <- data_source %>% ds_read("Patient")
 #'
 #' # Filter patients by gender.
-#' gender_filter <- pathling_search_to_column(pc, "Patient", "gender=male")
-#' filtered <- sparklyr::spark_dataframe(patients) %>%
-#'   sparklyr::j_invoke("filter", gender_filter) %>%
-#'   sparklyr::sdf_register()
+#' filtered <- patients %>%
+#'   pathling_filter(pc, "Patient", "gender=male", type = "search")
 #'
 #' # Multiple search parameters (AND).
-#' combined_filter <- pathling_search_to_column(pc, "Patient", "gender=male&active=true")
+#' filtered <- patients %>%
+#'   pathling_filter(pc, "Patient", "gender=male&active=true", type = "search")
 #'
 #' pathling_disconnect(pc)
 #' }
@@ -335,11 +334,9 @@ pathling_search_to_column <- function(pc, resource_type, search_expression) {
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples("ndjson"))
 #' patients <- data_source %>% ds_read("Patient")
 #'
-#' # Boolean expression for filtering.
-#' gender_filter <- pathling_fhirpath_to_column(pc, "Patient", "gender = 'male'")
-#' filtered <- sparklyr::spark_dataframe(patients) %>%
-#'   sparklyr::j_invoke("filter", gender_filter) %>%
-#'   sparklyr::sdf_register()
+#' # Filter patients using a boolean FHIRPath expression.
+#' filtered <- patients %>%
+#'   pathling_filter(pc, "Patient", "gender = 'male'")
 #'
 #' # Value expression for selection.
 #' name_col <- pathling_fhirpath_to_column(pc, "Patient", "name.given.first()")
