@@ -39,6 +39,11 @@
     ]
   },
   "overrides": {
-    "lodash-es": "4.17.23"
+    "lodash-es": "4.17.23",
+    "lodash": "4.17.23",
+    "node-forge": "1.3.3",
+    "qs": "6.15.0",
+    "js-yaml": "3.14.2",
+    "mdast-util-to-hast": "13.2.1"
   }
 }
