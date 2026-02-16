@@ -23,21 +23,26 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
+import ca.uhn.fhir.rest.annotation.RawParam;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 /**
- * HAPI resource provider that can be instantiated using any resource type to add the FHIRPath
- * search functionality.
+ * HAPI resource provider that can be instantiated using any resource type to add search
+ * functionality. Supports both standard FHIR search parameters and FHIRPath-based search via the
+ * {@code _query=fhirPath} named query.
  *
  * @author John Grimes
  */
@@ -94,35 +99,69 @@ public class SearchProvider implements IResourceProvider {
   }
 
   /**
-   * Handles all search requests for the resource of the nominated type with no filters.
+   * Handles search requests with standard FHIR search parameters. Unknown parameters are accepted
+   * via {@code @RawParam} and passed through to the SearchExecutor for processing.
    *
+   * @param rawParams the raw search parameters from the URL query string, or null if none
    * @return a {@link SearchExecutor} which will generate the Bundle of results
    */
-  @Search
+  @Search(allowUnknownParams = true)
   @OperationAccess("search")
   @SuppressWarnings("UnusedReturnValue")
-  public IBundleProvider search() {
-    return buildSearchExecutor(Optional.empty());
+  public IBundleProvider search(@Nullable @RawParam final Map<String, List<String>> rawParams) {
+    final String queryString = buildQueryString(rawParams);
+    return buildSearchExecutor(queryString, Optional.empty());
   }
 
   /**
-   * Handles all search requests for the resource of the nominated type that contain filters.
+   * Handles search requests using the FHIRPath named query, optionally combined with standard FHIR
+   * search parameters.
    *
-   * @param filters the AND/OR search parameters passed using the "filter" key
+   * @param filters the AND/OR FHIRPath filter expressions passed using the "filter" key
+   * @param rawParams the raw standard search parameters from the URL query string, or null if none
    * @return a {@link SearchExecutor} which will generate the Bundle of results
    */
-  @Search(queryName = QUERY_NAME)
+  @Search(queryName = QUERY_NAME, allowUnknownParams = true)
   @OperationAccess("search")
   @SuppressWarnings("UnusedReturnValue")
   public IBundleProvider search(
-      @Nullable @OptionalParam(name = FILTER_PARAM) final StringAndListParam filters) {
-    return buildSearchExecutor(Optional.ofNullable(filters));
+      @Nullable @OptionalParam(name = FILTER_PARAM) final StringAndListParam filters,
+      @Nullable @RawParam final Map<String, List<String>> rawParams) {
+    final String queryString = buildQueryString(rawParams);
+    return buildSearchExecutor(queryString, Optional.ofNullable(filters));
+  }
+
+  /**
+   * Reconstructs a query string from the raw parameter map. Each key-value pair is joined with
+   * {@code =}, and pairs are joined with {@code &}. Multi-valued entries (repeated URL parameters)
+   * emit separate {@code key=value} pairs for each value. Modifier suffixes in map keys (e.g.,
+   * {@code gender:not}) are preserved as-is.
+   *
+   * @param rawParams the raw parameter map, or null if no parameters
+   * @return the reconstructed query string, or null if the map is null or empty
+   */
+  @Nullable
+  static String buildQueryString(@Nullable final Map<String, List<String>> rawParams) {
+    if (rawParams == null || rawParams.isEmpty()) {
+      return null;
+    }
+    return rawParams.entrySet().stream()
+        .flatMap(entry -> entry.getValue().stream().map(value -> entry.getKey() + "=" + value))
+        .collect(Collectors.joining("&"));
   }
 
   @Nonnull
-  private IBundleProvider buildSearchExecutor(@Nonnull final Optional<StringAndListParam> filters) {
+  private IBundleProvider buildSearchExecutor(
+      @Nullable final String standardSearchQueryString,
+      @Nonnull final Optional<StringAndListParam> filters) {
     final boolean cacheResults = configuration.getQuery().isCacheResults();
     return new SearchExecutor(
-        fhirContext, dataSource, fhirEncoders, resourceTypeCode, filters, cacheResults);
+        fhirContext,
+        dataSource,
+        fhirEncoders,
+        resourceTypeCode,
+        standardSearchQueryString,
+        filters,
+        cacheResults);
   }
 }

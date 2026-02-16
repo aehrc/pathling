@@ -24,6 +24,7 @@ import ca.uhn.fhir.context.FhirContext;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Enumerations.SearchParamType;
@@ -180,5 +181,97 @@ class SearchParameterRegistryTest {
         SearchParameterRegistry.fromSearchParameters(List.of(sp));
 
     assertTrue(registry.getParameter(ResourceType.PATIENT, "no-expr").isEmpty());
+  }
+
+  // ========== getParameters(ResourceType) tests ==========
+
+  @Test
+  void getParameters_returnsAllParametersForResourceType() {
+    // Given: a registry with multiple parameters for Patient.
+    final SearchParameter genderParam = new SearchParameter();
+    genderParam.setCode("gender");
+    genderParam.setType(SearchParamType.TOKEN);
+    genderParam.addBase("Patient");
+    genderParam.setExpression("Patient.gender");
+
+    final SearchParameter birthdateParam = new SearchParameter();
+    birthdateParam.setCode("birthdate");
+    birthdateParam.setType(SearchParamType.DATE);
+    birthdateParam.addBase("Patient");
+    birthdateParam.setExpression("Patient.birthDate");
+
+    final SearchParameterRegistry registry =
+        SearchParameterRegistry.fromSearchParameters(List.of(genderParam, birthdateParam));
+
+    // When: getting all parameters for Patient.
+    final Map<String, SearchParameterDefinition> params =
+        registry.getParameters(ResourceType.PATIENT);
+
+    // Then: both parameters are returned.
+    assertEquals(2, params.size());
+    assertTrue(params.containsKey("gender"));
+    assertTrue(params.containsKey("birthdate"));
+    assertEquals(SearchParameterType.TOKEN, params.get("gender").type());
+    assertEquals(SearchParameterType.DATE, params.get("birthdate").type());
+  }
+
+  @Test
+  void getParameters_returnsEmptyMapForUnknownResourceType() {
+    // Given: a registry with parameters only for Patient.
+    final SearchParameter sp = new SearchParameter();
+    sp.setCode("gender");
+    sp.setType(SearchParamType.TOKEN);
+    sp.addBase("Patient");
+    sp.setExpression("Patient.gender");
+
+    final SearchParameterRegistry registry =
+        SearchParameterRegistry.fromSearchParameters(List.of(sp));
+
+    // When: getting parameters for a resource type with no entries.
+    final Map<String, SearchParameterDefinition> params =
+        registry.getParameters(ResourceType.OBSERVATION);
+
+    // Then: an empty map is returned.
+    assertTrue(params.isEmpty());
+  }
+
+  @Test
+  void getParameters_returnsEmptyMapForEmptyRegistry() {
+    // Given: an empty registry.
+    final SearchParameterRegistry registry =
+        SearchParameterRegistry.fromSearchParameters(List.of());
+
+    // When: getting parameters for any resource type.
+    final Map<String, SearchParameterDefinition> params =
+        registry.getParameters(ResourceType.PATIENT);
+
+    // Then: an empty map is returned.
+    assertTrue(params.isEmpty());
+  }
+
+  @Test
+  void getParameters_returnsImmutableMap() {
+    // Given: a registry with a parameter.
+    final SearchParameter sp = new SearchParameter();
+    sp.setCode("gender");
+    sp.setType(SearchParamType.TOKEN);
+    sp.addBase("Patient");
+    sp.setExpression("Patient.gender");
+
+    final SearchParameterRegistry registry =
+        SearchParameterRegistry.fromSearchParameters(List.of(sp));
+
+    // When: getting parameters and attempting to modify the result.
+    final Map<String, SearchParameterDefinition> params =
+        registry.getParameters(ResourceType.PATIENT);
+
+    // Then: the map is unmodifiable.
+    try {
+      params.put("newParam", new SearchParameterDefinition("new", SearchParameterType.TOKEN, "x"));
+      // If we get here, the map is mutable — fail.
+      assertTrue(false, "Expected UnsupportedOperationException");
+    } catch (final UnsupportedOperationException e) {
+      // Expected.
+    }
   }
 }

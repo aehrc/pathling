@@ -17,11 +17,12 @@
 
 package au.csiro.pathling.search;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /** Exception thrown when a search parameter is not found in the registry. */
-public class UnknownSearchParameterException extends RuntimeException {
+public class UnknownSearchParameterException extends InvalidUserInputError {
 
   /**
    * Creates a new exception for an unknown search parameter.

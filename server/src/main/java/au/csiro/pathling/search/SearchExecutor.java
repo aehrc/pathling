@@ -20,7 +20,9 @@ package au.csiro.pathling.search;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.requireNonNull;
+import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -48,6 +50,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IPrimitiveType;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.InstantType;
 
 /**
@@ -77,7 +80,9 @@ public class SearchExecutor implements IBundleProvider {
    * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
    * @param subjectResourceCode the type code of the resource to search (e.g., "Patient",
    *     "ViewDefinition")
-   * @param filters the optional filter expressions to apply
+   * @param standardSearchQueryString an optional query string containing standard FHIR search
+   *     parameters (e.g., "gender=male&amp;birthdate=ge1990-01-01"), or null if none
+   * @param filters the optional FHIRPath filter expressions to apply
    * @param cacheResults whether to cache the result dataset
    */
   public SearchExecutor(
@@ -85,6 +90,7 @@ public class SearchExecutor implements IBundleProvider {
       @Nonnull final DataSource dataSource,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final String subjectResourceCode,
+      @Nullable final String standardSearchQueryString,
       @Nonnull final Optional<StringAndListParam> filters,
       final boolean cacheResults) {
     this.fhirEncoders = fhirEncoders;
@@ -94,15 +100,19 @@ public class SearchExecutor implements IBundleProvider {
 
     final String filterStrings = filters.map(SearchExecutor::filtersToString).orElse("none");
     log.info(
-        "Received search request: resource={}, filters=[{}]", subjectResourceCode, filterStrings);
+        "Received search request: resource={}, standardParams=[{}], filters=[{}]",
+        subjectResourceCode,
+        standardSearchQueryString != null ? standardSearchQueryString : "none",
+        filterStrings);
 
-    this.result = initializeDataset(fhirContext, dataSource, filters);
+    this.result = initializeDataset(fhirContext, dataSource, standardSearchQueryString, filters);
   }
 
   @Nonnull
   private Dataset<Row> initializeDataset(
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
+      @Nullable final String standardSearchQueryString,
       @Nonnull final Optional<StringAndListParam> filters) {
 
     // Try to read the resource type from the data source. This allows data sources that support
@@ -116,61 +126,87 @@ public class SearchExecutor implements IBundleProvider {
       return createEmptyDataset();
     }
 
-    // If there are no filters, return the flat dataset directly.
-    if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
+    final boolean hasStandardParams =
+        standardSearchQueryString != null && !standardSearchQueryString.isBlank();
+    final boolean hasFhirPathFilters =
+        filters.isPresent() && !filters.get().getValuesAsQueryTokens().isEmpty();
+
+    // If there are no filters of any kind, return the flat dataset directly.
+    if (!hasStandardParams && !hasFhirPathFilters) {
       return cacheIfEnabled(flatDataset);
     }
 
+    Dataset<Row> resultDataset = flatDataset;
+
+    // Apply standard FHIR search parameters using SearchColumnBuilder.
+    if (hasStandardParams) {
+      final SearchColumnBuilder builder = SearchColumnBuilder.withDefaultRegistry(fhirContext);
+      final ResourceType resourceType = ResourceType.fromCode(subjectResourceCode);
+      final Column standardFilter =
+          builder.fromQueryString(resourceType, standardSearchQueryString);
+      final Column safeFilter = coalesce(standardFilter, lit(false));
+      resultDataset = resultDataset.filter(safeFilter);
+    }
+
+    // Apply FHIRPath filter expressions using DatasetEvaluator. This preserves FHIRPath boolean
+    // conversion semantics (truthy evaluation of non-boolean collections) and supports custom
+    // resource types like ViewDefinition.
+    if (hasFhirPathFilters) {
+      resultDataset = applyFhirPathFilters(fhirContext, resultDataset, filters.get());
+    }
+
+    return cacheIfEnabled(resultDataset);
+  }
+
+  /**
+   * Applies FHIRPath filter expressions to a dataset using the DatasetEvaluator, preserving the
+   * AND/OR combining semantics from the StringAndListParam structure.
+   *
+   * @param fhirContext the FHIR context
+   * @param dataset the dataset to filter
+   * @param filters the FHIRPath filter expressions
+   * @return the filtered dataset
+   */
+  @Nonnull
+  private Dataset<Row> applyFhirPathFilters(
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final StringAndListParam filters) {
+
     // Create a FHIRPath evaluator for the subject resource type.
-    // This supports both standard FHIR resource types and custom types like ViewDefinition.
     final DatasetEvaluator evaluator =
         DatasetEvaluatorBuilder.create(subjectResourceCode, fhirContext)
-            .withDataset(flatDataset)
+            .withDataset(dataset)
             .build();
-
-    // Get the input context for FHIRPath evaluation.
     final ResourceCollection inputContext = evaluator.getDefaultInputContext();
+    final Parser parser = new Parser();
 
     // Parse and evaluate each filter expression, building up a combined filter column.
-    // This captures the AND/OR conditions possible through the FHIR API.
     // See https://hl7.org/fhir/R4/search.html#combining.
-    final Parser parser = new Parser();
     @Nullable Column filterColumn = null;
 
-    for (final StringOrListParam orParam : filters.get().getValuesAsQueryTokens()) {
+    for (final StringOrListParam orParam : filters.getValuesAsQueryTokens()) {
       @Nullable Column orColumn = null;
 
       for (final StringParam param : orParam.getValuesAsQueryTokens()) {
         final String expression = param.getValue();
         checkUserInput(!expression.isBlank(), "Filter expression cannot be blank");
 
-        // Parse the FHIRPath expression.
         final FhirPath fhirPath = parser.parse(expression);
-
-        // Evaluate the expression against the input context.
         final Collection filterResult = evaluator.evaluateToCollection(fhirPath, inputContext);
-
-        // Convert to boolean using FHIRPath boolean context semantics.
         final Column filterValue = filterResult.asBooleanSingleton().getColumn().getValue();
 
-        // Combine OR conditions within this parameter group.
         orColumn = orColumn == null ? filterValue : orColumn.or(filterValue);
       }
 
-      // Combine AND conditions between parameter groups.
       filterColumn = filterColumn == null ? orColumn : filterColumn.and(orColumn);
     }
 
     requireNonNull(filterColumn);
 
-    // Coalesce the filter to handle null values (treat null as false).
-    final Column safeFilterColumn =
-        org.apache.spark.sql.functions.coalesce(
-            filterColumn, org.apache.spark.sql.functions.lit(false));
+    final Column safeFilterColumn = coalesce(filterColumn, lit(false));
 
-    // Get the filtered IDs by selecting the ID column from the evaluator's dataset and applying
-    // the filter. The evaluator's dataset has the standardized structure with columns compatible
-    // with the filter column.
+    // Join the flat dataset with filtered IDs to preserve the flat schema for encoding.
     final String filterIdAlias = randomAlias();
     final Dataset<Row> evaluatorDataset = evaluator.getDataset();
     final Dataset<Row> filteredIds =
@@ -178,13 +214,7 @@ public class SearchExecutor implements IBundleProvider {
             .select(evaluatorDataset.col("id").alias(filterIdAlias))
             .filter(safeFilterColumn);
 
-    // Join the flat dataset with the filtered IDs using left_semi to keep only matching rows
-    // while preserving the flat schema for encoding.
-    final Dataset<Row> filteredDataset =
-        flatDataset.join(
-            filteredIds, flatDataset.col("id").equalTo(col(filterIdAlias)), "left_semi");
-
-    return cacheIfEnabled(filteredDataset);
+    return dataset.join(filteredIds, dataset.col("id").equalTo(col(filterIdAlias)), "left_semi");
   }
 
   @Nonnull

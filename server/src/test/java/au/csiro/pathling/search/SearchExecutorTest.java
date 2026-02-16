@@ -32,11 +32,13 @@ import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.StringOrListParam;
 import ca.uhn.fhir.rest.param.StringParam;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,6 +69,8 @@ class SearchExecutorTest {
   @BeforeEach
   void setUp() {
     // Create test patients with varied attributes for filtering tests.
+    // Patients 0-24 have even indices (male), patients 1-49 have odd indices (female).
+    // Patients 0-24 are born in 1980, patients 25-49 are born in 2000.
     final List<IBaseResource> patients = new ArrayList<>();
 
     for (int i = 0; i < 50; i++) {
@@ -75,6 +79,8 @@ class SearchExecutorTest {
       patient.setGender(i % 2 == 0 ? AdministrativeGender.MALE : AdministrativeGender.FEMALE);
       patient.setActive(i % 3 != 0);
       patient.addName().setFamily("Family" + i).addGiven("Given" + i);
+      // First 25 patients born in 1980, rest in 2000.
+      patient.setBirthDateElement(new DateType(i < 25 ? "1980-01-01" : "2000-01-01"));
       patients.add(patient);
     }
 
@@ -86,7 +92,7 @@ class SearchExecutorTest {
     // When: search without any filters.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", Optional.empty(), false);
+            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.empty(), false);
 
     // Then: returns all Patient resources.
     assertThat(result.size()).isEqualTo(50);
@@ -104,7 +110,7 @@ class SearchExecutorTest {
     // When: search with filter.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false);
+            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
 
     // Then: returns only male patients (25 of 50).
     assertThat(result.size()).isEqualTo(25);
@@ -128,7 +134,7 @@ class SearchExecutorTest {
     // When: search with AND filters.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false);
+            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
 
     // Then: returns patients matching both conditions (17 female AND active).
     assertThat(result.size()).isEqualTo(17);
@@ -156,7 +162,7 @@ class SearchExecutorTest {
     // When: search with OR filters.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false);
+            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
 
     // Then: returns patients matching either condition (all 50).
     assertThat(result.size()).isEqualTo(50);
@@ -176,7 +182,7 @@ class SearchExecutorTest {
     // Given: a search that returns 50 patients.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", Optional.empty(), false);
+            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.empty(), false);
 
     // When: retrieving pages of 10.
     final int pageSize = 10;
@@ -205,7 +211,7 @@ class SearchExecutorTest {
     // When: search with filter.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false);
+            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
 
     // Then: returns empty result (not an error).
     assertThat(result.size()).isEqualTo(0);
@@ -220,7 +226,7 @@ class SearchExecutorTest {
     // When: search with filter.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false);
+            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
 
     // Then: returns patients with given names (truthy semantics: non-empty = true).
     assertThat(result.size()).isEqualTo(50);
@@ -236,7 +242,13 @@ class SearchExecutorTest {
     assertThatThrownBy(
             () ->
                 new SearchExecutor(
-                    fhirContext, dataSource, fhirEncoders, "Patient", Optional.of(filters), false))
+                    fhirContext,
+                    dataSource,
+                    fhirEncoders,
+                    "Patient",
+                    null,
+                    Optional.of(filters),
+                    false))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("Filter expression cannot be blank");
   }
@@ -254,6 +266,7 @@ class SearchExecutorTest {
             dataSource,
             fhirEncoders,
             "Patient",
+            null,
             Optional.of(filters),
             true // cacheResults enabled
             );
@@ -262,5 +275,186 @@ class SearchExecutorTest {
     assertThat(result.size()).isEqualTo(25);
     final List<IBaseResource> resources = result.getResources(0, result.size());
     assertThat(resources).hasSize(25);
+  }
+
+  // ========== Standard search parameter tests (tasks 1.1-1.6) ==========
+
+  @Test
+  void standardSearchByTokenParameter() {
+    // Verifies that a standard token search parameter produces correct filtered results.
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext,
+            dataSource,
+            fhirEncoders,
+            "Patient",
+            "gender=male",
+            Optional.empty(),
+            false);
+
+    // 25 male patients (even indices: 0, 2, 4, ..., 48).
+    assertThat(result.size()).isEqualTo(25);
+    final List<IBaseResource> resources = result.getResources(0, result.size());
+    assertThat(resources)
+        .allSatisfy(r -> assertThat(((Patient) r).getGender().toCode()).isEqualTo("male"));
+  }
+
+  @Test
+  void standardSearchByDateParameter() {
+    // Verifies that a standard date search parameter with a prefix produces correct results.
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext,
+            dataSource,
+            fhirEncoders,
+            "Patient",
+            "birthdate=ge1990-01-01",
+            Optional.empty(),
+            false);
+
+    // 25 patients born in 2000 (indices 25-49).
+    assertThat(result.size()).isEqualTo(25);
+    final List<IBaseResource> resources = result.getResources(0, result.size());
+    assertThat(resources)
+        .allSatisfy(
+            r -> {
+              final Date birthDate = ((Patient) r).getBirthDate();
+              assertThat(birthDate).isAfterOrEqualTo("1990-01-01");
+            });
+  }
+
+  @Test
+  void standardSearchByStringParameter() {
+    // Verifies that a standard string search parameter (prefix match) works correctly.
+    // Patient 0 has family name "Family0". The "family" search parameter has a simple string
+    // expression (Patient.name.family) that the string matcher can handle directly.
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext,
+            dataSource,
+            fhirEncoders,
+            "Patient",
+            "family=Family0",
+            Optional.empty(),
+            false);
+
+    // "Family0" should match "Family0" (exact prefix match).
+    assertThat(result.size()).isEqualTo(1);
+  }
+
+  @Test
+  void standardSearchAndCombiningSemanticsRepeatedParameters() {
+    // Verifies AND logic between different parameters: gender=male AND birthdate>=1990.
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext,
+            dataSource,
+            fhirEncoders,
+            "Patient",
+            "gender=male&birthdate=ge1990-01-01",
+            Optional.empty(),
+            false);
+
+    // Male patients born on or after 1990 (indices 26, 28, 30, ..., 48 = 12 patients).
+    assertThat(result.size()).isEqualTo(12);
+    final List<IBaseResource> resources = result.getResources(0, result.size());
+    assertThat(resources)
+        .allSatisfy(
+            r -> {
+              final Patient patient = (Patient) r;
+              assertThat(patient.getGender().toCode()).isEqualTo("male");
+              assertThat(patient.getBirthDate()).isAfterOrEqualTo("1990-01-01");
+            });
+  }
+
+  @Test
+  void standardSearchOrCombiningSemanticsCommaSeparatedValues() {
+    // Verifies OR logic within comma-separated values: gender=male,female.
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext,
+            dataSource,
+            fhirEncoders,
+            "Patient",
+            "gender=male,female",
+            Optional.empty(),
+            false);
+
+    // All 50 patients match male or female.
+    assertThat(result.size()).isEqualTo(50);
+  }
+
+  @Test
+  void combinedStandardAndFhirPathFilters() {
+    // Verifies that standard parameters and FHIRPath filters are combined with AND logic.
+    final StringAndListParam filters = new StringAndListParam();
+    filters.addAnd(new StringParam("active = true"));
+
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext,
+            dataSource,
+            fhirEncoders,
+            "Patient",
+            "gender=male",
+            Optional.of(filters),
+            false);
+
+    // Male patients (25) that are also active (active = i % 3 != 0).
+    // Male indices: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36,
+    // 38, 40, 42, 44, 46, 48.
+    // Of these, not active (i % 3 == 0): 0, 6, 12, 18, 24, 30, 36, 42, 48 = 9 not active.
+    // So 25 - 9 = 16 active male patients.
+    assertThat(result.size()).isEqualTo(16);
+    final List<IBaseResource> resources = result.getResources(0, result.size());
+    assertThat(resources)
+        .allSatisfy(
+            r -> {
+              final Patient patient = (Patient) r;
+              assertThat(patient.getGender().toCode()).isEqualTo("male");
+              assertThat(patient.getActive()).isTrue();
+            });
+  }
+
+  @Test
+  void fhirPathOnlySearchBackwardsCompatibility() {
+    // Verifies that FHIRPath-only search (without standard params) still works identically.
+    final StringAndListParam filters = new StringAndListParam();
+    filters.addAnd(new StringParam("gender = 'male'"));
+    filters.addAnd(new StringParam("active = true"));
+
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
+
+    // Same as before: male AND active patients = 16.
+    assertThat(result.size()).isEqualTo(16);
+  }
+
+  @Test
+  void unknownStandardParameterThrowsInvalidUserInputError() {
+    // Verifies that an unknown search parameter throws InvalidUserInputError.
+    assertThatThrownBy(
+            () ->
+                new SearchExecutor(
+                    fhirContext,
+                    dataSource,
+                    fhirEncoders,
+                    "Patient",
+                    "unknownparam=value",
+                    Optional.empty(),
+                    false))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("unknownparam");
+  }
+
+  @Test
+  void standardSearchWithEmptyQueryStringReturnsAllResources() {
+    // Verifies that an empty standard query string returns all resources.
+    final IBundleProvider result =
+        new SearchExecutor(
+            fhirContext, dataSource, fhirEncoders, "Patient", "", Optional.empty(), false);
+
+    assertThat(result.size()).isEqualTo(50);
   }
 }

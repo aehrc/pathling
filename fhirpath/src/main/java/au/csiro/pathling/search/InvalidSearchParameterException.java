@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nonnull;
 
 /**
@@ -31,7 +32,7 @@ import jakarta.annotation.Nonnull;
  *
  * @see <a href="https://hl7.org/fhir/search.html">FHIR Search</a>
  */
-public class InvalidSearchParameterException extends RuntimeException {
+public class InvalidSearchParameterException extends InvalidUserInputError {
 
   /**
    * Creates a new exception with a custom message.

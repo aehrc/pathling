@@ -92,4 +92,18 @@ public class SearchParameterRegistry {
       @Nonnull final ResourceType resourceType, @Nonnull final String code) {
     return Optional.ofNullable(parameters.get(resourceType)).map(params -> params.get(code));
   }
+
+  /**
+   * Gets all search parameter definitions for a given resource type.
+   *
+   * @param resourceType the resource type
+   * @return an unmodifiable map of parameter code to definition, or an empty map if the resource
+   *     type has no entries
+   */
+  @Nonnull
+  public Map<String, SearchParameterDefinition> getParameters(
+      @Nonnull final ResourceType resourceType) {
+    final Map<String, SearchParameterDefinition> resourceParams = parameters.get(resourceType);
+    return resourceParams != null ? Map.copyOf(resourceParams) : Map.of();
+  }
 }

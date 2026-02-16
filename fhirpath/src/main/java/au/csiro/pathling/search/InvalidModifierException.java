@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nonnull;
 
 /**
@@ -27,7 +28,7 @@ import jakarta.annotation.Nonnull;
  *
  * @see <a href="https://hl7.org/fhir/search.html#modifiers">FHIR Search Modifiers</a>
  */
-public class InvalidModifierException extends RuntimeException {
+public class InvalidModifierException extends InvalidUserInputError {
 
   /**
    * Creates a new exception for an invalid modifier.

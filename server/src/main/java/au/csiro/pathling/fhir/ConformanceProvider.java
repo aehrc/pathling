@@ -31,6 +31,9 @@ import au.csiro.pathling.config.OperationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.search.SearchParameterDefinition;
+import au.csiro.pathling.search.SearchParameterRegistry;
+import au.csiro.pathling.search.SearchParameterType;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -134,6 +137,19 @@ public class ConformanceProvider
   private static final Set<ResourceType> EXPORT_RESOURCE_TYPES =
       Set.of(ResourceType.PATIENT, ResourceType.GROUP);
 
+  /**
+   * Mapping from our SearchParameterType to the FHIR SearchParamType used in CapabilityStatement.
+   */
+  private static final Map<SearchParameterType, SearchParamType> SEARCH_TYPE_MAP =
+      Map.of(
+          SearchParameterType.TOKEN, SearchParamType.TOKEN,
+          SearchParameterType.STRING, SearchParamType.STRING,
+          SearchParameterType.DATE, SearchParamType.DATE,
+          SearchParameterType.NUMBER, SearchParamType.NUMBER,
+          SearchParameterType.QUANTITY, SearchParamType.QUANTITY,
+          SearchParameterType.REFERENCE, SearchParamType.REFERENCE,
+          SearchParameterType.URI, SearchParamType.URI);
+
   @Nonnull private final ServerConfiguration configuration;
 
   @Nonnull private final Optional<OidcConfiguration> oidcConfiguration;
@@ -149,6 +165,8 @@ public class ConformanceProvider
   @Nonnull private final Map<String, OperationDefinition> resources;
 
   @Nonnull private final List<String> systemLevelOperations;
+
+  @Nonnull private final SearchParameterRegistry searchParameterRegistry;
 
   /**
    * Creates a new ConformanceProvider.
@@ -198,6 +216,9 @@ public class ConformanceProvider
       mapBuilder.put(id, load(path));
     }
     resources = mapBuilder.build();
+
+    // Load the search parameter registry from the bundled FHIR R4 search parameters.
+    searchParameterRegistry = loadSearchParameterRegistry(fhirContext);
 
     restfulServer = Optional.empty();
   }
@@ -321,6 +342,9 @@ public class ConformanceProvider
         final ResourceInteractionComponent searchInteraction = new ResourceInteractionComponent();
         searchInteraction.setCode(TypeRestfulInteraction.SEARCHTYPE);
         resource.addInteraction(searchInteraction);
+
+        // Add standard search parameters from the registry for this resource type.
+        addSearchParameters(resource, resourceType);
 
         // Add the fhirPath named query with filter parameter for FHIRPath-based search.
         final CapabilityStatementRestResourceSearchParamComponent filterParam =
@@ -568,6 +592,49 @@ public class ConformanceProvider
       throw new ResourceNotFoundError("OperationDefinition not found: " + idString);
     }
     return resource;
+  }
+
+  /**
+   * Adds standard search parameters from the registry to a resource component.
+   *
+   * @param resource the capability statement resource component to add parameters to
+   * @param resourceType the FHIR resource type
+   */
+  private void addSearchParameters(
+      @Nonnull final CapabilityStatementRestResourceComponent resource,
+      @Nonnull final ResourceType resourceType) {
+    final Map<String, SearchParameterDefinition> params =
+        searchParameterRegistry.getParameters(resourceType);
+    for (final Map.Entry<String, SearchParameterDefinition> entry : params.entrySet()) {
+      final SearchParamType fhirType = SEARCH_TYPE_MAP.get(entry.getValue().type());
+      if (fhirType == null) {
+        // Skip unsupported parameter types (composite, special).
+        continue;
+      }
+      final CapabilityStatementRestResourceSearchParamComponent searchParam =
+          new CapabilityStatementRestResourceSearchParamComponent();
+      searchParam.setName(entry.getKey());
+      searchParam.setType(fhirType);
+      resource.addSearchParam(searchParam);
+    }
+  }
+
+  /**
+   * Loads the search parameter registry from the bundled FHIR R4 search parameters resource.
+   *
+   * @param fhirContext the FHIR context
+   * @return the loaded registry
+   */
+  @Nonnull
+  private static SearchParameterRegistry loadSearchParameterRegistry(
+      @Nonnull final FhirContext fhirContext) {
+    final String path = "/fhir/R4/search-parameters.json";
+    try (final InputStream is = ConformanceProvider.class.getResourceAsStream(path)) {
+      requireNonNull(is, "Search parameters resource not found: " + path);
+      return SearchParameterRegistry.fromInputStream(fhirContext, is);
+    } catch (final java.io.IOException e) {
+      throw new java.io.UncheckedIOException("Failed to load search parameters", e);
+    }
   }
 
   @Nonnull

@@ -308,7 +308,7 @@ class ViewDefinitionSearchTest {
   private IBundleProvider createSearchExecutor(
       @Nonnull final Optional<StringAndListParam> filters) {
     return new SearchExecutor(
-        fhirContext, dataSource, fhirEncoders, "ViewDefinition", filters, false);
+        fhirContext, dataSource, fhirEncoders, "ViewDefinition", null, filters, false);
   }
 
   @Nonnull

@@ -29,6 +29,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.parser.IParser;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -36,9 +37,11 @@ import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.CapabilityStatement;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceOperationComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceSearchParamComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.ResourceInteractionComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.TypeRestfulInteraction;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.Enumerations.SearchParamType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -435,6 +438,142 @@ class ConformanceProviderTest {
                 ops -> ops.setGroupExportEnabled(false),
             "Group",
             "export"));
+  }
+
+  // -------------------------------------------------------------------------
+  // Standard search parameter declaration tests (tasks 2.1, 2.2)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void capabilityStatementDeclaresStandardSearchParametersForPatient() {
+    // When: Getting the capability statement.
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    // Then: The Patient resource should declare standard search parameters from the registry.
+    final CapabilityStatementRestResourceComponent patientResource =
+        findResource(capabilityStatement, "Patient");
+
+    final Map<String, SearchParamType> searchParams =
+        patientResource.getSearchParam().stream()
+            .collect(
+                Collectors.toMap(
+                    CapabilityStatementRestResourceSearchParamComponent::getName,
+                    CapabilityStatementRestResourceSearchParamComponent::getType));
+
+    // Verify key Patient search parameters are present with correct types.
+    assertThat(searchParams).containsEntry("gender", SearchParamType.TOKEN);
+    assertThat(searchParams).containsEntry("birthdate", SearchParamType.DATE);
+    assertThat(searchParams).containsEntry("family", SearchParamType.STRING);
+    assertThat(searchParams).containsEntry("general-practitioner", SearchParamType.REFERENCE);
+  }
+
+  @Test
+  void capabilityStatementDeclaresStandardSearchParametersForObservation() {
+    // When: Getting the capability statement.
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    // Then: The Observation resource should declare standard search parameters.
+    final CapabilityStatementRestResourceComponent observationResource =
+        findResource(capabilityStatement, "Observation");
+
+    final Map<String, SearchParamType> searchParams =
+        observationResource.getSearchParam().stream()
+            .collect(
+                Collectors.toMap(
+                    CapabilityStatementRestResourceSearchParamComponent::getName,
+                    CapabilityStatementRestResourceSearchParamComponent::getType));
+
+    // Verify key Observation search parameters.
+    assertThat(searchParams).containsEntry("code", SearchParamType.TOKEN);
+    assertThat(searchParams).containsEntry("subject", SearchParamType.REFERENCE);
+    assertThat(searchParams).containsEntry("date", SearchParamType.DATE);
+    assertThat(searchParams).containsEntry("value-quantity", SearchParamType.QUANTITY);
+  }
+
+  @Test
+  void capabilityStatementDeclaresFilterParameterAlongsideStandardParameters() {
+    // When: Getting the capability statement.
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    // Then: The Patient resource should have both the FHIRPath filter parameter and standard
+    // search parameters.
+    final CapabilityStatementRestResourceComponent patientResource =
+        findResource(capabilityStatement, "Patient");
+
+    final Map<String, SearchParamType> searchParams =
+        patientResource.getSearchParam().stream()
+            .collect(
+                Collectors.toMap(
+                    CapabilityStatementRestResourceSearchParamComponent::getName,
+                    CapabilityStatementRestResourceSearchParamComponent::getType));
+
+    // The FHIRPath filter parameter should still be present.
+    assertThat(searchParams).containsEntry("filter", SearchParamType.STRING);
+
+    // Standard parameters should also be present alongside filter.
+    assertThat(searchParams).containsKey("gender");
+    assertThat(searchParams.size()).isGreaterThan(1);
+  }
+
+  @Test
+  void capabilityStatementDoesNotDeclareStandardSearchParametersWhenSearchDisabled() {
+    // Given: A configuration with search disabled.
+    final ConformanceProvider provider =
+        createProviderWithDisabledOperations(ops -> ops.setSearchEnabled(false));
+
+    // When: Getting the capability statement.
+    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
+
+    // Then: No resource should have search parameters declared.
+    final List<CapabilityStatementRestResourceComponent> resources =
+        capabilityStatement.getRest().getFirst().getResource();
+
+    for (final CapabilityStatementRestResourceComponent resource : resources) {
+      assertThat(resource.getSearchParam())
+          .as("Resource " + resource.getType() + " should have no search params when disabled")
+          .isEmpty();
+    }
+  }
+
+  @Test
+  void capabilityStatementDoesNotDeclareStandardSearchParametersForViewDefinition() {
+    // ViewDefinition is a custom resource type that does not have standard FHIR search parameters
+    // in the registry. It should only have the FHIRPath filter parameter.
+
+    // When: Getting the capability statement.
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    // Then: ViewDefinition should only have the filter parameter, not standard search parameters.
+    final CapabilityStatementRestResourceComponent viewDefResource =
+        findResource(capabilityStatement, "ViewDefinition");
+
+    final List<String> paramNames =
+        viewDefResource.getSearchParam().stream()
+            .map(CapabilityStatementRestResourceSearchParamComponent::getName)
+            .toList();
+
+    assertThat(paramNames)
+        .as("ViewDefinition should only have the filter parameter")
+        .containsExactly("filter");
+  }
+
+  /**
+   * Helper to find a resource component by type code in the capability statement.
+   *
+   * @param capabilityStatement the capability statement to search
+   * @param typeCode the resource type code (e.g., "Patient")
+   * @return the matching resource component
+   */
+  private CapabilityStatementRestResourceComponent findResource(
+      final CapabilityStatement capabilityStatement, final String typeCode) {
+    return capabilityStatement.getRest().getFirst().getResource().stream()
+        .filter(r -> r.getType().equals(typeCode))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("Resource not found: " + typeCode));
   }
 
   /**
