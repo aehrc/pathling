@@ -1,0 +1,60 @@
+# Copyright © 2026, Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+# ABN 41 687 119 230. Licensed under the Apache License, Version 2.0.
+#
+# Author: John Grimes
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-deployment
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.fhirpathLabApi.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: fhirpath-lab-api
+          image: {{ .Values.fhirpathLabApi.image | quote }}
+          imagePullPolicy: {{ .Values.fhirpathLabApi.imagePullPolicy | quote }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          {{- if gt (len .Values.fhirpathLabApi.config) 0 }}
+          env:
+            {{- range $key, $value := .Values.fhirpathLabApi.config }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
+          startupProbe:
+            httpGet:
+              path: /healthcheck
+              port: http
+            periodSeconds: 5
+            failureThreshold: 36
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          {{- if .Values.fhirpathLabApi.resources }}
+          resources: {{ toYaml .Values.fhirpathLabApi.resources | nindent 12 }}
+          {{- end }}
+      tolerations: {{ toJson .Values.fhirpathLabApi.tolerations }}
+      affinity: {{ toJson .Values.fhirpathLabApi.affinity }}
+      nodeSelector: {{ toJson .Values.fhirpathLabApi.nodeSelector }}

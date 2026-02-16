@@ -1,0 +1,38 @@
+# Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+# Organisation (CSIRO) ABN 41 687 119 230. Licensed under the Apache License,
+# Version 2.0.
+#
+# Author: John Grimes
+
+[project]
+name = "fhirpath-lab-api"
+version = "0.1.0"
+description = "A FHIRPath Lab server backed by the Pathling FHIRPath engine"
+requires-python = ">=3.9"
+dependencies = [
+    "flask>=3.1,<4",
+    "flask-cors>=5.0,<6",
+    "pathling>=9.3.1,<10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<9",
+    "ruff>=0.9,<1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fhirpath_lab_api"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

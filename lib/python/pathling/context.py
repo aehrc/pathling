@@ -33,6 +33,14 @@ if TYPE_CHECKING:
 __all__ = ["PathlingContext"]
 
 
+def _convert_java_value(value):
+    """Converts a Java value from Py4J to an equivalent Python type."""
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    # For other types (e.g., Java BigDecimal, Row), convert to string.
+    return str(value)
+
+
 class StorageType:
     MEMORY: str = "memory"
     DISK: str = "disk"
@@ -414,6 +422,59 @@ class PathlingContext:
         """
         jcolumn = self._jpc.fhirPathToColumn(resource_type, fhirpath_expression)
         return Column(jcolumn)
+
+    def evaluate_fhirpath(
+        self,
+        resource_type: str,
+        resource_json: str,
+        fhirpath_expression: str,
+        context_expression: Optional[str] = None,
+        variables: Optional[dict] = None,
+    ) -> dict:
+        """
+        Evaluates a FHIRPath expression against a single FHIR resource and returns
+        materialised typed results.
+
+        The resource is encoded into a one-row Spark Dataset internally, and the
+        existing FHIRPath engine is used to evaluate the expression. Results are
+        collected and returned as typed values.
+
+        Example usage::
+
+            pc = PathlingContext.create(spark)
+            result = pc.evaluate_fhirpath("Patient", patient_json, "name.family")
+            for value in result["results"]:
+                print(f"{value['type']}: {value['value']}")
+
+        :param resource_type: the FHIR resource type (e.g., "Patient", "Observation")
+        :param resource_json: the FHIR resource as a JSON string
+        :param fhirpath_expression: the FHIRPath expression to evaluate
+        :param context_expression: an optional context expression; if provided, the main
+               expression is composed with the context expression
+        :param variables: optional named variables available via %variable syntax, or None
+        :return: a dict with ``results`` (list of dicts with ``type`` and ``value``
+                 keys) and ``expectedReturnType`` (string)
+        :raises: Exception if the expression is invalid or evaluation fails
+        """
+        jresult = self._jpc.evaluateFhirPath(
+            resource_type,
+            resource_json,
+            fhirpath_expression,
+            context_expression,
+            variables,
+        )
+        # Convert Java FhirPathResult to Python dict.
+        results = []
+        for jtyped_value in jresult.getResults():
+            value = jtyped_value.getValue()
+            # Convert Java types to Python types.
+            if value is not None:
+                value = _convert_java_value(value)
+            results.append({"type": jtyped_value.getType(), "value": value})
+        return {
+            "results": results,
+            "expectedReturnType": jresult.getExpectedReturnType(),
+        }
 
     def search_to_column(self, resource_type: str, search_expression: str) -> Column:
         """
