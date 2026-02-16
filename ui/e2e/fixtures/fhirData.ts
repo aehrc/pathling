@@ -45,10 +45,20 @@ export const mockCapabilityStatement: CapabilityStatement = {
             { code: "search-type" },
             { code: "delete" },
           ],
+          searchParam: [
+            { name: "gender", type: "token" },
+            { name: "birthdate", type: "date" },
+            { name: "name", type: "string" },
+            { name: "family", type: "string" },
+          ],
         },
         {
           type: "Observation",
           interaction: [{ code: "read" }, { code: "search-type" }],
+          searchParam: [
+            { name: "code", type: "token" },
+            { name: "date", type: "date" },
+          ],
         },
         {
           type: "Condition",

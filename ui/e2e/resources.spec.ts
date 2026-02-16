@@ -66,7 +66,10 @@ test.describe("Resources page", () => {
       await expect(
         page.getByRole("heading", { name: "Search resources" }),
       ).toBeVisible();
-      await expect(page.getByRole("combobox")).toBeVisible();
+      // The resource type combobox should show "Patient" by default.
+      await expect(
+        page.getByRole("combobox").filter({ hasText: "Patient" }),
+      ).toBeVisible();
       await expect(page.getByText("FHIRPath filters")).toBeVisible();
       await expect(page.getByRole("button", { name: "Search" })).toBeVisible();
     });
@@ -86,7 +89,7 @@ test.describe("Resources page", () => {
       await page.goto("/admin/resources");
 
       // Open the resource type dropdown.
-      await page.getByRole("combobox").click();
+      await page.getByRole("combobox").filter({ hasText: "Patient" }).click();
 
       // Verify resource types from the mock are available.
       await expect(page.getByRole("option", { name: "Patient" })).toBeVisible();
@@ -367,6 +370,111 @@ test.describe("Resources page", () => {
       );
       expect(clipboardText).toContain('"resourceType": "Patient"');
       expect(clipboardText).toContain('"id": "patient-123"');
+    });
+  });
+
+  test.describe("Search parameters", () => {
+    test("displays search parameters section with parameter dropdown", async ({
+      page,
+    }) => {
+      await setupStandardMocks(page);
+      await page.goto("/admin/resources");
+
+      // Verify the search parameters section is displayed.
+      await expect(
+        page.getByText("Search parameters", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Add parameter" }),
+      ).toBeVisible();
+    });
+
+    test("searches with a standard search parameter", async ({ page }) => {
+      let capturedUrl = "";
+
+      await mockMetadata(page);
+      await page.route(
+        /\/(Patient|Observation|Condition)(\?|\/|$)/,
+        async (route) => {
+          if (route.request().method() === "GET") {
+            capturedUrl = route.request().url();
+            await route.fulfill({
+              status: 200,
+              contentType: "application/fhir+json",
+              body: JSON.stringify(mockPatientBundle),
+            });
+          }
+        },
+      );
+
+      await page.goto("/admin/resources");
+
+      // Select a search parameter from the dropdown.
+      const comboboxes = page.locator('[role="combobox"]');
+      // The second combobox is the parameter dropdown (first is resource type).
+      await comboboxes.nth(1).click();
+      await page.getByRole("option", { name: /gender/i }).click();
+
+      // Enter a value.
+      await page.getByPlaceholder("e.g., male").fill("male");
+
+      // Submit the search.
+      await page.getByRole("button", { name: "Search" }).click();
+
+      // Wait for results.
+      await expect(page.getByText("patient-123")).toBeVisible();
+
+      // Verify the URL includes the search parameter.
+      expect(capturedUrl).toContain("gender=male");
+      // Without FHIRPath filters, _query should not be present.
+      expect(capturedUrl).not.toContain("_query=fhirPath");
+    });
+
+    test("combines standard parameters with FHIRPath filters", async ({
+      page,
+    }) => {
+      let capturedUrl = "";
+
+      await mockMetadata(page);
+      await page.route(
+        /\/(Patient|Observation|Condition)(\?|\/|$)/,
+        async (route) => {
+          if (route.request().method() === "GET") {
+            capturedUrl = route.request().url();
+            await route.fulfill({
+              status: 200,
+              contentType: "application/fhir+json",
+              body: JSON.stringify(mockPatientBundle),
+            });
+          }
+        },
+      );
+
+      await page.goto("/admin/resources");
+
+      // Select a search parameter.
+      const comboboxes = page.locator('[role="combobox"]');
+      await comboboxes.nth(1).click();
+      await page.getByRole("option", { name: /gender/i }).click();
+
+      // Enter a value for the search parameter.
+      await page.getByPlaceholder("e.g., male").fill("male");
+
+      // Enter a FHIRPath filter.
+      await page
+        .getByPlaceholder("e.g., gender = 'female'")
+        .fill("active = true");
+
+      // Submit the search.
+      await page.getByRole("button", { name: "Search" }).click();
+
+      // Wait for results.
+      await expect(page.getByText("patient-123")).toBeVisible();
+
+      // Verify both the search parameter and FHIRPath filter are in the URL.
+      expect(capturedUrl).toContain("gender=male");
+      expect(capturedUrl).toContain("_query=fhirPath");
+      expect(capturedUrl).toContain("filter=active");
     });
   });
 

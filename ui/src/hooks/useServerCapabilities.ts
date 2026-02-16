@@ -21,11 +21,20 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { CapabilityStatement } from "fhir/r4";
 
 /**
+ * A search parameter declared by the server for a resource type.
+ */
+export interface SearchParamCapability {
+  name: string;
+  type: string;
+}
+
+/**
  * Resource capability from server.
  */
 export interface ResourceCapability {
   type: string;
   operations: string[];
+  searchParams: SearchParamCapability[];
 }
 
 /**
@@ -131,10 +140,19 @@ function parseCapabilities(
         }
       }
 
+      // Extract search parameters declared for this resource type.
+      const searchParams: SearchParamCapability[] = [];
+      for (const param of resource.searchParam ?? []) {
+        if (param.name && param.type) {
+          searchParams.push({ name: param.name, type: param.type });
+        }
+      }
+
       if (resource.type) {
         resources.push({
           type: resource.type,
           operations: ops,
+          searchParams,
         });
       }
     }

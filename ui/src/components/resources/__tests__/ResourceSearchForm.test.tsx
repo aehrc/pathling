@@ -30,9 +30,10 @@
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { render, screen } from "../../../test/testUtils";
+import { render, screen, within } from "../../../test/testUtils";
 import { ResourceSearchForm } from "../ResourceSearchForm";
 
+import type { SearchParamCapability } from "../../../hooks/useServerCapabilities";
 import type { SearchRequest } from "../../../types/search";
 
 describe("ResourceSearchForm", () => {
@@ -484,6 +485,372 @@ describe("ResourceSearchForm", () => {
       );
 
       expect(screen.getByText(/leave empty to return all resources/i)).toBeInTheDocument();
+    });
+  });
+
+  describe("search parameters", () => {
+    const mockSearchParams: Record<string, SearchParamCapability[]> = {
+      Patient: [
+        { name: "gender", type: "token" },
+        { name: "birthdate", type: "date" },
+        { name: "name", type: "string" },
+      ],
+      Observation: [
+        { name: "code", type: "token" },
+        { name: "date", type: "date" },
+      ],
+      Condition: [],
+    };
+
+    it("renders search parameters section with heading", () => {
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Use exact text match to distinguish heading from help text.
+      expect(screen.getByText("Search parameters")).toBeInTheDocument();
+    });
+
+    it("renders one empty parameter row by default", () => {
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Should have one value input for search parameters.
+      const valueInputs = screen.getAllByPlaceholderText(/e\.g\., male/i);
+      expect(valueInputs).toHaveLength(1);
+    });
+
+    it("renders add parameter button", () => {
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      expect(screen.getByRole("button", { name: /add parameter/i })).toBeInTheDocument();
+    });
+
+    it("adds a new parameter row when add parameter button is clicked", async () => {
+      const user = userEvent.setup();
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /add parameter/i }));
+
+      const valueInputs = screen.getAllByPlaceholderText(/e\.g\., male/i);
+      expect(valueInputs).toHaveLength(2);
+    });
+
+    it("removes a parameter row when remove button is clicked", async () => {
+      const user = userEvent.setup();
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Add a second row.
+      await user.click(screen.getByRole("button", { name: /add parameter/i }));
+      let valueInputs = screen.getAllByPlaceholderText(/e\.g\., male/i);
+      expect(valueInputs).toHaveLength(2);
+
+      // Find a remove button near a parameter value input and click it.
+      const firstParamInput = valueInputs[0];
+      const paramRow = firstParamInput.closest("[style]")!.parentElement!;
+      const removeButton = within(paramRow)
+        .getAllByRole("button")
+        .find(
+          (btn) =>
+            btn.querySelector("svg") !== null && !btn.textContent && !btn.hasAttribute("disabled"),
+        );
+      if (removeButton) {
+        await user.click(removeButton);
+      }
+
+      valueInputs = screen.getAllByPlaceholderText(/e\.g\., male/i);
+      expect(valueInputs).toHaveLength(1);
+    });
+
+    it("disables the remove button when there is only one parameter row", () => {
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Find the remove button adjacent to the parameter value input.
+      const paramInput = screen.getByPlaceholderText(/e\.g\., male/i);
+      const paramRow = paramInput.closest("[style]")!.parentElement!;
+      const removeButtons = within(paramRow)
+        .getAllByRole("button")
+        .filter((btn) => btn.querySelector("svg") !== null && !btn.textContent);
+
+      expect(removeButtons).toHaveLength(1);
+      expect(removeButtons[0]).toBeDisabled();
+    });
+
+    it("populates parameter dropdown with options for selected resource type", async () => {
+      const user = userEvent.setup();
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Default resource type is Patient. Open the parameter dropdown.
+      // The parameter dropdown is the second combobox (first is resource type).
+      const comboboxes = screen.getAllByRole("combobox");
+      const paramDropdown = comboboxes[1];
+      await user.click(paramDropdown);
+
+      // Verify Patient search params are available.
+      expect(screen.getByRole("option", { name: /gender/i })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /birthdate/i })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /name/i })).toBeInTheDocument();
+    });
+
+    it("updates parameter options when resource type changes", async () => {
+      const user = userEvent.setup();
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Change resource type to Observation.
+      const resourceTypeCombobox = screen.getAllByRole("combobox")[0];
+      await user.click(resourceTypeCombobox);
+      await user.click(screen.getByRole("option", { name: "Observation" }));
+
+      // Open the parameter dropdown.
+      const paramDropdown = screen.getAllByRole("combobox")[1];
+      await user.click(paramDropdown);
+
+      // Verify Observation search params are available.
+      expect(screen.getByRole("option", { name: /code/i })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /date/i })).toBeInTheDocument();
+
+      // Patient-specific params should not be present.
+      expect(screen.queryByRole("option", { name: /gender/i })).not.toBeInTheDocument();
+    });
+
+    it("clears selected parameter when resource type changes and selection is invalid", async () => {
+      const user = userEvent.setup();
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Select "gender" parameter for Patient.
+      const paramDropdown = screen.getAllByRole("combobox")[1];
+      await user.click(paramDropdown);
+      await user.click(screen.getByRole("option", { name: /gender/i }));
+
+      // Change resource type to Observation (which doesn't have "gender").
+      const resourceTypeCombobox = screen.getAllByRole("combobox")[0];
+      await user.click(resourceTypeCombobox);
+      await user.click(screen.getByRole("option", { name: "Observation" }));
+
+      // The parameter dropdown should no longer show "gender".
+      const updatedParamDropdown = screen.getAllByRole("combobox")[1];
+      expect(updatedParamDropdown).not.toHaveTextContent("gender");
+    });
+
+    it("displays help text for search parameters section", () => {
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      expect(screen.getByText(/standard fhir search syntax/i)).toBeInTheDocument();
+    });
+
+    it("includes search params in submitted request", async () => {
+      const user = userEvent.setup();
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Select "gender" parameter and enter a value.
+      const paramDropdown = screen.getAllByRole("combobox")[1];
+      await user.click(paramDropdown);
+      await user.click(screen.getByRole("option", { name: /gender/i }));
+
+      const valueInput = screen.getByPlaceholderText(/e\.g\., male/i);
+      await user.type(valueInput, "male");
+
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      const request = mockOnSubmit.mock.calls[0][0] as SearchRequest;
+      expect(request.params).toEqual({ gender: ["male"] });
+    });
+
+    it("excludes empty parameter rows from submission", async () => {
+      const user = userEvent.setup();
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Add a second parameter row but leave both empty.
+      await user.click(screen.getByRole("button", { name: /add parameter/i }));
+
+      // Only fill in the first row.
+      const paramDropdown = screen.getAllByRole("combobox")[1];
+      await user.click(paramDropdown);
+      await user.click(screen.getByRole("option", { name: /gender/i }));
+
+      const valueInputs = screen.getAllByPlaceholderText(/e\.g\., male/i);
+      await user.type(valueInputs[0], "female");
+
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      const request = mockOnSubmit.mock.calls[0][0] as SearchRequest;
+      // Only the filled row should be included.
+      expect(request.params).toEqual({ gender: ["female"] });
+    });
+
+    it("sends multiple values for the same parameter as repeated entries", async () => {
+      const user = userEvent.setup();
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Select "birthdate" in the first row.
+      const firstParamDropdown = screen.getAllByRole("combobox")[1];
+      await user.click(firstParamDropdown);
+      await user.click(screen.getByRole("option", { name: /birthdate/i }));
+
+      const firstValueInput = screen.getAllByPlaceholderText(/e\.g\., male/i)[0];
+      await user.type(firstValueInput, "gt2000-01-01");
+
+      // Add a second row with the same parameter.
+      await user.click(screen.getByRole("button", { name: /add parameter/i }));
+
+      const secondParamDropdown = screen.getAllByRole("combobox")[2];
+      await user.click(secondParamDropdown);
+      await user.click(screen.getByRole("option", { name: /birthdate/i }));
+
+      const secondValueInput = screen.getAllByPlaceholderText(/e\.g\., male/i)[1];
+      await user.type(secondValueInput, "lt2025-01-01");
+
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      const request = mockOnSubmit.mock.calls[0][0] as SearchRequest;
+      expect(request.params).toEqual({
+        birthdate: ["gt2000-01-01", "lt2025-01-01"],
+      });
+    });
+
+    it("combines search params with FHIRPath filters in submission", async () => {
+      const user = userEvent.setup();
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Set a search parameter.
+      const paramDropdown = screen.getAllByRole("combobox")[1];
+      await user.click(paramDropdown);
+      await user.click(screen.getByRole("option", { name: /gender/i }));
+
+      const valueInput = screen.getByPlaceholderText(/e\.g\., male/i);
+      await user.type(valueInput, "male");
+
+      // Set a FHIRPath filter.
+      const filterInput = screen.getByPlaceholderText(/gender = 'female'/i);
+      await user.type(filterInput, "active = true");
+
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      const request = mockOnSubmit.mock.calls[0][0] as SearchRequest;
+      expect(request.params).toEqual({ gender: ["male"] });
+      expect(request.filters).toEqual(["active = true"]);
+    });
+
+    it("does not render search parameters section when searchParams is not provided", () => {
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+        />,
+      );
+
+      expect(screen.queryByText("Search parameters")).not.toBeInTheDocument();
     });
   });
 });

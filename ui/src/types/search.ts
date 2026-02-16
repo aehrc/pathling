@@ -27,6 +27,8 @@
 export interface SearchRequest {
   resourceType: string;
   filters: string[];
+  /** Standard FHIR search parameters as name-value pairs. */
+  params: Record<string, string[]>;
 }
 
 /**

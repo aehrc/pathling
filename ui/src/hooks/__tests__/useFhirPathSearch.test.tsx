@@ -184,7 +184,7 @@ describe("useFhirPathSearch", () => {
       );
     });
 
-    it("omits filter param when all filters are empty", async () => {
+    it("omits filter and _query params when all filters are empty", async () => {
       vi.mocked(search).mockResolvedValue(mockBundle);
 
       const { result } = renderHook(
@@ -200,11 +200,11 @@ describe("useFhirPathSearch", () => {
         expect(result.current.isLoading).toBe(false);
       });
 
+      // When no valid filters are present, _query should not be included.
       expect(search).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           params: {
-            _query: "fhirPath",
             _count: "10",
           },
         }),
@@ -398,6 +398,114 @@ describe("useFhirPathSearch", () => {
 
       expect(result.current.error).toBe(testError);
       expect(result.current.resources).toEqual([]);
+    });
+  });
+
+  describe("search parameters", () => {
+    it("includes search params in the request", async () => {
+      vi.mocked(search).mockResolvedValue(mockBundle);
+
+      const { result } = renderHook(
+        () =>
+          useFhirPathSearch({
+            resourceType: "Patient",
+            filters: [],
+            searchParams: { gender: ["male"] },
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(search).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          params: expect.objectContaining({
+            gender: ["male"],
+          }),
+        }),
+      );
+    });
+
+    it("combines search params with FHIRPath filters", async () => {
+      vi.mocked(search).mockResolvedValue(mockBundle);
+
+      const { result } = renderHook(
+        () =>
+          useFhirPathSearch({
+            resourceType: "Patient",
+            filters: ["active = true"],
+            searchParams: { gender: ["male"] },
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(search).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          params: expect.objectContaining({
+            _query: "fhirPath",
+            filter: ["active = true"],
+            gender: ["male"],
+          }),
+        }),
+      );
+    });
+
+    it("omits _query param when only search params are used without filters", async () => {
+      vi.mocked(search).mockResolvedValue(mockBundle);
+
+      const { result } = renderHook(
+        () =>
+          useFhirPathSearch({
+            resourceType: "Patient",
+            filters: [],
+            searchParams: { gender: ["male"] },
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // When there are no FHIRPath filters, the _query param should not be set.
+      const callParams = vi.mocked(search).mock.calls[0][1].params!;
+      expect(callParams).not.toHaveProperty("_query");
+      expect(callParams).toHaveProperty("gender", ["male"]);
+    });
+
+    it("sends multiple values for the same search parameter", async () => {
+      vi.mocked(search).mockResolvedValue(mockBundle);
+
+      const { result } = renderHook(
+        () =>
+          useFhirPathSearch({
+            resourceType: "Patient",
+            filters: [],
+            searchParams: { date: ["gt2020-01-01", "lt2025-01-01"] },
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(search).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          params: expect.objectContaining({
+            date: ["gt2020-01-01", "lt2025-01-01"],
+          }),
+        }),
+      );
     });
   });
 

@@ -25,13 +25,16 @@ import type { Bundle, Resource } from "fhir/r4";
 
 /**
  * Options for useFhirPathSearch hook.
- * This is a specialised search that uses FHIRPath filter expressions.
+ * This is a specialised search that uses FHIRPath filter expressions and
+ * standard FHIR search parameters.
  */
 export interface UseFhirPathSearchOptions {
   /** The FHIR resource type to search. */
   resourceType: string;
   /** FHIRPath filter expressions. */
   filters: string[];
+  /** Standard FHIR search parameters as name-value pairs. */
+  searchParams?: Record<string, string[]>;
   /** Whether to enable the query. */
   enabled?: boolean;
 }
@@ -78,18 +81,34 @@ export const useFhirPathSearch: UseFhirPathSearchFn = (options) => {
     { resources: Resource[]; total?: number; bundle: Bundle },
     Error
   >({
-    queryKey: ["fhirPathSearch", options.resourceType, options.filters],
+    queryKey: [
+      "fhirPathSearch",
+      options.resourceType,
+      options.filters,
+      options.searchParams,
+    ],
     queryFn: async () => {
       const params: Record<string, string | string[]> = {
-        _query: "fhirPath",
         _count: "10",
       };
 
       const filters = options.filters
         .map((f) => f.trim())
         .filter((f) => f.length > 0);
+
+      // Only use the fhirPath named query when FHIRPath filters are present.
       if (filters.length > 0) {
+        params._query = "fhirPath";
         params.filter = filters;
+      }
+
+      // Merge standard search parameters into the request.
+      if (options.searchParams) {
+        for (const [key, values] of Object.entries(options.searchParams)) {
+          if (values.length > 0) {
+            params[key] = values;
+          }
+        }
       }
 
       const bundle: Bundle = await search(fhirBaseUrl!, {

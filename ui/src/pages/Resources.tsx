@@ -35,6 +35,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import { useFhirPathSearch, useServerCapabilities } from "../hooks";
 
+import type { SearchParamCapability } from "../hooks/useServerCapabilities";
 import type { SearchRequest } from "../types/search";
 
 interface DeleteTarget {
@@ -62,6 +63,15 @@ export function Resources() {
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
+  // Build search parameters mapping from capabilities.
+  let searchParams: Record<string, SearchParamCapability[]> | undefined;
+  if (capabilities?.resources) {
+    searchParams = {};
+    for (const resource of capabilities.resources) {
+      searchParams[resource.type] = resource.searchParams;
+    }
+  }
+
   // Execute the search query. 401 errors handled globally.
   const {
     resources,
@@ -72,6 +82,7 @@ export function Resources() {
   } = useFhirPathSearch({
     resourceType: searchRequest?.resourceType ?? "",
     filters: searchRequest?.filters ?? [],
+    searchParams: searchRequest?.params,
     enabled: !!searchRequest?.resourceType,
   });
 
@@ -137,6 +148,7 @@ export function Resources() {
             isLoading={isSearching}
             disabled={false}
             resourceTypes={capabilities?.resourceTypes ?? []}
+            searchParams={searchParams}
           />
         </Box>
 

@@ -84,6 +84,11 @@ describe("useServerCapabilities", () => {
               { code: "delete" },
             ],
             operation: [{ name: "match", definition: "http://example.org/match" }],
+            searchParam: [
+              { name: "gender", type: "token" },
+              { name: "birthdate", type: "date" },
+              { name: "name", type: "string" },
+            ],
           },
           {
             type: "Observation",
@@ -133,10 +138,16 @@ describe("useServerCapabilities", () => {
           {
             type: "Patient",
             operations: ["read", "search-type", "create", "update", "delete", "$match"],
+            searchParams: [
+              { name: "gender", type: "token" },
+              { name: "birthdate", type: "date" },
+              { name: "name", type: "string" },
+            ],
           },
           {
             type: "Observation",
             operations: ["read", "search-type"],
+            searchParams: [],
           },
         ],
         resourceTypes: ["Observation", "Patient"],
@@ -409,6 +420,89 @@ describe("useServerCapabilities", () => {
       });
 
       expect(result.current.error?.message).toBe("Network error");
+    });
+  });
+
+  describe("search parameters", () => {
+    it("extracts search parameters from CapabilityStatement", async () => {
+      vi.spyOn(global, "fetch").mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockCapabilityStatement),
+      } as Response);
+
+      const { result } = renderHook(() => useServerCapabilities("http://localhost:8080/fhir"), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Patient has search params declared in the mock.
+      const patient = result.current.data?.resources?.find((r) => r.type === "Patient");
+      expect(patient?.searchParams).toEqual([
+        { name: "gender", type: "token" },
+        { name: "birthdate", type: "date" },
+        { name: "name", type: "string" },
+      ]);
+    });
+
+    it("returns empty searchParams for resource with no search parameters", async () => {
+      vi.spyOn(global, "fetch").mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockCapabilityStatement),
+      } as Response);
+
+      const { result } = renderHook(() => useServerCapabilities("http://localhost:8080/fhir"), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Observation has no searchParam entries in the mock.
+      const observation = result.current.data?.resources?.find((r) => r.type === "Observation");
+      expect(observation?.searchParams).toEqual([]);
+    });
+
+    it("handles search parameters with missing name or type", async () => {
+      const capabilityWithIncompleteParams: CapabilityStatement = {
+        ...mockCapabilityStatement,
+        rest: [
+          {
+            mode: "server",
+            resource: [
+              {
+                type: "Patient",
+                interaction: [],
+                searchParam: [
+                  { name: "gender", type: "token" },
+                  { name: "incomplete" } as never, // Missing type.
+                  { type: "string" } as never, // Missing name.
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      vi.spyOn(global, "fetch").mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(capabilityWithIncompleteParams),
+      } as Response);
+
+      const { result } = renderHook(() => useServerCapabilities("http://localhost:8080/fhir"), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Only the complete entry should be included.
+      const patient = result.current.data?.resources?.find((r) => r.type === "Patient");
+      expect(patient?.searchParams).toEqual([{ name: "gender", type: "token" }]);
     });
   });
 
