@@ -33,11 +33,11 @@ import {
   Text,
   Tooltip,
 } from "@radix-ui/themes";
+
+import type { Resource } from "fhir/r4";
 import { useState } from "react";
 
 import { useClipboard } from "../../hooks";
-
-import type { Resource } from "fhir/r4";
 
 interface ResourceCardProps {
   resource: Resource;
@@ -174,6 +174,7 @@ export function ResourceCard({ resource, fhirBaseUrl, onDelete }: ResourceCardPr
                 textOverflow: "ellipsis",
                 cursor: "pointer",
                 userSelect: "none",
+                maxWidth: "400px",
               }}
               onClick={() => setExpanded(!expanded)}
             >

@@ -215,6 +215,7 @@ export function ResourceSearchForm({
                       value={row.value}
                       onChange={(e) => updateParamRow(row.id, "value", e.target.value)}
                       onKeyDown={handleKeyDown}
+                      style={{ minWidth: "100px" }}
                     />
                   </Box>
                   <IconButton
