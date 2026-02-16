@@ -674,7 +674,7 @@ describe("ResourceSearchForm", () => {
       expect(screen.queryByRole("option", { name: /gender/i })).not.toBeInTheDocument();
     });
 
-    it("clears selected parameter when resource type changes and selection is invalid", async () => {
+    it("resets parameter rows to a single empty row when resource type changes", async () => {
       const user = userEvent.setup();
       render(
         <ResourceSearchForm
@@ -686,19 +686,63 @@ describe("ResourceSearchForm", () => {
         />,
       );
 
-      // Select "gender" parameter for Patient.
+      // Select "gender" parameter for Patient and enter a value.
       const paramDropdown = screen.getAllByRole("combobox")[1];
       await user.click(paramDropdown);
       await user.click(screen.getByRole("option", { name: /gender/i }));
+      const valueInput = screen.getByPlaceholderText(/e\.g\., male/i);
+      await user.type(valueInput, "male");
 
-      // Change resource type to Observation (which doesn't have "gender").
+      // Add a second parameter row.
+      await user.click(screen.getByRole("button", { name: /add parameter/i }));
+      expect(screen.getAllByPlaceholderText(/e\.g\., male/i)).toHaveLength(2);
+
+      // Change resource type to Observation.
       const resourceTypeCombobox = screen.getAllByRole("combobox")[0];
       await user.click(resourceTypeCombobox);
       await user.click(screen.getByRole("option", { name: "Observation" }));
 
-      // The parameter dropdown should no longer show "gender".
+      // Should be back to a single empty parameter row.
+      const valueInputs = screen.getAllByPlaceholderText(/e\.g\., male/i);
+      expect(valueInputs).toHaveLength(1);
+      expect(valueInputs[0]).toHaveValue("");
+
+      // The parameter dropdown should be cleared (no selection).
       const updatedParamDropdown = screen.getAllByRole("combobox")[1];
-      expect(updatedParamDropdown).not.toHaveTextContent("gender");
+      expect(updatedParamDropdown).toHaveTextContent("Select parameter...");
+    });
+
+    it("resets FHIRPath filter rows to a single empty row when resource type changes", async () => {
+      const user = userEvent.setup();
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={mockSearchParams}
+        />,
+      );
+
+      // Enter a FHIRPath filter expression.
+      const filterInput = screen.getByPlaceholderText(/gender = 'female'/i);
+      await user.type(filterInput, "active = true");
+
+      // Add a second filter row and fill it in.
+      await user.click(screen.getByRole("button", { name: /add filter/i }));
+      const filterInputs = screen.getAllByPlaceholderText(/gender = 'female'/i);
+      expect(filterInputs).toHaveLength(2);
+      await user.type(filterInputs[1], "gender = 'male'");
+
+      // Change resource type to Observation.
+      const resourceTypeCombobox = screen.getAllByRole("combobox")[0];
+      await user.click(resourceTypeCombobox);
+      await user.click(screen.getByRole("option", { name: "Observation" }));
+
+      // Should be back to a single empty filter row.
+      const updatedFilterInputs = screen.getAllByPlaceholderText(/gender = 'female'/i);
+      expect(updatedFilterInputs).toHaveLength(1);
+      expect(updatedFilterInputs[0]).toHaveValue("");
     });
 
     it("displays help text for search parameters section", () => {

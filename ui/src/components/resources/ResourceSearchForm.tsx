@@ -88,19 +88,14 @@ export function ResourceSearchForm({
   // Available search parameters for the currently selected resource type.
   const availableParams = searchParams?.[resourceType] ?? [];
 
-  // Track previous resource type to clear invalid selections on change.
+  // Reset all form fields when the resource type changes, since the previous
+  // search criteria are unlikely to be relevant to the new type.
   const prevResourceType = useRef(resourceType);
   if (prevResourceType.current !== resourceType) {
     prevResourceType.current = resourceType;
-    const validNames = new Set(availableParams.map((p) => p.name));
-    const needsClear = paramRows.some((row) => row.paramName && !validNames.has(row.paramName));
-    if (needsClear) {
-      setParamRows(
-        paramRows.map((row) =>
-          row.paramName && !validNames.has(row.paramName) ? { ...row, paramName: "" } : row,
-        ),
-      );
-    }
+    idCounter.current = 1;
+    setFilters([{ id: 0, expression: "" }]);
+    setParamRows([{ id: 0, paramName: "", value: "" }]);
   }
 
   const handleSubmit = () => {
