@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,6 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluatorBuilder;
@@ -34,6 +33,9 @@ import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -77,6 +79,21 @@ public class SearchColumnBuilder {
 
   /** Resource path for the bundled R4 search parameters. */
   private static final String R4_REGISTRY_RESOURCE = "/fhir/R4/search-parameters.json";
+
+  /**
+   * Mappings from complex FHIR types to their string sub-fields.
+   *
+   * <p>When a string search parameter expression resolves to one of these complex types, the search
+   * is expanded to match against each sub-field independently. A match on any sub-field satisfies
+   * the search criterion.
+   *
+   * @see <a href="https://hl7.org/fhir/search.html#string">String Search</a>
+   */
+  private static final Map<FHIRDefinedType, List<String>> COMPLEX_TYPE_STRING_SUBFIELDS =
+      Map.of(
+          FHIRDefinedType.HUMANNAME, List.of("family", "given", "text", "prefix", "suffix"),
+          FHIRDefinedType.ADDRESS,
+              List.of("text", "line", "city", "district", "state", "postalCode", "country"));
 
   /** The FHIR context for resource definitions. */
   @Nonnull FhirContext fhirContext;
@@ -261,6 +278,11 @@ public class SearchColumnBuilder {
   /**
    * Builds a filter expression for a single FHIRPath expression within a search criterion.
    *
+   * <p>When the expression resolves to a complex type with known string sub-fields (HumanName,
+   * Address), the expression is expanded into multiple sub-field expressions that are each
+   * evaluated independently. The filter results are OR'd together so that a match on any sub-field
+   * satisfies the criterion.
+   *
    * @param paramType the search parameter type
    * @param criterion the search criterion (for modifier and values)
    * @param expression the FHIRPath expression to evaluate
@@ -274,14 +296,11 @@ public class SearchColumnBuilder {
       @Nonnull final String expression,
       @Nonnull final SingleResourceEvaluator evaluator) {
 
-    // Parse the FHIRPath expression
+    // Parse and evaluate the FHIRPath expression to determine its type.
     final FhirPath fhirPath = parser.parse(expression);
-
-    // Evaluate the FHIRPath to extract the value column
     final Collection result = evaluator.evaluate(fhirPath);
-    final ColumnRepresentation valueColumn = result.getColumn();
 
-    // Get FHIR type from collection - fail if not available
+    // Get FHIR type from collection - fail if not available.
     final FHIRDefinedType fhirType =
         result
             .getFhirType()
@@ -290,11 +309,32 @@ public class SearchColumnBuilder {
                     new InvalidSearchParameterException(
                         "Cannot determine FHIR type for expression: " + expression));
 
-    // Get the appropriate filter for the parameter type, modifier, and FHIR type
-    final SearchFilter filter = getFilterForType(paramType, criterion.getModifier(), fhirType);
+    // If the expression resolves to a complex type with known string sub-fields, expand into
+    // sub-field expressions and OR the results together.
+    final List<String> subFields = COMPLEX_TYPE_STRING_SUBFIELDS.get(fhirType);
+    if (subFields != null) {
+      return subFields.stream()
+          .map(subField -> expression + "." + subField)
+          .flatMap(
+              subFieldExpr -> {
+                final FhirPath subFhirPath = parser.parse(subFieldExpr);
+                final Collection subResult = evaluator.evaluate(subFhirPath);
+                // Skip sub-fields that do not exist for this resource type.
+                if (subResult.getFhirType().isEmpty()) {
+                  return Stream.empty();
+                }
+                final SearchFilter filter =
+                    getFilterForType(
+                        paramType, criterion.getModifier(), subResult.getFhirType().get());
+                return Stream.of(filter.buildFilter(subResult.getColumn(), criterion.getValues()));
+              })
+          .reduce(Column::or)
+          .orElse(lit(false));
+    }
 
-    // Build and return the filter expression
-    return filter.buildFilter(valueColumn, criterion.getValues());
+    // Standard path: build filter directly from the evaluated column.
+    final SearchFilter filter = getFilterForType(paramType, criterion.getModifier(), fhirType);
+    return filter.buildFilter(result.getColumn(), criterion.getValues());
   }
 
   /**

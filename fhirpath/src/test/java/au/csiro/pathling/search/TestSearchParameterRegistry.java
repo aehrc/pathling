@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,6 +45,10 @@ public class TestSearchParameterRegistry extends SearchParameterRegistry {
                   Map.entry(
                       "address-use",
                       new SearchParameterDefinition("address-use", TOKEN, "Patient.address.use")),
+                  Map.entry("name", new SearchParameterDefinition("name", STRING, "Patient.name")),
+                  Map.entry(
+                      "address",
+                      new SearchParameterDefinition("address", STRING, "Patient.address")),
                   Map.entry(
                       "family",
                       new SearchParameterDefinition("family", STRING, "Patient.name.family")),
