@@ -6,7 +6,7 @@ name: Server pre-release
 on:
   push:
     branches:
-      - "release/server/v*"
+      - "release/server/*"
 
 permissions:
   contents: read
