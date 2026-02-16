@@ -66,6 +66,6 @@ A FHIR R4 analytics server implementing SQL on FHIR and Bulk Data Access.
 - [Export](/docs/server/operations/export.md): The export operation allows FHIR data to be exported from the server in bulk using the FHIR Bulk Data Access specification.
 - [Import](/docs/server/operations/import.md): The import operation allows FHIR data to be imported into the server from external sources such as S3, HDFS, or local filesystem.
 - [Import (ping and pull)](/docs/server/operations/import-pnp.md): The import-pnp operation allows bulk data to be imported via a ping and pull workflow, where the server fetches data from a remote FHIR bulk export endpoint.
-- [Search](/docs/server/operations/search.md): Pathling supports FHIRPath-based search, allowing you to retrieve FHIR resources filtered by one or more FHIRPath expressions.
+- [Search](/docs/server/operations/search.md): Pathling supports both standard FHIR search parameters and FHIRPath-based search for filtering resources.
 - [Export view](/docs/server/operations/view-export.md): The view export operation executes ViewDefinitions against FHIR data and exports the results to files in NDJSON, CSV, or Parquet format.
 - [Run view](/docs/server/operations/view-run.md): The view run operation executes a ViewDefinition against FHIR data and returns tabular results in NDJSON or CSV format.
