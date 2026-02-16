@@ -23,7 +23,6 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.SearchParameter;
 
 /**
@@ -38,7 +37,7 @@ import org.hl7.fhir.r4.model.SearchParameter;
  */
 public class SearchParameterRegistry {
 
-  @Nonnull private final Map<ResourceType, Map<String, SearchParameterDefinition>> parameters;
+  @Nonnull private final Map<String, Map<String, SearchParameterDefinition>> parameters;
 
   /**
    * Creates a registry with pre-loaded parameters.
@@ -48,7 +47,7 @@ public class SearchParameterRegistry {
    * @param parameters the pre-loaded parameter map
    */
   protected SearchParameterRegistry(
-      @Nonnull final Map<ResourceType, Map<String, SearchParameterDefinition>> parameters) {
+      @Nonnull final Map<String, Map<String, SearchParameterDefinition>> parameters) {
     this.parameters = parameters;
   }
 
@@ -83,26 +82,25 @@ public class SearchParameterRegistry {
   /**
    * Gets the search parameter definition for a given resource type and parameter code.
    *
-   * @param resourceType the resource type
+   * @param resourceType the resource type name
    * @param code the parameter code
    * @return the parameter definition, or empty if not found
    */
   @Nonnull
   public Optional<SearchParameterDefinition> getParameter(
-      @Nonnull final ResourceType resourceType, @Nonnull final String code) {
+      @Nonnull final String resourceType, @Nonnull final String code) {
     return Optional.ofNullable(parameters.get(resourceType)).map(params -> params.get(code));
   }
 
   /**
    * Gets all search parameter definitions for a given resource type.
    *
-   * @param resourceType the resource type
+   * @param resourceType the resource type name
    * @return an unmodifiable map of parameter code to definition, or an empty map if the resource
    *     type has no entries
    */
   @Nonnull
-  public Map<String, SearchParameterDefinition> getParameters(
-      @Nonnull final ResourceType resourceType) {
+  public Map<String, SearchParameterDefinition> getParameters(@Nonnull final String resourceType) {
     final Map<String, SearchParameterDefinition> resourceParams = parameters.get(resourceType);
     return resourceParams != null ? Map.copyOf(resourceParams) : Map.of();
   }

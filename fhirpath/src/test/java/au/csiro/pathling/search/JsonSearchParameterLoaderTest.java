@@ -26,7 +26,6 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -60,11 +59,11 @@ class JsonSearchParameterLoaderTest {
         }
         """;
 
-    final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
+    final Map<String, Map<String, SearchParameterDefinition>> result =
         loader.load(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
-    assertNotNull(result.get(ResourceType.PATIENT));
-    final SearchParameterDefinition def = result.get(ResourceType.PATIENT).get("gender");
+    assertNotNull(result.get("Patient"));
+    final SearchParameterDefinition def = result.get("Patient").get("gender");
     assertNotNull(def);
     assertEquals("gender", def.code());
     assertEquals(SearchParameterType.TOKEN, def.type());
@@ -91,17 +90,16 @@ class JsonSearchParameterLoaderTest {
         }
         """;
 
-    final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
+    final Map<String, Map<String, SearchParameterDefinition>> result =
         loader.load(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
     // Patient should have Patient.name.given
-    final SearchParameterDefinition patientDef = result.get(ResourceType.PATIENT).get("given");
+    final SearchParameterDefinition patientDef = result.get("Patient").get("given");
     assertNotNull(patientDef);
     assertEquals(List.of("Patient.name.given"), patientDef.expressions());
 
     // Practitioner should have Practitioner.name.given
-    final SearchParameterDefinition practitionerDef =
-        result.get(ResourceType.PRACTITIONER).get("given");
+    final SearchParameterDefinition practitionerDef = result.get("Practitioner").get("given");
     assertNotNull(practitionerDef);
     assertEquals(List.of("Practitioner.name.given"), practitionerDef.expressions());
   }
@@ -126,10 +124,10 @@ class JsonSearchParameterLoaderTest {
         }
         """;
 
-    final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
+    final Map<String, Map<String, SearchParameterDefinition>> result =
         loader.load(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
-    final SearchParameterDefinition def = result.get(ResourceType.OBSERVATION).get("date");
+    final SearchParameterDefinition def = result.get("Observation").get("date");
     assertNotNull(def);
     assertEquals(SearchParameterType.DATE, def.type());
     assertEquals(
@@ -157,20 +155,18 @@ class JsonSearchParameterLoaderTest {
         }
         """;
 
-    final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
+    final Map<String, Map<String, SearchParameterDefinition>> result =
         loader.load(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
     // AllergyIntolerance gets both qualified and unqualified
-    final SearchParameterDefinition allergyDef =
-        result.get(ResourceType.ALLERGYINTOLERANCE).get("date");
+    final SearchParameterDefinition allergyDef = result.get("AllergyIntolerance").get("date");
     assertNotNull(allergyDef);
     assertEquals(
         List.of("AllergyIntolerance.recordedDate", "(start | requestedPeriod.start).first()"),
         allergyDef.expressions());
 
     // Appointment gets only unqualified (no qualified expression for it)
-    final SearchParameterDefinition appointmentDef =
-        result.get(ResourceType.APPOINTMENT).get("date");
+    final SearchParameterDefinition appointmentDef = result.get("Appointment").get("date");
     assertNotNull(appointmentDef);
     assertEquals(List.of("(start | requestedPeriod.start).first()"), appointmentDef.expressions());
   }
@@ -194,13 +190,13 @@ class JsonSearchParameterLoaderTest {
         }
         """;
 
-    final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
+    final Map<String, Map<String, SearchParameterDefinition>> result =
         loader.load(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
     assertTrue(
         result.isEmpty()
-            || result.get(ResourceType.PATIENT) == null
-            || result.get(ResourceType.PATIENT).get("no-expression") == null);
+            || result.get("Patient") == null
+            || result.get("Patient").get("no-expression") == null);
   }
 
   @Test
@@ -259,21 +255,16 @@ class JsonSearchParameterLoaderTest {
         }
         """;
 
-    final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
+    final Map<String, Map<String, SearchParameterDefinition>> result =
         loader.load(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
+    assertEquals(SearchParameterType.STRING, result.get("Patient").get("string-param").type());
+    assertEquals(SearchParameterType.TOKEN, result.get("Patient").get("token-param").type());
+    assertEquals(SearchParameterType.DATE, result.get("Patient").get("date-param").type());
     assertEquals(
-        SearchParameterType.STRING, result.get(ResourceType.PATIENT).get("string-param").type());
+        SearchParameterType.NUMBER, result.get("RiskAssessment").get("number-param").type());
     assertEquals(
-        SearchParameterType.TOKEN, result.get(ResourceType.PATIENT).get("token-param").type());
-    assertEquals(
-        SearchParameterType.DATE, result.get(ResourceType.PATIENT).get("date-param").type());
-    assertEquals(
-        SearchParameterType.NUMBER,
-        result.get(ResourceType.RISKASSESSMENT).get("number-param").type());
-    assertEquals(
-        SearchParameterType.QUANTITY,
-        result.get(ResourceType.OBSERVATION).get("quantity-param").type());
+        SearchParameterType.QUANTITY, result.get("Observation").get("quantity-param").type());
   }
 
   @Test
@@ -286,7 +277,7 @@ class JsonSearchParameterLoaderTest {
         }
         """;
 
-    final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
+    final Map<String, Map<String, SearchParameterDefinition>> result =
         loader.load(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
     assertTrue(result.isEmpty());
@@ -321,10 +312,10 @@ class JsonSearchParameterLoaderTest {
         }
         """;
 
-    final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
+    final Map<String, Map<String, SearchParameterDefinition>> result =
         loader.load(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
-    final Map<String, SearchParameterDefinition> patientParams = result.get(ResourceType.PATIENT);
+    final Map<String, SearchParameterDefinition> patientParams = result.get("Patient");
     assertNotNull(patientParams);
     assertEquals(2, patientParams.size());
     assertNotNull(patientParams.get("gender"));

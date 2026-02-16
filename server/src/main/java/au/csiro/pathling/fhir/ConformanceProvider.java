@@ -604,7 +604,7 @@ public class ConformanceProvider
       @Nonnull final CapabilityStatementRestResourceComponent resource,
       @Nonnull final ResourceType resourceType) {
     final Map<String, SearchParameterDefinition> params =
-        searchParameterRegistry.getParameters(resourceType);
+        searchParameterRegistry.getParameters(resourceType.toCode());
     for (final Map.Entry<String, SearchParameterDefinition> entry : params.entrySet()) {
       final SearchParamType fhirType = SEARCH_TYPE_MAP.get(entry.getValue().type());
       if (fhirType == null) {

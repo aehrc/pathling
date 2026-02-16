@@ -26,7 +26,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Enumerations.SearchParamType;
 import org.hl7.fhir.r4.model.SearchParameter;
 import org.junit.jupiter.api.Test;
@@ -68,8 +67,7 @@ class SearchParameterRegistryTest {
         SearchParameterRegistry.fromInputStream(
             FHIR_CONTEXT, new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
-    final Optional<SearchParameterDefinition> result =
-        registry.getParameter(ResourceType.PATIENT, "gender");
+    final Optional<SearchParameterDefinition> result = registry.getParameter("Patient", "gender");
 
     assertTrue(result.isPresent());
     assertEquals("gender", result.get().code());
@@ -91,7 +89,7 @@ class SearchParameterRegistryTest {
         SearchParameterRegistry.fromInputStream(
             FHIR_CONTEXT, new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
-    assertTrue(registry.getParameter(ResourceType.PATIENT, "unknown").isEmpty());
+    assertTrue(registry.getParameter("Patient", "unknown").isEmpty());
   }
 
   // ========== fromSearchParameters tests ==========
@@ -107,8 +105,7 @@ class SearchParameterRegistryTest {
     final SearchParameterRegistry registry =
         SearchParameterRegistry.fromSearchParameters(List.of(sp));
 
-    final Optional<SearchParameterDefinition> result =
-        registry.getParameter(ResourceType.PATIENT, "active");
+    final Optional<SearchParameterDefinition> result = registry.getParameter("Patient", "active");
 
     assertTrue(result.isPresent());
     assertEquals("active", result.get().code());
@@ -133,8 +130,8 @@ class SearchParameterRegistryTest {
     final SearchParameterRegistry registry =
         SearchParameterRegistry.fromSearchParameters(List.of(genderParam, birthdateParam));
 
-    assertTrue(registry.getParameter(ResourceType.PATIENT, "gender").isPresent());
-    assertTrue(registry.getParameter(ResourceType.PATIENT, "birthdate").isPresent());
+    assertTrue(registry.getParameter("Patient", "gender").isPresent());
+    assertTrue(registry.getParameter("Patient", "birthdate").isPresent());
   }
 
   @Test
@@ -150,13 +147,12 @@ class SearchParameterRegistryTest {
         SearchParameterRegistry.fromSearchParameters(List.of(sp));
 
     // Each resource gets its own expression
-    final Optional<SearchParameterDefinition> patientDef =
-        registry.getParameter(ResourceType.PATIENT, "name");
+    final Optional<SearchParameterDefinition> patientDef = registry.getParameter("Patient", "name");
     assertTrue(patientDef.isPresent());
     assertEquals(List.of("Patient.name"), patientDef.get().expressions());
 
     final Optional<SearchParameterDefinition> practitionerDef =
-        registry.getParameter(ResourceType.PRACTITIONER, "name");
+        registry.getParameter("Practitioner", "name");
     assertTrue(practitionerDef.isPresent());
     assertEquals(List.of("Practitioner.name"), practitionerDef.get().expressions());
   }
@@ -166,7 +162,7 @@ class SearchParameterRegistryTest {
     final SearchParameterRegistry registry =
         SearchParameterRegistry.fromSearchParameters(List.of());
 
-    assertTrue(registry.getParameter(ResourceType.PATIENT, "anything").isEmpty());
+    assertTrue(registry.getParameter("Patient", "anything").isEmpty());
   }
 
   @Test
@@ -180,10 +176,10 @@ class SearchParameterRegistryTest {
     final SearchParameterRegistry registry =
         SearchParameterRegistry.fromSearchParameters(List.of(sp));
 
-    assertTrue(registry.getParameter(ResourceType.PATIENT, "no-expr").isEmpty());
+    assertTrue(registry.getParameter("Patient", "no-expr").isEmpty());
   }
 
-  // ========== getParameters(ResourceType) tests ==========
+  // ========== getParameters(String) tests ==========
 
   @Test
   void getParameters_returnsAllParametersForResourceType() {
@@ -204,8 +200,7 @@ class SearchParameterRegistryTest {
         SearchParameterRegistry.fromSearchParameters(List.of(genderParam, birthdateParam));
 
     // When: getting all parameters for Patient.
-    final Map<String, SearchParameterDefinition> params =
-        registry.getParameters(ResourceType.PATIENT);
+    final Map<String, SearchParameterDefinition> params = registry.getParameters("Patient");
 
     // Then: both parameters are returned.
     assertEquals(2, params.size());
@@ -228,8 +223,7 @@ class SearchParameterRegistryTest {
         SearchParameterRegistry.fromSearchParameters(List.of(sp));
 
     // When: getting parameters for a resource type with no entries.
-    final Map<String, SearchParameterDefinition> params =
-        registry.getParameters(ResourceType.OBSERVATION);
+    final Map<String, SearchParameterDefinition> params = registry.getParameters("Observation");
 
     // Then: an empty map is returned.
     assertTrue(params.isEmpty());
@@ -242,8 +236,7 @@ class SearchParameterRegistryTest {
         SearchParameterRegistry.fromSearchParameters(List.of());
 
     // When: getting parameters for any resource type.
-    final Map<String, SearchParameterDefinition> params =
-        registry.getParameters(ResourceType.PATIENT);
+    final Map<String, SearchParameterDefinition> params = registry.getParameters("Patient");
 
     // Then: an empty map is returned.
     assertTrue(params.isEmpty());
@@ -262,8 +255,7 @@ class SearchParameterRegistryTest {
         SearchParameterRegistry.fromSearchParameters(List.of(sp));
 
     // When: getting parameters and attempting to modify the result.
-    final Map<String, SearchParameterDefinition> params =
-        registry.getParameters(ResourceType.PATIENT);
+    final Map<String, SearchParameterDefinition> params = registry.getParameters("Patient");
 
     // Then: the map is unmodifiable.
     try {

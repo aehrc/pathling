@@ -27,7 +27,6 @@ import static au.csiro.pathling.search.SearchParameterType.URI;
 
 import java.util.List;
 import java.util.Map;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A test registry with hardcoded search parameter definitions for unit testing.
@@ -37,9 +36,9 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public class TestSearchParameterRegistry extends SearchParameterRegistry {
 
-  private static final Map<ResourceType, Map<String, SearchParameterDefinition>> TEST_PARAMETERS =
+  private static final Map<String, Map<String, SearchParameterDefinition>> TEST_PARAMETERS =
       Map.of(
-          ResourceType.PATIENT,
+          "Patient",
               Map.ofEntries(
                   Map.entry(
                       "gender", new SearchParameterDefinition("gender", TOKEN, "Patient.gender")),
@@ -64,7 +63,7 @@ public class TestSearchParameterRegistry extends SearchParameterRegistry {
                       "general-practitioner",
                       new SearchParameterDefinition(
                           "general-practitioner", REFERENCE, "Patient.generalPractitioner"))),
-          ResourceType.OBSERVATION,
+          "Observation",
               Map.of(
                   "code", new SearchParameterDefinition("code", TOKEN, "Observation.code"),
                   "date",
@@ -80,27 +79,27 @@ public class TestSearchParameterRegistry extends SearchParameterRegistry {
                           "value-quantity", QUANTITY, "Observation.value.ofType(Quantity)"),
                   "subject",
                       new SearchParameterDefinition("subject", REFERENCE, "Observation.subject")),
-          ResourceType.RISKASSESSMENT,
+          "RiskAssessment",
               Map.of(
                   "probability",
                   new SearchParameterDefinition(
                       "probability",
                       NUMBER,
                       "RiskAssessment.prediction.probability.ofType(decimal)")),
-          ResourceType.COVERAGE,
+          "Coverage",
               Map.of("period", new SearchParameterDefinition("period", DATE, "Coverage.period")),
-          ResourceType.CONDITION,
+          "Condition",
               Map.of(
                   "recorded-date",
                   new SearchParameterDefinition("recorded-date", DATE, "Condition.recordedDate")),
-          ResourceType.AUDITEVENT,
+          "AuditEvent",
               Map.of("date", new SearchParameterDefinition("date", DATE, "AuditEvent.recorded")),
-          ResourceType.CAREPLAN,
+          "CarePlan",
               Map.of(
                   "instantiates-uri",
                   new SearchParameterDefinition(
                       "instantiates-uri", URI, "CarePlan.instantiatesUri")),
-          ResourceType.CAPABILITYSTATEMENT,
+          "CapabilityStatement",
               Map.of("url", new SearchParameterDefinition("url", URI, "CapabilityStatement.url")));
 
   /** Creates a test registry with hardcoded parameters. */

@@ -19,7 +19,6 @@ package au.csiro.pathling.search;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nonnull;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /** Exception thrown when a search parameter is not found in the registry. */
 public class UnknownSearchParameterException extends InvalidUserInputError {
@@ -28,13 +27,12 @@ public class UnknownSearchParameterException extends InvalidUserInputError {
    * Creates a new exception for an unknown search parameter.
    *
    * @param parameterCode the parameter code that was not found
-   * @param resourceType the resource type being searched
+   * @param resourceType the resource type name being searched
    */
   public UnknownSearchParameterException(
-      @Nonnull final String parameterCode, @Nonnull final ResourceType resourceType) {
+      @Nonnull final String parameterCode, @Nonnull final String resourceType) {
     super(
         String.format(
-            "Unknown search parameter '%s' for resource type '%s'",
-            parameterCode, resourceType.toCode()));
+            "Unknown search parameter '%s' for resource type '%s'", parameterCode, resourceType));
   }
 }

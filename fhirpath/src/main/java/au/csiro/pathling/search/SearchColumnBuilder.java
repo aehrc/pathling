@@ -242,14 +242,14 @@ public class SearchColumnBuilder {
       @Nonnull final SearchCriterion criterion,
       @Nonnull final SingleResourceEvaluator evaluator) {
 
-    // Look up the parameter definition
+    // Look up the parameter definition.
     final SearchParameterDefinition paramDef =
         registry
-            .getParameter(resourceType, criterion.getParameterCode())
+            .getParameter(resourceType.toCode(), criterion.getParameterCode())
             .orElseThrow(
                 () ->
                     new UnknownSearchParameterException(
-                        criterion.getParameterCode(), resourceType));
+                        criterion.getParameterCode(), resourceType.toCode()));
 
     // Build filter for each expression and combine with OR
     return paramDef.expressions().stream()

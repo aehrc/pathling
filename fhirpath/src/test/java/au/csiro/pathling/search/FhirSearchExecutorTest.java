@@ -1064,19 +1064,19 @@ class FhirSearchExecutorTest {
     assertAll(
         () ->
             assertTrue(
-                defaultRegistry.getParameter(ResourceType.PATIENT, "gender").isPresent(),
+                defaultRegistry.getParameter("Patient", "gender").isPresent(),
                 "Patient.gender should be present"),
         () ->
             assertTrue(
-                defaultRegistry.getParameter(ResourceType.PATIENT, "birthdate").isPresent(),
+                defaultRegistry.getParameter("Patient", "birthdate").isPresent(),
                 "Patient.birthdate should be present"),
         () ->
             assertTrue(
-                defaultRegistry.getParameter(ResourceType.OBSERVATION, "code").isPresent(),
+                defaultRegistry.getParameter("Observation", "code").isPresent(),
                 "Observation.code should be present"),
         () ->
             assertTrue(
-                defaultRegistry.getParameter(ResourceType.OBSERVATION, "date").isPresent(),
+                defaultRegistry.getParameter("Observation", "date").isPresent(),
                 "Observation.date should be present"));
   }
 

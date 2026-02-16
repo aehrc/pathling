@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -97,51 +96,48 @@ class FhirPathUnionParserTest {
 
   @Test
   void extractResourceType_simpleExpression() {
-    assertEquals(ResourceType.PATIENT, FhirPathUnionParser.extractResourceType("Patient.name"));
-    assertEquals(
-        ResourceType.OBSERVATION, FhirPathUnionParser.extractResourceType("Observation.code"));
+    assertEquals("Patient", FhirPathUnionParser.extractResourceType("Patient.name"));
+    assertEquals("Observation", FhirPathUnionParser.extractResourceType("Observation.code"));
   }
 
   @Test
   void extractResourceType_parenthesizedExpression() {
-    assertEquals(
-        ResourceType.PATIENT, FhirPathUnionParser.extractResourceType("(Patient.name.given)"));
+    assertEquals("Patient", FhirPathUnionParser.extractResourceType("(Patient.name.given)"));
   }
 
   // ========== parse tests ==========
 
   @Test
   void parse_simpleQualifiedExpression() {
-    final Map<ResourceType, List<String>> result =
-        FhirPathUnionParser.parse("Patient.name", List.of(ResourceType.PATIENT));
+    final Map<String, List<String>> result =
+        FhirPathUnionParser.parse("Patient.name", List.of("Patient"));
 
-    assertEquals(Map.of(ResourceType.PATIENT, List.of("Patient.name")), result);
+    assertEquals(Map.of("Patient", List.of("Patient.name")), result);
   }
 
   @Test
   void parse_multiResourceUnion() {
-    final Map<ResourceType, List<String>> result =
+    final Map<String, List<String>> result =
         FhirPathUnionParser.parse(
-            "Patient.name.given | Practitioner.name.given",
-            List.of(ResourceType.PATIENT, ResourceType.PRACTITIONER));
+            "Patient.name.given | Practitioner.name.given", List.of("Patient", "Practitioner"));
 
     assertEquals(
         Map.of(
-            ResourceType.PATIENT, List.of("Patient.name.given"),
-            ResourceType.PRACTITIONER, List.of("Practitioner.name.given")),
+            "Patient", List.of("Patient.name.given"),
+            "Practitioner", List.of("Practitioner.name.given")),
         result);
   }
 
   @Test
   void parse_polymorphicSameResource() {
-    final Map<ResourceType, List<String>> result =
+    final Map<String, List<String>> result =
         FhirPathUnionParser.parse(
             "Observation.effective.ofType(dateTime) | Observation.effective.ofType(Period)",
-            List.of(ResourceType.OBSERVATION));
+            List.of("Observation"));
 
     assertEquals(
         Map.of(
-            ResourceType.OBSERVATION,
+            "Observation",
             List.of(
                 "Observation.effective.ofType(dateTime)", "Observation.effective.ofType(Period)")),
         result);
@@ -149,74 +145,68 @@ class FhirPathUnionParserTest {
 
   @Test
   void parse_unqualifiedIncludedForAllBases() {
-    // Example with mixed qualified/unqualified expression
-    final Map<ResourceType, List<String>> result =
+    // Example with mixed qualified/unqualified expression.
+    final Map<String, List<String>> result =
         FhirPathUnionParser.parse(
             "Procedure.occurrence.ofType(Period) | occurrence.ofType(dateTime)",
-            List.of(ResourceType.PROCEDURE));
+            List.of("Procedure"));
 
     assertEquals(
         Map.of(
-            ResourceType.PROCEDURE,
+            "Procedure",
             List.of("Procedure.occurrence.ofType(Period)", "occurrence.ofType(dateTime)")),
         result);
   }
 
   @Test
   void parse_dateParameterWithUnqualified() {
-    // Simulates the 'date' parameter with unqualified expression for Appointment
-    final Map<ResourceType, List<String>> result =
+    // Simulates the 'date' parameter with unqualified expression for Appointment.
+    final Map<String, List<String>> result =
         FhirPathUnionParser.parse(
             "AllergyIntolerance.recordedDate | (start | requestedPeriod.start).first() |"
                 + " AuditEvent.recorded",
-            List.of(
-                ResourceType.ALLERGYINTOLERANCE,
-                ResourceType.APPOINTMENT,
-                ResourceType.AUDITEVENT));
+            List.of("AllergyIntolerance", "Appointment", "AuditEvent"));
 
     assertEquals(
         Map.of(
-            ResourceType.ALLERGYINTOLERANCE,
+            "AllergyIntolerance",
                 List.of(
                     "AllergyIntolerance.recordedDate", "(start | requestedPeriod.start).first()"),
-            ResourceType.APPOINTMENT, List.of("(start | requestedPeriod.start).first()"),
-            ResourceType.AUDITEVENT,
+            "Appointment", List.of("(start | requestedPeriod.start).first()"),
+            "AuditEvent",
                 List.of("AuditEvent.recorded", "(start | requestedPeriod.start).first()")),
         result);
   }
 
   @Test
   void parse_onlyUnqualified() {
-    // Resource with only unqualified expressions
-    final Map<ResourceType, List<String>> result =
+    // Resource with only unqualified expressions.
+    final Map<String, List<String>> result =
         FhirPathUnionParser.parse(
-            "(start | requestedPeriod.start).first()", List.of(ResourceType.APPOINTMENT));
+            "(start | requestedPeriod.start).first()", List.of("Appointment"));
 
-    assertEquals(
-        Map.of(ResourceType.APPOINTMENT, List.of("(start | requestedPeriod.start).first()")),
-        result);
+    assertEquals(Map.of("Appointment", List.of("(start | requestedPeriod.start).first()")), result);
   }
 
   @Test
   void parse_baseNotInQualified() {
-    // Base resource has no qualified expression, gets only unqualified
-    final Map<ResourceType, List<String>> result =
+    // Base resource has no qualified expression, gets only unqualified.
+    final Map<String, List<String>> result =
         FhirPathUnionParser.parse(
             "Patient.name | unqualified.field | Practitioner.name",
-            List.of(ResourceType.PATIENT, ResourceType.OBSERVATION, ResourceType.PRACTITIONER));
+            List.of("Patient", "Observation", "Practitioner"));
 
     assertEquals(
         Map.of(
-            ResourceType.PATIENT, List.of("Patient.name", "unqualified.field"),
-            ResourceType.OBSERVATION, List.of("unqualified.field"),
-            ResourceType.PRACTITIONER, List.of("Practitioner.name", "unqualified.field")),
+            "Patient", List.of("Patient.name", "unqualified.field"),
+            "Observation", List.of("unqualified.field"),
+            "Practitioner", List.of("Practitioner.name", "unqualified.field")),
         result);
   }
 
   @Test
   void parse_emptyBases() {
-    final Map<ResourceType, List<String>> result =
-        FhirPathUnionParser.parse("Patient.name", List.of());
+    final Map<String, List<String>> result = FhirPathUnionParser.parse("Patient.name", List.of());
 
     assertTrue(result.isEmpty());
   }

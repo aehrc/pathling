@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search;
 
+import au.csiro.pathling.encoders.ResourceTypes;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.parser.LenientErrorHandler;
@@ -26,14 +27,10 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Enumerations.SearchParamType;
 import org.hl7.fhir.r4.model.SearchParameter;
 
@@ -70,8 +67,7 @@ class JsonSearchParameterLoader {
    * @throws UncheckedIOException if the file cannot be read or parsed
    */
   @Nonnull
-  public Map<ResourceType, Map<String, SearchParameterDefinition>> load(
-      @Nonnull final Path jsonPath) {
+  public Map<String, Map<String, SearchParameterDefinition>> load(@Nonnull final Path jsonPath) {
     try (final InputStream is = Files.newInputStream(jsonPath)) {
       return load(is);
     } catch (final IOException e) {
@@ -86,16 +82,15 @@ class JsonSearchParameterLoader {
    * @return map of resource type to map of parameter code to definition
    */
   @Nonnull
-  public Map<ResourceType, Map<String, SearchParameterDefinition>> load(
+  public Map<String, Map<String, SearchParameterDefinition>> load(
       @Nonnull final InputStream jsonStream) {
 
     final IParser parser = fhirContext.newJsonParser();
-    // Use lenient parsing to skip unknown types (e.g., "resource" type from R5)
+    // Use lenient parsing to skip unknown types (e.g., "resource" type from R5).
     parser.setParserErrorHandler(new LenientErrorHandler());
     final Bundle bundle = parser.parseResource(Bundle.class, jsonStream);
 
-    final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
-        new EnumMap<>(ResourceType.class);
+    final Map<String, Map<String, SearchParameterDefinition>> result = new HashMap<>();
 
     for (final Bundle.BundleEntryComponent entry : bundle.getEntry()) {
       if (entry.getResource() instanceof final SearchParameter sp) {
@@ -116,11 +111,10 @@ class JsonSearchParameterLoader {
    * @return map of resource type to map of parameter code to definition
    */
   @Nonnull
-  static Map<ResourceType, Map<String, SearchParameterDefinition>> processSearchParameters(
+  static Map<String, Map<String, SearchParameterDefinition>> processSearchParameters(
       @Nonnull final List<SearchParameter> searchParameters) {
 
-    final Map<ResourceType, Map<String, SearchParameterDefinition>> result =
-        new EnumMap<>(ResourceType.class);
+    final Map<String, Map<String, SearchParameterDefinition>> result = new HashMap<>();
 
     for (final SearchParameter sp : searchParameters) {
       processSearchParameter(sp, result);
@@ -137,47 +131,39 @@ class JsonSearchParameterLoader {
    */
   private static void processSearchParameter(
       @Nonnull final SearchParameter sp,
-      @Nonnull final Map<ResourceType, Map<String, SearchParameterDefinition>> result) {
+      @Nonnull final Map<String, Map<String, SearchParameterDefinition>> result) {
 
     final String code = sp.getCode();
     final String expression = sp.getExpression();
 
-    // Skip parameters without expression (e.g., composite parameters without expression)
+    // Skip parameters without expression (e.g., composite parameters without expression).
     if (expression == null || expression.isBlank()) {
       return;
     }
 
     final SearchParameterType type = mapType(sp.getType());
 
-    // Skip unsupported types
+    // Skip unsupported types.
     if (type == null) {
       return;
     }
 
-    final List<ResourceType> bases =
+    final List<String> bases =
         sp.getBase().stream()
-            .map(
-                baseCode -> {
-                  try {
-                    return ResourceType.fromCode(baseCode.getCode());
-                  } catch (final FHIRException e) {
-                    // Skip unknown resource types (e.g., new R5 resources)
-                    return null;
-                  }
-                })
-            .filter(Objects::nonNull)
+            .map(baseCode -> baseCode.getCode())
+            .filter(ResourceTypes::isSupported)
             .toList();
 
     if (bases.isEmpty()) {
       return;
     }
 
-    // Parse union expression into per-resource expressions
-    final Map<ResourceType, List<String>> parsed = FhirPathUnionParser.parse(expression, bases);
+    // Parse union expression into per-resource expressions.
+    final Map<String, List<String>> parsed = FhirPathUnionParser.parse(expression, bases);
 
-    // Create definition for each resource
+    // Create definition for each resource.
     for (final var entry : parsed.entrySet()) {
-      final ResourceType resourceType = entry.getKey();
+      final String resourceType = entry.getKey();
       final List<String> expressions = entry.getValue();
 
       final SearchParameterDefinition def = new SearchParameterDefinition(code, type, expressions);

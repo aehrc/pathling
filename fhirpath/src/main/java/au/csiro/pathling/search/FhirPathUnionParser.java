@@ -19,11 +19,10 @@ package au.csiro.pathling.search;
 
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Parses FHIRPath union expressions from search parameter definitions and maps them to resource
@@ -58,29 +57,29 @@ public final class FhirPathUnionParser {
    * </ul>
    *
    * @param expression the full expression (may contain | unions)
-   * @param bases the resource types this parameter applies to
-   * @return map of resource type to list of expressions for that resource
+   * @param bases the resource type names this parameter applies to
+   * @return map of resource type name to list of expressions for that resource
    */
   @Nonnull
-  public static Map<ResourceType, List<String>> parse(
-      @Nonnull final String expression, @Nonnull final List<ResourceType> bases) {
+  public static Map<String, List<String>> parse(
+      @Nonnull final String expression, @Nonnull final List<String> bases) {
 
     final List<String> parts = splitUnion(expression);
 
-    // Separate qualified and unqualified expressions
+    // Separate qualified and unqualified expressions.
     final List<String> unqualified = parts.stream().filter(p -> !isQualified(p)).toList();
 
-    final Map<ResourceType, List<String>> qualified =
+    final Map<String, List<String>> qualified =
         parts.stream()
             .filter(FhirPathUnionParser::isQualified)
             .collect(Collectors.groupingBy(FhirPathUnionParser::extractResourceType));
 
-    // For each base: combine qualified + all unqualified
-    final Map<ResourceType, List<String>> result = new EnumMap<>(ResourceType.class);
-    for (final ResourceType base : bases) {
+    // For each base: combine qualified + all unqualified.
+    final Map<String, List<String>> result = new HashMap<>();
+    for (final String base : bases) {
       final List<String> exprs = new ArrayList<>();
       exprs.addAll(qualified.getOrDefault(base, List.of()));
-      exprs.addAll(unqualified); // ALL unqualified added to every resource
+      exprs.addAll(unqualified); // ALL unqualified added to every resource.
       if (!exprs.isEmpty()) {
         result.put(base, List.copyOf(exprs));
       }
@@ -135,18 +134,16 @@ public final class FhirPathUnionParser {
   }
 
   /**
-   * Extracts resource type from a qualified expression.
+   * Extracts the resource type name from a qualified expression.
    *
-   * <p>Example: {@code "Patient.name.given"} → {@code PATIENT}
+   * <p>Example: {@code "Patient.name.given"} → {@code "Patient"}
    *
    * @param expr the qualified expression
-   * @return the resource type
-   * @throws IllegalArgumentException if the resource type is not recognized
+   * @return the resource type name (the prefix before the first dot)
    */
   @Nonnull
-  static ResourceType extractResourceType(@Nonnull final String expr) {
+  static String extractResourceType(@Nonnull final String expr) {
     final String clean = expr.startsWith("(") ? expr.substring(1) : expr;
-    final String resourceName = clean.split("\\.")[0];
-    return ResourceType.fromCode(resourceName);
+    return clean.split("\\.")[0];
   }
 }
