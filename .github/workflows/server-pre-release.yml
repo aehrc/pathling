@@ -4,6 +4,7 @@
 name: Server pre-release
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "release/server/*"
