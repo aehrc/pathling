@@ -80,6 +80,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.create"><code class="docutils literal notranslate"><span class="pre">PathlingContext.create()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.encode"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.encode_bundle"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode_bundle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.evaluate_fhirpath"><code class="docutils literal notranslate"><span class="pre">PathlingContext.evaluate_fhirpath()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.fhirpath_to_column"><code class="docutils literal notranslate"><span class="pre">PathlingContext.fhirpath_to_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.read"><code class="docutils literal notranslate"><span class="pre">PathlingContext.read</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.context.PathlingContext.search_to_column"><code class="docutils literal notranslate"><span class="pre">PathlingContext.search_to_column()</span></code></a></li>
@@ -291,6 +292,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.create"><code class="docutils literal notranslate"><span class="pre">PathlingContext.create()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.encode"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.encode_bundle"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode_bundle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.evaluate_fhirpath"><code class="docutils literal notranslate"><span class="pre">PathlingContext.evaluate_fhirpath()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.fhirpath_to_column"><code class="docutils literal notranslate"><span class="pre">PathlingContext.fhirpath_to_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.read"><code class="docutils literal notranslate"><span class="pre">PathlingContext.read</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.PathlingContext.search_to_column"><code class="docutils literal notranslate"><span class="pre">PathlingContext.search_to_column()</span></code></a></li>
@@ -720,6 +722,42 @@ input dataframe is assumed to have one column of type string.</p></li>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the given type of resources encoded into Spark
 columns</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.context.PathlingContext.evaluate_fhirpath">
+<span class="sig-name descname"><span class="pre">evaluate_fhirpath</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resource_json</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhirpath_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.evaluate_fhirpath"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.evaluate_fhirpath" title="Permalink to this definition"></a></dt>
+<dd><p>Evaluates a FHIRPath expression against a single FHIR resource and returns
+materialised typed results.</p>
+<p>The resource is encoded into a one-row Spark Dataset internally, and the
+existing FHIRPath engine is used to evaluate the expression. Results are
+collected and returned as typed values.</p>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pc</span> <span class="o">=</span> <span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">spark</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">evaluate_fhirpath</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="n">patient_json</span><span class="p">,</span> <span class="s2">&quot;name.family&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">value</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resource_type</strong> – the FHIR resource type (e.g., “Patient”, “Observation”)</p></li>
+<li><p><strong>resource_json</strong> – the FHIR resource as a JSON string</p></li>
+<li><p><strong>fhirpath_expression</strong> – the FHIRPath expression to evaluate</p></li>
+<li><p><strong>context_expression</strong> – an optional context expression; if provided, the main
+expression is composed with the context expression</p></li>
+<li><p><strong>variables</strong> – optional named variables available via %variable syntax, or None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a dict with <code class="docutils literal notranslate"><span class="pre">results</span></code> (list of dicts with <code class="docutils literal notranslate"><span class="pre">type</span></code> and <code class="docutils literal notranslate"><span class="pre">value</span></code>
+keys) and <code class="docutils literal notranslate"><span class="pre">expectedReturnType</span></code> (string)</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Exception if the expression is invalid or evaluation fails</p>
 </dd>
 </dl>
 </dd></dl>
@@ -2443,6 +2481,42 @@ input dataframe is assumed to have one column of type string.</p></li>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the given type of resources encoded into Spark
 columns</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.PathlingContext.evaluate_fhirpath">
+<span class="sig-name descname"><span class="pre">evaluate_fhirpath</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resource_json</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhirpath_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.evaluate_fhirpath"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.evaluate_fhirpath" title="Permalink to this definition"></a></dt>
+<dd><p>Evaluates a FHIRPath expression against a single FHIR resource and returns
+materialised typed results.</p>
+<p>The resource is encoded into a one-row Spark Dataset internally, and the
+existing FHIRPath engine is used to evaluate the expression. Results are
+collected and returned as typed values.</p>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pc</span> <span class="o">=</span> <span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">spark</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">evaluate_fhirpath</span><span class="p">(</span><span class="s2">&quot;Patient&quot;</span><span class="p">,</span> <span class="n">patient_json</span><span class="p">,</span> <span class="s2">&quot;name.family&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">value</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resource_type</strong> – the FHIR resource type (e.g., “Patient”, “Observation”)</p></li>
+<li><p><strong>resource_json</strong> – the FHIR resource as a JSON string</p></li>
+<li><p><strong>fhirpath_expression</strong> – the FHIRPath expression to evaluate</p></li>
+<li><p><strong>context_expression</strong> – an optional context expression; if provided, the main
+expression is composed with the context expression</p></li>
+<li><p><strong>variables</strong> – optional named variables available via %variable syntax, or None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a dict with <code class="docutils literal notranslate"><span class="pre">results</span></code> (list of dicts with <code class="docutils literal notranslate"><span class="pre">type</span></code> and <code class="docutils literal notranslate"><span class="pre">value</span></code>
+keys) and <code class="docutils literal notranslate"><span class="pre">expectedReturnType</span></code> (string)</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Exception if the expression is invalid or evaluation fails</p>
 </dd>
 </dl>
 </dd></dl>

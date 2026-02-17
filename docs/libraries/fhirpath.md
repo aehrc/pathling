@@ -382,3 +382,90 @@ Results in:
 | ------------------------------------ | ------ | ----------- |
 | 8ee183e2-b3c0-4151-be94-b945d6aa8c6d | male   | 1967        |
 | 93ee0b14-4f22-4c1a-93e2-b4e5c0d7f0d6 | male   | 1995        |
+
+## Single resource evaluation[​](#single-resource-evaluation "Direct link to Single resource evaluation")
+
+FHIRPath expressions can also be evaluated against a single FHIR resource provided as a JSON string, without requiring the resource to be part of a DataFrame. This is useful for ad-hoc evaluation, testing expressions, or working with individual resources.
+
+The method returns a list of typed results along with the inferred return type of the expression.
+
+* Python
+* R
+* Scala
+* Java
+
+```
+from pathling import PathlingContext
+
+pc = PathlingContext.create()
+
+patient_json = '{"resourceType": "Patient", "id": "example", "gender": "male", "name": [{"family": "Smith", "given": ["John"]}]}'
+
+# Evaluate a FHIRPath expression against a single resource.
+result = pc.evaluate_fhirpath("Patient", patient_json, "name.family")
+for value in result["results"]:
+    print(f"{value['type']}: {value['value']}")
+print(f"Return type: {result['expectedReturnType']}")
+```
+
+```
+library(pathling)
+
+pc <- pathling_connect()
+
+patient_json <- '{"resourceType": "Patient", "id": "example", "gender": "male", "name": [{"family": "Smith", "given": ["John"]}]}'
+
+# Evaluate a FHIRPath expression against a single resource.
+result <- pathling_evaluate_fhirpath(pc, "Patient", patient_json, "name.family")
+for (entry in result$results) {
+  cat(entry$type, ": ", entry$value, "\n")
+}
+cat("Return type:", result$expectedReturnType, "\n")
+
+pc %>% pathling_disconnect()
+```
+
+```
+import au.csiro.pathling.library.PathlingContext
+
+val pc = PathlingContext.create()
+
+val patientJson = """{"resourceType": "Patient", "id": "example", "gender": "male", "name": [{"family": "Smith", "given": ["John"]}]}"""
+
+// Evaluate a FHIRPath expression against a single resource.
+val result = pc.evaluateFhirPath("Patient", patientJson, "name.family")
+result.getResults.forEach { value =>
+    println(s"${value.getType}: ${value.getValue}")
+}
+println(s"Return type: ${result.getExpectedReturnType}")
+```
+
+```
+import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
+
+class MyApp {
+
+    public static void main(String[] args) {
+        PathlingContext pc = PathlingContext.create();
+
+        String patientJson = "{\"resourceType\": \"Patient\", \"id\": \"example\", \"gender\": \"male\", \"name\": [{\"family\": \"Smith\", \"given\": [\"John\"]}]}";
+
+        // Evaluate a FHIRPath expression against a single resource.
+        SingleInstanceEvaluationResult result = pc.evaluateFhirPath(
+            "Patient", patientJson, "name.family"
+        );
+        for (SingleInstanceEvaluationResult.TypedValue value : result.getResults()) {
+            System.out.println(value.getType() + ": " + value.getValue());
+        }
+        System.out.println("Return type: " + result.getExpectedReturnType());
+    }
+}
+```
+
+Results in:
+
+```
+string: Smith
+Return type: string
+```

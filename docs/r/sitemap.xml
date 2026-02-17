@@ -24,6 +24,7 @@
 <url><loc>/reference/pathling_disconnect_all.html</loc></url>
 <url><loc>/reference/pathling_encode.html</loc></url>
 <url><loc>/reference/pathling_encode_bundle.html</loc></url>
+<url><loc>/reference/pathling_evaluate_fhirpath.html</loc></url>
 <url><loc>/reference/pathling_example_resource.html</loc></url>
 <url><loc>/reference/pathling_examples.html</loc></url>
 <url><loc>/reference/pathling_fhirpath_to_column.html</loc></url>

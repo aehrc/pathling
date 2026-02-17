@@ -104,6 +104,14 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;PathlingContext&quot;</span><span class="p">]</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_convert_java_value</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Converts a Java value from Py4J to an equivalent Python type.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="n">value</span>
+    <span class="c1"># For other types (e.g., Java BigDecimal, Row), convert to string.</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="StorageType"><a class="viewcode-back" href="../../pathling.html#pathling.context.StorageType">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">StorageType</span><span class="p">:</span>
     <span class="n">MEMORY</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;memory&quot;</span>
     <span class="n">DISK</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;disk&quot;</span></div>
@@ -485,6 +493,59 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">jcolumn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">fhirPathToColumn</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">fhirpath_expression</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">Column</span><span class="p">(</span><span class="n">jcolumn</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PathlingContext.evaluate_fhirpath"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.evaluate_fhirpath">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_fhirpath</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">resource_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">resource_json</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">fhirpath_expression</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">context_expression</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">variables</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluates a FHIRPath expression against a single FHIR resource and returns</span>
+<span class="sd">        materialised typed results.</span>
+
+<span class="sd">        The resource is encoded into a one-row Spark Dataset internally, and the</span>
+<span class="sd">        existing FHIRPath engine is used to evaluate the expression. Results are</span>
+<span class="sd">        collected and returned as typed values.</span>
+
+<span class="sd">        Example usage::</span>
+
+<span class="sd">            pc = PathlingContext.create(spark)</span>
+<span class="sd">            result = pc.evaluate_fhirpath(&quot;Patient&quot;, patient_json, &quot;name.family&quot;)</span>
+<span class="sd">            for value in result[&quot;results&quot;]:</span>
+<span class="sd">                print(f&quot;{value[&#39;type&#39;]}: {value[&#39;value&#39;]}&quot;)</span>
+
+<span class="sd">        :param resource_type: the FHIR resource type (e.g., &quot;Patient&quot;, &quot;Observation&quot;)</span>
+<span class="sd">        :param resource_json: the FHIR resource as a JSON string</span>
+<span class="sd">        :param fhirpath_expression: the FHIRPath expression to evaluate</span>
+<span class="sd">        :param context_expression: an optional context expression; if provided, the main</span>
+<span class="sd">               expression is composed with the context expression</span>
+<span class="sd">        :param variables: optional named variables available via %variable syntax, or None</span>
+<span class="sd">        :return: a dict with ``results`` (list of dicts with ``type`` and ``value``</span>
+<span class="sd">                 keys) and ``expectedReturnType`` (string)</span>
+<span class="sd">        :raises: Exception if the expression is invalid or evaluation fails</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">jresult</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">evaluateFhirPath</span><span class="p">(</span>
+            <span class="n">resource_type</span><span class="p">,</span>
+            <span class="n">resource_json</span><span class="p">,</span>
+            <span class="n">fhirpath_expression</span><span class="p">,</span>
+            <span class="n">context_expression</span><span class="p">,</span>
+            <span class="n">variables</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># Convert Java FhirPathResult to Python dict.</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">jtyped_value</span> <span class="ow">in</span> <span class="n">jresult</span><span class="o">.</span><span class="n">getResults</span><span class="p">():</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">jtyped_value</span><span class="o">.</span><span class="n">getValue</span><span class="p">()</span>
+            <span class="c1"># Convert Java types to Python types.</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">_convert_java_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">jtyped_value</span><span class="o">.</span><span class="n">getType</span><span class="p">(),</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="n">results</span><span class="p">,</span>
+            <span class="s2">&quot;expectedReturnType&quot;</span><span class="p">:</span> <span class="n">jresult</span><span class="o">.</span><span class="n">getExpectedReturnType</span><span class="p">(),</span>
+        <span class="p">}</span></div>
 
 <div class="viewcode-block" id="PathlingContext.search_to_column"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.search_to_column">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">search_to_column</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resource_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">search_expression</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Column</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>

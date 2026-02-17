@@ -64,21 +64,15 @@ See [Operators](https://hl7.org/fhirpath/#operators) in the FHIRPath specificati
 
 #### Arithmetic operators[​](#arithmetic-operators "Direct link to Arithmetic operators")
 
-| Operator | Description    |
-| -------- | -------------- |
-| `+`      | Addition       |
-| `-`      | Subtraction    |
-| `*`      | Multiplication |
-| `/`      | Division       |
-| `mod`    | Modulus        |
+| Operator | Description                     |
+| -------- | ------------------------------- |
+| `+`      | Addition / string concatenation |
+| `-`      | Subtraction                     |
+| `*`      | Multiplication                  |
+| `/`      | Division                        |
+| `mod`    | Modulus                         |
 
 Unary `+` and `-` are also supported for numeric values.
-
-#### String operators[​](#string-operators "Direct link to String operators")
-
-| Operator | Description          |
-| -------- | -------------------- |
-| `&`      | String concatenation |
 
 #### Collection operators[​](#collection-operators "Direct link to Collection operators")
 
