@@ -24,7 +24,6 @@ from pytest import fixture
 from pathling import PathlingContext
 from pathling._version import (
     __delta_version__,
-    __hadoop_version__,
     __java_version__,
     __scala_version__,
 )
@@ -77,8 +76,7 @@ def pathling_ctx(request, temp_warehouse_dir):
         .config(
             "spark.jars.packages",
             f"au.csiro.pathling:library-runtime:{__java_version__},"
-            f"io.delta:delta-spark_{__scala_version__}:{__delta_version__},"
-            f"org.apache.hadoop:hadoop-aws:{__hadoop_version__}",
+            f"io.delta:delta-spark_{__scala_version__}:{__delta_version__}",
         )
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config(
