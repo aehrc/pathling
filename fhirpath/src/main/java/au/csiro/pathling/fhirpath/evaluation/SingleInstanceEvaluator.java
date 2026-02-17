@@ -306,10 +306,11 @@ public class SingleInstanceEvaluator {
   }
 
   /**
-   * Strips synthetic fields from a Spark Row, recursively handling nested struct types.
+   * Strips synthetic fields and null-valued fields from a Spark Row, recursively handling nested
+   * struct types.
    *
    * @param row the row to sanitise
-   * @return a new Row with synthetic fields removed
+   * @return a new Row with synthetic and null-valued fields removed
    */
   @Nonnull
   static Row sanitiseRow(@Nonnull final Row row) {
@@ -323,8 +324,12 @@ public class SingleInstanceEvaluator {
 
     for (final StructField field : schema.fields()) {
       if (!SyntheticFieldUtils.isSyntheticField(field.name())) {
-        filteredFields.add(field);
         final Object value = row.get(row.fieldIndex(field.name()));
+        // Skip fields with null values.
+        if (value == null) {
+          continue;
+        }
+        filteredFields.add(field);
         // Recursively sanitise nested struct values.
         if (value instanceof final Row nestedRow) {
           filteredValues.add(sanitiseRow(nestedRow));

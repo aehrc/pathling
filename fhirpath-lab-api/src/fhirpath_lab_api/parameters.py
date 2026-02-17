@@ -236,30 +236,17 @@ def _build_result_part(typed_value: dict) -> dict:
     if value_key is not None:
         return {"name": type_name, value_key: value}
 
-    # For complex types, strip null values and use the json-value extension.
-    json_string = value if isinstance(value, str) else json.dumps(_strip_nulls(value))
+    # Complex types arrive as pre-serialised JSON strings from the Java evaluator,
+    # which handles synthetic field removal and null stripping.
     return {
         "name": type_name,
         "extension": [
             {
                 "url": JSON_VALUE_EXTENSION_URL,
-                "valueString": json_string,
+                "valueString": value,
             }
         ],
     }
-
-
-def _strip_nulls(value: Any) -> Any:
-    """Recursively removes null-valued keys from dicts.
-
-    :param value: the value to strip nulls from
-    :return: the value with null-valued dict keys removed
-    """
-    if isinstance(value, dict):
-        return {k: _strip_nulls(v) for k, v in value.items() if v is not None}
-    if isinstance(value, list):
-        return [_strip_nulls(item) for item in value]
-    return value
 
 
 def build_operation_outcome(

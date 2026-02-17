@@ -106,6 +106,12 @@ Complex type results SHALL also have null-valued fields stripped before
 serialisation, so that the JSON representation only contains fields with
 non-null values. This stripping SHALL be applied recursively to nested structs.
 
+Both synthetic field removal and null-value stripping SHALL be performed in the
+Java `SingleInstanceEvaluator.sanitiseRow()` method, so that the JSON string
+produced by `rowToJson()` is already clean before crossing the Java/Python
+boundary. The Python response construction layer SHALL treat complex type values
+as opaque JSON strings and SHALL NOT perform additional null stripping.
+
 This sanitisation SHALL be applied recursively to nested struct types within
 complex type results.
 

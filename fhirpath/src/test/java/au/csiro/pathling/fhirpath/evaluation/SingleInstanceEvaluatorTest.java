@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -245,8 +244,8 @@ class SingleInstanceEvaluatorTest {
     }
 
     @Test
-    void handlesNullNestedValues() {
-      // A null nested struct value should be preserved without error.
+    void stripsNullNestedStructValues() {
+      // A null nested struct value should be stripped as a null-valued field.
       final StructType nestedSchema =
           new StructType(
               new StructField[] {
@@ -265,9 +264,93 @@ class SingleInstanceEvaluatorTest {
 
       final Row sanitised = SingleInstanceEvaluator.sanitiseRow(outerRow);
 
-      assertEquals(2, sanitised.schema().fields().length);
+      assertEquals(1, sanitised.schema().fields().length);
+      assertEquals("display", sanitised.schema().fields()[0].name());
       assertEquals("outer_val", sanitised.get(0));
-      assertNull(sanitised.get(1));
+    }
+
+    @Test
+    void stripsNullValuedFields() {
+      // Fields with null values should be removed from the row.
+      final StructType schema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("id", DataTypes.StringType, true),
+                DataTypes.createStructField("value", DataTypes.StringType, true),
+                DataTypes.createStructField("comparator", DataTypes.StringType, true),
+                DataTypes.createStructField("unit", DataTypes.StringType, true),
+              });
+
+      final Row row = new GenericRowWithSchema(new Object[] {null, "100", null, "mg"}, schema);
+
+      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(row);
+
+      assertEquals(2, sanitised.schema().fields().length);
+      assertEquals("value", sanitised.schema().fields()[0].name());
+      assertEquals("unit", sanitised.schema().fields()[1].name());
+      assertEquals("100", sanitised.get(0));
+      assertEquals("mg", sanitised.get(1));
+    }
+
+    @Test
+    void stripsNullValuedFieldsFromNestedStructs() {
+      // Null-valued fields in nested struct types should also be stripped.
+      final StructType nestedSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("start", DataTypes.StringType, true),
+                DataTypes.createStructField("end", DataTypes.StringType, true),
+              });
+
+      final StructType outerSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("family", DataTypes.StringType, true),
+                DataTypes.createStructField("text", DataTypes.StringType, true),
+                DataTypes.createStructField("period", nestedSchema, true),
+              });
+
+      final Row nestedRow =
+          new GenericRowWithSchema(new Object[] {"2020-01-01", null}, nestedSchema);
+      final Row outerRow =
+          new GenericRowWithSchema(new Object[] {"Smith", null, nestedRow}, outerSchema);
+
+      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(outerRow);
+
+      // The outer null-valued "text" should be removed.
+      assertEquals(2, sanitised.schema().fields().length);
+      assertEquals("family", sanitised.schema().fields()[0].name());
+      assertEquals("period", sanitised.schema().fields()[1].name());
+
+      // The nested null-valued "end" should also be removed.
+      final Row sanitisedNested = sanitised.getAs("period");
+      assertNotNull(sanitisedNested);
+      assertEquals(1, sanitisedNested.schema().fields().length);
+      assertEquals("start", sanitisedNested.schema().fields()[0].name());
+      assertEquals("2020-01-01", sanitisedNested.get(0));
+    }
+
+    @Test
+    void preservesFieldsWithNonNullValues() {
+      // All non-null fields should be kept, even if some are null.
+      final StructType schema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("value", DataTypes.StringType, true),
+                DataTypes.createStructField("unit", DataTypes.StringType, true),
+                DataTypes.createStructField("system", DataTypes.StringType, true),
+                DataTypes.createStructField("code", DataTypes.StringType, true),
+              });
+
+      final Row row =
+          new GenericRowWithSchema(
+              new Object[] {"1.5", "mmol/L", "http://unitsofmeasure.org", "mmol/L"}, schema);
+
+      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(row);
+
+      assertEquals(4, sanitised.schema().fields().length);
+      assertEquals("1.5", sanitised.get(0));
+      assertEquals("mmol/L", sanitised.get(1));
     }
   }
 
@@ -294,6 +377,28 @@ class SingleInstanceEvaluatorTest {
       assertFalse(json.contains("value_scale"));
       assertTrue(json.contains("\"value\":\"100\""));
       assertTrue(json.contains("\"code\":\"mg\""));
+    }
+
+    @Test
+    void jsonExcludesNullValuedFields() {
+      // The JSON output should not contain fields with null values.
+      final StructType schema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("id", DataTypes.StringType, true),
+                DataTypes.createStructField("value", DataTypes.StringType, true),
+                DataTypes.createStructField("comparator", DataTypes.StringType, true),
+                DataTypes.createStructField("unit", DataTypes.StringType, true),
+              });
+
+      final Row row = new GenericRowWithSchema(new Object[] {null, "100", null, "mg"}, schema);
+
+      final String json = SingleInstanceEvaluator.rowToJson(row);
+
+      assertFalse(json.contains("\"id\""));
+      assertFalse(json.contains("\"comparator\""));
+      assertTrue(json.contains("\"value\":\"100\""));
+      assertTrue(json.contains("\"unit\":\"mg\""));
     }
   }
 }
