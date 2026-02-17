@@ -32,7 +32,6 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -184,7 +183,7 @@ public class SingleInstanceEvaluator {
     final List<Row> contextRows = contextDf.collectAsList();
 
     if (contextRows.isEmpty() || contextRows.getFirst().isNullAt(0)) {
-      return new SingleInstanceEvaluationResult(Collections.emptyList(), expectedReturnType);
+      return new SingleInstanceEvaluationResult(new ArrayList<>(), expectedReturnType);
     }
 
     // The context value is an array; evaluate the main expression against the input context
@@ -233,12 +232,12 @@ public class SingleInstanceEvaluator {
     final List<Row> rows = resultDf.collectAsList();
 
     if (rows.isEmpty()) {
-      return Collections.emptyList();
+      return new ArrayList<>();
     }
 
     final Row row = rows.getFirst();
     if (row.isNullAt(0)) {
-      return Collections.emptyList();
+      return new ArrayList<>();
     }
 
     final Object rawValue = row.get(0);
