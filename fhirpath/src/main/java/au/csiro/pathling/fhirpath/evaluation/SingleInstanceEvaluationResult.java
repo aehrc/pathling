@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.library;
+package au.csiro.pathling.fhirpath.evaluation;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -26,19 +26,19 @@ import java.util.List;
  *
  * @author John Grimes
  */
-public class FhirPathResult {
+public class SingleInstanceEvaluationResult {
 
   @Nonnull private final List<TypedValue> results;
 
   @Nonnull private final String expectedReturnType;
 
   /**
-   * Creates a new FhirPathResult.
+   * Creates a new SingleInstanceEvaluationResult.
    *
    * @param results the typed result values from the evaluation
    * @param expectedReturnType the statically inferred return type of the expression
    */
-  public FhirPathResult(
+  public SingleInstanceEvaluationResult(
       @Nonnull final List<TypedValue> results, @Nonnull final String expectedReturnType) {
     this.results = results;
     this.expectedReturnType = expectedReturnType;

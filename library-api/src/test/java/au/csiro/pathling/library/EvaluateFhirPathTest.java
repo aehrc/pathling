@@ -23,8 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.library.FhirPathResult.TypedValue;
+import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
+import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
 import java.util.List;
+import java.util.Map;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -93,12 +95,13 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateStringExpression() {
     // Evaluating name.family should return the family names as strings.
-    final FhirPathResult result = pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.family");
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.family");
 
     assertNotNull(result);
     assertEquals(2, result.getResults().size());
 
-    final TypedValue first = result.getResults().get(0);
+    final TypedValue first = result.getResults().getFirst();
     assertEquals("string", first.getType());
     assertEquals("Smith", first.getValue());
   }
@@ -106,7 +109,8 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateMultipleValues() {
     // Evaluating name.given should return all given names.
-    final FhirPathResult result = pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.given");
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.given");
 
     assertNotNull(result);
     assertEquals(3, result.getResults().size());
@@ -120,12 +124,13 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateBooleanExpression() {
     // Evaluating active should return a boolean.
-    final FhirPathResult result = pathling.evaluateFhirPath("Patient", PATIENT_JSON, "active");
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "active");
 
     assertNotNull(result);
     assertEquals(1, result.getResults().size());
 
-    final TypedValue first = result.getResults().get(0);
+    final TypedValue first = result.getResults().getFirst();
     assertEquals("boolean", first.getType());
     assertEquals(true, first.getValue());
   }
@@ -134,7 +139,7 @@ public class EvaluateFhirPathTest {
   void evaluateEmptyResult() {
     // Evaluating a path that matches nothing should return an empty list.
     // Use multipleBirth rather than deceased, as deceased is a choice type that requires ofType().
-    final FhirPathResult result =
+    final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "multipleBirthBoolean");
 
     assertNotNull(result);
@@ -144,12 +149,13 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateComplexType() {
     // Evaluating name should return complex HumanName types.
-    final FhirPathResult result = pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name");
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name");
 
     assertNotNull(result);
     assertEquals(2, result.getResults().size());
 
-    final TypedValue first = result.getResults().get(0);
+    final TypedValue first = result.getResults().getFirst();
     assertEquals("HumanName", first.getType());
     // The value should be a JSON string for complex types.
     assertNotNull(first.getValue());
@@ -158,12 +164,13 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateDateExpression() {
     // Evaluating birthDate should return a date.
-    final FhirPathResult result = pathling.evaluateFhirPath("Patient", PATIENT_JSON, "birthDate");
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "birthDate");
 
     assertNotNull(result);
     assertEquals(1, result.getResults().size());
 
-    final TypedValue first = result.getResults().get(0);
+    final TypedValue first = result.getResults().getFirst();
     assertEquals("date", first.getType());
     assertEquals("1990-01-01", first.getValue());
   }
@@ -171,7 +178,8 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateWithReturnType() {
     // The return type should be inferred correctly.
-    final FhirPathResult result = pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.family");
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.family");
 
     assertEquals("string", result.getExpectedReturnType());
   }
@@ -179,7 +187,8 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateBooleanReturnType() {
     // Boolean expressions should have boolean return type.
-    final FhirPathResult result = pathling.evaluateFhirPath("Patient", PATIENT_JSON, "active");
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "active");
 
     assertEquals("boolean", result.getExpectedReturnType());
   }
@@ -187,7 +196,8 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateComplexReturnType() {
     // Complex type expressions should have the complex type as return type.
-    final FhirPathResult result = pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name");
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name");
 
     assertEquals("HumanName", result.getExpectedReturnType());
   }
@@ -198,7 +208,7 @@ public class EvaluateFhirPathTest {
   void evaluateWithContextExpression() {
     // When a context expression is provided, the main expression is composed with the context.
     // For name.given, this returns all given names across all name entries.
-    final FhirPathResult result =
+    final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "given", "name", null);
 
     assertNotNull(result);
@@ -223,12 +233,13 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateGenderCode() {
     // Evaluating gender should return a string code value.
-    final FhirPathResult result = pathling.evaluateFhirPath("Patient", PATIENT_JSON, "gender");
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "gender");
 
     assertNotNull(result);
     assertEquals(1, result.getResults().size());
 
-    final TypedValue first = result.getResults().get(0);
+    final TypedValue first = result.getResults().getFirst();
     assertEquals("code", first.getType());
     assertEquals("male", first.getValue());
   }
@@ -236,13 +247,13 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateWithFhirPathFunction() {
     // Evaluating with a FHIRPath function like count().
-    final FhirPathResult result =
+    final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.count()");
 
     assertNotNull(result);
     assertEquals(1, result.getResults().size());
 
-    final TypedValue first = result.getResults().get(0);
+    final TypedValue first = result.getResults().getFirst();
     assertEquals("integer", first.getType());
     assertEquals(2, first.getValue());
   }
@@ -250,13 +261,13 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateExistsFunction() {
     // Evaluating exists() should return boolean.
-    final FhirPathResult result =
+    final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.exists()");
 
     assertNotNull(result);
     assertFalse(result.getResults().isEmpty());
 
-    final TypedValue first = result.getResults().get(0);
+    final TypedValue first = result.getResults().getFirst();
     assertEquals("boolean", first.getType());
     assertEquals(true, first.getValue());
   }
@@ -264,14 +275,135 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateWhereFunction() {
     // Evaluating where() to filter.
-    final FhirPathResult result =
+    final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.where(use = 'official').family");
 
     assertNotNull(result);
     assertEquals(1, result.getResults().size());
 
-    final TypedValue first = result.getResults().get(0);
+    final TypedValue first = result.getResults().getFirst();
     assertEquals("string", first.getType());
     assertEquals("Smith", first.getValue());
+  }
+
+  // ========== Sanitisation tests ==========
+
+  private static final String OBSERVATION_JSON =
+      """
+      {
+        "resourceType": "Observation",
+        "id": "bp-example",
+        "status": "final",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "85354-9"
+            }
+          ]
+        },
+        "valueQuantity": {
+          "value": 120.0,
+          "unit": "mmHg",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      }
+      """;
+
+  @Test
+  void quantityResultExcludesSyntheticFields() {
+    // Evaluating a Quantity expression should return JSON without synthetic fields
+    // like value_scale, _value_canonicalized, or _code_canonicalized.
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Observation", OBSERVATION_JSON, "value.ofType(Quantity)");
+
+    assertNotNull(result);
+    assertFalse(result.getResults().isEmpty());
+
+    final TypedValue first = result.getResults().getFirst();
+    assertEquals("Quantity", first.getType());
+
+    final String json = (String) first.getValue();
+    assertNotNull(json);
+    assertFalse(json.contains("value_scale"), "JSON should not contain value_scale");
+    assertFalse(
+        json.contains("_value_canonicalized"), "JSON should not contain _value_canonicalized");
+    assertFalse(
+        json.contains("_code_canonicalized"), "JSON should not contain _code_canonicalized");
+    assertFalse(json.contains("_fid"), "JSON should not contain _fid");
+  }
+
+  @Test
+  void complexTypeResultExcludesFidField() {
+    // Any complex type result should not contain the _fid field.
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name");
+
+    assertNotNull(result);
+    assertFalse(result.getResults().isEmpty());
+
+    for (final TypedValue tv : result.getResults()) {
+      final String json = (String) tv.getValue();
+      assertNotNull(json);
+      assertFalse(json.contains("_fid"), "JSON should not contain _fid");
+    }
+  }
+
+  // ========== Variable resolution tests ==========
+
+  @Test
+  void evaluateWithStringVariable() {
+    // A string variable should be resolvable in expressions.
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath(
+            "Patient", PATIENT_JSON, "%greeting", null, Map.of("greeting", "hello"));
+
+    assertNotNull(result);
+    assertEquals(1, result.getResults().size());
+
+    final TypedValue first = result.getResults().getFirst();
+    assertEquals("string", first.getType());
+    assertEquals("hello", first.getValue());
+  }
+
+  @Test
+  void evaluateWithIntegerVariable() {
+    // An integer variable should be resolvable in expressions.
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "%count", null, Map.of("count", 42));
+
+    assertNotNull(result);
+    assertEquals(1, result.getResults().size());
+
+    final TypedValue first = result.getResults().getFirst();
+    assertEquals("integer", first.getType());
+    assertEquals(42, first.getValue());
+  }
+
+  @Test
+  void evaluateWithBooleanVariable() {
+    // A boolean variable should be resolvable in expressions.
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "%flag", null, Map.of("flag", true));
+
+    assertNotNull(result);
+    assertEquals(1, result.getResults().size());
+
+    final TypedValue first = result.getResults().getFirst();
+    assertEquals("boolean", first.getType());
+    assertEquals(true, first.getValue());
+  }
+
+  @Test
+  void evaluateWithNoVariables() {
+    // When no variables are provided, evaluation should proceed with default environment
+    // variables only.
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "active", null, null);
+
+    assertNotNull(result);
+    assertEquals(1, result.getResults().size());
+    assertEquals(true, result.getResults().getFirst().getValue());
   }
 }
