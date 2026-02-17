@@ -211,3 +211,108 @@ test_that("pathling_filter and pathling_with_column work together in a pipe", {
   # Should have only male patients.
   expect_true(result %>% sparklyr::sdf_nrow() > 0)
 })
+
+# ========== pathling_evaluate_fhirpath tests ==========
+
+# Sample Patient JSON used across evaluate_fhirpath tests.
+PATIENT_JSON <- '{
+  "resourceType": "Patient",
+  "id": "example",
+  "active": true,
+  "gender": "male",
+  "birthDate": "1990-01-01",
+  "name": [
+    {
+      "use": "official",
+      "family": "Smith",
+      "given": ["John", "James"]
+    },
+    {
+      "use": "nickname",
+      "family": "Smith",
+      "given": ["Johnny"]
+    }
+  ]
+}'
+
+# Helper to create a PathlingContext for evaluate_fhirpath tests.
+evaluate_test_setup <- function() {
+  spark <- def_spark()
+  pc <- pathling_connect(spark)
+  list(pc = pc)
+}
+
+test_that("evaluate_fhirpath returns a string result for name.family", {
+  setup <- evaluate_test_setup()
+  # Evaluating name.family should return family names as strings.
+  result <- pathling_evaluate_fhirpath(setup$pc, "Patient", PATIENT_JSON, "name.family")
+  expect_type(result, "list")
+  expect_true("results" %in% names(result))
+  expect_true("expectedReturnType" %in% names(result))
+  expect_equal(result$expectedReturnType, "string")
+  expect_equal(length(result$results), 2)
+  expect_equal(result$results[[1]]$type, "string")
+  expect_equal(result$results[[1]]$value, "Smith")
+})
+
+test_that("evaluate_fhirpath returns multiple values for name.given", {
+  setup <- evaluate_test_setup()
+  # Evaluating name.given should return all given names.
+  result <- pathling_evaluate_fhirpath(setup$pc, "Patient", PATIENT_JSON, "name.given")
+  expect_equal(length(result$results), 3)
+  values <- sapply(result$results, function(x) x$value)
+  expect_true("John" %in% values)
+  expect_true("James" %in% values)
+  expect_true("Johnny" %in% values)
+})
+
+test_that("evaluate_fhirpath returns empty results for missing element", {
+  setup <- evaluate_test_setup()
+  # Evaluating a path that matches nothing should return an empty list.
+  result <- pathling_evaluate_fhirpath(setup$pc, "Patient", PATIENT_JSON, "multipleBirthBoolean")
+  expect_equal(length(result$results), 0)
+})
+
+test_that("evaluate_fhirpath returns boolean result for active", {
+  setup <- evaluate_test_setup()
+  # Evaluating active should return a boolean.
+  result <- pathling_evaluate_fhirpath(setup$pc, "Patient", PATIENT_JSON, "active")
+  expect_equal(length(result$results), 1)
+  expect_equal(result$results[[1]]$type, "boolean")
+  expect_equal(result$results[[1]]$value, TRUE)
+  expect_equal(result$expectedReturnType, "boolean")
+})
+
+test_that("evaluate_fhirpath raises error for invalid expression", {
+  setup <- evaluate_test_setup()
+  # An invalid FHIRPath expression should raise an error.
+  expect_error(
+    pathling_evaluate_fhirpath(setup$pc, "Patient", PATIENT_JSON, "!!invalid!!")
+  )
+})
+
+test_that("evaluate_fhirpath with context expression", {
+  setup <- evaluate_test_setup()
+  # Using a context expression to compose the evaluation.
+  result <- pathling_evaluate_fhirpath(
+    setup$pc, "Patient", PATIENT_JSON, "given",
+    context_expression = "name"
+  )
+  expect_equal(length(result$results), 3)
+  values <- sapply(result$results, function(x) x$value)
+  expect_true("John" %in% values)
+  expect_true("James" %in% values)
+  expect_true("Johnny" %in% values)
+})
+
+test_that("evaluate_fhirpath with variable substitution", {
+  setup <- evaluate_test_setup()
+  # A string variable should be resolvable via %variable syntax.
+  result <- pathling_evaluate_fhirpath(
+    setup$pc, "Patient", PATIENT_JSON, "%myVar",
+    variables = list(myVar = "test")
+  )
+  expect_equal(length(result$results), 1)
+  expect_equal(result$results[[1]]$type, "string")
+  expect_equal(result$results[[1]]$value, "test")
+})

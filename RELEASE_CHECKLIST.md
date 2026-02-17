@@ -10,7 +10,7 @@
 - [ ] Create a Python pre-release ("Python pre-release" workflow, manually
       triggered)
 - [ ] Test snapshot library API, dev Python library release and R package on
-      target Databricks release
+      target Databricks release (see `scripts/test_databricks_release.py`)
 - [ ] Update the supported Databricks Runtime versions in the
       documentation (`site/docs/libraries/installation/databricks.md`)
 - [ ] Run `R CMD check --as-cran --no-examples [package file]` and address any

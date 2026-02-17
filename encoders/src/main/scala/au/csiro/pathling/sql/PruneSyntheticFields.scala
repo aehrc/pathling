@@ -72,7 +72,6 @@ case class PruneSyntheticFields(child: Expression)
   override def prettyName: String = "pruneSyntheticFields"
 
   def isAnnotation(name: String): Boolean = {
-    name.startsWith("_") || // the typical prefix for synthetic fields
-      name.endsWith("_scale") // the scale field added for decimal representation
+    SyntheticFieldUtils.isSyntheticField(name)
   }
 }

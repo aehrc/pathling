@@ -26,6 +26,8 @@ import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ResourceTypes;
+import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
+import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.sql.PathlingUdfConfigurer;
@@ -42,6 +44,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -677,6 +681,91 @@ public class PathlingContext {
       @Nonnull final String resourceType, @Nonnull final String fhirPathExpression) {
     final SearchColumnBuilder builder = SearchColumnBuilder.withDefaultRegistry(getFhirContext());
     return builder.fromExpression(ResourceType.fromCode(resourceType), fhirPathExpression);
+  }
+
+  /**
+   * Evaluates a FHIRPath expression against a single FHIR resource and returns materialised typed
+   * results.
+   *
+   * <p>The resource is encoded into a one-row Spark Dataset internally, and the existing FHIRPath
+   * engine is used to evaluate the expression. Results are collected and returned as typed values.
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * PathlingContext pc = PathlingContext.create(spark);
+   * SingleInstanceEvaluationResult result = pc.evaluateFhirPath("Patient", patientJson, "name.family");
+   * for (SingleInstanceEvaluationResult.TypedValue value : result.getResults()) {
+   *     System.out.println(value.getType() + ": " + value.getValue());
+   * }
+   * }</pre>
+   *
+   * @param resourceType the FHIR resource type (e.g., "Patient", "Observation")
+   * @param resourceJson the FHIR resource as a JSON string
+   * @param fhirPathExpression the FHIRPath expression to evaluate
+   * @return a {@link SingleInstanceEvaluationResult} containing typed result values and type
+   *     metadata
+   * @throws IllegalArgumentException if the resource type is invalid
+   */
+  @Nonnull
+  public SingleInstanceEvaluationResult evaluateFhirPath(
+      @Nonnull final String resourceType,
+      @Nonnull final String resourceJson,
+      @Nonnull final String fhirPathExpression) {
+    return evaluateFhirPath(resourceType, resourceJson, fhirPathExpression, null, null);
+  }
+
+  /**
+   * Evaluates a FHIRPath expression against a single FHIR resource with an optional context
+   * expression and variables.
+   *
+   * <p>When a context expression is provided, the context expression is evaluated first. The main
+   * expression is then evaluated once for each item in the context result, with each context item
+   * used as the input. Results are returned as a flat list of typed values.
+   *
+   * @param resourceType the FHIR resource type (e.g., "Patient", "Observation")
+   * @param resourceJson the FHIR resource as a JSON string
+   * @param fhirPathExpression the FHIRPath expression to evaluate
+   * @param contextExpression an optional context expression; if non-null, the main expression is
+   *     evaluated once per context item
+   * @param variables optional named variables available via %variable syntax, or null
+   * @return a {@link SingleInstanceEvaluationResult} containing typed result values and type
+   *     metadata
+   * @throws IllegalArgumentException if the resource type is invalid
+   */
+  @Nonnull
+  public SingleInstanceEvaluationResult evaluateFhirPath(
+      @Nonnull final String resourceType,
+      @Nonnull final String resourceJson,
+      @Nonnull final String fhirPathExpression,
+      @Nullable final String contextExpression,
+      @Nullable final Map<String, Object> variables) {
+
+    // Encode the resource JSON into a one-row Spark Dataset.
+    final Dataset<Row> resourceDf = encodeResourceJson(resourceType, resourceJson);
+
+    return SingleInstanceEvaluator.evaluate(
+        resourceDf,
+        resourceType,
+        getFhirContext(),
+        fhirPathExpression,
+        contextExpression,
+        variables);
+  }
+
+  /**
+   * Encodes a single FHIR resource JSON string into a one-row Spark Dataset.
+   *
+   * @param resourceType the FHIR resource type
+   * @param resourceJson the JSON string
+   * @return a single-row Dataset representing the encoded resource
+   */
+  @Nonnull
+  private Dataset<Row> encodeResourceJson(
+      @Nonnull final String resourceType, @Nonnull final String resourceJson) {
+    final Dataset<Row> jsonDf =
+        spark.createDataset(Collections.singletonList(resourceJson), Encoders.STRING()).toDF();
+    return encode(jsonDf, resourceType, FHIR_JSON);
   }
 
   @Nonnull

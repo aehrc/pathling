@@ -40,7 +40,7 @@ from pyspark.sql import SparkSession
 spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
-        "au.csiro.pathling:library-runtime:9.3.1," +
+        "au.csiro.pathling:library-runtime:9.4.0," +
         "io.delta:delta-spark_2.13:4.0.0"
     )
     .config(
@@ -80,7 +80,7 @@ pc <- pathling_connect(sc)
 import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder
-        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:9.3.1," +
+        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:9.4.0," +
                 "io.delta:delta-spark_2.13:4.0.0")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
@@ -102,7 +102,7 @@ class MyApp {
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
                 .config("spark.jars.packages",
-                        "au.csiro.pathling:library-runtime:9.3.1," +
+                        "au.csiro.pathling:library-runtime:9.4.0," +
                                 "io.delta:delta-spark_2.13:4.0.0")
                 .config("spark.sql.extensions",
                         "io.delta.sql.DeltaSparkSessionExtension")

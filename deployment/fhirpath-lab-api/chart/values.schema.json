@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "FHIRPath Lab API Helm Chart Values",
+  "description": "Configuration values for deploying the FHIRPath Lab API server on Kubernetes",
+  "type": "object",
+  "properties": {
+    "fhirpathLabApi": {
+      "type": "object",
+      "description": "FHIRPath Lab API server configuration",
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Docker image for the FHIRPath Lab API server",
+          "default": "ghcr.io/aehrc/fhirpath-lab-api:latest"
+        },
+        "imagePullPolicy": {
+          "type": "string",
+          "description": "Image pull policy for the container",
+          "enum": ["Always", "IfNotPresent", "Never"],
+          "default": "Always"
+        },
+        "replicas": {
+          "type": "integer",
+          "description": "Number of replicas to deploy",
+          "minimum": 1,
+          "default": 1
+        },
+        "service": {
+          "type": "object",
+          "description": "Kubernetes service configuration",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Service type",
+              "enum": ["ClusterIP", "NodePort", "LoadBalancer"],
+              "default": "ClusterIP"
+            },
+            "port": {
+              "type": "integer",
+              "description": "Service port",
+              "default": 8080
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "description": "Resource requests and limits for the server pod",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": ["string", "integer"],
+                  "description": "CPU request"
+                },
+                "memory": {
+                  "type": "string",
+                  "description": "Memory request"
+                }
+              }
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "description": "Memory limit"
+                }
+              }
+            }
+          },
+          "default": {}
+        },
+        "config": {
+          "type": "object",
+          "description": "Environment variables passed to the server container",
+          "additionalProperties": {
+            "type": ["string", "integer", "boolean", "null"]
+          },
+          "default": {}
+        },
+        "tolerations": {
+          "type": "array",
+          "description": "Tolerations for pod scheduling",
+          "items": {
+            "type": "object"
+          },
+          "default": []
+        },
+        "affinity": {
+          "type": "object",
+          "description": "Affinity rules for pod scheduling",
+          "default": {}
+        },
+        "nodeSelector": {
+          "type": "object",
+          "description": "Node selector for pod scheduling",
+          "default": {}
+        }
+      }
+    }
+  }
+}

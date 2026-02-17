@@ -66,7 +66,9 @@ public enum BinaryOperatorType {
   /** Arithmetic division operator. */
   DIVISION("/", new MathOperator(MathOperation.DIVISION)),
   /** Arithmetic modulus operator. */
-  MODULUS("mod", new MathOperator(MathOperation.MODULUS));
+  MODULUS("mod", new MathOperator(MathOperation.MODULUS)),
+  /** Union operator. */
+  UNION("|", new UnionOperator());
 
   private final String symbol;
 
