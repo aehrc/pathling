@@ -102,6 +102,10 @@ fields that are not part of the FHIR specification. A field is synthetic if its
 name starts with `_` or ends with `_scale`, consistent with the
 `PruneSyntheticFields.isAnnotation` convention in the encoders module.
 
+Complex type results SHALL also have null-valued fields stripped before
+serialisation, so that the JSON representation only contains fields with
+non-null values. This stripping SHALL be applied recursively to nested structs.
+
 This sanitisation SHALL be applied recursively to nested struct types within
 complex type results.
 
@@ -135,6 +139,18 @@ complex type results.
 - **WHEN** the expression returns a complex type containing nested struct
   fields with synthetic fields
 - **THEN** the synthetic fields are stripped from nested structs as well
+
+#### Scenario: Complex type results exclude null-valued fields
+
+- **WHEN** the expression returns a Quantity value with `id`, `comparator`, and
+  other fields set to null
+- **THEN** the JSON representation omits those null-valued fields entirely
+
+#### Scenario: Nested null stripping
+
+- **WHEN** the expression returns a complex type containing nested structs with
+  null-valued fields
+- **THEN** the null-valued fields are stripped from nested structs as well
 
 #### Scenario: Empty result
 

@@ -203,6 +203,81 @@ def test_build_response_with_complex_type_results():
     assert "Smith" in name_part["extension"][0]["valueString"]
 
 
+def test_build_response_complex_type_omits_null_fields():
+    """Null-valued fields are stripped from complex type JSON output."""
+    # Simulates a Quantity result with nulls for unset fields.
+    results = [
+        {
+            "type": "Quantity",
+            "value": {
+                "id": None,
+                "value": 1.5,
+                "comparator": None,
+                "unit": "mmol/L",
+                "system": "http://unitsofmeasure.org",
+                "code": "mmol/L",
+            },
+        },
+    ]
+    response = build_response_parameters(
+        evaluator_string="Pathling 9.3.1 (R4)",
+        expression="value.ofType(Quantity)",
+        resource={"resourceType": "Observation", "id": "example"},
+        expected_return_type="Quantity",
+        results=results,
+    )
+
+    result_part = response["parameter"][1]
+    quantity_part = result_part["part"][0]
+    quantity_json = json.loads(quantity_part["extension"][0]["valueString"])
+
+    # Null-valued fields should be absent.
+    assert "id" not in quantity_json
+    assert "comparator" not in quantity_json
+    # Non-null fields should be present.
+    assert quantity_json["value"] == 1.5
+    assert quantity_json["unit"] == "mmol/L"
+    assert quantity_json["system"] == "http://unitsofmeasure.org"
+    assert quantity_json["code"] == "mmol/L"
+
+
+def test_build_response_complex_type_strips_nulls_recursively():
+    """Null-valued fields are stripped recursively from nested structs."""
+    results = [
+        {
+            "type": "HumanName",
+            "value": {
+                "family": "Smith",
+                "given": ["John"],
+                "period": {
+                    "start": "2020-01-01",
+                    "end": None,
+                },
+                "text": None,
+            },
+        },
+    ]
+    response = build_response_parameters(
+        evaluator_string="Pathling 9.3.1 (R4)",
+        expression="name",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="HumanName",
+        results=results,
+    )
+
+    result_part = response["parameter"][1]
+    name_part = result_part["part"][0]
+    name_json = json.loads(name_part["extension"][0]["valueString"])
+
+    # Top-level null should be stripped.
+    assert "text" not in name_json
+    # Nested null should be stripped.
+    assert "end" not in name_json["period"]
+    # Non-null values preserved.
+    assert name_json["family"] == "Smith"
+    assert name_json["period"]["start"] == "2020-01-01"
+
+
 def test_build_response_with_empty_results():
     """Builds a response with no result parts when results are empty."""
     response = build_response_parameters(
