@@ -80,21 +80,15 @@ specification for detailed semantics.
 
 #### Arithmetic operators
 
-| Operator | Description    |
-| -------- | -------------- |
-| `+`      | Addition       |
-| `-`      | Subtraction    |
-| `*`      | Multiplication |
-| `/`      | Division       |
-| `mod`    | Modulus        |
+| Operator | Description                     |
+| -------- | ------------------------------- |
+| `+`      | Addition / string concatenation |
+| `-`      | Subtraction                     |
+| `*`      | Multiplication                  |
+| `/`      | Division                        |
+| `mod`    | Modulus                         |
 
 Unary `+` and `-` are also supported for numeric values.
-
-#### String operators
-
-| Operator | Description          |
-| -------- | -------------------- |
-| `&`      | String concatenation |
 
 #### Collection operators
 
