@@ -38,8 +38,8 @@ logger = logging.getLogger(__name__)
 
 # Default CORS origins for FHIRPath Lab.
 DEFAULT_CORS_ORIGINS = [
-    "https://fhirpath-lab.com",
-    "https://dev.fhirpath-lab.com",
+    "https://fhirpath-lab.azurewebsites.net",
+    "https://fhirpath-lab-dev.azurewebsites.net",
     "http://localhost:3000",
 ]
 
