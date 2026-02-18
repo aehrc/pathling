@@ -50,6 +50,12 @@ scheduling, and environment variables.
 - **WHEN** tolerations, affinity, or nodeSelector are configured
 - **THEN** the Deployment pod spec includes the specified scheduling constraints
 
+#### Scenario: Default CORS origins
+
+- **WHEN** the chart is installed with default values
+- **THEN** the container receives `CORS_ALLOWED_ORIGINS` set to
+  `https://fhirpath-lab.azurewebsites.net,http://localhost:3000`
+
 ### Requirement: Service configuration
 
 The Helm chart SHALL create a Kubernetes Service for the FHIRPath Lab API

@@ -38,13 +38,13 @@ uv run pytest -v
 
 The server is configured via environment variables:
 
-| Variable               | Description                                     | Default |
-| ---------------------- | ----------------------------------------------- | ------- |
-| `PORT`                 | HTTP port to listen on                          | `8080`  |
-| `CORS_ALLOWED_ORIGINS` | Comma-separated list of additional CORS origins | (none)  |
+| Variable               | Description                             | Default |
+| ---------------------- | --------------------------------------- | ------- |
+| `PORT`                 | HTTP port to listen on                  | `8080`  |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed origins | (none)  |
 
-CORS is pre-configured for `https://fhirpath-lab.com`,
-`https://dev.fhirpath-lab.com`, and `http://localhost:3000`.
+CORS is disabled unless `CORS_ALLOWED_ORIGINS` is set. The Helm chart provides
+default origins for production deployments.
 
 ## API
 

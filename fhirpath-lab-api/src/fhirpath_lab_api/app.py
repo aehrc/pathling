@@ -36,13 +36,6 @@ from fhirpath_lab_api.parameters import (
 
 logger = logging.getLogger(__name__)
 
-# Default CORS origins for FHIRPath Lab.
-DEFAULT_CORS_ORIGINS = [
-    "https://fhirpath-lab.azurewebsites.net",
-    "https://fhirpath-lab-dev.azurewebsites.net",
-    "http://localhost:3000",
-]
-
 
 def create_app(pathling_context=None) -> Flask:
     """Creates and configures the Flask application.
@@ -53,14 +46,13 @@ def create_app(pathling_context=None) -> Flask:
     """
     app = Flask(__name__)
 
-    # Configure CORS origins.
-    additional_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "")
-    cors_origins = list(DEFAULT_CORS_ORIGINS)
-    if additional_origins:
-        cors_origins.extend(
-            origin.strip() for origin in additional_origins.split(",") if origin.strip()
-        )
-    CORS(app, origins=cors_origins)
+    # Configure CORS origins from the environment variable.
+    origins_value = os.environ.get("CORS_ALLOWED_ORIGINS", "")
+    cors_origins = [
+        origin.strip() for origin in origins_value.split(",") if origin.strip()
+    ]
+    if cors_origins:
+        CORS(app, origins=cors_origins)
 
     # Store the PathlingContext in app config.
     # Lazy initialisation: create at first request if not provided.

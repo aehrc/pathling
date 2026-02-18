@@ -21,11 +21,14 @@ Author: John Grimes
 """
 
 import json
-from unittest.mock import MagicMock
+import os
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from fhirpath_lab_api.app import create_app
+
+TEST_CORS_ORIGINS = "https://fhirpath-lab.azurewebsites.net,http://localhost:3000"
 
 
 @pytest.fixture()
@@ -42,11 +45,12 @@ def mock_context():
 
 @pytest.fixture()
 def client(mock_context):
-    """Creates a Flask test client with a mock context."""
-    app = create_app(pathling_context=mock_context)
-    app.config["TESTING"] = True
-    with app.test_client() as client:
-        yield client
+    """Creates a Flask test client with CORS origins configured via env var."""
+    with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": TEST_CORS_ORIGINS}):
+        app = create_app(pathling_context=mock_context)
+        app.config["TESTING"] = True
+        with app.test_client() as client:
+            yield client
 
 
 @pytest.fixture()
@@ -240,6 +244,43 @@ def test_preflight_cors_request(client):
 
     assert response.status_code == 200
     assert response.headers.get("Access-Control-Allow-Origin") is not None
+
+
+def test_cors_no_origins_configured(mock_context):
+    """No CORS headers when CORS_ALLOWED_ORIGINS is unset."""
+    with patch.dict(os.environ, {}, clear=True):
+        # Remove CORS_ALLOWED_ORIGINS if present.
+        os.environ.pop("CORS_ALLOWED_ORIGINS", None)
+        app = create_app(pathling_context=mock_context)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            response = c.options(
+                "/$fhirpath-r4",
+                headers={
+                    "Origin": "https://fhirpath-lab.azurewebsites.net",
+                    "Access-Control-Request-Method": "POST",
+                },
+            )
+            assert response.headers.get("Access-Control-Allow-Origin") is None
+
+
+def test_cors_multiple_origins(mock_context, valid_request_body):
+    """All comma-separated origins in CORS_ALLOWED_ORIGINS are permitted."""
+    origins = "https://example.com,https://other.example.com"
+    with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": origins}):
+        app = create_app(pathling_context=mock_context)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            for origin in ["https://example.com", "https://other.example.com"]:
+                response = c.post(
+                    "/$fhirpath-r4",
+                    data=json.dumps(valid_request_body),
+                    content_type="application/json",
+                    headers={"Origin": origin},
+                )
+                assert (
+                    response.headers.get("Access-Control-Allow-Origin") is not None
+                ), f"Expected CORS header for {origin}"
 
 
 def test_context_expression_passed_to_evaluator(client, mock_context):

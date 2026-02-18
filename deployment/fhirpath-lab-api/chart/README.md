@@ -30,10 +30,20 @@ helm install fhirpath-lab-api ./deployment/fhirpath-lab-api/chart/ \
 | `fhirpathLabApi.service.type`    | Kubernetes service type                 | `ClusterIP`                             |
 | `fhirpathLabApi.service.port`    | Service port                            | `8080`                                  |
 | `fhirpathLabApi.resources`       | CPU/memory resource requests and limits | `{}`                                    |
-| `fhirpathLabApi.config`          | Environment variables for the container | `{}`                                    |
+| `fhirpathLabApi.config`          | Environment variables for the container | See below                               |
 | `fhirpathLabApi.tolerations`     | Pod tolerations                         | `[]`                                    |
 | `fhirpathLabApi.affinity`        | Pod affinity rules                      | `{}`                                    |
 | `fhirpathLabApi.nodeSelector`    | Pod node selector                       | `{}`                                    |
+
+### Default configuration
+
+The chart sets the following environment variables by default:
+
+| Variable               | Default value                                                  |
+| ---------------------- | -------------------------------------------------------------- |
+| `CORS_ALLOWED_ORIGINS` | `https://fhirpath-lab.azurewebsites.net,http://localhost:3000` |
+
+Override these in your values file as needed.
 
 ## Examples
 
@@ -49,7 +59,7 @@ fhirpathLabApi:
             memory: "4Gi"
 ```
 
-### Additional CORS origins
+### Custom CORS origins
 
 ```yaml
 fhirpathLabApi:

@@ -20,7 +20,8 @@ fhirpathLabApi:
     # limits:
     #   memory: "4Gi"
 
-  config: {}
+  config:
+    CORS_ALLOWED_ORIGINS: "https://fhirpath-lab.azurewebsites.net,http://localhost:3000"
 
   tolerations: []
   affinity: {}
