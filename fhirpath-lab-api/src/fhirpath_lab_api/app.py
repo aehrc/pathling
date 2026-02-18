@@ -152,6 +152,11 @@ def _handle_evaluate(get_context) -> Response:
     )
 
 
+# Module-level WSGI application instance for use by production WSGI servers
+# (e.g. gunicorn -w 1 fhirpath_lab_api.app:application).
+application = create_app()
+
+
 def _error_response(
     status: int,
     code: str,

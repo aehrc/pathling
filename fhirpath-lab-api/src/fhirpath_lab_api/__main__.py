@@ -21,10 +21,9 @@ Author: John Grimes
 import logging
 import os
 
-from fhirpath_lab_api.app import create_app
+from fhirpath_lab_api.app import application
 
 logging.basicConfig(level=logging.INFO)
 
-app = create_app()
 port = int(os.environ.get("PORT", "8080"))
-app.run(host="0.0.0.0", port=port)
+application.run(host="0.0.0.0", port=port)

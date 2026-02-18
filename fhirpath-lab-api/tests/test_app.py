@@ -221,7 +221,7 @@ def test_cors_headers_present(client, valid_request_body):
         "/$fhirpath-r4",
         data=json.dumps(valid_request_body),
         content_type="application/json",
-        headers={"Origin": "https://fhirpath-lab.com"},
+        headers={"Origin": "https://fhirpath-lab.azurewebsites.net"},
     )
 
     assert response.headers.get("Access-Control-Allow-Origin") is not None
@@ -232,7 +232,7 @@ def test_preflight_cors_request(client):
     response = client.options(
         "/$fhirpath-r4",
         headers={
-            "Origin": "https://fhirpath-lab.com",
+            "Origin": "https://fhirpath-lab.azurewebsites.net",
             "Access-Control-Request-Method": "POST",
             "Access-Control-Request-Headers": "Content-Type",
         },

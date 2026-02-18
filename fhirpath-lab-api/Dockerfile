@@ -22,7 +22,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 RUN python3 -c "from pathling import PathlingContext; pc = PathlingContext.create(); pc.spark.stop()"
 
 ENV PORT=8080
+ENV WEB_WORKERS=1
 
 EXPOSE 8080
 
-CMD ["python3", "-m", "fhirpath_lab_api"]
+CMD sh -c "exec gunicorn --bind 0.0.0.0:${PORT} --workers ${WEB_WORKERS} fhirpath_lab_api.app:application"
