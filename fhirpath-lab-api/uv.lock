@@ -98,7 +98,7 @@ dev = [
 requires-dist = [
     { name = "flask", specifier = ">=3.1,<4" },
     { name = "flask-cors", specifier = ">=6.0,<7" },
-    { name = "pathling", specifier = ">=9.3.1,<10" },
+    { name = "pathling", specifier = ">=9.4.0,<10" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3,<9" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9,<1" },
 ]
@@ -300,15 +300,15 @@ wheels = [
 
 [[package]]
 name = "pathling"
-version = "9.3.1"
+version = "9.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecated" },
     { name = "pyspark" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2f/26/772efa7c69ca75d6894ad52d4a9f5489a41e01b6defd0dab432fd221c130/pathling-9.3.1.tar.gz", hash = "sha256:6668c9de1284280f7b1d21d9dea2e0e415e6070b2adc636c6a0b89acc2818346", size = 53087, upload_time = "2026-02-16T07:58:32.707Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/74/3baeb2eb7e2cdf399f8ac51d3417f351a51f7cd46e2f601f1d3bb59bd5ec/pathling-9.4.0.tar.gz", hash = "sha256:a06fa5e1608af12edf75f7056e2c1b1e8c0378ddce442e953f51f57f978ba832", size = 53733, upload_time = "2026-02-17T23:37:41.669Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/be/e5/343195cb457a6177e343e38eb36ca37a74caf18d482ae79dc414c0601ac7/pathling-9.3.1-py3-none-any.whl", hash = "sha256:1f7469555380f1a911e104d4e900c7bbf54dd3697ed98a84d0e01db66b678b05", size = 72936, upload_time = "2026-02-16T07:58:31.721Z" },
+    { url = "https://files.pythonhosted.org/packages/dc/04/68125076b2b13cab17b955c22822d804ad7a4d108a17154ec70538950818/pathling-9.4.0-py3-none-any.whl", hash = "sha256:33acd683a5baec3b6af75e7474d3ad2a18a843d88c24978bd7ce7907190c3c12", size = 73625, upload_time = "2026-02-17T23:37:40.627Z" },
 ]
 
 [[package]]
