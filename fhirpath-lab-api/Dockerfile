@@ -17,6 +17,10 @@ RUN python3 -m venv /app/.venv && \
     /app/.venv/bin/pip install --no-cache-dir .
 
 ENV PATH="/app/.venv/bin:$PATH"
+
+# This caches the download of the Spark dependencies at build time.
+RUN python3 -c "from pathling import PathlingContext; pc = PathlingContext.create(); pc.spark.stop()"
+
 ENV PORT=8080
 
 EXPOSE 8080
