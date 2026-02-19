@@ -21,12 +21,15 @@
  * @author John Grimes
  */
 
-import { Box, Flex, Select, Text, TextField } from "@radix-ui/themes";
+import { Cross2Icon, PlusIcon } from "@radix-ui/react-icons";
+import { Box, Button, Card, Flex, IconButton, Select, Text, TextField } from "@radix-ui/themes";
 
 import { ResourceTypePicker } from "./ResourceTypePicker";
 import { OUTPUT_FORMATS } from "../../types/exportOptions";
+import { SearchParamsInput, createEmptyRow } from "../SearchParamsInput";
 
-import type { ExportOptionsValues } from "../../types/exportOptions";
+import type { SearchParamCapability } from "../../hooks/useServerCapabilities";
+import type { ExportOptionsValues, TypeFilterState } from "../../types/exportOptions";
 
 interface ExportOptionsProps {
   /** Available resource types for selection. */
@@ -37,17 +40,20 @@ interface ExportOptionsProps {
   onChange: (values: ExportOptionsValues) => void;
   /** Whether to hide the outputFormat field. */
   hideOutputFormat?: boolean;
+  /** Search parameters per resource type from the CapabilityStatement. */
+  searchParams?: Record<string, SearchParamCapability[]>;
 }
 
 /**
  * Form fields for configuring bulk export options including resource types,
- * date filters, elements, and output format.
+ * date filters, elements, output format, and type filters.
  *
  * @param props - The component props.
  * @param props.resourceTypes - Available resource types for selection.
  * @param props.values - Current export options values.
  * @param props.onChange - Callback when any option value changes.
  * @param props.hideOutputFormat - Whether to hide the outputFormat field.
+ * @param props.searchParams - Search parameters per resource type.
  * @returns The export options component.
  */
 export function ExportOptions({
@@ -55,6 +61,7 @@ export function ExportOptions({
   values,
   onChange,
   hideOutputFormat = false,
+  searchParams,
 }: Readonly<ExportOptionsProps>) {
   /**
    * Updates a single option value.
@@ -67,6 +74,40 @@ export function ExportOptions({
     value: ExportOptionsValues[K],
   ) => {
     onChange({ ...values, [key]: value });
+  };
+
+  /**
+   * Updates the type filters list.
+   *
+   * @param updater - Function that produces the new type filters array.
+   */
+  const updateTypeFilters = (updater: (prev: TypeFilterState[]) => TypeFilterState[]) => {
+    updateOption("typeFilters", updater(values.typeFilters));
+  };
+
+  const addTypeFilter = () => {
+    updateTypeFilters((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), resourceType: "", rows: [createEmptyRow()] },
+    ]);
+  };
+
+  const removeTypeFilter = (id: string) => {
+    updateTypeFilters((prev) => prev.filter((entry) => entry.id !== id));
+  };
+
+  const updateTypeFilterResourceType = (id: string, resourceType: string) => {
+    updateTypeFilters((prev) =>
+      prev.map((entry) =>
+        entry.id === id ? { ...entry, resourceType, rows: [createEmptyRow()] } : entry,
+      ),
+    );
+  };
+
+  const updateTypeFilterRows = (id: string, rows: TypeFilterState["rows"]) => {
+    updateTypeFilters((prev) =>
+      prev.map((entry) => (entry.id === id ? { ...entry, rows } : entry)),
+    );
   };
 
   return (
@@ -143,6 +184,69 @@ export function ExportOptions({
           </Text>
         </Box>
       )}
+
+      <Box>
+        <Flex justify="between" align="center" mb="2">
+          <Text as="label" size="2" weight="medium">
+            Type filters
+          </Text>
+          <Button size="1" variant="soft" onClick={addTypeFilter}>
+            <PlusIcon />
+            Add type filter
+          </Button>
+        </Flex>
+        {values.typeFilters.length > 0 ? (
+          <Flex direction="column" gap="3">
+            {values.typeFilters.map((entry) => (
+              <Card key={entry.id} variant="surface">
+                <Flex direction="column" gap="3">
+                  <Flex justify="between" align="center">
+                    <Box style={{ flex: 1 }}>
+                      <Select.Root
+                        value={entry.resourceType}
+                        onValueChange={(value) => updateTypeFilterResourceType(entry.id, value)}
+                      >
+                        <Select.Trigger
+                          placeholder="Select resource type..."
+                          style={{ width: "100%" }}
+                        />
+                        <Select.Content>
+                          {resourceTypes.map((rt) => (
+                            <Select.Item key={rt} value={rt}>
+                              {rt}
+                            </Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Root>
+                    </Box>
+                    <IconButton
+                      size="2"
+                      variant="soft"
+                      color="red"
+                      ml="2"
+                      onClick={() => removeTypeFilter(entry.id)}
+                    >
+                      <Cross2Icon />
+                    </IconButton>
+                  </Flex>
+                  {entry.resourceType && (
+                    <SearchParamsInput
+                      availableParams={searchParams?.[entry.resourceType] ?? []}
+                      rows={entry.rows}
+                      onChange={(rows) => updateTypeFilterRows(entry.id, rows)}
+                    />
+                  )}
+                </Flex>
+              </Card>
+            ))}
+          </Flex>
+        ) : (
+          <Text size="1" color="gray">
+            No type filters configured. Type filters allow filtering exported resources using FHIR
+            search parameters.
+          </Text>
+        )}
+      </Box>
     </Flex>
   );
 }

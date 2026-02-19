@@ -33,6 +33,7 @@ import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useServerCapabilities } from "../hooks";
 
+import type { SearchParamCapability } from "../hooks/useServerCapabilities";
 import type { ImportJob, ImportRequest } from "../types/import";
 import type { ImportPnpRequest } from "../types/importPnp";
 
@@ -94,6 +95,15 @@ export function Import() {
     setImports((prev) => prev.filter((job) => job.id !== id));
   };
 
+  // Build search parameters mapping from capabilities.
+  let searchParams: Record<string, SearchParamCapability[]> | undefined;
+  if (capabilities?.resources) {
+    searchParams = {};
+    for (const resource of capabilities.resources) {
+      searchParams[resource.type] = resource.searchParams;
+    }
+  }
+
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
     return (
@@ -138,6 +148,7 @@ export function Import() {
                 isSubmitting={false}
                 disabled={false}
                 resourceTypes={capabilities?.resourceTypes ?? []}
+                searchParams={searchParams}
               />
             </Tabs.Content>
           </Box>

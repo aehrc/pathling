@@ -112,7 +112,7 @@ describe("ExportOptions", () => {
       expect(screen.queryByText(/output format/i)).not.toBeInTheDocument();
     });
 
-    it("does not render type filters or include associated data fields", () => {
+    it("renders the type filters section with add button", () => {
       render(
         <ExportOptions
           resourceTypes={defaultResourceTypes}
@@ -121,7 +121,31 @@ describe("ExportOptions", () => {
         />,
       );
 
-      expect(screen.queryByText(/type filters/i)).not.toBeInTheDocument();
+      expect(screen.getByText("Type filters")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /add type filter/i })).toBeInTheDocument();
+    });
+
+    it("shows empty state text when no type filters are configured", () => {
+      render(
+        <ExportOptions
+          resourceTypes={defaultResourceTypes}
+          values={DEFAULT_EXPORT_OPTIONS}
+          onChange={mockOnChange}
+        />,
+      );
+
+      expect(screen.getByText(/no type filters configured/i)).toBeInTheDocument();
+    });
+
+    it("does not render include associated data field", () => {
+      render(
+        <ExportOptions
+          resourceTypes={defaultResourceTypes}
+          values={DEFAULT_EXPORT_OPTIONS}
+          onChange={mockOnChange}
+        />,
+      );
+
       expect(screen.queryByText(/include associated data/i)).not.toBeInTheDocument();
     });
   });

@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Type filters section in export form
 
@@ -93,54 +93,11 @@ SHALL be excluded.
 - **THEN** the export API request SHALL include the query parameter
   `_typeFilter=Patient?active=true`
 
-#### Scenario: Export with multiple type filters for different types
-
-- **WHEN** the user adds a type filter entry for "Patient" with parameter
-  "active" = "true" and another entry for "Observation" with parameter "code" =
-  "8867-4", and submits the export
-- **THEN** the export API request SHALL include
-  `_typeFilter=Patient?active=true` and `_typeFilter=Observation?code=8867-4`
-
-#### Scenario: Export with multiple type filters for the same type (OR logic)
-
-- **WHEN** the user adds two type filter entries both for "Observation", one with
-  parameter "code" = "8867-4" and another with parameter "code" = "8310-5", and
-  submits the export
-- **THEN** the export API request SHALL include
-  `_typeFilter=Observation?code=8867-4` and
-  `_typeFilter=Observation?code=8310-5`
-
-#### Scenario: Type filter entry with multiple search parameters (AND logic)
-
-- **WHEN** the user adds a type filter entry for "Observation" with parameters
-  "code" = "8867-4" and "date" = "ge2024-01-01", and submits the export
-- **THEN** the export API request SHALL include
-  `_typeFilter=Observation?code=8867-4&date=ge2024-01-01`
-
 #### Scenario: Incomplete type filter entries are excluded
 
 - **WHEN** the user adds a type filter entry with no resource type selected and
   submits the export
 - **THEN** that entry SHALL be excluded from the export API request
-
-#### Scenario: Type filter entry with empty parameter rows is excluded
-
-- **WHEN** the user adds a type filter entry with resource type "Patient" but
-  all parameter rows have empty names or values, and submits the export
-- **THEN** that entry SHALL be excluded from the export API request
-
-### Requirement: ExportRequest type extended for type filters
-
-The `ExportRequest` interface SHALL include a `typeFilters` field of type
-`Array<{ resourceType: string; params: Record<string, string[]> }>` to carry
-structured type filter data from the form to the export card.
-
-#### Scenario: ExportRequest with type filters
-
-- **WHEN** an export is submitted with a type filter for "Patient" with parameter
-  "active" = "true"
-- **THEN** the `ExportRequest` object SHALL contain
-  `typeFilters: [{ resourceType: "Patient", params: { active: ["true"] } }]`
 
 ### Requirement: ExportOptionsValues extended with typeFilters
 
@@ -173,21 +130,6 @@ type filter entries from `exportOptions.typeFilters` SHALL be serialised into
 
 - **WHEN** the user submits the import PnP form with no type filters configured
 - **THEN** the `ImportPnpRequest` SHALL have `typeFilters` as `undefined`
-
-### Requirement: BulkExportRequest and API support for typeFilters
-
-The `BulkExportRequest` interface SHALL include a `typeFilters` field of type
-`string[]` containing pre-serialised `_typeFilter` strings. The
-`BulkExportBaseOptions` interface SHALL include a `typeFilters` field of type
-`string[]`. The `buildExportParams` function SHALL include `_typeFilter` entries
-in the query parameters sent to the server, supporting multiple values.
-
-#### Scenario: API request includes typeFilter query parameters
-
-- **WHEN** a bulk export is kicked off with
-  `typeFilters: ["Patient?active=true", "Observation?code=8867-4"]`
-- **THEN** the HTTP request to the server SHALL include query parameters
-  `_typeFilter=Patient?active=true&_typeFilter=Observation?code=8867-4`
 
 ### Requirement: Remove raw typeFilters and showExtendedOptions from ExportOptions
 

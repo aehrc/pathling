@@ -33,6 +33,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "../../../test/testUtils";
 import { ImportPnpForm } from "../ImportPnpForm";
 
+import type { SearchParamCapability } from "../../../hooks/useServerCapabilities";
 import type { ImportPnpRequest } from "../../../types/importPnp";
 
 describe("ImportPnpForm", () => {
@@ -240,6 +241,77 @@ describe("ImportPnpForm", () => {
 
       const request = mockOnSubmit.mock.calls[0][0] as ImportPnpRequest;
       expect(request.types).toContain("Patient");
+    });
+
+    it("includes type filters in the request when configured", async () => {
+      const searchParams: Record<string, SearchParamCapability[]> = {
+        Patient: [
+          { name: "gender", type: "token" },
+          { name: "active", type: "token" },
+        ],
+        Observation: [{ name: "status", type: "token" }],
+      };
+      const user = userEvent.setup();
+      render(
+        <ImportPnpForm
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+          searchParams={searchParams}
+        />,
+      );
+
+      // Enter export URL.
+      const urlInput = screen.getByPlaceholderText(/https:\/\/example.org\/fhir\/\$export/i);
+      await user.type(urlInput, "https://server.example.org/fhir/$export");
+
+      // Expand export options.
+      const trigger = screen.getByText(/export options/i);
+      await user.click(trigger);
+
+      // Add a type filter entry and select Patient.
+      await user.click(screen.getByRole("button", { name: /add type filter/i }));
+      // The first combobox is the input format selector; the type filter resource type
+      // selector is the next one.
+      const comboboxes = screen.getAllByRole("combobox");
+      const resourceTypeCombobox = comboboxes[comboboxes.length - 1];
+      await user.click(resourceTypeCombobox);
+      await user.click(screen.getByRole("option", { name: "Patient" }));
+
+      // Select search parameter and enter value.
+      const paramComboboxes = screen.getAllByRole("combobox");
+      const paramNameCombobox = paramComboboxes[paramComboboxes.length - 1];
+      await user.click(paramNameCombobox);
+      await user.click(screen.getByRole("option", { name: /active/i }));
+
+      const valueInput = screen.getByPlaceholderText(/e\.g\., male/i);
+      await user.type(valueInput, "true");
+
+      await user.click(screen.getByRole("button", { name: /start import/i }));
+
+      const request = mockOnSubmit.mock.calls[0][0] as ImportPnpRequest;
+      expect(request.typeFilters).toEqual(["Patient?active=true"]);
+    });
+
+    it("submits without type filters when none are configured", async () => {
+      const user = userEvent.setup();
+      render(
+        <ImportPnpForm
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+        />,
+      );
+
+      // Enter export URL and submit.
+      const urlInput = screen.getByPlaceholderText(/https:\/\/example.org\/fhir\/\$export/i);
+      await user.type(urlInput, "https://server.example.org/fhir/$export");
+      await user.click(screen.getByRole("button", { name: /start import/i }));
+
+      const request = mockOnSubmit.mock.calls[0][0] as ImportPnpRequest;
+      expect(request.typeFilters).toBeUndefined();
     });
   });
 

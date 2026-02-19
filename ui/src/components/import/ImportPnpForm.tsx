@@ -27,10 +27,12 @@ import { Box, Button, Card, Flex, Heading, Select, Text, TextField } from "@radi
 import { useState } from "react";
 
 import { SaveModeField } from "./SaveModeField";
-import { DEFAULT_EXPORT_OPTIONS } from "../../types/exportOptions";
+import { serialiseTypeFilters } from "../../types/export";
+import { DEFAULT_EXPORT_OPTIONS, serialiseTypeFilterState } from "../../types/exportOptions";
 import { IMPORT_FORMATS } from "../../types/import";
 import { ExportOptions } from "../export/ExportOptions";
 
+import type { SearchParamCapability } from "../../hooks/useServerCapabilities";
 import type { ExportOptionsValues } from "../../types/exportOptions";
 import type { ImportFormat, SaveMode } from "../../types/import";
 import type { ExportType, ImportPnpRequest } from "../../types/importPnp";
@@ -40,6 +42,8 @@ interface ImportPnpFormProps {
   isSubmitting: boolean;
   disabled: boolean;
   resourceTypes: string[];
+  /** Search parameters per resource type from the CapabilityStatement. */
+  searchParams?: Record<string, SearchParamCapability[]>;
 }
 
 /**
@@ -50,6 +54,7 @@ interface ImportPnpFormProps {
  * @param root0.isSubmitting - Whether an import is in progress.
  * @param root0.disabled - Whether the form is disabled.
  * @param root0.resourceTypes - Available resource types for selection.
+ * @param root0.searchParams - Search parameters per resource type.
  * @returns The import PnP form component.
  */
 export function ImportPnpForm({
@@ -57,6 +62,7 @@ export function ImportPnpForm({
   isSubmitting,
   disabled,
   resourceTypes,
+  searchParams,
 }: Readonly<ImportPnpFormProps>) {
   const [exportUrl, setExportUrl] = useState("");
   const [saveMode, setSaveMode] = useState<SaveMode>("overwrite");
@@ -66,6 +72,10 @@ export function ImportPnpForm({
   const exportType: ExportType = "dynamic";
 
   const handleSubmit = () => {
+    // Serialise type filter state into TypeFilterEntry[], then into strings.
+    const typeFilterEntries = serialiseTypeFilterState(exportOptions.typeFilters);
+    const typeFilterStrings = serialiseTypeFilters(typeFilterEntries);
+
     const request: ImportPnpRequest = {
       exportUrl,
       exportType,
@@ -76,6 +86,7 @@ export function ImportPnpForm({
       since: exportOptions.since || undefined,
       until: exportOptions.until || undefined,
       elements: exportOptions.elements || undefined,
+      typeFilters: typeFilterStrings,
     };
     onSubmit(request);
   };
@@ -143,6 +154,7 @@ export function ImportPnpForm({
                 values={exportOptions}
                 onChange={setExportOptions}
                 hideOutputFormat
+                searchParams={searchParams}
               />
             </Box>
           </Collapsible.Content>

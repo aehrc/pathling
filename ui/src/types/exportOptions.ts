@@ -21,6 +21,19 @@
  * @author John Grimes
  */
 
+import type { TypeFilterEntry } from "./export";
+import type { SearchParamRowData } from "../components/SearchParamsInput";
+
+/** Internal state for a single type filter entry. */
+export interface TypeFilterState {
+  /** Unique identifier for the entry. */
+  id: string;
+  /** The selected resource type. */
+  resourceType: string;
+  /** Search parameter rows for this entry. */
+  rows: SearchParamRowData[];
+}
+
 /**
  * Values for configuring bulk export options.
  */
@@ -35,6 +48,8 @@ export interface ExportOptionsValues {
   elements: string;
   /** Output format MIME type for the export. */
   outputFormat: string;
+  /** Type filter entries for restricting exported resources. */
+  typeFilters: TypeFilterState[];
 }
 
 /**
@@ -46,7 +61,35 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptionsValues = {
   until: "",
   elements: "",
   outputFormat: "",
+  typeFilters: [],
 };
+
+/**
+ * Serialises type filter state entries into the format expected by export
+ * requests. Entries with no resource type selected are excluded.
+ *
+ * @param entries - The type filter state entries.
+ * @returns Array of TypeFilterEntry objects, or undefined if empty.
+ */
+export function serialiseTypeFilterState(
+  entries: TypeFilterState[],
+): TypeFilterEntry[] | undefined {
+  const result: TypeFilterEntry[] = [];
+  for (const entry of entries) {
+    if (!entry.resourceType) continue;
+    const params: Record<string, string[]> = {};
+    for (const row of entry.rows) {
+      if (row.paramName && row.value) {
+        if (!params[row.paramName]) {
+          params[row.paramName] = [];
+        }
+        params[row.paramName].push(row.value);
+      }
+    }
+    result.push({ resourceType: entry.resourceType, params });
+  }
+  return result.length > 0 ? result : undefined;
+}
 
 /**
  * Output format options for bulk export.

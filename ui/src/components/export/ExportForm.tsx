@@ -21,28 +21,16 @@
  * @author John Grimes
  */
 
-import { Cross2Icon, PlayIcon, PlusIcon } from "@radix-ui/react-icons";
-import {
-  Box,
-  Button,
-  Card,
-  Flex,
-  Heading,
-  IconButton,
-  Select,
-  Text,
-  TextField,
-} from "@radix-ui/themes";
+import { PlayIcon } from "@radix-ui/react-icons";
+import { Box, Button, Card, Flex, Heading, Select, Text, TextField } from "@radix-ui/themes";
 import { useState } from "react";
 
 import { ExportOptions } from "./ExportOptions";
-import { DEFAULT_EXPORT_OPTIONS } from "../../types/exportOptions";
-import { SearchParamsInput, createEmptyRow } from "../SearchParamsInput";
+import { DEFAULT_EXPORT_OPTIONS, serialiseTypeFilterState } from "../../types/exportOptions";
 
 import type { SearchParamCapability } from "../../hooks/useServerCapabilities";
-import type { ExportLevel, ExportRequest, TypeFilterEntry } from "../../types/export";
+import type { ExportLevel, ExportRequest } from "../../types/export";
 import type { ExportOptionsValues } from "../../types/exportOptions";
-import type { SearchParamRowData } from "../SearchParamsInput";
 
 interface ExportFormProps {
   onSubmit: (request: ExportRequest) => void;
@@ -51,44 +39,12 @@ interface ExportFormProps {
   searchParams?: Record<string, SearchParamCapability[]>;
 }
 
-/** Internal state for a single type filter entry. */
-interface TypeFilterState {
-  id: string;
-  resourceType: string;
-  rows: SearchParamRowData[];
-}
-
 const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
   { value: "system", label: "All data in system" },
   { value: "all-patients", label: "All patient data" },
   { value: "patient", label: "Data for single patient" },
   { value: "group", label: "Data for patients in group" },
 ];
-
-/**
- * Serialises type filter entries into the format expected by the ExportRequest.
- * Entries with no resource type selected or no non-empty rows are excluded.
- *
- * @param entries - The internal type filter state entries.
- * @returns Array of TypeFilterEntry objects, or undefined if empty.
- */
-function serialiseTypeFilters(entries: TypeFilterState[]): TypeFilterEntry[] | undefined {
-  const result: TypeFilterEntry[] = [];
-  for (const entry of entries) {
-    if (!entry.resourceType) continue;
-    const params: Record<string, string[]> = {};
-    for (const row of entry.rows) {
-      if (row.paramName && row.value) {
-        if (!params[row.paramName]) {
-          params[row.paramName] = [];
-        }
-        params[row.paramName].push(row.value);
-      }
-    }
-    result.push({ resourceType: entry.resourceType, params });
-  }
-  return result.length > 0 ? result : undefined;
-}
 
 /**
  * Form for configuring and starting a bulk data export.
@@ -104,30 +60,6 @@ export function ExportForm({ onSubmit, resourceTypes, searchParams }: Readonly<E
   const [exportOptions, setExportOptions] = useState<ExportOptionsValues>(DEFAULT_EXPORT_OPTIONS);
   const [patientId, setPatientId] = useState("");
   const [groupId, setGroupId] = useState("");
-  const [typeFilters, setTypeFilters] = useState<TypeFilterState[]>([]);
-
-  const addTypeFilter = () => {
-    setTypeFilters((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), resourceType: "", rows: [createEmptyRow()] },
-    ]);
-  };
-
-  const removeTypeFilter = (id: string) => {
-    setTypeFilters((prev) => prev.filter((entry) => entry.id !== id));
-  };
-
-  const updateTypeFilterResourceType = (id: string, resourceType: string) => {
-    setTypeFilters((prev) =>
-      prev.map((entry) =>
-        entry.id === id ? { ...entry, resourceType, rows: [createEmptyRow()] } : entry,
-      ),
-    );
-  };
-
-  const updateTypeFilterRows = (id: string, rows: SearchParamRowData[]) => {
-    setTypeFilters((prev) => prev.map((entry) => (entry.id === id ? { ...entry, rows } : entry)));
-  };
 
   const handleSubmit = () => {
     const request: ExportRequest = {
@@ -139,7 +71,7 @@ export function ExportForm({ onSubmit, resourceTypes, searchParams }: Readonly<E
       patientId: level === "patient" ? patientId : undefined,
       groupId: level === "group" ? groupId : undefined,
       outputFormat: exportOptions.outputFormat || undefined,
-      typeFilters: serialiseTypeFilters(typeFilters),
+      typeFilters: serialiseTypeFilterState(exportOptions.typeFilters),
     };
     onSubmit(request);
   };
@@ -195,70 +127,8 @@ export function ExportForm({ onSubmit, resourceTypes, searchParams }: Readonly<E
           resourceTypes={resourceTypes}
           values={exportOptions}
           onChange={setExportOptions}
+          searchParams={searchParams}
         />
-
-        <Box>
-          <Flex justify="between" align="center" mb="2">
-            <Text as="label" size="2" weight="medium">
-              Type filters
-            </Text>
-            <Button size="1" variant="soft" onClick={addTypeFilter}>
-              <PlusIcon />
-              Add type filter
-            </Button>
-          </Flex>
-          {typeFilters.length > 0 ? (
-            <Flex direction="column" gap="3">
-              {typeFilters.map((entry) => (
-                <Card key={entry.id} variant="surface">
-                  <Flex direction="column" gap="3">
-                    <Flex justify="between" align="center">
-                      <Box style={{ flex: 1 }}>
-                        <Select.Root
-                          value={entry.resourceType}
-                          onValueChange={(value) => updateTypeFilterResourceType(entry.id, value)}
-                        >
-                          <Select.Trigger
-                            placeholder="Select resource type..."
-                            style={{ width: "100%" }}
-                          />
-                          <Select.Content>
-                            {resourceTypes.map((rt) => (
-                              <Select.Item key={rt} value={rt}>
-                                {rt}
-                              </Select.Item>
-                            ))}
-                          </Select.Content>
-                        </Select.Root>
-                      </Box>
-                      <IconButton
-                        size="2"
-                        variant="soft"
-                        color="red"
-                        ml="2"
-                        onClick={() => removeTypeFilter(entry.id)}
-                      >
-                        <Cross2Icon />
-                      </IconButton>
-                    </Flex>
-                    {entry.resourceType && (
-                      <SearchParamsInput
-                        availableParams={searchParams?.[entry.resourceType] ?? []}
-                        rows={entry.rows}
-                        onChange={(rows) => updateTypeFilterRows(entry.id, rows)}
-                      />
-                    )}
-                  </Flex>
-                </Card>
-              ))}
-            </Flex>
-          ) : (
-            <Text size="1" color="gray">
-              No type filters configured. Type filters allow filtering exported resources using FHIR
-              search parameters.
-            </Text>
-          )}
-        </Box>
 
         <Button
           size="3"
