@@ -33,6 +33,7 @@ import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useServerCapabilities } from "../hooks";
 
+import type { SearchParamCapability } from "../hooks/useServerCapabilities";
 import type { ExportRequest } from "../types/export";
 
 interface ExportJob {
@@ -54,6 +55,15 @@ export function Export() {
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
+
+  // Build search parameters mapping from capabilities.
+  let searchParams: Record<string, SearchParamCapability[]> | undefined;
+  if (capabilities?.resources) {
+    searchParams = {};
+    for (const resource of capabilities.resources) {
+      searchParams[resource.type] = resource.searchParams;
+    }
+  }
 
   const handleExport = (request: ExportRequest) => {
     const newExport: ExportJob = {
@@ -92,7 +102,11 @@ export function Export() {
     <>
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
         <Box style={{ flex: 1 }}>
-          <ExportForm onSubmit={handleExport} resourceTypes={capabilities?.resourceTypes ?? []} />
+          <ExportForm
+            onSubmit={handleExport}
+            resourceTypes={capabilities?.resourceTypes ?? []}
+            searchParams={searchParams}
+          />
         </Box>
 
         <Flex direction="column" gap="3" style={{ flex: 1 }}>

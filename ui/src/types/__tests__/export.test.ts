@@ -26,7 +26,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { getExportOutputFiles } from "../export";
+import {
+  getExportOutputFiles,
+  serialiseTypeFilterEntry,
+  serialiseTypeFilters,
+} from "../export";
 
 import type { Parameters } from "fhir/r4";
 
@@ -244,5 +248,60 @@ describe("getExportOutputFiles", () => {
       "Observation",
     ]);
     expect(outputs.map((o) => o.count)).toEqual([1000, 1000, 50000]);
+  });
+});
+
+describe("serialiseTypeFilterEntry", () => {
+  it("serialises entry with a single parameter", () => {
+    const result = serialiseTypeFilterEntry({
+      resourceType: "Patient",
+      params: { gender: ["female"] },
+    });
+    expect(result).toBe("Patient?gender=female");
+  });
+
+  it("serialises entry with multiple parameters", () => {
+    const result = serialiseTypeFilterEntry({
+      resourceType: "Patient",
+      params: { gender: ["female"], active: ["true"] },
+    });
+    expect(result).toBe("Patient?gender=female&active=true");
+  });
+
+  it("serialises entry with multiple values for the same parameter", () => {
+    const result = serialiseTypeFilterEntry({
+      resourceType: "Observation",
+      params: { code: ["1234-5", "6789-0"] },
+    });
+    expect(result).toBe("Observation?code=1234-5&code=6789-0");
+  });
+
+  it("serialises entry with no parameters as just the resource type", () => {
+    const result = serialiseTypeFilterEntry({
+      resourceType: "Patient",
+      params: {},
+    });
+    expect(result).toBe("Patient");
+  });
+});
+
+describe("serialiseTypeFilters", () => {
+  it("serialises multiple entries", () => {
+    const result = serialiseTypeFilters([
+      { resourceType: "Patient", params: { gender: ["female"] } },
+      { resourceType: "Observation", params: { status: ["final"] } },
+    ]);
+    expect(result).toEqual([
+      "Patient?gender=female",
+      "Observation?status=final",
+    ]);
+  });
+
+  it("returns undefined for empty array", () => {
+    expect(serialiseTypeFilters([])).toBeUndefined();
+  });
+
+  it("returns undefined for undefined input", () => {
+    expect(serialiseTypeFilters(undefined)).toBeUndefined();
   });
 });

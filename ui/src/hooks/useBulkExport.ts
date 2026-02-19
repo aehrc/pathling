@@ -61,6 +61,8 @@ export interface BulkExportRequest {
   elements?: string;
   /** Output format. */
   outputFormat?: string;
+  /** Pre-serialised _typeFilter strings (e.g. "Patient?gender=female"). */
+  typeFilters?: string[];
 }
 
 /**
@@ -76,10 +78,8 @@ export type ExportManifest = Parameters;
 /**
  * Result of useBulkExport hook.
  */
-export interface UseBulkExportResult extends UseAsyncJobResult<
-  BulkExportRequest,
-  ExportManifest
-> {
+export interface UseBulkExportResult
+  extends UseAsyncJobResult<BulkExportRequest, ExportManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -122,6 +122,7 @@ export const useBulkExport: UseBulkExportFn = (options) => {
           until: request.until,
           elements: request.elements,
           outputFormat: request.outputFormat,
+          typeFilters: request.typeFilters,
           accessToken,
         };
 

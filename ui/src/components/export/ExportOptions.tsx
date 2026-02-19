@@ -35,21 +35,18 @@ interface ExportOptionsProps {
   values: ExportOptionsValues;
   /** Callback when any option value changes. */
   onChange: (values: ExportOptionsValues) => void;
-  /** Whether to show extended options (outputFormat, typeFilters, includeAssociatedData). */
-  showExtendedOptions?: boolean;
   /** Whether to hide the outputFormat field. */
   hideOutputFormat?: boolean;
 }
 
 /**
  * Form fields for configuring bulk export options including resource types,
- * date filters, elements, and advanced options.
+ * date filters, elements, and output format.
  *
  * @param props - The component props.
  * @param props.resourceTypes - Available resource types for selection.
  * @param props.values - Current export options values.
  * @param props.onChange - Callback when any option value changes.
- * @param props.showExtendedOptions - Whether to show extended options.
  * @param props.hideOutputFormat - Whether to hide the outputFormat field.
  * @returns The export options component.
  */
@@ -57,7 +54,6 @@ export function ExportOptions({
   resourceTypes,
   values,
   onChange,
-  showExtendedOptions = false,
   hideOutputFormat = false,
 }: Readonly<ExportOptionsProps>) {
   /**
@@ -146,38 +142,6 @@ export function ExportOptions({
             Output format for the export data.
           </Text>
         </Box>
-      )}
-
-      {showExtendedOptions && (
-        <>
-          <Box>
-            <Text as="label" size="2" weight="medium" mb="1">
-              Type filters (optional)
-            </Text>
-            <TextField.Root
-              placeholder="e.g., Patient?active=true,Observation?status=final"
-              value={values.typeFilters}
-              onChange={(e) => updateOption("typeFilters", e.target.value)}
-            />
-            <Text size="1" color="gray" mt="1">
-              Comma-separated FHIR search queries to filter resources.
-            </Text>
-          </Box>
-
-          <Box>
-            <Text as="label" size="2" weight="medium" mb="1">
-              Include associated data (optional)
-            </Text>
-            <TextField.Root
-              placeholder="e.g., LatestProvenanceResources,RelevantProvenanceResources"
-              value={values.includeAssociatedData}
-              onChange={(e) => updateOption("includeAssociatedData", e.target.value)}
-            />
-            <Text size="1" color="gray" mt="1">
-              Comma-separated list of pre-defined associated data sets.
-            </Text>
-          </Box>
-        </>
       )}
     </Flex>
   );

@@ -28,7 +28,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { OperationOutcomeDisplay } from "../../components/error/OperationOutcomeDisplay";
 import { useBulkExport, useDownloadFile } from "../../hooks";
-import { getExportOutputFiles } from "../../types/export";
+import { getExportOutputFiles, serialiseTypeFilters } from "../../types/export";
 import { formatDateTime } from "../../utils";
 
 import type { BulkExportType } from "../../hooks/useBulkExport";
@@ -125,6 +125,7 @@ export function ExportCard({ request, createdAt, onError, onClose }: Readonly<Ex
         patientId: request.patientId,
         groupId: request.groupId,
         outputFormat: request.outputFormat,
+        typeFilters: serialiseTypeFilters(request.typeFilters),
       });
     }
   }, [request, startWith]);

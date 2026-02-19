@@ -164,26 +164,6 @@ describe("ImportPnpForm", () => {
       expect(screen.getByText(/resource types/i)).toBeInTheDocument();
     });
 
-    it("shows extended options when expanded", async () => {
-      const user = userEvent.setup();
-      render(
-        <ImportPnpForm
-          onSubmit={mockOnSubmit}
-          isSubmitting={false}
-          disabled={false}
-          resourceTypes={defaultResourceTypes}
-        />,
-      );
-
-      // Click the export options trigger.
-      const trigger = screen.getByText(/export options/i);
-      await user.click(trigger);
-
-      // Extended options should be visible (type filters, include associated data).
-      expect(screen.getByText(/type filters/i)).toBeInTheDocument();
-      expect(screen.getByText(/include associated data/i)).toBeInTheDocument();
-    });
-
     it("hides output format in export options", async () => {
       const user = userEvent.setup();
       render(
@@ -260,89 +240,6 @@ describe("ImportPnpForm", () => {
 
       const request = mockOnSubmit.mock.calls[0][0] as ImportPnpRequest;
       expect(request.types).toContain("Patient");
-    });
-
-    it("includes type filters when specified", async () => {
-      const user = userEvent.setup();
-      render(
-        <ImportPnpForm
-          onSubmit={mockOnSubmit}
-          isSubmitting={false}
-          disabled={false}
-          resourceTypes={defaultResourceTypes}
-        />,
-      );
-
-      // Enter export URL.
-      const urlInput = screen.getByPlaceholderText(/https:\/\/example.org\/fhir\/\$export/i);
-      await user.type(urlInput, "https://server.example.org/fhir/$export");
-
-      // Expand export options.
-      const trigger = screen.getByText(/export options/i);
-      await user.click(trigger);
-
-      // Enter type filters.
-      const typeFiltersInput = screen.getByPlaceholderText(
-        /Patient\?active=true,Observation\?status=final/i,
-      );
-      await user.type(typeFiltersInput, "Patient?gender=female,Observation?status=final");
-
-      await user.click(screen.getByRole("button", { name: /start import/i }));
-
-      const request = mockOnSubmit.mock.calls[0][0] as ImportPnpRequest;
-      expect(request.typeFilters).toEqual(["Patient?gender=female", "Observation?status=final"]);
-    });
-
-    it("includes associated data when specified", async () => {
-      const user = userEvent.setup();
-      render(
-        <ImportPnpForm
-          onSubmit={mockOnSubmit}
-          isSubmitting={false}
-          disabled={false}
-          resourceTypes={defaultResourceTypes}
-        />,
-      );
-
-      // Enter export URL.
-      const urlInput = screen.getByPlaceholderText(/https:\/\/example.org\/fhir\/\$export/i);
-      await user.type(urlInput, "https://server.example.org/fhir/$export");
-
-      // Expand export options.
-      const trigger = screen.getByText(/export options/i);
-      await user.click(trigger);
-
-      // Enter include associated data.
-      const associatedDataInput = screen.getByPlaceholderText(
-        /LatestProvenanceResources,RelevantProvenanceResources/i,
-      );
-      await user.type(associatedDataInput, "LatestProvenanceResources");
-
-      await user.click(screen.getByRole("button", { name: /start import/i }));
-
-      const request = mockOnSubmit.mock.calls[0][0] as ImportPnpRequest;
-      expect(request.includeAssociatedData).toEqual(["LatestProvenanceResources"]);
-    });
-
-    it("does not include empty type filters in the request", async () => {
-      const user = userEvent.setup();
-      render(
-        <ImportPnpForm
-          onSubmit={mockOnSubmit}
-          isSubmitting={false}
-          disabled={false}
-          resourceTypes={defaultResourceTypes}
-        />,
-      );
-
-      // Enter export URL.
-      const urlInput = screen.getByPlaceholderText(/https:\/\/example.org\/fhir\/\$export/i);
-      await user.type(urlInput, "https://server.example.org/fhir/$export");
-
-      await user.click(screen.getByRole("button", { name: /start import/i }));
-
-      const request = mockOnSubmit.mock.calls[0][0] as ImportPnpRequest;
-      expect(request.typeFilters).toBeUndefined();
     });
   });
 

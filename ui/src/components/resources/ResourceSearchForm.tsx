@@ -23,7 +23,6 @@
 
 import { Cross2Icon, MagnifyingGlassIcon, PlusIcon } from "@radix-ui/react-icons";
 import {
-  Badge,
   Box,
   Button,
   Card,
@@ -36,18 +35,15 @@ import {
 } from "@radix-ui/themes";
 import { useRef, useState } from "react";
 
+import { SearchParamsInput, createEmptyRow } from "../SearchParamsInput";
+
 import type { SearchParamCapability } from "../../hooks/useServerCapabilities";
 import type { SearchRequest } from "../../types/search";
+import type { SearchParamRowData } from "../SearchParamsInput";
 
 interface FilterInputWithId {
   id: number;
   expression: string;
-}
-
-interface SearchParamRowData {
-  id: number;
-  paramName: string;
-  value: string;
 }
 
 interface ResourceSearchFormProps {
@@ -95,7 +91,7 @@ export function ResourceSearchForm({
     prevResourceType.current = resourceType;
     idCounter.current = 1;
     setFilters([{ id: 0, expression: "" }]);
-    setParamRows([{ id: 0, paramName: "", value: "" }]);
+    setParamRows([createEmptyRow()]);
   }
 
   const handleSubmit = () => {
@@ -132,20 +128,6 @@ export function ResourceSearchForm({
     setFilters(filters.map((f) => (f.id === id ? { ...f, expression } : f)));
   };
 
-  const addParamRow = () => {
-    setParamRows([...paramRows, { id: idCounter.current++, paramName: "", value: "" }]);
-  };
-
-  const removeParamRow = (id: number) => {
-    if (paramRows.length > 1) {
-      setParamRows(paramRows.filter((row) => row.id !== id));
-    }
-  };
-
-  const updateParamRow = (id: number, field: "paramName" | "value", val: string) => {
-    setParamRows(paramRows.map((row) => (row.id === id ? { ...row, [field]: val } : row)));
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !disabled && !isLoading) {
       handleSubmit();
@@ -176,64 +158,12 @@ export function ResourceSearchForm({
         </Box>
 
         {searchParams && (
-          <Box>
-            <Flex justify="between" align="center" mb="2">
-              <Text as="label" size="2" weight="medium">
-                Search parameters
-              </Text>
-              <Button size="1" variant="soft" onClick={addParamRow}>
-                <PlusIcon />
-                Add parameter
-              </Button>
-            </Flex>
-            <Flex direction="column" gap="2">
-              {paramRows.map((row) => (
-                <Flex key={row.id} gap="2" align="center">
-                  <Box style={{ flex: 1 }}>
-                    <Select.Root
-                      value={row.paramName}
-                      onValueChange={(val) => updateParamRow(row.id, "paramName", val)}
-                    >
-                      <Select.Trigger placeholder="Select parameter..." style={{ width: "100%" }} />
-                      <Select.Content>
-                        {availableParams.map((param) => (
-                          <Select.Item key={param.name} value={param.name}>
-                            <Flex gap="2" align="center">
-                              {param.name}
-                              <Badge size="1" variant="surface">
-                                {param.type}
-                              </Badge>
-                            </Flex>
-                          </Select.Item>
-                        ))}
-                      </Select.Content>
-                    </Select.Root>
-                  </Box>
-                  <Box style={{ flex: 1 }}>
-                    <TextField.Root
-                      placeholder="e.g., male"
-                      value={row.value}
-                      onChange={(e) => updateParamRow(row.id, "value", e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      style={{ minWidth: "100px" }}
-                    />
-                  </Box>
-                  <IconButton
-                    size="2"
-                    variant="soft"
-                    color="red"
-                    onClick={() => removeParamRow(row.id)}
-                    disabled={paramRows.length === 1}
-                  >
-                    <Cross2Icon />
-                  </IconButton>
-                </Flex>
-              ))}
-            </Flex>
-            <Text size="1" color="gray" mt="1">
-              Search parameters use standard FHIR search syntax and are combined with AND logic.
-            </Text>
-          </Box>
+          <SearchParamsInput
+            availableParams={availableParams}
+            rows={paramRows}
+            onChange={setParamRows}
+            onKeyDown={handleKeyDown}
+          />
         )}
 
         <Box>

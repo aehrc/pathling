@@ -30,6 +30,8 @@ export interface BulkExportBaseOptions extends AuthOptions {
   until?: string;
   elements?: string;
   outputFormat?: string;
+  /** Pre-serialised _typeFilter strings (e.g. "Patient?gender=female"). */
+  typeFilters?: string[];
 }
 
 export type SystemExportKickOffOptions = BulkExportBaseOptions;
@@ -87,34 +89,41 @@ export type BulkExportDownloadFn = (
 ) => Promise<ReadableStream>;
 
 /**
- * Builds query parameters for bulk export operations.
+ * Builds query parameters for bulk export operations. Returns URLSearchParams
+ * to support repeated keys (e.g. multiple _typeFilter values).
  *
  * @param options - Export options containing optional filters.
- * @returns Record of query parameter key-value pairs.
+ * @returns URLSearchParams instance with the export query parameters.
  */
-function buildExportParams(
-  options: SystemExportKickOffOptions | AllPatientsExportKickOffOptions,
-): Record<string, string> {
-  const params: Record<string, string> = {};
+export function buildExportParams(
+  options: BulkExportBaseOptions,
+): URLSearchParams {
+  const params = new URLSearchParams();
 
   if (options.types && options.types.length > 0) {
-    params._type = options.types.join(",");
+    params.set("_type", options.types.join(","));
   }
 
   if (options.since) {
-    params._since = options.since;
+    params.set("_since", options.since);
   }
 
   if (options.until) {
-    params._until = options.until;
+    params.set("_until", options.until);
   }
 
   if (options.elements) {
-    params._elements = options.elements;
+    params.set("_elements", options.elements);
   }
 
   if (options.outputFormat) {
-    params._outputFormat = options.outputFormat;
+    params.set("_outputFormat", options.outputFormat);
+  }
+
+  if (options.typeFilters) {
+    for (const filter of options.typeFilters) {
+      params.append("_typeFilter", filter);
+    }
   }
 
   return params;
@@ -131,14 +140,10 @@ function buildExportParams(
 async function kickOffExport(
   baseUrl: string,
   path: string,
-  options: SystemExportKickOffOptions,
+  options: BulkExportBaseOptions,
 ): Promise<BulkExportKickOffResult> {
   const params = buildExportParams(options);
-  const url = buildUrl(
-    baseUrl,
-    path,
-    Object.keys(params).length > 0 ? params : undefined,
-  );
+  const url = buildUrl(baseUrl, path, params);
   const headers = buildHeaders({
     accessToken: options.accessToken,
     prefer: "respond-async",

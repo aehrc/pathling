@@ -87,7 +87,7 @@ export function buildHeaders(options: BuildHeadersOptions = {}): HeadersInit {
 export function buildUrl(
   base: string,
   path: string,
-  params?: Record<string, string>,
+  params?: Record<string, string> | URLSearchParams,
 ): string {
   // Normalise base URL by removing trailing slash.
   const normalisedBase = base.endsWith("/") ? base.slice(0, -1) : base;
@@ -97,9 +97,13 @@ export function buildUrl(
 
   let url = `${normalisedBase}${normalisedPath}`;
 
-  if (params && Object.keys(params).length > 0) {
-    const searchParams = new URLSearchParams(params);
-    url += `?${searchParams.toString()}`;
+  if (params) {
+    const searchParams =
+      params instanceof URLSearchParams ? params : new URLSearchParams(params);
+    const queryString = searchParams.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
   }
 
   return url;

@@ -43,20 +43,6 @@ interface ImportPnpFormProps {
 }
 
 /**
- * Splits a comma-separated string into an array of trimmed non-empty strings.
- *
- * @param value - The comma-separated string to split.
- * @returns Array of trimmed strings, or undefined if empty.
- */
-function splitCommaSeparated(value: string): string[] | undefined {
-  const parts = value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return parts.length > 0 ? parts : undefined;
-}
-
-/**
  * Form for configuring and starting a ping-and-pull import.
  *
  * @param root0 - The component props.
@@ -90,8 +76,6 @@ export function ImportPnpForm({
       since: exportOptions.since || undefined,
       until: exportOptions.until || undefined,
       elements: exportOptions.elements || undefined,
-      typeFilters: splitCommaSeparated(exportOptions.typeFilters),
-      includeAssociatedData: splitCommaSeparated(exportOptions.includeAssociatedData),
     };
     onSubmit(request);
   };
@@ -158,7 +142,6 @@ export function ImportPnpForm({
                 resourceTypes={resourceTypes}
                 values={exportOptions}
                 onChange={setExportOptions}
-                showExtendedOptions
                 hideOutputFormat
               />
             </Box>

@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnauthorizedError } from "../../types/errors";
 import {
   allPatientsExportKickOff,
+  buildExportParams,
   bulkExportDownload,
   bulkExportStatus,
   groupExportKickOff,
@@ -331,6 +332,101 @@ describe("bulkExportStatus", () => {
         pollingUrl: "https://example.com/$job?id=abc",
       }),
     ).rejects.toThrow(UnauthorizedError);
+  });
+});
+
+describe("buildExportParams", () => {
+  it("returns empty URLSearchParams when no options provided", () => {
+    const params = buildExportParams({});
+    expect(params.toString()).toBe("");
+  });
+
+  it("includes _type parameter when types provided", () => {
+    const params = buildExportParams({
+      types: ["Patient", "Observation"],
+    });
+    expect(params.get("_type")).toBe("Patient,Observation");
+  });
+
+  it("includes _since parameter when provided", () => {
+    const params = buildExportParams({
+      since: "2024-01-01T00:00:00Z",
+    });
+    expect(params.get("_since")).toBe("2024-01-01T00:00:00Z");
+  });
+
+  it("includes _until parameter when provided", () => {
+    const params = buildExportParams({
+      until: "2024-12-31T23:59:59Z",
+    });
+    expect(params.get("_until")).toBe("2024-12-31T23:59:59Z");
+  });
+
+  it("includes _elements parameter when provided", () => {
+    const params = buildExportParams({ elements: "id,name,birthDate" });
+    expect(params.get("_elements")).toBe("id,name,birthDate");
+  });
+
+  it("includes _outputFormat parameter when provided", () => {
+    const params = buildExportParams({
+      outputFormat: "application/fhir+ndjson",
+    });
+    expect(params.get("_outputFormat")).toBe("application/fhir+ndjson");
+  });
+
+  it("includes single _typeFilter parameter", () => {
+    const params = buildExportParams({
+      typeFilters: ["Patient?gender=female"],
+    });
+    expect(params.getAll("_typeFilter")).toEqual(["Patient?gender=female"]);
+  });
+
+  it("includes multiple _typeFilter parameters as repeated keys", () => {
+    const params = buildExportParams({
+      typeFilters: ["Patient?gender=female", "Observation?status=final"],
+    });
+    expect(params.getAll("_typeFilter")).toEqual([
+      "Patient?gender=female",
+      "Observation?status=final",
+    ]);
+  });
+
+  it("does not include _typeFilter when array is empty", () => {
+    const params = buildExportParams({ typeFilters: [] });
+    expect(params.has("_typeFilter")).toBe(false);
+  });
+
+  it("includes all parameters together", () => {
+    const params = buildExportParams({
+      types: ["Patient"],
+      since: "2024-01-01T00:00:00Z",
+      elements: "id,name",
+      typeFilters: ["Patient?gender=female"],
+    });
+    expect(params.get("_type")).toBe("Patient");
+    expect(params.get("_since")).toBe("2024-01-01T00:00:00Z");
+    expect(params.get("_elements")).toBe("id,name");
+    expect(params.getAll("_typeFilter")).toEqual(["Patient?gender=female"]);
+  });
+});
+
+describe("systemExportKickOff with _typeFilter", () => {
+  it("includes _typeFilter parameters in the request URL", async () => {
+    const headers = new Headers();
+    headers.set("Content-Location", "https://example.com/$job?id=abc");
+
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 202, headers }),
+    );
+
+    await systemExportKickOff("https://example.com/fhir", {
+      typeFilters: ["Patient?gender=female", "Observation?status=final"],
+    });
+
+    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    // Verify both _typeFilter values are present.
+    expect(calledUrl).toContain("_typeFilter=Patient");
+    expect(calledUrl).toContain("_typeFilter=Observation");
   });
 });
 

@@ -21,8 +21,7 @@
  *
  * These tests verify that the component correctly renders all option fields,
  * handles user input, and notifies parent components of changes through the
- * onChange callback. Tests also cover the conditional display of extended
- * options and the output format field.
+ * onChange callback.
  *
  * @author John Grimes
  */
@@ -112,10 +111,8 @@ describe("ExportOptions", () => {
 
       expect(screen.queryByText(/output format/i)).not.toBeInTheDocument();
     });
-  });
 
-  describe("extended options", () => {
-    it("does not show extended options by default", () => {
+    it("does not render type filters or include associated data fields", () => {
       render(
         <ExportOptions
           resourceTypes={defaultResourceTypes}
@@ -126,50 +123,6 @@ describe("ExportOptions", () => {
 
       expect(screen.queryByText(/type filters/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/include associated data/i)).not.toBeInTheDocument();
-    });
-
-    it("shows extended options when showExtendedOptions is true", () => {
-      render(
-        <ExportOptions
-          resourceTypes={defaultResourceTypes}
-          values={DEFAULT_EXPORT_OPTIONS}
-          onChange={mockOnChange}
-          showExtendedOptions
-        />,
-      );
-
-      expect(screen.getByText(/type filters/i)).toBeInTheDocument();
-      expect(screen.getByText(/include associated data/i)).toBeInTheDocument();
-    });
-
-    it("renders type filters placeholder text", () => {
-      render(
-        <ExportOptions
-          resourceTypes={defaultResourceTypes}
-          values={DEFAULT_EXPORT_OPTIONS}
-          onChange={mockOnChange}
-          showExtendedOptions
-        />,
-      );
-
-      expect(
-        screen.getByPlaceholderText(/Patient\?active=true,Observation\?status=final/i),
-      ).toBeInTheDocument();
-    });
-
-    it("renders include associated data placeholder text", () => {
-      render(
-        <ExportOptions
-          resourceTypes={defaultResourceTypes}
-          values={DEFAULT_EXPORT_OPTIONS}
-          onChange={mockOnChange}
-          showExtendedOptions
-        />,
-      );
-
-      expect(
-        screen.getByPlaceholderText(/LatestProvenanceResources,RelevantProvenanceResources/i),
-      ).toBeInTheDocument();
     });
   });
 
@@ -190,48 +143,6 @@ describe("ExportOptions", () => {
       expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ elements: "id,name" }));
     });
 
-    it("calls onChange when type filters value changes", () => {
-      render(
-        <ExportOptions
-          resourceTypes={defaultResourceTypes}
-          values={DEFAULT_EXPORT_OPTIONS}
-          onChange={mockOnChange}
-          showExtendedOptions
-        />,
-      );
-
-      const typeFiltersInput = screen.getByPlaceholderText(
-        /Patient\?active=true,Observation\?status=final/i,
-      );
-      fireEvent.change(typeFiltersInput, { target: { value: "Patient?gender=female" } });
-
-      expect(mockOnChange).toHaveBeenCalledTimes(1);
-      expect(mockOnChange).toHaveBeenCalledWith(
-        expect.objectContaining({ typeFilters: "Patient?gender=female" }),
-      );
-    });
-
-    it("calls onChange when include associated data value changes", () => {
-      render(
-        <ExportOptions
-          resourceTypes={defaultResourceTypes}
-          values={DEFAULT_EXPORT_OPTIONS}
-          onChange={mockOnChange}
-          showExtendedOptions
-        />,
-      );
-
-      const associatedDataInput = screen.getByPlaceholderText(
-        /LatestProvenanceResources,RelevantProvenanceResources/i,
-      );
-      fireEvent.change(associatedDataInput, { target: { value: "LatestProvenanceResources" } });
-
-      expect(mockOnChange).toHaveBeenCalledTimes(1);
-      expect(mockOnChange).toHaveBeenCalledWith(
-        expect.objectContaining({ includeAssociatedData: "LatestProvenanceResources" }),
-      );
-    });
-
     it("calls onChange when output format is selected", async () => {
       const user = userEvent.setup();
       render(
@@ -243,8 +154,6 @@ describe("ExportOptions", () => {
       );
 
       // Find and click the output format select trigger.
-      // There are multiple comboboxes (resource types and output format), so we need
-      // to find the one for output format specifically.
       const formatTrigger = screen.getByRole("combobox", { name: "" });
       await user.click(formatTrigger);
 
@@ -275,48 +184,6 @@ describe("ExportOptions", () => {
 
       const elementsInput = screen.getByPlaceholderText(/id,meta,name/i) as HTMLInputElement;
       expect(elementsInput.value).toBe("id,name,birthDate");
-    });
-
-    it("displays current type filters value when extended options are shown", () => {
-      const values: ExportOptionsValues = {
-        ...DEFAULT_EXPORT_OPTIONS,
-        typeFilters: "Patient?active=true",
-      };
-
-      render(
-        <ExportOptions
-          resourceTypes={defaultResourceTypes}
-          values={values}
-          onChange={mockOnChange}
-          showExtendedOptions
-        />,
-      );
-
-      const typeFiltersInput = screen.getByPlaceholderText(
-        /Patient\?active=true,Observation\?status=final/i,
-      ) as HTMLInputElement;
-      expect(typeFiltersInput.value).toBe("Patient?active=true");
-    });
-
-    it("displays current include associated data value when extended options are shown", () => {
-      const values: ExportOptionsValues = {
-        ...DEFAULT_EXPORT_OPTIONS,
-        includeAssociatedData: "LatestProvenanceResources",
-      };
-
-      render(
-        <ExportOptions
-          resourceTypes={defaultResourceTypes}
-          values={values}
-          onChange={mockOnChange}
-          showExtendedOptions
-        />,
-      );
-
-      const associatedDataInput = screen.getByPlaceholderText(
-        /LatestProvenanceResources,RelevantProvenanceResources/i,
-      ) as HTMLInputElement;
-      expect(associatedDataInput.value).toBe("LatestProvenanceResources");
     });
   });
 
@@ -367,34 +234,6 @@ describe("ExportOptions", () => {
       );
 
       expect(screen.getByText(/output format for the export data/i)).toBeInTheDocument();
-    });
-
-    it("displays type filters help text when extended options are shown", () => {
-      render(
-        <ExportOptions
-          resourceTypes={defaultResourceTypes}
-          values={DEFAULT_EXPORT_OPTIONS}
-          onChange={mockOnChange}
-          showExtendedOptions
-        />,
-      );
-
-      expect(screen.getByText(/comma-separated fhir search queries/i)).toBeInTheDocument();
-    });
-
-    it("displays include associated data help text when extended options are shown", () => {
-      render(
-        <ExportOptions
-          resourceTypes={defaultResourceTypes}
-          values={DEFAULT_EXPORT_OPTIONS}
-          onChange={mockOnChange}
-          showExtendedOptions
-        />,
-      );
-
-      expect(
-        screen.getByText(/comma-separated list of pre-defined associated data sets/i),
-      ).toBeInTheDocument();
     });
   });
 });

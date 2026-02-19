@@ -25,6 +25,12 @@ import type { Parameters } from "fhir/r4";
 
 export type ExportLevel = "system" | "all-patients" | "patient" | "group";
 
+/** A single type filter entry mapping a resource type to search parameters. */
+export interface TypeFilterEntry {
+  resourceType: string;
+  params: Record<string, string[]>;
+}
+
 export interface ExportRequest {
   level: ExportLevel;
   resourceTypes?: string[];
@@ -34,6 +40,7 @@ export interface ExportRequest {
   patientId?: string;
   groupId?: string;
   outputFormat?: string;
+  typeFilters?: TypeFilterEntry[];
 }
 
 /**
@@ -49,6 +56,38 @@ export interface ExportManifestOutput {
  * Export manifest is a FHIR Parameters resource containing export results.
  */
 export type ExportManifest = Parameters;
+
+/**
+ * Serialises a single TypeFilterEntry into the `_typeFilter` query string
+ * format: `ResourceType?param1=value1&param2=value2`.
+ *
+ * @param entry - The type filter entry to serialise.
+ * @returns The serialised _typeFilter string.
+ */
+export function serialiseTypeFilterEntry(entry: TypeFilterEntry): string {
+  const parts: string[] = [];
+  for (const [name, values] of Object.entries(entry.params)) {
+    for (const value of values) {
+      parts.push(`${name}=${value}`);
+    }
+  }
+  return parts.length > 0
+    ? `${entry.resourceType}?${parts.join("&")}`
+    : entry.resourceType;
+}
+
+/**
+ * Serialises an array of TypeFilterEntry objects into `_typeFilter` strings.
+ *
+ * @param entries - The type filter entries to serialise.
+ * @returns Array of serialised _typeFilter strings, or undefined if empty.
+ */
+export function serialiseTypeFilters(
+  entries: TypeFilterEntry[] | undefined,
+): string[] | undefined {
+  if (!entries || entries.length === 0) return undefined;
+  return entries.map(serialiseTypeFilterEntry);
+}
 
 /**
  * Extracts output file entries from an export manifest Parameters resource.

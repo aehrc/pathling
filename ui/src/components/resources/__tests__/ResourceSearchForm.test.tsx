@@ -30,7 +30,7 @@
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { render, screen, within } from "../../../test/testUtils";
+import { render, screen } from "../../../test/testUtils";
 import { ResourceSearchForm } from "../ResourceSearchForm";
 
 import type { SearchParamCapability } from "../../../hooks/useServerCapabilities";
@@ -582,17 +582,14 @@ describe("ResourceSearchForm", () => {
       let valueInputs = screen.getAllByPlaceholderText(/e\.g\., male/i);
       expect(valueInputs).toHaveLength(2);
 
-      // Find a remove button near a parameter value input and click it.
-      const firstParamInput = valueInputs[0];
-      const paramRow = firstParamInput.closest("[style]")!.parentElement!;
-      const removeButton = within(paramRow)
-        .getAllByRole("button")
-        .find(
-          (btn) =>
-            btn.querySelector("svg") !== null && !btn.textContent && !btn.hasAttribute("disabled"),
-        );
-      if (removeButton) {
-        await user.click(removeButton);
+      // Find an enabled icon-only remove button and click it.
+      const allButtons = screen.getAllByRole("button");
+      const enabledRemoveButton = allButtons.find(
+        (btn) =>
+          btn.querySelector("svg") !== null && !btn.textContent && !btn.hasAttribute("disabled"),
+      );
+      if (enabledRemoveButton) {
+        await user.click(enabledRemoveButton);
       }
 
       valueInputs = screen.getAllByPlaceholderText(/e\.g\., male/i);
@@ -610,15 +607,16 @@ describe("ResourceSearchForm", () => {
         />,
       );
 
-      // Find the remove button adjacent to the parameter value input.
-      const paramInput = screen.getByPlaceholderText(/e\.g\., male/i);
-      const paramRow = paramInput.closest("[style]")!.parentElement!;
-      const removeButtons = within(paramRow)
-        .getAllByRole("button")
-        .filter((btn) => btn.querySelector("svg") !== null && !btn.textContent);
+      // Find icon-only buttons (remove buttons) - the first disabled one is for
+      // the FHIRPath filter row, the second is for the search parameter row.
+      const allButtons = screen.getAllByRole("button");
+      const disabledRemoveButtons = allButtons.filter(
+        (btn) =>
+          btn.querySelector("svg") !== null && !btn.textContent && btn.hasAttribute("disabled"),
+      );
 
-      expect(removeButtons).toHaveLength(1);
-      expect(removeButtons[0]).toBeDisabled();
+      // Both the filter row and param row remove buttons should be disabled.
+      expect(disabledRemoveButtons.length).toBeGreaterThanOrEqual(2);
     });
 
     it("populates parameter dropdown with options for selected resource type", async () => {

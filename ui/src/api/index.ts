@@ -27,6 +27,7 @@ export {
   groupExportKickOff,
   bulkExportStatus,
   bulkExportDownload,
+  buildExportParams,
 } from "./bulkExport";
 
 // Bulk submit operations.

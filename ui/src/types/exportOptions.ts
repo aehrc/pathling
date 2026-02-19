@@ -35,10 +35,6 @@ export interface ExportOptionsValues {
   elements: string;
   /** Output format MIME type for the export. */
   outputFormat: string;
-  /** Comma-separated FHIR search queries to filter resources. */
-  typeFilters: string;
-  /** Comma-separated list of pre-defined associated data sets to include. */
-  includeAssociatedData: string;
 }
 
 /**
@@ -50,8 +46,6 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptionsValues = {
   until: "",
   elements: "",
   outputFormat: "",
-  typeFilters: "",
-  includeAssociatedData: "",
 };
 
 /**
