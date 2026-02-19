@@ -41,6 +41,7 @@ import { useState } from "react";
 
 import { useClipboard } from "../../hooks";
 import { useViewDefinitions } from "../../hooks/useViewDefinitions";
+import { FieldGuidance } from "../FieldGuidance";
 
 import type { ViewRunRequest } from "../../hooks";
 import type { CreateViewDefinitionResult } from "../../types/sqlOnFhir";
@@ -207,9 +208,9 @@ export function SqlOnFhirForm({
                       />
                     </Box>
                   ) : (
-                    <Text size="1" color="gray" mt="2">
+                    <FieldGuidance mt="2">
                       Select a view definition that has been loaded into the server.
-                    </Text>
+                    </FieldGuidance>
                   ))}
               </Box>
             </Tabs.Content>
@@ -230,9 +231,9 @@ export function SqlOnFhirForm({
                   onChange={(e) => setCustomJson(e.target.value)}
                   style={{ fontFamily: "monospace" }}
                 />
-                <Text size="1" color="gray" mt="2">
+                <FieldGuidance mt="2">
                   Enter a valid view definition resource in JSON format.
-                </Text>
+                </FieldGuidance>
                 {saveError && (
                   <Callout.Root color="red" mt="2" size="1">
                     <Callout.Text>{saveError.message}</Callout.Text>

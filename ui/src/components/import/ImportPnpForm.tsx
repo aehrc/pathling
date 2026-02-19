@@ -31,6 +31,7 @@ import { serialiseTypeFilters } from "../../types/export";
 import { DEFAULT_EXPORT_OPTIONS, serialiseTypeFilterState } from "../../types/exportOptions";
 import { IMPORT_FORMATS } from "../../types/import";
 import { ExportOptions } from "../export/ExportOptions";
+import { FieldGuidance } from "../FieldGuidance";
 
 import type { SearchParamCapability } from "../../hooks/useServerCapabilities";
 import type { ExportOptionsValues } from "../../types/exportOptions";
@@ -130,9 +131,7 @@ export function ImportPnpForm({
             value={exportUrl}
             onChange={(e) => setExportUrl(e.target.value)}
           />
-          <Text size="1" color="gray" mt="1">
-            The bulk export endpoint URL of the remote FHIR server.
-          </Text>
+          <FieldGuidance>The bulk export endpoint URL of the remote FHIR server.</FieldGuidance>
         </Box>
 
         <SaveModeField value={saveMode} onChange={setSaveMode} />

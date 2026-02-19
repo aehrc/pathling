@@ -37,6 +37,7 @@ import { useRef, useState } from "react";
 
 import { SaveModeField } from "./SaveModeField";
 import { IMPORT_FORMATS } from "../../types/import";
+import { FieldGuidance } from "../FieldGuidance";
 
 import type { ImportFormat, ImportRequest, SaveMode } from "../../types/import";
 
@@ -179,9 +180,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
               </Flex>
             ))}
           </Flex>
-          <Text size="1" color="gray" mt="1">
-            Supported URL schemes: s3a://, hdfs://, file://
-          </Text>
+          <FieldGuidance>Supported URL schemes: s3a://, hdfs://, file://</FieldGuidance>
         </Box>
 
         <SaveModeField value={saveMode} onChange={setSaveMode} />

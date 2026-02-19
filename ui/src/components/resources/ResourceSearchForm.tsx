@@ -35,6 +35,7 @@ import {
 } from "@radix-ui/themes";
 import { useRef, useState } from "react";
 
+import { FieldGuidance } from "../FieldGuidance";
 import { SearchParamsInput, createEmptyRow } from "../SearchParamsInput";
 
 import type { SearchParamCapability } from "../../hooks/useServerCapabilities";
@@ -199,9 +200,9 @@ export function ResourceSearchForm({
               </Flex>
             ))}
           </Flex>
-          <Text size="1" color="gray" mt="1">
+          <FieldGuidance>
             Filter expressions are combined with AND logic. Leave empty to return all resources.
-          </Text>
+          </FieldGuidance>
         </Box>
 
         <Button size="3" onClick={handleSubmit} disabled={disabled || isLoading}>

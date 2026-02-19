@@ -23,6 +23,8 @@
 
 import { Box, CheckboxCards, Flex, ScrollArea, Text } from "@radix-ui/themes";
 
+import { FieldGuidance } from "../FieldGuidance";
+
 interface ResourceTypePickerProps {
   resourceTypes: string[];
   selectedTypes: string[];
@@ -54,9 +56,7 @@ export function ResourceTypePicker({
           <Text as="label" size="2" weight="medium">
             Resource types
           </Text>
-          <Text size="1" color="gray">
-            (leave empty to export all)
-          </Text>
+          <FieldGuidance mt="0">(leave empty to export all)</FieldGuidance>
         </Flex>
         <Text size="1" color="teal" style={{ cursor: "pointer" }} onClick={clearAllTypes}>
           Clear

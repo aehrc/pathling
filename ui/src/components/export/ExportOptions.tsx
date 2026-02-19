@@ -26,6 +26,7 @@ import { Box, Button, Card, Flex, IconButton, Select, Text, TextField } from "@r
 
 import { ResourceTypePicker } from "./ResourceTypePicker";
 import { OUTPUT_FORMATS } from "../../types/exportOptions";
+import { FieldGuidance } from "../FieldGuidance";
 import { SearchParamsInput, createEmptyRow } from "../SearchParamsInput";
 
 import type { SearchParamCapability } from "../../hooks/useServerCapabilities";
@@ -128,9 +129,7 @@ export function ExportOptions({
             value={values.since}
             onChange={(e) => updateOption("since", e.target.value)}
           />
-          <Text size="1" color="gray" mt="1">
-            Only resources updated after this time.
-          </Text>
+          <FieldGuidance>Only resources updated after this time.</FieldGuidance>
         </Box>
         <Box style={{ flex: 1 }}>
           <Text as="label" size="2" weight="medium" mb="1">
@@ -141,9 +140,7 @@ export function ExportOptions({
             value={values.until}
             onChange={(e) => updateOption("until", e.target.value)}
           />
-          <Text size="1" color="gray" mt="1">
-            Only resources updated before this time.
-          </Text>
+          <FieldGuidance>Only resources updated before this time.</FieldGuidance>
         </Box>
       </Flex>
 
@@ -156,9 +153,7 @@ export function ExportOptions({
           value={values.elements}
           onChange={(e) => updateOption("elements", e.target.value)}
         />
-        <Text size="1" color="gray" mt="1">
-          Comma-separated list of element names to include.
-        </Text>
+        <FieldGuidance>Comma-separated list of element names to include.</FieldGuidance>
       </Box>
 
       {!hideOutputFormat && (
@@ -179,9 +174,7 @@ export function ExportOptions({
               ))}
             </Select.Content>
           </Select.Root>
-          <Text size="1" color="gray" mt="1">
-            Output format for the export data.
-          </Text>
+          <FieldGuidance>Output format for the export data.</FieldGuidance>
         </Box>
       )}
 
@@ -241,10 +234,10 @@ export function ExportOptions({
             ))}
           </Flex>
         ) : (
-          <Text size="1" color="gray">
+          <FieldGuidance mt="0">
             No type filters configured. Type filters allow filtering exported resources using FHIR
             search parameters.
-          </Text>
+          </FieldGuidance>
         )}
       </Box>
     </Flex>

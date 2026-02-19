@@ -24,6 +24,8 @@
 import { Cross2Icon, PlusIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Flex, IconButton, Select, Text, TextField } from "@radix-ui/themes";
 
+import { FieldGuidance } from "./FieldGuidance";
+
 import type { SearchParamCapability } from "../hooks/useServerCapabilities";
 
 /**
@@ -157,9 +159,9 @@ export function SearchParamsInput({
           </Flex>
         ))}
       </Flex>
-      <Text size="1" color="gray" mt="1">
+      <FieldGuidance>
         Search parameters use standard FHIR search syntax and are combined with AND logic.
-      </Text>
+      </FieldGuidance>
     </Box>
   );
 }
