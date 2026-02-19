@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.bulkexport;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.ELEMENTS_PARAM_NAME;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.OUTPUT_FORMAT_PARAM_NAME;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.SINCE_PARAM_NAME;
+import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.TYPE_FILTER_PARAM_NAME;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.TYPE_PARAM_NAME;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.UNTIL_PARAM_NAME;
 
@@ -82,6 +83,7 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
    * @param since the since date parameter
    * @param until the until date parameter
    * @param type the type parameter
+   * @param typeFilter the type filter parameter
    * @param elements the elements parameter
    * @param requestDetails the request details
    * @return the binary result, or null if the job was cancelled
@@ -96,6 +98,7 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
       @Nullable @OperationParam(name = SINCE_PARAM_NAME) final InstantType since,
       @Nullable @OperationParam(name = UNTIL_PARAM_NAME) final InstantType until,
       @Nullable @OperationParam(name = TYPE_PARAM_NAME) final List<String> type,
+      @Nullable @OperationParam(name = TYPE_FILTER_PARAM_NAME) final List<String> typeFilter,
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) final List<String> elements,
       @Nonnull final ServletRequestDetails requestDetails) {
     return exportOperationHelper.executeExport(requestDetails);
@@ -110,6 +113,7 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
    * @param since the since date parameter
    * @param until the until date parameter
    * @param type the type parameter
+   * @param typeFilter the type filter parameter
    * @param elements the elements parameter
    * @param requestDetails the request details
    * @return the binary result, or null if the job was cancelled
@@ -125,6 +129,7 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
       @Nullable @OperationParam(name = SINCE_PARAM_NAME) final InstantType since,
       @Nullable @OperationParam(name = UNTIL_PARAM_NAME) final InstantType until,
       @Nullable @OperationParam(name = TYPE_PARAM_NAME) final List<String> type,
+      @Nullable @OperationParam(name = TYPE_FILTER_PARAM_NAME) final List<String> typeFilter,
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) final List<String> elements,
       @Nonnull final ServletRequestDetails requestDetails) {
     return exportOperationHelper.executeExport(requestDetails);
@@ -136,8 +141,8 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
   public PreAsyncValidationResult<ExportRequest> preAsyncValidate(
       @Nonnull final ServletRequestDetails servletRequestDetails, @Nonnull final Object[] args) {
     // Determine if this is a type-level or instance-level operation based on args.
-    // Type-level: args = [outputFormat, since, until, type, elements, requestDetails]
-    // Instance-level: args = [patientId, outputFormat, since, until, type, elements,
+    // Type-level: args = [outputFormat, since, until, type, typeFilter, elements, requestDetails]
+    // Instance-level: args = [patientId, outputFormat, since, until, type, typeFilter, elements,
     // requestDetails]
     final boolean isInstanceLevel = args.length > 0 && args[0] instanceof IdType;
 
@@ -147,6 +152,7 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
     final InstantType since;
     final InstantType until;
     final List<String> type;
+    final List<String> typeFilter;
     final List<String> elements;
 
     if (isInstanceLevel) {
@@ -157,7 +163,8 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
       since = (InstantType) args[2];
       until = (InstantType) args[3];
       type = (List<String>) args[4];
-      elements = (List<String>) args[5];
+      typeFilter = (List<String>) args[5];
+      elements = (List<String>) args[6];
     } else {
       exportLevel = ExportLevel.PATIENT_TYPE;
       patientIds = Set.of();
@@ -165,10 +172,19 @@ public class PatientExportProvider implements IResourceProvider, PreAsyncValidat
       since = (InstantType) args[1];
       until = (InstantType) args[2];
       type = (List<String>) args[3];
-      elements = (List<String>) args[4];
+      typeFilter = (List<String>) args[4];
+      elements = (List<String>) args[5];
     }
 
     return exportOperationValidator.validatePatientExportRequest(
-        servletRequestDetails, exportLevel, patientIds, outputFormat, since, until, type, elements);
+        servletRequestDetails,
+        exportLevel,
+        patientIds,
+        outputFormat,
+        since,
+        until,
+        type,
+        typeFilter,
+        elements);
   }
 }

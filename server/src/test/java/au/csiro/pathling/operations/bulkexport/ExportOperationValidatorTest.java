@@ -352,4 +352,215 @@ class ExportOperationValidatorTest {
               assertThat(result.result().elements().get(0).resourceTypeCode()).isEqualTo("Patient");
             });
   }
+
+  // _typeFilter tests.
+
+  @Test
+  @DisplayName("validateRequest should parse valid _typeFilter into typeFilters map")
+  void validateRequest_shouldParseValidTypeFilter() {
+    // A valid _typeFilter value should be parsed into the typeFilters map on the ExportRequest.
+    final List<String> typeFilter = List.of("Observation?code=8867-4");
+    final PreAsyncValidationResult<ExportRequest> result =
+        validator.validateRequest(requestDetails, null, null, null, null, typeFilter, null);
+
+    assertThat(result.result().typeFilters()).containsKey("Observation");
+    assertThat(result.result().typeFilters().get("Observation")).containsExactly("code=8867-4");
+  }
+
+  @Test
+  @DisplayName("validateRequest should parse multiple _typeFilter values for same resource type")
+  void validateRequest_shouldParseMultipleTypeFiltersForSameType() {
+    // Multiple _typeFilter values targeting the same resource type should be grouped together.
+    final List<String> typeFilter = List.of("Observation?code=8867-4", "Observation?code=8310-5");
+    final PreAsyncValidationResult<ExportRequest> result =
+        validator.validateRequest(requestDetails, null, null, null, null, typeFilter, null);
+
+    assertThat(result.result().typeFilters()).containsKey("Observation");
+    assertThat(result.result().typeFilters().get("Observation"))
+        .containsExactly("code=8867-4", "code=8310-5");
+  }
+
+  @Test
+  @DisplayName("validateRequest should parse _typeFilter values for different resource types")
+  void validateRequest_shouldParseTypeFiltersForDifferentTypes() {
+    // _typeFilter values for different resource types should be separated into different keys.
+    final List<String> typeFilter = List.of("Observation?code=8867-4", "Condition?code=73211009");
+    final PreAsyncValidationResult<ExportRequest> result =
+        validator.validateRequest(requestDetails, null, null, null, null, typeFilter, null);
+
+    assertThat(result.result().typeFilters()).hasSize(2);
+    assertThat(result.result().typeFilters().get("Observation")).containsExactly("code=8867-4");
+    assertThat(result.result().typeFilters().get("Condition")).containsExactly("code=73211009");
+  }
+
+  @Test
+  @DisplayName("validateRequest should reject _typeFilter without question mark separator")
+  void validateRequest_shouldRejectTypeFilterWithoutQuestionMark() {
+    // A _typeFilter value must contain a '?' separator.
+    final List<String> typeFilter = List.of("Observation");
+
+    assertThatThrownBy(
+            () ->
+                validator.validateRequest(requestDetails, null, null, null, null, typeFilter, null))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("_typeFilter")
+        .hasMessageContaining("format");
+  }
+
+  @Test
+  @DisplayName("validateRequest should reject _typeFilter with empty search query")
+  void validateRequest_shouldRejectTypeFilterWithEmptySearchQuery() {
+    // A _typeFilter value must have a non-empty search query after the '?'.
+    final List<String> typeFilter = List.of("Observation?");
+
+    assertThatThrownBy(
+            () ->
+                validator.validateRequest(requestDetails, null, null, null, null, typeFilter, null))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("_typeFilter")
+        .hasMessageContaining("empty");
+  }
+
+  @Test
+  @DisplayName(
+      "validateRequest should reject _typeFilter with invalid resource type in strict mode")
+  void validateRequest_shouldRejectTypeFilterWithInvalidResourceType() {
+    // An invalid resource type in _typeFilter should be rejected in strict mode.
+    final List<String> typeFilter = List.of("FakeResource?status=active");
+
+    assertThatThrownBy(
+            () ->
+                validator.validateRequest(requestDetails, null, null, null, null, typeFilter, null))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("FakeResource");
+  }
+
+  @Test
+  @DisplayName(
+      "validateRequest should ignore _typeFilter with invalid resource type in lenient mode")
+  void validateRequest_shouldIgnoreTypeFilterWithInvalidResourceTypeInLenientMode() {
+    // In lenient mode, an invalid resource type in _typeFilter should be ignored.
+    when(requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName()))
+        .thenReturn(List.of("handling=lenient"));
+    final List<String> typeFilter = List.of("FakeResource?status=active");
+
+    final PreAsyncValidationResult<ExportRequest> result =
+        validator.validateRequest(requestDetails, null, null, null, null, typeFilter, null);
+
+    assertThat(result.result().typeFilters()).isEmpty();
+    assertThat(result.warnings()).isNotEmpty();
+  }
+
+  @Test
+  @DisplayName("validateRequest should reject _typeFilter type not in _type in strict mode")
+  void validateRequest_shouldRejectTypeFilterTypeNotInType() {
+    // When _type is specified and _typeFilter references a type not in _type, reject in strict
+    // mode.
+    final List<String> type = List.of("Patient");
+    final List<String> typeFilter = List.of("Observation?code=8867-4");
+
+    assertThatThrownBy(
+            () ->
+                validator.validateRequest(requestDetails, null, null, null, type, typeFilter, null))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("_typeFilter")
+        .hasMessageContaining("Observation")
+        .hasMessageContaining("_type");
+  }
+
+  @Test
+  @DisplayName("validateRequest should ignore _typeFilter type not in _type in lenient mode")
+  void validateRequest_shouldIgnoreTypeFilterTypeNotInTypeInLenientMode() {
+    // In lenient mode, _typeFilter entries for types not in _type should be silently ignored.
+    when(requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName()))
+        .thenReturn(List.of("handling=lenient"));
+    final List<String> type = List.of("Patient");
+    final List<String> typeFilter = List.of("Observation?code=8867-4");
+
+    final PreAsyncValidationResult<ExportRequest> result =
+        validator.validateRequest(requestDetails, null, null, null, type, typeFilter, null);
+
+    assertThat(result.result().typeFilters()).isEmpty();
+    assertThat(result.warnings()).isNotEmpty();
+  }
+
+  @Test
+  @DisplayName("validateRequest should accept _typeFilter that matches subset of _type")
+  void validateRequest_shouldAcceptTypeFilterMatchingSubsetOfType() {
+    // When _type includes multiple types and _typeFilter targets a subset, it should be accepted.
+    final List<String> type = List.of("Patient", "Observation");
+    final List<String> typeFilter = List.of("Observation?code=8867-4");
+
+    final PreAsyncValidationResult<ExportRequest> result =
+        validator.validateRequest(requestDetails, null, null, null, type, typeFilter, null);
+
+    assertThat(result.result().typeFilters()).containsKey("Observation");
+    assertThat(result.result().includeResourceTypeFilters())
+        .containsExactlyInAnyOrder("Patient", "Observation");
+  }
+
+  @Test
+  @DisplayName(
+      "validateRequest should implicitly include resource types from _typeFilter when _type is"
+          + " absent")
+  void validateRequest_shouldImplicitlyIncludeTypesFromTypeFilter() {
+    // When _type is not provided but _typeFilter is, the resource types from _typeFilter should
+    // become the effective type filter.
+    final List<String> typeFilter = List.of("Observation?code=8867-4", "Condition?code=73211009");
+
+    final PreAsyncValidationResult<ExportRequest> result =
+        validator.validateRequest(requestDetails, null, null, null, null, typeFilter, null);
+
+    assertThat(result.result().includeResourceTypeFilters())
+        .containsExactlyInAnyOrder("Observation", "Condition");
+    assertThat(result.result().typeFilters()).hasSize(2);
+  }
+
+  @Test
+  @DisplayName("validateRequest should accept null _typeFilter parameter")
+  void validateRequest_shouldAcceptNullTypeFilter() {
+    // Null _typeFilter should result in an empty typeFilters map.
+    final PreAsyncValidationResult<ExportRequest> result =
+        validator.validateRequest(requestDetails, null, null, null, null, null, null);
+
+    assertThat(result.result().typeFilters()).isEmpty();
+  }
+
+  @Test
+  @DisplayName(
+      "validateRequest should handle _typeFilter with multiple search criteria (compound query)")
+  void validateRequest_shouldHandleTypeFilterWithMultipleSearchCriteria() {
+    // A _typeFilter value can have multiple search criteria separated by '&'.
+    final List<String> typeFilter = List.of("Observation?code=8867-4&date=ge2024-01-01");
+
+    final PreAsyncValidationResult<ExportRequest> result =
+        validator.validateRequest(requestDetails, null, null, null, null, typeFilter, null);
+
+    assertThat(result.result().typeFilters()).containsKey("Observation");
+    assertThat(result.result().typeFilters().get("Observation"))
+        .containsExactly("code=8867-4&date=ge2024-01-01");
+  }
+
+  @Test
+  @DisplayName(
+      "validateRequest should handle _typeFilter for patient export with non-compartment type")
+  void validateRequest_shouldFilterNonCompartmentTypeFilterInPatientExport() {
+    // For patient-level exports, _typeFilter values referencing non-compartment resource types
+    // should be silently ignored.
+    final List<String> typeFilter = List.of("Organization?name=test");
+
+    final PreAsyncValidationResult<ExportRequest> result =
+        validator.validatePatientExportRequest(
+            requestDetails,
+            ExportRequest.ExportLevel.PATIENT_TYPE,
+            java.util.Set.of(),
+            null,
+            null,
+            null,
+            null,
+            typeFilter,
+            null);
+
+    assertThat(result.result().typeFilters()).isEmpty();
+  }
 }

@@ -134,6 +134,7 @@ public class ExportExecutor {
     mapped = applyResourceTypeFiltering(exportRequest, mapped);
     mapped = applySinceDateFilter(exportRequest, mapped);
     mapped = applyUntilDateFilter(exportRequest, mapped);
+    mapped = applyTypeFilters(exportRequest, mapped);
 
     // Apply patient compartment filtering for patient-level and group-level exports.
     if (exportRequest.exportLevel() != ExportLevel.SYSTEM) {
@@ -367,6 +368,43 @@ public class ExportExecutor {
                       + "'"));
     }
     return mapped;
+  }
+
+  /**
+   * Applies _typeFilter search-based filtering to the exported resources. For each resource type
+   * that has filters, generates a Spark Column from each search query string and combines them with
+   * OR logic. Resource types without filters are passed through unmodified.
+   *
+   * @param exportRequest the export request containing the type filters
+   * @param dataSource the data source to filter
+   * @return the filtered data source
+   */
+  @Nonnull
+  private QueryableDataSource applyTypeFilters(
+      @Nonnull final ExportRequest exportRequest, @Nonnull final QueryableDataSource dataSource) {
+    if (exportRequest.typeFilters().isEmpty()) {
+      return dataSource;
+    }
+
+    return dataSource.map(
+        (resourceType, rowDataset) -> {
+          final java.util.List<String> filters = exportRequest.typeFilters().get(resourceType);
+          if (filters == null || filters.isEmpty()) {
+            return rowDataset;
+          }
+
+          // Convert each search query string to a Spark Column and combine with OR.
+          Column combined = null;
+          for (final String searchQuery : filters) {
+            final Column filterColumn = pathlingContext.searchToColumn(resourceType, searchQuery);
+            combined = combined == null ? filterColumn : combined.or(filterColumn);
+          }
+          log.debug(
+              "Applying _typeFilter for resource type {} with {} filter(s)",
+              resourceType,
+              filters.size());
+          return rowDataset.filter(combined);
+        });
   }
 
   @Nonnull

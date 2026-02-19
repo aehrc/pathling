@@ -50,8 +50,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -557,6 +559,7 @@ class ExportOperationExecutorTest {
             null,
             null,
             List.of(),
+            Map.of(),
             List.of(),
             false,
             ExportRequest.ExportLevel.SYSTEM,
@@ -580,6 +583,147 @@ class ExportOperationExecutorTest {
     assertThat(parquetFiles.length).isGreaterThan(0);
   }
 
+  // Tests for _typeFilter.
+
+  @Test
+  void testTypeFilterAppliesSingleFilter() throws IOException {
+    // A single _typeFilter should filter the exported resources to only those matching the search
+    // criteria.
+    final Patient activePatient = new Patient();
+    activePatient.setId("active-1");
+    activePatient.setActive(true);
+    final Patient inactivePatient = new Patient();
+    inactivePatient.setId("inactive-1");
+    inactivePatient.setActive(false);
+
+    exportExecutor = create_exec(activePatient, inactivePatient);
+
+    final ExportRequest req =
+        new ExportRequest(
+            BASE + "_type=Patient&_typeFilter=Patient?active=true",
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.NDJSON,
+            null,
+            null,
+            List.of("Patient"),
+            Map.of("Patient", List.of("active=true")),
+            List.of(),
+            false,
+            ExportRequest.ExportLevel.SYSTEM,
+            Set.of());
+
+    final TestExportResponse response = execute(req);
+    assertThat(response.exportResponse().getWriteDetails().fileInfos()).hasSize(1);
+    final Patient result =
+        readNdjson(
+            parser,
+            response.exportResponse().getWriteDetails().fileInfos().getFirst(),
+            Patient.class);
+    assertThat(result.getActive()).isTrue();
+  }
+
+  @Test
+  void testTypeFilterCombinesMultipleFiltersWithOrLogic() throws IOException {
+    // Multiple _typeFilter values for the same resource type should be combined with OR logic.
+    final Patient activePatient = new Patient();
+    activePatient.setId("active-1");
+    activePatient.setActive(true);
+    activePatient.setGender(org.hl7.fhir.r4.model.Enumerations.AdministrativeGender.MALE);
+    final Patient inactivePatient = new Patient();
+    inactivePatient.setId("inactive-1");
+    inactivePatient.setActive(false);
+    inactivePatient.setGender(org.hl7.fhir.r4.model.Enumerations.AdministrativeGender.FEMALE);
+
+    exportExecutor = create_exec(activePatient, inactivePatient);
+
+    // Two filters for Patient: active=true OR gender=female. Both patients should match.
+    final ExportRequest req =
+        new ExportRequest(
+            BASE
+                + "_type=Patient&_typeFilter=Patient?active=true&_typeFilter=Patient?gender=female",
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.NDJSON,
+            null,
+            null,
+            List.of("Patient"),
+            Map.of("Patient", List.of("active=true", "gender=female")),
+            List.of(),
+            false,
+            ExportRequest.ExportLevel.SYSTEM,
+            Set.of());
+
+    final TestExportResponse response = execute(req);
+    // All file infos should be for Patient.
+    assertThat(response.exportResponse().getWriteDetails().fileInfos())
+        .allMatch(fi -> fi.fhirResourceType().equals("Patient"));
+    // Read all NDJSON files and count total resources across all partitions.
+    long totalLines = 0;
+    for (final var fi : response.exportResponse().getWriteDetails().fileInfos()) {
+      final String content = Files.readString(Paths.get(URI.create(fi.absoluteUrl())));
+      totalLines += content.lines().filter(line -> !line.isBlank()).count();
+    }
+    assertThat(totalLines).isEqualTo(2);
+  }
+
+  @Test
+  void testTypeFilterDoesNotAffectResourceTypesWithoutFilter() throws IOException {
+    // Resource types that are exported but have no _typeFilter should not be filtered.
+    final Patient patient = new Patient();
+    patient.setId("patient-1");
+    patient.setActive(true);
+    final Observation observation = new Observation();
+    observation.setId("obs-1");
+    observation.setStatus(Observation.ObservationStatus.FINAL);
+
+    exportExecutor = create_exec(patient, observation);
+
+    // Only filter Patient resources, not Observation.
+    final ExportRequest req =
+        new ExportRequest(
+            BASE + "_type=Patient,Observation&_typeFilter=Patient?active=true",
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.NDJSON,
+            null,
+            null,
+            List.of("Patient", "Observation"),
+            Map.of("Patient", List.of("active=true")),
+            List.of(),
+            false,
+            ExportRequest.ExportLevel.SYSTEM,
+            Set.of());
+
+    final TestExportResponse response = execute(req);
+    // Both resource types should be present in the output.
+    assertThat(response.exportResponse().getWriteDetails().fileInfos()).hasSize(2);
+  }
+
+  @Test
+  void testTypeFilterWithEmptyMapDoesNotAffectExport() {
+    // An empty typeFilters map should not affect the export (no filtering applied).
+    final Patient patient = new Patient();
+    patient.setId("patient-1");
+    patient.setActive(true);
+
+    exportExecutor = createExecutor(patient);
+
+    final ExportRequest req =
+        new ExportRequest(
+            BASE,
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.NDJSON,
+            null,
+            null,
+            List.of(),
+            Map.of(),
+            List.of(),
+            false,
+            ExportRequest.ExportLevel.SYSTEM,
+            Set.of());
+
+    final TestExportResponse response = execute(req);
+    assertThat(response.exportResponse().getWriteDetails().fileInfos()).hasSize(1);
+  }
+
   @Test
   void testExportWithParquetFormatHasCorrectOutputFormat() {
     final Patient patient = new Patient();
@@ -596,6 +740,7 @@ class ExportOperationExecutorTest {
             null,
             null,
             List.of("Patient"),
+            Map.of(),
             List.of(),
             false,
             ExportRequest.ExportLevel.SYSTEM,

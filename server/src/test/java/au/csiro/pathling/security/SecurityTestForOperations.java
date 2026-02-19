@@ -48,6 +48,7 @@ import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -159,6 +160,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
             null,
             null,
             type,
+            Map.of(),
             List.of(),
             lenient,
             ExportLevel.SYSTEM,
@@ -171,6 +173,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
             exportRequest.since(),
             exportRequest.until(),
             type,
+            null,
             null,
             requestDetails);
     try {

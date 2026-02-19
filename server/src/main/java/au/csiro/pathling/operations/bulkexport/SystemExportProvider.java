@@ -51,6 +51,9 @@ public class SystemExportProvider implements PreAsyncValidation<ExportRequest> {
   /** The name of the type parameter. */
   public static final String TYPE_PARAM_NAME = "_type";
 
+  /** The name of the type filter parameter. */
+  public static final String TYPE_FILTER_PARAM_NAME = "_typeFilter";
+
   /** The name of the elements parameter. */
   public static final String ELEMENTS_PARAM_NAME = "_elements";
 
@@ -79,6 +82,7 @@ public class SystemExportProvider implements PreAsyncValidation<ExportRequest> {
    * @param since the since date parameter (validated in pre-async validation)
    * @param until the until date parameter (validated in pre-async validation)
    * @param type the type parameter (validated in pre-async validation)
+   * @param typeFilter the type filter parameter (validated in pre-async validation)
    * @param elements the elements parameter (validated in pre-async validation)
    * @param requestDetails the request details
    * @return the binary result, or null if the job was cancelled
@@ -93,6 +97,7 @@ public class SystemExportProvider implements PreAsyncValidation<ExportRequest> {
       @Nullable @OperationParam(name = SINCE_PARAM_NAME) final InstantType since,
       @Nullable @OperationParam(name = UNTIL_PARAM_NAME) final InstantType until,
       @Nullable @OperationParam(name = TYPE_PARAM_NAME) final List<String> type,
+      @Nullable @OperationParam(name = TYPE_FILTER_PARAM_NAME) final List<String> typeFilter,
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) final List<String> elements,
       @Nonnull final ServletRequestDetails requestDetails) {
     return exportOperationHelper.executeExport(requestDetails);
@@ -109,6 +114,7 @@ public class SystemExportProvider implements PreAsyncValidation<ExportRequest> {
         (InstantType) args[1],
         (InstantType) args[2],
         (List<String>) args[3],
-        (List<String>) args[4]);
+        (List<String>) args[4],
+        (List<String>) args[5]);
   }
 }

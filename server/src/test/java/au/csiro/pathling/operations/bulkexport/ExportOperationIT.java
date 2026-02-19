@@ -436,4 +436,213 @@ class ExportOperationIT {
     }
     return false;
   }
+
+  // _typeFilter integration tests.
+
+  /**
+   * Kicks off an export request using the URI builder to properly handle URL encoding of
+   * _typeFilter values (which contain '?' and '=' characters).
+   */
+  private String kickOffExportWithTypeFilter(
+      final String basePath, final String typeFilter, @Nullable final String type) {
+    final String pollUrl =
+        webTestClient
+            .get()
+            .uri(
+                uriBuilder -> {
+                  uriBuilder
+                      .path(basePath)
+                      .queryParam("_outputFormat", "application/fhir+ndjson")
+                      .queryParam("_since", "2017-01-01T00:00:00Z")
+                      .queryParam("_typeFilter", typeFilter);
+                  if (type != null) {
+                    uriBuilder.queryParam("_type", type);
+                  }
+                  return uriBuilder.build();
+                })
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .exchange()
+            .expectStatus()
+            .is2xxSuccessful()
+            .expectHeader()
+            .exists("Content-Location")
+            .returnResult(String.class)
+            .getResponseHeaders()
+            .getFirst("Content-Location");
+    assertNotNull(pollUrl);
+    return pollUrl;
+  }
+
+  @Test
+  void testExportWithTypeFilterOnSystemLevel() {
+    // A system-level export with _typeFilter should only return resources matching the search
+    // criteria. Using gender=male to filter Patient resources.
+    final String pollUrl =
+        kickOffExportWithTypeFilter("/fhir/$export", "Patient?gender=male", "Patient");
+    await()
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(1, TimeUnit.SECONDS)
+        .until(
+            () ->
+                doPolling(
+                    webTestClient,
+                    pollUrl,
+                    result -> {
+                      assertNotNull(result.getResponseBody());
+                      assertTypeFilterResult(result.getResponseBody(), "Patient", "male");
+                    }));
+  }
+
+  @Test
+  void testExportWithTypeFilterOnPatientLevel() {
+    // A patient-level export with _typeFilter should also filter resources appropriately.
+    final String pollUrl =
+        kickOffExportWithTypeFilter("/fhir/Patient/$export", "Patient?gender=male", "Patient");
+    await()
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(1, TimeUnit.SECONDS)
+        .until(
+            () ->
+                doPolling(
+                    webTestClient,
+                    pollUrl,
+                    result -> {
+                      assertNotNull(result.getResponseBody());
+                      assertTypeFilterResult(result.getResponseBody(), "Patient", "male");
+                    }));
+  }
+
+  @Test
+  void testExportWithTypeFilterInvalidFormatReturnsError() {
+    // A _typeFilter without a '?' separator should be rejected in strict mode.
+    webTestClient
+        .get()
+        .uri(
+            uriBuilder ->
+                uriBuilder
+                    .path("/fhir/$export")
+                    .queryParam("_outputFormat", "application/fhir+ndjson")
+                    .queryParam("_since", "2017-01-01T00:00:00Z")
+                    .queryParam("_typeFilter", "InvalidFormat")
+                    .build())
+        .header("Accept", "application/fhir+json")
+        .header("Prefer", "respond-async")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void testExportWithTypeFilterInvalidFormatLenientAlsoFails() {
+    // Format validation (missing '?') is always strict, even in lenient mode.
+    webTestClient
+        .get()
+        .uri(
+            uriBuilder ->
+                uriBuilder
+                    .path("/fhir/$export")
+                    .queryParam("_outputFormat", "application/fhir+ndjson")
+                    .queryParam("_since", "2017-01-01T00:00:00Z")
+                    .queryParam("_typeFilter", "InvalidFormat")
+                    .build())
+        .header("Accept", "application/fhir+json")
+        .header("Prefer", "respond-async, handling=lenient")
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  @Test
+  void testExportWithTypeFilterImplicitTypeInclusion() {
+    // When _type is absent but _typeFilter is present, resource types should be implicitly included
+    // from the _typeFilter values.
+    final String pollUrl =
+        kickOffExportWithTypeFilter("/fhir/$export", "Patient?gender=male", null);
+    await()
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(1, TimeUnit.SECONDS)
+        .until(
+            () ->
+                doPolling(
+                    webTestClient,
+                    pollUrl,
+                    result -> {
+                      assertNotNull(result.getResponseBody());
+                      // Only Patient should be in the output since _typeFilter implicitly sets
+                      // the type.
+                      assertTypeFilterResult(result.getResponseBody(), "Patient", "male");
+                    }));
+  }
+
+  /**
+   * Asserts that a completed export response contains only the specified resource type and that all
+   * Patient resources have the expected gender.
+   */
+  private void assertTypeFilterResult(
+      final String responseBody, final String expectedType, final String expectedGender) {
+    try {
+      final ObjectMapper objectMapper = new ObjectMapper();
+      final JsonNode node = objectMapper.readTree(responseBody);
+
+      assertThat(node.get("resourceType").asText()).isEqualTo("Parameters");
+      final JsonNode parameters = node.get("parameter");
+
+      // Extract output file information.
+      final List<FileInformation> fileInfos =
+          StreamSupport.stream(parameters.spliterator(), false)
+              .filter(param -> "output".equals(param.get("name").asText()))
+              .map(
+                  outputParam -> {
+                    final JsonNode parts = outputParam.get("part");
+                    String type = null;
+                    String url = null;
+                    for (final JsonNode part : parts) {
+                      final String partName = part.get("name").asText();
+                      if ("type".equals(partName)) {
+                        type =
+                            part.has("valueCode")
+                                ? part.get("valueCode").asText()
+                                : part.get("valueString").asText();
+                      } else if ("url".equals(partName)) {
+                        url = part.get("valueUri").asText();
+                      }
+                    }
+                    assertNotNull(type);
+                    assertNotNull(url);
+                    return new FileInformation(type, url);
+                  })
+              .toList();
+
+      assertThat(fileInfos).isNotEmpty();
+      // All output should be for the expected resource type.
+      assertThat(fileInfos).allMatch(fi -> fi.fhirResourceType().equals(expectedType));
+
+      // Download and verify the content.
+      for (final FileInformation fileInfo : fileInfos) {
+        final EntityExchangeResult<byte[]> fileResult =
+            webTestClient
+                .get()
+                .uri(fileInfo.absoluteUrl())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .returnResult();
+        final byte[] bytes = fileResult.getResponseBodyContent();
+        assertThat(bytes).isNotNull();
+        final String content = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+        final List<Resource> resources =
+            ExportOperationUtil.parseNdjson(parser, content, expectedType);
+        assertThat(resources).isNotEmpty();
+        // Verify all patients have the expected gender.
+        for (final Resource resource : resources) {
+          assertThat(resource).isInstanceOf(Patient.class);
+          assertThat(((Patient) resource).getGender().toCode()).isEqualTo(expectedGender);
+        }
+      }
+    } catch (final IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -64,7 +65,7 @@ public class ExportOperationValidator {
 
   /** Query parameters that are not supported by the export operation. */
   public static final Set<String> UNSUPPORTED_QUERY_PARAMS =
-      Set.of("includeAssociatedData", "_typeFilter", "organizeOutputBy");
+      Set.of("includeAssociatedData", "organizeOutputBy");
 
   @Nonnull private final FhirContext fhirContext;
 
@@ -89,7 +90,7 @@ public class ExportOperationValidator {
   }
 
   /**
-   * Validates a system-level export request.
+   * Validates a system-level export request (backwards-compatible overload without _typeFilter).
    *
    * @param requestDetails the request details
    * @param outputFormat the output format parameter
@@ -106,12 +107,50 @@ public class ExportOperationValidator {
       @Nullable final InstantType until,
       @Nullable final List<String> type,
       @Nullable final List<String> elements) {
+    return validateRequest(requestDetails, outputFormat, since, until, type, null, elements);
+  }
+
+  /**
+   * Validates a system-level export request.
+   *
+   * @param requestDetails the request details
+   * @param outputFormat the output format parameter
+   * @param since the since parameter
+   * @param until the until parameter
+   * @param type the type parameter
+   * @param typeFilter the type filter parameter
+   * @param elements the elements parameter
+   * @return the pre-async validation result
+   */
+  public PreAsyncValidation.PreAsyncValidationResult<ExportRequest> validateRequest(
+      @Nonnull final RequestDetails requestDetails,
+      @Nullable final String outputFormat,
+      @Nullable final InstantType since,
+      @Nullable final InstantType until,
+      @Nullable final List<String> type,
+      @Nullable final List<String> typeFilter,
+      @Nullable final List<String> elements) {
     final boolean lenient =
         requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName()).stream()
             .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
 
     final List<String> typeList = type != null ? type : new ArrayList<>();
+    final List<String> typeFilterList = typeFilter != null ? typeFilter : new ArrayList<>();
     final List<String> elementsList = elements != null ? elements : new ArrayList<>();
+
+    // Parse and validate _typeFilter values.
+    final List<OperationOutcome.OperationOutcomeIssueComponent> typeFilterIssues =
+        new ArrayList<>();
+    final Map<String, List<String>> parsedTypeFilters =
+        parseTypeFilters(typeFilterList, typeList, lenient, typeFilterIssues, false);
+
+    // If _type is absent but _typeFilter is present, implicitly include referenced types.
+    final List<String> effectiveTypeList;
+    if (typeList.isEmpty() && !parsedTypeFilters.isEmpty()) {
+      effectiveTypeList = new ArrayList<>(parsedTypeFilters.keySet());
+    } else {
+      effectiveTypeList = typeList;
+    }
 
     final ExportRequest exportRequest =
         createExportRequest(
@@ -121,20 +160,23 @@ public class ExportOperationValidator {
             outputFormat,
             since,
             until,
-            typeList,
+            effectiveTypeList,
+            parsedTypeFilters,
             elementsList);
     final List<OperationOutcome.OperationOutcomeIssueComponent> issues =
         Stream.of(
                 OperationValidation.validateAcceptHeader(requestDetails, lenient),
                 OperationValidation.validatePreferHeader(requestDetails, lenient),
-                validateUnsupportedQueryParams(requestDetails, lenient))
+                validateUnsupportedQueryParams(requestDetails, lenient),
+                typeFilterIssues)
             .flatMap(Collection::stream)
             .toList();
     return new PreAsyncValidation.PreAsyncValidationResult<>(exportRequest, issues);
   }
 
   /**
-   * Validates a patient-level or group-level export request.
+   * Validates a patient-level or group-level export request (backwards-compatible overload without
+   * _typeFilter).
    *
    * @param requestDetails the request details
    * @param exportLevel the export level (PATIENT_TYPE, PATIENT_INSTANCE, or GROUP)
@@ -155,12 +197,55 @@ public class ExportOperationValidator {
       @Nullable final InstantType until,
       @Nullable final List<String> type,
       @Nullable final List<String> elements) {
+    return validatePatientExportRequest(
+        requestDetails, exportLevel, patientIds, outputFormat, since, until, type, null, elements);
+  }
+
+  /**
+   * Validates a patient-level or group-level export request.
+   *
+   * @param requestDetails the request details
+   * @param exportLevel the export level (PATIENT_TYPE, PATIENT_INSTANCE, or GROUP)
+   * @param patientIds the patient IDs to export (empty for all patients)
+   * @param outputFormat the output format parameter
+   * @param since the since parameter
+   * @param until the until parameter
+   * @param type the type parameter
+   * @param typeFilter the type filter parameter
+   * @param elements the elements parameter
+   * @return the pre-async validation result
+   */
+  public PreAsyncValidation.PreAsyncValidationResult<ExportRequest> validatePatientExportRequest(
+      @Nonnull final RequestDetails requestDetails,
+      @Nonnull final ExportLevel exportLevel,
+      @Nonnull final Set<String> patientIds,
+      @Nullable final String outputFormat,
+      @Nullable final InstantType since,
+      @Nullable final InstantType until,
+      @Nullable final List<String> type,
+      @Nullable final List<String> typeFilter,
+      @Nullable final List<String> elements) {
     final boolean lenient =
         requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName()).stream()
             .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
 
     final List<String> typeList = type != null ? type : new ArrayList<>();
+    final List<String> typeFilterList = typeFilter != null ? typeFilter : new ArrayList<>();
     final List<String> elementsList = elements != null ? elements : new ArrayList<>();
+
+    // Parse and validate _typeFilter values, filtering non-compartment types for patient exports.
+    final List<OperationOutcome.OperationOutcomeIssueComponent> typeFilterIssues =
+        new ArrayList<>();
+    final Map<String, List<String>> parsedTypeFilters =
+        parseTypeFilters(typeFilterList, typeList, lenient, typeFilterIssues, true);
+
+    // If _type is absent but _typeFilter is present, implicitly include referenced types.
+    final List<String> effectiveTypeList;
+    if (typeList.isEmpty() && !parsedTypeFilters.isEmpty()) {
+      effectiveTypeList = new ArrayList<>(parsedTypeFilters.keySet());
+    } else {
+      effectiveTypeList = typeList;
+    }
 
     final ExportRequest exportRequest =
         createPatientExportRequest(
@@ -170,7 +255,8 @@ public class ExportOperationValidator {
             outputFormat,
             since,
             until,
-            typeList,
+            effectiveTypeList,
+            parsedTypeFilters,
             elementsList,
             exportLevel,
             patientIds);
@@ -179,7 +265,8 @@ public class ExportOperationValidator {
         Stream.of(
                 OperationValidation.validateAcceptHeader(requestDetails, lenient),
                 OperationValidation.validatePreferHeader(requestDetails, lenient),
-                validateUnsupportedQueryParams(requestDetails, lenient))
+                validateUnsupportedQueryParams(requestDetails, lenient),
+                typeFilterIssues)
             .flatMap(Collection::stream)
             .toList();
     return new PreAsyncValidation.PreAsyncValidationResult<>(exportRequest, issues);
@@ -222,6 +309,106 @@ public class ExportOperationValidator {
   }
 
   /**
+   * Parses and validates _typeFilter values, returning a map keyed by resource type code.
+   *
+   * @param typeFilterList the raw _typeFilter parameter values
+   * @param typeList the _type parameter values (for consistency checking)
+   * @param lenient whether lenient handling is enabled
+   * @param issues mutable list to collect informational issues for lenient mode
+   * @param filterNonCompartment whether to silently filter out non-compartment resource types
+   * @return a map of resource type code to list of search query strings
+   */
+  @Nonnull
+  private Map<String, List<String>> parseTypeFilters(
+      @Nonnull final List<String> typeFilterList,
+      @Nonnull final List<String> typeList,
+      final boolean lenient,
+      @Nonnull final List<OperationOutcome.OperationOutcomeIssueComponent> issues,
+      final boolean filterNonCompartment) {
+    if (typeFilterList.isEmpty()) {
+      return Map.of();
+    }
+
+    // Resolve the effective _type set for consistency checking.
+    final Set<String> typeSet =
+        typeList.stream()
+            .map(String::strip)
+            .filter(Predicate.not(String::isEmpty))
+            .flatMap(string -> Arrays.stream(string.split(",")))
+            .collect(Collectors.toSet());
+
+    final Map<String, List<String>> result = new java.util.LinkedHashMap<>();
+
+    for (final String filterValue : typeFilterList) {
+      // Split on the first '?' to separate resource type from search query.
+      final int questionMarkIndex = filterValue.indexOf('?');
+      if (questionMarkIndex < 0) {
+        throw new InvalidRequestException(
+            "_typeFilter value '%s' has invalid format. Expected format: [ResourceType]?[search-params]"
+                .formatted(filterValue));
+      }
+
+      final String resourceTypeCode = filterValue.substring(0, questionMarkIndex);
+      final String searchQuery = filterValue.substring(questionMarkIndex + 1);
+
+      if (searchQuery.isEmpty()) {
+        throw new InvalidRequestException(
+            "_typeFilter value '%s' has an empty search query.".formatted(filterValue));
+      }
+
+      // Validate the resource type.
+      final Optional<String> validatedType = mapTypeQueryParam(resourceTypeCode, lenient);
+      if (validatedType.isEmpty()) {
+        // In lenient mode, mapTypeQueryParam returns empty and logs. Add an informational issue.
+        issues.add(
+            new OperationOutcome.OperationOutcomeIssueComponent()
+                .setCode(OperationOutcome.IssueType.INFORMATIONAL)
+                .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
+                .setDetails(
+                    new CodeableConcept()
+                        .setText(
+                            "_typeFilter references unknown resource type '%s'. Ignoring because lenient handling is enabled."
+                                .formatted(resourceTypeCode))));
+        continue;
+      }
+
+      final String resolvedType = validatedType.get();
+
+      // For patient/group exports, filter out non-compartment resource types silently.
+      if (filterNonCompartment && !patientCompartmentService.isInPatientCompartment(resolvedType)) {
+        log.info(
+            "_typeFilter resource type '{}' is not in the Patient compartment. Ignoring.",
+            resolvedType);
+        continue;
+      }
+
+      // Check consistency with _type parameter if _type was provided.
+      if (!typeSet.isEmpty() && !typeSet.contains(resolvedType)) {
+        if (!lenient) {
+          throw new InvalidRequestException(
+              "_typeFilter references resource type '%s' which is not included in _type parameter."
+                  .formatted(resolvedType));
+        } else {
+          issues.add(
+              new OperationOutcome.OperationOutcomeIssueComponent()
+                  .setCode(OperationOutcome.IssueType.INFORMATIONAL)
+                  .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
+                  .setDetails(
+                      new CodeableConcept()
+                          .setText(
+                              "_typeFilter references resource type '%s' which is not included in _type. Ignoring because lenient handling is enabled."
+                                  .formatted(resolvedType))));
+          continue;
+        }
+      }
+
+      result.computeIfAbsent(resolvedType, k -> new ArrayList<>()).add(searchQuery);
+    }
+
+    return result;
+  }
+
+  /**
    * Creates an ExportRequest for system-level exports.
    *
    * @param originalRequest the original request URL
@@ -231,6 +418,7 @@ public class ExportOperationValidator {
    * @param since the since parameter
    * @param until the until parameter
    * @param type the type parameter
+   * @param typeFilters the parsed type filters
    * @param elements the elements parameter
    * @return the export request
    */
@@ -242,6 +430,7 @@ public class ExportOperationValidator {
       @Nullable final InstantType since,
       @Nullable final InstantType until,
       @Nonnull final List<String> type,
+      @Nonnull final Map<String, List<String>> typeFilters,
       @Nonnull final List<String> elements) {
     if (outputFormat == null) {
       log.debug("No _outputFormat specified, defaulting to ndjson.");
@@ -280,6 +469,7 @@ public class ExportOperationValidator {
         since,
         until,
         resourceFilter,
+        typeFilters,
         fhirElements,
         lenient,
         ExportLevel.SYSTEM,
@@ -296,6 +486,7 @@ public class ExportOperationValidator {
    * @param since the since parameter
    * @param until the until parameter
    * @param type the type parameter
+   * @param typeFilters the parsed type filters
    * @param elements the elements parameter
    * @param exportLevel the export level
    * @param patientIds the patient IDs to export
@@ -309,6 +500,7 @@ public class ExportOperationValidator {
       @Nullable final InstantType since,
       @Nullable final InstantType until,
       @Nonnull final List<String> type,
+      @Nonnull final Map<String, List<String>> typeFilters,
       @Nonnull final List<String> elements,
       @Nonnull final ExportLevel exportLevel,
       @Nonnull final Set<String> patientIds) {
@@ -353,6 +545,7 @@ public class ExportOperationValidator {
         since,
         until,
         resourceFilter,
+        typeFilters,
         fhirElements,
         lenient,
         exportLevel,

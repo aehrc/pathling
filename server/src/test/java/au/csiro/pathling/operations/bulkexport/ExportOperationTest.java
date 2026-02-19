@@ -345,6 +345,8 @@ class ExportOperationTest {
         arguments(NDJSON, now, List.of("Patient"), Map.of(), false, List.of(), true),
         arguments(NDJSON, now, List.of("Patient123"), Map.of(), false, List.of(), false),
         arguments(NDJSON, now, List.of("Patient123"), Map.of(), true, List.of(), true),
+        // _typeFilter is now a supported parameter, so it should not trigger unsupported param
+        // errors.
         arguments(
             NDJSON,
             now,
@@ -352,16 +354,14 @@ class ExportOperationTest {
             queryParameter("_typeFilter", "test"),
             false,
             List.of(),
-            false),
+            true),
         arguments(
             NDJSON,
             now,
             List.<String>of(),
             queryParameter("_typeFilter", "test"),
             true,
-            List.of(
-                "The query parameter '_typeFilter' is not supported. Ignoring because lenient"
-                    + " handling is enabled."),
+            List.of(),
             true));
   }
 
@@ -443,12 +443,21 @@ class ExportOperationTest {
                       since,
                       until,
                       type,
+                      Map.of(),
                       emptyList))
           .isExactlyInstanceOf(InvalidRequestException.class);
     } else {
       final ExportRequest expectedRequest =
           exportOperationValidator.createExportRequest(
-              originalRequest, serverBaseUrl, false, outputFormat, since, until, type, emptyList);
+              originalRequest,
+              serverBaseUrl,
+              false,
+              outputFormat,
+              since,
+              until,
+              type,
+              Map.of(),
+              emptyList);
       assertThat(expectedRequest).isEqualTo(expectedMappedRequest);
     }
   }

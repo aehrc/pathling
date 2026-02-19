@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.bulkexport;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.ELEMENTS_PARAM_NAME;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.OUTPUT_FORMAT_PARAM_NAME;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.SINCE_PARAM_NAME;
+import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.TYPE_FILTER_PARAM_NAME;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.TYPE_PARAM_NAME;
 import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.UNTIL_PARAM_NAME;
 
@@ -97,6 +98,7 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
    * @param since the since date parameter
    * @param until the until date parameter
    * @param type the type parameter
+   * @param typeFilter the type filter parameter
    * @param elements the elements parameter
    * @param requestDetails the request details
    * @return the binary result, or null if the job was cancelled
@@ -112,6 +114,7 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
       @Nullable @OperationParam(name = SINCE_PARAM_NAME) final InstantType since,
       @Nullable @OperationParam(name = UNTIL_PARAM_NAME) final InstantType until,
       @Nullable @OperationParam(name = TYPE_PARAM_NAME) final List<String> type,
+      @Nullable @OperationParam(name = TYPE_FILTER_PARAM_NAME) final List<String> typeFilter,
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) final List<String> elements,
       @Nonnull final ServletRequestDetails requestDetails) {
     return exportOperationHelper.executeExport(requestDetails);
@@ -122,13 +125,14 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
   @Nonnull
   public PreAsyncValidationResult<ExportRequest> preAsyncValidate(
       @Nonnull final ServletRequestDetails servletRequestDetails, @Nonnull final Object[] args) {
-    // args = [groupId, outputFormat, since, until, type, elements, requestDetails]
+    // args = [groupId, outputFormat, since, until, type, typeFilter, elements, requestDetails]
     final IdType groupId = (IdType) args[0];
     final String outputFormat = (String) args[1];
     final InstantType since = (InstantType) args[2];
     final InstantType until = (InstantType) args[3];
     final List<String> type = (List<String>) args[4];
-    final List<String> elements = (List<String>) args[5];
+    final List<String> typeFilter = (List<String>) args[5];
+    final List<String> elements = (List<String>) args[6];
 
     // Extract patient IDs from the group during validation.
     final Set<String> patientIds =
@@ -142,6 +146,7 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
         since,
         until,
         type,
+        typeFilter,
         elements);
   }
 }

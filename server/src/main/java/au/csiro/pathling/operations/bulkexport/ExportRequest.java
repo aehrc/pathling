@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.bulkexport;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.hl7.fhir.r4.model.InstantType;
 
@@ -37,6 +38,9 @@ import org.hl7.fhir.r4.model.InstantType;
  * @param includeResourceTypeFilters When provided, resources will be included in the response if
  *     their resource type is listed here. Uses String resource type codes to support both standard
  *     FHIR resource types and custom types like ViewDefinition.
+ * @param typeFilters Search-based filters for exported resources, keyed by resource type code. Each
+ *     value is a list of FHIR search query strings. Multiple filters for the same resource type are
+ *     combined with OR logic.
  * @param elements When provided, the listed FHIR resource elements will be the only ones returned
  *     in the resources (alongside mandatory elements).
  * @param lenient Lenient handling enabled.
@@ -52,6 +56,7 @@ public record ExportRequest(
     @Nullable InstantType since,
     @Nullable InstantType until,
     @Nonnull List<String> includeResourceTypeFilters,
+    @Nonnull Map<String, List<String>> typeFilters,
     @Nonnull List<FhirElement> elements,
     boolean lenient,
     @Nonnull ExportLevel exportLevel,
