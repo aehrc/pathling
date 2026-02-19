@@ -32,6 +32,7 @@ import { DEFAULT_EXPORT_OPTIONS, serialiseTypeFilterState } from "../../types/ex
 import { IMPORT_FORMATS } from "../../types/import";
 import { ExportOptions } from "../export/ExportOptions";
 import { FieldGuidance } from "../FieldGuidance";
+import { FieldLabel } from "../FieldLabel";
 
 import type { SearchParamCapability } from "../../hooks/useServerCapabilities";
 import type { ExportOptionsValues } from "../../types/exportOptions";
@@ -100,11 +101,7 @@ export function ImportPnpForm({
         <Heading size="4">New import</Heading>
 
         <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Input format
-            </Text>
-          </Box>
+          <FieldLabel mb="2">Input format</FieldLabel>
           <Select.Root
             value={inputFormat}
             onValueChange={(value) => setInputFormat(value as ImportFormat)}
@@ -121,11 +118,7 @@ export function ImportPnpForm({
         </Box>
 
         <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Export URL
-            </Text>
-          </Box>
+          <FieldLabel mb="2">Export URL</FieldLabel>
           <TextField.Root
             placeholder="e.g., https://example.org/fhir/$export"
             value={exportUrl}

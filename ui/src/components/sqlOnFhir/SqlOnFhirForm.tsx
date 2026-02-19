@@ -42,6 +42,7 @@ import { useState } from "react";
 import { useClipboard } from "../../hooks";
 import { useViewDefinitions } from "../../hooks/useViewDefinitions";
 import { FieldGuidance } from "../FieldGuidance";
+import { FieldLabel } from "../FieldLabel";
 
 import type { ViewRunRequest } from "../../hooks";
 import type { CreateViewDefinitionResult } from "../../types/sqlOnFhir";
@@ -141,11 +142,7 @@ export function SqlOnFhirForm({
           <Box pt="4">
             <Tabs.Content value="stored">
               <Box>
-                <Box mb="2">
-                  <Text as="label" size="2" weight="medium">
-                    View definition
-                  </Text>
-                </Box>
+                <FieldLabel mb="2">View definition</FieldLabel>
                 {isLoadingViewDefinitions ? (
                   <Flex align="center" gap="2" py="2">
                     <Spinner size="1" />
@@ -217,11 +214,7 @@ export function SqlOnFhirForm({
 
             <Tabs.Content value="custom">
               <Box>
-                <Box mb="2">
-                  <Text as="label" size="2" weight="medium">
-                    View definition JSON
-                  </Text>
-                </Box>
+                <FieldLabel mb="2">View definition JSON</FieldLabel>
                 <TextArea
                   size="1"
                   resize="vertical"

@@ -24,6 +24,7 @@
 import { Box, Flex, RadioCards, Text } from "@radix-ui/themes";
 
 import { SAVE_MODES } from "../../types/import";
+import { FieldLabel } from "../FieldLabel";
 
 import type { SaveMode } from "../../types/import";
 
@@ -43,11 +44,7 @@ interface SaveModeFieldProps {
 export function SaveModeField({ value, onChange }: SaveModeFieldProps) {
   return (
     <Box>
-      <Box mb="2">
-        <Text as="label" size="2" weight="medium">
-          Save mode
-        </Text>
-      </Box>
+      <FieldLabel mb="2">Save mode</FieldLabel>
       <RadioCards.Root
         value={value}
         onValueChange={(v) => onChange(v as SaveMode)}

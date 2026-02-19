@@ -22,20 +22,11 @@
  */
 
 import { Cross2Icon, MagnifyingGlassIcon, PlusIcon } from "@radix-ui/react-icons";
-import {
-  Box,
-  Button,
-  Card,
-  Flex,
-  Heading,
-  IconButton,
-  Select,
-  Text,
-  TextField,
-} from "@radix-ui/themes";
+import { Box, Button, Card, Flex, Heading, IconButton, Select, TextField } from "@radix-ui/themes";
 import { useRef, useState } from "react";
 
 import { FieldGuidance } from "../FieldGuidance";
+import { FieldLabel } from "../FieldLabel";
 import { SearchParamsInput, createEmptyRow } from "../SearchParamsInput";
 
 import type { SearchParamCapability } from "../../hooks/useServerCapabilities";
@@ -141,11 +132,7 @@ export function ResourceSearchForm({
         <Heading size="4">Search resources</Heading>
 
         <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Resource type
-            </Text>
-          </Box>
+          <FieldLabel mb="2">Resource type</FieldLabel>
           <Select.Root value={resourceType} onValueChange={setResourceType}>
             <Select.Trigger style={{ width: "100%" }} />
             <Select.Content>
@@ -169,9 +156,7 @@ export function ResourceSearchForm({
 
         <Box>
           <Flex justify="between" align="center" mb="2">
-            <Text as="label" size="2" weight="medium">
-              FHIRPath filters
-            </Text>
+            <FieldLabel mb="0">FHIRPath filters</FieldLabel>
             <Button size="1" variant="soft" onClick={addFilter}>
               <PlusIcon />
               Add filter

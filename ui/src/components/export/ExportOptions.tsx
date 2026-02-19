@@ -22,11 +22,12 @@
  */
 
 import { Cross2Icon, PlusIcon } from "@radix-ui/react-icons";
-import { Box, Button, Card, Flex, IconButton, Select, Text, TextField } from "@radix-ui/themes";
+import { Box, Button, Card, Flex, IconButton, Select, TextField } from "@radix-ui/themes";
 
 import { ResourceTypePicker } from "./ResourceTypePicker";
 import { OUTPUT_FORMATS } from "../../types/exportOptions";
 import { FieldGuidance } from "../FieldGuidance";
+import { FieldLabel } from "../FieldLabel";
 import { SearchParamsInput, createEmptyRow } from "../SearchParamsInput";
 
 import type { SearchParamCapability } from "../../hooks/useServerCapabilities";
@@ -121,9 +122,7 @@ export function ExportOptions({
 
       <Flex gap="4" wrap="wrap">
         <Box style={{ flex: 1 }}>
-          <Text as="label" size="2" weight="medium" mb="1">
-            Since
-          </Text>
+          <FieldLabel>Since</FieldLabel>
           <TextField.Root
             type="datetime-local"
             value={values.since}
@@ -132,9 +131,7 @@ export function ExportOptions({
           <FieldGuidance>Only resources updated after this time.</FieldGuidance>
         </Box>
         <Box style={{ flex: 1 }}>
-          <Text as="label" size="2" weight="medium" mb="1">
-            Until
-          </Text>
+          <FieldLabel>Until</FieldLabel>
           <TextField.Root
             type="datetime-local"
             value={values.until}
@@ -145,9 +142,7 @@ export function ExportOptions({
       </Flex>
 
       <Box>
-        <Text as="label" size="2" weight="medium" mb="1">
-          Elements (optional)
-        </Text>
+        <FieldLabel optional>Elements</FieldLabel>
         <TextField.Root
           placeholder="e.g., id,meta,name"
           value={values.elements}
@@ -158,9 +153,7 @@ export function ExportOptions({
 
       {!hideOutputFormat && (
         <Box>
-          <Text as="label" size="2" weight="medium" mb="1">
-            Output format
-          </Text>
+          <FieldLabel>Output format</FieldLabel>
           <Select.Root
             value={values.outputFormat}
             onValueChange={(value) => updateOption("outputFormat", value)}
@@ -180,9 +173,7 @@ export function ExportOptions({
 
       <Box>
         <Flex justify="between" align="center" mb="2">
-          <Text as="label" size="2" weight="medium">
-            Type filters
-          </Text>
+          <FieldLabel mb="0">Type filters</FieldLabel>
           <Button size="1" variant="soft" onClick={addTypeFilter}>
             <PlusIcon />
             Add type filter

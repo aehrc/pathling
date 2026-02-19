@@ -24,6 +24,7 @@
 import { Box, CheckboxCards, Flex, ScrollArea, Text } from "@radix-ui/themes";
 
 import { FieldGuidance } from "../FieldGuidance";
+import { FieldLabel } from "../FieldLabel";
 
 interface ResourceTypePickerProps {
   resourceTypes: string[];
@@ -53,9 +54,7 @@ export function ResourceTypePicker({
     <Box>
       <Flex justify="between" align="center" mb="2">
         <Flex gap="2" align="baseline">
-          <Text as="label" size="2" weight="medium">
-            Resource types
-          </Text>
+          <FieldLabel mb="0">Resource types</FieldLabel>
           <FieldGuidance mt="0">(leave empty to export all)</FieldGuidance>
         </Flex>
         <Text size="1" color="teal" style={{ cursor: "pointer" }} onClick={clearAllTypes}>

@@ -38,6 +38,7 @@ import { useRef, useState } from "react";
 import { SaveModeField } from "./SaveModeField";
 import { IMPORT_FORMATS } from "../../types/import";
 import { FieldGuidance } from "../FieldGuidance";
+import { FieldLabel } from "../FieldLabel";
 
 import type { ImportFormat, ImportRequest, SaveMode } from "../../types/import";
 
@@ -103,11 +104,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
         <Heading size="4">New import</Heading>
 
         <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Input format
-            </Text>
-          </Box>
+          <FieldLabel mb="2">Input format</FieldLabel>
           <Select.Root
             value={inputFormat}
             onValueChange={(value) => setInputFormat(value as ImportFormat)}
@@ -125,9 +122,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
 
         <Box>
           <Flex justify="between" align="center" mb="2">
-            <Text as="label" size="2" weight="medium">
-              Input files
-            </Text>
+            <FieldLabel mb="0">Input files</FieldLabel>
             <Button size="1" variant="soft" onClick={addInput}>
               <PlusIcon />
               Add input

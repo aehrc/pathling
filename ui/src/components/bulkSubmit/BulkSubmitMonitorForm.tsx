@@ -25,6 +25,8 @@ import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Heading, Text, TextField } from "@radix-ui/themes";
 import { useState } from "react";
 
+import { FieldLabel } from "../FieldLabel";
+
 import type { SubmitterIdentifier } from "../../types/bulkSubmit";
 
 interface BulkSubmitMonitorFormProps {
@@ -71,11 +73,7 @@ export function BulkSubmitMonitorForm({
         </Text>
 
         <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Submitter system
-            </Text>
-          </Box>
+          <FieldLabel mb="2">Submitter system</FieldLabel>
           <TextField.Root
             placeholder="e.g., http://example.org/submitters"
             value={submitterSystem}
@@ -84,11 +82,7 @@ export function BulkSubmitMonitorForm({
         </Box>
 
         <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Submitter value
-            </Text>
-          </Box>
+          <FieldLabel mb="2">Submitter value</FieldLabel>
           <TextField.Root
             placeholder="e.g., my-submitter-id"
             value={submitterValue}
@@ -97,11 +91,7 @@ export function BulkSubmitMonitorForm({
         </Box>
 
         <Box>
-          <Box mb="2">
-            <Text as="label" size="2" weight="medium">
-              Submission ID
-            </Text>
-          </Box>
+          <FieldLabel mb="2">Submission ID</FieldLabel>
           <TextField.Root
             placeholder="e.g., 550e8400-e29b-41d4-a716-446655440000"
             value={submissionId}

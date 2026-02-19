@@ -22,11 +22,12 @@
  */
 
 import { PlayIcon } from "@radix-ui/react-icons";
-import { Box, Button, Card, Flex, Heading, Select, Text, TextField } from "@radix-ui/themes";
+import { Box, Button, Card, Flex, Heading, Select, TextField } from "@radix-ui/themes";
 import { useState } from "react";
 
 import { ExportOptions } from "./ExportOptions";
 import { DEFAULT_EXPORT_OPTIONS, serialiseTypeFilterState } from "../../types/exportOptions";
+import { FieldLabel } from "../FieldLabel";
 
 import type { SearchParamCapability } from "../../hooks/useServerCapabilities";
 import type { ExportLevel, ExportRequest } from "../../types/export";
@@ -82,9 +83,7 @@ export function ExportForm({ onSubmit, resourceTypes, searchParams }: Readonly<E
         <Heading size="4">New export</Heading>
 
         <Box>
-          <Text as="label" size="2" weight="medium" mb="1">
-            Export level
-          </Text>
+          <FieldLabel>Export level</FieldLabel>
           <Select.Root value={level} onValueChange={(value) => setLevel(value as ExportLevel)}>
             <Select.Trigger style={{ width: "100%" }} />
             <Select.Content>
@@ -99,9 +98,7 @@ export function ExportForm({ onSubmit, resourceTypes, searchParams }: Readonly<E
 
         {level === "patient" && (
           <Box>
-            <Text as="label" size="2" weight="medium" mb="1">
-              Patient ID
-            </Text>
+            <FieldLabel>Patient ID</FieldLabel>
             <TextField.Root
               placeholder="e.g., patient-123"
               value={patientId}
@@ -112,9 +109,7 @@ export function ExportForm({ onSubmit, resourceTypes, searchParams }: Readonly<E
 
         {level === "group" && (
           <Box>
-            <Text as="label" size="2" weight="medium" mb="1">
-              Group ID
-            </Text>
+            <FieldLabel>Group ID</FieldLabel>
             <TextField.Root
               placeholder="e.g., group-456"
               value={groupId}

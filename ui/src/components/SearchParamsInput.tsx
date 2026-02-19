@@ -22,9 +22,10 @@
  */
 
 import { Cross2Icon, PlusIcon } from "@radix-ui/react-icons";
-import { Badge, Box, Button, Flex, IconButton, Select, Text, TextField } from "@radix-ui/themes";
+import { Badge, Box, Button, Flex, IconButton, Select, TextField } from "@radix-ui/themes";
 
 import { FieldGuidance } from "./FieldGuidance";
+import { FieldLabel } from "./FieldLabel";
 
 import type { SearchParamCapability } from "../hooks/useServerCapabilities";
 
@@ -107,9 +108,7 @@ export function SearchParamsInput({
   return (
     <Box>
       <Flex justify="between" align="center" mb="2">
-        <Text as="label" size="2" weight="medium">
-          Search parameters
-        </Text>
+        <FieldLabel mb="0">Search parameters</FieldLabel>
         <Button size="1" variant="soft" onClick={addRow}>
           <PlusIcon />
           Add parameter
