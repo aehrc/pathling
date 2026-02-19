@@ -43,7 +43,7 @@ interface FieldGuidanceProps {
  */
 export function FieldGuidance({ children, mt = "1" }: Readonly<FieldGuidanceProps>) {
   return (
-    <Text size="1" color="gray" mt={mt}>
+    <Text size="1" color="gray" mt={mt} style={{ display: "block" }}>
       {children}
     </Text>
   );
