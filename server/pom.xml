@@ -6,7 +6,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>server</artifactId>
-  <version>1.2.0-SNAPSHOT</version>
+  <version>1.2.0</version>
 
   <name>Pathling Server</name>
   <description>
