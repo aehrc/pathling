@@ -21,6 +21,37 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Find a project-local Node binary by walking up from a file's directory.
+# Falls back to the global binary if no local installation is found.
+find_node_bin() {
+    local file="$1"
+    local bin_name="$2"
+    local dir
+
+    dir=$(dirname "$file")
+    while [ "$dir" != "." ] && [ "$dir" != "/" ]; do
+        if [ -x "$dir/node_modules/.bin/$bin_name" ]; then
+            echo "$dir/node_modules/.bin/$bin_name"
+            return 0
+        fi
+        dir=$(dirname "$dir")
+    done
+
+    # Check the repo root.
+    if [ -x "node_modules/.bin/$bin_name" ]; then
+        echo "node_modules/.bin/$bin_name"
+        return 0
+    fi
+
+    # Fall back to the global binary.
+    if command_exists "$bin_name"; then
+        echo "$bin_name"
+        return 0
+    fi
+
+    return 1
+}
+
 # Format a file and re-stage it if modified.
 format_and_restage() {
     local file="$1"
@@ -55,22 +86,22 @@ for FILE in $STAGED_FILES; do
 
     case "$EXT" in
         js|jsx|ts|tsx|json|md|markdown)
-            if ! command_exists prettier; then
+            PRETTIER=$(find_node_bin "$FILE" "prettier") || {
                 echo "Error: prettier is not installed. Please install it with: bun add -g prettier"
                 exit 1
-            fi
-            format_and_restage "$FILE" prettier --write "$FILE"
+            }
+            format_and_restage "$FILE" "$PRETTIER" --write "$FILE"
             ;;
         yaml|yml)
             # Skip Helm templates (contain Go template syntax that Prettier cannot parse).
             if [[ "$FILE" == */templates/*.yaml || "$FILE" == */templates/*.yml ]]; then
                 continue
             fi
-            if ! command_exists prettier; then
+            PRETTIER=$(find_node_bin "$FILE" "prettier") || {
                 echo "Error: prettier is not installed. Please install it with: bun add -g prettier"
                 exit 1
-            fi
-            format_and_restage "$FILE" prettier --write "$FILE"
+            }
+            format_and_restage "$FILE" "$PRETTIER" --write "$FILE"
             ;;
         java)
             if ! command_exists google-java-format; then
