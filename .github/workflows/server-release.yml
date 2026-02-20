@@ -33,10 +33,19 @@ jobs:
 
       # Release won't be possible if there are outstanding vulnerabilities of medium severity or
       # higher as reported by Trivy.
-      - name: Run security scan
+      - name: Run server security scan
         uses: ./.github/actions/trivy-scan
         with:
-          skip-dirs: "utilities,encoders,terminology,fhirpath,library-api,library-runtime,lib,site,fhirpath-lab-api,benchmark,test-data,deployment"
+          scan-ref: server
+          trivyignore: server/.trivyignore
+          sarif-output: trivy-results-server.sarif
+
+      - name: Run UI security scan
+        uses: ./.github/actions/trivy-scan
+        with:
+          scan-ref: ui
+          trivyignore: ui/.trivyignore
+          sarif-output: trivy-results-ui.sarif
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -54,7 +63,7 @@ jobs:
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling_server -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.sarifReportPaths=../trivy-results.sarif
+          -Dsonar.sarifReportPaths=../trivy-results-server.sarif
         timeout-minutes: 30
 
       - name: Save test reports

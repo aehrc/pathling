@@ -81,6 +81,7 @@ jobs:
       - name: Run security scan
         uses: ./.github/actions/trivy-scan
         with:
+          skip-files: "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*"
           skip-db-update: "true"
           skip-dirs: "server,ui,site,fhirpath-lab-api,benchmark,test-data,deployment"
 

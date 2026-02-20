@@ -14,7 +14,7 @@ inputs:
   skip-files:
     description: Files to skip (glob patterns).
     required: false
-    default: "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock"
+    default: "**/target/**/*"
   skip-dirs:
     description: Directories to skip (comma-separated).
     required: false
@@ -27,6 +27,10 @@ inputs:
     description: Skip Trivy database updates (use cached DB).
     required: false
     default: "false"
+  trivyignore:
+    description: Path to .trivyignore file (relative to repo root).
+    required: false
+    default: ".trivyignore"
   sarif-output:
     description: Path for SARIF output file.
     required: false
@@ -42,6 +46,7 @@ runs:
       env:
         TRIVY_SKIP_DB_UPDATE: ${{ inputs.skip-db-update }}
         TRIVY_SKIP_JAVA_DB_UPDATE: ${{ inputs.skip-db-update }}
+        TRIVY_IGNOREFILE: ${{ inputs.trivyignore }}
       with:
         scan-type: repo
         scan-ref: ${{ inputs.scan-ref }}
@@ -60,6 +65,7 @@ runs:
       env:
         TRIVY_SKIP_DB_UPDATE: ${{ inputs.skip-db-update }}
         TRIVY_SKIP_JAVA_DB_UPDATE: ${{ inputs.skip-db-update }}
+        TRIVY_IGNOREFILE: ${{ inputs.trivyignore }}
       with:
         scan-type: repo
         scan-ref: ${{ inputs.scan-ref }}

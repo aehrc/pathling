@@ -35,8 +35,8 @@ jobs:
         uses: ./.github/actions/trivy-scan
         with:
           scan-ref: site
+          trivyignore: site/.trivyignore
           skip-db-update: "true"
-          skip-files: "**/target/**/*,bun.lock"
 
       - name: Run install goal
         env:

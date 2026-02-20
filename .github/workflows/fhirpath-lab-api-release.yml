@@ -33,6 +33,7 @@ jobs:
         uses: ./.github/actions/trivy-scan
         with:
           scan-ref: fhirpath-lab-api
+          trivyignore: fhirpath-lab-api/.trivyignore
           skip-db-update: "true"
 
       - name: Run tests

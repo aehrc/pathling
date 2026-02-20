@@ -11,7 +11,8 @@ its top-level directory:
 
 | Changed directory                                                                                  | Scope            |
 | -------------------------------------------------------------------------------------------------- | ---------------- |
-| `server/`, `ui/`                                                                                   | server           |
+| `server/`                                                                                          | server           |
+| `ui/`                                                                                              | ui               |
 | `utilities/`, `encoders/`, `terminology/`, `fhirpath/`, `library-api/`, `library-runtime/`, `lib/` | core-libraries   |
 | `site/`                                                                                            | site             |
 | `fhirpath-lab-api/`                                                                                | fhirpath-lab-api |
@@ -24,39 +25,20 @@ modified and stop.
 
 ## Step 2: Run Trivy for each scope
 
-Run the appropriate `trivy repo` command for each identified scope. All
-commands must be run from the repository root so that `.trivyignore` and
-relative scan paths resolve correctly.
+Each scope has its own `.trivyignore` file. Run Trivy from within the scope's
+directory so that the local `.trivyignore` is picked up automatically.
 
 Common options for all scans:
 
 ```
 --severity MEDIUM,HIGH,CRITICAL
---ignorefile .trivyignore
 --exit-code 0
-```
-
-### Server scope
-
-Scans the full repo from the root but skips all non-server modules. The
-`**/target/**/*` skip-file excludes Maven build output.
-
-Working directory: repository root.
-
-```bash
-trivy repo . \
-  --severity MEDIUM,HIGH,CRITICAL \
-  --skip-files "**/target/**/*" \
-  --skip-dirs "utilities,encoders,terminology,fhirpath,library-api,library-runtime,lib,site,fhirpath-lab-api,benchmark,test-data,deployment" \
-  --ignorefile .trivyignore \
-  --exit-code 0
 ```
 
 ### Core libraries scope
 
-Scans the full repo from the root but skips non-core modules. The skip-files
-exclude directories that are siblings of the core modules but not part of any
-scan scope.
+Scans from the repository root with `--skip-dirs` to exclude non-core modules.
+The root `.trivyignore` contains suppressions for Spark-provided dependencies.
 
 Working directory: repository root.
 
@@ -65,36 +47,60 @@ trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
   --skip-files "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*" \
   --skip-dirs "server,ui,site,fhirpath-lab-api,benchmark,test-data,deployment" \
-  --ignorefile .trivyignore \
+  --exit-code 0
+```
+
+### Server scope
+
+Scans the `server` directory. The `server/.trivyignore` contains suppressions
+for Spark runtime transitive dependencies and server-specific libraries.
+
+Working directory: `server/`.
+
+```bash
+cd server && trivy repo . \
+  --severity MEDIUM,HIGH,CRITICAL \
+  --skip-files "**/target/**/*" \
+  --exit-code 0
+```
+
+### UI scope
+
+Scans the `ui` directory. The `ui/.trivyignore` contains suppressions for
+client-side JavaScript dependencies.
+
+Working directory: `ui/`.
+
+```bash
+cd ui && trivy repo . \
+  --severity MEDIUM,HIGH,CRITICAL \
   --exit-code 0
 ```
 
 ### Site scope
 
-Scans only the `site` subdirectory. The `bun.lock` skip-file prevents
-lockfile noise. The `--ignorefile` path is relative to the working directory,
-not the scan target, so it resolves to the root `.trivyignore`.
+Scans the `site` directory. The `site/.trivyignore` contains any
+site-specific suppressions.
 
-Working directory: repository root.
+Working directory: `site/`.
 
 ```bash
-trivy repo site \
+cd site && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
-  --skip-files "bun.lock" \
-  --ignorefile .trivyignore \
+  --skip-files "**/target/**/*" \
   --exit-code 0
 ```
 
 ### FHIRPath Lab API scope
 
-Scans only the `fhirpath-lab-api` subdirectory.
+Scans the `fhirpath-lab-api` directory. The
+`fhirpath-lab-api/.trivyignore` contains any API-specific suppressions.
 
-Working directory: repository root.
+Working directory: `fhirpath-lab-api/`.
 
 ```bash
-trivy repo fhirpath-lab-api \
+cd fhirpath-lab-api && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
-  --ignorefile .trivyignore \
   --exit-code 0
 ```
 
@@ -142,9 +148,10 @@ For each vulnerability:
       override or exclusion is appropriate.
     - **Exploitable with no fix available**: Recommend tracking for future
       remediation. Suggest a workaround if one exists.
-    - **Not exploitable or not applicable**: Recommend adding to
-      `.trivyignore` with a comment explaining the rationale, following the
-      existing format in that file (comment line, then CVE/GHSA ID).
+    - **Not exploitable or not applicable**: Recommend adding to the
+      scope-specific `.trivyignore` with a comment explaining the rationale,
+      following the existing format in that file (comment line, then CVE/GHSA
+      ID).
 
 ### Output format
 
@@ -154,8 +161,8 @@ For each scope, present:
 2. **Detailed findings table** with columns: CVE/GHSA ID, package, severity,
    exploitability assessment, and recommended action.
 3. **`.trivyignore` additions**: For vulnerabilities that should be suppressed,
-   provide the exact lines to add, following the existing format (comment
-   explaining rationale, then the CVE/GHSA ID).
+   provide the exact lines to add to the scope's `.trivyignore` file, following
+   the existing format (comment explaining rationale, then the CVE/GHSA ID).
 
 If no vulnerabilities are found for a scope, report that the scan passed
 cleanly.

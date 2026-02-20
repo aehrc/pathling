@@ -1,0 +1,5 @@
+# React Router vulnerabilities - UI uses Declarative Mode (BrowserRouter), no
+# SSR, no ScrollRestoration, no loader/action redirects.
+CVE-2026-21884
+CVE-2026-22029
+CVE-2026-22030
