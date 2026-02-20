@@ -82,6 +82,7 @@ jobs:
         uses: ./.github/actions/trivy-scan
         with:
           skip-db-update: "true"
+          skip-dirs: "server,ui,site,fhirpath-lab-api,benchmark,test-data,deployment"
 
       - name: Run deploy goal (pre-release)
         env:

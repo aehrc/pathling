@@ -57,6 +57,8 @@ jobs:
       # higher as reported by Trivy.
       - name: Run security scan
         uses: ./.github/actions/trivy-scan
+        with:
+          skip-dirs: "server,ui,site,fhirpath-lab-api,benchmark,test-data,deployment"
 
       - name: Run deploy goal
         env:

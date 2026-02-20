@@ -31,6 +31,13 @@ jobs:
           python: "true"
           bun: "true"
 
+      - name: Run security scan
+        uses: ./.github/actions/trivy-scan
+        with:
+          scan-ref: site
+          skip-db-update: "true"
+          skip-files: "**/target/**/*,bun.lock"
+
       - name: Run install goal
         env:
           R_KEEP_PKG_SOURCE: yes

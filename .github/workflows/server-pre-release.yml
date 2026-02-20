@@ -35,6 +35,7 @@ jobs:
         uses: ./.github/actions/trivy-scan
         with:
           skip-db-update: "true"
+          skip-dirs: "utilities,encoders,terminology,fhirpath,library-api,library-runtime,lib,site,fhirpath-lab-api,benchmark,test-data,deployment"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3

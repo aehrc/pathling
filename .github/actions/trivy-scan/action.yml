@@ -7,10 +7,18 @@ name: Trivy Security Scan
 description: Run Trivy security scan with SARIF output, table on failure.
 
 inputs:
+  scan-ref:
+    description: Path to scan (relative to repo root).
+    required: false
+    default: "."
   skip-files:
     description: Files to skip (glob patterns).
     required: false
     default: "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*,site/bun.lock"
+  skip-dirs:
+    description: Directories to skip (comma-separated).
+    required: false
+    default: ""
   ignore-unfixed:
     description: Ignore unfixed vulnerabilities.
     required: false
@@ -36,14 +44,15 @@ runs:
         TRIVY_SKIP_JAVA_DB_UPDATE: ${{ inputs.skip-db-update }}
       with:
         scan-type: repo
-        scan-ref: .
+        scan-ref: ${{ inputs.scan-ref }}
         ignore-unfixed: ${{ inputs.ignore-unfixed }}
         format: sarif
         output: ${{ inputs.sarif-output }}
         skip-files: ${{ inputs.skip-files }}
+        skip-dirs: ${{ inputs.skip-dirs }}
         exit-code: "1"
         severity: MEDIUM,HIGH,CRITICAL
-        version: 'v0.69.0'
+        version: "v0.69.0"
 
     - name: Run security scan (table output on failure)
       if: steps.sarif-scan.outcome == 'failure'
@@ -53,11 +62,12 @@ runs:
         TRIVY_SKIP_JAVA_DB_UPDATE: ${{ inputs.skip-db-update }}
       with:
         scan-type: repo
-        scan-ref: .
+        scan-ref: ${{ inputs.scan-ref }}
         ignore-unfixed: ${{ inputs.ignore-unfixed }}
         format: table
         skip-files: ${{ inputs.skip-files }}
+        skip-dirs: ${{ inputs.skip-dirs }}
         skip-setup-trivy: true
         exit-code: "1"
         severity: MEDIUM,HIGH,CRITICAL
-        version: 'v0.69.0'
+        version: "v0.69.0"

@@ -29,6 +29,12 @@ jobs:
           java: "false"
           python: "true"
 
+      - name: Run security scan
+        uses: ./.github/actions/trivy-scan
+        with:
+          scan-ref: fhirpath-lab-api
+          skip-db-update: "true"
+
       - name: Run tests
         working-directory: fhirpath-lab-api
         run: |
