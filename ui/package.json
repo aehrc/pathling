@@ -54,7 +54,7 @@
     "globals": "^16.5.0",
     "jscpd": "^4.0.7",
     "jsdom": "^27.4.0",
-    "prettier": "^3.7.4",
+    "prettier": "^3.8.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
