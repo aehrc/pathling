@@ -63,6 +63,6 @@ jobs:
           mvn --batch-mode -U verify \
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -f server/pom.xml \
-          -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
+          -Dsonar.projectKey=aehrc_pathling_server -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
           -Dsonar.sarifReportPaths=trivy-results.sarif
