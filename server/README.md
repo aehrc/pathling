@@ -1,5 +1,7 @@
 # Pathling Server
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=aehrc_pathling&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=aehrc_pathling_server)
+
 Pathling Server is a FHIR R4 analytics server that exposes a range of
 functionality for use by applications.
 
@@ -78,19 +80,22 @@ include:
 - **Operations**: Enable or disable specific FHIR operations
 - **Spark**: Apache Spark cluster configuration for distributed processing
 
-See the [configuration documentation](https://pathling.csiro.au/docs/server/configuration)
+See
+the [configuration documentation](https://pathling.csiro.au/docs/server/configuration)
 for full details.
 
 ## Development
 
-For build, test, and deployment instructions, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For build, test, and deployment instructions,
+see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 For coding conventions and contribution guidelines, see the
 [main CONTRIBUTING.md](../CONTRIBUTING.md) in the repository root.
 
 ## Documentation
 
-Full documentation is available at [pathling.csiro.au](https://pathling.csiro.au/docs/server).
+Full documentation is available
+at [pathling.csiro.au](https://pathling.csiro.au/docs/server).
 
 ## Licence
 
