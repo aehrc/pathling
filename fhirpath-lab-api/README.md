@@ -56,9 +56,9 @@ Returns server health status.
 { "status": "ok" }
 ```
 
-### `POST /$fhirpath-r4`
+### `POST /fhir/$fhirpath`
 
-Evaluates a FHIRPath expression against a FHIR R4 resource.
+Evaluates a FHIRPath expression against a FHIR resource.
 
 Request body (FHIR Parameters):
 

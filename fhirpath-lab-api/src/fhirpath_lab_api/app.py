@@ -81,7 +81,7 @@ def create_app(pathling_context=None) -> Flask:
             content_type="application/json",
         )
 
-    @app.route("/$fhirpath-r4", methods=["POST"])
+    @app.route("/fhir/$fhirpath", methods=["POST"])
     def evaluate_fhirpath():
         """Evaluates a FHIRPath expression against a FHIR resource.
 

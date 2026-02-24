@@ -80,13 +80,13 @@ def test_healthcheck_returns_200(client):
     assert data["status"] == "ok"
 
 
-# ========== POST /$fhirpath-r4 tests ==========
+# ========== POST /fhir/$fhirpath tests ==========
 
 
 def test_successful_evaluation(client, mock_context, valid_request_body):
     """A valid request returns a FHIR Parameters response with results."""
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data=json.dumps(valid_request_body),
         content_type="application/json",
     )
@@ -119,7 +119,7 @@ def test_missing_expression_returns_400(client):
         ],
     }
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data=json.dumps(body),
         content_type="application/json",
     )
@@ -139,7 +139,7 @@ def test_missing_resource_returns_400(client):
         ],
     }
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data=json.dumps(body),
         content_type="application/json",
     )
@@ -153,7 +153,7 @@ def test_missing_resource_returns_400(client):
 def test_malformed_json_returns_400(client):
     """A request with malformed JSON returns 400."""
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data="not valid json{",
         content_type="application/json",
     )
@@ -166,7 +166,7 @@ def test_malformed_json_returns_400(client):
 def test_empty_body_returns_400(client):
     """A request with an empty body returns 400."""
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data="",
         content_type="application/json",
     )
@@ -178,7 +178,7 @@ def test_non_parameters_resource_returns_400(client):
     """A request with a non-Parameters resource returns 400."""
     body = {"resourceType": "Patient", "id": "example"}
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data=json.dumps(body),
         content_type="application/json",
     )
@@ -194,7 +194,7 @@ def test_evaluation_error_returns_500(client, mock_context, valid_request_body):
     mock_context.evaluate_fhirpath.side_effect = RuntimeError("Evaluation failed")
 
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data=json.dumps(valid_request_body),
         content_type="application/json",
     )
@@ -208,7 +208,7 @@ def test_evaluation_error_returns_500(client, mock_context, valid_request_body):
 def test_response_includes_evaluator_string(client, valid_request_body):
     """The response includes the evaluator identification string."""
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data=json.dumps(valid_request_body),
         content_type="application/json",
     )
@@ -223,7 +223,7 @@ def test_response_includes_evaluator_string(client, valid_request_body):
 def test_cors_headers_present(client, valid_request_body):
     """CORS headers are present in responses."""
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data=json.dumps(valid_request_body),
         content_type="application/json",
         headers={"Origin": "https://fhirpath-lab.azurewebsites.net"},
@@ -235,7 +235,7 @@ def test_cors_headers_present(client, valid_request_body):
 def test_preflight_cors_request(client):
     """OPTIONS preflight request returns CORS headers."""
     response = client.options(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         headers={
             "Origin": "https://fhirpath-lab.azurewebsites.net",
             "Access-Control-Request-Method": "POST",
@@ -256,7 +256,7 @@ def test_cors_no_origins_configured(mock_context):
         app.config["TESTING"] = True
         with app.test_client() as c:
             response = c.options(
-                "/$fhirpath-r4",
+                "/fhir/$fhirpath",
                 headers={
                     "Origin": "https://fhirpath-lab.azurewebsites.net",
                     "Access-Control-Request-Method": "POST",
@@ -274,7 +274,7 @@ def test_cors_multiple_origins(mock_context, valid_request_body):
         with app.test_client() as c:
             for origin in ["https://example.com", "https://other.example.com"]:
                 response = c.post(
-                    "/$fhirpath-r4",
+                    "/fhir/$fhirpath",
                     data=json.dumps(valid_request_body),
                     content_type="application/json",
                     headers={"Origin": origin},
@@ -298,7 +298,7 @@ def test_context_expression_passed_to_evaluator(client, mock_context):
         ],
     }
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data=json.dumps(body),
         content_type="application/json",
     )
@@ -362,7 +362,7 @@ def test_py4j_error_returns_friendly_message_and_diagnostics(
     )
 
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data=json.dumps(valid_request_body),
         content_type="application/json",
     )
@@ -387,7 +387,7 @@ def test_py4j_error_with_unparseable_format_falls_back(
     )
 
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data=json.dumps(valid_request_body),
         content_type="application/json",
     )
@@ -404,7 +404,7 @@ def test_non_py4j_error_passes_through(client, mock_context, valid_request_body)
     mock_context.evaluate_fhirpath.side_effect = RuntimeError("Evaluation failed")
 
     response = client.post(
-        "/$fhirpath-r4",
+        "/fhir/$fhirpath",
         data=json.dumps(valid_request_body),
         content_type="application/json",
     )
