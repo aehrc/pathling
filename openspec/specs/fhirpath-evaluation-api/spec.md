@@ -10,6 +10,10 @@ The method SHALL use the existing Pathling FHIRPath engine (Spark-based) to
 evaluate the expression, encoding the resource into a one-row Dataset
 internally.
 
+When the expression is empty or contains only whitespace, the fhirpath-lab-api
+SHALL return a successful response with an empty collection (zero result parts)
+without invoking the FHIRPath engine.
+
 #### Scenario: Simple expression evaluation
 
 - **WHEN** the method is called with a Patient JSON resource and the expression
@@ -28,6 +32,13 @@ internally.
 - **WHEN** the method is called with a Patient JSON resource and an expression
   that matches no elements (e.g., `deceased`)
 - **THEN** the method returns an empty list
+
+#### Scenario: Empty expression
+
+- **WHEN** the fhirpath-lab-api receives a request with an expression that is an
+  empty string or contains only whitespace
+- **THEN** it returns a successful Parameters response with zero result parts and
+  no type metadata, without invoking the FHIRPath engine
 
 #### Scenario: Invalid expression
 

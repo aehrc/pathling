@@ -79,6 +79,10 @@ Request body (FHIR Parameters):
 }
 ```
 
+If the expression is empty or contains only whitespace, the endpoint returns a
+successful response with an empty collection (no result parts) without invoking
+the FHIRPath engine.
+
 Optional parameters:
 
 - `context` (valueString): A FHIRPath context expression.

@@ -174,6 +174,64 @@ def test_empty_body_returns_400(client):
     assert response.status_code == 400
 
 
+def test_empty_expression_returns_empty_collection(client, mock_context):
+    """An empty expression returns a successful response with no results."""
+    body = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "expression", "valueString": ""},
+            {
+                "name": "resource",
+                "resource": {"resourceType": "Patient", "id": "example"},
+            },
+        ],
+    }
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(body),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert response.content_type == "application/fhir+json"
+
+    data = json.loads(response.data)
+    assert data["resourceType"] == "Parameters"
+
+    # Should contain a parameters part but no result part.
+    assert len(data["parameter"]) == 1
+    assert data["parameter"][0]["name"] == "parameters"
+
+    # The engine should not have been invoked.
+    mock_context.evaluate_fhirpath.assert_not_called()
+
+
+def test_whitespace_expression_returns_empty_collection(client, mock_context):
+    """A whitespace-only expression returns a successful response with no results."""
+    body = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "expression", "valueString": "   \t\n  "},
+            {
+                "name": "resource",
+                "resource": {"resourceType": "Patient", "id": "example"},
+            },
+        ],
+    }
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(body),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["resourceType"] == "Parameters"
+    assert len(data["parameter"]) == 1
+    assert data["parameter"][0]["name"] == "parameters"
+    mock_context.evaluate_fhirpath.assert_not_called()
+
+
 def test_non_parameters_resource_returns_400(client):
     """A request with a non-Parameters resource returns 400."""
     body = {"resourceType": "Patient", "id": "example"}

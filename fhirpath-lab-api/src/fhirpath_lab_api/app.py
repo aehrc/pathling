@@ -114,6 +114,22 @@ def _handle_evaluate(get_context) -> Response:
     except ValueError as e:
         return _error_response(400, "required", str(e))
 
+    # An empty expression evaluates to an empty collection.
+    if not params.expression.strip():
+        response_body = build_response_parameters(
+            evaluator_string="",
+            expression=params.expression,
+            resource=params.resource,
+            expected_return_type="",
+            results=[],
+            context=params.context,
+        )
+        return Response(
+            json.dumps(response_body),
+            status=200,
+            content_type="application/fhir+json",
+        )
+
     # Evaluate the expression.
     try:
         pc = get_context()
