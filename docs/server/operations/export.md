@@ -15,13 +15,49 @@ Pathling supports export at multiple levels:
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 
-| Name            | Cardinality | Type    | Description                                                                                                                                                                                                                     |
-| --------------- | ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `_outputFormat` | 0..1        | string  | The format for exported files. Accepts `application/fhir+ndjson`, `application/ndjson`, `ndjson`, `application/vnd.apache.parquet`, or `parquet`. Defaults to `application/fhir+ndjson`. See [Output formats](#output-formats). |
-| `_since`        | 0..1        | instant | Only include resources where `meta.lastUpdated` is after this time.                                                                                                                                                             |
-| `_until`        | 0..1        | instant | Only include resources where `meta.lastUpdated` is before this time.                                                                                                                                                            |
-| `_type`         | 0..\*       | string  | Comma-delimited list of resource types to export. If omitted, all supported types are exported. Invalid types cause an error unless the `Prefer: handling=lenient` header is included.                                          |
-| `_elements`     | 0..\*       | string  | Comma-delimited list of elements to include. Specify as `[type].[element]` (e.g., `Patient.name`) or `[element]` for all types. Only top-level elements are supported. Mandatory elements are always included.                  |
+| Name            | Cardinality | Type    | Description                                                                                                                                                                                                                                           |
+| --------------- | ----------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_outputFormat` | 0..1        | string  | The format for exported files. Accepts `application/fhir+ndjson`, `application/ndjson`, `ndjson`, `application/vnd.apache.parquet`, or `parquet`. Defaults to `application/fhir+ndjson`. See [Output formats](#output-formats).                       |
+| `_since`        | 0..1        | instant | Only include resources where `meta.lastUpdated` is after this time.                                                                                                                                                                                   |
+| `_until`        | 0..1        | instant | Only include resources where `meta.lastUpdated` is before this time.                                                                                                                                                                                  |
+| `_type`         | 0..\*       | string  | Comma-delimited list of resource types to export. If omitted, all supported types are exported. Invalid types cause an error unless the `Prefer: handling=lenient` header is included.                                                                |
+| `_typeFilter`   | 0..\*       | string  | FHIR search queries to filter exported resources by type. Each value has the format `[ResourceType]?[search-params]` (e.g., `Patient?gender=male`). Multiple filters for the same type are combined with OR logic. See [Type filters](#type-filters). |
+| `_elements`     | 0..\*       | string  | Comma-delimited list of elements to include. Specify as `[type].[element]` (e.g., `Patient.name`) or `[element]` for all types. Only top-level elements are supported. Mandatory elements are always included.                                        |
+
+## Type filters[​](#type-filters "Direct link to Type filters")
+
+The `_typeFilter` parameter allows you to apply FHIR search queries to filter resources during export. Each filter specifies a resource type and a search query string, separated by `?`.
+
+For example, to export only active medication requests and male patients:
+
+```
+GET [base]/$export?_type=MedicationRequest,Patient&_typeFilter=MedicationRequest?status=active&_typeFilter=Patient?gender=male HTTP/1.1
+Accept: application/fhir+json
+Prefer: respond-async
+```
+
+### Multiple filters per type[​](#multiple-filters-per-type "Direct link to Multiple filters per type")
+
+When multiple `_typeFilter` values target the same resource type, they are combined using OR logic. For example, the following request exports patients who are either male or born after 2000:
+
+```
+GET [base]/$export?_type=Patient&_typeFilter=Patient?gender=male&_typeFilter=Patient?birthdate=gt2000-01-01 HTTP/1.1
+```
+
+### Implicit type inclusion[​](#implicit-type-inclusion "Direct link to Implicit type inclusion")
+
+If `_typeFilter` is provided without `_type`, the resource types referenced in the filters are automatically included in the export. For example, this request exports only Patient resources:
+
+```
+GET [base]/$export?_typeFilter=Patient?gender=male HTTP/1.1
+```
+
+### Validation[​](#validation "Direct link to Validation")
+
+* Each `_typeFilter` value must contain a `?` separating the resource type from the search query.
+* The resource type must be a valid FHIR resource type supported by the server.
+* If `_type` is also specified, the resource types in `_typeFilter` must be a subset of `_type`. In strict mode, a mismatch causes an error. With `Prefer: handling=lenient`, mismatched filters are silently ignored.
+* Search parameters must be valid for the specified resource type.
 
 ## Output formats[​](#output-formats "Direct link to Output formats")
 
