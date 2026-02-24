@@ -23,10 +23,12 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import Optional
 
 from flask import Flask, Response, request
 from flask_cors import CORS
+from py4j.protocol import Py4JJavaError
 
 from fhirpath_lab_api.parameters import (
     build_operation_outcome,
@@ -122,6 +124,13 @@ def _handle_evaluate(get_context) -> Response:
             context_expression=params.context,
             variables=params.variables,
         )
+    except Py4JJavaError as e:
+        full_message = str(e)
+        logger.exception("Error evaluating FHIRPath expression")
+        friendly = _extract_friendly_message(full_message)
+        if friendly:
+            return _error_response(500, "exception", friendly, diagnostics=full_message)
+        return _error_response(500, "exception", full_message)
     except Exception as e:
         logger.exception("Error evaluating FHIRPath expression")
         return _error_response(500, "exception", f"Error evaluating expression: {e}")
@@ -169,3 +178,31 @@ def _error_response(
         status=status,
         content_type="application/fhir+json",
     )
+
+
+# Matches a fully-qualified Java exception class name (ending in Error or Exception)
+# followed by a colon and the exception message, stopping before the stack trace.
+_JAVA_EXCEPTION_RE = re.compile(
+    r"([\w.$]+(?:Error|Exception)):\s*(.+?)(?=\n?\tat |\Z)",
+    re.DOTALL,
+)
+
+
+def _extract_friendly_message(error_str: str) -> Optional[str]:
+    """Extracts a human-readable message from a Py4J Java error string.
+
+    Parses the Java exception class name and message from the error string,
+    returning a concise form like "ClassName: message". Returns None if the
+    string does not match the expected pattern.
+
+    :param error_str: the full string representation of the Py4J error
+    :return: a friendly message, or None if the pattern does not match
+    """
+    match = _JAVA_EXCEPTION_RE.search(error_str)
+    if not match:
+        return None
+    fqcn = match.group(1)
+    message = match.group(2).strip()
+    # Use only the short class name (after the last dot).
+    short_name = fqcn.rsplit(".", 1)[-1]
+    return f"{short_name}: {message}"

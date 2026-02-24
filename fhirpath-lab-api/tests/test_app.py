@@ -25,8 +25,9 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from py4j.protocol import Py4JJavaError
 
-from fhirpath_lab_api.app import create_app
+from fhirpath_lab_api.app import _extract_friendly_message, create_app
 
 TEST_CORS_ORIGINS = "https://fhirpath-lab.azurewebsites.net,http://localhost:3000"
 
@@ -310,3 +311,106 @@ def test_context_expression_passed_to_evaluator(client, mock_context):
         context_expression="name",
         variables=None,
     )
+
+
+# ========== Friendly error message tests ==========
+
+
+class _TestPy4JJavaError(Py4JJavaError):
+    """A testable Py4JJavaError that does not require a live JVM."""
+
+    def __init__(self, message: str):
+        # Skip parent __init__ to avoid JVM dependency.
+        Exception.__init__(self, message)
+        self._message = message
+
+    def __str__(self):
+        return self._message
+
+
+# A realistic Py4J error string with newlines and tab-indented stack trace.
+PY4J_ERROR_WITH_TRACE = (
+    "An error occurred while calling o84.evaluateFhirPath.\n"
+    ": au.csiro.pathling.errors.UnsupportedFhirPathFeatureError:"
+    " Unsupported function: trace\n"
+    "\tat au.csiro.pathling.fhirpath.path.Paths$EvalFunction.apply"
+    "(Paths.java:190)\n"
+    "\tat au.csiro.pathling.fhirpath.FhirPath$Composite.lambda$apply$0"
+    "(FhirPath.java:179)\n"
+)
+
+
+def test_extract_friendly_message_from_py4j_error():
+    """Extracts the short class name and message from a Py4J error string."""
+    result = _extract_friendly_message(PY4J_ERROR_WITH_TRACE)
+    assert result == "UnsupportedFhirPathFeatureError: Unsupported function: trace"
+
+
+def test_extract_friendly_message_returns_none_for_non_java_error():
+    """Returns None when the error string does not match the Java pattern."""
+    result = _extract_friendly_message("Something went wrong")
+    assert result is None
+
+
+def test_py4j_error_returns_friendly_message_and_diagnostics(
+    client, mock_context, valid_request_body
+):
+    """A Py4J error returns a concise message in details.text and the full
+    trace in diagnostics."""
+    mock_context.evaluate_fhirpath.side_effect = _TestPy4JJavaError(
+        PY4J_ERROR_WITH_TRACE
+    )
+
+    response = client.post(
+        "/$fhirpath-r4",
+        data=json.dumps(valid_request_body),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 500
+    data = json.loads(response.data)
+    issue = data["issue"][0]
+    assert (
+        issue["details"]["text"]
+        == "UnsupportedFhirPathFeatureError: Unsupported function: trace"
+    )
+    assert "au.csiro.pathling.fhirpath.path.Paths" in issue["diagnostics"]
+
+
+def test_py4j_error_with_unparseable_format_falls_back(
+    client, mock_context, valid_request_body
+):
+    """A Py4J error with an unparseable string falls back to the full message
+    with no diagnostics."""
+    mock_context.evaluate_fhirpath.side_effect = _TestPy4JJavaError(
+        "Some unexpected Py4J message"
+    )
+
+    response = client.post(
+        "/$fhirpath-r4",
+        data=json.dumps(valid_request_body),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 500
+    data = json.loads(response.data)
+    issue = data["issue"][0]
+    assert "Some unexpected Py4J message" in issue["details"]["text"]
+    assert "diagnostics" not in issue
+
+
+def test_non_py4j_error_passes_through(client, mock_context, valid_request_body):
+    """A non-Py4J exception uses the message directly with no diagnostics."""
+    mock_context.evaluate_fhirpath.side_effect = RuntimeError("Evaluation failed")
+
+    response = client.post(
+        "/$fhirpath-r4",
+        data=json.dumps(valid_request_body),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 500
+    data = json.loads(response.data)
+    issue = data["issue"][0]
+    assert issue["details"]["text"] == "Error evaluating expression: Evaluation failed"
+    assert "diagnostics" not in issue
