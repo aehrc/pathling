@@ -1,0 +1,3 @@
+# minimatch DoS (serve-handler transitive dependency, only used by local
+# docusaurus serve command, not in production GitHub Pages deployment).
+CVE-2026-26996
