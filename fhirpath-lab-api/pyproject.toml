@@ -6,7 +6,7 @@
 
 [project]
 name = "fhirpath-lab-api"
-version = "0.1.0"
+version = "0.2.0"
 description = "A FHIRPath Lab server backed by the Pathling FHIRPath engine"
 requires-python = ">=3.9"
 dependencies = [
