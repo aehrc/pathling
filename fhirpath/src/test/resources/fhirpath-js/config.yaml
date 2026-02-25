@@ -414,6 +414,15 @@ excludeSet:
         type: wontfix
         any:
           - "Patient.name.exists(given)"
+      - title: "length without parentheses treated as child traversal"
+        type: wontfix
+        outcome: failure
+        comment: |
+          FHIRPath length() requires parentheses. The test uses $this.length
+          (without parentheses), which Pathling treats as a child field access
+          rather than the length() function, returning null.
+        any:
+          - "Patient.name.given.select($this.length) = Patient.name.given.select(length)"
       - title: "Unsupported type runner feature: expression maps"
         type: new-feature
         any:
@@ -578,6 +587,8 @@ excludeSet:
         any:
           - "mixedTypeVals.as(Integer)"
           - "mixedTypeVals as Integer"
+          - "mixedTypeVals.select($this as Integer)"
+          - "mixedTypeVals.select($this.as(Integer))"
       - title: "Operator precedence of is/as causes union type errors"
         type: wontfix
         outcome: error
@@ -594,4 +605,3 @@ excludeSet:
           This is correct behavior per spec operator precedence rules.
         any:
           - "1 | 1 is Integer"
-

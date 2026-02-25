@@ -64,6 +64,26 @@ public class FilteringAndProjectionFunctions {
   }
 
   /**
+   * Returns a collection containing the result of evaluating the projection expression for each
+   * item in the input collection. The results are flattened: if evaluation produces multiple items,
+   * all are added to the output; if evaluation produces empty, nothing is added.
+   *
+   * <p>If the input collection is empty, the result is empty.
+   *
+   * @param input The input collection
+   * @param expression The projection expression
+   * @return A collection containing the projected results
+   * @see <a
+   *     href="https://build.fhir.org/ig/HL7/FHIRPath/#selectprojection--expression--collection">select</a>
+   */
+  @FhirPathFunction
+  @Nonnull
+  public static Collection select(
+      @Nonnull final Collection input, @Nonnull final CollectionTransform expression) {
+    return input.project(expression);
+  }
+
+  /**
    * Returns a collection that contains all items in the input collection that are of the given type
    * or a subclass thereof. If the input collection is empty, the result is empty. The type argument
    * is an identifier that must resolve to the name of a type in a model. For implementations with

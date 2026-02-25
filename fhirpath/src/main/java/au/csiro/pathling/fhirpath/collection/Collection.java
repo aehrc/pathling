@@ -34,6 +34,7 @@ import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
@@ -400,6 +401,27 @@ public class Collection implements Equatable {
   @Nonnull
   public Collection filter(@Nonnull final ColumnTransform lambda) {
     return map(ctx -> ctx.filter(col -> lambda.apply(ctx.copyOf(col)).getValue()));
+  }
+
+  /**
+   * Projects each element of this collection using the specified transform, flattening the results.
+   *
+   * <p>The transform is evaluated for each item in the collection. If evaluation produces multiple
+   * items, all are added to the output. If evaluation produces empty, nothing is added. The result
+   * collection adopts the type of the transform's output rather than preserving the input type.
+   *
+   * @param transform The collection transform representing the projection expression
+   * @return A new collection containing the projected and flattened results
+   */
+  @Nonnull
+  public Collection project(@Nonnull final CollectionTransform transform) {
+    final Collection resultTemplate = transform.apply(this);
+    final ColumnTransform columnTransform = transform.toColumnTransformation(this);
+    final ColumnRepresentation projected =
+        getColumn()
+            .transform(col -> columnTransform.apply(getColumn().copyOf(col)).getValue())
+            .flatten();
+    return resultTemplate.copyWith(projected);
   }
 
   /**
