@@ -22,6 +22,7 @@ import static au.csiro.pathling.fhirpath.TypeSpecifier.SYSTEM_NAMESPACE;
 import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
+import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TerminologyConcepts;
@@ -40,6 +41,7 @@ import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -50,6 +52,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -422,6 +425,70 @@ public class Collection implements Equatable {
             .transform(col -> columnTransform.apply(getColumn().copyOf(col)).getValue())
             .flatten();
     return resultTemplate.copyWith(projected);
+  }
+
+  /**
+   * Recursively traverses this collection using the specified transform, collecting all results
+   * without deduplication. This implements the FHIRPath {@code repeatAll()} STU function.
+   *
+   * <p>The transform is evaluated on each item, and its results are added to the output collection.
+   * The transform is then re-evaluated on the new results, repeating until no new items are
+   * produced or the maximum depth is reached.
+   *
+   * <p>Uses {@link ValueFunctions#variantTransformTree} to perform recursive traversal with
+   * Variant-based schema unification. The identity extractor collects items themselves at each
+   * level, while the traversal navigates to children using the same projection expression. Schema
+   * divergence across nesting levels is handled by converting to Variant at each level and
+   * unwrapping back to the level-0 schema at the end. Same-type depth limiting is provided by
+   * {@code UnresolvedTransformTree}, which only decrements the depth counter when traversing to a
+   * node of the same type.
+   *
+   * @param transform The collection transform representing the recursive projection expression
+   * @param maxDepth The maximum same-type recursion depth to prevent infinite traversal
+   * @return A new collection containing all recursively collected results
+   */
+  @Nonnull
+  public Collection repeatAll(@Nonnull final CollectionTransform transform, final int maxDepth) {
+    // Apply the transform once to determine the result type metadata and column transform.
+    final Collection resultTemplate = transform.apply(this);
+    final ColumnTransform columnTransform = transform.toColumnTransformation(this);
+
+    // Compute the level-0 result by applying the column transform to the input. Normalize to
+    // array via plural() so that both singular and collection results are represented uniformly
+    // as arrays for the tree traversal.
+    final Column level0 = columnTransform.apply(getColumn()).plural().getValue();
+
+    // Build a column-level function for deeper levels that applies the projection to individual
+    // struct elements. Uses DefaultRepresentation because nested elements are structs accessed
+    // via getField(), not top-level Dataset columns accessed via col(). The plural() call
+    // ensures the traversal result is always an array, matching the level-0 normalization.
+    final UnaryOperator<Column> innerTransform =
+        col -> columnTransform.apply(new DefaultRepresentation(col)).plural().getValue();
+
+    // Check if the projection produces a primitive (non-struct) type. Primitive types cannot
+    // be converted to Variant via to_variant_object(), and they do not need schema unification
+    // since primitives are leaf types with no structural differences across nesting levels.
+    final boolean isPrimitive =
+        resultTemplate
+            .getType()
+            .map(t -> !(t.getSqlDataType() instanceof StructType))
+            .orElse(false);
+
+    final Column result;
+    if (isPrimitive) {
+      // Primitives are leaf types with no children to recurse into. Return the level-0 result
+      // directly — this is equivalent to select() and matches the spec requirement that
+      // repeatAll on a non-recursive field behaves like select.
+      result = level0;
+    } else {
+      // For complex types, use Variant-based schema unification. The identity extractor
+      // collects items at each level (variantTransformTree wraps it with to_variant_object),
+      // while the traversal navigates to children using the same projection expression.
+      result =
+          ValueFunctions.variantTransformTree(level0, c -> c, List.of(innerTransform), maxDepth);
+    }
+
+    return resultTemplate.copyWithColumn(result);
   }
 
   /**

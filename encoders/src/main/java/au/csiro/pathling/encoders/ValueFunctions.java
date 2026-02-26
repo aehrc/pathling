@@ -35,6 +35,8 @@ import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.classic.ColumnConversions$;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataType;
 import scala.Function1;
 import scala.collection.immutable.Seq;
 import scala.jdk.javaapi.CollectionConverters;
@@ -223,6 +225,118 @@ public class ValueFunctions {
     return column(
         new UnresolvedTransformTree(
             expression(value), liftToExpression(extractor)::apply, scalaSeq, maxDepth));
+  }
+
+  /**
+   * Wraps a column transform so that it converts each result element to Variant. The wrapped
+   * transform applies the original transform and then maps each element in the resulting array to a
+   * Variant via {@code to_variant_object()}, producing {@code Array[Variant]}.
+   *
+   * <p>This is useful for making arrays from different nesting levels type-compatible, since all
+   * Variant arrays share the same element type regardless of the original struct schema.
+   *
+   * @param transform The original column transform that produces an array
+   * @return A new transform that produces {@code Array[Variant]}
+   */
+  @Nonnull
+  public static UnaryOperator<Column> wrapWithVariant(
+      @Nonnull final UnaryOperator<Column> transform) {
+    return c -> functions.transform(transform.apply(c), functions::to_variant_object);
+  }
+
+  /**
+   * Converts an {@code Array[Variant]} column back to an array of a specific target schema using
+   * {@code variant_get()}. Each Variant element is decoded using the JSON path {@code "$"} (root)
+   * and the provided target schema string. Missing fields in shallower nesting levels are filled
+   * with null.
+   *
+   * @param variantArray The column containing {@code Array[Variant]}
+   * @param targetSchema The Spark SQL schema string for the target element type (e.g., {@code
+   *     "STRUCT<linkId: STRING, type: STRING, item: ARRAY<STRUCT<...>>>"})
+   * @return A column containing an array with elements decoded to the target schema
+   */
+  @Nonnull
+  public static Column unwrapVariantArray(
+      @Nonnull final Column variantArray, @Nonnull final String targetSchema) {
+    return functions.transform(variantArray, v -> functions.variant_get(v, "$", targetSchema));
+  }
+
+  /**
+   * Converts an {@code Array[Variant]} column back to an array of a specific target data type using
+   * {@code variant_get()}. This overload accepts a {@link DataType} and converts it to its DDL
+   * string representation for use with {@code variant_get()}.
+   *
+   * @param variantArray The column containing {@code Array[Variant]}
+   * @param targetType The Spark {@link DataType} for the target element type
+   * @return A column containing an array with elements decoded to the target type
+   */
+  @Nonnull
+  public static Column unwrapVariantArray(
+      @Nonnull final Column variantArray, @Nonnull final DataType targetType) {
+    return unwrapVariantArray(variantArray, targetType.sql());
+  }
+
+  /**
+   * Performs a recursive tree traversal with Variant-based schema unification, collecting all
+   * extracted values across nesting levels regardless of structural differences.
+   *
+   * <p>This method solves the schema divergence problem when traversing self-referential FHIR
+   * structures. At each nesting level, the extractor may produce arrays with different struct
+   * schemas (deeper levels have fewer fields due to encoding truncation). To make these arrays
+   * type-compatible for concatenation, each extracted element is converted to Spark's Variant type
+   * as an intermediate representation. After the tree traversal collects all results, the final
+   * {@code Array[Variant]} is converted back to the target schema (from level 0, the fullest
+   * schema), determined lazily at Catalyst analysis time.
+   *
+   * @param value The starting value column to traverse
+   * @param extractor An extraction operation that produces an array at each node
+   * @param traversals A list of traversal operations for reaching child nodes
+   * @param maxDepth The maximum recursion depth for same-type traversals
+   * @return A Column containing an array of extracted values, all conforming to the level-0 schema
+   */
+  @Nonnull
+  public static Column variantTransformTree(
+      @Nonnull final Column value,
+      @Nonnull final UnaryOperator<Column> extractor,
+      @Nonnull final List<UnaryOperator<Column>> traversals,
+      final int maxDepth) {
+
+    // Wrap the extractor to convert each result element to Variant.
+    final UnaryOperator<Column> variantExtractor = wrapWithVariant(extractor);
+
+    // Run the tree traversal with Variant-wrapped extractor but raw traversals.
+    final Expression variantTreeExpr =
+        expression(transformTree(value, variantExtractor, traversals, maxDepth));
+
+    // Build a schema reference expression by applying the raw extractor to the value. This
+    // expression will resolve to the level-0 array type, from which the target element type is
+    // derived during Catalyst analysis.
+    final Expression schemaRefExpr = liftToExpression(extractor).apply(expression(value));
+
+    // Wrap with deferred Variant unwrapping. The UnresolvedVariantUnwrap expression resolves
+    // once both the tree result and schema reference are resolved, converting each Variant
+    // element back to the target struct type.
+    return column(new UnresolvedVariantUnwrap(variantTreeExpr, schemaRefExpr));
+  }
+
+  /**
+   * Converts an {@code Array[Variant]} column back to a typed array using deferred schema
+   * resolution. The target element type is determined at Catalyst analysis time from a schema
+   * reference expression, which should resolve to the fullest (level-0) array type.
+   *
+   * <p>This is used by {@code repeatAll()} to convert the concatenated Variant results from all
+   * nesting levels back to the target struct type, with missing fields in shallower levels filled
+   * with null.
+   *
+   * @param variantArray The column containing {@code Array[Variant]}
+   * @param schemaRef A column whose resolved type determines the target element schema (should be
+   *     an array type; the element type will be extracted)
+   * @return A column containing an array with elements decoded to the schema reference's type
+   */
+  @Nonnull
+  public static Column variantUnwrap(
+      @Nonnull final Column variantArray, @Nonnull final Column schemaRef) {
+    return column(new UnresolvedVariantUnwrap(expression(variantArray), expression(schemaRef)));
   }
 
   /**

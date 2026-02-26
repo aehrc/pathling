@@ -30,6 +30,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
 import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedException}
 import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.expressions.{variant => variantExpr}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
 import org.apache.spark.sql.catalyst.trees.TreePattern.{ARRAYS_ZIP, TreePattern}
@@ -872,5 +873,62 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
     copy(children = newChildren)
 }
 
+
+/**
+ * Wraps an Array[Variant] expression with deferred unwrapping to a target schema. The target
+ * schema is determined lazily from a reference expression that represents the level-0 (fullest)
+ * result of the extractor.
+ *
+ * During resolution, once both the inner expression (Array[Variant]) and the schema reference
+ * expression are resolved, this expression expands into a `transform(inner, v -> variant_get(v,
+ * '$', targetSchema))` call that converts each Variant element back to the target struct type.
+ *
+ * @param inner     the Array[Variant] expression produced by UnresolvedTransformTree
+ * @param schemaRef an expression whose resolved element type determines the target schema
+ */
+case class UnresolvedVariantUnwrap(inner: Expression, schemaRef: Expression)
+  extends Expression with UnevaluableCopy with NonSQLExpression {
+
+  override def children: Seq[Expression] = Seq(inner, schemaRef)
+
+  override protected def withNewChildrenInternal(
+      newChildren: IndexedSeq[Expression]): Expression = {
+    copy(inner = newChildren(0), schemaRef = newChildren(1))
+  }
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+    val newInner = f(inner)
+    val newSchemaRef = f(schemaRef)
+    if (newInner.resolved && newSchemaRef.resolved) {
+      // Determine the target element type from the schema reference expression.
+      val targetElementType = newSchemaRef.dataType match {
+        case ArrayType(elementType, _) => elementType
+        case other => other
+      }
+      // Build: transform(inner, v -> variant_get(v, '$', targetSchema))
+      val lambdaVar = NamedLambdaVariable(
+        "v", VariantType, nullable = true,
+        exprId = NamedExpression.newExprId,
+        value = new java.util.concurrent.atomic.AtomicReference[Any]()
+      )
+      val variantGetExpr = new variantExpr.VariantGet(
+        lambdaVar, Literal.create("$", StringType),
+        targetElementType, failOnError = true, timeZoneId = None
+      )
+      val lambdaFunc = LambdaFunction(variantGetExpr, Seq(lambdaVar))
+      ArrayTransform(newInner, lambdaFunc)
+    } else {
+      copy(inner = newInner, schemaRef = newSchemaRef)
+    }
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"VariantUnwrap($inner)"
+}
 
 // ColumnFunctions has been moved to a Java class to access package-private Spark methods

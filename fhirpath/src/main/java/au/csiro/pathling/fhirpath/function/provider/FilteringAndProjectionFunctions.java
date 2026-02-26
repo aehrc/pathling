@@ -102,4 +102,32 @@ public class FilteringAndProjectionFunctions {
       @Nonnull final Collection input, @Nonnull final TypeSpecifier typeSpecifier) {
     return input.filterByType(typeSpecifier);
   }
+
+  /**
+   * Recursively evaluates a projection expression on each item in the input collection, adding all
+   * results to the output without deduplication. The projection is then re-evaluated on the new
+   * results, repeating until no new items are produced or the maximum same-type recursion depth is
+   * reached.
+   *
+   * <p>This is the STU FHIRPath {@code repeatAll()} function. Unlike {@code repeat()}, it does not
+   * perform equality-based deduplication of results.
+   *
+   * <p>If the input collection is empty, the result is empty.
+   *
+   * <p>The same-type recursion depth limit is hardcoded to 10, matching the default used by the SQL
+   * on FHIR {@code repeat} clause implementation. Cross-type traversals do not consume depth
+   * budget.
+   *
+   * @param input The input collection
+   * @param expression The projection expression to apply recursively
+   * @return A collection containing all recursively collected results
+   * @see <a
+   *     href="https://build.fhir.org/ig/HL7/FHIRPath/#repeatallprojection--expression--collection">repeatAll</a>
+   */
+  @FhirPathFunction
+  @Nonnull
+  public static Collection repeatAll(
+      @Nonnull final Collection input, @Nonnull final CollectionTransform expression) {
+    return input.repeatAll(expression, 10);
+  }
 }
