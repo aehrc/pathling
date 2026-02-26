@@ -174,7 +174,6 @@ export function ResourceCard({ resource, fhirBaseUrl, onDelete }: ResourceCardPr
                 textOverflow: "ellipsis",
                 cursor: "pointer",
                 userSelect: "none",
-                maxWidth: "400px",
               }}
               onClick={() => setExpanded(!expanded)}
             >
