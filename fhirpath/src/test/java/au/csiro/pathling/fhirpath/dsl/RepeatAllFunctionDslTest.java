@@ -120,8 +120,47 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
     return questionnaire;
   }
 
+  /**
+   * Creates a Patient with all fields needed by the patient projection tests: two names, gender,
+   * marital status, and nested extensions.
+   *
+   * <p>Extension structure:
+   *
+   * <pre>
+   *   Patient
+   *     name: Smith, Jones
+   *     gender: MALE
+   *     maritalStatus: M (Married)
+   *     extension "http://example.com/simple" = "simple-value"
+   *     extension "http://example.com/parent"
+   *       extension "http://example.com/child" = "child-value"
+   * </pre>
+   *
+   * @return a Patient resource with all fields populated
+   */
+  private static Patient createPatient() {
+    final Patient patient = new Patient();
+    patient.setId("test-patient");
+    patient.addName().setFamily("Smith");
+    patient.addName().setFamily("Jones");
+    patient.setGender(AdministrativeGender.MALE);
+    patient.setMaritalStatus(
+        new CodeableConcept(new Coding("http://example.com/cs", "M", "Married")));
+
+    // Simple leaf extension.
+    patient.addExtension(
+        new Extension("http://example.com/simple", new StringType("simple-value")));
+
+    // Complex extension containing a nested sub-extension.
+    final Extension parent = new Extension("http://example.com/parent");
+    parent.addExtension(new Extension("http://example.com/child", new StringType("child-value")));
+    patient.addExtension(parent);
+
+    return patient;
+  }
+
   @FhirPathTest
-  public Stream<DynamicTest> testRepeatAllBasicTraversal() {
+  public Stream<DynamicTest> testRepeatAllQuestionnaireTraversal() {
     return builder()
         .withResource(createQuestionnaire())
         .group("repeatAll() basic traversal")
@@ -133,18 +172,54 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
             4,
             "repeatAll(item).count()",
             "repeatAll(item).count() returns total items across all levels")
-        .build();
-  }
-
-  @FhirPathTest
-  public Stream<DynamicTest> testRepeatAllFiltering() {
-    return builder()
-        .withResource(createQuestionnaire())
         .group("repeatAll() with filtering")
         .testEquals(
             List.of("1", "1.1"),
             "repeatAll(item).where(type = 'group').linkId",
             "repeatAll(item).where(type = 'group') filters items from all nesting levels")
+        .group("repeatAll() $index not defined")
+        .testError(
+            "repeatAll($index)", "$index is not available within repeatAll projection expression")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatAllPatientProjections() {
+    // repeatAll(first()) produces the same SQL DataType at every level (ArrayType(HumanName)),
+    // triggering same-type depth limiting. With a depth limit of 10, the initial level (where
+    // parentType is None and does not consume budget) plus 10 same-type levels produce 11 total
+    // copies of the first element before traversal stops.
+    return builder()
+        .withResource(createPatient())
+        .group("repeatAll() non-recursive projection")
+        .testEquals(
+            List.of("Smith", "Jones"),
+            "repeatAll(name).family",
+            "repeatAll(name).family returns same result as select() for non-recursive fields")
+        .group("repeatAll() singular primitive projection")
+        .testEquals(
+            "male",
+            "repeatAll(gender)",
+            "repeatAll(gender) returns a singular primitive value like select()")
+        .group("repeatAll() singular complex projection")
+        .testEquals(
+            "M",
+            "repeatAll(maritalStatus).coding.code",
+            "repeatAll(maritalStatus) returns a singular complex value with sub-elements intact")
+        .group("repeatAll() identity-like same-type depth limiting")
+        .testEquals(
+            11,
+            "name.repeatAll(first()).count()",
+            "repeatAll(first()) stops after same-type depth limit and returns bounded results")
+        .group("repeatAll() extension traversal")
+        .testEquals(
+            List.of(
+                "http://example.com/simple",
+                "http://example.com/parent",
+                "http://example.com/child"),
+            "repeatAll(extension).url",
+            "repeatAll(extension) recursively collects all extensions including nested"
+                + " sub-extensions")
         .build();
   }
 
@@ -157,6 +232,10 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
             "repeatAll(item)", "repeatAll() on a resource with no items returns empty collection")
         .testEquals(
             0, "repeatAll(item).count()", "repeatAll(item).count() returns 0 for empty input")
+        .group("repeatAll() empty literal")
+        .testEmpty(
+            "{}.repeatAll($this)",
+            "repeatAll() on the FHIRPath empty literal returns empty collection")
         .build();
   }
 
@@ -228,56 +307,6 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
             3,
             "repeatAll(item).count()",
             "repeatAll(item).count() includes duplicate items in the total")
-        .build();
-  }
-
-  @FhirPathTest
-  public Stream<DynamicTest> testRepeatAllNonRecursiveProjection() {
-    final Patient patient = new Patient();
-    patient.setId("test-patient");
-    patient.addName().setFamily("Smith");
-    patient.addName().setFamily("Jones");
-
-    return builder()
-        .withResource(patient)
-        .group("repeatAll() non-recursive projection")
-        .testEquals(
-            List.of("Smith", "Jones"),
-            "repeatAll(name).family",
-            "repeatAll(name).family returns same result as select() for non-recursive fields")
-        .build();
-  }
-
-  @FhirPathTest
-  public Stream<DynamicTest> testRepeatAllSingularPrimitive() {
-    final Patient patient = new Patient();
-    patient.setId("singular-patient");
-    patient.setGender(AdministrativeGender.MALE);
-
-    return builder()
-        .withResource(patient)
-        .group("repeatAll() singular primitive projection")
-        .testEquals(
-            "male",
-            "repeatAll(gender)",
-            "repeatAll(gender) returns a singular primitive value like select()")
-        .build();
-  }
-
-  @FhirPathTest
-  public Stream<DynamicTest> testRepeatAllSingularComplex() {
-    final Patient patient = new Patient();
-    patient.setId("complex-patient");
-    patient.setMaritalStatus(
-        new CodeableConcept(new Coding("http://example.com/cs", "M", "Married")));
-
-    return builder()
-        .withResource(patient)
-        .group("repeatAll() singular complex projection")
-        .testEquals(
-            "M",
-            "repeatAll(maritalStatus).coding.code",
-            "repeatAll(maritalStatus) returns a singular complex value with sub-elements intact")
         .build();
   }
 

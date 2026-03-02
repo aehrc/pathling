@@ -68,11 +68,21 @@ across all current items produces an empty collection (no new results).
 
 ### Requirement: repeatAll function handles empty input
 
-If the input collection is empty, the result SHALL be empty.
+If the input collection is empty, the result SHALL be empty. This SHALL hold
+both when the input is a typed collection that evaluates to empty at runtime
+(e.g., a resource where the traversed field is absent) and when the input is
+the FHIRPath empty literal `{}`.
 
-#### Scenario: Empty input collection
+#### Scenario: Empty collection from absent field
 
-- **WHEN** `repeatAll` is called on an empty collection
+- **WHEN** `repeatAll` is called on a resource where the traversed field is
+  absent (e.g., a Questionnaire with no items)
+- **THEN** the result SHALL be an empty collection
+
+#### Scenario: Empty collection literal
+
+- **WHEN** `repeatAll` is called on the FHIRPath empty literal `{}` (e.g.,
+  `{}.repeatAll(item)`)
 - **THEN** the result SHALL be an empty collection
 
 ### Requirement: repeatAll function supports chained expressions
@@ -104,26 +114,53 @@ subsequent FHIRPath operations such as path navigation, `where()`, `count()`,
 
 ### Requirement: repeatAll function bounds same-type recursion depth
 
-The function SHALL always navigate to the deepest level possible regardless of
-the encoding's maximum nesting level. Recursion depth SHALL only be limited when
-the traversal expression is self-referential (i.e. navigates to a node of the
-same type), in which case a hardcoded depth limit of 10 SHALL prevent infinite
-loops. This matches the approach used by the SQL on FHIR `repeat` clause
-implementation.
+The function delegates recursive traversal to `UnresolvedTransformTree`, which
+limits recursion depth based on Spark SQL `DataType` equality. The depth counter
+only decrements when the traversal expression produces a node whose resolved SQL
+`DataType` is structurally identical to its parent's. When the counter reaches
+zero, traversal stops and returns results collected up to that point. The
+hardcoded same-type depth limit is 10, matching the default
+`maxUnboundTraversalDepth` used by the SQL on FHIR `repeat` clause.
 
-#### Scenario: Same-type recursion bounded by depth limit
+For traversals through schema-truncated structures (e.g.,
+`Questionnaire.repeatAll(item)`), each nesting level has a progressively smaller
+`StructType` due to the encoding's `maxNestingLevel` truncation. These are NOT
+same-type traversals — the depth counter is never decremented, and traversal
+terminates naturally when a field is no longer present in the truncated schema
+(`FIELD_NOT_FOUND`).
 
-- **WHEN** `repeatAll` is evaluated and the traversal expression navigates to a
-  node of the same type (e.g., `item` navigating from Item to Item)
-- **THEN** the function SHALL stop same-type traversal after the hardcoded depth
-  limit and return results collected up to that point
+Same-type recursion occurs when the traversal produces an element with an
+identical SQL `DataType` at every level. Known cases include:
 
-#### Scenario: Cross-type traversal not limited by depth
+- **Extension traversal**: Extension structs have a fixed flat schema at all
+  nesting levels (extensions use a global `_extension` map rather than recursive
+  struct fields), so `repeatAll(extension)` produces same-type nodes.
+- **Identity-like traversals**: Functions such as `first()` that return an
+  element of the same type as the input, causing the SQL `DataType` to remain
+  unchanged across levels.
 
-- **WHEN** `repeatAll` is evaluated and the traversal expression crosses
-  different types before recurring (e.g., Item → Answer → Item)
-- **THEN** the cross-type steps SHALL NOT consume depth budget, allowing deeper
-  traversal than the same-type limit alone would permit
+#### Scenario: Extension traversal bounded by actual depth or limit
+
+- **WHEN** `repeatAll(extension)` is evaluated on a resource whose elements
+  carry nested extensions
+- **THEN** the function SHALL traverse extensions up to the actual nesting depth
+  or the same-type depth limit (10), whichever is reached first, and return all
+  collected extensions
+
+#### Scenario: Identity-like traversal bounded by depth limit
+
+- **WHEN** `repeatAll` is evaluated with a traversal that always produces the
+  same SQL `DataType` (e.g., `repeatAll(first())` on a complex-typed
+  collection)
+- **THEN** the function SHALL stop after the same-type depth limit and return
+  results collected up to that point
+
+#### Scenario: Schema-truncated traversal terminates naturally
+
+- **WHEN** `repeatAll(item)` is evaluated on a Questionnaire with nested items
+- **THEN** traversal SHALL terminate naturally when the schema no longer
+  contains the `item` field (due to `maxNestingLevel` truncation during the
+  encoding), without consuming same-type depth budget
 
 ### Requirement: repeatAll function does not define $index
 
