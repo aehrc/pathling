@@ -35,6 +35,13 @@ import jakarta.annotation.Nonnull;
  */
 public class FilteringAndProjectionFunctions {
 
+  /**
+   * The default maximum same-type recursion depth for {@code repeatAll()}. Cross-type traversals do
+   * not consume depth budget. This matches the default used by the SQL on FHIR {@code repeat}
+   * clause implementation.
+   */
+  private static final int DEFAULT_SAME_TYPE_RECURSION_DEPTH = 10;
+
   private FilteringAndProjectionFunctions() {}
 
   /**
@@ -125,9 +132,10 @@ public class FilteringAndProjectionFunctions {
    *     href="https://build.fhir.org/ig/HL7/FHIRPath/#repeatallprojection--expression--collection">repeatAll</a>
    */
   @FhirPathFunction
+  @SqlOnFhirConformance(Profile.EXPERIMENTAL)
   @Nonnull
   public static Collection repeatAll(
       @Nonnull final Collection input, @Nonnull final CollectionTransform expression) {
-    return input.repeatAll(expression, 10);
+    return input.repeatAll(expression, DEFAULT_SAME_TYPE_RECURSION_DEPTH);
   }
 }

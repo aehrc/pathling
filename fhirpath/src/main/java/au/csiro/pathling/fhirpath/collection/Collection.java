@@ -468,6 +468,8 @@ public class Collection implements Equatable {
     // Check if the projection produces a primitive (non-struct) type. Primitive types cannot
     // be converted to Variant via to_variant_object(), and they do not need schema unification
     // since primitives are leaf types with no structural differences across nesting levels.
+    // When the type is unknown (empty Optional), default to false — unknown types are treated as
+    // complex and routed through the Variant path for safe schema unification.
     final boolean isPrimitive =
         resultTemplate
             .getType()
@@ -488,6 +490,8 @@ public class Collection implements Equatable {
           ValueFunctions.variantTransformTree(level0, c -> c, List.of(innerTransform), maxDepth);
     }
 
+    // No flatten() is needed here unlike project(), because variantTransformTree already produces
+    // a flat array by concatenating results from all nesting levels internally.
     return resultTemplate.copyWithColumn(result);
   }
 

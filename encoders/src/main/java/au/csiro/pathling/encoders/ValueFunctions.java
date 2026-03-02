@@ -316,7 +316,7 @@ public class ValueFunctions {
     // Wrap with deferred Variant unwrapping. The UnresolvedVariantUnwrap expression resolves
     // once both the tree result and schema reference are resolved, converting each Variant
     // element back to the target struct type.
-    return column(new UnresolvedVariantUnwrap(variantTreeExpr, schemaRefExpr));
+    return variantUnwrap(column(variantTreeExpr), column(schemaRefExpr));
   }
 
   /**
@@ -331,12 +331,34 @@ public class ValueFunctions {
    * @param variantArray The column containing {@code Array[Variant]}
    * @param schemaRef A column whose resolved type determines the target element schema (should be
    *     an array type; the element type will be extracted)
+   * @param failOnError Whether to throw an error when a Variant element cannot be decoded to the
+   *     target schema. When {@code true}, decoding failures cause a runtime exception; when {@code
+   *     false}, they produce {@code null}.
+   * @return A column containing an array with elements decoded to the schema reference's type
+   */
+  @Nonnull
+  public static Column variantUnwrap(
+      @Nonnull final Column variantArray,
+      @Nonnull final Column schemaRef,
+      final boolean failOnError) {
+    return column(
+        new UnresolvedVariantUnwrap(expression(variantArray), expression(schemaRef), failOnError));
+  }
+
+  /**
+   * Converts an {@code Array[Variant]} column back to a typed array using deferred schema
+   * resolution with strict error handling. Equivalent to calling {@link #variantUnwrap(Column,
+   * Column, boolean)} with {@code failOnError = true}.
+   *
+   * @param variantArray The column containing {@code Array[Variant]}
+   * @param schemaRef A column whose resolved type determines the target element schema (should be
+   *     an array type; the element type will be extracted)
    * @return A column containing an array with elements decoded to the schema reference's type
    */
   @Nonnull
   public static Column variantUnwrap(
       @Nonnull final Column variantArray, @Nonnull final Column schemaRef) {
-    return column(new UnresolvedVariantUnwrap(expression(variantArray), expression(schemaRef)));
+    return variantUnwrap(variantArray, schemaRef, true);
   }
 
   /**

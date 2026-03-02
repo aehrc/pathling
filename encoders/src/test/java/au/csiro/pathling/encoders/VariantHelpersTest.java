@@ -88,7 +88,9 @@ class VariantHelpersTest {
 
     // The result should be a non-null array with one element.
     final Row row = result.head();
-    assertNotNull(row.get(0));
+    final List<?> resultItems = row.getList(0);
+    assertEquals(1, resultItems.size());
+    assertNotNull(resultItems.get(0));
   }
 
   @Test

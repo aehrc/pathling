@@ -886,7 +886,8 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
  * @param inner     the Array[Variant] expression produced by UnresolvedTransformTree
  * @param schemaRef an expression whose resolved element type determines the target schema
  */
-case class UnresolvedVariantUnwrap(inner: Expression, schemaRef: Expression)
+case class UnresolvedVariantUnwrap(inner: Expression, schemaRef: Expression,
+    failOnError: Boolean = true)
   extends Expression with UnevaluableCopy with NonSQLExpression {
 
   override def children: Seq[Expression] = Seq(inner, schemaRef)
@@ -896,6 +897,9 @@ case class UnresolvedVariantUnwrap(inner: Expression, schemaRef: Expression)
     copy(inner = newChildren(0), schemaRef = newChildren(1))
   }
 
+  // Resolution happens inside mapChildren because it is called by Catalyst rules
+  // (e.g., ResolveLambdaVariables, ResolveReferences). If mapChildren is called multiple
+  // times before both children are resolved, the expression safely returns a copy() each time.
   override def mapChildren(f: Expression => Expression): Expression = {
     val newInner = f(inner)
     val newSchemaRef = f(schemaRef)
@@ -913,7 +917,7 @@ case class UnresolvedVariantUnwrap(inner: Expression, schemaRef: Expression)
       )
       val variantGetExpr = new variantExpr.VariantGet(
         lambdaVar, Literal.create("$", StringType),
-        targetElementType, failOnError = true, timeZoneId = None
+        targetElementType, failOnError = failOnError, timeZoneId = None
       )
       val lambdaFunc = LambdaFunction(variantGetExpr, Seq(lambdaVar))
       ArrayTransform(newInner, lambdaFunc)

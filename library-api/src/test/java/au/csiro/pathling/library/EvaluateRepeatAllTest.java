@@ -19,12 +19,12 @@ package au.csiro.pathling.library;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -98,11 +98,9 @@ public class EvaluateRepeatAllTest {
     assertNotNull(result);
     assertEquals(4, result.getResults().size());
 
-    final List<Object> linkIds = result.getResults().stream().map(TypedValue::getValue).toList();
-    assertTrue(linkIds.contains("1"));
-    assertTrue(linkIds.contains("2"));
-    assertTrue(linkIds.contains("1.1"));
-    assertTrue(linkIds.contains("1.1.1"));
+    final Set<Object> linkIds =
+        new HashSet<>(result.getResults().stream().map(TypedValue::getValue).toList());
+    assertEquals(Set.of("1", "2", "1.1", "1.1.1"), linkIds);
   }
 
   @Test
