@@ -117,10 +117,7 @@ subsequent FHIRPath operations such as path navigation, `where()`, `count()`,
 The function delegates recursive traversal to `UnresolvedTransformTree`, which
 limits recursion depth based on Spark SQL `DataType` equality. The depth counter
 only decrements when the traversal expression produces a node whose resolved SQL
-`DataType` is structurally identical to its parent's. When the counter reaches
-zero, traversal stops and returns results collected up to that point. The
-hardcoded same-type depth limit is 10, matching the default
-`maxUnboundTraversalDepth` used by the SQL on FHIR `repeat` clause.
+`DataType` is structurally identical to its parent's.
 
 For traversals through schema-truncated structures (e.g.,
 `Questionnaire.repeatAll(item)`), each nesting level has a progressively smaller
@@ -130,37 +127,62 @@ terminates naturally when a field is no longer present in the truncated schema
 (`FIELD_NOT_FOUND`).
 
 Same-type recursion occurs when the traversal produces an element with an
-identical SQL `DataType` at every level. Known cases include:
+identical SQL `DataType` at every level. The function SHALL distinguish two
+cases:
 
-- **Extension traversal**: Extension structs have a fixed flat schema at all
-  nesting levels (extensions use a global `_extension` map rather than recursive
-  struct fields), so `repeatAll(extension)` produces same-type nodes.
-- **Identity-like traversals**: Functions such as `first()` that return an
-  element of the same type as the input, causing the SQL `DataType` to remain
-  unchanged across levels.
+- **Extension traversal**: When the projection produces a result with FHIR type
+  `Extension`, the function SHALL silently stop traversal when the configured
+  `maxExtensionDepth` is reached, returning all results collected up to that
+  point. This supports legitimate recursive navigation of Extension hierarchies.
+- **Non-Extension same-type traversal**: When the projection produces a
+  non-Extension type and same-type depth is exhausted, the function SHALL raise
+  an evaluation error with a message indicating that infinite recursive
+  traversal was detected. This covers identity-like traversals such as
+  `repeatAll($this)`, `repeatAll(first())`, and `repeatAll('const')` that would
+  otherwise loop indefinitely.
 
-#### Scenario: Extension traversal bounded by actual depth or limit
+The same-type recursion depth is controlled by the `maxExtensionDepth` setting
+in `FhirpathConfiguration`, with a default value of 10.
+
+#### Scenario: Extension traversal bounded by configured depth
 
 - **WHEN** `repeatAll(extension)` is evaluated on a resource whose elements
-  carry nested extensions
-- **THEN** the function SHALL traverse extensions up to the actual nesting depth
-  or the same-type depth limit (10), whichever is reached first, and return all
-  collected extensions
+  carry nested extensions and `maxExtensionDepth` is set to 5
+- **THEN** the function SHALL traverse extensions up to depth 5, returning all
+  collected extensions, and SHALL NOT raise an error
 
-#### Scenario: Identity-like traversal bounded by depth limit
+#### Scenario: Extension traversal with default depth
 
-- **WHEN** `repeatAll` is evaluated with a traversal that always produces the
-  same SQL `DataType` (e.g., `repeatAll(first())` on a complex-typed
-  collection)
-- **THEN** the function SHALL stop after the same-type depth limit and return
-  results collected up to that point
+- **WHEN** `repeatAll(extension)` is evaluated with default configuration
+- **THEN** the function SHALL traverse extensions up to depth 10
+
+#### Scenario: Infinite recursion detected for identity traversal
+
+- **WHEN** `repeatAll($this)` is evaluated on any collection
+- **THEN** the function SHALL raise an evaluation error indicating infinite
+  recursive traversal was detected
+
+#### Scenario: Infinite recursion detected for first() traversal
+
+- **WHEN** `name.repeatAll(first())` is evaluated on a resource with name
+  elements
+- **THEN** the function SHALL raise an evaluation error indicating infinite
+  recursive traversal was detected
 
 #### Scenario: Schema-truncated traversal terminates naturally
 
 - **WHEN** `repeatAll(item)` is evaluated on a Questionnaire with nested items
 - **THEN** traversal SHALL terminate naturally when the schema no longer
   contains the `item` field (due to `maxNestingLevel` truncation during the
-  encoding), without consuming same-type depth budget
+  encoding), without consuming same-type depth budget and without raising an
+  error
+
+#### Scenario: Unknown FHIR type defaults to error mode
+
+- **WHEN** `repeatAll` is evaluated with a projection whose FHIR type is
+  unknown and same-type depth is exhausted
+- **THEN** the function SHALL raise an evaluation error, as unknown types that
+  hit the depth limit are more likely bugs than intentional recursion
 
 ### Requirement: repeatAll function does not define $index
 

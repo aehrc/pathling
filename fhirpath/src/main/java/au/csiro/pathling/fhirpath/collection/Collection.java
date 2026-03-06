@@ -476,6 +476,13 @@ public class Collection implements Equatable {
             .map(t -> !(t.getSqlDataType() instanceof StructType))
             .orElse(false);
 
+    // Determine whether to error on same-type depth exhaustion. Extension traversal is the only
+    // legitimate same-type recursion — extensions have a fixed schema at all nesting levels. For
+    // all other types, same-type depth exhaustion indicates infinite recursion.
+    final boolean isExtensionTraversal =
+        resultTemplate.getFhirType().map(FHIRDefinedType.EXTENSION::equals).orElse(false);
+    final boolean errorOnDepthExhaustion = !isExtensionTraversal;
+
     final Column result;
     if (isPrimitive) {
       // Primitives are leaf types with no children to recurse into. Return the level-0 result
@@ -487,7 +494,8 @@ public class Collection implements Equatable {
       // collects items at each level (variantTransformTree wraps it with to_variant_object),
       // while the traversal navigates to children using the same projection expression.
       result =
-          ValueFunctions.variantTransformTree(level0, c -> c, List.of(innerTransform), maxDepth);
+          ValueFunctions.variantTransformTree(
+              level0, c -> c, List.of(innerTransform), maxDepth, errorOnDepthExhaustion);
     }
 
     // No flatten() is needed here unlike project(), because variantTransformTree already produces

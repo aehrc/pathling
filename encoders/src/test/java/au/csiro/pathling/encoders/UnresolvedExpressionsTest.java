@@ -27,6 +27,7 @@ package au.csiro.pathling.encoders;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
@@ -78,9 +79,33 @@ class UnresolvedExpressionsTest {
         new UnresolvedTransformTree(stringLiteral("data1"), extractor, toIndexedSeq(traversor), 2);
     assertUnresolvedExpression(unresolvedTransformTree);
     assertEquals("data1", unresolvedTransformTree.toString());
+    assertFalse(unresolvedTransformTree.errorOnDepthExhaustion());
 
     assertEquals(
         new UnresolvedTransformTree(stringLiteral("data2"), extractor, toIndexedSeq(traversor), 2),
         unresolvedTransformTree.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2"))));
+  }
+
+  @Test
+  void testUnresolvedTransformTreeWithErrorOnDepthExhaustion() {
+
+    final Function1<Expression, Expression> extractor = x -> x;
+    final Function1<Expression, Expression> traversor = x -> x;
+
+    // Construct with errorOnDepthExhaustion = true.
+    final UnresolvedTransformTree tree =
+        new UnresolvedTransformTree(
+            stringLiteral("data1"),
+            extractor,
+            toIndexedSeq(traversor),
+            scala.Option.empty(),
+            2,
+            true);
+    assertUnresolvedExpression(tree);
+    assertTrue(tree.errorOnDepthExhaustion());
+
+    // The flag should be preserved through withNewChildrenInternal.
+    final Expression rebuilt = tree.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2")));
+    assertTrue(((UnresolvedTransformTree) rebuilt).errorOnDepthExhaustion());
   }
 }

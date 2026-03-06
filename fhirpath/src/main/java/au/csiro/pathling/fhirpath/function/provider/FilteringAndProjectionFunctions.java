@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
@@ -34,13 +35,6 @@ import jakarta.annotation.Nonnull;
  *     Specification - Filtering and projection</a>
  */
 public class FilteringAndProjectionFunctions {
-
-  /**
-   * The default maximum same-type recursion depth for {@code repeatAll()}. Cross-type traversals do
-   * not consume depth budget. This matches the default used by the SQL on FHIR {@code repeat}
-   * clause implementation.
-   */
-  private static final int DEFAULT_SAME_TYPE_RECURSION_DEPTH = 10;
 
   private FilteringAndProjectionFunctions() {}
 
@@ -121,12 +115,14 @@ public class FilteringAndProjectionFunctions {
    *
    * <p>If the input collection is empty, the result is empty.
    *
-   * <p>The same-type recursion depth limit is hardcoded to 10, matching the default used by the SQL
-   * on FHIR {@code repeat} clause implementation. Cross-type traversals do not consume depth
-   * budget.
+   * <p>For Extension traversal, same-type depth exhaustion silently stops and returns results
+   * collected up to that point. For all other same-type traversals, depth exhaustion raises an
+   * error indicating infinite recursive traversal. The depth limit is controlled by {@code
+   * maxExtensionDepth} in the FHIRPath configuration.
    *
    * @param input The input collection
    * @param expression The projection expression to apply recursively
+   * @param context The evaluation context providing configuration
    * @return A collection containing all recursively collected results
    * @see <a
    *     href="https://build.fhir.org/ig/HL7/FHIRPath/#repeatallprojection--expression--collection">repeatAll</a>
@@ -135,7 +131,10 @@ public class FilteringAndProjectionFunctions {
   @SqlOnFhirConformance(Profile.EXPERIMENTAL)
   @Nonnull
   public static Collection repeatAll(
-      @Nonnull final Collection input, @Nonnull final CollectionTransform expression) {
-    return input.repeatAll(expression, DEFAULT_SAME_TYPE_RECURSION_DEPTH);
+      @Nonnull final Collection input,
+      @Nonnull final CollectionTransform expression,
+      @Nonnull final EvaluationContext context) {
+    final int maxExtensionDepth = context.getConfiguration().getMaxExtensionDepth();
+    return input.repeatAll(expression, maxExtensionDepth);
   }
 }

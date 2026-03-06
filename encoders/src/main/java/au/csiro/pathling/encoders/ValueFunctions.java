@@ -206,6 +206,8 @@ public class ValueFunctions {
    * @param extractor An extraction operation to apply at each node that must return an array type
    * @param traversals A list of traversal operations to apply recursively to reach child nodes
    * @param maxDepth The maximum recursion depth for same-type traversals to prevent infinite loops
+   * @param errorOnDepthExhaustion If true, throws an error when same-type depth is exhausted
+   *     instead of returning an empty array
    * @return A Column containing an array of all extracted values from the tree traversal
    */
   @Nonnull
@@ -213,7 +215,8 @@ public class ValueFunctions {
       @Nonnull final Column value,
       @Nonnull final UnaryOperator<Column> extractor,
       @Nonnull final List<UnaryOperator<Column>> traversals,
-      final int maxDepth) {
+      final int maxDepth,
+      final boolean errorOnDepthExhaustion) {
 
     final List<Function1<Expression, Expression>> x =
         traversals.stream()
@@ -224,7 +227,33 @@ public class ValueFunctions {
     final Seq<Function1<Expression, Expression>> scalaSeq = CollectionConverters.asScala(x).toSeq();
     return column(
         new UnresolvedTransformTree(
-            expression(value), liftToExpression(extractor)::apply, scalaSeq, maxDepth));
+            expression(value),
+            liftToExpression(extractor)::apply,
+            scalaSeq,
+            scala.Option.empty(),
+            maxDepth,
+            errorOnDepthExhaustion));
+  }
+
+  /**
+   * Performs a recursive tree traversal that extracts values at each level of a hierarchical
+   * structure, concatenating all extracted results into a single array.
+   *
+   * <p>This overload defaults to silent stop on same-type depth exhaustion.
+   *
+   * @param value The starting value column to traverse
+   * @param extractor An extraction operation to apply at each node that must return an array type
+   * @param traversals A list of traversal operations to apply recursively to reach child nodes
+   * @param maxDepth The maximum recursion depth for same-type traversals to prevent infinite loops
+   * @return A Column containing an array of all extracted values from the tree traversal
+   */
+  @Nonnull
+  public static Column transformTree(
+      @Nonnull final Column value,
+      @Nonnull final UnaryOperator<Column> extractor,
+      @Nonnull final List<UnaryOperator<Column>> traversals,
+      final int maxDepth) {
+    return transformTree(value, extractor, traversals, maxDepth, false);
   }
 
   /**
@@ -292,6 +321,8 @@ public class ValueFunctions {
    * @param extractor An extraction operation that produces an array at each node
    * @param traversals A list of traversal operations for reaching child nodes
    * @param maxDepth The maximum recursion depth for same-type traversals
+   * @param errorOnDepthExhaustion If true, throws an error when same-type depth is exhausted
+   *     instead of returning an empty array
    * @return A Column containing an array of extracted values, all conforming to the level-0 schema
    */
   @Nonnull
@@ -299,14 +330,16 @@ public class ValueFunctions {
       @Nonnull final Column value,
       @Nonnull final UnaryOperator<Column> extractor,
       @Nonnull final List<UnaryOperator<Column>> traversals,
-      final int maxDepth) {
+      final int maxDepth,
+      final boolean errorOnDepthExhaustion) {
 
     // Wrap the extractor to convert each result element to Variant.
     final UnaryOperator<Column> variantExtractor = wrapWithVariant(extractor);
 
     // Run the tree traversal with Variant-wrapped extractor but raw traversals.
     final Expression variantTreeExpr =
-        expression(transformTree(value, variantExtractor, traversals, maxDepth));
+        expression(
+            transformTree(value, variantExtractor, traversals, maxDepth, errorOnDepthExhaustion));
 
     // Build a schema reference expression by applying the raw extractor to the value. This
     // expression will resolve to the level-0 array type, from which the target element type is
@@ -317,6 +350,27 @@ public class ValueFunctions {
     // once both the tree result and schema reference are resolved, converting each Variant
     // element back to the target struct type.
     return variantUnwrap(column(variantTreeExpr), column(schemaRefExpr));
+  }
+
+  /**
+   * Performs a recursive tree traversal with Variant-based schema unification, collecting all
+   * extracted values across nesting levels regardless of structural differences.
+   *
+   * <p>This overload defaults to silent stop on same-type depth exhaustion.
+   *
+   * @param value The starting value column to traverse
+   * @param extractor An extraction operation that produces an array at each node
+   * @param traversals A list of traversal operations for reaching child nodes
+   * @param maxDepth The maximum recursion depth for same-type traversals
+   * @return A Column containing an array of extracted values, all conforming to the level-0 schema
+   */
+  @Nonnull
+  public static Column variantTransformTree(
+      @Nonnull final Column value,
+      @Nonnull final UnaryOperator<Column> extractor,
+      @Nonnull final List<UnaryOperator<Column>> traversals,
+      final int maxDepth) {
+    return variantTransformTree(value, extractor, traversals, maxDepth, false);
   }
 
   /**

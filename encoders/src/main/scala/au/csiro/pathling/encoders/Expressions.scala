@@ -525,14 +525,16 @@ case class UnresolvedEmptyArrayIfMissingField(value: Expression)
  * @param node       the current node expression to traverse
  * @param extractor  a function to extract values from a node (must return array type)
  * @param traversals a sequence of functions to traverse to child nodes
- * @param parentType the data type of the parent node, used to determine if depth should decrement
- * @param level      the remaining levels to traverse for same-type recursion; when exhausted, only extraction occurs
+ * @param parentType              the data type of the parent node, used to determine if depth should decrement
+ * @param level                   the remaining levels to traverse for same-type recursion; when exhausted, only extraction occurs
+ * @param errorOnDepthExhaustion  if true, throws an AnalysisException when same-type depth is exhausted instead of returning an empty array
  */
 case class UnresolvedTransformTree(node: Expression,
                                    extractor: Expression => Expression,
                                    traversals: Seq[Expression => Expression],
                                    parentType: Option[DataType],
-                                   level: Int
+                                   level: Int,
+                                   errorOnDepthExhaustion: Boolean = false
                                   )
   extends Expression with UnevaluableCopy with NonSQLExpression {
 
@@ -540,7 +542,7 @@ case class UnresolvedTransformTree(node: Expression,
            extractor: Expression => Expression,
            traversals: Seq[Expression => Expression],
            level: Int) = {
-    this(node, extractor, traversals, None, level)
+    this(node, extractor, traversals, None, level, false)
   }
 
   override def mapChildren(f: Expression => Expression): Expression = {
@@ -556,9 +558,14 @@ case class UnresolvedTransformTree(node: Expression,
               traversals
                 .map(t => UnresolvedTransformTree(t(node), extractor, traversals,
                   Some(newValue.dataType),
-                  if (parentType.contains(newValue.dataType)) level - 1 else level
+                  if (parentType.contains(newValue.dataType)) level - 1 else level,
+                  errorOnDepthExhaustion
                 ))
           )
+        else if (errorOnDepthExhaustion)
+          throw new AnalysisException(
+            errorClass = "INTERNAL_ERROR",
+            messageParameters = Map("message" -> "Infinite recursive traversal detected."))
         else CreateArray(Seq.empty)
       }
       else {
@@ -582,7 +589,7 @@ case class UnresolvedTransformTree(node: Expression,
   override def children: Seq[Expression] = node :: Nil
 
   override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
-    UnresolvedTransformTree(newChildren.head, extractor, traversals, parentType, level)
+    UnresolvedTransformTree(newChildren.head, extractor, traversals, parentType, level, errorOnDepthExhaustion)
   }
 }
 

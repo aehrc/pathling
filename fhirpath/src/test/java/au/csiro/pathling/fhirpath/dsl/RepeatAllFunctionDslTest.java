@@ -177,6 +177,10 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
             List.of("1", "1.1"),
             "repeatAll(item).where(type = 'group').linkId",
             "repeatAll(item).where(type = 'group') filters items from all nesting levels")
+        .group("repeatAll() computed empty input")
+        .testEmpty(
+            "item.where(linkId = 'nonexistent').repeatAll(item)",
+            "repeatAll() on a computed empty collection returns empty")
         .group("repeatAll() $index not defined")
         .testError(
             "repeatAll($index)", "$index is not available within repeatAll projection expression")
@@ -184,13 +188,18 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
   }
 
   @FhirPathTest
-  public Stream<DynamicTest> testRepeatAllPatientProjections() {
-    // repeatAll(first()) produces the same SQL DataType at every level (ArrayType(HumanName)),
-    // triggering same-type depth limiting. With a depth limit of 10, the initial level (where
-    // parentType is None and does not consume budget) plus 10 same-type levels produce 11 total
-    // copies of the first element before traversal stops.
+  public Stream<DynamicTest> testRepeatAllNonRecursiveProjections() {
     return builder()
-        .withResource(createPatient())
+        .withSubject(
+            sb ->
+                sb.elementArray(
+                        "name",
+                        n1 -> n1.string("family", "Smith"),
+                        n2 -> n2.string("family", "Jones"))
+                    .string("gender", "male")
+                    .element(
+                        "maritalStatus",
+                        ms -> ms.elementArray("coding", c -> c.string("code", "M"))))
         .group("repeatAll() non-recursive projection")
         .testEquals(
             List.of("Smith", "Jones"),
@@ -206,11 +215,22 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
             "M",
             "repeatAll(maritalStatus).coding.code",
             "repeatAll(maritalStatus) returns a singular complex value with sub-elements intact")
-        .group("repeatAll() identity-like same-type depth limiting")
-        .testEquals(
-            11,
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatAllInfiniteRecursionAndExtensions() {
+    return builder()
+        .withResource(createPatient())
+        .group("repeatAll() infinite recursion detection")
+        .testError(
+            "Infinite recursive traversal detected.",
             "name.repeatAll(first()).count()",
-            "repeatAll(first()) stops after same-type depth limit and returns bounded results")
+            "repeatAll(first()) raises an error for non-Extension same-type depth exhaustion")
+        .testError(
+            "Infinite recursive traversal detected.",
+            "repeatAll($this)",
+            "repeatAll($this) raises an error for identity traversal")
         .group("repeatAll() extension traversal")
         .testEquals(
             List.of(
@@ -220,6 +240,12 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
             "repeatAll(extension).url",
             "repeatAll(extension) recursively collects all extensions including nested"
                 + " sub-extensions")
+        .group("repeatAll() choice type via extension value")
+        .testEquals(
+            List.of("simple-value", "child-value"),
+            "repeatAll(extension).value.ofType(string)",
+            "repeatAll(extension).value.ofType(string) extracts choice-typed values from all"
+                + " extensions")
         .build();
   }
 
