@@ -10,6 +10,10 @@ The method SHALL use the existing Pathling FHIRPath engine (Spark-based) to
 evaluate the expression, encoding the resource into a one-row Dataset
 internally.
 
+The method SHALL support all FHIRPath functions implemented in the engine,
+including scoped functions that accept projection expressions (e.g., `select()`,
+`repeatAll()`).
+
 When the expression is empty or contains only whitespace, the fhirpath-lab-api
 SHALL return a successful response with an empty collection (zero result parts)
 without invoking the FHIRPath engine.
@@ -51,6 +55,13 @@ without invoking the FHIRPath engine.
   `name`, and expression `given.first()`
 - **THEN** the method evaluates the main expression once for each result of the
   context expression and returns results grouped by context item
+
+#### Scenario: Recursive function evaluation
+
+- **WHEN** the method is called with a Questionnaire JSON resource and the
+  expression `repeatAll(item).linkId`
+- **THEN** the method returns a list containing `linkId` values from all
+  recursively nested items
 
 ### Requirement: Return type metadata with evaluation results
 
