@@ -1,0 +1,241 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package au.csiro.pathling.fhirpath.dsl;
+
+import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
+import au.csiro.pathling.test.dsl.FhirPathTest;
+import jakarta.annotation.Nonnull;
+import java.util.List;
+import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Questionnaire;
+import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent;
+import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType;
+import org.hl7.fhir.r4.model.StringType;
+import org.junit.jupiter.api.DynamicTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+
+/**
+ * Tests for the FHIRPath repeat() function.
+ *
+ * <p>Focuses on the differences from repeatAll(): equality-based deduplication and handling of
+ * self-referential primitive traversal.
+ */
+@Import(RepeatFunctionDslTest.Config.class)
+public class RepeatFunctionDslTest extends FhirPathDslTestBase {
+
+  /**
+   * Provides a FhirEncoders bean with maxNestingLevel=3 to support deeply nested items in test
+   * Questionnaire resources.
+   */
+  @TestConfiguration
+  static class Config {
+
+    @Bean
+    @Nonnull
+    FhirEncoders fhirEncoders() {
+      return FhirEncoders.forR4()
+          .withExtensionsEnabled(true)
+          .withAllOpenTypes()
+          .withMaxNestingLevel(3)
+          .getOrCreate();
+    }
+  }
+
+  /**
+   * Creates a Questionnaire with items nested 3 levels deep.
+   *
+   * <p>Structure:
+   *
+   * <pre>
+   *   item "1" (group)
+   *     item "1.1" (group)
+   *       item "1.1.1" (display)
+   *   item "2" (display)
+   * </pre>
+   */
+  private static Questionnaire createQuestionnaire() {
+    final Questionnaire questionnaire = new Questionnaire();
+    questionnaire.setId("test-questionnaire");
+    questionnaire.setStatus(PublicationStatus.DRAFT);
+
+    final QuestionnaireItemComponent item1 = questionnaire.addItem();
+    item1.setLinkId("1");
+    item1.setType(QuestionnaireItemType.GROUP);
+
+    final QuestionnaireItemComponent item1_1 = item1.addItem();
+    item1_1.setLinkId("1.1");
+    item1_1.setType(QuestionnaireItemType.GROUP);
+
+    final QuestionnaireItemComponent item1_1_1 = item1_1.addItem();
+    item1_1_1.setLinkId("1.1.1");
+    item1_1_1.setType(QuestionnaireItemType.DISPLAY);
+
+    final QuestionnaireItemComponent item2 = questionnaire.addItem();
+    item2.setLinkId("2");
+    item2.setType(QuestionnaireItemType.DISPLAY);
+
+    return questionnaire;
+  }
+
+  private static Patient createPatient() {
+    final Patient patient = new Patient();
+    patient.setId("test-patient");
+    patient.addName().setFamily("Smith");
+    patient.addName().setFamily("Jones");
+    patient.setGender(AdministrativeGender.MALE);
+    patient.setMaritalStatus(
+        new CodeableConcept(new Coding("http://example.com/cs", "M", "Married")));
+
+    patient.addExtension(
+        new Extension("http://example.com/simple", new StringType("simple-value")));
+
+    final Extension parent = new Extension("http://example.com/parent");
+    parent.addExtension(new Extension("http://example.com/child", new StringType("child-value")));
+    patient.addExtension(parent);
+
+    return patient;
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatBasicTreeTraversal() {
+    return builder()
+        .withResource(createQuestionnaire())
+        .group("repeat() basic traversal")
+        .testEquals(
+            List.of("1", "2", "1.1", "1.1.1"),
+            "repeat(item).linkId",
+            "repeat(item).linkId returns linkIds from all nesting levels")
+        .testEquals(
+            4, "repeat(item).count()", "repeat(item).count() returns total items across all levels")
+        .group("repeat() with filtering")
+        .testEquals(
+            List.of("1", "1.1"),
+            "repeat(item).where(type = 'group').linkId",
+            "repeat(item).where(type = 'group') filters items from all nesting levels")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatPrimitiveDedup() {
+    return builder()
+        .withResource(createPatient())
+        .group("repeat() primitive self-referential deduplication")
+        .testEquals(
+            "male",
+            "gender.repeat($this)",
+            "repeat($this) on a primitive returns the deduplicated value")
+        .testEquals(
+            1,
+            "gender.repeat($this).count()",
+            "repeat($this) on a primitive deduplicates to a single value")
+        .testEquals(
+            "someValue",
+            "gender.repeat('someValue')",
+            "repeat('literal') on a primitive returns the constant deduplicated")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatComplexTypeNoDedup() {
+    final Questionnaire questionnaire = new Questionnaire();
+    questionnaire.setId("dup-questionnaire");
+    questionnaire.setStatus(PublicationStatus.DRAFT);
+
+    final QuestionnaireItemComponent item1 = questionnaire.addItem();
+    item1.setLinkId("A");
+    item1.setType(QuestionnaireItemType.GROUP);
+
+    final QuestionnaireItemComponent item1Child = item1.addItem();
+    item1Child.setLinkId("B");
+    item1Child.setType(QuestionnaireItemType.DISPLAY);
+
+    final QuestionnaireItemComponent item2 = questionnaire.addItem();
+    item2.setLinkId("B");
+    item2.setType(QuestionnaireItemType.DISPLAY);
+
+    return builder()
+        .withResource(questionnaire)
+        .group("repeat() complex type - no dedup applied")
+        .testEquals(
+            List.of("A", "B", "B"),
+            "repeat(item).linkId",
+            "repeat(item).linkId preserves items with the same linkId from different nesting"
+                + " levels because complex types are not deduplicated")
+        .testEquals(
+            3, "repeat(item).count()", "repeat(item).count() includes all items without dedup")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatEmptyInput() {
+    final Questionnaire empty = new Questionnaire();
+    empty.setId("empty-questionnaire");
+    empty.setStatus(PublicationStatus.DRAFT);
+
+    return builder()
+        .withResource(empty)
+        .group("repeat() empty input")
+        .testEmpty("repeat(item)", "repeat() on a resource with no items returns empty collection")
+        .testEquals(0, "repeat(item).count()", "repeat(item).count() returns 0 for empty input")
+        .group("repeat() empty literal")
+        .testEmpty(
+            "{}.repeat($this)", "repeat() on the FHIRPath empty literal returns empty collection")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatExtensionTraversal() {
+    return builder()
+        .withResource(createPatient())
+        .group("repeat() extension traversal")
+        .testEquals(
+            List.of(
+                "http://example.com/simple",
+                "http://example.com/parent",
+                "http://example.com/child"),
+            "repeat(extension).url",
+            "repeat(extension) recursively collects all extensions including nested"
+                + " sub-extensions")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatChainedOperations() {
+    return builder()
+        .withResource(createQuestionnaire())
+        .group("repeat() chained operations")
+        .testEquals(
+            List.of("1", "2", "1.1", "1.1.1"),
+            "repeat(item).linkId",
+            "repeat(item).linkId chains path navigation after repeat")
+        .testEquals(
+            List.of("2", "1.1.1"),
+            "repeat(item).where(type = 'display').linkId",
+            "repeat(item).where().linkId chains where and path after repeat")
+        .build();
+  }
+}

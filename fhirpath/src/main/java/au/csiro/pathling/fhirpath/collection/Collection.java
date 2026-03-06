@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.fhirpath.TypeSpecifier.FHIR_NAMESPACE;
 import static au.csiro.pathling.fhirpath.TypeSpecifier.SYSTEM_NAMESPACE;
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.array_distinct;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.encoders.ValueFunctions;
@@ -30,6 +31,7 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.Equatable;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
@@ -37,6 +39,7 @@ import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
+import au.csiro.pathling.sql.SqlFunctions;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.Constructor;
@@ -453,10 +456,16 @@ public class Collection implements Equatable {
    *
    * @param transform The collection transform representing the recursive projection expression
    * @param maxDepth The maximum same-type recursion depth to prevent infinite traversal
+   * @param allowPrimitiveSelfRef If {@code true}, self-referential primitive traversal returns
+   *     level_0 instead of throwing an error. Used by {@code repeat()} where deduplication
+   *     guarantees termination.
    * @return A new collection containing all recursively collected results
    */
   @Nonnull
-  public Collection repeatAll(@Nonnull final CollectionTransform transform, final int maxDepth) {
+  public Collection repeatAll(
+      @Nonnull final CollectionTransform transform,
+      final int maxDepth,
+      final boolean allowPrimitiveSelfRef) {
     // Apply the transform to the input to get level_0 (the result type and first-level output).
     final Collection level0Collection = transform.apply(this);
 
@@ -495,6 +504,11 @@ public class Collection implements Equatable {
             .orElse(false);
 
     if (isPrimitive) {
+      if (allowPrimitiveSelfRef) {
+        // For repeat(), self-referential primitive traversal is valid — deduplication guarantees
+        // termination. Return level_0 directly; the caller will deduplicate.
+        return level0Collection;
+      }
       // A primitive type that produces the same primitive type on self-application is
       // self-referential and will recurse infinitely.
       throw new InvalidUserInputError(
@@ -533,6 +547,38 @@ public class Collection implements Equatable {
     // No flatten() is needed here unlike project(), because variantTransformTree already produces
     // a flat array by concatenating results from all nesting levels internally.
     return level0Collection.copyWithColumn(result);
+  }
+
+  /**
+   * Recursively traverses this collection using the specified transform, collecting results with
+   * equality-based deduplication. This implements the FHIRPath {@code repeat()} function.
+   *
+   * <p>Delegates to {@link #repeatAll(CollectionTransform, int, boolean)} with primitive
+   * self-reference allowed, then deduplicates the result for {@link Equatable} types using the
+   * collection's comparator. Non-Equatable types (complex backbone elements) are not deduplicated.
+   *
+   * @param transform The collection transform representing the recursive projection expression
+   * @param maxDepth The maximum same-type recursion depth to prevent infinite traversal
+   * @return A new collection containing deduplicated recursively collected results
+   */
+  @Nonnull
+  public Collection repeat(@Nonnull final CollectionTransform transform, final int maxDepth) {
+    final Collection result = repeatAll(transform, maxDepth, true);
+
+    // Deduplicate only for types with a FHIRPath type (primitives, Coding, Quantity, etc.).
+    // Complex backbone elements have no FHIRPath type and contain synthetic fields like _fid
+    // that make struct equality impractical.
+    if (result instanceof Equatable equatable && result.getType().isPresent()) {
+      final Column array = result.getColumn().plural().getValue();
+      final ColumnEquality comparator = equatable.getComparator();
+      final Column deduplicated =
+          comparator.usesDefaultSqlEquality()
+              ? array_distinct(array)
+              : SqlFunctions.arrayDistinctWithEquality(array, comparator::equalsTo);
+      return result.copyWithColumn(deduplicated);
+    }
+
+    return result;
   }
 
   /**

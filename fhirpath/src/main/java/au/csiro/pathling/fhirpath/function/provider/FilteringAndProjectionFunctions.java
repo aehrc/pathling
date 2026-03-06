@@ -105,6 +105,34 @@ public class FilteringAndProjectionFunctions {
   }
 
   /**
+   * Recursively evaluates a projection expression on each item in the input collection, adding
+   * results to the output only if they are not already present as determined by the equals ({@code
+   * =}) operator. The projection is then re-evaluated on the new results, repeating until no new
+   * items are produced or the maximum same-type recursion depth is reached.
+   *
+   * <p>This is the standard FHIRPath {@code repeat()} function. Unlike {@code repeatAll()}, it
+   * performs equality-based deduplication of results.
+   *
+   * <p>If the input collection is empty, the result is empty.
+   *
+   * @param input The input collection
+   * @param expression The projection expression to apply recursively
+   * @param context The evaluation context providing configuration
+   * @return A collection containing deduplicated recursively collected results
+   * @see <a
+   *     href="https://build.fhir.org/ig/HL7/FHIRPath/#repeatprojection--expression--collection">repeat</a>
+   */
+  @FhirPathFunction
+  @Nonnull
+  public static Collection repeat(
+      @Nonnull final Collection input,
+      @Nonnull final CollectionTransform expression,
+      @Nonnull final EvaluationContext context) {
+    final int maxExtensionDepth = context.getConfiguration().getMaxExtensionDepth();
+    return input.repeat(expression, maxExtensionDepth);
+  }
+
+  /**
    * Recursively evaluates a projection expression on each item in the input collection, adding all
    * results to the output without deduplication. The projection is then re-evaluated on the new
    * results, repeating until no new items are produced or the maximum same-type recursion depth is
@@ -135,6 +163,6 @@ public class FilteringAndProjectionFunctions {
       @Nonnull final CollectionTransform expression,
       @Nonnull final EvaluationContext context) {
     final int maxExtensionDepth = context.getConfiguration().getMaxExtensionDepth();
-    return input.repeatAll(expression, maxExtensionDepth);
+    return input.repeatAll(expression, maxExtensionDepth, false);
   }
 }

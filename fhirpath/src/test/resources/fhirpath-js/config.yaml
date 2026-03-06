@@ -167,6 +167,15 @@ excludeSet:
           return 0 instead of 1.
         any:
           - "Patient.name.given.where(id = 'Jacomus1Id').count()"
+      - title: "repeat() on id attribute of primitive elements not supported"
+        type: feature
+        outcome: failure
+        id: "#437"
+        comment: |
+          This test uses repeat() to traverse the id attribute of primitive elements.
+          Pathling does not support accessing the id attribute of primitive elements.
+        any:
+          - "Patient.name.given.repeat(id)"
   - title: Equality exclusions
     glob: "fhirpath-js/cases/6.1_equality.yaml"
     exclude:
@@ -605,3 +614,13 @@ excludeSet:
           This is correct behavior per spec operator precedence rules.
         any:
           - "1 | 1 is Integer"
+      - title: "Recursive ValueSet.expansion.contains not encoded"
+        type: feature
+        outcome: failure
+        comment: |
+          The encoder explicitly skips the recursive 'contains' field within
+          ValueSetExpansionContainsComponent (see R4DataTypeMappings.skipField).
+          This means nested contains entries are not available in the Spark schema,
+          so repeat(contains) only finds top-level entries.
+        any:
+          - "** testRepeat1"
