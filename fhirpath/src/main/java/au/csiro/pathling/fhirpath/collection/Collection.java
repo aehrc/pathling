@@ -435,13 +435,21 @@ public class Collection implements Equatable {
    * The transform is then re-evaluated on the new results, repeating until no new items are
    * produced or the maximum depth is reached.
    *
-   * <p>Uses {@link ValueFunctions#variantTransformTree} to perform recursive traversal with
-   * Variant-based schema unification. The identity extractor collects items themselves at each
-   * level, while the traversal navigates to children using the same projection expression. Schema
-   * divergence across nesting levels is handled by converting to Variant at each level and
-   * unwrapping back to the level-0 schema at the end. Same-type depth limiting is provided by
-   * {@code UnresolvedTransformTree}, which only decrements the depth counter when traversing to a
-   * node of the same type.
+   * <p>Before entering the tree traversal, a static type analysis gate classifies the recursion
+   * behavior by applying the transform twice: once to the input (level_0) and once to the level_0
+   * result (level_1). The classification is based on the FHIR type comparison:
+   *
+   * <ul>
+   *   <li>level_1 empty: return level_0 directly (equivalent to {@code select()})
+   *   <li>level_1 same FHIR type as level_0, primitive: error (self-referential primitive)
+   *   <li>level_1 same FHIR type as level_0, complex Extension: tree traversal with soft stop
+   *   <li>level_1 same FHIR type as level_0, complex non-Extension: tree traversal with error
+   *   <li>level_1 different non-empty type: error (inconsistent traversal types)
+   * </ul>
+   *
+   * <p>For complex types that pass the gate, uses {@link ValueFunctions#variantTransformTree} to
+   * perform recursive traversal with Variant-based schema unification. Same-type depth limiting is
+   * provided by {@code UnresolvedTransformTree}.
    *
    * @param transform The collection transform representing the recursive projection expression
    * @param maxDepth The maximum same-type recursion depth to prevent infinite traversal
@@ -449,13 +457,56 @@ public class Collection implements Equatable {
    */
   @Nonnull
   public Collection repeatAll(@Nonnull final CollectionTransform transform, final int maxDepth) {
-    // Apply the transform once to determine the result type metadata and column transform.
-    final Collection resultTemplate = transform.apply(this);
+    // Apply the transform to the input to get level_0 (the result type and first-level output).
+    final Collection level0Collection = transform.apply(this);
+
+    // Apply the transform to its own result to get level_1 (self-application).
+    final Collection level1Collection = transform.apply(level0Collection);
+
+    // Static type analysis gate: classify recursion behavior based on level_0/level_1 types.
+    if (level1Collection.isEmpty()) {
+      // The traversal expression produces empty when applied to its own result. This means the
+      // recursion terminates after one level — equivalent to select(). Return level_0 directly
+      // for both primitive and complex types.
+      return level0Collection;
+    }
+
+    // Level_1 is non-empty — check FHIR type consistency.
+    final Optional<FHIRDefinedType> level0Type = level0Collection.getFhirType();
+    final Optional<FHIRDefinedType> level1Type = level1Collection.getFhirType();
+
+    if (!level0Type.equals(level1Type)) {
+      // The traversal expression produces a different non-empty FHIR type when applied to its
+      // own result. This violates the type stability invariant for recursive application.
+      throw new InvalidUserInputError(
+          "repeatAll() expression does not produce a consistent type across recursive"
+              + " applications: level_0 type is "
+              + level0Type.map(FHIRDefinedType::toCode).orElse("unknown")
+              + " but level_1 type is "
+              + level1Type.map(FHIRDefinedType::toCode).orElse("unknown")
+              + ".");
+    }
+
+    // Same FHIR type — check if the result is primitive.
+    final boolean isPrimitive =
+        level0Collection
+            .getType()
+            .map(t -> !(t.getSqlDataType() instanceof StructType))
+            .orElse(false);
+
+    if (isPrimitive) {
+      // A primitive type that produces the same primitive type on self-application is
+      // self-referential and will recurse infinitely.
+      throw new InvalidUserInputError(
+          "repeatAll() expression produces a self-referential primitive type that cannot"
+              + " terminate.");
+    }
+
+    // Same FHIR type, complex — proceed to tree traversal with depth limiting.
     final ColumnTransform columnTransform = transform.toColumnTransformation(this);
 
-    // Compute the level-0 result by applying the column transform to the input. Normalize to
-    // array via plural() so that both singular and collection results are represented uniformly
-    // as arrays for the tree traversal.
+    // Compute the level-0 column result. Normalize to array via plural() so that both singular
+    // and collection results are represented uniformly as arrays for the tree traversal.
     final Column level0 = columnTransform.apply(getColumn()).plural().getValue();
 
     // Build a column-level function for deeper levels that applies the projection to individual
@@ -465,42 +516,23 @@ public class Collection implements Equatable {
     final UnaryOperator<Column> innerTransform =
         col -> columnTransform.apply(new DefaultRepresentation(col)).plural().getValue();
 
-    // Check if the projection produces a primitive (non-struct) type. Primitive types cannot
-    // be converted to Variant via to_variant_object(), and they do not need schema unification
-    // since primitives are leaf types with no structural differences across nesting levels.
-    // When the type is unknown (empty Optional), default to false — unknown types are treated as
-    // complex and routed through the Variant path for safe schema unification.
-    final boolean isPrimitive =
-        resultTemplate
-            .getType()
-            .map(t -> !(t.getSqlDataType() instanceof StructType))
-            .orElse(false);
-
     // Determine whether to error on same-type depth exhaustion. Extension traversal is the only
     // legitimate same-type recursion — extensions have a fixed schema at all nesting levels. For
     // all other types, same-type depth exhaustion indicates infinite recursion.
     final boolean isExtensionTraversal =
-        resultTemplate.getFhirType().map(FHIRDefinedType.EXTENSION::equals).orElse(false);
+        level0Collection.getFhirType().map(FHIRDefinedType.EXTENSION::equals).orElse(false);
     final boolean errorOnDepthExhaustion = !isExtensionTraversal;
 
-    final Column result;
-    if (isPrimitive) {
-      // Primitives are leaf types with no children to recurse into. Return the level-0 result
-      // directly — this is equivalent to select() and matches the spec requirement that
-      // repeatAll on a non-recursive field behaves like select.
-      result = level0;
-    } else {
-      // For complex types, use Variant-based schema unification. The identity extractor
-      // collects items at each level (variantTransformTree wraps it with to_variant_object),
-      // while the traversal navigates to children using the same projection expression.
-      result =
-          ValueFunctions.variantTransformTree(
-              level0, c -> c, List.of(innerTransform), maxDepth, errorOnDepthExhaustion);
-    }
+    // Use Variant-based schema unification for complex types. The identity extractor collects
+    // items at each level (variantTransformTree wraps it with to_variant_object), while the
+    // traversal navigates to children using the same projection expression.
+    final Column result =
+        ValueFunctions.variantTransformTree(
+            level0, c -> c, List.of(innerTransform), maxDepth, errorOnDepthExhaustion);
 
     // No flatten() is needed here unlike project(), because variantTransformTree already produces
     // a flat array by concatenating results from all nesting levels internally.
-    return resultTemplate.copyWithColumn(result);
+    return level0Collection.copyWithColumn(result);
   }
 
   /**

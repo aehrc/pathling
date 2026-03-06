@@ -222,7 +222,20 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
   public Stream<DynamicTest> testRepeatAllInfiniteRecursionAndExtensions() {
     return builder()
         .withResource(createPatient())
-        .group("repeatAll() infinite recursion detection")
+        .group("repeatAll() primitive self-referential detection")
+        .testError(
+            "self-referential primitive type",
+            "gender.repeatAll($this)",
+            "repeatAll($this) on a primitive raises a static self-referential error")
+        .testError(
+            "self-referential primitive type",
+            "gender.repeatAll('someValue')",
+            "repeatAll('literal') on a primitive raises a static self-referential error")
+        .testError(
+            "self-referential primitive type",
+            "gender.repeatAll(length())",
+            "repeatAll(length()) on a primitive raises a static self-referential error")
+        .group("repeatAll() complex infinite recursion detection")
         .testError(
             "Infinite recursive traversal detected.",
             "name.repeatAll(first()).count()",
@@ -230,7 +243,7 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
         .testError(
             "Infinite recursive traversal detected.",
             "repeatAll($this)",
-            "repeatAll($this) raises an error for identity traversal")
+            "repeatAll($this) on a complex type raises an analysis-time error")
         .group("repeatAll() extension traversal")
         .testEquals(
             List.of(
