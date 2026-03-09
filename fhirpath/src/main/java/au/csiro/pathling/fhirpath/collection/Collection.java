@@ -444,9 +444,14 @@ public class Collection implements Equatable {
    *
    * <ul>
    *   <li>level_1 empty: return level_0 directly (equivalent to {@code select()})
-   *   <li>level_1 same FHIR type as level_0, primitive: error (self-referential primitive)
-   *   <li>level_1 same FHIR type as level_0, complex Extension: tree traversal with soft stop
-   *   <li>level_1 same FHIR type as level_0, complex non-Extension: tree traversal with error
+   *   <li>level_0 or level_1 indeterminate FHIR type: error (unresolved choice type)
+   *   <li>level_1 same FHIR type, primitive, self-ref not allowed: error (self-referential)
+   *   <li>level_1 same FHIR type, primitive, self-ref allowed: return level_0 directly
+   *   <li>level_1 same FHIR type, complex Extension: tree traversal with soft stop
+   *   <li>level_1 same FHIR type, complex non-Extension, self-ref not allowed: tree traversal with
+   *       error on depth exhaustion
+   *   <li>level_1 same FHIR type, complex non-Extension, self-ref allowed: tree traversal with soft
+   *       stop on depth exhaustion
    *   <li>level_1 different non-empty type: error (inconsistent traversal types)
    * </ul>
    *
@@ -456,16 +461,17 @@ public class Collection implements Equatable {
    *
    * @param transform The collection transform representing the recursive projection expression
    * @param maxDepth The maximum same-type recursion depth to prevent infinite traversal
-   * @param allowPrimitiveSelfRef If {@code true}, self-referential primitive traversal returns
-   *     level_0 instead of throwing an error. Used by {@code repeat()} where deduplication
-   *     guarantees termination.
+   * @param allowSelfReference If {@code true}, self-referential traversal is permitted for both
+   *     primitive and complex types. For primitives, returns level_0 directly instead of throwing.
+   *     For complex non-Extension types, suppresses depth exhaustion errors. Used by {@code
+   *     repeat()} where deduplication guarantees termination.
    * @return A new collection containing all recursively collected results
    */
   @Nonnull
   public Collection repeatAll(
       @Nonnull final CollectionTransform transform,
       final int maxDepth,
-      final boolean allowPrimitiveSelfRef) {
+      final boolean allowSelfReference) {
     // Static type probing: apply the transform twice to classify recursion behavior. These
     // applications build Collection objects for type inspection only — the actual column-level
     // computation is performed separately below via toColumnTransformation(). This is safe because
@@ -486,6 +492,14 @@ public class Collection implements Equatable {
     final Optional<FHIRDefinedType> level0Type = level0Collection.getFhirType();
     final Optional<FHIRDefinedType> level1Type = level1Collection.getFhirType();
 
+    // If either type is indeterminate, the recursive traversal cannot safely proceed. This
+    // occurs with unresolved choice type elements (MixedCollection) where getFhirType() returns
+    // empty. Without a concrete type, we cannot classify the recursion behavior.
+    if (level0Type.isEmpty() || level1Type.isEmpty()) {
+      throw new InvalidUserInputError(
+          "Recursive traversal expression produces a result with indeterminate FHIR type.");
+    }
+
     if (!level0Type.equals(level1Type)) {
       // The traversal expression produces a different non-empty FHIR type when applied to its
       // own result. This violates the type stability invariant for recursive application.
@@ -498,23 +512,26 @@ public class Collection implements Equatable {
               + ".");
     }
 
-    // Same FHIR type — check if the result is primitive.
+    // Same FHIR type — check if the result is primitive or a resource. Resources are represented
+    // with a boolean existence column (not a struct), so they cannot be recursed into via
+    // variantTransformTree and must be handled like primitives.
     final boolean isPrimitive =
         level0Collection
             .getType()
             .map(t -> !(t.getSqlDataType() instanceof StructType))
             .orElse(false);
+    final boolean isResource = level0Collection instanceof ResourceCollection;
 
-    if (isPrimitive) {
-      if (allowPrimitiveSelfRef) {
-        // For repeat(), self-referential primitive traversal is valid — deduplication guarantees
+    if (isPrimitive || isResource) {
+      if (allowSelfReference) {
+        // For repeat(), self-referential traversal is valid — deduplication guarantees
         // termination. Return level_0 directly; the caller will deduplicate.
         return level0Collection;
       }
-      // A primitive type that produces the same primitive type on self-application is
+      // A primitive or resource type that produces the same type on self-application is
       // self-referential and will recurse infinitely.
       throw new InvalidUserInputError(
-          "Recursive traversal expression produces a self-referential primitive type that cannot"
+          "Recursive traversal expression produces a self-referential type that cannot"
               + " terminate.");
     }
 
@@ -532,12 +549,13 @@ public class Collection implements Equatable {
     final UnaryOperator<Column> innerTransform =
         col -> columnTransform.apply(new DefaultRepresentation(col)).plural().getValue();
 
-    // Determine whether to error on same-type depth exhaustion. Extension traversal is the only
-    // legitimate same-type recursion — extensions have a fixed schema at all nesting levels. For
-    // all other types, same-type depth exhaustion indicates infinite recursion.
+    // Determine whether to error on same-type depth exhaustion. Extension traversal and
+    // self-reference mode (used by repeat()) are the legitimate cases where depth exhaustion
+    // should not raise an error — extensions have a fixed schema at all nesting levels, and
+    // repeat() deduplicates the results to guarantee termination.
     final boolean isExtensionTraversal =
         level0Collection.getFhirType().map(FHIRDefinedType.EXTENSION::equals).orElse(false);
-    final boolean errorOnDepthExhaustion = !isExtensionTraversal;
+    final boolean errorOnDepthExhaustion = !isExtensionTraversal && !allowSelfReference;
 
     // Use Variant-based schema unification for complex types. The identity extractor collects
     // items at each level (variantTransformTree wraps it with to_variant_object), while the
@@ -555,9 +573,11 @@ public class Collection implements Equatable {
    * Recursively traverses this collection using the specified transform, collecting results with
    * equality-based deduplication. This implements the FHIRPath {@code repeat()} function.
    *
-   * <p>Delegates to {@link #repeatAll(CollectionTransform, int, boolean)} with primitive
-   * self-reference allowed, then deduplicates the result for {@link Equatable} types using the
-   * collection's comparator. Non-Equatable types (complex backbone elements) are not deduplicated.
+   * <p>Delegates to {@link #repeatAll(CollectionTransform, int, boolean)} with self-reference
+   * allowed, which suppresses both primitive self-reference errors and complex depth exhaustion
+   * errors. The result is then deduplicated for {@link Equatable} types using the collection's
+   * comparator. Non-Equatable types (complex backbone elements) are not deduplicated. Deduplication
+   * guarantees termination for self-referential expressions like {@code repeat($this)}.
    *
    * @param transform The collection transform representing the recursive projection expression
    * @param maxDepth The maximum same-type recursion depth to prevent infinite traversal

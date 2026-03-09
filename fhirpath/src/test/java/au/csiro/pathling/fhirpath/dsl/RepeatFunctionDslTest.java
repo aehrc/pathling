@@ -28,7 +28,9 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType;
@@ -220,6 +222,55 @@ public class RepeatFunctionDslTest extends FhirPathDslTestBase {
             "repeat(extension).url",
             "repeat(extension) recursively collects all extensions including nested"
                 + " sub-extensions")
+        .build();
+  }
+
+  /**
+   * Creates an Observation with a populated value[x] choice element (Quantity), for testing choice
+   * type interactions with repeat().
+   *
+   * @return an Observation resource with a Quantity value
+   */
+  private static Observation createObservation() {
+    final Observation observation = new Observation();
+    observation.setId("test-observation");
+    observation.setStatus(Observation.ObservationStatus.FINAL);
+    observation.setValue(new Quantity(42.0).setUnit("mg").setSystem("http://unitsofmeasure.org"));
+    return observation;
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatChoiceTypeExpressions() {
+    return builder()
+        .withResource(createObservation())
+        .group("repeat() choice type — indeterminate type guard")
+        .testError(
+            "indeterminate FHIR type",
+            "value.repeat($this)",
+            "repeat($this) on a choice type raises an indeterminate type error")
+        .group("repeat() choice type — ofType resolves and terminates")
+        .testEquals(
+            42.0,
+            "repeat(value.ofType(Quantity)).value",
+            "repeat(value.ofType(Quantity)) returns the Quantity value (level_1 empty, early"
+                + " return)")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatSelfReferentialComplex() {
+    return builder()
+        .withResource(createPatient())
+        .group("repeat() self-referential complex expressions")
+        .testEquals(
+            1,
+            "repeat($this).count()",
+            "repeat($this) on a resource returns the resource (dedup collapses depth-limited"
+                + " copies)")
+        .testEquals(
+            "male",
+            "name.repeat(%resource).gender",
+            "repeat(%resource) returns the patient's gender (dedup collapses to single resource)")
         .build();
   }
 

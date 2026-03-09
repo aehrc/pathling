@@ -28,7 +28,9 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType;
@@ -224,15 +226,15 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
         .withResource(createPatient())
         .group("repeatAll() primitive self-referential detection")
         .testError(
-            "self-referential primitive type",
+            "self-referential type that cannot terminate",
             "gender.repeatAll($this)",
             "repeatAll($this) on a primitive raises a static self-referential error")
         .testError(
-            "self-referential primitive type",
+            "self-referential type that cannot terminate",
             "gender.repeatAll('someValue')",
             "repeatAll('literal') on a primitive raises a static self-referential error")
         .testError(
-            "self-referential primitive type",
+            "self-referential type that cannot terminate",
             "gender.repeatAll(length())",
             "repeatAll(length()) on a primitive raises a static self-referential error")
         .group("repeatAll() complex infinite recursion detection")
@@ -241,9 +243,9 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
             "name.repeatAll(first()).count()",
             "repeatAll(first()) raises an error for non-Extension same-type depth exhaustion")
         .testError(
-            "Recursive traversal exceeded maximum depth",
+            "self-referential type that cannot terminate",
             "repeatAll($this)",
-            "repeatAll($this) on a complex type raises an analysis-time error")
+            "repeatAll($this) on a resource raises a static self-referential error")
         .group("repeatAll() extension traversal")
         .testEquals(
             List.of(
@@ -431,6 +433,59 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
     item2.addExtension(new Extension("http://example.com/ext", new StringType("ext-2")));
 
     return questionnaire;
+  }
+
+  /**
+   * Creates an Observation with a populated value[x] choice element (Quantity), for testing choice
+   * type interactions with repeatAll().
+   *
+   * @return an Observation resource with a Quantity value
+   */
+  private static Observation createObservation() {
+    final Observation observation = new Observation();
+    observation.setId("test-observation");
+    observation.setStatus(Observation.ObservationStatus.FINAL);
+    observation.setValue(new Quantity(42.0).setUnit("mg").setSystem("http://unitsofmeasure.org"));
+    return observation;
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatAllChoiceTypeExpressions() {
+    return builder()
+        .withResource(createObservation())
+        .group("repeatAll() choice type — indeterminate type guard")
+        .testError(
+            "indeterminate FHIR type",
+            "value.repeatAll($this)",
+            "repeatAll($this) on a choice type raises an indeterminate type error")
+        .group("repeatAll() choice type — ofType on mixed collection")
+        .testError(
+            "Must have a fhirType or a definition",
+            "value.repeatAll(ofType(Quantity)).count()",
+            "repeatAll(ofType(Quantity)) on a choice type fails during type probing")
+        .group("repeatAll() choice type — polymorphic traversal")
+        .testError(
+            "polymorphic",
+            "repeatAll(value)",
+            "repeatAll(value) on Observation fails on MixedCollection traversal")
+        .group("repeatAll() choice type — first() on mixed collection")
+        .testError(
+            "Must have a fhirType or a definition",
+            "value.repeatAll(first())",
+            "repeatAll(first()) on a choice type fails during type probing")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatAllResourceLevelDegenerate() {
+    return builder()
+        .withResource(createPatient())
+        .group("repeatAll() resource-level degenerate expressions")
+        .testError(
+            "self-referential type that cannot terminate",
+            "name.repeatAll(%resource).gender",
+            "repeatAll(%resource) on a resource raises a static self-referential error")
+        .build();
   }
 
   @FhirPathTest
