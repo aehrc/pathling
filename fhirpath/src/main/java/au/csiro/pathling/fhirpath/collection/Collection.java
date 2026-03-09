@@ -466,10 +466,12 @@ public class Collection implements Equatable {
       @Nonnull final CollectionTransform transform,
       final int maxDepth,
       final boolean allowPrimitiveSelfRef) {
-    // Apply the transform to the input to get level_0 (the result type and first-level output).
+    // Static type probing: apply the transform twice to classify recursion behavior. These
+    // applications build Collection objects for type inspection only — the actual column-level
+    // computation is performed separately below via toColumnTransformation(). This is safe because
+    // CollectionTransform.apply() is a pure function that constructs column expressions without
+    // side effects.
     final Collection level0Collection = transform.apply(this);
-
-    // Apply the transform to its own result to get level_1 (self-application).
     final Collection level1Collection = transform.apply(level0Collection);
 
     // Static type analysis gate: classify recursion behavior based on level_0/level_1 types.
@@ -488,8 +490,8 @@ public class Collection implements Equatable {
       // The traversal expression produces a different non-empty FHIR type when applied to its
       // own result. This violates the type stability invariant for recursive application.
       throw new InvalidUserInputError(
-          "repeatAll() expression does not produce a consistent type across recursive"
-              + " applications: level_0 type is "
+          "Recursive traversal expression does not produce a consistent type across"
+              + " levels: level_0 type is "
               + level0Type.map(FHIRDefinedType::toCode).orElse("unknown")
               + " but level_1 type is "
               + level1Type.map(FHIRDefinedType::toCode).orElse("unknown")
@@ -512,7 +514,7 @@ public class Collection implements Equatable {
       // A primitive type that produces the same primitive type on self-application is
       // self-referential and will recurse infinitely.
       throw new InvalidUserInputError(
-          "repeatAll() expression produces a self-referential primitive type that cannot"
+          "Recursive traversal expression produces a self-referential primitive type that cannot"
               + " terminate.");
     }
 

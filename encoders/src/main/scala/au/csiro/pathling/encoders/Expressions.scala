@@ -547,34 +547,37 @@ case class UnresolvedTransformTree(node: Expression,
 
   override def mapChildren(f: Expression => Expression): Expression = {
 
-    try {
-      val newValue = f(node)
-      if (newValue.resolved) {
-        // if node is resolved we concatenate
-        // the value extracted from the node with next level traversal
-        if (level > 0 || !parentType.contains(newValue.dataType))
-          Concat(
-            Seq(extractor(node)) ++
-              traversals
-                .map(t => UnresolvedTransformTree(t(node), extractor, traversals,
-                  Some(newValue.dataType),
-                  if (parentType.contains(newValue.dataType)) level - 1 else level,
-                  errorOnDepthExhaustion
-                ))
-          )
-        else if (errorOnDepthExhaustion)
-          throw new AnalysisException(
-            errorClass = "INTERNAL_ERROR",
-            messageParameters = Map("message" -> "Infinite recursive traversal detected."))
-        else CreateArray(Seq.empty)
-      }
-      else {
-        copy(node = newValue)
-      }
+    // Only the Catalyst resolution call f(node) is expected to throw FIELD_NOT_FOUND when the
+    // field doesn't exist at this schema level. Other operations (extractor, traversal
+    // construction) should propagate errors normally.
+    val newValue = try {
+      f(node)
     } catch {
       case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
-        // in case of AnalysisException we just return an empty array
-        CreateArray(Seq.empty)
+        return CreateArray(Seq.empty)
+    }
+
+    if (newValue.resolved) {
+      // If node is resolved we concatenate the value extracted from the node with next level
+      // traversal.
+      if (level > 0 || !parentType.contains(newValue.dataType))
+        Concat(
+          Seq(extractor(node)) ++
+            traversals
+              .map(t => UnresolvedTransformTree(t(node), extractor, traversals,
+                Some(newValue.dataType),
+                if (parentType.contains(newValue.dataType)) level - 1 else level,
+                errorOnDepthExhaustion
+              ))
+        )
+      else if (errorOnDepthExhaustion)
+        throw new AnalysisException(
+          errorClass = "INTERNAL_ERROR",
+          messageParameters = Map("message" -> "Recursive traversal exceeded maximum depth — possible infinite recursion."))
+      else CreateArray(Seq.empty)
+    }
+    else {
+      copy(node = newValue)
     }
   }
 

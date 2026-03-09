@@ -237,11 +237,11 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
             "repeatAll(length()) on a primitive raises a static self-referential error")
         .group("repeatAll() complex infinite recursion detection")
         .testError(
-            "Infinite recursive traversal detected.",
+            "Recursive traversal exceeded maximum depth",
             "name.repeatAll(first()).count()",
             "repeatAll(first()) raises an error for non-Extension same-type depth exhaustion")
         .testError(
-            "Infinite recursive traversal detected.",
+            "Recursive traversal exceeded maximum depth",
             "repeatAll($this)",
             "repeatAll($this) on a complex type raises an analysis-time error")
         .group("repeatAll() extension traversal")
