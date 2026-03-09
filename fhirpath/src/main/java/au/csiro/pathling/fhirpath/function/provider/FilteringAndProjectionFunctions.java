@@ -128,8 +128,8 @@ public class FilteringAndProjectionFunctions {
       @Nonnull final Collection input,
       @Nonnull final CollectionTransform expression,
       @Nonnull final EvaluationContext context) {
-    final int maxExtensionDepth = context.getConfiguration().getMaxExtensionDepth();
-    return input.repeat(expression, maxExtensionDepth);
+    final int maxDepth = context.getConfiguration().getMaxUnboundTraversalDepth();
+    return input.repeat(expression, maxDepth);
   }
 
   /**
@@ -146,7 +146,7 @@ public class FilteringAndProjectionFunctions {
    * <p>For Extension traversal, same-type depth exhaustion silently stops and returns results
    * collected up to that point. For all other same-type traversals, depth exhaustion raises an
    * error indicating infinite recursive traversal. The depth limit is controlled by {@code
-   * maxExtensionDepth} in the FHIRPath configuration.
+   * maxUnboundTraversalDepth} in the FHIRPath configuration.
    *
    * @param input The input collection
    * @param expression The projection expression to apply recursively
@@ -162,7 +162,7 @@ public class FilteringAndProjectionFunctions {
       @Nonnull final Collection input,
       @Nonnull final CollectionTransform expression,
       @Nonnull final EvaluationContext context) {
-    final int maxExtensionDepth = context.getConfiguration().getMaxExtensionDepth();
-    return input.repeatAll(expression, maxExtensionDepth, false);
+    final int maxDepth = context.getConfiguration().getMaxUnboundTraversalDepth();
+    return input.repeatAll(expression, maxDepth, false);
   }
 }

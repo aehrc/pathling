@@ -36,10 +36,10 @@ public class FhirpathConfiguration {
   public static final FhirpathConfiguration DEFAULT = FhirpathConfiguration.builder().build();
 
   /**
-   * Maximum depth for same-type recursive traversal of Extension elements in {@code repeatAll()}.
+   * Maximum depth for same-type recursive traversal in {@code repeat()} and {@code repeatAll()}.
    * Cross-type traversals do not consume depth budget.
    */
   @Min(1)
   @Builder.Default
-  private int maxExtensionDepth = 10;
+  private int maxUnboundTraversalDepth = 10;
 }

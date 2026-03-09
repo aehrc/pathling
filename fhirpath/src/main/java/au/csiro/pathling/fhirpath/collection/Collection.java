@@ -590,9 +590,9 @@ public class Collection implements Equatable {
     // Deduplicate only for types with a FHIRPath type (primitives, Coding, Quantity, etc.).
     // Complex backbone elements have no FHIRPath type and contain synthetic fields like _fid
     // that make struct equality impractical.
-    if (result instanceof Equatable equatable && result.getType().isPresent()) {
+    if (result.getType().isPresent()) {
       final Column array = result.getColumn().plural().getValue();
-      final ColumnEquality comparator = equatable.getComparator();
+      final ColumnEquality comparator = result.getComparator();
       final Column deduplicated =
           comparator.usesDefaultSqlEquality()
               ? array_distinct(array)

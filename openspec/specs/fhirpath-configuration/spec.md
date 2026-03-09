@@ -6,26 +6,28 @@ The FHIRPath engine SHALL support a `FhirpathConfiguration` object that holds
 configurable parameters for FHIRPath expression evaluation. The configuration
 SHALL be accessible to FHIRPath functions through the `EvaluationContext`.
 
-The configuration SHALL include `maxExtensionDepth` (integer), which controls
-the maximum depth for same-type recursive traversal of Extension elements. The
-default value SHALL be 10.
+The configuration SHALL include `maxUnboundTraversalDepth` (integer), which controls
+the maximum depth for same-type recursive traversal in `repeat()` and
+`repeatAll()`. Cross-type traversals do not consume depth budget. The default
+value SHALL be 10.
 
 When no explicit configuration is provided, the evaluation context SHALL use a
-default configuration with `maxExtensionDepth` set to 10.
+default configuration with `maxUnboundTraversalDepth` set to 10.
 
 #### Scenario: Default configuration
 
 - **WHEN** no `FhirpathConfiguration` is explicitly provided to the evaluation
   context
 - **THEN** the evaluation context SHALL use a default configuration with
-  `maxExtensionDepth` equal to 10
+  `maxUnboundTraversalDepth` equal to 10
 
 #### Scenario: Custom configuration
 
-- **WHEN** a `FhirpathConfiguration` with `maxExtensionDepth` set to 5 is
+- **WHEN** a `FhirpathConfiguration` with `maxUnboundTraversalDepth` set to 5 is
   provided to the evaluation context
-- **THEN** the evaluation context SHALL use that configuration and Extension
-  traversal in `repeatAll(extension)` SHALL be limited to depth 5
+- **THEN** the evaluation context SHALL use that configuration and same-type
+  recursive traversal in `repeat()` and `repeatAll()` SHALL be limited to
+  depth 5
 
 ### Requirement: EvaluationContext provides configuration access
 
@@ -37,7 +39,7 @@ configuration SHALL return the default configuration.
 
 - **WHEN** a FHIRPath function accesses the evaluation context during evaluation
 - **THEN** the `FhirpathConfiguration` SHALL be available with the configured
-  `maxExtensionDepth` value
+  `maxUnboundTraversalDepth` value
 
 ### Requirement: FHIRPath functions can receive EvaluationContext
 

@@ -158,7 +158,7 @@ and the caller is expected to deduplicate the results.
 
 For cases 5, 6, and 7, the function delegates to `variantTransformTree` with
 `UnresolvedTransformTree` providing analysis-time same-SQL-type depth limiting.
-The depth limit for Extension traversal is controlled by `maxExtensionDepth` in
+The depth limit for Extension traversal is controlled by `maxUnboundTraversalDepth` in
 `FhirpathConfiguration`.
 
 #### Scenario: Self-referential primitive identity traversal detected
@@ -246,7 +246,7 @@ The depth limit for Extension traversal is controlled by `maxExtensionDepth` in
 #### Scenario: Extension traversal bounded by configured depth
 
 - **WHEN** `repeatAll(extension)` is evaluated on a resource whose elements
-  carry nested extensions and `maxExtensionDepth` is set to 5
+  carry nested extensions and `maxUnboundTraversalDepth` is set to 5
 - **THEN** the function SHALL traverse extensions up to depth 5, returning all
   collected extensions, and SHALL NOT raise an error
 
