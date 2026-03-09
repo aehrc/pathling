@@ -1,4 +1,4 @@
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: FHIRPath evaluation configuration object
 
@@ -29,31 +29,7 @@ default configuration with `maxUnboundTraversalDepth` set to 10.
   recursive traversal in `repeat()` and `repeatAll()` SHALL be limited to
   depth 5
 
-### Requirement: EvaluationContext provides configuration access
-
-The `EvaluationContext` interface SHALL provide a method to retrieve the
-`FhirpathConfiguration`. Implementations that do not explicitly set a
-configuration SHALL return the default configuration.
-
-#### Scenario: Configuration accessible from evaluation context
-
-- **WHEN** a FHIRPath function accesses the evaluation context during evaluation
-- **THEN** the `FhirpathConfiguration` SHALL be available with the configured
-  `maxUnboundTraversalDepth` value
-
-### Requirement: FHIRPath functions can receive EvaluationContext
-
-The `FunctionParameterResolver` SHALL support injecting the `EvaluationContext`
-into `@FhirPathFunction`-annotated static methods. When a method parameter is
-typed as `EvaluationContext`, the resolver SHALL inject the current evaluation
-context without consuming an argument from the FHIRPath argument list.
-
-#### Scenario: EvaluationContext injection
-
-- **WHEN** a `@FhirPathFunction` method declares an `EvaluationContext`
-  parameter
-- **THEN** the resolver SHALL inject the current evaluation context and the
-  function SHALL receive it alongside the normal input and arguments
+## ADDED Requirements
 
 ### Requirement: QueryConfiguration maxUnboundTraversalDepth minimum is 1
 

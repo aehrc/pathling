@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.evaluation;
 
+import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
@@ -69,6 +70,8 @@ public class SingleResourceEvaluatorBuilder {
   @Nonnull private FunctionRegistry functionRegistry = StaticFunctionRegistry.getInstance();
 
   @Nonnull private Map<String, Collection> variables = Map.of();
+
+  @Nonnull private FhirpathConfiguration configuration = FhirpathConfiguration.DEFAULT;
 
   /** Private constructor. Use factory methods to create instances. */
   private SingleResourceEvaluatorBuilder(
@@ -172,6 +175,21 @@ public class SingleResourceEvaluatorBuilder {
   }
 
   /**
+   * Sets the FHIRPath evaluation configuration.
+   *
+   * <p>Default is {@link FhirpathConfiguration#DEFAULT}.
+   *
+   * @param configuration the FHIRPath configuration
+   * @return this builder for method chaining
+   */
+  @Nonnull
+  public SingleResourceEvaluatorBuilder withConfiguration(
+      @Nonnull final FhirpathConfiguration configuration) {
+    this.configuration = configuration;
+    return this;
+  }
+
+  /**
    * Builds the {@link SingleResourceEvaluator} with the configured options.
    *
    * @return a new SingleResourceEvaluator instance
@@ -180,6 +198,6 @@ public class SingleResourceEvaluatorBuilder {
   public SingleResourceEvaluator build() {
     final ResourceResolver resolver =
         new FhirResourceResolver(subjectResourceCode, fhirContext, crossResourceStrategy);
-    return new SingleResourceEvaluator(resolver, functionRegistry, variables);
+    return new SingleResourceEvaluator(resolver, functionRegistry, variables, configuration);
   }
 }

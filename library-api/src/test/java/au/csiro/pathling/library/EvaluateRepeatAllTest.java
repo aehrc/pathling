@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import au.csiro.pathling.config.EncodingConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
 import java.util.HashSet;
@@ -115,5 +116,85 @@ public class EvaluateRepeatAllTest {
     final TypedValue countValue = result.getResults().getFirst();
     assertEquals("integer", countValue.getType());
     assertEquals(4, countValue.getValue());
+  }
+
+  @Test
+  void itemsTraverseDeeperThanDepthLimit() {
+    // Questionnaire items use different SQL types at each nesting level (due to schema
+    // truncation), so each level is a cross-type traversal that does not consume depth budget.
+    // With maxUnboundTraversalDepth=1, all 4 items across 3 nesting levels should still be
+    // returned.
+    final PathlingContext shallowDepthPathling =
+        PathlingContext.builder(spark)
+            .encodingConfiguration(EncodingConfiguration.builder().maxNestingLevel(3).build())
+            .queryConfiguration(QueryConfiguration.builder().maxUnboundTraversalDepth(1).build())
+            .build();
+
+    final SingleInstanceEvaluationResult result =
+        shallowDepthPathling.evaluateFhirPath(
+            "Questionnaire", QUESTIONNAIRE_JSON, "repeatAll(item).linkId");
+
+    assertNotNull(result);
+    assertEquals(4, result.getResults().size());
+
+    final Set<Object> linkIds =
+        new HashSet<>(result.getResults().stream().map(TypedValue::getValue).toList());
+    assertEquals(Set.of("1", "2", "1.1", "1.1.1"), linkIds);
+  }
+
+  @Test
+  void extensionsLimitedByDepth() {
+    // Extensions have the same SQL type at every nesting level, so each level is a same-type
+    // traversal that consumes depth budget. With maxUnboundTraversalDepth=1, only extensions up
+    // to depth 1 should be returned — fewer than the 3 total levels in the data.
+    final String patientJson =
+        """
+        {
+          "resourceType": "Patient",
+          "id": "test-patient",
+          "extension": [
+            {
+              "url": "http://example.com/ext1",
+              "extension": [
+                {
+                  "url": "http://example.com/ext2",
+                  "extension": [
+                    {
+                      "url": "http://example.com/ext3",
+                      "valueString": "deep"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    // First verify baseline: with default depth (10), all 3 extensions are returned.
+    final SingleInstanceEvaluationResult baselineResult =
+        pathling.evaluateFhirPath("Patient", patientJson, "repeatAll(extension).url");
+    assertNotNull(baselineResult);
+    assertEquals(3, baselineResult.getResults().size());
+
+    // Now with maxUnboundTraversalDepth=1, fewer extensions should be returned.
+    final PathlingContext shallowDepthPathling =
+        PathlingContext.builder(spark)
+            .encodingConfiguration(EncodingConfiguration.builder().maxNestingLevel(3).build())
+            .queryConfiguration(QueryConfiguration.builder().maxUnboundTraversalDepth(1).build())
+            .build();
+
+    final SingleInstanceEvaluationResult limitedResult =
+        shallowDepthPathling.evaluateFhirPath("Patient", patientJson, "repeatAll(extension).url");
+
+    assertNotNull(limitedResult);
+    final Set<Object> urls =
+        new HashSet<>(limitedResult.getResults().stream().map(TypedValue::getValue).toList());
+    // With maxDepth=1: ext1 at depth 0 + ext2 at depth 1 = 2 extensions. ext3 is excluded
+    // because reaching it would require depth 2.
+    assertEquals(
+        Set.of("http://example.com/ext1", "http://example.com/ext2"),
+        urls,
+        "Expected only 2 extensions with maxUnboundTraversalDepth=1");
   }
 }
