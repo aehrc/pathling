@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
  *
  * @author Piotr Szul
  */
-public class EvaluateRepeatAllTest {
+class EvaluateRepeatAllTest {
 
   private static SparkSession spark;
   private static PathlingContext pathling;

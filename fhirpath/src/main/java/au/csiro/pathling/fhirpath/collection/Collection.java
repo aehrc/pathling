@@ -69,6 +69,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @Slf4j
 public class Collection implements Equatable {
 
+  private static final String UNKNOWN_TYPE = "unknown";
+
   // Additional mappings for collection classes that don't directly map to FhirPathType
   @Nonnull
   private static final Map<FHIRDefinedType, Class<? extends Collection>>
@@ -506,9 +508,9 @@ public class Collection implements Equatable {
       throw new InvalidUserInputError(
           "Recursive traversal expression does not produce a consistent type across"
               + " levels: level_0 type is "
-              + level0Type.map(FHIRDefinedType::toCode).orElse("unknown")
+              + level0Type.map(FHIRDefinedType::toCode).orElse(UNKNOWN_TYPE)
               + " but level_1 type is "
-              + level1Type.map(FHIRDefinedType::toCode).orElse("unknown")
+              + level1Type.map(FHIRDefinedType::toCode).orElse(UNKNOWN_TYPE)
               + ".");
     }
 
@@ -813,7 +815,7 @@ public class Collection implements Equatable {
    */
   @Nonnull
   public String getDisplayExpression() {
-    final String leftDisplay = getType().map(FhirPathType::getTypeSpecifier).orElse("unknown");
+    final String leftDisplay = getType().map(FhirPathType::getTypeSpecifier).orElse(UNKNOWN_TYPE);
     return getFhirType().map(fdt -> leftDisplay + "(" + fdt.toCode() + ")").orElse(leftDisplay);
   }
 

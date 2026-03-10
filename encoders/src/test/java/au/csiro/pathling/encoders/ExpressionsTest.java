@@ -1010,8 +1010,7 @@ public class ExpressionsTest {
     final Dataset<Row> ds = spark.createDataFrame(data, rootSchema);
 
     // Convert array elements to Variant and back.
-    final Column variantArray =
-        functions.transform(ds.col("items"), c -> functions.to_variant_object(c));
+    final Column variantArray = functions.transform(ds.col("items"), functions::to_variant_object);
     final Dataset<Row> result =
         ds.withColumn("unwrapped", variantUnwrap(variantArray, ds.col("items")));
 
@@ -1069,8 +1068,7 @@ public class ExpressionsTest {
     final Dataset<Row> ds = spark.createDataFrame(data, rootSchema);
 
     // Convert source elements to Variant and unwrap with the wider target schema.
-    final Column variantArray =
-        functions.transform(ds.col("source"), c -> functions.to_variant_object(c));
+    final Column variantArray = functions.transform(ds.col("source"), functions::to_variant_object);
     final Dataset<Row> result =
         ds.withColumn("unwrapped", variantUnwrap(variantArray, ds.col("target_ref"), false));
 

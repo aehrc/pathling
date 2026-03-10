@@ -95,13 +95,13 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
     item1.setLinkId("1");
     item1.setType(QuestionnaireItemType.GROUP);
 
-    final QuestionnaireItemComponent item1_1 = item1.addItem();
-    item1_1.setLinkId("1.1");
-    item1_1.setType(QuestionnaireItemType.GROUP);
+    final QuestionnaireItemComponent item1Sub1 = item1.addItem();
+    item1Sub1.setLinkId("1.1");
+    item1Sub1.setType(QuestionnaireItemType.GROUP);
 
-    final QuestionnaireItemComponent item1_1_1 = item1_1.addItem();
-    item1_1_1.setLinkId("1.1.1");
-    item1_1_1.setType(QuestionnaireItemType.DISPLAY);
+    final QuestionnaireItemComponent item1Sub1Sub1 = item1Sub1.addItem();
+    item1Sub1Sub1.setLinkId("1.1.1");
+    item1Sub1Sub1.setType(QuestionnaireItemType.DISPLAY);
 
     final QuestionnaireItemComponent item2 = questionnaire.addItem();
     item2.setLinkId("2");
@@ -422,10 +422,10 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
     item1.setType(QuestionnaireItemType.GROUP);
     item1.addExtension(new Extension("http://example.com/ext", new StringType("ext-1")));
 
-    final QuestionnaireItemComponent item1_1 = item1.addItem();
-    item1_1.setLinkId("1.1");
-    item1_1.setType(QuestionnaireItemType.DISPLAY);
-    item1_1.addExtension(new Extension("http://example.com/ext", new StringType("ext-1.1")));
+    final QuestionnaireItemComponent item1Sub1 = item1.addItem();
+    item1Sub1.setLinkId("1.1");
+    item1Sub1.setType(QuestionnaireItemType.DISPLAY);
+    item1Sub1.addExtension(new Extension("http://example.com/ext", new StringType("ext-1.1")));
 
     final QuestionnaireItemComponent item2 = questionnaire.addItem();
     item2.setLinkId("2");
