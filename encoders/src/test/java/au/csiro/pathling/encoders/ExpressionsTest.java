@@ -28,13 +28,17 @@ import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray2;
 import static au.csiro.pathling.encoders.ValueFunctions.nullIfMissingField;
 import static au.csiro.pathling.encoders.ValueFunctions.unnest;
+import static au.csiro.pathling.encoders.ValueFunctions.variantTransformTree;
+import static au.csiro.pathling.encoders.ValueFunctions.variantUnwrap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
+import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -813,5 +817,275 @@ public class ExpressionsTest {
     // Key distinction: Fields that exist but have null values (row 1 name, row 2 age)
     // preserve the null from the data, while missing fields (address, email, salary)
     // return null because they don't exist in the struct schema
+  }
+
+  /**
+   * Creates a 2-level nested structure with schema divergence between levels. Level 0 has fields
+   * {linkId, text, extra, item} while level 1 has only {linkId, text}. This is the key scenario
+   * that demonstrates variantTransformTree's ability to handle schema differences across levels.
+   *
+   * @return Dataset with divergent schemas at each nesting level
+   */
+  private Dataset<Row> createDivergentSchemaDataset() {
+    final Metadata metadata = Metadata.empty();
+
+    // Level 1 (leaf): only linkId and text, no extra field, no item field.
+    final StructType level1Type =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("linkId", DataTypes.StringType, true, metadata),
+              new StructField("text", DataTypes.StringType, true, metadata)
+            });
+
+    // Level 0: has linkId, text, extra, and item array (richer schema than level 1).
+    final StructType level0Type =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("linkId", DataTypes.StringType, true, metadata),
+              new StructField("text", DataTypes.StringType, true, metadata),
+              new StructField("extra", DataTypes.StringType, true, metadata),
+              new StructField("item", DataTypes.createArrayType(level1Type), true, metadata)
+            });
+
+    final Row level1Item = RowFactory.create("child", "Child text");
+    final Row level0Item =
+        RowFactory.create("root", "Root text", "extra-value", List.of(level1Item));
+
+    final StructType rootSchema =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("id", DataTypes.IntegerType, true, metadata),
+              new StructField("items", DataTypes.createArrayType(level0Type), true, metadata)
+            });
+
+    return spark.createDataFrame(List.of(RowFactory.create(1, List.of(level0Item))), rootSchema);
+  }
+
+  @Test
+  void testVariantTransformTreeFinitePathWithDifferentTypes() {
+    // Variant version of the finite-path test. Uses variantTransformTree to extract scalar values
+    // across levels with different schemas. The result should match the non-variant version.
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    final Dataset<Row> result =
+        ds.withColumn(
+            "collected",
+            variantTransformTree(
+                ds.col("items"),
+                c -> functions.array(c.getField("linkId")),
+                List.of(c -> unnest(c.getField("item"))),
+                1));
+
+    // Flatten the result because each extracted element is Array[String] from the extractor.
+    final Dataset<Row> flattened =
+        result.withColumn("collected", functions.flatten(result.col("collected")));
+
+    final List<Row> results = flattened.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> linkIds = CollectionConverters.asJava(collected);
+
+    // Should collect all 3 levels: "1" (level 0), "2" (level 1), "3" (level 2).
+    assertEquals(List.of("1", "2", "3"), linkIds);
+  }
+
+  @Test
+  void testVariantTransformTreeSelfReferentialWithDepthLimit() {
+    // Self-referential traversal (identity function) limited by maxDepth. The same item is
+    // extracted repeatedly until the depth limit is reached.
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    final Dataset<Row> result =
+        ds.withColumn(
+            "collected",
+            variantTransformTree(
+                ds.col("items"), c -> functions.array(c.getField("linkId")), List.of(c -> c), 2));
+
+    // Flatten the result because each extracted element is Array[String] from the extractor.
+    final Dataset<Row> flattened =
+        result.withColumn("collected", functions.flatten(result.col("collected")));
+
+    final List<Row> results = flattened.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> linkIds = CollectionConverters.asJava(collected);
+
+    // Self-referential: same item repeated at each depth level.
+    assertEquals(List.of("1", "1", "1"), linkIds);
+  }
+
+  @Test
+  void testVariantTransformTreeSchemaDivergence() {
+    // Key test: full-struct extraction across levels with different schemas. The level-0 schema
+    // has {linkId, text, extra, item} while level-1 only has {linkId, text}. The variant
+    // mechanism should unify these, filling missing fields with null at level 1.
+
+    final Dataset<Row> ds = createDivergentSchemaDataset();
+
+    final Dataset<Row> result =
+        ds.withColumn(
+            "collected",
+            variantTransformTree(
+                ds.col("items"), c -> c, List.of(c -> unnest(c.getField("item"))), 1));
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> items = CollectionConverters.asJava(collected);
+
+    // Should have 2 items: the level-0 struct and the level-1 struct.
+    assertEquals(2, items.size());
+
+    // Level-0 item: all fields present.
+    final Row level0 = (Row) items.get(0);
+    assertEquals("root", level0.getAs("linkId"));
+    assertEquals("Root text", level0.getAs("text"));
+    assertEquals("extra-value", level0.getAs("extra"));
+    assertNotNull(level0.getAs("item"));
+
+    // Level-1 item: missing fields (extra, item) should be null.
+    final Row level1 = (Row) items.get(1);
+    assertEquals("child", level1.getAs("linkId"));
+    assertEquals("Child text", level1.getAs("text"));
+    assertNull(level1.getAs("extra"));
+    assertNull(level1.getAs("item"));
+  }
+
+  @Test
+  void testVariantTransformTreeErrorOnDepthExhaustion() {
+    // When errorOnDepthExhaustion=true, exceeding maxDepth on a self-referential traversal
+    // should throw an exception rather than silently returning an empty array.
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    // The AnalysisException is thrown eagerly during column resolution, so the entire
+    // withColumn + collect must be wrapped in the assertion.
+    assertThrows(
+        AnalysisException.class,
+        () ->
+            ds.withColumn(
+                    "collected",
+                    variantTransformTree(
+                        ds.col("items"),
+                        c -> functions.array(c.getField("linkId")),
+                        List.of(c -> c),
+                        1,
+                        true))
+                .collectAsList());
+  }
+
+  @Test
+  void testVariantUnwrapDirect() {
+    // Direct round-trip test: create a struct array, convert each element to Variant, then unwrap
+    // using the original column as schema reference. The data should survive the round-trip.
+
+    final Metadata metadata = Metadata.empty();
+    final StructType itemType =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("name", DataTypes.StringType, true, metadata),
+              new StructField("value", DataTypes.IntegerType, true, metadata)
+            });
+
+    final StructType rootSchema =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("id", DataTypes.IntegerType, true, metadata),
+              new StructField("items", DataTypes.createArrayType(itemType), true, metadata)
+            });
+
+    final List<Row> data =
+        List.of(
+            RowFactory.create(
+                1, List.of(RowFactory.create("Alice", 10), RowFactory.create("Bob", 20))));
+
+    final Dataset<Row> ds = spark.createDataFrame(data, rootSchema);
+
+    // Convert array elements to Variant and back.
+    final Column variantArray =
+        functions.transform(ds.col("items"), c -> functions.to_variant_object(c));
+    final Dataset<Row> result =
+        ds.withColumn("unwrapped", variantUnwrap(variantArray, ds.col("items")));
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> unwrapped = row.getAs("unwrapped");
+    final List<?> unwrappedItems = CollectionConverters.asJava(unwrapped);
+
+    assertEquals(2, unwrappedItems.size());
+
+    final Row first = (Row) unwrappedItems.get(0);
+    assertEquals("Alice", first.getAs("name"));
+    assertEquals(10, (int) first.getAs("value"));
+
+    final Row second = (Row) unwrappedItems.get(1);
+    assertEquals("Bob", second.getAs("name"));
+    assertEquals(20, (int) second.getAs("value"));
+  }
+
+  @Test
+  void testVariantUnwrapFailOnErrorFalse() {
+    // When failOnError=false, missing fields should produce null rather than throwing an
+    // exception. The source data has a subset schema; the schema reference has additional fields.
+
+    final Metadata metadata = Metadata.empty();
+
+    // Source schema: only has "name".
+    final StructType sourceType =
+        DataTypes.createStructType(
+            new StructField[] {new StructField("name", DataTypes.StringType, true, metadata)});
+
+    // Target schema reference: has "name" and "value".
+    final StructType targetType =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("name", DataTypes.StringType, true, metadata),
+              new StructField("value", DataTypes.IntegerType, true, metadata)
+            });
+
+    final StructType rootSchema =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("id", DataTypes.IntegerType, true, metadata),
+              new StructField("source", DataTypes.createArrayType(sourceType), true, metadata),
+              new StructField("target_ref", DataTypes.createArrayType(targetType), true, metadata)
+            });
+
+    final List<Row> data =
+        List.of(
+            RowFactory.create(
+                1, List.of(RowFactory.create("Alice")), List.of(RowFactory.create("Ref", 99))));
+
+    final Dataset<Row> ds = spark.createDataFrame(data, rootSchema);
+
+    // Convert source elements to Variant and unwrap with the wider target schema.
+    final Column variantArray =
+        functions.transform(ds.col("source"), c -> functions.to_variant_object(c));
+    final Dataset<Row> result =
+        ds.withColumn("unwrapped", variantUnwrap(variantArray, ds.col("target_ref"), false));
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> unwrapped = row.getAs("unwrapped");
+    final List<?> unwrappedItems = CollectionConverters.asJava(unwrapped);
+
+    assertEquals(1, unwrappedItems.size());
+
+    final Row item = (Row) unwrappedItems.getFirst();
+    assertEquals("Alice", item.getAs("name"));
+    // The "value" field is missing from the source, so it should be null.
+    assertNull(item.getAs("value"));
   }
 }
