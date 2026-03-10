@@ -38,6 +38,7 @@ The version number needs to be changed in the following places:
 - `lib/R/pom.xml`
 - `site/pom.xml`
 - `library-runtime/pom.xml`
+- `benchmark/pom.xml`
 
 The following should only be updated for release versions, not snapshots:
 
