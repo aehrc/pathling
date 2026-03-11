@@ -41,6 +41,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.MetadataBuilder;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -125,15 +126,16 @@ public class Projection {
 
     // Convert the intermediate struct representation in the result column to a regular row, using
     // the inline function.
-    final Dataset<Row> inlinedResult =
-        filteredResult.select(inline(projectionResult.getResultColumn()));
-
     // Get the list of column names from the data type of the column that we just inlined.
     final StructType schema = filteredResult.select(projectionResult.getResultColumn()).schema();
     final ArrayType arrayType = (ArrayType) schema.fields()[0].dataType();
     final StructType structType = (StructType) arrayType.elementType();
     final List<String> columnNames =
         Arrays.stream(structType.fields()).map(StructField::name).toList();
+
+    final Dataset<Row> inlinedResult =
+        filteredResult.select(inline(projectionResult.getResultColumn()));
+
     // Bind the result collections to the columns in the projection result.
     final List<Collection> boundResults =
         IntStream.range(0, columnNames.size())
@@ -176,8 +178,14 @@ public class Projection {
       // Otherwise, we can use the collection as-is.
       finalResult = collection;
     }
-    // re-alias the column
-    return finalResult.getColumn().getValue().alias(name);
+    // Alias the column with non-empty metadata to prevent the optimizer from collapsing this
+    // Project into the Generate node below. Without this, RemoveRedundantAliases eliminates the
+    // Project, and GeneratorNestedColumnAliasing may add pass-through columns to the Generate
+    // output, shifting column positions during physical execution.
+    return finalResult
+        .getColumn()
+        .getValue()
+        .as(name, new MetadataBuilder().putBoolean("__pathling_view_column", true).build());
   }
 
   /**
