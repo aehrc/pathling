@@ -32,7 +32,7 @@ import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedExcept
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
-import org.apache.spark.sql.catalyst.trees.TreePattern.{ARRAYS_ZIP, TreePattern}
+
 import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
 import org.apache.spark.sql.types._
 
@@ -599,8 +599,6 @@ case class UnresolvedTransformTree(node: Expression,
 case class StructProduct(children: Seq[Expression], outer: Boolean = false)
   extends Expression with NonSQLExpression {
 
-  final override val nodePatterns: Seq[TreePattern] = Seq(ARRAYS_ZIP)
-
 
   override lazy val resolved: Boolean =
     childrenResolved && checkInputDataTypes.isSuccess
@@ -692,16 +690,19 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
 
 
     // idx -  the the index of the child expression (the array to cross)
-    // i - the index of the product element 
+    // i - the index of the product element
     val getValueForType = arrayElementTypes.zipWithIndex.map { case (eleType, idx) =>
       val g = CodeGenerator.getValue(s"$arrVals[$idx]", eleType, s"$prodIdxs[$idx]")
       val structValue = s"structValue_$idx"
+      // Get the field data types for this struct, needed for UnsafeRow.get().
+      val fieldDataTypes = eleType.asInstanceOf[StructType].fields.map(_.dataType)
+      val fieldTypesRef = ctx.addReferenceObj(s"fieldTypes_$idx", fieldDataTypes, "org.apache.spark.sql.types.DataType[]")
       s"""
-         | ${CodeGenerator.javaType(eleType)} $structValue = $g; 
+         | ${CodeGenerator.javaType(eleType)} $structValue = $g;
          | // using the base copy the values of all the fields to the output
          | for(int fi = 0; $structValue != null && fi < $structValue.numFields(); fi++) {
          |    if(!$structValue.isNullAt(fi)) {
-         |      $currentRow[$offsets[$idx] + fi] = $structValue.get(fi, null);
+         |      $currentRow[$offsets[$idx] + fi] = $structValue.get(fi, $fieldTypesRef[fi]);
          |    }
          | }
       """.stripMargin
@@ -858,10 +859,11 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
   private def copyStructFields(arr: ArrayData, arrayIndex: Int, elementIndex: Int,
                                currentRowData: Array[Any]): Unit = {
     val structData = arr.get(elementIndex, arrayElementTypes(arrayIndex)).asInstanceOf[InternalRow]
+    val fieldTypes = arrayElementTypes(arrayIndex).asInstanceOf[StructType].fields
 
     for (fi <- 0 until structData.numFields) {
       if (!structData.isNullAt(fi)) {
-        currentRowData(offsetsScala(arrayIndex) + fi) = structData.get(fi, null)
+        currentRowData(offsetsScala(arrayIndex) + fi) = structData.get(fi, fieldTypes(fi).dataType)
       }
     }
   }
