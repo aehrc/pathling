@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
@@ -78,4 +79,14 @@ public interface EvaluationContext {
    */
   @Nonnull
   Collection getInputContext();
+
+  /**
+   * Returns the configuration for FHIRPath evaluation.
+   *
+   * @return The FHIRPath configuration
+   */
+  @Nonnull
+  default FhirpathConfiguration getConfiguration() {
+    return FhirpathConfiguration.DEFAULT;
+  }
 }

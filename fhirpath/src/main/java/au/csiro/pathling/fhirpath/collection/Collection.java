@@ -20,8 +20,10 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.fhirpath.TypeSpecifier.FHIR_NAMESPACE;
 import static au.csiro.pathling.fhirpath.TypeSpecifier.SYSTEM_NAMESPACE;
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.array_distinct;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
+import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TerminologyConcepts;
@@ -29,16 +31,20 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.Equatable;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
+import au.csiro.pathling.sql.SqlFunctions;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -49,6 +55,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -61,6 +68,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 @Slf4j
 public class Collection implements Equatable {
+
+  private static final String UNKNOWN_TYPE = "unknown";
 
   // Additional mappings for collection classes that don't directly map to FhirPathType
   @Nonnull
@@ -403,6 +412,207 @@ public class Collection implements Equatable {
   }
 
   /**
+   * Projects each element of this collection using the specified transform, flattening the results.
+   *
+   * <p>The transform is evaluated for each item in the collection. If evaluation produces multiple
+   * items, all are added to the output. If evaluation produces empty, nothing is added. The result
+   * collection adopts the type of the transform's output rather than preserving the input type.
+   *
+   * @param transform The collection transform representing the projection expression
+   * @return A new collection containing the projected and flattened results
+   */
+  @Nonnull
+  public Collection project(@Nonnull final CollectionTransform transform) {
+    final Collection resultTemplate = transform.apply(this);
+    final ColumnTransform columnTransform = transform.toColumnTransformation(this);
+    final ColumnRepresentation projected =
+        getColumn()
+            .transform(col -> columnTransform.apply(getColumn().copyOf(col)).getValue())
+            .flatten();
+    return resultTemplate.copyWith(projected);
+  }
+
+  /**
+   * Recursively traverses this collection using the specified transform, collecting all results
+   * without deduplication. This implements the FHIRPath {@code repeatAll()} STU function.
+   *
+   * <p>The transform is evaluated on each item, and its results are added to the output collection.
+   * The transform is then re-evaluated on the new results, repeating until no new items are
+   * produced or the maximum depth is reached.
+   *
+   * <p>Before entering the tree traversal, a static type analysis gate classifies the recursion
+   * behavior by applying the transform twice: once to the input (level_0) and once to the level_0
+   * result (level_1). The classification is based on the FHIR type comparison:
+   *
+   * <ul>
+   *   <li>level_1 empty: return level_0 directly (equivalent to {@code select()})
+   *   <li>level_0 or level_1 indeterminate FHIR type: error (unresolved choice type)
+   *   <li>level_1 same FHIR type, primitive, self-ref not allowed: error (self-referential)
+   *   <li>level_1 same FHIR type, primitive, self-ref allowed: return level_0 directly
+   *   <li>level_1 same FHIR type, complex Extension: tree traversal with soft stop
+   *   <li>level_1 same FHIR type, complex non-Extension, self-ref not allowed: tree traversal with
+   *       error on depth exhaustion
+   *   <li>level_1 same FHIR type, complex non-Extension, self-ref allowed: tree traversal with soft
+   *       stop on depth exhaustion
+   *   <li>level_1 different non-empty type: error (inconsistent traversal types)
+   * </ul>
+   *
+   * <p>For complex types that pass the gate, uses {@link ValueFunctions#variantTransformTree} to
+   * perform recursive traversal with Variant-based schema unification. Same-type depth limiting is
+   * provided by {@code UnresolvedTransformTree}.
+   *
+   * @param transform The collection transform representing the recursive projection expression
+   * @param maxDepth The maximum same-type recursion depth to prevent infinite traversal
+   * @param allowSelfReference If {@code true}, self-referential traversal is permitted for both
+   *     primitive and complex types. For primitives, returns level_0 directly instead of throwing.
+   *     For complex non-Extension types, suppresses depth exhaustion errors. Used by {@code
+   *     repeat()} where deduplication guarantees termination.
+   * @return A new collection containing all recursively collected results
+   */
+  @Nonnull
+  public Collection repeatAll(
+      @Nonnull final CollectionTransform transform,
+      final int maxDepth,
+      final boolean allowSelfReference) {
+    // Static type probing: apply the transform twice to classify recursion behavior. These
+    // applications build Collection objects for type inspection only — the actual column-level
+    // computation is performed separately below via toColumnTransformation(). This is safe because
+    // CollectionTransform.apply() is a pure function that constructs column expressions without
+    // side effects.
+    final Collection level0Collection = transform.apply(this);
+    final Collection level1Collection = transform.apply(level0Collection);
+
+    // Static type analysis gate: classify recursion behavior based on level_0/level_1 types.
+    if (level1Collection.isEmpty()) {
+      // The traversal expression produces empty when applied to its own result. This means the
+      // recursion terminates after one level — equivalent to select(). Return level_0 directly
+      // for both primitive and complex types.
+      return level0Collection;
+    }
+
+    // Level_1 is non-empty — check FHIR type consistency.
+    final Optional<FHIRDefinedType> level0Type = level0Collection.getFhirType();
+    final Optional<FHIRDefinedType> level1Type = level1Collection.getFhirType();
+
+    // If either type is indeterminate, the recursive traversal cannot safely proceed. This
+    // occurs with unresolved choice type elements (MixedCollection) where getFhirType() returns
+    // empty. Without a concrete type, we cannot classify the recursion behavior.
+    if (level0Type.isEmpty() || level1Type.isEmpty()) {
+      throw new InvalidUserInputError(
+          "Recursive traversal expression produces a result with indeterminate FHIR type.");
+    }
+
+    if (!level0Type.equals(level1Type)) {
+      // The traversal expression produces a different non-empty FHIR type when applied to its
+      // own result. This violates the type stability invariant for recursive application.
+      throw new InvalidUserInputError(
+          "Recursive traversal expression does not produce a consistent type across"
+              + " levels: level_0 type is "
+              + level0Type.map(FHIRDefinedType::toCode).orElse(UNKNOWN_TYPE)
+              + " but level_1 type is "
+              + level1Type.map(FHIRDefinedType::toCode).orElse(UNKNOWN_TYPE)
+              + ".");
+    }
+
+    // Same FHIR type — check if the result is primitive or a resource. Resources are represented
+    // with a boolean existence column (not a struct), so they cannot be recursed into via
+    // variantTransformTree and must be handled like primitives.
+    final boolean isPrimitive =
+        level0Collection
+            .getType()
+            .map(t -> !(t.getSqlDataType() instanceof StructType))
+            .orElse(false);
+    final boolean isResource = level0Collection instanceof ResourceCollection;
+
+    if (isPrimitive || isResource) {
+      if (allowSelfReference) {
+        // For repeat(), self-referential traversal is valid — deduplication guarantees
+        // termination. Return level_0 directly; the caller will deduplicate.
+        return level0Collection;
+      }
+      // A primitive or resource type that produces the same type on self-application is
+      // self-referential and will recurse infinitely.
+      throw new InvalidUserInputError(
+          "Recursive traversal expression produces a self-referential type that cannot"
+              + " terminate.");
+    }
+
+    // Same FHIR type, complex — proceed to tree traversal with depth limiting.
+    // The column transform must be derived from level0Collection (not this) so that deeper-level
+    // applications operate on the recursive element type. For example, in
+    // QuestionnaireResponse.repeat(item | answer.item), the transform must evaluate in the context
+    // of QuestionnaireResponseItemComponent (where both item and answer are valid paths), not
+    // QuestionnaireResponse.
+    final ColumnTransform columnTransform = transform.toColumnTransformation(level0Collection);
+
+    // Compute the level-0 column result. Use the column from level0Collection directly, since
+    // transform.apply(this) has already evaluated the expression on the input. Normalize to array
+    // via plural() so that both singular and collection results are represented uniformly as arrays
+    // for the tree traversal.
+    final Column level0 = level0Collection.getColumn().plural().getValue();
+
+    // Build a column-level function for deeper levels that applies the projection to individual
+    // struct elements. Uses DefaultRepresentation because nested elements are structs accessed
+    // via getField(), not top-level Dataset columns accessed via col(). The plural() call
+    // ensures the traversal result is always an array, matching the level-0 normalization.
+    final UnaryOperator<Column> innerTransform =
+        col -> columnTransform.apply(new DefaultRepresentation(col)).plural().getValue();
+
+    // Determine whether to error on same-type depth exhaustion. Extension traversal and
+    // self-reference mode (used by repeat()) are the legitimate cases where depth exhaustion
+    // should not raise an error — extensions have a fixed schema at all nesting levels, and
+    // repeat() deduplicates the results to guarantee termination.
+    final boolean isExtensionTraversal =
+        level0Collection.getFhirType().map(FHIRDefinedType.EXTENSION::equals).orElse(false);
+    final boolean errorOnDepthExhaustion = !isExtensionTraversal && !allowSelfReference;
+
+    // Use Variant-based schema unification for complex types. The identity extractor collects
+    // items at each level (variantTransformTree wraps it with to_variant_object), while the
+    // traversal navigates to children using the same projection expression.
+    final Column result =
+        ValueFunctions.variantTransformTree(
+            level0, c -> c, List.of(innerTransform), maxDepth, errorOnDepthExhaustion);
+
+    // No flatten() is needed here unlike project(), because variantTransformTree already produces
+    // a flat array by concatenating results from all nesting levels internally.
+    return level0Collection.copyWithColumn(result);
+  }
+
+  /**
+   * Recursively traverses this collection using the specified transform, collecting results with
+   * equality-based deduplication. This implements the FHIRPath {@code repeat()} function.
+   *
+   * <p>Delegates to {@link #repeatAll(CollectionTransform, int, boolean)} with self-reference
+   * allowed, which suppresses both primitive self-reference errors and complex depth exhaustion
+   * errors. The result is then deduplicated for {@link Equatable} types using the collection's
+   * comparator. Non-Equatable types (complex backbone elements) are not deduplicated. Deduplication
+   * guarantees termination for self-referential expressions like {@code repeat($this)}.
+   *
+   * @param transform The collection transform representing the recursive projection expression
+   * @param maxDepth The maximum same-type recursion depth to prevent infinite traversal
+   * @return A new collection containing deduplicated recursively collected results
+   */
+  @Nonnull
+  public Collection repeat(@Nonnull final CollectionTransform transform, final int maxDepth) {
+    final Collection result = repeatAll(transform, maxDepth, true);
+
+    // Deduplicate only for types with a FHIRPath type (primitives, Coding, Quantity, etc.).
+    // Complex backbone elements have no FHIRPath type and contain synthetic fields like _fid
+    // that make struct equality impractical.
+    if (result.getType().isPresent()) {
+      final Column array = result.getColumn().plural().getValue();
+      final ColumnEquality comparator = result.getComparator();
+      final Column deduplicated =
+          comparator.usesDefaultSqlEquality()
+              ? array_distinct(array)
+              : SqlFunctions.arrayDistinctWithEquality(array, comparator::equalsTo);
+      return result.copyWithColumn(deduplicated);
+    }
+
+    return result;
+  }
+
+  /**
    * Checks if this collection is statically known to be empty.
    *
    * <p>This method performs a static type check to determine if the collection is an {@link
@@ -612,7 +822,7 @@ public class Collection implements Equatable {
    */
   @Nonnull
   public String getDisplayExpression() {
-    final String leftDisplay = getType().map(FhirPathType::getTypeSpecifier).orElse("unknown");
+    final String leftDisplay = getType().map(FhirPathType::getTypeSpecifier).orElse(UNKNOWN_TYPE);
     return getFhirType().map(fdt -> leftDisplay + "(" + fdt.toCode() + ")").orElse(leftDisplay);
   }
 

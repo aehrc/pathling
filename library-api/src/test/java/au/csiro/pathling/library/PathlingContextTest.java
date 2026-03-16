@@ -525,7 +525,7 @@ public class PathlingContextTest {
 
   @Test
   void failsOnInvalidQueryConfiguration() {
-    // Test with negative maxUnboundTraversalDepth
+    // Test with negative maxUnboundTraversalDepth.
     final QueryConfiguration invalidQueryConfig =
         QueryConfiguration.builder().maxUnboundTraversalDepth(-5).build();
 
@@ -537,9 +537,29 @@ public class PathlingContextTest {
 
     final String message = ex.getMessage();
     assertTrue(
-        message.contains("maxUnboundTraversalDepth: must be greater than or equal to 0"),
+        message.contains("maxUnboundTraversalDepth: must be greater than or equal to 1"),
         "Expected error message to contain 'maxUnboundTraversalDepth: must be greater than or equal"
-            + " to 0', but was: "
+            + " to 1', but was: "
+            + message);
+  }
+
+  @Test
+  void failsOnZeroMaxUnboundTraversalDepth() {
+    // Test that zero is also rejected with @Min(1).
+    final QueryConfiguration zeroDepthConfig =
+        QueryConfiguration.builder().maxUnboundTraversalDepth(0).build();
+
+    final PathlingContext.Builder builder =
+        PathlingContext.builder(spark).queryConfiguration(zeroDepthConfig);
+
+    final ConstraintViolationException ex =
+        assertThrows(ConstraintViolationException.class, builder::build);
+
+    final String message = ex.getMessage();
+    assertTrue(
+        message.contains("maxUnboundTraversalDepth: must be greater than or equal to 1"),
+        "Expected error message to contain 'maxUnboundTraversalDepth: must be greater than or equal"
+            + " to 1', but was: "
             + message);
   }
 

@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.evaluation;
 
+import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
@@ -43,13 +44,36 @@ import java.util.Optional;
  * @param variableResolver the resolver for environment variables
  * @param functionRegistry the registry for resolving FHIRPath functions
  * @param resourceResolver the resolver for FHIR resources
+ * @param configuration the FHIRPath evaluation configuration
  */
 public record FhirEvaluationContext(
     @Nonnull Collection inputContext,
     @Nonnull EnvironmentVariableResolver variableResolver,
     @Nonnull FunctionRegistry functionRegistry,
-    @Nonnull ResourceResolver resourceResolver)
+    @Nonnull ResourceResolver resourceResolver,
+    @Nonnull FhirpathConfiguration configuration)
     implements EvaluationContext {
+
+  /**
+   * Creates a FhirEvaluationContext with default configuration.
+   *
+   * @param inputContext the current input context (focus) for the evaluation
+   * @param variableResolver the resolver for environment variables
+   * @param functionRegistry the registry for resolving FHIRPath functions
+   * @param resourceResolver the resolver for FHIR resources
+   */
+  public FhirEvaluationContext(
+      @Nonnull final Collection inputContext,
+      @Nonnull final EnvironmentVariableResolver variableResolver,
+      @Nonnull final FunctionRegistry functionRegistry,
+      @Nonnull final ResourceResolver resourceResolver) {
+    this(
+        inputContext,
+        variableResolver,
+        functionRegistry,
+        resourceResolver,
+        FhirpathConfiguration.DEFAULT);
+  }
 
   /**
    * {@inheritDoc}
@@ -95,5 +119,16 @@ public record FhirEvaluationContext(
   @Nonnull
   public Collection getInputContext() {
     return inputContext;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Returns the configuration provided at construction time.
+   */
+  @Override
+  @Nonnull
+  public FhirpathConfiguration getConfiguration() {
+    return configuration;
   }
 }

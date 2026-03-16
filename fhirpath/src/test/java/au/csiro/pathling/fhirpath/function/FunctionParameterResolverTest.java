@@ -105,6 +105,15 @@ class FunctionParameterResolverTest {
 
   @Nullable
   @SuppressWarnings("unused")
+  public static Collection funcWithContext(
+      @Nonnull final Collection input,
+      @Nonnull final CollectionTransform transform,
+      @Nonnull final EvaluationContext context) {
+    return null;
+  }
+
+  @Nullable
+  @SuppressWarnings("unused")
   static Collection invalidFunction() {
     return null;
   }
@@ -313,6 +322,30 @@ class FunctionParameterResolverTest {
         "Function 'funcConcepts', input: Cannot convert collection of type CodingCollection to"
             + " TerminologyConcepts",
         ex.getMessage());
+  }
+
+  @Test
+  void testEvaluationContextInjection() {
+    final Collection input = mock(Collection.class);
+    final BooleanCollection transformResult = mock(BooleanCollection.class);
+    final FhirPath transformPath = mock(FhirPath.class);
+    final StringCollection transformArgument = mock(StringCollection.class);
+    when(transformPath.apply(transformArgument, evaluationContext)).thenReturn(transformResult);
+
+    // Only one FHIRPath argument (the transform), but the method has 3 parameters.
+    // The EvaluationContext should be injected without consuming an argument.
+    final FunctionParameterResolver resolver =
+        new FunctionParameterResolver(evaluationContext, input, List.of(transformPath));
+    final Method method = getMethod("funcWithContext");
+    final FunctionInvocation invocation = resolver.bind(method);
+    assertEquals(method, invocation.method());
+    assertEquals(input, invocation.arguments()[0]);
+    // The second argument should be the transform.
+    assertEquals(
+        transformResult,
+        ((CollectionTransform) invocation.arguments()[1]).apply(transformArgument));
+    // The third argument should be the injected evaluation context.
+    assertEquals(evaluationContext, invocation.arguments()[2]);
   }
 
   @Test

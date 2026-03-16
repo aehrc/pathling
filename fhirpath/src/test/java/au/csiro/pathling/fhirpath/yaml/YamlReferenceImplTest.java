@@ -17,16 +17,39 @@
 
 package au.csiro.pathling.fhirpath.yaml;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.yaml.YamlCachedTestBase;
 import au.csiro.pathling.test.yaml.annotations.YamlTest;
 import au.csiro.pathling.test.yaml.annotations.YamlTestConfiguration;
 import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 
 @Slf4j
 @YamlTestConfiguration(config = "fhirpath-js/config.yaml", resourceBase = "fhirpath-js/resources")
+@Import(YamlReferenceImplTest.Config.class)
 public class YamlReferenceImplTest extends YamlCachedTestBase {
+
+  /**
+   * Provides FhirEncoders with maxNestingLevel=4 to support deeply nested resource structures
+   * required by reference test cases (e.g., Questionnaire items nested 5 levels deep).
+   */
+  @TestConfiguration
+  static class Config {
+
+    @Bean
+    @Nonnull
+    FhirEncoders fhirEncoders() {
+      return FhirEncoders.forR4()
+          .withExtensionsEnabled(true)
+          .withAllOpenTypes()
+          .withMaxNestingLevel(4)
+          .getOrCreate();
+    }
+  }
 
   //   From: https://github.com/hl7/fhirpath.js/
   //   Tag: 3.16.4

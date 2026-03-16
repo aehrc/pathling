@@ -47,7 +47,7 @@ public class QueryConfiguration {
    * Maximum depth for self-referencing structure traversals in repeat operations. Controls how
    * deeply nested hierarchical data can be flattened during projection.
    */
-  @Min(0)
+  @Min(1)
   @Builder.Default
   private int maxUnboundTraversalDepth = 10;
 }

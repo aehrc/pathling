@@ -27,6 +27,7 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a selection that performs recursive traversal of nested data structures using the
@@ -35,6 +36,10 @@ import org.apache.spark.sql.Column;
  * <p>This enables automatic flattening of hierarchical data to any depth by recursively following
  * the specified paths and applying a projection clause at each level. When multiple projections are
  * needed, wrap them in a {@link GroupingSelection} first.
+ *
+ * <p>When same-type depth is exhausted, Extension traversals silently stop and return results
+ * collected up to that point. All other types raise a runtime error indicating that the recursive
+ * traversal exceeded the maximum depth.
  *
  * @param paths the list of FHIRPath expressions that define paths to recursively traverse
  * @param component the projection clause to apply at each level (use GroupingSelection for
@@ -50,15 +55,25 @@ public record RepeatSelection(
   @Override
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
 
-    // Create the list of non-empty starting contexts from current context and provided paths
+    // Evaluate each path to get collections, retaining them for type inspection.
+    final List<Collection> pathCollections = paths.stream().map(context::evalExpression).toList();
+
+    // Determine whether depth exhaustion should error. Error unless all paths produce Extension
+    // types. If any path is non-Extension (or has no FHIR type), depth exhaustion raises an error.
+    final boolean errorOnDepthExhaustion =
+        pathCollections.stream()
+            .filter(Collection::isNotEmpty)
+            .anyMatch(
+                c -> c.getFhirType().map(t -> !FHIRDefinedType.EXTENSION.equals(t)).orElse(true));
+
+    // Create the list of non-empty starting contexts from the evaluated path collections.
     final List<ProjectionContext> startingNodes =
-        paths.stream()
-            .map(context::evalExpression)
+        pathCollections.stream()
             .filter(Collection::isNotEmpty)
             .map(context::withInputContext)
             .toList();
 
-    // Map starting nodes to transformTree expressions and concatenate the results
+    // Map starting nodes to transformTree expressions and concatenate the results.
     final Column[] nodeResults =
         startingNodes.stream()
             .map(
@@ -69,7 +84,8 @@ public record RepeatSelection(
                             ValueFunctions.emptyArrayIfMissingField(
                                 component.evaluateElementWise(ctx.withInputColumn(c))),
                         paths.stream().map(ctx::asColumnOperator).toList(),
-                        maxDepth))
+                        maxDepth,
+                        errorOnDepthExhaustion))
             .toArray(Column[]::new);
 
     final Column result =
@@ -81,7 +97,7 @@ public record RepeatSelection(
                 .flatten()
                 .getValue();
 
-    // Compute the output schema based on first non-empty context or empty context
+    // Compute the output schema based on first non-empty context or empty context.
     final ProjectionContext schemaContext =
         startingNodes.stream().findFirst().orElse(context.withEmptyInput());
 

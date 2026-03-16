@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.evaluation;
 
+import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -59,7 +60,7 @@ import lombok.Getter;
 public class SingleResourceEvaluator {
 
   /**
-   * Creates a new SingleResourceEvaluator with the specified resolver.
+   * Creates a new SingleResourceEvaluator with the specified resolver and default configuration.
    *
    * <p>This factory method allows creating evaluators with custom resource resolvers, such as
    * {@link DefinitionResourceResolver} for arbitrary data structures.
@@ -74,7 +75,8 @@ public class SingleResourceEvaluator {
       @Nonnull final ResourceResolver resolver,
       @Nonnull final FunctionRegistry functionRegistry,
       @Nonnull final Map<String, Collection> variables) {
-    return new SingleResourceEvaluator(resolver, functionRegistry, variables);
+    return new SingleResourceEvaluator(
+        resolver, functionRegistry, variables, FhirpathConfiguration.DEFAULT);
   }
 
   /** The resource resolver. */
@@ -85,6 +87,9 @@ public class SingleResourceEvaluator {
 
   /** Additional variables available during evaluation. */
   @Nonnull private final Map<String, Collection> variables;
+
+  /** The FHIRPath evaluation configuration. */
+  @Nonnull private final FhirpathConfiguration configuration;
 
   /**
    * Evaluates a FHIRPath expression with the default input context.
@@ -119,7 +124,7 @@ public class SingleResourceEvaluator {
         VariableResolverChain.withDefaults(resource, inputContext, variables);
     final EvaluationContext evalContext =
         new FhirEvaluationContext(
-            inputContext, variableResolver, functionRegistry, resourceResolver);
+            inputContext, variableResolver, functionRegistry, resourceResolver, configuration);
     return fhirPath.apply(inputContext, evalContext);
   }
 

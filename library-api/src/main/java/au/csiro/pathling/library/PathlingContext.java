@@ -21,6 +21,7 @@ import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.EncodingConfiguration;
+import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoderBuilder;
@@ -744,13 +745,19 @@ public class PathlingContext {
     // Encode the resource JSON into a one-row Spark Dataset.
     final Dataset<Row> resourceDf = encodeResourceJson(resourceType, resourceJson);
 
+    final FhirpathConfiguration fhirpathConfig =
+        FhirpathConfiguration.builder()
+            .maxUnboundTraversalDepth(queryConfiguration.getMaxUnboundTraversalDepth())
+            .build();
+
     return SingleInstanceEvaluator.evaluate(
         resourceDf,
         resourceType,
         getFhirContext(),
         fhirPathExpression,
         contextExpression,
-        variables);
+        variables,
+        fhirpathConfig);
   }
 
   /**

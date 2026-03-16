@@ -30,6 +30,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
 import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedException}
 import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.expressions.{variant => variantExpr}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
 import org.apache.spark.sql.catalyst.trees.TreePattern.{ARRAYS_ZIP, TreePattern}
@@ -524,14 +525,16 @@ case class UnresolvedEmptyArrayIfMissingField(value: Expression)
  * @param node       the current node expression to traverse
  * @param extractor  a function to extract values from a node (must return array type)
  * @param traversals a sequence of functions to traverse to child nodes
- * @param parentType the data type of the parent node, used to determine if depth should decrement
- * @param level      the remaining levels to traverse for same-type recursion; when exhausted, only extraction occurs
+ * @param parentType              the data type of the parent node, used to determine if depth should decrement
+ * @param level                   the remaining levels to traverse for same-type recursion; when exhausted, only extraction occurs
+ * @param errorOnDepthExhaustion  if true, throws an AnalysisException when same-type depth is exhausted instead of returning an empty array
  */
 case class UnresolvedTransformTree(node: Expression,
                                    extractor: Expression => Expression,
                                    traversals: Seq[Expression => Expression],
                                    parentType: Option[DataType],
-                                   level: Int
+                                   level: Int,
+                                   errorOnDepthExhaustion: Boolean = false
                                   )
   extends Expression with UnevaluableCopy with NonSQLExpression {
 
@@ -539,34 +542,42 @@ case class UnresolvedTransformTree(node: Expression,
            extractor: Expression => Expression,
            traversals: Seq[Expression => Expression],
            level: Int) = {
-    this(node, extractor, traversals, None, level)
+    this(node, extractor, traversals, None, level, false)
   }
 
   override def mapChildren(f: Expression => Expression): Expression = {
 
-    try {
-      val newValue = f(node)
-      if (newValue.resolved) {
-        // if node is resolved we concatenate
-        // the value extracted from the node with next level traversal
-        if (level > 0 || !parentType.contains(newValue.dataType))
-          Concat(
-            Seq(extractor(node)) ++
-              traversals
-                .map(t => UnresolvedTransformTree(t(node), extractor, traversals,
-                  Some(newValue.dataType),
-                  if (parentType.contains(newValue.dataType)) level - 1 else level
-                ))
-          )
-        else CreateArray(Seq.empty)
-      }
-      else {
-        copy(node = newValue)
-      }
+    // Only the Catalyst resolution call f(node) is expected to throw FIELD_NOT_FOUND when the
+    // field doesn't exist at this schema level. Other operations (extractor, traversal
+    // construction) should propagate errors normally.
+    val newValue = try {
+      f(node)
     } catch {
       case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
-        // in case of AnalysisException we just return an empty array
-        CreateArray(Seq.empty)
+        return CreateArray(Seq.empty)
+    }
+
+    if (newValue.resolved) {
+      // If node is resolved we concatenate the value extracted from the node with next level
+      // traversal.
+      if (level > 0 || !parentType.contains(newValue.dataType))
+        Concat(
+          Seq(extractor(node)) ++
+            traversals
+              .map(t => UnresolvedTransformTree(t(node), extractor, traversals,
+                Some(newValue.dataType),
+                if (parentType.contains(newValue.dataType)) level - 1 else level,
+                errorOnDepthExhaustion
+              ))
+        )
+      else if (errorOnDepthExhaustion)
+        throw new AnalysisException(
+          errorClass = "INTERNAL_ERROR",
+          messageParameters = Map("message" -> "Recursive traversal exceeded maximum depth — possible infinite recursion."))
+      else CreateArray(Seq.empty)
+    }
+    else {
+      copy(node = newValue)
     }
   }
 
@@ -581,7 +592,7 @@ case class UnresolvedTransformTree(node: Expression,
   override def children: Seq[Expression] = node :: Nil
 
   override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
-    UnresolvedTransformTree(newChildren.head, extractor, traversals, parentType, level)
+    UnresolvedTransformTree(newChildren.head, extractor, traversals, parentType, level, errorOnDepthExhaustion)
   }
 }
 
@@ -872,5 +883,66 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
     copy(children = newChildren)
 }
 
+
+/**
+ * Wraps an Array[Variant] expression with deferred unwrapping to a target schema. The target
+ * schema is determined lazily from a reference expression that represents the level-0 (fullest)
+ * result of the extractor.
+ *
+ * During resolution, once both the inner expression (Array[Variant]) and the schema reference
+ * expression are resolved, this expression expands into a `transform(inner, v -> variant_get(v,
+ * '$', targetSchema))` call that converts each Variant element back to the target struct type.
+ *
+ * @param inner     the Array[Variant] expression produced by UnresolvedTransformTree
+ * @param schemaRef an expression whose resolved element type determines the target schema
+ */
+case class UnresolvedVariantUnwrap(inner: Expression, schemaRef: Expression,
+    failOnError: Boolean = true)
+  extends Expression with UnevaluableCopy with NonSQLExpression {
+
+  override def children: Seq[Expression] = Seq(inner, schemaRef)
+
+  override protected def withNewChildrenInternal(
+      newChildren: IndexedSeq[Expression]): Expression = {
+    copy(inner = newChildren(0), schemaRef = newChildren(1))
+  }
+
+  // Resolution happens inside mapChildren because it is called by Catalyst rules
+  // (e.g., ResolveLambdaVariables, ResolveReferences). If mapChildren is called multiple
+  // times before both children are resolved, the expression safely returns a copy() each time.
+  override def mapChildren(f: Expression => Expression): Expression = {
+    val newInner = f(inner)
+    val newSchemaRef = f(schemaRef)
+    if (newInner.resolved && newSchemaRef.resolved) {
+      // Determine the target element type from the schema reference expression.
+      val targetElementType = newSchemaRef.dataType match {
+        case ArrayType(elementType, _) => elementType
+        case other => other
+      }
+      // Build: transform(inner, v -> variant_get(v, '$', targetSchema))
+      val lambdaVar = NamedLambdaVariable(
+        "v", VariantType, nullable = true,
+        exprId = NamedExpression.newExprId,
+        value = new java.util.concurrent.atomic.AtomicReference[Any]()
+      )
+      val variantGetExpr = new variantExpr.VariantGet(
+        lambdaVar, Literal.create("$", StringType),
+        targetElementType, failOnError = failOnError, timeZoneId = None
+      )
+      val lambdaFunc = LambdaFunction(variantGetExpr, Seq(lambdaVar))
+      ArrayTransform(newInner, lambdaFunc)
+    } else {
+      copy(inner = newInner, schemaRef = newSchemaRef)
+    }
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"VariantUnwrap($inner)"
+}
 
 // ColumnFunctions has been moved to a Java class to access package-private Spark methods

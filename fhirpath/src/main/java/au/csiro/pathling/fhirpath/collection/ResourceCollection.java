@@ -31,6 +31,7 @@ import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Getter;
+import org.apache.spark.sql.Column;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -47,7 +48,7 @@ public class ResourceCollection extends Collection {
   @Nonnull private final ResourceDefinition resourceDefinition;
 
   /**
-   * Creates a new ResourceCollection.
+   * Creates a new ResourceCollection, deriving the extension map from the column representation.
    *
    * @param columnRepresentation the column representation
    * @param type the FhirPath type
@@ -68,6 +69,29 @@ public class ResourceCollection extends Collection {
         definition,
         Optional.of(
             columnRepresentation.traverse(ExtensionSupport.EXTENSIONS_FIELD_NAME()).getValue()));
+    this.resourceDefinition = resourceDefinition;
+  }
+
+  /**
+   * Creates a new ResourceCollection with an explicit extension map column. This is used by {@link
+   * #copyWith(ColumnRepresentation)} to preserve the resource-level extension map when creating
+   * copies with a different column representation (e.g. during repeatAll traversal).
+   *
+   * @param columnRepresentation the column representation
+   * @param type the FhirPath type
+   * @param fhirType the FHIR type
+   * @param definition the node definition
+   * @param resourceDefinition the resource definition
+   * @param extensionMapColumn the extension map column to preserve
+   */
+  private ResourceCollection(
+      @Nonnull final ColumnRepresentation columnRepresentation,
+      @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<? extends NodeDefinition> definition,
+      @Nonnull final ResourceDefinition resourceDefinition,
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
     this.resourceDefinition = resourceDefinition;
   }
 
@@ -175,7 +199,12 @@ public class ResourceCollection extends Collection {
   @Override
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
     return new ResourceCollection(
-        newValue, getType(), getFhirType(), getDefinition(), resourceDefinition);
+        newValue,
+        getType(),
+        getFhirType(),
+        getDefinition(),
+        resourceDefinition,
+        getExtensionMapColumn());
   }
 
   /**

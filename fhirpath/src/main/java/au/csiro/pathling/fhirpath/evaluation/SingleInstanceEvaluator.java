@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.evaluation;
 
+import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -76,6 +77,40 @@ public class SingleInstanceEvaluator {
       @Nonnull final String fhirPathExpression,
       @Nullable final String contextExpression,
       @Nullable final Map<String, Object> variables) {
+    return evaluate(
+        resourceDf,
+        resourceType,
+        fhirContext,
+        fhirPathExpression,
+        contextExpression,
+        variables,
+        FhirpathConfiguration.DEFAULT);
+  }
+
+  /**
+   * Evaluates a FHIRPath expression against a single encoded FHIR resource with custom
+   * configuration.
+   *
+   * @param resourceDf the encoded resource as a single-row Dataset
+   * @param resourceType the FHIR resource type code (e.g. "Patient")
+   * @param fhirContext the FHIR context
+   * @param fhirPathExpression the FHIRPath expression to evaluate
+   * @param contextExpression an optional context expression; if non-null, the main expression is
+   *     composed with the context
+   * @param variables optional named variables available via %variable syntax, or null
+   * @param configuration the FHIRPath evaluation configuration
+   * @return a {@link SingleInstanceEvaluationResult} containing typed result values and type
+   *     metadata
+   */
+  @Nonnull
+  public static SingleInstanceEvaluationResult evaluate(
+      @Nonnull final Dataset<Row> resourceDf,
+      @Nonnull final String resourceType,
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final String fhirPathExpression,
+      @Nullable final String contextExpression,
+      @Nullable final Map<String, Object> variables,
+      @Nonnull final FhirpathConfiguration configuration) {
 
     // Convert incoming variables to Collection objects for the evaluator.
     final Map<String, Collection> variableCollections = convertVariables(variables);
@@ -89,6 +124,7 @@ public class SingleInstanceEvaluator {
         SingleResourceEvaluatorBuilder.create(ResourceType.fromCode(resourceType), fhirContext)
             .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
             .withVariables(variableCollections)
+            .withConfiguration(configuration)
             .build();
 
     // Evaluate to determine the return type.
