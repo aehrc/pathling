@@ -1,3 +1,14 @@
 # minimatch DoS (serve-handler transitive dependency, only used by local
 # docusaurus serve command, not in production GitHub Pages deployment).
 CVE-2026-26996
+CVE-2026-27903
+CVE-2026-27904
+
+# dompurify XSS — shipped via mermaid but no user input in static site.
+CVE-2026-0540
+
+# serialize-javascript RCE — build-time webpack dependency, not deployed.
+GHSA-5c6j-r48x-rmvq
+
+# svgo XML entity expansion DoS — build-time SVG optimiser, only processes trusted source files.
+CVE-2026-29074
