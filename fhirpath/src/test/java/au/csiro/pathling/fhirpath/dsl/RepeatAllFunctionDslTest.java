@@ -395,6 +395,12 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
             List.of("nested-1", "nested-2"),
             "item.repeatAll(answer.item).linkId",
             "repeatAll(answer.item) traverses through answer elements to reach nested items")
+        .group("repeatAll() union traversal through item and answer.item")
+        .testEquals(
+            List.of("root", "nested-1", "nested-2"),
+            "repeatAll(item | answer.item).linkId",
+            "repeatAll(item | answer.item) collects linkIds from items nested through both"
+                + " item and answer.item paths")
         .build();
   }
 
@@ -460,9 +466,10 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
             "repeatAll($this) on a choice type raises an indeterminate type error")
         .group("repeatAll() choice type — ofType on mixed collection")
         .testError(
-            "Must have a fhirType or a definition",
+            "Recursive traversal exceeded maximum depth",
             "value.repeatAll(ofType(Quantity)).count()",
-            "repeatAll(ofType(Quantity)) on a choice type fails during type probing")
+            "repeatAll(ofType(Quantity)) on a choice type hits depth exhaustion because"
+                + " Quantity.ofType(Quantity) is self-referential")
         .group("repeatAll() choice type — polymorphic traversal")
         .testError(
             "polymorphic",

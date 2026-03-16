@@ -23,8 +23,10 @@ import au.csiro.pathling.test.dsl.FhirPathTest;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Extension;
@@ -34,6 +36,10 @@ import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType;
+import org.hl7.fhir.r4.model.QuestionnaireResponse;
+import org.hl7.fhir.r4.model.QuestionnaireResponse.QuestionnaireResponseItemAnswerComponent;
+import org.hl7.fhir.r4.model.QuestionnaireResponse.QuestionnaireResponseItemComponent;
+import org.hl7.fhir.r4.model.QuestionnaireResponse.QuestionnaireResponseStatus;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -271,6 +277,104 @@ public class RepeatFunctionDslTest extends FhirPathDslTestBase {
             "male",
             "name.repeat(%resource).gender",
             "repeat(%resource) returns the patient's gender (dedup collapses to single resource)")
+        .build();
+  }
+
+  /**
+   * Creates a QuestionnaireResponse with items nested through both item and answer.item paths.
+   *
+   * <p>Structure:
+   *
+   * <pre>
+   *   item "1" (Demographics)
+   *     item "1.1" (Name)
+   *       answer "Jane Doe"
+   *         item "1.1.1" (Name confirmed)
+   *           answer true
+   *     item "1.2" (Date of Birth)
+   *       answer "1990-01-15"
+   *   item "2" (Medical History)
+   *     item "2.1" (Conditions)
+   *       answer true
+   *         item "2.1.1" (Condition details)
+   *           answer "Type 2 Diabetes"
+   * </pre>
+   */
+  private static QuestionnaireResponse createQuestionnaireResponse() {
+    final QuestionnaireResponse qr = new QuestionnaireResponse();
+    qr.setId("example");
+    qr.setStatus(QuestionnaireResponseStatus.COMPLETED);
+
+    // item "1" (Demographics).
+    final QuestionnaireResponseItemComponent item1 = qr.addItem();
+    item1.setLinkId("1");
+    item1.setText("Demographics");
+
+    // item "1.1" (Name).
+    final QuestionnaireResponseItemComponent item1Sub1 = item1.addItem();
+    item1Sub1.setLinkId("1.1");
+    item1Sub1.setText("Name");
+
+    // answer "Jane Doe" with nested item "1.1.1".
+    final QuestionnaireResponseItemAnswerComponent answer1Sub1 = item1Sub1.addAnswer();
+    answer1Sub1.setValue(new StringType("Jane Doe"));
+    final QuestionnaireResponseItemComponent item1Sub1Sub1 = answer1Sub1.addItem();
+    item1Sub1Sub1.setLinkId("1.1.1");
+    item1Sub1Sub1.setText("Name confirmed");
+    item1Sub1Sub1.addAnswer().setValue(new BooleanType(true));
+
+    // item "1.2" (Date of Birth).
+    final QuestionnaireResponseItemComponent item1Sub2 = item1.addItem();
+    item1Sub2.setLinkId("1.2");
+    item1Sub2.setText("Date of Birth");
+    item1Sub2.addAnswer().setValue(new DateType("1990-01-15"));
+
+    // item "2" (Medical History).
+    final QuestionnaireResponseItemComponent item2 = qr.addItem();
+    item2.setLinkId("2");
+    item2.setText("Medical History");
+
+    // item "2.1" (Conditions).
+    final QuestionnaireResponseItemComponent item2Sub1 = item2.addItem();
+    item2Sub1.setLinkId("2.1");
+    item2Sub1.setText("Conditions");
+
+    // answer true with nested item "2.1.1".
+    final QuestionnaireResponseItemAnswerComponent answer2Sub1 = item2Sub1.addAnswer();
+    answer2Sub1.setValue(new BooleanType(true));
+    final QuestionnaireResponseItemComponent item2Sub1Sub1 = answer2Sub1.addItem();
+    item2Sub1Sub1.setLinkId("2.1.1");
+    item2Sub1Sub1.setText("Condition details");
+    item2Sub1Sub1.addAnswer().setValue(new StringType("Type 2 Diabetes"));
+
+    return qr;
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatUnionTraversal() {
+    return builder()
+        .withResource(createQuestionnaireResponse())
+        .group("repeat() with union expression on QuestionnaireResponse")
+        .testEquals(
+            List.of("1", "2", "1.1", "1.2", "2.1", "1.1.1", "2.1.1"),
+            "repeat(item | answer.item).linkId",
+            "repeat(item | answer.item).linkId collects linkIds from items nested through both"
+                + " item and answer.item paths")
+        .testEquals(
+            7,
+            "repeat(item | answer.item).count()",
+            "repeat(item | answer.item).count() returns total items from all paths and levels")
+        .testEquals(
+            List.of(
+                "Demographics",
+                "Medical History",
+                "Name",
+                "Date of Birth",
+                "Conditions",
+                "Name confirmed",
+                "Condition details"),
+            "repeat(item | answer.item).text",
+            "repeat(item | answer.item).text collects text from all items")
         .build();
   }
 

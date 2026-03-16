@@ -538,11 +538,18 @@ public class Collection implements Equatable {
     }
 
     // Same FHIR type, complex — proceed to tree traversal with depth limiting.
-    final ColumnTransform columnTransform = transform.toColumnTransformation(this);
+    // The column transform must be derived from level0Collection (not this) so that deeper-level
+    // applications operate on the recursive element type. For example, in
+    // QuestionnaireResponse.repeat(item | answer.item), the transform must evaluate in the context
+    // of QuestionnaireResponseItemComponent (where both item and answer are valid paths), not
+    // QuestionnaireResponse.
+    final ColumnTransform columnTransform = transform.toColumnTransformation(level0Collection);
 
-    // Compute the level-0 column result. Normalize to array via plural() so that both singular
-    // and collection results are represented uniformly as arrays for the tree traversal.
-    final Column level0 = columnTransform.apply(getColumn()).plural().getValue();
+    // Compute the level-0 column result. Use the column from level0Collection directly, since
+    // transform.apply(this) has already evaluated the expression on the input. Normalize to array
+    // via plural() so that both singular and collection results are represented uniformly as arrays
+    // for the tree traversal.
+    final Column level0 = level0Collection.getColumn().plural().getValue();
 
     // Build a column-level function for deeper levels that applies the projection to individual
     // struct elements. Uses DefaultRepresentation because nested elements are structs accessed
