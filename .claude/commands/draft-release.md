@@ -30,9 +30,9 @@ Draft a GitHub release for the tag: $ARGUMENTS
       that apply:
         - `## New features`
         - `## Bug fixes`
-        - `## Documentation`
         - `## Dependencies`
-        - `## Infrastructure and tooling`
+    - Do not include "Documentation" or "Infrastructure and tooling" sections.
+    - Only include bug fixes that are the subject of a GitHub issue.
     - Within sections, use concise bullet points. Link to issues where
       applicable using the format
       `[#123](https://github.com/aehrc/pathling/issues/123)`.
