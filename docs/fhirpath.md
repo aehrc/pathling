@@ -103,10 +103,13 @@ The following standard FHIRPath functions are implemented. See [Functions](https
 
 #### Filtering and projection functions[​](#filtering-and-projection-functions "Direct link to Filtering and projection functions")
 
-| Function          | Description                              |
-| ----------------- | ---------------------------------------- |
-| `where(criteria)` | Filter collection by criteria expression |
-| `ofType(type)`    | Filter collection by type                |
+| Function                | Description                                                       |
+| ----------------------- | ----------------------------------------------------------------- |
+| `where(criteria)`       | Filter collection by criteria expression                          |
+| `select(projection)`    | Evaluate projection for each element, flattening results          |
+| `ofType(type)`          | Filter collection by type                                         |
+| `repeat(projection)`    | Recursively evaluate projection, deduplicating results            |
+| `repeatAll(projection)` | Recursively evaluate projection without deduplication (see below) |
 
 #### Subsetting functions[​](#subsetting-functions "Direct link to Subsetting functions")
 
@@ -162,12 +165,22 @@ The following standard FHIRPath functions are implemented. See [Functions](https
 The following FHIRPath features are **not currently supported**:
 
 * **Equivalence operators**: `~` and `!~`
-* **Lambda expressions**
 * **Aggregate functions**: `sum()`, `avg()`, `min()`, `max()`
 * **Special variables**: `$index`, `$total`
 * **Quantity arithmetic**: Math operations on Quantity types
 * **DateTime arithmetic**: DateTime math operations
 * **Full resource resolution**: The `resolve()` function extracts type information only and does not support field traversal
+
+#### Recursive traversal depth[​](#recursive-traversal-depth "Direct link to Recursive traversal depth")
+
+Both `repeat` and `repeatAll` use static type analysis to determine how to handle the recursion. When the projection expression produces the same FHIR type at each level (e.g. navigating `item` within a Questionnaire), the traversal is bounded by a configurable maximum depth. The default maximum depth is 10.
+
+For Extension traversal, depth exhaustion silently stops and returns results collected up to that point. For other types, depth exhaustion raises an error.
+
+The maximum depth can be configured:
+
+* In the **Pathling libraries**, via the `maxUnboundTraversalDepth` parameter in the query configuration.
+* In the **Pathling server**, via the `pathling.query.maxUnboundTraversalDepth` configuration property.
 
 ## Additional functions[​](#additional-functions "Direct link to Additional functions")
 

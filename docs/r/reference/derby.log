@@ -1,6 +1,6 @@
 ----------------------------------------------------------------
-Tue Feb 24 00:36:10 UTC 2026:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.16.1.1 - (1901046): instance a816c00e-019c-8d13-2f76-0000031789c0 
+Tue Mar 17 02:16:24 UTC 2026:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.16.1.1 - (1901046): instance a816c00e-019c-f994-7d04-000004b8da38 
 on database directory /home/runner/work/pathling/pathling/lib/R/target/docs/reference/metastore_db with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@30f39991 
 Loaded from file:/home/runner/spark/spark-4.0.2-bin-hadoop3/jars/derby-10.16.1.1.jar
 java.vendor=Azul Systems, Inc.
@@ -8,6 +8,6 @@ java.runtime.version=21.0.10+7-LTS
 user.dir=/home/runner/work/pathling/pathling/lib/R/target/docs/reference
 os.name=Linux
 os.arch=amd64
-os.version=6.11.0-1018-azure
+os.version=6.14.0-1017-azure
 derby.system.home=null
 Database Class Loader started - derby.database.classpath=''

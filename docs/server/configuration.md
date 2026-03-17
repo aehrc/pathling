@@ -117,6 +117,7 @@ fs:
 
 * `pathling.query.explainQueries` - (default: `false`) If set to true, Spark query plans will be written to the logs.
 * `pathling.query.cacheResults` - (default: `true`) This controls whether the built-in caching within Spark is used for search results. It may be useful to turn this off for large datasets in memory-constrained environments.
+* `pathling.query.maxUnboundTraversalDepth` - (default: `10`) Controls the maximum depth for same-type recursive traversal in `repeat()` and `repeatAll()` FHIRPath functions. Cross-type traversals do not consume depth budget. The minimum value is `1`.
 
 ### Apache Spark[​](#apache-spark "Direct link to Apache Spark")
 
