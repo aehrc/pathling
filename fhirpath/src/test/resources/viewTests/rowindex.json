@@ -1,0 +1,284 @@
+{
+  "title": "%rowIndex tests",
+  "resources": [
+    {
+      "resourceType": "Patient",
+      "id": "pt1",
+      "name": [
+        {
+          "family": "Smith",
+          "given": ["John", "James"]
+        },
+        {
+          "family": "Jones",
+          "given": ["Jane"]
+        }
+      ],
+      "contact": [
+        {
+          "telecom": [
+            { "system": "phone", "value": "555-0001" },
+            { "system": "email", "value": "a@b.com" }
+          ]
+        },
+        {
+          "telecom": [{ "system": "phone", "value": "555-0002" }]
+        }
+      ]
+    },
+    {
+      "resourceType": "Patient",
+      "id": "pt2",
+      "name": [
+        {
+          "family": "Brown",
+          "given": ["Bob"]
+        }
+      ]
+    },
+    {
+      "resourceType": "Patient",
+      "id": "pt3",
+      "gender": "male"
+    }
+  ],
+  "tests": [
+    {
+      "title": "spec example - capturing element position",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }]
+          },
+          {
+            "forEach": "name",
+            "column": [
+              { "name": "name_index", "path": "%rowIndex" },
+              { "name": "family", "path": "family" }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt1", "name_index": 0, "family": "Smith" },
+        { "id": "pt1", "name_index": 1, "family": "Jones" },
+        { "id": "pt2", "name_index": 0, "family": "Brown" }
+      ]
+    },
+    {
+      "title": "spec example - nested iteration with independent indices",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }]
+          },
+          {
+            "forEach": "contact",
+            "column": [{ "name": "contact_index", "path": "%rowIndex" }],
+            "select": [
+              {
+                "forEach": "telecom",
+                "column": [
+                  { "name": "telecom_index", "path": "%rowIndex" },
+                  { "name": "system", "path": "system" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "pt1",
+          "contact_index": 0,
+          "telecom_index": 0,
+          "system": "phone"
+        },
+        {
+          "id": "pt1",
+          "contact_index": 0,
+          "telecom_index": 1,
+          "system": "email"
+        },
+        {
+          "id": "pt1",
+          "contact_index": 1,
+          "telecom_index": 0,
+          "system": "phone"
+        }
+      ]
+    },
+    {
+      "title": "spec example - row index with unionAll",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }]
+          },
+          {
+            "forEach": "name",
+            "column": [{ "name": "name_index", "path": "%rowIndex" }],
+            "select": [
+              {
+                "unionAll": [
+                  {
+                    "forEach": "given",
+                    "column": [
+                      { "name": "given_index", "path": "%rowIndex" },
+                      { "name": "value", "path": "$this" }
+                    ]
+                  },
+                  {
+                    "column": [
+                      { "name": "given_index", "path": "%rowIndex" },
+                      { "name": "value", "path": "family" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt1", "name_index": 0, "given_index": 0, "value": "John" },
+        { "id": "pt1", "name_index": 0, "given_index": 1, "value": "James" },
+        { "id": "pt1", "name_index": 0, "given_index": 0, "value": "Smith" },
+        { "id": "pt1", "name_index": 1, "given_index": 0, "value": "Jane" },
+        { "id": "pt1", "name_index": 1, "given_index": 1, "value": "Jones" },
+        { "id": "pt2", "name_index": 0, "given_index": 0, "value": "Bob" },
+        { "id": "pt2", "name_index": 0, "given_index": 0, "value": "Brown" }
+      ]
+    },
+    {
+      "title": "top-level %rowIndex defaults to 0",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              { "name": "id", "path": "id" },
+              { "name": "row_index", "path": "%rowIndex" }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt1", "row_index": 0 },
+        { "id": "pt2", "row_index": 0 },
+        { "id": "pt3", "row_index": 0 }
+      ]
+    },
+    {
+      "title": "forEach with %rowIndex",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }],
+            "select": [
+              {
+                "forEach": "name",
+                "column": [
+                  { "name": "name_index", "path": "%rowIndex" },
+                  { "name": "family", "path": "family" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt1", "name_index": 0, "family": "Smith" },
+        { "id": "pt1", "name_index": 1, "family": "Jones" },
+        { "id": "pt2", "name_index": 0, "family": "Brown" }
+      ]
+    },
+    {
+      "title": "nested forEach with independent %rowIndex values",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }],
+            "select": [
+              {
+                "forEach": "name",
+                "column": [{ "name": "name_index", "path": "%rowIndex" }],
+                "select": [
+                  {
+                    "forEach": "given",
+                    "column": [
+                      { "name": "given_index", "path": "%rowIndex" },
+                      { "name": "given", "path": "$this" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt1", "name_index": 0, "given_index": 0, "given": "John" },
+        { "id": "pt1", "name_index": 0, "given_index": 1, "given": "James" },
+        { "id": "pt1", "name_index": 1, "given_index": 0, "given": "Jane" },
+        { "id": "pt2", "name_index": 0, "given_index": 0, "given": "Bob" }
+      ]
+    },
+    {
+      "title": "forEachOrNull with %rowIndex",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }],
+            "select": [
+              {
+                "forEachOrNull": "name",
+                "column": [
+                  { "name": "family", "path": "family" },
+                  { "name": "name_index", "path": "%rowIndex" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt1", "family": "Smith", "name_index": 0 },
+        { "id": "pt1", "family": "Jones", "name_index": 1 },
+        { "id": "pt2", "family": "Brown", "name_index": 0 },
+        { "id": "pt3", "family": null, "name_index": null }
+      ]
+    },
+    {
+      "title": "%rowIndex used in arithmetic expression",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }],
+            "select": [
+              {
+                "forEach": "name",
+                "column": [
+                  { "name": "family", "path": "family" },
+                  { "name": "one_based_index", "path": "%rowIndex + 1" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt1", "family": "Smith", "one_based_index": 1 },
+        { "id": "pt1", "family": "Jones", "one_based_index": 2 },
+        { "id": "pt2", "family": "Brown", "one_based_index": 1 }
+      ]
+    }
+  ]
+}

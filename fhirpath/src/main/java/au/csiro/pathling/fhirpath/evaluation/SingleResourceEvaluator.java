@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.variable.EnvironmentVariableResolver;
 import au.csiro.pathling.fhirpath.variable.VariableResolverChain;
 import jakarta.annotation.Nonnull;
+import java.util.HashMap;
 import java.util.Map;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -90,6 +91,22 @@ public class SingleResourceEvaluator {
 
   /** The FHIRPath evaluation configuration. */
   @Nonnull private final FhirpathConfiguration configuration;
+
+  /**
+   * Creates a new SingleResourceEvaluator with an additional variable added to the variable map.
+   *
+   * @param name the variable name
+   * @param value the variable value as a Collection
+   * @return a new SingleResourceEvaluator with the additional variable
+   */
+  @Nonnull
+  public SingleResourceEvaluator withVariable(
+      @Nonnull final String name, @Nonnull final Collection value) {
+    final Map<String, Collection> newVariables = new HashMap<>(variables);
+    newVariables.put(name, value);
+    return new SingleResourceEvaluator(
+        resourceResolver, functionRegistry, newVariables, configuration);
+  }
 
   /**
    * Evaluates a FHIRPath expression with the default input context.
