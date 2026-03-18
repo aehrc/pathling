@@ -19,6 +19,7 @@ package au.csiro.pathling.projection;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -29,6 +30,9 @@ import org.apache.spark.sql.Column;
  * <p>This selection evaluates a FHIRPath expression to get a collection, then applies a projection
  * clause to each element of that collection. The results are flattened into a single array. When
  * multiple projections are needed, wrap them in a {@link GroupingSelection} first.
+ *
+ * <p>The {@code %rowIndex} environment variable is set to the 0-based index of each element during
+ * iteration. Each nesting level maintains its own independent {@code %rowIndex} value.
  *
  * @param path the FHIRPath expression that identifies the collection to unnest
  * @param component the projection clause to apply to each element (use GroupingSelection for
@@ -48,7 +52,18 @@ public record UnnestingSelection(
     // Evaluate the path to get the collection that will serve as the basis for unnesting.
     final Collection unnestingCollection = context.evalExpression(path);
     final ProjectionContext unnestingContext = context.withInputContext(unnestingCollection);
-    final Column columnResult = component.evaluateElementWise(unnestingContext);
+
+    // Use the indexed transform to track the element index as %rowIndex.
+    final Column columnResult =
+        new DefaultRepresentation(unnestingContext.inputContext().getColumnValue())
+            .transformWithIndex(
+                (element, index) ->
+                    component
+                        .evaluate(unnestingContext.withInputColumn(element).withRowIndex(index))
+                        .getResultColumn())
+            .flatten()
+            .getValue();
+
     return component
         .evaluate(unnestingContext.asStubContext())
         .withResultColumn(columnResult)
