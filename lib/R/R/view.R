@@ -20,7 +20,7 @@
 #' @param ds The DataSource object containing the data to be queried.
 #' @param resource A string representing the type of FHIR resource that the view is based upon, e.g. 'Patient' or 'Observation'.
 #' @param select A list of columns and nested selects to include in the view. Each element should be a list with appropriate structure.
-#' @param constants An optional list of constants that can be used in FHIRPath expressions.
+#' @param constant An optional list of constants that can be used in FHIRPath expressions.
 #' @param where An optional list of FHIRPath expressions that can be used to filter the view.
 #' @param json An optional JSON string representing the view definition, as an alternative to providing the parameters as R objects.
 #' @return A Spark DataFrame containing the results of the view.
@@ -66,7 +66,7 @@
 #'   )
 #' )
 #' }
-ds_view <- function(ds, resource, select = NULL, constants = NULL, where = NULL, json = NULL) {
+ds_view <- function(ds, resource, select = NULL, constant = NULL, where = NULL, json = NULL) {
   jquery <- j_invoke(ds, "view", as.character(resource))
 
   if (!is.null(json)) {
@@ -83,8 +83,8 @@ ds_view <- function(ds, resource, select = NULL, constants = NULL, where = NULL,
       query$select <- select
     }
 
-    if (!is.null(constants)) {
-      query$constants <- constants
+    if (!is.null(constant)) {
+      query$constant <- constant
     }
 
     if (!is.null(where)) {
