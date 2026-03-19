@@ -76,14 +76,23 @@ jobs:
       - name: Run install goal
         env:
           R_KEEP_PKG_SOURCE: yes
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           mvn --batch-mode install \
+          -pl '!site,!benchmark'
+        timeout-minutes: 60
+
+      - name: Run SonarCloud analysis
+        # Secrets are not available for pull requests from forks.
+        if: env.SONAR_TOKEN != ''
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn --batch-mode \
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
           -pl '!site,!benchmark'
-        timeout-minutes: 60
+        timeout-minutes: 10
 
       - name: Upload test artifacts
         if: always()
