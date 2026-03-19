@@ -100,3 +100,35 @@ test_that("test SOF view with components", {
   expect_equal(colnames(sof_result), colnames(ResultRow))
   expect_equal(sof_result %>% sdf_collect(), ResultRow)
 })
+
+
+# test SOF view with constants
+test_that("test SOF view with constants", {
+  # expectations
+  ResultRow <- tibble::tibble(
+    id = c("8ee183e2-b3c0-4151-be94-b945d6aa8c6d"),
+    family_name = c("Krajcik437")
+  )
+
+  # actuals
+  sof_result <- ds_view(
+    test_data_source(),
+    resource = "Patient",
+    constant = list(
+      list(name = "filter_id", valueUuid = "8ee183e2-b3c0-4151-be94-b945d6aa8c6d")
+    ),
+    select = list(
+      list(
+        column = list(
+          list(path = "id", name = "id"),
+          list(path = "name.first().family", name = "family_name")
+        )
+      )
+    ),
+    where = list(
+      list(path = "id = %filter_id")
+    )
+  )
+  expect_equal(colnames(sof_result), colnames(ResultRow))
+  expect_equal(sof_result %>% sdf_collect(), ResultRow)
+})

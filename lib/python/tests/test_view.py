@@ -46,26 +46,30 @@ def test_view_on_ndjson(ndjson_test_data_dir, pathling_ctx):
         ResultRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "Towne435"),
     ]
 
+
 def test_view_with_constants(ndjson_test_data_dir, pathling_ctx):
     """Reproduces #2574: view with constants fails to resolve constant references in where clause."""
 
     data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
     result = data_source.view(
         resource="Patient",
-        constant = [{"name": "filter_id", "valueUuid": "8ee183e2-b3c0-4151-be94-b945d6aa8c6d"}],
+        constant=[
+            {"name": "filter_id", "valueUuid": "8ee183e2-b3c0-4151-be94-b945d6aa8c6d"}
+        ],
         select=[
             {
                 "column": [
                     {"path": "id", "name": "id"},
-                    {"value": "name.first().family", "name": "family_name"},
+                    {"path": "name.first().family", "name": "family_name"},
                 ]
             }
         ],
-        where=[{"path": "id = $filter_id"}],
+        where=[{"path": "id = %filter_id"}],
     )
     assert result.collect() == [
-        Row("8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "Krajcik437"),
+        ResultRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "Krajcik437"),
     ]
+
 
 ConditionCodingRow = Row("id", "code_text", "system", "code", "display")
 
