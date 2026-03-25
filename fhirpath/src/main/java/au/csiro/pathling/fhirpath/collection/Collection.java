@@ -37,6 +37,8 @@ import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import au.csiro.pathling.sql.SqlFunctions;
@@ -79,6 +81,21 @@ public class Collection implements Equatable {
               .put(FHIRDefinedType.REFERENCE, ReferenceCollection.class)
               .put(FHIRDefinedType.NULL, EmptyCollection.class)
               .build();
+
+  /**
+   * Definition for TypeInfo structures returned by the {@code type()} reflection function. This
+   * defines three string children: {@code namespace}, {@code name}, and {@code baseType}.
+   */
+  @Nonnull
+  public static final ElementDefinition TYPE_INFO_DEFINITION =
+      DefaultCompositeDefinition.of(
+          "TypeInfo",
+          List.of(
+              DefaultPrimitiveDefinition.single("namespace", FHIRDefinedType.STRING),
+              DefaultPrimitiveDefinition.single("name", FHIRDefinedType.STRING),
+              DefaultPrimitiveDefinition.single("baseType", FHIRDefinedType.STRING)),
+          1,
+          FHIRDefinedType.BACKBONEELEMENT);
 
   // See https://hl7.org/fhir/fhirpath.html#types.
 
@@ -162,6 +179,28 @@ public class Collection implements Equatable {
       @Nonnull final FHIRDefinedType fhirType) {
     return getInstance(
         columnRepresentation, Optional.of(fhirType), Optional.empty(), Optional.empty());
+  }
+
+  /**
+   * Builds a {@link Collection} with only a {@link ColumnRepresentation} and {@link
+   * NodeDefinition}, without requiring a {@link FHIRDefinedType}. This is used for collections that
+   * represent non-FHIR structures such as TypeInfo results from the {@code type()} reflection
+   * function.
+   *
+   * @param columnRepresentation a {@link ColumnRepresentation} containing the result
+   * @param definition the {@link NodeDefinition} enabling child element navigation
+   * @return a new {@link Collection}
+   */
+  @Nonnull
+  public static Collection buildWithDefinition(
+      @Nonnull final ColumnRepresentation columnRepresentation,
+      @Nonnull final NodeDefinition definition) {
+    return new Collection(
+        columnRepresentation,
+        Optional.empty(),
+        Optional.empty(),
+        Optional.of(definition),
+        Optional.empty());
   }
 
   /**

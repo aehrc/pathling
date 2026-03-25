@@ -17,12 +17,22 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.struct;
+
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataTypes;
 
 /**
  * Contains functions for type checking and type operations.
@@ -78,5 +88,89 @@ public class TypeFunctions {
   public static Collection as(
       @Nonnull final Collection input, @Nonnull final TypeSpecifier typeSpecifier) {
     return input.asType(typeSpecifier);
+  }
+
+  /**
+   * Returns the type information for each element in the input collection, using concrete subtypes
+   * of TypeInfo. The result is a collection of TypeInfo structures with {@code namespace}, {@code
+   * name}, and {@code baseType} fields.
+   *
+   * <p>The namespace and name are determined by the origin of the collection:
+   *
+   * <ul>
+   *   <li>FHIR model elements return {@code FHIR} namespace with the FHIR type code.
+   *   <li>System literals return {@code System} namespace with the FHIRPath type specifier.
+   *   <li>TypeInfo results return {@code System.Object}.
+   *   <li>Empty or choice collections return empty.
+   * </ul>
+   *
+   * @param input The input collection
+   * @return A collection of TypeInfo structures, or empty
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#reflection">FHIRPath Reflection</a>
+   */
+  @FhirPathFunction
+  @Nonnull
+  public static Collection type(@Nonnull final Collection input) {
+    if (input instanceof EmptyCollection) {
+      return EmptyCollection.getInstance();
+    }
+
+    return resolveTypeInfoStruct(input)
+        .map(
+            typeInfoStruct -> {
+              // Transform each element to a TypeInfo struct element-wise, handling both singular
+              // and plural (array) representations. Use transform (not map) so that array elements
+              // are processed individually. Wrap in DefaultRepresentation so struct field access
+              // works correctly for navigation (e.g., .namespace, .name, .baseType).
+              final Column mappedValue =
+                  input.getColumn().transform(col -> typeInfoStruct).getValue();
+              return Collection.buildWithDefinition(
+                  new DefaultRepresentation(mappedValue), Collection.TYPE_INFO_DEFINITION);
+            })
+        .orElse(EmptyCollection.getInstance());
+  }
+
+  /**
+   * Resolves the type information and builds a TypeInfo struct column for the given collection.
+   * Returns empty if the type cannot be determined.
+   */
+  @Nonnull
+  private static Optional<Column> resolveTypeInfoStruct(@Nonnull final Collection input) {
+    final Optional<? extends NodeDefinition> definition = input.getDefinition();
+
+    // TypeInfo collections return System.Object.
+    if (definition.isPresent() && definition.get() == Collection.TYPE_INFO_DEFINITION) {
+      return Optional.of(buildTypeInfoStruct("System", "Object", "System.Any"));
+    }
+
+    // FHIR model definitions use the FHIR namespace.
+    if (definition.isPresent() && definition.get().isFhirDefinition()) {
+      return input
+          .getFhirType()
+          .map(
+              fhirType -> {
+                final String name = fhirType.toCode();
+                final String baseType =
+                    input instanceof ResourceCollection ? "FHIR.Resource" : "FHIR.Element";
+                return buildTypeInfoStruct("FHIR", name, baseType);
+              });
+    }
+
+    // System types (literals and operation results).
+    return input
+        .getType()
+        .map(
+            fhirPathType ->
+                buildTypeInfoStruct("System", fhirPathType.getTypeSpecifier(), "System.Any"));
+  }
+
+  /** Builds a Spark struct column representing a TypeInfo with the given field values. */
+  @Nonnull
+  private static Column buildTypeInfoStruct(
+      @Nonnull final String namespace, @Nonnull final String name, @Nonnull final String baseType) {
+    return struct(
+        lit(namespace).cast(DataTypes.StringType).as("namespace"),
+        lit(name).cast(DataTypes.StringType).as("name"),
+        lit(baseType).cast(DataTypes.StringType).as("baseType"));
   }
 }
