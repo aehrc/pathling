@@ -743,4 +743,149 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
             "Filter names by type and property returns multiple matching items")
         .build();
   }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTypeFunction() {
+    final Patient patient = new Patient();
+    patient.setId("type-test");
+    patient.setActive(true);
+    patient.setBirthDateElement(new org.hl7.fhir.r4.model.DateType("1990-01-01"));
+    patient.setMaritalStatus(
+        new CodeableConcept()
+            .addCoding(
+                new Coding(
+                    "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "M", "Married")));
+    patient.addName(new HumanName().setFamily("Smith").addGiven("John").addGiven("David"));
+
+    return builder()
+        .withResource(patient)
+        // System primitive literals
+        .group("type() - System primitive literals")
+        .testEquals("System", "1.type().namespace", "Integer literal namespace is System")
+        .testEquals("Integer", "1.type().name", "Integer literal name is Integer")
+        .testEquals("System.Any", "1.type().baseType", "Integer literal baseType is System.Any")
+        .testEquals("System", "true.type().namespace", "Boolean literal namespace is System")
+        .testEquals("Boolean", "true.type().name", "Boolean literal name is Boolean")
+        .testEquals("System", "'hello'.type().namespace", "String literal namespace is System")
+        .testEquals("String", "'hello'.type().name", "String literal name is String")
+        .testEquals("System", "3.14.type().namespace", "Decimal literal namespace is System")
+        .testEquals("Decimal", "3.14.type().name", "Decimal literal name is Decimal")
+        .testEquals("System", "@2024-01-01.type().namespace", "Date literal namespace is System")
+        .testEquals("Date", "@2024-01-01.type().name", "Date literal name is Date")
+        .testEquals(
+            "System",
+            "@2024-01-01T10:00:00.type().namespace",
+            "DateTime literal namespace is System")
+        .testEquals(
+            "DateTime", "@2024-01-01T10:00:00.type().name", "DateTime literal name is DateTime")
+        .testEquals("System", "@T10:00:00.type().namespace", "Time literal namespace is System")
+        .testEquals("Time", "@T10:00:00.type().name", "Time literal name is Time")
+        // System Quantity and Coding literals
+        .group("type() - System Quantity and Coding literals")
+        .testEquals("System", "(10 'mg').type().namespace", "Quantity literal namespace is System")
+        .testEquals("Quantity", "(10 'mg').type().name", "Quantity literal name is Quantity")
+        .testEquals(
+            "System.Any", "(10 'mg').type().baseType", "Quantity literal baseType is System.Any")
+        .testEquals(
+            "System",
+            "(http://example.com|code).type().namespace",
+            "Coding literal namespace is System")
+        .testEquals(
+            "Coding", "(http://example.com|code).type().name", "Coding literal name is Coding")
+        .testEquals(
+            "System.Any",
+            "(http://example.com|code).type().baseType",
+            "Coding literal baseType is System.Any")
+        // FHIR primitive elements
+        .group("type() - FHIR primitive elements")
+        .testEquals(
+            "FHIR", "Patient.active.type().namespace", "FHIR boolean element namespace is FHIR")
+        .testEquals("boolean", "Patient.active.type().name", "FHIR boolean element name is boolean")
+        .testEquals(
+            "FHIR.Element",
+            "Patient.active.type().baseType",
+            "FHIR boolean element baseType is FHIR.Element")
+        .testEquals(
+            "FHIR", "Patient.birthDate.type().namespace", "FHIR date element namespace is FHIR")
+        .testEquals("date", "Patient.birthDate.type().name", "FHIR date element name is date")
+        // FHIR complex type elements
+        .group("type() - FHIR complex type elements")
+        .testEquals(
+            "FHIR",
+            "Patient.maritalStatus.type().namespace",
+            "FHIR CodeableConcept element namespace is FHIR")
+        .testEquals(
+            "CodeableConcept",
+            "Patient.maritalStatus.type().name",
+            "FHIR CodeableConcept element name is CodeableConcept")
+        .testEquals(
+            "FHIR.Element",
+            "Patient.maritalStatus.type().baseType",
+            "FHIR CodeableConcept baseType is FHIR.Element")
+        // FHIR resource types
+        .group("type() - FHIR resource types")
+        .testEquals("FHIR", "Patient.type().namespace", "Patient resource namespace is FHIR")
+        .testEquals("Patient", "Patient.type().name", "Patient resource name is Patient")
+        .testEquals(
+            "FHIR.Resource",
+            "Patient.type().baseType",
+            "Patient resource baseType is FHIR.Resource")
+        // Empty collection
+        .group("type() - empty collection")
+        .testEmpty("{}.type()", "type() returns empty for empty collection")
+        // Nested type().type() returns System.Object
+        .group("type() - nested type() call")
+        .testEquals("System", "1.type().type().namespace", "Nested type() returns System namespace")
+        .testEquals("Object", "1.type().type().name", "Nested type() returns Object name")
+        .testEquals(
+            "System.Any", "1.type().type().baseType", "Nested type() returns System.Any baseType")
+        // ofType() followed by type()
+        .group("type() - ofType() followed by type()")
+        .testEquals(
+            "Patient",
+            "Patient.ofType(Patient).type().name",
+            "ofType() followed by type() returns correct name")
+        // FHIRPath operations produce System types
+        .group("type() - operations produce System types")
+        .testEquals(
+            "System", "Patient.active.not().type().namespace", "not() produces System namespace")
+        .testEquals("Boolean", "Patient.active.not().type().name", "not() produces System Boolean")
+        .testEquals(
+            "String",
+            "(Patient.name.first().given.first() + Patient.name.first().family).type().name",
+            "String concatenation produces System String")
+        .testEquals(
+            "System",
+            "(Patient.name.first().given.first() + Patient.name.first().family).type().namespace",
+            "String concatenation produces System namespace")
+        // Multiple elements produce multiple TypeInfo structs
+        .group("type() - multiple elements")
+        .testEquals(
+            2, "('John' | 'Mary').type().count()", "type() returns one TypeInfo per element")
+        // FHIR plural collection produces one TypeInfo per element
+        .group("type() - FHIR plural collection")
+        .testEquals(
+            "FHIR",
+            "Patient.name.given.type().first().namespace",
+            "FHIR plural collection type() returns FHIR namespace")
+        .testEquals(
+            "string",
+            "Patient.name.given.type().first().name",
+            "FHIR plural collection type() returns FHIR type name")
+        .testEquals(
+            2,
+            "Patient.name.given.type().count()",
+            "FHIR plural collection type() returns one TypeInfo per non-null element")
+        // where() preserves FHIR context
+        .group("type() - where() preserves FHIR context")
+        .testEquals(
+            "FHIR",
+            "Patient.active.where($this).type().namespace",
+            "where() preserves FHIR namespace")
+        .testEquals(
+            "boolean",
+            "Patient.active.where($this).type().name",
+            "where() preserves FHIR type name")
+        .build();
+  }
 }
