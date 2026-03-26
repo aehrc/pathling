@@ -149,7 +149,23 @@ public class SqlQueryExecutionHelper {
 
     // Parse the Library resource as a SQLQuery.
     final Library library = castToLibrary(libraryResource);
+
+    // Log the raw Library contents for debugging.
+    log.info(
+        "SQLQuery Library has {} relatedArtifact entries", library.getRelatedArtifact().size());
+    for (final org.hl7.fhir.r4.model.RelatedArtifact ra : library.getRelatedArtifact()) {
+      log.info(
+          "  relatedArtifact: type={}, label={}, resource={}",
+          ra.getType(),
+          ra.getLabel(),
+          ra.getResource());
+    }
+
     final ParsedSqlQuery parsedQuery = libraryParser.parse(library);
+    log.info(
+        "Parsed SQL query: {} view references, {} parameters",
+        parsedQuery.getViewReferences().size(),
+        parsedQuery.getDeclaredParameters().size());
 
     // Resolve ViewDefinitions and check authorization.
     final Map<String, FhirView> resolvedViews = resolveViewDefinitions(parsedQuery);
@@ -165,26 +181,23 @@ public class SqlQueryExecutionHelper {
     final boolean shouldIncludeHeader = includeHeader == null || includeHeader.booleanValue();
 
     // Register views and execute the query.
-    Map<String, String> registeredViews = Map.of();
+    List<String> registeredViewNames = List.of();
     try {
-      registeredViews = viewRegistrationService.registerViews(resolvedViews, deltaLake);
-
-      // Rewrite SQL to use prefixed temp view names.
-      final String rewrittenSql =
-          viewRegistrationService.rewriteSql(parsedQuery.getSql(), registeredViews);
+      registeredViewNames = viewRegistrationService.registerViews(resolvedViews, deltaLake);
 
       // Build parameter map for Spark parameterized queries.
+      final String sql = parsedQuery.getSql();
       final Map<String, String> parameterMap = buildParameterMap(parameterValues);
 
       // Execute the SQL query. Use parameterized queries only when parameters are provided.
       Dataset<Row> result;
       if (parameterMap.isEmpty()) {
-        result = sparkSession.sql(rewrittenSql);
+        result = sparkSession.sql(sql);
       } else {
         @SuppressWarnings("unchecked")
         final java.util.Map<String, Object> objectMap =
             (java.util.Map<String, Object>) (java.util.Map<String, ?>) parameterMap;
-        result = sparkSession.sql(rewrittenSql, objectMap);
+        result = sparkSession.sql(sql, objectMap);
       }
 
       // Apply limit if specified.
@@ -196,7 +209,7 @@ public class SqlQueryExecutionHelper {
       streamResults(result, outputFormat, shouldIncludeHeader, response);
 
     } finally {
-      viewRegistrationService.dropViews(registeredViews.values());
+      viewRegistrationService.dropViews(registeredViewNames);
     }
   }
 
