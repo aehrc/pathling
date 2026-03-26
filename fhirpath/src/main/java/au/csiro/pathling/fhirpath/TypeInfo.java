@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath;
 
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
@@ -30,6 +31,7 @@ import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataTypes;
@@ -135,6 +137,42 @@ public class TypeInfo {
 
     // System types (literals and operation results).
     return input.getType().map(TypeInfo::forSystemType);
+  }
+
+  /**
+   * Creates a mapper function that transforms a choice element column into a TypeInfo struct
+   * column. The mapper inspects which choice field is non-null for each row and returns the
+   * corresponding TypeInfo. This enables per-row type resolution for polymorphic choice elements.
+   *
+   * @param choiceTypes the list of possible child element definitions for the choice
+   * @return a function that maps an element column to a TypeInfo struct column
+   */
+  @Nonnull
+  public static UnaryOperator<Column> choiceTypeInfoMapper(
+      @Nonnull final List<ElementDefinition> choiceTypes) {
+    return elementCol -> {
+      // Use a null struct matching the TypeInfo schema as the default fallback.
+      Column result =
+          lit(null)
+              .cast(
+                  DataTypes.createStructType(
+                      new org.apache.spark.sql.types.StructField[] {
+                        DataTypes.createStructField("namespace", DataTypes.StringType, true),
+                        DataTypes.createStructField("name", DataTypes.StringType, true),
+                        DataTypes.createStructField("baseType", DataTypes.StringType, true)
+                      }));
+      // Build a CASE WHEN chain in reverse order so that the first matching type wins.
+      for (int i = choiceTypes.size() - 1; i >= 0; i--) {
+        final ElementDefinition elemDef = choiceTypes.get(i);
+        final TypeInfo typeInfo = forFhirType(elemDef.getFhirType().orElseThrow(), false);
+        result =
+            when(
+                    elementCol.getField(elemDef.getElementName()).isNotNull(),
+                    typeInfo.toStructColumn())
+                .otherwise(result);
+      }
+      return result;
+    };
   }
 
   /**

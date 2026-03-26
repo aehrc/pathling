@@ -23,9 +23,11 @@ import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
+import au.csiro.pathling.fhirpath.collection.mixed.ChoiceElementCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
 
 /**
@@ -95,7 +97,8 @@ public class TypeFunctions {
    *   <li>FHIR model elements return {@code FHIR} namespace with the FHIR type code.
    *   <li>System literals return {@code System} namespace with the FHIRPath type specifier.
    *   <li>TypeInfo results return {@code System.Object}.
-   *   <li>Empty or choice collections return empty.
+   *   <li>Choice collections return per-row TypeInfo based on which field is non-null.
+   *   <li>Empty collections return empty.
    * </ul>
    *
    * @param input The input collection
@@ -105,6 +108,15 @@ public class TypeFunctions {
   @FhirPathFunction
   @Nonnull
   public static Collection type(@Nonnull final Collection input) {
+    // Choice collections require per-row type resolution based on which field is non-null.
+    if (input instanceof final ChoiceElementCollection choice) {
+      final UnaryOperator<Column> mapper =
+          TypeInfo.choiceTypeInfoMapper(choice.getChoiceDefinition().getAllChildTypes());
+      final Column mappedValue = choice.getParent().getColumn().transform(mapper).getValue();
+      return Collection.buildWithDefinition(
+          new DefaultRepresentation(mappedValue), TypeInfo.DEFINITION);
+    }
+
     return TypeInfo.fromCollection(input)
         .map(
             typeInfo -> {
