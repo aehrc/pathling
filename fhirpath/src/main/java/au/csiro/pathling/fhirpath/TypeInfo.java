@@ -60,6 +60,10 @@ public class TypeInfo {
           1,
           FHIRDefinedType.BACKBONEELEMENT);
 
+  private static final String FHIR_RESOURCE_BASE = TypeSpecifier.FHIR_NAMESPACE + ".Resource";
+  private static final String FHIR_ELEMENT_BASE = TypeSpecifier.FHIR_NAMESPACE + ".Element";
+  private static final String SYSTEM_ANY_BASE = TypeSpecifier.SYSTEM_NAMESPACE + ".Any";
+
   @Nonnull String namespace;
   @Nonnull String name;
   @Nonnull String baseType;
@@ -77,9 +81,7 @@ public class TypeInfo {
     return new TypeInfo(
         TypeSpecifier.FHIR_NAMESPACE,
         fhirType.toCode(),
-        isResource
-            ? TypeSpecifier.FHIR_NAMESPACE + ".Resource"
-            : TypeSpecifier.FHIR_NAMESPACE + ".Element");
+        isResource ? FHIR_RESOURCE_BASE : FHIR_ELEMENT_BASE);
   }
 
   /**
@@ -91,9 +93,7 @@ public class TypeInfo {
   @Nonnull
   public static TypeInfo forSystemType(@Nonnull final FhirPathType fhirPathType) {
     return new TypeInfo(
-        TypeSpecifier.SYSTEM_NAMESPACE,
-        fhirPathType.getTypeSpecifier(),
-        TypeSpecifier.SYSTEM_NAMESPACE + ".Any");
+        TypeSpecifier.SYSTEM_NAMESPACE, fhirPathType.getTypeSpecifier(), SYSTEM_ANY_BASE);
   }
 
   /**
@@ -103,8 +103,7 @@ public class TypeInfo {
    */
   @Nonnull
   public static TypeInfo forTypeInfo() {
-    return new TypeInfo(
-        TypeSpecifier.SYSTEM_NAMESPACE, "Object", TypeSpecifier.SYSTEM_NAMESPACE + ".Any");
+    return new TypeInfo(TypeSpecifier.SYSTEM_NAMESPACE, "Object", SYSTEM_ANY_BASE);
   }
 
   /**
@@ -123,12 +122,12 @@ public class TypeInfo {
     final Optional<? extends NodeDefinition> definition = input.getDefinition();
 
     // TypeInfo collections return System.Object.
-    if (definition.isPresent() && definition.get() == DEFINITION) {
+    if (definition.filter(d -> d == DEFINITION).isPresent()) {
       return Optional.of(forTypeInfo());
     }
 
     // FHIR model definitions use the FHIR namespace.
-    if (definition.isPresent() && definition.get().isFhirDefinition()) {
+    if (definition.filter(NodeDefinition::isFhirDefinition).isPresent()) {
       return input
           .getFhirType()
           .map(fhirType -> forFhirType(fhirType, input instanceof ResourceCollection));
