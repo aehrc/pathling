@@ -19,6 +19,8 @@ CVE-2022-46751
 CVE-2023-44981
 CVE-2024-23944
 CVE-2025-58457
+CVE-2026-24281
+CVE-2026-24308
 
 # Jersey Client is provided via Spark, not bundled in distribution.
 CVE-2025-12383
@@ -41,3 +43,6 @@ CVE-2025-33042
 # Not applicable in library context, user controls all compressed input.
 # See: https://github.com/aehrc/pathling/issues/2540
 CVE-2025-67721
+
+# jackson-core async parser DoS — Pathling uses only synchronous parsing via HAPI FHIR.
+GHSA-72hv-8253-57qq

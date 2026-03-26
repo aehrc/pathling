@@ -35,6 +35,7 @@ import jakarta.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -100,28 +101,44 @@ public record FunctionParameterResolver(
     final Object resolvedInput =
         resolveCollection(input, method.getParameters()[0], context.forInput());
 
+    // Count non-context parameters (excluding input and EvaluationContext-typed parameters) to
+    // determine the expected number of FHIRPath arguments.
+    final long contextParamCount =
+        IntStream.range(1, method.getParameterCount())
+            .filter(
+                i -> EvaluationContext.class.isAssignableFrom(method.getParameters()[i].getType()))
+            .count();
+    final long expectedArgCount = method.getParameterCount() - 1 - contextParamCount;
+
     // Check that not extra arguments are provided.
     context.check(
-        actualArguments.size() <= method.getParameterCount() - 1,
+        actualArguments.size() <= expectedArgCount,
         "Too many arguments provided. Expected "
-            + (method.getParameterCount() - 1)
+            + expectedArgCount
             + ", got "
             + actualArguments.size());
 
-    // Resolve each pair of method parameter and argument.
-    final Stream<Object> resolvedArguments =
-        IntStream.range(0, method.getParameterCount() - 1)
-            .mapToObj(
-                i -> {
-                  final Parameter parameter = method.getParameters()[i + 1];
-                  return resolveArgument(
-                      parameter,
-                      (i < actualArguments.size()) ? actualArguments.get(i) : null,
-                      context.forArgument(i, parameter.getType()));
-                });
+    // Resolve each method parameter. EvaluationContext parameters are injected from the resolver's
+    // state without consuming a FHIRPath argument. All other parameters consume arguments in order.
+    final List<Object> resolvedArguments = new ArrayList<>();
+    int argIndex = 0;
+    for (int i = 1; i < method.getParameterCount(); i++) {
+      final Parameter parameter = method.getParameters()[i];
+      if (EvaluationContext.class.isAssignableFrom(parameter.getType())) {
+        resolvedArguments.add(evaluationContext);
+      } else {
+        resolvedArguments.add(
+            resolveArgument(
+                parameter,
+                (argIndex < actualArguments.size()) ? actualArguments.get(argIndex) : null,
+                context.forArgument(argIndex, parameter.getType())));
+        argIndex++;
+      }
+    }
 
     return new FunctionInvocation(
-        method, Stream.concat(Stream.of(resolvedInput), resolvedArguments).toArray(Object[]::new));
+        method,
+        Stream.concat(Stream.of(resolvedInput), resolvedArguments.stream()).toArray(Object[]::new));
   }
 
   /**

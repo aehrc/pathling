@@ -356,8 +356,9 @@ The branching strategy is very simple and is based on
 long-lived branches, all changes are made via pull requests and will be the
 subject of an issue branch that is created from and targeting `main`.
 
-We release frequently, and we will use a short-lived `release/`-prefixed branch
-to aggregate more than one PR into a new version.
+We aim to release on the third Tuesday of each month, unless an urgent
+security update necessitates an earlier release. We use a short-lived
+`release/`-prefixed branch to aggregate more than one PR into a new version.
 
 The POM versions of the core modules should be on a SNAPSHOT version when
 developing on a release branch. Successful builds of the release branch

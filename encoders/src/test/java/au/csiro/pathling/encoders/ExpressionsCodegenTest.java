@@ -28,18 +28,21 @@ import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray2;
 import static au.csiro.pathling.encoders.ValueFunctions.nullIfMissingField;
 import static au.csiro.pathling.encoders.ValueFunctions.unnest;
+import static au.csiro.pathling.encoders.ValueFunctions.variantTransformTree;
+import static au.csiro.pathling.encoders.ValueFunctions.variantUnwrap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
+import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
@@ -51,22 +54,13 @@ import org.junit.jupiter.api.Test;
 import scala.collection.Seq;
 import scala.jdk.javaapi.CollectionConverters;
 
-/** Test for FHIR encoders. */
-public class ExpressionsTest {
+/** Tests for FHIR encoder expressions with whole-stage codegen enabled (default). */
+public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
 
-  private static SparkSession spark;
-
-  /** Set up Spark. */
+  /** Set up Spark with codegen enabled (the default). */
   @BeforeAll
-  static void setUp() {
-    spark =
-        SparkSession.builder()
-            .master("local[*]")
-            .appName("testing")
-            .config("spark.driver.bindAddress", "localhost")
-            .config("spark.driver.host", "localhost")
-            .config("spark.ui.enabled", "false")
-            .getOrCreate();
+  static void setUpCodegen() {
+    setUp();
   }
 
   /** Tear down Spark. */
@@ -186,11 +180,11 @@ public class ExpressionsTest {
 
     final Row firstRow = results.getFirst();
     assertEquals(0L, (Long) firstRow.getAs("id"));
-    // Single array should trigger else branch
+    // Single array should trigger else branch.
     assertNotNull(firstRow.getAs("test_single_array"));
     final Seq<?> singleArrayResult = firstRow.getAs("test_single_array");
     assertEquals(50, CollectionConverters.asJava(singleArrayResult).getFirst());
-    // Array of arrays should trigger array branch
+    // Array of arrays should trigger array branch.
     assertNotNull(firstRow.getAs("test_array_of_arrays"));
     final Seq<?> arrayOfArraysResult = firstRow.getAs("test_array_of_arrays");
     assertEquals(200, CollectionConverters.asJava(arrayOfArraysResult).getFirst());
@@ -199,11 +193,11 @@ public class ExpressionsTest {
 
     final Row secondRow = results.get(1);
     assertEquals(1L, (Long) secondRow.getAs("id"));
-    // Single array should trigger else branch
+    // Single array should trigger else branch.
     assertNotNull(secondRow.getAs("test_single_array"));
     final Seq<?> singleArrayResult2 = secondRow.getAs("test_single_array");
     assertEquals(50, CollectionConverters.asJava(singleArrayResult2).getFirst());
-    // Array of arrays should trigger array branch
+    // Array of arrays should trigger array branch.
     assertNotNull(secondRow.getAs("test_array_of_arrays"));
     final Seq<?> arrayOfArraysResult2 = secondRow.getAs("test_array_of_arrays");
     assertEquals(200, CollectionConverters.asJava(arrayOfArraysResult2).getFirst());
@@ -256,165 +250,6 @@ public class ExpressionsTest {
   }
 
   @Test
-  void testArrayCrossProd() {
-    final Dataset<Row> ds = spark.range(1).toDF();
-
-    // Create three input array columns
-    final Dataset<Row> inputDs =
-        ds.withColumn(
-                "arrayA",
-                functions.array(
-                    functions.struct(
-                        functions.lit("zzz").alias("str"), functions.lit(true).alias("bool")),
-                    functions.struct(
-                        functions.lit("yyy").alias("str"), functions.lit(false).alias("bool"))))
-            .withColumn(
-                "arrayB",
-                functions.array(
-                    functions.struct(functions.lit(13).alias("int")),
-                    functions.struct(functions.lit(17).alias("int")),
-                    functions.struct(functions.lit(1).alias("int"))))
-            .withColumn(
-                "arrayC",
-                functions.array(
-                    functions.struct(functions.lit(13.1).alias("float")),
-                    functions.struct(functions.lit(17.2).alias("float"))));
-
-    // Test structProduct
-    final Dataset<Row> structProductDs =
-        inputDs
-            .withColumn("sp_one", ColumnFunctions.structProduct(inputDs.col("arrayA")))
-            .withColumn(
-                "sp_two",
-                ColumnFunctions.structProduct(inputDs.col("arrayA"), inputDs.col("arrayB")))
-            .withColumn(
-                "sp_three",
-                ColumnFunctions.structProduct(
-                    inputDs.col("arrayA"), inputDs.col("arrayB"), inputDs.col("arrayC")));
-
-    // Test structProductOuter
-    final Dataset<Row> structProductOuterDs =
-        inputDs
-            .withColumn("spo_one", ColumnFunctions.structProductOuter(inputDs.col("arrayA")))
-            .withColumn(
-                "spo_two",
-                ColumnFunctions.structProductOuter(inputDs.col("arrayA"), inputDs.col("arrayB")))
-            .withColumn(
-                "spo_three",
-                ColumnFunctions.structProductOuter(
-                    inputDs.col("arrayA"), inputDs.col("arrayB"), inputDs.col("arrayC")));
-
-    // Collect and assert structProduct results
-    final List<Row> spResults = structProductDs.collectAsList();
-    assertEquals(1, spResults.size());
-    final Row spRow = spResults.getFirst();
-    assertNotNull(spRow.getAs("sp_one"));
-    assertNotNull(spRow.getAs("sp_two"));
-    assertNotNull(spRow.getAs("sp_three"));
-
-    // Collect and assert structProductOuter results
-    final List<Row> spoResults = structProductOuterDs.collectAsList();
-    assertEquals(1, spoResults.size());
-    final Row spoRow = spoResults.getFirst();
-    assertNotNull(spoRow.getAs("spo_one"));
-    assertNotNull(spoRow.getAs("spo_two"));
-    assertNotNull(spoRow.getAs("spo_three"));
-
-    // Assert sizes against expected product
-    final int aSize = 2; // arrayA
-    final int bSize = 3; // arrayB
-    final int cSize = 2; // arrayC
-
-    assertEquals(aSize, ((Seq<?>) spRow.getAs("sp_one")).size());
-    assertEquals(aSize, ((Seq<?>) spoRow.getAs("spo_one")).size());
-
-    assertEquals(aSize * bSize, ((Seq<?>) spRow.getAs("sp_two")).size());
-    assertEquals(aSize * bSize, ((Seq<?>) spoRow.getAs("spo_two")).size());
-
-    assertEquals(aSize * bSize * cSize, ((Seq<?>) spRow.getAs("sp_three")).size());
-    assertEquals(aSize * bSize * cSize, ((Seq<?>) spoRow.getAs("spo_three")).size());
-  }
-
-  @Test
-  void testArrayCrossProdWithNullsAndEmptys() {
-    final Dataset<Row> ds = spark.range(1).toDF();
-
-    // Create input array columns
-    final Dataset<Row> inputDs =
-        ds.withColumn(
-                "nullArray",
-                functions
-                    .lit(null)
-                    .cast(
-                        DataTypes.createArrayType(
-                            DataTypes.createStructType(
-                                Arrays.asList(
-                                    DataTypes.createStructField("str", DataTypes.StringType, true),
-                                    DataTypes.createStructField(
-                                        "int", DataTypes.IntegerType, true))))))
-            .withColumn(
-                "emptyArray",
-                functions
-                    .array()
-                    .cast(
-                        DataTypes.createArrayType(
-                            DataTypes.createStructType(
-                                Arrays.asList(
-                                    DataTypes.createStructField("str", DataTypes.StringType, true),
-                                    DataTypes.createStructField(
-                                        "int", DataTypes.IntegerType, true))))))
-            .withColumn(
-                "nonEmptyArray",
-                functions.array(
-                    functions.struct(
-                        functions.lit("zzz").alias("str"), functions.lit(1).alias("int")),
-                    functions.struct(
-                        functions.lit("yyy").alias("str"), functions.lit(2).alias("int"))));
-
-    // Test structProduct
-    final Dataset<Row> structProductDs =
-        inputDs
-            .withColumn("sp_null", ColumnFunctions.structProduct(inputDs.col("nullArray")))
-            .withColumn("sp_empty", ColumnFunctions.structProduct(inputDs.col("emptyArray")))
-            .withColumn(
-                "sp_nonEmpty",
-                ColumnFunctions.structProduct(
-                    inputDs.col("nonEmptyArray"), inputDs.col("emptyArray")));
-
-    // Test structProductOuter
-    final Dataset<Row> structProductOuterDs =
-        inputDs
-            .withColumn("spo_null", ColumnFunctions.structProductOuter(inputDs.col("nullArray")))
-            .withColumn("spo_empty", ColumnFunctions.structProductOuter(inputDs.col("emptyArray")))
-            .withColumn(
-                "spo_nonEmpty",
-                ColumnFunctions.structProductOuter(
-                    inputDs.col("nonEmptyArray"), inputDs.col("emptyArray")));
-
-    // Collect and assert structProduct results
-    final List<Row> spResults = structProductDs.collectAsList();
-    assertEquals(1, spResults.size());
-    final Row spRow = spResults.getFirst();
-    assertNotNull(spRow.getAs("sp_null"));
-    assertEquals(0, ((Seq<?>) spRow.getAs("sp_null")).size());
-    assertNotNull(spRow.getAs("sp_empty"));
-    assertEquals(0, ((Seq<?>) spRow.getAs("sp_empty")).size());
-    assertNotNull(spRow.getAs("sp_nonEmpty"));
-    assertEquals(0, ((Seq<?>) spRow.getAs("sp_nonEmpty")).size());
-
-    // Collect and assert structProductOuter results
-    final List<Row> spoResults = structProductOuterDs.collectAsList();
-    assertEquals(1, spoResults.size());
-    final Row spoRow = spoResults.getFirst();
-    assertNotNull(spoRow.getAs("spo_null"));
-    assertEquals(1, ((Seq<?>) spoRow.getAs("spo_null")).size());
-    assertNotNull(spoRow.getAs("spo_empty"));
-    assertEquals(1, ((Seq<?>) spoRow.getAs("spo_empty")).size());
-    assertNotNull(spoRow.getAs("spo_nonEmpty"));
-    assertEquals(1, ((Seq<?>) spoRow.getAs("spo_nonEmpty")).size());
-  }
-
-  @Test
   void testPruneAnnotations() {
     final Metadata metadata = Metadata.empty();
     final StructType valueStructType =
@@ -451,14 +286,14 @@ public class ExpressionsTest {
 
     final Dataset<Row> dataset = spark.createDataFrame(inputData, inputSchema).repartition(1);
 
-    // Prune all columns
+    // Prune all columns.
     final Dataset<Row> prunedDataset =
         dataset.select(
             Stream.of(dataset.columns())
                 .map(cn -> ValueFunctions.pruneAnnotations(dataset.col(cn)).alias(cn))
                 .toArray(Column[]::new));
 
-    // Expected result has the _fid field removed from the value struct
+    // Expected result has the _fid field removed from the value struct.
     final StructType expectedValueStructType =
         DataTypes.createStructType(
             new StructField[] {
@@ -529,13 +364,13 @@ public class ExpressionsTest {
 
     final Dataset<Row> dataset = spark.createDataFrame(inputData, inputSchema).repartition(1);
 
-    // Group by pruned value column and aggregate
+    // Group by pruned value column and aggregate.
     final Dataset<Row> grouped =
         dataset
             .groupBy(ValueFunctions.pruneAnnotations(dataset.col("value")))
             .agg(functions.count(dataset.col("gender")).alias("count"));
 
-    // Select with proper column names
+    // Select with proper column names.
     final Dataset<Row> groupedResult =
         grouped
             .select(functions.col(grouped.columns()[0]).alias("value"), functions.col("count"))
@@ -576,7 +411,7 @@ public class ExpressionsTest {
   private Dataset<Row> createNestedItemDataset() {
     final Metadata metadata = Metadata.empty();
 
-    // Level 2 (leaf): NO item field - different type from level1
+    // Level 2 (leaf): NO item field - different type from level1.
     final StructType level2Type =
         DataTypes.createStructType(
             new StructField[] {
@@ -584,7 +419,7 @@ public class ExpressionsTest {
               new StructField("text", DataTypes.StringType, true, metadata)
             });
 
-    // Level 1: HAS item field (array of level2Type) - different type from level0
+    // Level 1: HAS item field (array of level2Type) - different type from level0.
     final StructType level1Type =
         DataTypes.createStructType(
             new StructField[] {
@@ -593,7 +428,7 @@ public class ExpressionsTest {
               new StructField("item", DataTypes.createArrayType(level2Type), true, metadata)
             });
 
-    // Level 0: HAS item field (array of level1Type) - root level type
+    // Level 0: HAS item field (array of level1Type) - root level type.
     final StructType level0Type =
         DataTypes.createStructType(
             new StructField[] {
@@ -602,7 +437,7 @@ public class ExpressionsTest {
               new StructField("item", DataTypes.createArrayType(level1Type), true, metadata)
             });
 
-    // Create test data: 3 levels deep
+    // Create test data: 3 levels deep.
     final Row level2Item = RowFactory.create("3", "Level 2");
     final Row level1Item = RowFactory.create("2", "Level 1", List.of(level2Item));
     final Row level0Item = RowFactory.create("1", "Level 0", List.of(level1Item));
@@ -619,25 +454,16 @@ public class ExpressionsTest {
 
   @Test
   void testTransformTreeFinitePathWithDifferentTypes() {
-    // Finite path: traversing via getField('item') through structurally different types
-    // Each level has a different schema type (level0Type != level1Type != level2Type)
-    // maxDepth should NOT apply because types change at each traversal step
-
     final Dataset<Row> ds = createNestedItemDataset();
 
-    // Traverse with getField('item') - each traversal step changes type
-    // Level 0 (level0Type) -> getField('item') -> Level 1 (level1Type) -> getField('item') -> Level
-    // 2 (level2Type)
-    // maxDepth=1 is very strict, but should NOT limit because types change
     final Dataset<Row> result =
         ds.withColumn(
             "collected",
             ValueFunctions.transformTree(
                 ds.col("items"),
-                c -> c.getField("linkId"), // Extract linkId at each level
-                List.of(c -> unnest(c.getField("item"))), // Traverse via item field (type changes)
-                1 // maxDepth=1 (strict limit)
-                ));
+                c -> c.getField("linkId"),
+                List.of(c -> unnest(c.getField("item"))),
+                1));
 
     final List<Row> results = result.collectAsList();
     assertEquals(1, results.size());
@@ -646,32 +472,18 @@ public class ExpressionsTest {
     final Seq<?> collected = row.getAs("collected");
     final List<?> linkIds = CollectionConverters.asJava(collected);
 
-    // Should collect ALL 3 levels because each level has different type
-    // "1" (level 0), "2" (level 1), "3" (level 2)
     assertEquals(List.of("1", "2", "3"), linkIds);
   }
 
   @Test
   void testTransformTreeSelfReferentialInfiniteLoop() {
-    // Self-referential: traversing with identity function c -> c
-    // This would create infinite recursion (same type forever)
-    // maxDepth MUST apply to prevent infinite loop
-
     final Dataset<Row> ds = createNestedItemDataset();
 
-    // Traverse with identity function c -> c
-    // This would loop infinitely: items -> items -> items -> items ...
-    // Type never changes (always array<level0Type>), so maxDepth applies
-    // maxDepth=1 should limit to only 2 iterations (levels 0 and 1)
     final Dataset<Row> result =
         ds.withColumn(
             "collected",
             ValueFunctions.transformTree(
-                ds.col("items"),
-                c -> c.getField("linkId"), // Extract linkId at each level
-                List.of(c -> c), // Identity function: infinite loop!
-                2 // maxDepth=1 must prevent infinite recursion
-                ));
+                ds.col("items"), c -> c.getField("linkId"), List.of(c -> c), 2));
 
     final List<Row> results = result.collectAsList();
     assertEquals(1, results.size());
@@ -680,38 +492,21 @@ public class ExpressionsTest {
     final Seq<?> collected = row.getAs("collected");
     final List<?> linkIds = CollectionConverters.asJava(collected);
 
-    // Should collect only 3 levels (0, 1 and 2) because:
-    // - Level 0: items (type = array<level0Type>)
-    // - Level 1: c -> c returns items again (type = array<level0Type>, same type!)
-    // - Level 2: c -> c returns items again (type = array<level1Type>, same type!)
-    // - Level 3: would be items again but maxDepth=3 prevents it
-    // All extracted linkIds should be "1" (same item repeated)
     assertEquals(List.of("1", "1", "1"), linkIds);
   }
 
   @Test
   void testTransformTreeMultipleTraversalPaths() {
-    // Multiple traversal paths: combines finite path (type-changing) and self-referential (infinite
-    // loop)
-    // This demonstrates that different paths can have different depth behaviors simultaneously
-
     final Dataset<Row> ds = createNestedItemDataset();
 
-    // Use TWO traversal paths:
-    // Path 1: c -> unnest(c.getField("item")) - finite path with type changes
-    // Path 2: c -> c - self-referential with same type (infinite loop)
     final Dataset<Row> result =
         ds.withColumn(
             "collected",
             ValueFunctions.transformTree(
                 ds.col("items"),
-                c -> c.getField("linkId"), // Extract linkId at each level
-                List.of(
-                    c -> unnest(c.getField("item")), // Path 1: finite, type changes
-                    c -> c // Path 2: infinite loop, type stays same
-                    ),
-                1 // maxDepth=1
-                ));
+                c -> c.getField("linkId"),
+                List.of(c -> unnest(c.getField("item")), c -> c),
+                1));
 
     final List<Row> results = result.collectAsList();
     assertEquals(1, results.size());
@@ -719,28 +514,14 @@ public class ExpressionsTest {
     final Row row = results.getFirst();
     final Seq<?> collected = row.getAs("collected");
     final List<?> linkIds = CollectionConverters.asJava(collected);
-
-    // Should collect:
-    // From Path 1 (finite, type-changing):
-    // - "1" (level 0), "2" (level 1),
-    // From Path 2 (self-referential, infinite loop, maxDepth=1):
-    // - "1" (level 0), "2" (level 1),
-    // Total collected: "1", "2", "3", "3", "2", "3", "1", "2", "3"
 
     assertEquals(List.of("1", "2", "3", "3", "2", "3", "1", "2", "3"), linkIds);
   }
 
   @Test
   void testNullIfMissingField() {
-    // Comprehensive test for nullIfMissingField covering all scenarios:
-    // 1. Existing top-level fields returning actual values
-    // 2. Existing nested struct fields returning actual values
-    // 3. Missing struct fields returning null
-    // 4. Struct fields with null values vs non-existent fields
-
     final Metadata metadata = Metadata.empty();
 
-    // Create a struct type for person with name and age fields (no email or salary fields)
     final StructType personType =
         DataTypes.createStructType(
             new StructField[] {
@@ -758,60 +539,316 @@ public class ExpressionsTest {
 
     final List<Row> data =
         List.of(
-            RowFactory.create(1, 100, RowFactory.create(null, 25)), // person.name is null
-            RowFactory.create(2, 200, RowFactory.create("Bob", null)), // person.age is null
+            RowFactory.create(1, 100, RowFactory.create(null, 25)),
+            RowFactory.create(2, 200, RowFactory.create("Bob", null)),
             RowFactory.create(3, 300, RowFactory.create("Charlie", 30)));
 
     final Dataset<Row> ds = spark.createDataFrame(data, schema);
 
-    // Apply multiple nullIfMissingField expressions to test all scenarios
     final Dataset<Row> result =
-        ds
-            // Test 1: Existing top-level field
-            .withColumn("test_top_level", nullIfMissingField(ds.col("value")))
-            // Test 2: Existing nested field using dot notation
+        ds.withColumn("test_top_level", nullIfMissingField(ds.col("value")))
             .withColumn("test_nested_exists", nullIfMissingField(ds.col("person.name")))
-            // Test 3: Existing nested field using getField
             .withColumn("test_struct_field", nullIfMissingField(ds.col("person").getField("age")))
-            // Test 4: Missing struct field (address doesn't exist)
             .withColumn(
                 "test_missing_address", nullIfMissingField(ds.col("person").getField("address")))
-            // Test 5: Missing struct field (email doesn't exist)
             .withColumn(
                 "test_missing_email", nullIfMissingField(ds.col("person").getField("email")))
-            // Test 6: Missing struct field (salary doesn't exist)
             .withColumn(
                 "test_missing_salary", nullIfMissingField(ds.col("person").getField("salary")));
 
     final List<Row> results = result.collectAsList();
     assertEquals(3, results.size());
 
-    // Row 1: person.name is null, person.age is 25
+    // Row 1: person.name is null, person.age is 25.
     assertEquals(100, (Integer) results.getFirst().getAs("test_top_level"));
-    assertNull(results.getFirst().getAs("test_nested_exists")); // null value from data
+    assertNull(results.getFirst().getAs("test_nested_exists"));
     assertEquals(25, (Integer) results.getFirst().getAs("test_struct_field"));
-    assertNull(results.getFirst().getAs("test_missing_address")); // field doesn't exist
+    assertNull(results.getFirst().getAs("test_missing_address"));
     assertNull(results.get(0).getAs("test_missing_email"));
     assertNull(results.get(0).getAs("test_missing_salary"));
 
-    // Row 2: person.name is "Bob", person.age is null
+    // Row 2: person.name is "Bob", person.age is null.
     assertEquals(200, (Integer) results.get(1).getAs("test_top_level"));
     assertEquals("Bob", results.get(1).getAs("test_nested_exists"));
-    assertNull(results.get(1).getAs("test_struct_field")); // null value from data
-    assertNull(results.get(1).getAs("test_missing_address")); // field doesn't exist
+    assertNull(results.get(1).getAs("test_struct_field"));
+    assertNull(results.get(1).getAs("test_missing_address"));
     assertNull(results.get(1).getAs("test_missing_email"));
     assertNull(results.get(1).getAs("test_missing_salary"));
 
-    // Row 3: person.name is "Charlie", person.age is 30
+    // Row 3: person.name is "Charlie", person.age is 30.
     assertEquals(300, (Integer) results.get(2).getAs("test_top_level"));
     assertEquals("Charlie", results.get(2).getAs("test_nested_exists"));
     assertEquals(30, (Integer) results.get(2).getAs("test_struct_field"));
-    assertNull(results.get(2).getAs("test_missing_address")); // field doesn't exist
+    assertNull(results.get(2).getAs("test_missing_address"));
     assertNull(results.get(2).getAs("test_missing_email"));
     assertNull(results.get(2).getAs("test_missing_salary"));
+  }
 
-    // Key distinction: Fields that exist but have null values (row 1 name, row 2 age)
-    // preserve the null from the data, while missing fields (address, email, salary)
-    // return null because they don't exist in the struct schema
+  /**
+   * Creates a 2-level nested structure with schema divergence between levels. Level 0 has fields
+   * {linkId, text, extra, item} while level 1 has only {linkId, text}. This is the key scenario
+   * that demonstrates variantTransformTree's ability to handle schema differences across levels.
+   *
+   * @return Dataset with divergent schemas at each nesting level
+   */
+  private Dataset<Row> createDivergentSchemaDataset() {
+    final Metadata metadata = Metadata.empty();
+
+    // Level 1 (leaf): only linkId and text, no extra field, no item field.
+    final StructType level1Type =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("linkId", DataTypes.StringType, true, metadata),
+              new StructField("text", DataTypes.StringType, true, metadata)
+            });
+
+    // Level 0: has linkId, text, extra, and item array (richer schema than level 1).
+    final StructType level0Type =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("linkId", DataTypes.StringType, true, metadata),
+              new StructField("text", DataTypes.StringType, true, metadata),
+              new StructField("extra", DataTypes.StringType, true, metadata),
+              new StructField("item", DataTypes.createArrayType(level1Type), true, metadata)
+            });
+
+    final Row level1Item = RowFactory.create("child", "Child text");
+    final Row level0Item =
+        RowFactory.create("root", "Root text", "extra-value", List.of(level1Item));
+
+    final StructType rootSchema =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("id", DataTypes.IntegerType, true, metadata),
+              new StructField("items", DataTypes.createArrayType(level0Type), true, metadata)
+            });
+
+    return spark.createDataFrame(List.of(RowFactory.create(1, List.of(level0Item))), rootSchema);
+  }
+
+  @Test
+  void testVariantTransformTreeFinitePathWithDifferentTypes() {
+    // Variant version of the finite-path test. Uses variantTransformTree to extract scalar values
+    // across levels with different schemas. The result should match the non-variant version.
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    final Dataset<Row> result =
+        ds.withColumn(
+            "collected",
+            variantTransformTree(
+                ds.col("items"),
+                c -> functions.array(c.getField("linkId")),
+                List.of(c -> unnest(c.getField("item"))),
+                1));
+
+    // Flatten the result because each extracted element is Array[String] from the extractor.
+    final Dataset<Row> flattened =
+        result.withColumn("collected", functions.flatten(result.col("collected")));
+
+    final List<Row> results = flattened.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> linkIds = CollectionConverters.asJava(collected);
+
+    // Should collect all 3 levels: "1" (level 0), "2" (level 1), "3" (level 2).
+    assertEquals(List.of("1", "2", "3"), linkIds);
+  }
+
+  @Test
+  void testVariantTransformTreeSelfReferentialWithDepthLimit() {
+    // Self-referential traversal (identity function) limited by maxDepth. The same item is
+    // extracted repeatedly until the depth limit is reached.
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    final Dataset<Row> result =
+        ds.withColumn(
+            "collected",
+            variantTransformTree(
+                ds.col("items"), c -> functions.array(c.getField("linkId")), List.of(c -> c), 2));
+
+    // Flatten the result because each extracted element is Array[String] from the extractor.
+    final Dataset<Row> flattened =
+        result.withColumn("collected", functions.flatten(result.col("collected")));
+
+    final List<Row> results = flattened.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> linkIds = CollectionConverters.asJava(collected);
+
+    // Self-referential: same item repeated at each depth level.
+    assertEquals(List.of("1", "1", "1"), linkIds);
+  }
+
+  @Test
+  void testVariantTransformTreeSchemaDivergence() {
+    // Key test: full-struct extraction across levels with different schemas. The level-0 schema
+    // has {linkId, text, extra, item} while level-1 only has {linkId, text}. The variant
+    // mechanism should unify these, filling missing fields with null at level 1.
+
+    final Dataset<Row> ds = createDivergentSchemaDataset();
+
+    final Dataset<Row> result =
+        ds.withColumn(
+            "collected",
+            variantTransformTree(
+                ds.col("items"), c -> c, List.of(c -> unnest(c.getField("item"))), 1));
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> items = CollectionConverters.asJava(collected);
+
+    // Should have 2 items: the level-0 struct and the level-1 struct.
+    assertEquals(2, items.size());
+
+    // Level-0 item: all fields present.
+    final Row level0 = (Row) items.get(0);
+    assertEquals("root", level0.getAs("linkId"));
+    assertEquals("Root text", level0.getAs("text"));
+    assertEquals("extra-value", level0.getAs("extra"));
+    assertNotNull(level0.getAs("item"));
+
+    // Level-1 item: missing fields (extra, item) should be null.
+    final Row level1 = (Row) items.get(1);
+    assertEquals("child", level1.getAs("linkId"));
+    assertEquals("Child text", level1.getAs("text"));
+    assertNull(level1.getAs("extra"));
+    assertNull(level1.getAs("item"));
+  }
+
+  @Test
+  void testVariantTransformTreeErrorOnDepthExhaustion() {
+    // When errorOnDepthExhaustion=true, exceeding maxDepth on a self-referential traversal
+    // should throw an exception rather than silently returning an empty array.
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    // The AnalysisException is thrown eagerly during column resolution, so the entire
+    // withColumn + collect must be wrapped in the assertion.
+    assertThrows(
+        AnalysisException.class,
+        () ->
+            ds.withColumn(
+                    "collected",
+                    variantTransformTree(
+                        ds.col("items"),
+                        c -> functions.array(c.getField("linkId")),
+                        List.of(c -> c),
+                        1,
+                        true))
+                .collectAsList());
+  }
+
+  @Test
+  void testVariantUnwrapDirect() {
+    // Direct round-trip test: create a struct array, convert each element to Variant, then unwrap
+    // using the original column as schema reference. The data should survive the round-trip.
+
+    final Metadata metadata = Metadata.empty();
+    final StructType itemType =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("name", DataTypes.StringType, true, metadata),
+              new StructField("value", DataTypes.IntegerType, true, metadata)
+            });
+
+    final StructType rootSchema =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("id", DataTypes.IntegerType, true, metadata),
+              new StructField("items", DataTypes.createArrayType(itemType), true, metadata)
+            });
+
+    final List<Row> data =
+        List.of(
+            RowFactory.create(
+                1, List.of(RowFactory.create("Alice", 10), RowFactory.create("Bob", 20))));
+
+    final Dataset<Row> ds = spark.createDataFrame(data, rootSchema);
+
+    // Convert array elements to Variant and back.
+    final Column variantArray = functions.transform(ds.col("items"), functions::to_variant_object);
+    final Dataset<Row> result =
+        ds.withColumn("unwrapped", variantUnwrap(variantArray, ds.col("items")));
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> unwrapped = row.getAs("unwrapped");
+    final List<?> unwrappedItems = CollectionConverters.asJava(unwrapped);
+
+    assertEquals(2, unwrappedItems.size());
+
+    final Row first = (Row) unwrappedItems.get(0);
+    assertEquals("Alice", first.getAs("name"));
+    assertEquals(10, (int) first.getAs("value"));
+
+    final Row second = (Row) unwrappedItems.get(1);
+    assertEquals("Bob", second.getAs("name"));
+    assertEquals(20, (int) second.getAs("value"));
+  }
+
+  @Test
+  void testVariantUnwrapFailOnErrorFalse() {
+    // When failOnError=false, missing fields should produce null rather than throwing an
+    // exception. The source data has a subset schema; the schema reference has additional fields.
+
+    final Metadata metadata = Metadata.empty();
+
+    // Source schema: only has "name".
+    final StructType sourceType =
+        DataTypes.createStructType(
+            new StructField[] {new StructField("name", DataTypes.StringType, true, metadata)});
+
+    // Target schema reference: has "name" and "value".
+    final StructType targetType =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("name", DataTypes.StringType, true, metadata),
+              new StructField("value", DataTypes.IntegerType, true, metadata)
+            });
+
+    final StructType rootSchema =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("id", DataTypes.IntegerType, true, metadata),
+              new StructField("source", DataTypes.createArrayType(sourceType), true, metadata),
+              new StructField("target_ref", DataTypes.createArrayType(targetType), true, metadata)
+            });
+
+    final List<Row> data =
+        List.of(
+            RowFactory.create(
+                1, List.of(RowFactory.create("Alice")), List.of(RowFactory.create("Ref", 99))));
+
+    final Dataset<Row> ds = spark.createDataFrame(data, rootSchema);
+
+    // Convert source elements to Variant and unwrap with the wider target schema.
+    final Column variantArray = functions.transform(ds.col("source"), functions::to_variant_object);
+    final Dataset<Row> result =
+        ds.withColumn("unwrapped", variantUnwrap(variantArray, ds.col("target_ref"), false));
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> unwrapped = row.getAs("unwrapped");
+    final List<?> unwrappedItems = CollectionConverters.asJava(unwrapped);
+
+    assertEquals(1, unwrappedItems.size());
+
+    final Row item = (Row) unwrappedItems.getFirst();
+    assertEquals("Alice", item.getAs("name"));
+    // The "value" field is missing from the source, so it should be null.
+    assertNull(item.getAs("value"));
   }
 }

@@ -23,6 +23,7 @@ import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 
+import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -128,11 +129,19 @@ public class FhirViewExecutor {
         view.getConstant().stream()
             .collect(toMap(ConstantDeclaration::getName, c -> Collection.fromValue(c.getValue())));
 
-    // Create evaluator (uses ResourceRepresentation with id column)
+    // Build FHIRPath configuration from query configuration so that FHIRPath functions like
+    // repeat() and repeatAll() respect the user-configured depth limit.
+    final FhirpathConfiguration fhirpathConfig =
+        FhirpathConfiguration.builder()
+            .maxUnboundTraversalDepth(queryConfiguration.getMaxUnboundTraversalDepth())
+            .build();
+
+    // Create evaluator (uses ResourceRepresentation with id column).
     final SingleResourceEvaluator evaluator =
         SingleResourceEvaluatorBuilder.create(subjectResource, fhirContext)
             .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
             .withVariables(variables)
+            .withConfiguration(fhirpathConfig)
             .build();
 
     return projection.execute(dataset, evaluator);
