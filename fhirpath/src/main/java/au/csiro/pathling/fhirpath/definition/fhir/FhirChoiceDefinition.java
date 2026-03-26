@@ -22,6 +22,7 @@ import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 
@@ -74,6 +75,14 @@ class FhirChoiceDefinition implements ChoiceDefinition {
   public Optional<ElementDefinition> getChildByType(@Nonnull final String type) {
     final String key = FhirChoiceDefinition.getColumnName(getName(), type);
     return getChildByElementName(key);
+  }
+
+  @Nonnull
+  @Override
+  public List<ElementDefinition> getAllChildTypes() {
+    return childDefinition.getValidChildNames().stream()
+        .flatMap(name -> getChildByElementName(name).stream())
+        .toList();
   }
 
   /**
