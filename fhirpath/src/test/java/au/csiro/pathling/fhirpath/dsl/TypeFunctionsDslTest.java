@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.dsl;
 
+import static au.csiro.pathling.test.dsl.TypeInfoExpectation.toTypeInfo;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toQuantity;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
@@ -761,84 +762,75 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
         .withResource(patient)
         // System primitive literals
         .group("type() - System primitive literals")
-        .testEquals("System", "1.type().namespace", "Integer literal namespace is System")
-        .testEquals("Integer", "1.type().name", "Integer literal name is Integer")
-        .testEquals("System.Any", "1.type().baseType", "Integer literal baseType is System.Any")
-        .testEquals("System", "true.type().namespace", "Boolean literal namespace is System")
-        .testEquals("Boolean", "true.type().name", "Boolean literal name is Boolean")
-        .testEquals("System", "'hello'.type().namespace", "String literal namespace is System")
-        .testEquals("String", "'hello'.type().name", "String literal name is String")
-        .testEquals("System", "3.14.type().namespace", "Decimal literal namespace is System")
-        .testEquals("Decimal", "3.14.type().name", "Decimal literal name is Decimal")
-        .testEquals("System", "@2024-01-01.type().namespace", "Date literal namespace is System")
-        .testEquals("Date", "@2024-01-01.type().name", "Date literal name is Date")
         .testEquals(
-            "System",
-            "@2024-01-01T10:00:00.type().namespace",
-            "DateTime literal namespace is System")
+            toTypeInfo("System.Integer(System.Any)"),
+            "1.type()",
+            "Integer literal type is System.Integer")
         .testEquals(
-            "DateTime", "@2024-01-01T10:00:00.type().name", "DateTime literal name is DateTime")
-        .testEquals("System", "@T10:00:00.type().namespace", "Time literal namespace is System")
-        .testEquals("Time", "@T10:00:00.type().name", "Time literal name is Time")
+            toTypeInfo("System.Boolean(System.Any)"),
+            "true.type()",
+            "Boolean literal type is System.Boolean")
+        .testEquals(
+            toTypeInfo("System.String(System.Any)"),
+            "'hello'.type()",
+            "String literal type is System.String")
+        .testEquals(
+            toTypeInfo("System.Decimal(System.Any)"),
+            "3.14.type()",
+            "Decimal literal type is System.Decimal")
+        .testEquals(
+            toTypeInfo("System.Date(System.Any)"),
+            "@2024-01-01.type()",
+            "Date literal type is System.Date")
+        .testEquals(
+            toTypeInfo("System.DateTime(System.Any)"),
+            "@2024-01-01T10:00:00.type()",
+            "DateTime literal type is System.DateTime")
+        .testEquals(
+            toTypeInfo("System.Time(System.Any)"),
+            "@T10:00:00.type()",
+            "Time literal type is System.Time")
         // System Quantity and Coding literals
         .group("type() - System Quantity and Coding literals")
-        .testEquals("System", "(10 'mg').type().namespace", "Quantity literal namespace is System")
-        .testEquals("Quantity", "(10 'mg').type().name", "Quantity literal name is Quantity")
         .testEquals(
-            "System.Any", "(10 'mg').type().baseType", "Quantity literal baseType is System.Any")
+            toTypeInfo("System.Quantity(System.Any)"),
+            "(10 'mg').type()",
+            "Quantity literal type is System.Quantity")
         .testEquals(
-            "System",
-            "(http://example.com|code).type().namespace",
-            "Coding literal namespace is System")
-        .testEquals(
-            "Coding", "(http://example.com|code).type().name", "Coding literal name is Coding")
-        .testEquals(
-            "System.Any",
-            "(http://example.com|code).type().baseType",
-            "Coding literal baseType is System.Any")
+            toTypeInfo("System.Coding(System.Any)"),
+            "(http://example.com|code).type()",
+            "Coding literal type is System.Coding")
         // FHIR primitive elements
         .group("type() - FHIR primitive elements")
         .testEquals(
-            "FHIR", "Patient.active.type().namespace", "FHIR boolean element namespace is FHIR")
-        .testEquals("boolean", "Patient.active.type().name", "FHIR boolean element name is boolean")
+            toTypeInfo("FHIR.boolean(FHIR.Element)"),
+            "Patient.active.type()",
+            "FHIR boolean element type is FHIR.boolean")
         .testEquals(
-            "FHIR.Element",
-            "Patient.active.type().baseType",
-            "FHIR boolean element baseType is FHIR.Element")
-        .testEquals(
-            "FHIR", "Patient.birthDate.type().namespace", "FHIR date element namespace is FHIR")
-        .testEquals("date", "Patient.birthDate.type().name", "FHIR date element name is date")
+            toTypeInfo("FHIR.date(FHIR.Element)"),
+            "Patient.birthDate.type()",
+            "FHIR date element type is FHIR.date")
         // FHIR complex type elements
         .group("type() - FHIR complex type elements")
         .testEquals(
-            "FHIR",
-            "Patient.maritalStatus.type().namespace",
-            "FHIR CodeableConcept element namespace is FHIR")
-        .testEquals(
-            "CodeableConcept",
-            "Patient.maritalStatus.type().name",
-            "FHIR CodeableConcept element name is CodeableConcept")
-        .testEquals(
-            "FHIR.Element",
-            "Patient.maritalStatus.type().baseType",
-            "FHIR CodeableConcept baseType is FHIR.Element")
+            toTypeInfo("FHIR.CodeableConcept(FHIR.Element)"),
+            "Patient.maritalStatus.type()",
+            "CodeableConcept element type is FHIR.CodeableConcept")
         // FHIR resource types
         .group("type() - FHIR resource types")
-        .testEquals("FHIR", "Patient.type().namespace", "Patient resource namespace is FHIR")
-        .testEquals("Patient", "Patient.type().name", "Patient resource name is Patient")
         .testEquals(
-            "FHIR.Resource",
-            "Patient.type().baseType",
-            "Patient resource baseType is FHIR.Resource")
+            toTypeInfo("FHIR.Patient(FHIR.Resource)"),
+            "Patient.type()",
+            "Patient resource type is FHIR.Patient")
         // Empty collection
         .group("type() - empty collection")
         .testEmpty("{}.type()", "type() returns empty for empty collection")
         // Nested type().type() returns System.Object
         .group("type() - nested type() call")
-        .testEquals("System", "1.type().type().namespace", "Nested type() returns System namespace")
-        .testEquals("Object", "1.type().type().name", "Nested type() returns Object name")
         .testEquals(
-            "System.Any", "1.type().type().baseType", "Nested type() returns System.Any baseType")
+            toTypeInfo("System.Object(System.Any)"),
+            "1.type().type()",
+            "Nested type() returns System.Object")
         // ofType() followed by type()
         .group("type() - ofType() followed by type()")
         .testEquals(
@@ -848,16 +840,13 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
         // FHIRPath operations produce System types
         .group("type() - operations produce System types")
         .testEquals(
-            "System", "Patient.active.not().type().namespace", "not() produces System namespace")
-        .testEquals("Boolean", "Patient.active.not().type().name", "not() produces System Boolean")
+            toTypeInfo("System.Boolean(System.Any)"),
+            "Patient.active.not().type()",
+            "not() produces System.Boolean")
         .testEquals(
-            "String",
-            "(Patient.name.first().given.first() + Patient.name.first().family).type().name",
-            "String concatenation produces System String")
-        .testEquals(
-            "System",
-            "(Patient.name.first().given.first() + Patient.name.first().family).type().namespace",
-            "String concatenation produces System namespace")
+            toTypeInfo("System.String(System.Any)"),
+            "(Patient.name.first().given.first() + Patient.name.first().family).type()",
+            "String concatenation produces System.String")
         // Multiple elements produce multiple TypeInfo structs
         .group("type() - multiple elements")
         .testEquals(
@@ -865,13 +854,9 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
         // FHIR plural collection produces one TypeInfo per element
         .group("type() - FHIR plural collection")
         .testEquals(
-            "FHIR",
-            "Patient.name.given.type().first().namespace",
-            "FHIR plural collection type() returns FHIR namespace")
-        .testEquals(
-            "string",
-            "Patient.name.given.type().first().name",
-            "FHIR plural collection type() returns FHIR type name")
+            toTypeInfo("FHIR.string(FHIR.Element)"),
+            "Patient.name.given.type().first()",
+            "FHIR plural collection type() returns FHIR.string")
         .testEquals(
             2,
             "Patient.name.given.type().count()",
@@ -879,13 +864,9 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
         // where() preserves FHIR context
         .group("type() - where() preserves FHIR context")
         .testEquals(
-            "FHIR",
-            "Patient.active.where($this).type().namespace",
-            "where() preserves FHIR namespace")
-        .testEquals(
-            "boolean",
-            "Patient.active.where($this).type().name",
-            "where() preserves FHIR type name")
+            toTypeInfo("FHIR.boolean(FHIR.Element)"),
+            "Patient.active.where($this).type()",
+            "where() preserves FHIR type context")
         .build();
   }
 
@@ -958,25 +939,21 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
         // Singular choice elements - type() returns correct TypeInfo per type.
         .group("type() - singular choice elements")
         .testEquals(
-            "FHIR",
-            "component[0].value.type().namespace",
-            "Quantity choice element namespace is FHIR")
+            toTypeInfo("FHIR.Quantity(FHIR.Element)"),
+            "component[0].value.type()",
+            "Quantity choice element type is FHIR.Quantity")
         .testEquals(
-            "Quantity",
-            "component[0].value.type().name",
-            "Quantity choice element name is Quantity")
+            toTypeInfo("FHIR.string(FHIR.Element)"),
+            "component[2].value.type()",
+            "String choice element type is FHIR.string")
         .testEquals(
-            "FHIR.Element",
-            "component[0].value.type().baseType",
-            "Quantity choice element baseType is FHIR.Element")
+            toTypeInfo("FHIR.CodeableConcept(FHIR.Element)"),
+            "component[3].value.type()",
+            "CodeableConcept choice element type is FHIR.CodeableConcept")
         .testEquals(
-            "string", "component[2].value.type().name", "String choice element name is string")
-        .testEquals(
-            "CodeableConcept",
-            "component[3].value.type().name",
-            "CodeableConcept choice element name is CodeableConcept")
-        .testEquals(
-            "boolean", "component[4].value.type().name", "Boolean choice element name is boolean")
+            toTypeInfo("FHIR.boolean(FHIR.Element)"),
+            "component[4].value.type()",
+            "Boolean choice element type is FHIR.boolean")
         // Choice element with no value set returns null.
         .group("type() - choice element with no value")
         .testTrue(
@@ -989,19 +966,25 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
             "component.value.type().count()",
             "type() returns one TypeInfo per component value including null")
         .testEquals(
-            "Quantity",
-            "component.value.type().first().name",
-            "First component type name is Quantity")
+            toTypeInfo("FHIR.Quantity(FHIR.Element)"),
+            "component.value.type().first()",
+            "First component type is FHIR.Quantity")
         .testEquals(
-            "Quantity", "component.value.type()[1].name", "Second component type name is Quantity")
+            toTypeInfo("FHIR.Quantity(FHIR.Element)"),
+            "component.value.type()[1]",
+            "Second component type is FHIR.Quantity")
         .testEquals(
-            "string", "component.value.type()[2].name", "Third component type name is string")
+            toTypeInfo("FHIR.string(FHIR.Element)"),
+            "component.value.type()[2]",
+            "Third component type is FHIR.string")
         .testEquals(
-            "CodeableConcept",
-            "component.value.type()[3].name",
-            "Fourth component type name is CodeableConcept")
+            toTypeInfo("FHIR.CodeableConcept(FHIR.Element)"),
+            "component.value.type()[3]",
+            "Fourth component type is FHIR.CodeableConcept")
         .testEquals(
-            "boolean", "component.value.type()[4].name", "Fifth component type name is boolean")
+            toTypeInfo("FHIR.boolean(FHIR.Element)"),
+            "component.value.type()[4]",
+            "Fifth component type is FHIR.boolean")
         // Composition with other FHIRPath functions.
         .group("type() - composition with FHIRPath functions")
         .testEquals(
