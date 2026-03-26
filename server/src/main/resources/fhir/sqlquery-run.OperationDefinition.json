@@ -1,0 +1,83 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "sqlquery-run",
+  "title": "Pathling SQLQuery Run Operation",
+  "status": "active",
+  "kind": "operation",
+  "experimental": false,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation executes a SQL query against materialised ViewDefinition tables within the Pathling server. The query is provided as a Library resource conforming to the SQLQuery profile from the SQL on FHIR v2 specification.",
+  "affectsState": false,
+  "code": "sqlquery-run",
+  "system": true,
+  "type": true,
+  "instance": true,
+  "resource": ["Library"],
+  "parameter": [
+    {
+      "name": "queryResource",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "An inline Library resource conforming to the SQLQuery profile. Contains the SQL query, ViewDefinition dependencies, and parameter declarations.",
+      "type": "Resource"
+    },
+    {
+      "name": "queryReference",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "A reference to a stored Library resource conforming to the SQLQuery profile.",
+      "type": "Reference"
+    },
+    {
+      "name": "_format",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "The output format for the query results. Supported values are 'ndjson' (default), 'csv', 'json', and 'parquet'.",
+      "type": "code"
+    },
+    {
+      "name": "header",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "For CSV output, whether to include a header row. Defaults to true.",
+      "type": "boolean"
+    },
+    {
+      "name": "_limit",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Maximum number of rows to return in the result.",
+      "type": "integer"
+    },
+    {
+      "name": "parameter",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "Query parameter values to bind to the SQL query. Each parameter has a name and a value.",
+      "part": [
+        {
+          "name": "name",
+          "use": "in",
+          "min": 1,
+          "max": "1",
+          "documentation": "The name of the parameter, matching the colon-prefixed placeholder in the SQL.",
+          "type": "string"
+        },
+        {
+          "name": "value",
+          "use": "in",
+          "min": 1,
+          "max": "1",
+          "documentation": "The value to bind to the parameter.",
+          "type": "string"
+        }
+      ]
+    }
+  ]
+}
