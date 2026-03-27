@@ -441,6 +441,17 @@ excludeSet:
         outcome: failure
         any:
           - "Patient.telecom.where($this.use = 'work')"
+      - title: "type() test expects old spec format without baseType"
+        id: "#2395"
+        type: wontfix
+        outcome: failure
+        comment: |
+          The test expects the published spec format ({name, namespace} with 2 fields)
+          but our implementation follows the CI build spec ({namespace, name, baseType}
+          with 3 fields). The test also expects 4 elements but null given names are
+          correctly filtered out.
+        any:
+          - "Patient.name.given.type()"
   - title: Combining exclusions
     glob: "fhirpath-js/cases/5.4_combining.yaml"
     exclude:
@@ -483,11 +494,6 @@ excludeSet:
         any:
           - "** testEscapedIdentifier"
           - "** testSimpleBackTick1"
-      - title: "Tick quotes identifiers not supported"
-        id: "#2153"
-        type: bug
-        any:
-          - "Patient.ofType(FHIR.`Patient`).type().name"
       - title: "Implicit conversion of polymorphic types not supported"
         type: feature
         id: "#2163"

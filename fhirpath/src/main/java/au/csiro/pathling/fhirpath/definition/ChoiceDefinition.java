@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.definition;
 
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 
 /** Represents a choice child elements in a FHIR-like schema. */
@@ -31,4 +32,12 @@ public interface ChoiceDefinition extends ChildDefinition {
    */
   @Nonnull
   Optional<ElementDefinition> getChildByType(@Nonnull final String type);
+
+  /**
+   * Returns all possible child element definitions for this choice element.
+   *
+   * @return the list of all child element definitions
+   */
+  @Nonnull
+  List<ElementDefinition> getAllChildTypes();
 }

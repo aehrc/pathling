@@ -165,6 +165,28 @@ public class Collection implements Equatable {
   }
 
   /**
+   * Builds a {@link Collection} with only a {@link ColumnRepresentation} and {@link
+   * NodeDefinition}, without requiring a {@link FHIRDefinedType}. This is used for collections that
+   * represent non-FHIR structures such as TypeInfo results from the {@code type()} reflection
+   * function.
+   *
+   * @param columnRepresentation a {@link ColumnRepresentation} containing the result
+   * @param definition the {@link NodeDefinition} enabling child element navigation
+   * @return a new {@link Collection}
+   */
+  @Nonnull
+  public static Collection buildWithDefinition(
+      @Nonnull final ColumnRepresentation columnRepresentation,
+      @Nonnull final NodeDefinition definition) {
+    return new Collection(
+        columnRepresentation,
+        Optional.empty(),
+        Optional.empty(),
+        Optional.of(definition),
+        Optional.empty());
+  }
+
+  /**
    * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
    * ColumnRepresentation}, {@link FHIRDefinedType} and {@link ElementDefinition}.
    *
