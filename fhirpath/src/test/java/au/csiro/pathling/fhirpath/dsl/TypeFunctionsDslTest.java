@@ -757,6 +757,14 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
                 new Coding(
                     "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "M", "Married")));
     patient.addName(new HumanName().setFamily("Smith").addGiven("John").addGiven("David"));
+    patient.addContact(
+        new Patient.ContactComponent()
+            .setName(new HumanName().setFamily("Jones"))
+            .addRelationship(
+                new CodeableConcept()
+                    .addCoding(
+                        new Coding(
+                            "http://terminology.hl7.org/CodeSystem/v2-0131", "N", "Next-of-Kin"))));
 
     return builder()
         .withResource(patient)
@@ -816,6 +824,12 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
             toTypeInfo("FHIR.CodeableConcept(FHIR.Element)"),
             "Patient.maritalStatus.type()",
             "CodeableConcept element type is FHIR.CodeableConcept")
+        // FHIR backbone elements return generic BackboneElement type.
+        .group("type() - FHIR backbone elements")
+        .testEquals(
+            toTypeInfo("FHIR.BackboneElement(FHIR.Element)"),
+            "Patient.contact.first().type()",
+            "Backbone element type is FHIR.BackboneElement")
         // FHIR resource types
         .group("type() - FHIR resource types")
         .testEquals(
