@@ -9,6 +9,24 @@ excludeSet:
         id: "#2418"
         expression:
           - "^StructureDefinition"
+      - title: "trace() projection parameter not yet supported"
+        type: feature
+        id: "#2580"
+        comment: |
+          The optional projection parameter for trace(name, projection) is not
+          yet implemented. Only trace(name) is supported.
+        any:
+          - "trace('test', given)"
+      - title: "Primitive .id extension not accessible after trace"
+        type: bug
+        id: "#2580"
+        outcome: failure
+        comment: |
+          Accessing the .id extension property on a FHIR primitive element
+          after trace() returns null because the TraceExpression wrapping
+          changes how the schema is resolved for extension fields.
+        any:
+          - "trace('coll')[0].id"
       - title: Parse error
         type: wontfix
         comment: |
