@@ -72,7 +72,7 @@ class DataSource(SparkConversionsMixin):
         self,
         resource: Optional[str] = None,
         select: Optional[Sequence[Dict]] = None,
-        constants: Optional[Sequence[Dict]] = None,
+        constant: Optional[Sequence[Dict]] = None,
         where: Optional[Sequence[Dict]] = None,
         json: Optional[str] = None,
     ) -> DataFrame:
@@ -82,7 +82,7 @@ class DataSource(SparkConversionsMixin):
         :param resource: The FHIR resource that the view is based upon, e.g. 'Patient' or
                'Observation'.
         :param select: A list of columns and nested selects to include in the view.
-        :param constants: A list of constants that can be used in FHIRPath expressions.
+        :param constant: A list of constants that can be used in FHIRPath expressions.
         :param where: A list of FHIRPath expressions that can be used to filter the view.
         :param json: A JSON string representing the view definition, as an alternative to providing
                the parameters as Python objects.
@@ -96,7 +96,7 @@ class DataSource(SparkConversionsMixin):
             args = locals()
             query = {
                 key: args[key]
-                for key in ["resource", "select", "constants", "where"]
+                for key in ["resource", "select", "constant", "where"]
                 if args[key] is not None
             }
             query_json = dumps(query)
