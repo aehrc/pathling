@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionError;
 import au.csiro.pathling.fhirpath.variable.EnvironmentVariableResolver;
+import au.csiro.pathling.sql.TraceCollector;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
@@ -45,17 +46,19 @@ import java.util.Optional;
  * @param functionRegistry the registry for resolving FHIRPath functions
  * @param resourceResolver the resolver for FHIR resources
  * @param configuration the FHIRPath evaluation configuration
+ * @param traceCollector an optional collector for capturing trace() output
  */
 public record FhirEvaluationContext(
     @Nonnull Collection inputContext,
     @Nonnull EnvironmentVariableResolver variableResolver,
     @Nonnull FunctionRegistry functionRegistry,
     @Nonnull ResourceResolver resourceResolver,
-    @Nonnull FhirpathConfiguration configuration)
+    @Nonnull FhirpathConfiguration configuration,
+    @Nonnull Optional<TraceCollector> traceCollector)
     implements EvaluationContext {
 
   /**
-   * Creates a FhirEvaluationContext with default configuration.
+   * Creates a FhirEvaluationContext with default configuration and no trace collector.
    *
    * @param inputContext the current input context (focus) for the evaluation
    * @param variableResolver the resolver for environment variables
@@ -72,7 +75,32 @@ public record FhirEvaluationContext(
         variableResolver,
         functionRegistry,
         resourceResolver,
-        FhirpathConfiguration.DEFAULT);
+        FhirpathConfiguration.DEFAULT,
+        Optional.empty());
+  }
+
+  /**
+   * Creates a FhirEvaluationContext with the specified configuration and no trace collector.
+   *
+   * @param inputContext the current input context (focus) for the evaluation
+   * @param variableResolver the resolver for environment variables
+   * @param functionRegistry the registry for resolving FHIRPath functions
+   * @param resourceResolver the resolver for FHIR resources
+   * @param configuration the FHIRPath evaluation configuration
+   */
+  public FhirEvaluationContext(
+      @Nonnull final Collection inputContext,
+      @Nonnull final EnvironmentVariableResolver variableResolver,
+      @Nonnull final FunctionRegistry functionRegistry,
+      @Nonnull final ResourceResolver resourceResolver,
+      @Nonnull final FhirpathConfiguration configuration) {
+    this(
+        inputContext,
+        variableResolver,
+        functionRegistry,
+        resourceResolver,
+        configuration,
+        Optional.empty());
   }
 
   /**
@@ -130,5 +158,16 @@ public record FhirEvaluationContext(
   @Nonnull
   public FhirpathConfiguration getConfiguration() {
     return configuration;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Returns the trace collector provided at construction time.
+   */
+  @Override
+  @Nonnull
+  public Optional<TraceCollector> getTraceCollector() {
+    return traceCollector;
   }
 }

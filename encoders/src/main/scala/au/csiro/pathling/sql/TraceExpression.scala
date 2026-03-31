@@ -29,10 +29,17 @@ import org.slf4j.LoggerFactory
  * value via SLF4J, then returns the value unchanged. This implements the
  * FHIRPath trace() function semantics.
  *
- * @param child the child expression whose value is traced
- * @param name  the diagnostic label included in log messages
+ * When a [[TraceCollector]] is provided, each value is also added to the
+ * collector with the trace label and FHIR type, enabling programmatic capture
+ * of trace output.
+ *
+ * @param child     the child expression whose value is traced
+ * @param name      the diagnostic label included in log messages
+ * @param fhirType  the FHIR type code of the traced collection (e.g., "HumanName")
+ * @param collector an optional collector for programmatic trace capture, or null
  */
-case class TraceExpression(child: Expression, name: String)
+case class TraceExpression(child: Expression, name: String, fhirType: String,
+                           collector: TraceCollector)
   extends UnaryExpression with CodegenFallback {
 
   @transient
@@ -49,7 +56,11 @@ case class TraceExpression(child: Expression, name: String)
   private lazy val toScala = CatalystTypeConverters.createToScalaConverter(dataType)
 
   override def nullSafeEval(value: Any): Any = {
-    log.info("[trace:{}] {}", name, toReadableString(toScala(value)))
+    val converted = toScala(value)
+    log.trace("[trace:{}] {}", name, toReadableString(converted))
+    if (collector != null) {
+      collector.add(name, fhirType, converted)
+    }
     value
   }
 

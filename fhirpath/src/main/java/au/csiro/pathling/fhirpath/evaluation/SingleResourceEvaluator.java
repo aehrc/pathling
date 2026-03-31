@@ -25,8 +25,10 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.variable.EnvironmentVariableResolver;
 import au.csiro.pathling.fhirpath.variable.VariableResolverChain;
+import au.csiro.pathling.sql.TraceCollector;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -76,7 +78,7 @@ public class SingleResourceEvaluator {
       @Nonnull final FunctionRegistry functionRegistry,
       @Nonnull final Map<String, Collection> variables) {
     return new SingleResourceEvaluator(
-        resolver, functionRegistry, variables, FhirpathConfiguration.DEFAULT);
+        resolver, functionRegistry, variables, FhirpathConfiguration.DEFAULT, Optional.empty());
   }
 
   /** The resource resolver. */
@@ -90,6 +92,9 @@ public class SingleResourceEvaluator {
 
   /** The FHIRPath evaluation configuration. */
   @Nonnull private final FhirpathConfiguration configuration;
+
+  /** An optional trace collector for capturing trace() output. */
+  @Nonnull private final Optional<TraceCollector> traceCollector;
 
   /**
    * Evaluates a FHIRPath expression with the default input context.
@@ -124,7 +129,12 @@ public class SingleResourceEvaluator {
         VariableResolverChain.withDefaults(resource, inputContext, variables);
     final EvaluationContext evalContext =
         new FhirEvaluationContext(
-            inputContext, variableResolver, functionRegistry, resourceResolver, configuration);
+            inputContext,
+            variableResolver,
+            functionRegistry,
+            resourceResolver,
+            configuration,
+            traceCollector);
     return fhirPath.apply(inputContext, evalContext);
   }
 

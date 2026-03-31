@@ -471,9 +471,27 @@ class PathlingContext:
             if value is not None:
                 value = _convert_java_value(value)
             results.append({"type": jtyped_value.getType(), "value": value})
+
+        # Convert trace results.
+        traces = []
+        for jtrace in jresult.getTraces():
+            trace_values = []
+            for jtyped_value in jtrace.getValues():
+                value = jtyped_value.getValue()
+                if value is not None:
+                    value = _convert_java_value(value)
+                trace_values.append({"type": jtyped_value.getType(), "value": value})
+            traces.append(
+                {
+                    "label": jtrace.getLabel(),
+                    "values": trace_values,
+                }
+            )
+
         return {
             "results": results,
             "expectedReturnType": jresult.getExpectedReturnType(),
+            "traces": traces,
         }
 
     def search_to_column(self, resource_type: str, search_expression: str) -> Column:

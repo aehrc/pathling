@@ -20,11 +20,14 @@ package au.csiro.pathling.fhirpath.function.provider;
 import static org.apache.spark.sql.classic.ExpressionUtils.column;
 import static org.apache.spark.sql.classic.ExpressionUtils.expression;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
+import au.csiro.pathling.sql.TraceCollector;
 import au.csiro.pathling.sql.TraceExpression;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.apache.spark.sql.Column;
 
 /**
@@ -43,8 +46,12 @@ public class UtilityFunctions {
    * Adds a string representation of the input collection to the diagnostic log, using the {@code
    * name} argument as the label in the log. Returns the input collection unchanged.
    *
+   * <p>When a {@link TraceCollector} is available on the evaluation context, each traced value is
+   * also added to the collector with the trace label and the FHIR type of the input collection.
+   *
    * @param input the input collection
    * @param name a {@link StringCollection} containing the diagnostic label for the trace output
+   * @param context the evaluation context, used to obtain the optional trace collector
    * @return the input collection, unchanged
    * @see <a
    *     href="https://build.fhir.org/ig/HL7/FHIRPath/#tracename-string-projection-expression-collection">FHIRPath
@@ -53,9 +60,14 @@ public class UtilityFunctions {
   @FhirPathFunction
   @Nonnull
   public static Collection trace(
-      @Nonnull final Collection input, @Nonnull final StringCollection name) {
+      @Nonnull final Collection input,
+      @Nonnull final StringCollection name,
+      @Nonnull final EvaluationContext context) {
     final String label = name.toLiteralValue();
-    return input.copyWith(input.getColumn().call(col -> wrapWithTrace(col, label)));
+    final String fhirType = input.getFhirType().map(t -> t.toCode()).orElse("unknown");
+    @Nullable final TraceCollector collector = context.getTraceCollector().orElse(null);
+    return input.copyWith(
+        input.getColumn().call(col -> wrapWithTrace(col, label, fhirType, collector)));
   }
 
   /**
@@ -63,10 +75,16 @@ public class UtilityFunctions {
    *
    * @param col the column to wrap
    * @param name the diagnostic label
+   * @param fhirType the FHIR type code
+   * @param collector the optional trace collector, or null
    * @return a new column that logs values during evaluation
    */
   @Nonnull
-  private static Column wrapWithTrace(@Nonnull final Column col, @Nonnull final String name) {
-    return column(new TraceExpression(expression(col), name));
+  private static Column wrapWithTrace(
+      @Nonnull final Column col,
+      @Nonnull final String name,
+      @Nonnull final String fhirType,
+      @Nullable final TraceCollector collector) {
+    return column(new TraceExpression(expression(col), name, fhirType, collector));
   }
 }
