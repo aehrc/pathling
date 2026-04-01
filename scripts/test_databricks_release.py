@@ -217,6 +217,7 @@ def build_cluster_edit_payload(
         "data_security_mode",
         "runtime_engine",
         "single_user_name",
+        "autotermination_minutes",
     ]:
         if field in cluster_info:
             payload[field] = cluster_info[field]
@@ -702,6 +703,7 @@ def main(argv: list[str] | None = None) -> int:
     info(f"  Timeout:         {args.timeout} minutes")
     print()
 
+    exit_code = 0
     try:
         # Check whether the cluster configuration needs updating.
         cluster_info = get_cluster_info(args.cluster_id)
@@ -775,14 +777,23 @@ def main(argv: list[str] | None = None) -> int:
         print_summary(results)
 
         all_passed = all(r["success"] for r in results)
-        return 0 if all_passed else 1
+        exit_code = 0 if all_passed else 1
 
     except RuntimeError as e:
         error(str(e))
-        return 1
+        exit_code = 1
     except KeyboardInterrupt:
         error("Interrupted by user.")
-        return 130
+        exit_code = 130
+    finally:
+        # Always terminate the cluster to avoid unnecessary costs.
+        info("Terminating cluster...")
+        try:
+            terminate_cluster(args.cluster_id, args.timeout)
+        except RuntimeError as e:
+            error(f"Failed to terminate cluster: {e}")
+
+    return exit_code
 
 
 if __name__ == "__main__":
