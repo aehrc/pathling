@@ -53,6 +53,8 @@ public class UpdateExecutor {
 
   @Nonnull private final CacheableDatabase cacheableDatabase;
 
+  private final boolean schemaAutoMerge;
+
   /**
    * Constructs a new UpdateExecutor.
    *
@@ -60,17 +62,20 @@ public class UpdateExecutor {
    * @param fhirEncoders encoders for converting FHIR resources to Spark Datasets
    * @param databasePath the path to the Delta database
    * @param cacheableDatabase the cacheable database for cache invalidation
+   * @param schemaAutoMerge whether to enable Delta Lake schema auto-merge during merge operations
    */
   public UpdateExecutor(
       @Nonnull final PathlingContext pathlingContext,
       @Nonnull final FhirEncoders fhirEncoders,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") @Nonnull
           final String databasePath,
-      @Nonnull final CacheableDatabase cacheableDatabase) {
+      @Nonnull final CacheableDatabase cacheableDatabase,
+      @Value("${pathling.storage.schemaAutoMerge:false}") final boolean schemaAutoMerge) {
     this.pathlingContext = pathlingContext;
     this.fhirEncoders = fhirEncoders;
     this.databasePath = databasePath;
     this.cacheableDatabase = cacheableDatabase;
+    this.schemaAutoMerge = schemaAutoMerge;
   }
 
   /**
@@ -129,16 +134,27 @@ public class UpdateExecutor {
     final String tablePath = getTablePath(resourceCode);
 
     if (deltaTableExists(spark, tablePath)) {
-      // Perform a merge operation on the existing table.
-      final DeltaTable table = DeltaTable.forPath(spark, tablePath);
-      table
-          .as("original")
-          .merge(updates.as("updates"), "original.id = updates.id")
-          .whenMatched()
-          .updateAll()
-          .whenNotMatched()
-          .insertAll()
-          .execute();
+      if (schemaAutoMerge) {
+        // Enable automatic schema merging so that tables created with an older encoder schema can
+        // accept resources encoded with a newer schema (e.g. additional synthetic fields).
+        spark.conf().set("spark.databricks.delta.schema.autoMerge.enabled", "true");
+      }
+      try {
+        // Perform a merge operation on the existing table.
+        final DeltaTable table = DeltaTable.forPath(spark, tablePath);
+        table
+            .as("original")
+            .merge(updates.as("updates"), "original.id = updates.id")
+            .whenMatched()
+            .updateAll()
+            .whenNotMatched()
+            .insertAll()
+            .execute();
+      } finally {
+        if (schemaAutoMerge) {
+          spark.conf().set("spark.databricks.delta.schema.autoMerge.enabled", "false");
+        }
+      }
     } else {
       // Create a new table with the resources.
       log.debug("Creating new Delta table for resource type: {}", resourceCode);

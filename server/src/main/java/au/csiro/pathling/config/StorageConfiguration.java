@@ -62,4 +62,11 @@ public class StorageConfiguration {
   @Min(1)
   @Builder.Default
   private int compactionThreshold = 10;
+
+  /**
+   * When enabled, Delta Lake merge operations will automatically evolve the table schema to
+   * accommodate new columns present in the incoming data. This is useful when the FHIR encoder adds
+   * new fields (e.g. synthetic columns) that are not yet present in an existing table.
+   */
+  @NotNull @Builder.Default private Boolean schemaAutoMerge = false;
 }

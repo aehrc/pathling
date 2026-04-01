@@ -87,7 +87,8 @@ class CreateProviderTest {
             pathlingContext,
             fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
-            cacheableDatabase);
+            cacheableDatabase,
+            false);
 
     // Create the CreateProvider.
     createProvider = new CreateProvider(updateExecutor, fhirContext, Patient.class);

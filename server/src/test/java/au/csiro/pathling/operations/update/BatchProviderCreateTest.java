@@ -86,7 +86,8 @@ class BatchProviderCreateTest {
             pathlingContext,
             fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
-            cacheableDatabase);
+            cacheableDatabase,
+            false);
 
     // Create DeleteExecutor with the temp database path.
     deleteExecutor =
