@@ -947,4 +947,86 @@ case class UnresolvedVariantUnwrap(inner: Expression, schemaRef: Expression,
   override def toString: String = s"VariantUnwrap($inner)"
 }
 
+/**
+ * A stateful, non-deterministic expression that returns a monotonically increasing integer each
+ * time it is evaluated. The counter is shared via a [[RowIndexCounter]] instance which uses
+ * [[ThreadLocal]] storage to ensure thread safety across parallel Spark tasks.
+ *
+ * This is designed for use inside array-producing expressions (e.g. `transform`, `Concat`) where
+ * the evaluation order is deterministic and single-threaded within a row. The counter must be reset
+ * to zero before each top-level evaluation via [[ResetCounter]].
+ *
+ * Modeled after Spark's `MonotonicallyIncreasingID`.
+ *
+ * @param state the shared thread-safe counter
+ */
+case class RowCounter(state: RowIndexCounter)
+  extends LeafExpression with Nondeterministic {
+
+  override def stateful: Boolean = true
+
+  override def nullable: Boolean = false
+
+  override def dataType: DataType = IntegerType
+
+  override protected def initializeInternal(partitionIndex: Int): Unit = {
+    // No-op: reset is handled by ResetCounter at the per-row level, not per-partition.
+  }
+
+  override protected def evalInternal(input: InternalRow): Int = {
+    state.getAndIncrement()
+  }
+
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    val counterRef = ctx.addReferenceObj("rowCounter", state, classOf[RowIndexCounter].getName)
+    ev.copy(code = code"""
+      final ${CodeGenerator.javaType(dataType)} ${ev.value} = $counterRef.getAndIncrement();""",
+      isNull = FalseLiteral)
+  }
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    RowCounter(state)
+  }
+}
+
+/**
+ * A unary expression that resets a [[RowCounter]]'s shared state to zero before evaluating its
+ * child expression. This ensures the counter starts fresh for each row when used inside
+ * per-row array transformations.
+ *
+ * @param child the expression to evaluate after resetting
+ * @param state the shared thread-safe counter to reset
+ */
+case class ResetCounter(child: Expression, state: RowIndexCounter)
+  extends UnaryExpression with NonSQLExpression {
+
+  override def dataType: DataType = child.dataType
+
+  override def nullable: Boolean = child.nullable
+
+  override protected def nullSafeEval(input: Any): Any = {
+    // This should not be called — we override eval directly.
+    throw new UnsupportedOperationException(ExpressionConstants.CODEGEN_ONLY_MSG)
+  }
+
+  override def eval(input: InternalRow): Any = {
+    state.reset()
+    child.eval(input)
+  }
+
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    val counterRef = ctx.addReferenceObj("rowCounter", state, classOf[RowIndexCounter].getName)
+    val childEval = child.genCode(ctx)
+    ev.copy(code = code"""
+      $counterRef.reset();
+      ${childEval.code}
+      final boolean ${ev.isNull} = ${childEval.isNull};
+      final ${CodeGenerator.javaType(dataType)} ${ev.value} = ${childEval.value};""")
+  }
+
+  override protected def withNewChildInternal(newChild: Expression): Expression = {
+    ResetCounter(newChild, state)
+  }
+}
+
 // ColumnFunctions has been moved to a Java class to access package-private Spark methods

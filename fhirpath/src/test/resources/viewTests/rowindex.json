@@ -40,6 +40,79 @@
       "resourceType": "Patient",
       "id": "pt3",
       "gender": "male"
+    },
+    {
+      "resourceType": "Patient",
+      "id": "pt4",
+      "extension": [
+        {
+          "url": "urn:ext1",
+          "extension": [
+            {
+              "url": "urn:ext2",
+              "extension": [
+                {
+                  "url": "urn:ext3",
+                  "extension": [
+                    {
+                      "url": "urn:ext4",
+                      "valueString": "leaf"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resourceType": "Patient",
+      "id": "pt5",
+      "extension": [
+        {
+          "url": "urn:branch-root",
+          "extension": [
+            {
+              "url": "urn:branch-child1",
+              "extension": [
+                {
+                  "url": "urn:branch-grandchild",
+                  "valueString": "deep"
+                }
+              ]
+            },
+            {
+              "url": "urn:branch-child2",
+              "valueString": "shallow"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resourceType": "Patient",
+      "id": "pt6",
+      "extension": [
+        {
+          "url": "urn:fe1",
+          "extension": [
+            {
+              "url": "urn:fe1.1",
+              "valueString": "v1"
+            }
+          ]
+        },
+        {
+          "url": "urn:fe2",
+          "extension": [
+            {
+              "url": "urn:fe2.1",
+              "valueString": "v2"
+            }
+          ]
+        }
+      ]
     }
   ],
   "tests": [
@@ -157,6 +230,7 @@
       "title": "top-level %rowIndex defaults to 0",
       "view": {
         "resource": "Patient",
+        "where": [{ "path": "id = 'pt1' or id = 'pt2' or id = 'pt3'" }],
         "select": [
           {
             "column": [
@@ -233,6 +307,7 @@
       "title": "forEachOrNull with %rowIndex",
       "view": {
         "resource": "Patient",
+        "where": [{ "path": "id = 'pt1' or id = 'pt2' or id = 'pt3'" }],
         "select": [
           {
             "column": [{ "name": "id", "path": "id" }],
@@ -278,6 +353,277 @@
         { "id": "pt1", "family": "Smith", "one_based_index": 1 },
         { "id": "pt1", "family": "Jones", "one_based_index": 2 },
         { "id": "pt2", "family": "Brown", "one_based_index": 1 }
+      ]
+    },
+    {
+      "title": "repeat with %rowIndex — linear chain",
+      "view": {
+        "resource": "Patient",
+        "where": [{ "path": "id = 'pt4'" }],
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }]
+          },
+          {
+            "repeat": ["extension"],
+            "column": [
+              { "name": "row_index", "path": "%rowIndex" },
+              { "name": "url", "path": "url", "type": "uri" }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt4", "row_index": 0, "url": "urn:ext1" },
+        { "id": "pt4", "row_index": 1, "url": "urn:ext2" },
+        { "id": "pt4", "row_index": 2, "url": "urn:ext3" },
+        { "id": "pt4", "row_index": 3, "url": "urn:ext4" }
+      ]
+    },
+    {
+      "title": "repeat with %rowIndex arithmetic",
+      "view": {
+        "resource": "Patient",
+        "where": [{ "path": "id = 'pt4'" }],
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }]
+          },
+          {
+            "repeat": ["extension"],
+            "column": [
+              { "name": "one_based", "path": "%rowIndex + 1" },
+              { "name": "url", "path": "url", "type": "uri" }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt4", "one_based": 1, "url": "urn:ext1" },
+        { "id": "pt4", "one_based": 2, "url": "urn:ext2" },
+        { "id": "pt4", "one_based": 3, "url": "urn:ext3" },
+        { "id": "pt4", "one_based": 4, "url": "urn:ext4" }
+      ]
+    },
+    {
+      "title": "repeat with %rowIndex and nested forEach",
+      "view": {
+        "resource": "Patient",
+        "where": [{ "path": "id = 'pt4'" }],
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }]
+          },
+          {
+            "repeat": ["extension"],
+            "column": [
+              { "name": "repeat_index", "path": "%rowIndex" },
+              { "name": "parent_url", "path": "url", "type": "uri" }
+            ],
+            "select": [
+              {
+                "forEach": "extension",
+                "column": [
+                  { "name": "foreach_index", "path": "%rowIndex" },
+                  { "name": "child_url", "path": "url", "type": "uri" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "pt4",
+          "repeat_index": 0,
+          "parent_url": "urn:ext1",
+          "foreach_index": 0,
+          "child_url": "urn:ext2"
+        },
+        {
+          "id": "pt4",
+          "repeat_index": 1,
+          "parent_url": "urn:ext2",
+          "foreach_index": 0,
+          "child_url": "urn:ext3"
+        },
+        {
+          "id": "pt4",
+          "repeat_index": 2,
+          "parent_url": "urn:ext3",
+          "foreach_index": 0,
+          "child_url": "urn:ext4"
+        }
+      ]
+    },
+    {
+      "title": "repeat with %rowIndex — branching tree breadth-first",
+      "view": {
+        "resource": "Patient",
+        "where": [{ "path": "id = 'pt5'" }],
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }]
+          },
+          {
+            "repeat": ["extension"],
+            "column": [
+              { "name": "row_index", "path": "%rowIndex" },
+              { "name": "url", "path": "url", "type": "uri" }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt5", "row_index": 0, "url": "urn:branch-root" },
+        { "id": "pt5", "row_index": 1, "url": "urn:branch-child1" },
+        { "id": "pt5", "row_index": 2, "url": "urn:branch-child2" },
+        { "id": "pt5", "row_index": 3, "url": "urn:branch-grandchild" }
+      ]
+    },
+    {
+      "title": "repeat with %rowIndex — counter resets per resource",
+      "view": {
+        "resource": "Patient",
+        "where": [{ "path": "id = 'pt4' or id = 'pt5'" }],
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }]
+          },
+          {
+            "repeat": ["extension"],
+            "column": [
+              { "name": "row_index", "path": "%rowIndex" },
+              { "name": "url", "path": "url", "type": "uri" }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt4", "row_index": 0, "url": "urn:ext1" },
+        { "id": "pt4", "row_index": 1, "url": "urn:ext2" },
+        { "id": "pt4", "row_index": 2, "url": "urn:ext3" },
+        { "id": "pt4", "row_index": 3, "url": "urn:ext4" },
+        { "id": "pt5", "row_index": 0, "url": "urn:branch-root" },
+        { "id": "pt5", "row_index": 1, "url": "urn:branch-child1" },
+        { "id": "pt5", "row_index": 2, "url": "urn:branch-child2" },
+        { "id": "pt5", "row_index": 3, "url": "urn:branch-grandchild" }
+      ]
+    },
+    {
+      "title": "repeat nested inside repeat — independent %rowIndex",
+      "view": {
+        "resource": "Patient",
+        "where": [{ "path": "id = 'pt4'" }],
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }]
+          },
+          {
+            "repeat": ["extension"],
+            "column": [
+              { "name": "outer_index", "path": "%rowIndex" },
+              { "name": "url", "path": "url", "type": "uri" }
+            ],
+            "select": [
+              {
+                "repeat": ["extension"],
+                "column": [
+                  { "name": "inner_index", "path": "%rowIndex" },
+                  { "name": "inner_url", "path": "url", "type": "uri" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "pt4",
+          "outer_index": 0,
+          "url": "urn:ext1",
+          "inner_index": 0,
+          "inner_url": "urn:ext2"
+        },
+        {
+          "id": "pt4",
+          "outer_index": 0,
+          "url": "urn:ext1",
+          "inner_index": 1,
+          "inner_url": "urn:ext3"
+        },
+        {
+          "id": "pt4",
+          "outer_index": 0,
+          "url": "urn:ext1",
+          "inner_index": 2,
+          "inner_url": "urn:ext4"
+        },
+        {
+          "id": "pt4",
+          "outer_index": 1,
+          "url": "urn:ext2",
+          "inner_index": 0,
+          "inner_url": "urn:ext3"
+        },
+        {
+          "id": "pt4",
+          "outer_index": 1,
+          "url": "urn:ext2",
+          "inner_index": 1,
+          "inner_url": "urn:ext4"
+        },
+        {
+          "id": "pt4",
+          "outer_index": 2,
+          "url": "urn:ext3",
+          "inner_index": 0,
+          "inner_url": "urn:ext4"
+        }
+      ]
+    },
+    {
+      "title": "repeat nested inside forEach — independent %rowIndex",
+      "view": {
+        "resource": "Patient",
+        "where": [{ "path": "id = 'pt6'" }],
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }]
+          },
+          {
+            "forEach": "extension",
+            "column": [
+              { "name": "foreach_index", "path": "%rowIndex" },
+              { "name": "parent_url", "path": "url", "type": "uri" }
+            ],
+            "select": [
+              {
+                "repeat": ["extension"],
+                "column": [
+                  { "name": "repeat_index", "path": "%rowIndex" },
+                  { "name": "inner_url", "path": "url", "type": "uri" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "pt6",
+          "foreach_index": 0,
+          "parent_url": "urn:fe1",
+          "repeat_index": 0,
+          "inner_url": "urn:fe1.1"
+        },
+        {
+          "id": "pt6",
+          "foreach_index": 1,
+          "parent_url": "urn:fe2",
+          "repeat_index": 0,
+          "inner_url": "urn:fe2.1"
+        }
       ]
     }
   ]

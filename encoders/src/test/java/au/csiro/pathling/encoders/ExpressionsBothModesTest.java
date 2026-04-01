@@ -45,6 +45,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 import scala.collection.Seq;
+import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * Abstract base class for expression tests that need to run in both codegen and interpreted modes.
@@ -291,5 +292,280 @@ public abstract class ExpressionsBothModesTest {
     for (int i = 0; i < expected.size(); i++) {
       assertEquals(expected.get(i), actual.get(i), "Row " + i + " mismatch");
     }
+  }
+
+  /**
+   * Tests that RowCounter produces sequential 0-based indices within a simple array transform, and
+   * that ResetCounter resets the sequence for each row.
+   */
+  @Test
+  void testRowCounterWithSimpleTransform() {
+    final RowIndexCounter counter = new RowIndexCounter();
+    final Column counterCol = ValueFunctions.rowCounter(counter);
+
+    // Create a dataset with two rows, each containing an array of different lengths.
+    final Dataset<Row> ds =
+        spark
+            .createDataFrame(
+                List.of(
+                    RowFactory.create(1, List.of("a", "b", "c")),
+                    RowFactory.create(2, List.of("d", "e"))),
+                DataTypes.createStructType(
+                    new StructField[] {
+                      new StructField("id", DataTypes.IntegerType, false, Metadata.empty()),
+                      new StructField(
+                          "items",
+                          DataTypes.createArrayType(DataTypes.StringType),
+                          false,
+                          Metadata.empty())
+                    }))
+            .repartition(1);
+
+    // Use transform to stamp each element with the counter, then wrap with resetCounter.
+    final Column transformed =
+        functions.transform(
+            ds.col("items"), elem -> functions.struct(elem.alias("val"), counterCol.alias("idx")));
+    final Column withReset = ValueFunctions.resetCounter(transformed, counter);
+
+    final Dataset<Row> result = ds.withColumn("indexed", withReset);
+    final List<Row> rows = result.collectAsList();
+
+    assertEquals(2, rows.size());
+
+    // Row 1: 3 elements → indices 0, 1, 2.
+    final Seq<?> row1Seq = rows.get(0).getAs("indexed");
+    final List<?> row1Items = CollectionConverters.asJava(row1Seq);
+    assertEquals(3, row1Items.size());
+    assertEquals(0, (int) ((Row) row1Items.get(0)).getAs("idx"));
+    assertEquals(1, (int) ((Row) row1Items.get(1)).getAs("idx"));
+    assertEquals(2, (int) ((Row) row1Items.get(2)).getAs("idx"));
+
+    // Row 2: 2 elements → indices reset to 0, 1.
+    final Seq<?> row2Seq = rows.get(1).getAs("indexed");
+    final List<?> row2Items = CollectionConverters.asJava(row2Seq);
+    assertEquals(2, row2Items.size());
+    assertEquals(0, (int) ((Row) row2Items.get(0)).getAs("idx"));
+    assertEquals(1, (int) ((Row) row2Items.get(1)).getAs("idx"));
+  }
+
+  /**
+   * Tests that RowCounter produces a continuous global sequence when used inside a transformTree
+   * with a single traversal, producing sequential indices across all depth levels.
+   */
+  @Test
+  void testRowCounterWithTransformTree() {
+    final Metadata metadata = Metadata.empty();
+
+    // Build a 3-level nested structure: root has 2 items, first item has 1 child.
+    final StructType leafType =
+        DataTypes.createStructType(
+            new StructField[] {new StructField("linkId", DataTypes.StringType, true, metadata)});
+
+    final StructType midType =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("linkId", DataTypes.StringType, true, metadata),
+              new StructField("item", DataTypes.createArrayType(leafType), true, metadata)
+            });
+
+    final StructType rootItemType =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("linkId", DataTypes.StringType, true, metadata),
+              new StructField("item", DataTypes.createArrayType(midType), true, metadata)
+            });
+
+    final StructType rootSchema =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("id", DataTypes.IntegerType, false, metadata),
+              new StructField("items", DataTypes.createArrayType(rootItemType), true, metadata)
+            });
+
+    // Tree structure:
+    //   items[0] (linkId: "1")
+    //     └── item[0] (linkId: "1.1")
+    //           └── item[0] (linkId: "1.1.1")
+    //   items[1] (linkId: "2")
+    final Row leaf = RowFactory.create("1.1.1");
+    final Row mid = RowFactory.create("1.1", List.of(leaf));
+    final Row root0 = RowFactory.create("1", List.of(mid));
+    final Row root1 = RowFactory.create("2", List.of());
+
+    final Dataset<Row> ds =
+        spark
+            .createDataFrame(
+                List.of(
+                    RowFactory.create(1, List.of(root0, root1)),
+                    RowFactory.create(2, List.of(root1))),
+                rootSchema)
+            .repartition(1);
+
+    final RowIndexCounter counter = new RowIndexCounter();
+    final Column counterCol = ValueFunctions.rowCounter(counter);
+
+    // Extractor: produce Array[Struct{linkId, idx}] from each array node.
+    final Column treeResult =
+        ValueFunctions.transformTree(
+            ds.col("items"),
+            c ->
+                functions.transform(
+                    c,
+                    elem ->
+                        functions.struct(
+                            elem.getField("linkId").alias("linkId"), counterCol.alias("idx"))),
+            List.of(c -> ValueFunctions.unnest(c.getField("item"))),
+            2);
+
+    final Column withReset = ValueFunctions.resetCounter(treeResult, counter);
+    final Dataset<Row> result = ds.withColumn("collected", withReset);
+    final List<Row> rows = result.collectAsList();
+
+    assertEquals(2, rows.size());
+
+    // Row 1: transformTree produces breadth-first-like order:
+    //   Concat(extractor(root_items), transformTree(root_items.item))
+    //   = Concat(["1","2"], Concat(["1.1"], ["1.1.1"]))
+    //   = ["1", "2", "1.1", "1.1.1"]
+    final Seq<?> row1Seq = rows.get(0).getAs("collected");
+    final List<?> row1 = CollectionConverters.asJava(row1Seq);
+    assertEquals(4, row1.size());
+    assertEquals("1", ((Row) row1.get(0)).getAs("linkId"));
+    assertEquals(0, (int) ((Row) row1.get(0)).getAs("idx"));
+    assertEquals("2", ((Row) row1.get(1)).getAs("linkId"));
+    assertEquals(1, (int) ((Row) row1.get(1)).getAs("idx"));
+    assertEquals("1.1", ((Row) row1.get(2)).getAs("linkId"));
+    assertEquals(2, (int) ((Row) row1.get(2)).getAs("idx"));
+    assertEquals("1.1.1", ((Row) row1.get(3)).getAs("linkId"));
+    assertEquals(3, (int) ((Row) row1.get(3)).getAs("idx"));
+
+    // Row 2: tree has 1 node → "2"(0) — counter resets.
+    final Seq<?> row2Seq = rows.get(1).getAs("collected");
+    final List<?> row2 = CollectionConverters.asJava(row2Seq);
+    assertEquals(1, row2.size());
+    assertEquals("2", ((Row) row2.get(0)).getAs("linkId"));
+    assertEquals(0, (int) ((Row) row2.get(0)).getAs("idx"));
+  }
+
+  /**
+   * Tests that RowCounter works with multiple traversal paths in transformTree, producing a
+   * continuous global index across all branches and depths.
+   */
+  @Test
+  void testRowCounterWithMultipleTraversals() {
+    final Metadata metadata = Metadata.empty();
+
+    // Build a structure with two traversal paths: "item" and self-reference.
+    final StructType level2Type =
+        DataTypes.createStructType(
+            new StructField[] {new StructField("linkId", DataTypes.StringType, true, metadata)});
+
+    final StructType level1Type =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("linkId", DataTypes.StringType, true, metadata),
+              new StructField("item", DataTypes.createArrayType(level2Type), true, metadata)
+            });
+
+    final StructType level0Type =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("linkId", DataTypes.StringType, true, metadata),
+              new StructField("item", DataTypes.createArrayType(level1Type), true, metadata)
+            });
+
+    final StructType rootSchema =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("id", DataTypes.IntegerType, false, metadata),
+              new StructField("items", DataTypes.createArrayType(level0Type), true, metadata)
+            });
+
+    // items[0] (linkId: "1") → item[0] (linkId: "2") → item[0] (linkId: "3").
+    final Row level2 = RowFactory.create("3");
+    final Row level1 = RowFactory.create("2", List.of(level2));
+    final Row level0 = RowFactory.create("1", List.of(level1));
+
+    final Dataset<Row> ds =
+        spark
+            .createDataFrame(List.of(RowFactory.create(1, List.of(level0))), rootSchema)
+            .repartition(1);
+
+    final RowIndexCounter counter = new RowIndexCounter();
+    final Column counterCol = ValueFunctions.rowCounter(counter);
+
+    // Use two traversals: item navigation and self-reference (like the existing test).
+    final Column treeResult =
+        ValueFunctions.transformTree(
+            ds.col("items"),
+            c ->
+                functions.transform(
+                    c,
+                    elem ->
+                        functions.struct(
+                            elem.getField("linkId").alias("linkId"), counterCol.alias("idx"))),
+            List.of(c -> ValueFunctions.unnest(c.getField("item")), c -> c),
+            1);
+
+    final Column withReset = ValueFunctions.resetCounter(treeResult, counter);
+    final Dataset<Row> result = ds.withColumn("collected", withReset);
+    final List<Row> rows = result.collectAsList();
+
+    assertEquals(1, rows.size());
+
+    // The existing test (without counter) produces linkIds: [1, 2, 3, 3, 2, 3, 1, 2, 3].
+    // Each element should have a sequential global index.
+    final Seq<?> collectedSeq = rows.get(0).getAs("collected");
+    final List<?> collected = CollectionConverters.asJava(collectedSeq);
+    assertEquals(9, collected.size());
+
+    // Verify sequential indices 0..8.
+    for (int i = 0; i < 9; i++) {
+      assertEquals(
+          i, (int) ((Row) collected.get(i)).getAs("idx"), "Index mismatch at position " + i);
+    }
+  }
+
+  /**
+   * Tests that RowCounter composes with arithmetic expressions, validating that %rowIndex + 1 style
+   * usage works correctly.
+   */
+  @Test
+  void testRowCounterInArithmeticExpression() {
+    final RowIndexCounter counter = new RowIndexCounter();
+    final Column counterCol = ValueFunctions.rowCounter(counter);
+
+    final Dataset<Row> ds =
+        spark
+            .createDataFrame(
+                List.of(RowFactory.create(1, List.of("a", "b", "c"))),
+                DataTypes.createStructType(
+                    new StructField[] {
+                      new StructField("id", DataTypes.IntegerType, false, Metadata.empty()),
+                      new StructField(
+                          "items",
+                          DataTypes.createArrayType(DataTypes.StringType),
+                          false,
+                          Metadata.empty())
+                    }))
+            .repartition(1);
+
+    // Use counter in an arithmetic expression: counter + 1 (1-based index).
+    final Column transformed =
+        functions.transform(
+            ds.col("items"),
+            elem -> functions.struct(elem.alias("val"), counterCol.plus(1).alias("one_based_idx")));
+    final Column withReset = ValueFunctions.resetCounter(transformed, counter);
+
+    final Dataset<Row> result = ds.withColumn("indexed", withReset);
+    final List<Row> rows = result.collectAsList();
+
+    assertEquals(1, rows.size());
+    final Seq<?> itemsSeq = rows.get(0).getAs("indexed");
+    final List<?> items = CollectionConverters.asJava(itemsSeq);
+    assertEquals(3, items.size());
+    assertEquals(1, (int) ((Row) items.get(0)).getAs("one_based_idx"));
+    assertEquals(2, (int) ((Row) items.get(1)).getAs("one_based_idx"));
+    assertEquals(3, (int) ((Row) items.get(2)).getAs("one_based_idx"));
   }
 }

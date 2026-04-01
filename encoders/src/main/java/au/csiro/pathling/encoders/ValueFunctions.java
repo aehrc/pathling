@@ -429,4 +429,35 @@ public class ValueFunctions {
   public static Column pruneAnnotations(@Nonnull final Column col) {
     return column(new PruneSyntheticFields(expression(col)));
   }
+
+  /**
+   * Creates a new row counter backed by a shared {@link RowIndexCounter}. Each evaluation of the
+   * returned column increments the counter and returns its previous value, producing a 0-based
+   * sequence: 0, 1, 2, ...
+   *
+   * <p>The counter must be reset before each top-level evaluation (e.g. per resource row) using
+   * {@link #resetCounter(Column, RowIndexCounter)}.
+   *
+   * @param state the shared counter instance
+   * @return a Column that produces the next integer on each evaluation
+   */
+  @Nonnull
+  public static Column rowCounter(@Nonnull final RowIndexCounter state) {
+    return column(new RowCounter(state));
+  }
+
+  /**
+   * Wraps a column expression so that the shared row counter is reset to zero before evaluating the
+   * expression. This should be applied at the outermost level of a repeat projection to ensure the
+   * counter starts fresh for each resource row.
+   *
+   * @param child the expression to evaluate after resetting
+   * @param state the shared counter instance to reset
+   * @return a Column that resets the counter and then evaluates the child
+   */
+  @Nonnull
+  public static Column resetCounter(
+      @Nonnull final Column child, @Nonnull final RowIndexCounter state) {
+    return column(new ResetCounter(expression(child), state));
+  }
 }

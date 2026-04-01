@@ -19,6 +19,7 @@ package au.csiro.pathling.projection;
 
 import static org.apache.spark.sql.functions.concat;
 
+import au.csiro.pathling.encoders.RowIndexCounter;
 import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -55,6 +56,12 @@ public record RepeatSelection(
   @Override
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
 
+    // Create a shared counter for the %rowIndex environment variable. Each element extracted by the
+    // tree traversal increments this counter, producing a global 0-based index across all depth
+    // levels and traversal branches.
+    final RowIndexCounter rowIndexCounter = new RowIndexCounter();
+    final Column rowIndexCol = ValueFunctions.rowCounter(rowIndexCounter);
+
     // Evaluate each path to get collections, retaining them for type inspection.
     final List<Collection> pathCollections = paths.stream().map(context::evalExpression).toList();
 
@@ -66,11 +73,13 @@ public record RepeatSelection(
             .anyMatch(
                 c -> c.getFhirType().map(t -> !FHIRDefinedType.EXTENSION.equals(t)).orElse(true));
 
-    // Create the list of non-empty starting contexts from the evaluated path collections.
+    // Create the list of non-empty starting contexts from the evaluated path collections. The row
+    // index counter is injected so that %rowIndex resolves to the global element position.
     final List<ProjectionContext> startingNodes =
         pathCollections.stream()
             .filter(Collection::isNotEmpty)
             .map(context::withInputContext)
+            .map(ctx -> ctx.withRowIndex(rowIndexCol))
             .toList();
 
     // Map starting nodes to transformTree expressions and concatenate the results.
@@ -88,9 +97,11 @@ public record RepeatSelection(
                         errorOnDepthExhaustion))
             .toArray(Column[]::new);
 
+    // Wrap the concatenated result with a counter reset so that the %rowIndex sequence restarts at
+    // zero for each resource row.
     final Column result =
         nodeResults.length > 0
-            ? concat(nodeResults)
+            ? ValueFunctions.resetCounter(concat(nodeResults), rowIndexCounter)
             : DefaultRepresentation.empty()
                 .plural()
                 .transform(component.asColumnOperator(context.withEmptyInput()))
