@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.encoders;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 
 /**
@@ -24,23 +26,31 @@ import java.io.Serializable;
  * thread gets its own independent counter via {@link ThreadLocal}, ensuring that Spark tasks
  * running in parallel on different partitions do not interfere with each other.
  *
+ * <p>This class is shared across partitions via Spark's {@code addReferenceObj()} mechanism in
+ * codegen mode. Since reference objects are shared within an executor, {@link ThreadLocal} is
+ * required to isolate mutable state per task thread.
+ *
  * <p>This class is {@link Serializable} so that it survives Spark plan serialization to executors.
- * The {@link ThreadLocal} state is transient and lazily re-initialized after deserialization.
+ * The {@link ThreadLocal} is eagerly initialized and re-initialized after deserialization via
+ * {@link #readObject(ObjectInputStream)}.
+ *
+ * <p>Note: {@link ThreadLocal#remove()} is intentionally not called. The stored value is a single
+ * {@code int[1]} (16 bytes) that is reset to zero each row via {@link #reset()}. When this object
+ * becomes unreachable, the {@link ThreadLocal}'s weak-reference key is collected and the stale
+ * entry is cleaned up lazily by subsequent {@link ThreadLocal} operations on the same thread.
  *
  * @author Piotr Szul
  */
+@SuppressWarnings("java:S5164") // ThreadLocal.remove() not needed — see class Javadoc.
 public class RowIndexCounter implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  @SuppressWarnings("TransientFieldNotInitialized")
-  private transient ThreadLocal<int[]> counter;
+  private transient ThreadLocal<int[]> counter = ThreadLocal.withInitial(() -> new int[] {0});
 
-  private ThreadLocal<int[]> getCounter() {
-    if (counter == null) {
-      counter = ThreadLocal.withInitial(() -> new int[] {0});
-    }
-    return counter;
+  private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
+    in.defaultReadObject();
+    counter = ThreadLocal.withInitial(() -> new int[] {0});
   }
 
   /**
@@ -50,7 +60,7 @@ public class RowIndexCounter implements Serializable {
    * @return the current counter value before incrementing
    */
   public int getAndIncrement() {
-    return getCounter().get()[0]++;
+    return counter.get()[0]++;
   }
 
   /**
@@ -58,6 +68,6 @@ public class RowIndexCounter implements Serializable {
    * top-level row to ensure the index sequence starts fresh.
    */
   public void reset() {
-    getCounter().get()[0] = 0;
+    counter.get()[0] = 0;
   }
 }
