@@ -49,8 +49,12 @@ public class UtilityFunctions {
    * <p>When a {@link TraceCollector} is available on the evaluation context, each traced value is
    * also added to the collector with the trace label and the FHIR type of the input collection.
    *
+   * <p><strong>Limitation:</strong> The {@code name} argument must be a string literal. Dynamic
+   * expressions (e.g., {@code trace(someField)}) are not supported and will raise an error.
+   *
    * @param input the input collection
    * @param name a {@link StringCollection} containing the diagnostic label for the trace output
+   *     (must be a literal value)
    * @param context the evaluation context, used to obtain the optional trace collector
    * @return the input collection, unchanged
    * @see <a

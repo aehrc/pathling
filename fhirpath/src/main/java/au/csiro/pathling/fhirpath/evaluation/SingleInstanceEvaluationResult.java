@@ -132,23 +132,16 @@ public class SingleInstanceEvaluationResult {
 
     @Nonnull private final String label;
 
-    @Nonnull private final String fhirType;
-
     @Nonnull private final List<TypedValue> values;
 
     /**
      * Creates a new TraceResult.
      *
      * @param label the trace label (the name argument to trace())
-     * @param fhirType the FHIR type code of the traced collection
      * @param values the traced values as typed values
      */
-    public TraceResult(
-        @Nonnull final String label,
-        @Nonnull final String fhirType,
-        @Nonnull final List<TypedValue> values) {
+    public TraceResult(@Nonnull final String label, @Nonnull final List<TypedValue> values) {
       this.label = label;
-      this.fhirType = fhirType;
       this.values = values;
     }
 
@@ -160,16 +153,6 @@ public class SingleInstanceEvaluationResult {
     @Nonnull
     public String getLabel() {
       return label;
-    }
-
-    /**
-     * Gets the FHIR type code of the traced collection.
-     *
-     * @return the FHIR type code
-     */
-    @Nonnull
-    public String getFhirType() {
-      return fhirType;
     }
 
     /**

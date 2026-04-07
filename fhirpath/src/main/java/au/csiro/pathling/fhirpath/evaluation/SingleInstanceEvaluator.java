@@ -427,13 +427,11 @@ public class SingleInstanceEvaluator {
     final List<TraceResult> results = new ArrayList<>();
     for (final Map.Entry<String, List<TraceEntry>> group : grouped.entrySet()) {
       final String label = group.getKey();
-      final List<TraceEntry> groupEntries = group.getValue();
-      final String fhirType = groupEntries.getFirst().fhirType();
       final List<TypedValue> values = new ArrayList<>();
-      for (final TraceEntry entry : groupEntries) {
+      for (final TraceEntry entry : group.getValue()) {
         expandTraceValue(entry.fhirType(), entry.value(), values);
       }
-      results.add(new TraceResult(label, fhirType, values));
+      results.add(new TraceResult(label, values));
     }
     return results;
   }

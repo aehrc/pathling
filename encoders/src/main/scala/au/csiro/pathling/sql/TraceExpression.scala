@@ -33,6 +33,11 @@ import org.slf4j.LoggerFactory
  * collector with the trace label and FHIR type, enabling programmatic capture
  * of trace output.
  *
+ * Note: this expression extends [[UnaryExpression]] and overrides
+ * `nullSafeEval`, so null values are passed through without being logged or
+ * collected. This is intentional — null represents an absent value in the
+ * FHIRPath collection and should not produce a trace entry.
+ *
  * @param child     the child expression whose value is traced
  * @param name      the diagnostic label included in log messages
  * @param fhirType  the FHIR type code of the traced collection (e.g., "HumanName")

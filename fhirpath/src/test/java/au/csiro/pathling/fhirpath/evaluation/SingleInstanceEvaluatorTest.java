@@ -497,7 +497,6 @@ class SingleInstanceEvaluatorTest {
 
       assertEquals(1, results.size());
       assertEquals("lbl", results.get(0).getLabel());
-      assertEquals("string", results.get(0).getFhirType());
       assertEquals(1, results.get(0).getValues().size());
       assertEquals("string", results.get(0).getValues().get(0).getType());
       assertEquals("hello", results.get(0).getValues().get(0).getValue());
@@ -663,18 +662,6 @@ class SingleInstanceEvaluatorTest {
       assertEquals(2, results.get(0).getValues().size());
       assertEquals("active", results.get(1).getLabel());
       assertEquals(1, results.get(1).getValues().size());
-    }
-
-    @Test
-    void fhirTypeFromFirstEntryInGroup() {
-      // The fhirType on TraceResult should come from the first entry in the group.
-      final ListTraceCollector collector = new ListTraceCollector();
-      collector.add("val", "string", "hello");
-      collector.add("val", "string", "world");
-
-      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
-
-      assertEquals("string", results.get(0).getFhirType());
     }
   }
 }
