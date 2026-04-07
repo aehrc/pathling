@@ -56,10 +56,14 @@ case class TraceExpression(child: Expression, name: String, fhirType: String,
   private lazy val toScala = CatalystTypeConverters.createToScalaConverter(dataType)
 
   override def nullSafeEval(value: Any): Any = {
-    val converted = toScala(value)
-    log.trace("[trace:{}] {}", name, toReadableString(converted))
-    if (collector != null) {
-      collector.add(name, fhirType, converted)
+    if (log.isTraceEnabled || collector != null) {
+      val converted = toScala(value)
+      if (log.isTraceEnabled) {
+        log.trace("[trace:{}] {}", name, toReadableString(converted))
+      }
+      if (collector != null) {
+        collector.add(name, fhirType, converted)
+      }
     }
     value
   }

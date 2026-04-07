@@ -154,7 +154,7 @@ public class SingleInstanceEvaluator {
 
       // Apply the result Column to the dataset and collect the results.
       final Column resultColumn = resultCollection.getColumn().getValue();
-      final List<TypedValue> results = collectResults(resourceDf, resultColumn, resultCollection);
+      final List<TypedValue> results = collectResults(resourceDf, resultColumn, expectedReturnType);
       final List<TraceResult> traces = buildTraceResults(traceCollector);
       return new SingleInstanceEvaluationResult(results, expectedReturnType, traces);
     }
@@ -249,7 +249,7 @@ public class SingleInstanceEvaluator {
     final Collection composedResult = evaluator.evaluate(composedPath);
     final Column composedColumn = composedResult.getColumn().getValue();
 
-    final List<TypedValue> results = collectResults(resourceDf, composedColumn, composedResult);
+    final List<TypedValue> results = collectResults(resourceDf, composedColumn, expectedReturnType);
     final List<TraceResult> traces = buildTraceResults(traceCollector);
     return new SingleInstanceEvaluationResult(results, expectedReturnType, traces);
   }
@@ -275,16 +275,15 @@ public class SingleInstanceEvaluator {
    *
    * @param resourceDf the single-row encoded resource Dataset
    * @param resultColumn the Column expression for the result
-   * @param collection the Collection with type metadata
+   * @param typeName the FHIR type name for the result values
    * @return a list of typed values
    */
   @Nonnull
   private static List<TypedValue> collectResults(
       @Nonnull final Dataset<Row> resourceDf,
       @Nonnull final Column resultColumn,
-      @Nonnull final Collection collection) {
+      @Nonnull final String typeName) {
 
-    final String typeName = determineReturnType(collection);
     final Dataset<Row> resultDf = resourceDf.select(resultColumn.alias("_result"));
     final List<Row> rows = resultDf.collectAsList();
 
@@ -335,13 +334,13 @@ public class SingleInstanceEvaluator {
    * Converts a raw Spark value to a Java value suitable for the result.
    *
    * <p>Struct types (complex FHIR types) are sanitised and converted to JSON strings. Primitive
-   * types are returned as-is.
+   * types are returned as-is. Null values are returned as-is.
    *
    * @param value the raw value
    * @return the converted value
    */
-  @Nonnull
-  private static Object convertValue(@Nonnull final Object value) {
+  @Nullable
+  private static Object convertValue(@Nullable final Object value) {
     if (value instanceof final Row row) {
       // Complex type: sanitise and convert to JSON string representation.
       return rowToJson(row);
@@ -455,25 +454,10 @@ public class SingleInstanceEvaluator {
     if (value instanceof final scala.collection.Seq<?> seq) {
       for (int i = 0; i < seq.size(); i++) {
         final Object element = seq.apply(i);
-        target.add(new TypedValue(fhirType, sanitizeTraceValue(element)));
+        target.add(new TypedValue(fhirType, convertValue(element)));
       }
     } else {
-      target.add(new TypedValue(fhirType, sanitizeTraceValue(value)));
+      target.add(new TypedValue(fhirType, convertValue(value)));
     }
-  }
-
-  /**
-   * Sanitizes a single trace value. Row objects are sanitized (synthetic fields stripped) and
-   * converted to JSON strings, consistent with how main result values are handled.
-   *
-   * @param value the raw trace value
-   * @return the sanitized value
-   */
-  @Nullable
-  private static Object sanitizeTraceValue(@Nullable final Object value) {
-    if (value instanceof final Row row) {
-      return rowToJson(row);
-    }
-    return value;
   }
 }

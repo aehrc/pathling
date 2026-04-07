@@ -41,6 +41,21 @@ def _convert_java_value(value):
     return str(value)
 
 
+def _convert_typed_values(jtyped_values) -> list:
+    """Converts a Java list of TypedValue objects to Python dicts.
+
+    :param jtyped_values: iterable of Java TypedValue objects with getType() and getValue()
+    :return: list of dicts with ``type`` and ``value`` keys
+    """
+    results = []
+    for jtyped_value in jtyped_values:
+        value = jtyped_value.getValue()
+        if value is not None:
+            value = _convert_java_value(value)
+        results.append({"type": jtyped_value.getType(), "value": value})
+    return results
+
+
 class StorageType:
     MEMORY: str = "memory"
     DISK: str = "disk"
@@ -453,7 +468,8 @@ class PathlingContext:
                expression is composed with the context expression
         :param variables: optional named variables available via %variable syntax, or None
         :return: a dict with ``results`` (list of dicts with ``type`` and ``value``
-                 keys) and ``expectedReturnType`` (string)
+                 keys), ``expectedReturnType`` (string), and ``traces`` (list of
+                 dicts with ``label`` and ``values`` keys)
         :raises: Exception if the expression is invalid or evaluation fails
         """
         jresult = self._jpc.evaluateFhirPath(
@@ -464,29 +480,16 @@ class PathlingContext:
             variables,
         )
         # Convert Java FhirPathResult to Python dict.
-        results = []
-        for jtyped_value in jresult.getResults():
-            value = jtyped_value.getValue()
-            # Convert Java types to Python types.
-            if value is not None:
-                value = _convert_java_value(value)
-            results.append({"type": jtyped_value.getType(), "value": value})
+        results = _convert_typed_values(jresult.getResults())
 
         # Convert trace results.
-        traces = []
-        for jtrace in jresult.getTraces():
-            trace_values = []
-            for jtyped_value in jtrace.getValues():
-                value = jtyped_value.getValue()
-                if value is not None:
-                    value = _convert_java_value(value)
-                trace_values.append({"type": jtyped_value.getType(), "value": value})
-            traces.append(
-                {
-                    "label": jtrace.getLabel(),
-                    "values": trace_values,
-                }
-            )
+        traces = [
+            {
+                "label": jtrace.getLabel(),
+                "values": _convert_typed_values(jtrace.getValues()),
+            }
+            for jtrace in jresult.getTraces()
+        ]
 
         return {
             "results": results,

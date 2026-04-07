@@ -73,29 +73,9 @@ class TraceFunctionTest {
 
   @BeforeEach
   void setUp() {
-    final Patient patient1 = new Patient();
-    patient1.setId("Patient/1");
-    patient1.setGender(AdministrativeGender.FEMALE);
-    patient1.setActive(true);
-    patient1.addName().setUse(HumanName.NameUse.OFFICIAL).setFamily("Smith").addGiven("Jane");
-
-    final Patient patient2 = new Patient();
-    patient2.setId("Patient/2");
-    patient2.setGender(AdministrativeGender.MALE);
-    patient2.setActive(false);
-    patient2
-        .addName()
-        .setUse(HumanName.NameUse.NICKNAME)
-        .setFamily("Doe")
-        .addGiven("John")
-        .addGiven("James");
-
-    final Patient patient3 = new Patient();
-    patient3.setId("Patient/3");
-    // No gender, no active status, no name.
-
     final ObjectDataSource dataSource =
-        new ObjectDataSource(spark, encoders, List.of(patient1, patient2, patient3));
+        new ObjectDataSource(
+            spark, encoders, List.of(createPatient1(), createPatient2(), createPatient3()));
     final Dataset<Row> dataset = dataSource.read("Patient");
 
     evaluator =

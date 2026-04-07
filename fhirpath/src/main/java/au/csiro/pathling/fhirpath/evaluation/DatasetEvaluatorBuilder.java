@@ -26,6 +26,7 @@ import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -68,7 +69,7 @@ public class DatasetEvaluatorBuilder {
 
   @Nonnull private CrossResourceStrategy crossResourceStrategy = CrossResourceStrategy.FAIL;
 
-  @Nullable private TraceCollector traceCollector;
+  @Nonnull private Optional<TraceCollector> traceCollector = Optional.empty();
 
   /** Private constructor. Use factory methods to create instances. */
   private DatasetEvaluatorBuilder(
@@ -196,7 +197,7 @@ public class DatasetEvaluatorBuilder {
    */
   @Nonnull
   public DatasetEvaluatorBuilder withTraceCollector(@Nonnull final TraceCollector traceCollector) {
-    this.traceCollector = traceCollector;
+    this.traceCollector = Optional.of(traceCollector);
     return this;
   }
 
@@ -219,9 +220,7 @@ public class DatasetEvaluatorBuilder {
             .withCrossResourceStrategy(crossResourceStrategy)
             .withFunctionRegistry(functionRegistry)
             .withVariables(variables);
-    if (traceCollector != null) {
-      evalBuilder.withTraceCollector(traceCollector);
-    }
+    traceCollector.ifPresent(evalBuilder::withTraceCollector);
     final SingleResourceEvaluator evaluator = evalBuilder.build();
 
     return new DatasetEvaluator(evaluator, resolvedDataset);
