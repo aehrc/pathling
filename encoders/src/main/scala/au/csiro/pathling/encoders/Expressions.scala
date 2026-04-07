@@ -990,6 +990,86 @@ case class RowCounter(state: RowIndexCounter)
 }
 
 /**
+ * A leaf expression that reads the current value of a [[RowIndexCounter]] without incrementing it.
+ * Multiple references to this expression within the same element evaluation all return the same
+ * value, making it safe for use when `%rowIndex` is referenced more than once.
+ *
+ * The counter must be advanced separately via [[RowCounterIncrement]] after all references for a
+ * given element have been evaluated.
+ *
+ * @param state the shared thread-safe counter
+ */
+case class RowCounterGet(state: RowIndexCounter)
+  extends LeafExpression with Nondeterministic {
+
+  override def stateful: Boolean = true
+
+  override def nullable: Boolean = false
+
+  override def dataType: DataType = IntegerType
+
+  override protected def initializeInternal(partitionIndex: Int): Unit = {
+    // No-op: reset is handled by ResetCounter at the per-row level, not per-partition.
+  }
+
+  override protected def evalInternal(input: InternalRow): Int = {
+    state.get()
+  }
+
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    val counterRef = ctx.addReferenceObj("rowCounter", state, classOf[RowIndexCounter].getName)
+    ev.copy(code = code"""
+      final ${CodeGenerator.javaType(dataType)} ${ev.value} = $counterRef.get();""",
+      isNull = FalseLiteral)
+  }
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    RowCounterGet(state)
+  }
+}
+
+/**
+ * A unary expression that increments a [[RowIndexCounter]] after evaluating its child expression.
+ * This is used to advance the counter exactly once per element, after all `%rowIndex` references
+ * (via [[RowCounterGet]]) have been read.
+ *
+ * @param child the expression to evaluate before incrementing
+ * @param state the shared thread-safe counter to increment
+ */
+case class RowCounterIncrement(child: Expression, state: RowIndexCounter)
+  extends UnaryExpression with NonSQLExpression {
+
+  override def dataType: DataType = child.dataType
+
+  override def nullable: Boolean = child.nullable
+
+  override protected def nullSafeEval(input: Any): Any = {
+    // This should not be called — we override eval directly.
+    throw new UnsupportedOperationException(ExpressionConstants.CODEGEN_ONLY_MSG)
+  }
+
+  override def eval(input: InternalRow): Any = {
+    val result = child.eval(input)
+    state.increment()
+    result
+  }
+
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    val counterRef = ctx.addReferenceObj("rowCounter", state, classOf[RowIndexCounter].getName)
+    val childEval = child.genCode(ctx)
+    ev.copy(code = code"""
+      ${childEval.code}
+      final boolean ${ev.isNull} = ${childEval.isNull};
+      final ${CodeGenerator.javaType(dataType)} ${ev.value} = ${childEval.value};
+      $counterRef.increment();""")
+  }
+
+  override protected def withNewChildInternal(newChild: Expression): Expression = {
+    RowCounterIncrement(newChild, state)
+  }
+}
+
+/**
  * A unary expression that resets a [[RowCounter]]'s shared state to zero before evaluating its
  * child expression. This ensures the counter starts fresh for each row when used inside
  * per-row array transformations.

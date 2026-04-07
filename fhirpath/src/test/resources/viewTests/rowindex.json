@@ -583,6 +583,32 @@
       ]
     },
     {
+      "title": "repeat with duplicate %rowIndex references — same value per element",
+      "view": {
+        "resource": "Patient",
+        "where": [{ "path": "id = 'pt4'" }],
+        "select": [
+          {
+            "column": [{ "name": "id", "path": "id" }]
+          },
+          {
+            "repeat": ["extension"],
+            "column": [
+              { "name": "idx_a", "path": "%rowIndex" },
+              { "name": "idx_b", "path": "%rowIndex" },
+              { "name": "url", "path": "url", "type": "uri" }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        { "id": "pt4", "idx_a": 0, "idx_b": 0, "url": "urn:ext1" },
+        { "id": "pt4", "idx_a": 1, "idx_b": 1, "url": "urn:ext2" },
+        { "id": "pt4", "idx_a": 2, "idx_b": 2, "url": "urn:ext3" },
+        { "id": "pt4", "idx_a": 3, "idx_b": 3, "url": "urn:ext4" }
+      ]
+    },
+    {
       "title": "repeat nested inside forEach — independent %rowIndex",
       "view": {
         "resource": "Patient",

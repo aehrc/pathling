@@ -447,6 +447,37 @@ public class ValueFunctions {
   }
 
   /**
+   * Creates a read-only view of a shared {@link RowIndexCounter}. Each evaluation returns the
+   * current counter value without incrementing it, so multiple references within the same element
+   * evaluation all see the same value.
+   *
+   * <p>The counter must be advanced separately via {@link #rowCounterIncrement(Column,
+   * RowIndexCounter)} after all references for a given element have been evaluated.
+   *
+   * @param state the shared counter instance
+   * @return a Column that reads the current counter value without incrementing
+   */
+  @Nonnull
+  public static Column rowCounterGet(@Nonnull final RowIndexCounter state) {
+    return column(new RowCounterGet(state));
+  }
+
+  /**
+   * Wraps a column expression so that the shared row counter is incremented after evaluating the
+   * expression. This should be applied to the extractor result in a repeat projection to ensure the
+   * counter advances exactly once per element.
+   *
+   * @param child the expression to evaluate before incrementing
+   * @param state the shared counter instance to increment
+   * @return a Column that evaluates the child and then increments the counter
+   */
+  @Nonnull
+  public static Column rowCounterIncrement(
+      @Nonnull final Column child, @Nonnull final RowIndexCounter state) {
+    return column(new RowCounterIncrement(expression(child), state));
+  }
+
+  /**
    * Wraps a column expression so that the shared row counter is reset to zero before evaluating the
    * expression. This should be applied at the outermost level of a repeat projection to ensure the
    * counter starts fresh for each resource row.

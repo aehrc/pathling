@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -56,11 +57,12 @@ public record RepeatSelection(
   @Override
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
 
-    // Create a shared counter for the %rowIndex environment variable. Each element extracted by the
-    // tree traversal increments this counter, producing a global 0-based index across all depth
-    // levels and traversal branches.
+    // Create a shared counter for the %rowIndex environment variable. The counter is split into
+    // read and increment operations: all %rowIndex references within a single element read the
+    // same value (via rowCounterGet), and the counter advances exactly once per element (via
+    // rowCounterIncrement wrapping the extractor result).
     final RowIndexCounter rowIndexCounter = new RowIndexCounter();
-    final Column rowIndexCol = ValueFunctions.rowCounter(rowIndexCounter);
+    final Column rowIndexCol = ValueFunctions.rowCounterGet(rowIndexCounter);
 
     // Evaluate each path to get collections, retaining them for type inspection.
     final List<Collection> pathCollections = paths.stream().map(context::evalExpression).toList();
@@ -91,7 +93,8 @@ public record RepeatSelection(
                         ctx.inputContext().getColumnValue(),
                         c ->
                             ValueFunctions.emptyArrayIfMissingField(
-                                component.evaluateElementWise(ctx.withInputColumn(c))),
+                                evaluateElementWiseWithIncrement(
+                                    ctx.withInputColumn(c), rowIndexCounter)),
                         paths.stream().map(ctx::asColumnOperator).toList(),
                         maxDepth,
                         errorOnDepthExhaustion))
@@ -113,6 +116,25 @@ public record RepeatSelection(
         startingNodes.stream().findFirst().orElse(context.withEmptyInput());
 
     return component.evaluate(schemaContext).withResultColumn(result);
+  }
+
+  /**
+   * Evaluates the component clause element-wise, wrapping each per-element result with a counter
+   * increment. This ensures the shared row index counter advances exactly once per array element,
+   * after all {@code %rowIndex} references within that element have been read.
+   *
+   * @param context the projection context for evaluation
+   * @param counter the shared counter to increment after each element
+   * @return the resulting column after element-wise evaluation with per-element increment
+   */
+  @Nonnull
+  private Column evaluateElementWiseWithIncrement(
+      @Nonnull final ProjectionContext context, @Nonnull final RowIndexCounter counter) {
+    final UnaryOperator<Column> elementOperator = component.asColumnOperator(context);
+    return new DefaultRepresentation(context.inputContext().getColumnValue())
+        .transform(c -> ValueFunctions.rowCounterIncrement(elementOperator.apply(c), counter))
+        .flatten()
+        .getValue();
   }
 
   /**
