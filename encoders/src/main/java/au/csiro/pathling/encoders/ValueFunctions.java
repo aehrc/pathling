@@ -431,22 +431,6 @@ public class ValueFunctions {
   }
 
   /**
-   * Creates a new row counter backed by a shared {@link RowIndexCounter}. Each evaluation of the
-   * returned column increments the counter and returns its previous value, producing a 0-based
-   * sequence: 0, 1, 2, ...
-   *
-   * <p>The counter must be reset before each top-level evaluation (e.g. per resource row) using
-   * {@link #resetCounter(Column, RowIndexCounter)}.
-   *
-   * @param state the shared counter instance
-   * @return a Column that produces the next integer on each evaluation
-   */
-  @Nonnull
-  public static Column rowCounter(@Nonnull final RowIndexCounter state) {
-    return column(new RowCounter(state));
-  }
-
-  /**
    * Creates a read-only view of a shared {@link RowIndexCounter}. Each evaluation returns the
    * current counter value without incrementing it, so multiple references within the same element
    * evaluation all see the same value.

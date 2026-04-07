@@ -65,16 +65,6 @@ public class RowIndexCounter implements Serializable {
   }
 
   /**
-   * Returns the current counter value and increments it. The first call after a {@link #reset()}
-   * returns 0.
-   *
-   * @return the current counter value before incrementing
-   */
-  public int getAndIncrement() {
-    return counter.get()[0]++;
-  }
-
-  /**
    * Increments the counter without returning a value. This is used to advance the counter after all
    * references to the current value have been evaluated.
    */

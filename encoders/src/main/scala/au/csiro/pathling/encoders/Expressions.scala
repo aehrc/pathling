@@ -948,48 +948,6 @@ case class UnresolvedVariantUnwrap(inner: Expression, schemaRef: Expression,
 }
 
 /**
- * A stateful, non-deterministic expression that returns a monotonically increasing integer each
- * time it is evaluated. The counter is shared via a [[RowIndexCounter]] instance which uses
- * [[ThreadLocal]] storage to ensure thread safety across parallel Spark tasks.
- *
- * This is designed for use inside array-producing expressions (e.g. `transform`, `Concat`) where
- * the evaluation order is deterministic and single-threaded within a row. The counter must be reset
- * to zero before each top-level evaluation via [[ResetCounter]].
- *
- * Modeled after Spark's `MonotonicallyIncreasingID`.
- *
- * @param state the shared thread-safe counter
- */
-case class RowCounter(state: RowIndexCounter)
-  extends LeafExpression with Nondeterministic {
-
-  override def stateful: Boolean = true
-
-  override def nullable: Boolean = false
-
-  override def dataType: DataType = IntegerType
-
-  override protected def initializeInternal(partitionIndex: Int): Unit = {
-    // No-op: reset is handled by ResetCounter at the per-row level, not per-partition.
-  }
-
-  override protected def evalInternal(input: InternalRow): Int = {
-    state.getAndIncrement()
-  }
-
-  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-    val counterRef = ctx.addReferenceObj("rowCounter", state, classOf[RowIndexCounter].getName)
-    ev.copy(code = code"""
-      final ${CodeGenerator.javaType(dataType)} ${ev.value} = $counterRef.getAndIncrement();""",
-      isNull = FalseLiteral)
-  }
-
-  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
-    RowCounter(state)
-  }
-}
-
-/**
  * A leaf expression that reads the current value of a [[RowIndexCounter]] without incrementing it.
  * Multiple references to this expression within the same element evaluation all return the same
  * value, making it safe for use when `%rowIndex` is referenced more than once.
@@ -1070,7 +1028,7 @@ case class RowCounterIncrement(child: Expression, state: RowIndexCounter)
 }
 
 /**
- * A unary expression that resets a [[RowCounter]]'s shared state to zero before evaluating its
+ * A unary expression that resets a [[RowIndexCounter]]'s shared state to zero before evaluating its
  * child expression. This ensures the counter starts fresh for each row when used inside
  * per-row array transformations.
  *
