@@ -186,6 +186,7 @@ def build_response_parameters(
     expected_return_type: str,
     results: list[dict],
     context: Optional[str] = None,
+    traces: Optional[list[dict]] = None,
 ) -> dict:
     """Constructs a FHIR Parameters response from evaluation results.
 
@@ -195,6 +196,7 @@ def build_response_parameters(
     :param expected_return_type: the statically inferred return type
     :param results: the list of typed result values
     :param context: the optional context expression
+    :param traces: the list of trace entries from trace() calls
     :return: a FHIR Parameters resource dict
     """
     # Build the parameters metadata part.
@@ -213,15 +215,27 @@ def build_response_parameters(
 
     output_parameters: list[dict] = [{"name": "parameters", "part": params_parts}]
 
-    # Build result parts.
-    if results:
+    # Build result and trace parts.
+    if results or traces:
         result_parts = []
         for typed_value in results:
             result_part = _build_result_part(typed_value)
             result_parts.append(result_part)
+        for trace_entry in traces or []:
+            result_parts.append(_build_trace_part(trace_entry))
         output_parameters.append({"name": "result", "part": result_parts})
 
     return {"resourceType": "Parameters", "parameter": output_parameters}
+
+
+def _build_trace_part(trace_entry: dict) -> dict:
+    """Builds a trace part from a trace entry.
+
+    :param trace_entry: a dict with 'label' and 'values' keys
+    :return: a FHIR Parameters part dict with the trace name and typed values
+    """
+    value_parts = [_build_result_part(tv) for tv in trace_entry["values"]]
+    return {"name": "trace", "valueString": trace_entry["label"], "part": value_parts}
 
 
 def _build_result_part(typed_value: dict) -> dict:

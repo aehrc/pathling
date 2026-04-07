@@ -162,6 +162,7 @@ def _handle_evaluate(get_context) -> Response:
         expected_return_type=result["expectedReturnType"],
         results=result["results"],
         context=params.context,
+        traces=result.get("traces", []),
     )
 
     return Response(

@@ -253,6 +253,92 @@ def test_build_response_includes_expected_return_type():
     assert return_type_parts[0]["valueString"] == "boolean"
 
 
+# ========== Trace rendering tests ==========
+
+
+def test_build_response_with_traces():
+    """Trace entries appear inside the result part with label and typed values."""
+    traces = [
+        {
+            "label": "myLabel",
+            "values": [
+                {"type": "string", "value": "id1"},
+                {"type": "string", "value": "id2"},
+            ],
+        },
+    ]
+    response = build_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="name.given.trace('myLabel')",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="string",
+        results=[{"type": "string", "value": "John"}],
+        traces=traces,
+    )
+
+    result_part = response["parameter"][1]
+    assert result_part["name"] == "result"
+
+    # First part is the result value, second is the trace.
+    assert result_part["part"][0] == {"name": "string", "valueString": "John"}
+
+    trace_part = result_part["part"][1]
+    assert trace_part["name"] == "trace"
+    assert trace_part["valueString"] == "myLabel"
+    assert trace_part["part"] == [
+        {"name": "string", "valueString": "id1"},
+        {"name": "string", "valueString": "id2"},
+    ]
+
+
+def test_build_response_with_empty_traces():
+    """No trace parts appear when the traces list is empty."""
+    response = build_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="active",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="boolean",
+        results=[{"type": "boolean", "value": True}],
+        traces=[],
+    )
+
+    result_part = response["parameter"][1]
+    trace_parts = [p for p in result_part["part"] if p["name"] == "trace"]
+    assert trace_parts == []
+
+
+def test_build_response_with_complex_trace_values():
+    """Complex trace values use the json-value extension."""
+    traces = [
+        {
+            "label": "names",
+            "values": [
+                {"type": "HumanName", "value": '{"family": "Smith"}'},
+            ],
+        },
+    ]
+    response = build_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="name.trace('names')",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="HumanName",
+        results=[],
+        traces=traces,
+    )
+
+    # Traces present even when results are empty.
+    result_part = response["parameter"][1]
+    assert result_part["name"] == "result"
+
+    trace_part = result_part["part"][0]
+    assert trace_part["name"] == "trace"
+    assert trace_part["valueString"] == "names"
+    value_part = trace_part["part"][0]
+    assert value_part["name"] == "HumanName"
+    assert value_part["extension"][0]["url"] == JSON_VALUE_EXTENSION_URL
+    assert "Smith" in value_part["extension"][0]["valueString"]
+
+
 # ========== OperationOutcome construction tests ==========
 
 

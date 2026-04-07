@@ -42,6 +42,7 @@ def mock_context():
     ctx.evaluate_fhirpath.return_value = {
         "results": [{"type": "string", "value": "Smith"}],
         "expectedReturnType": "string",
+        "traces": [],
     }
     return ctx
 
@@ -342,6 +343,40 @@ def test_cors_multiple_origins(mock_context, valid_request_body):
                 assert (
                     response.headers.get("Access-Control-Allow-Origin") is not None
                 ), f"Expected CORS header for {origin}"
+
+
+def test_traces_included_in_response(mock_context, valid_request_body):
+    """Trace entries from evaluation appear inside the result part."""
+    mock_context.evaluate_fhirpath.return_value = {
+        "results": [{"type": "boolean", "value": True}],
+        "expectedReturnType": "boolean",
+        "traces": [
+            {
+                "label": "flag",
+                "values": [{"type": "boolean", "value": True}],
+            },
+        ],
+    }
+
+    with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": TEST_CORS_ORIGINS}):
+        app = create_app(pathling_context=mock_context)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            response = c.post(
+                "/fhir/$fhirpath",
+                data=json.dumps(valid_request_body),
+                content_type="application/json",
+            )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    result_part = data["parameter"][1]
+    assert result_part["name"] == "result"
+
+    trace_parts = [p for p in result_part["part"] if p["name"] == "trace"]
+    assert len(trace_parts) == 1
+    assert trace_parts[0]["valueString"] == "flag"
+    assert trace_parts[0]["part"] == [{"name": "boolean", "valueBoolean": True}]
 
 
 def test_context_expression_passed_to_evaluator(client, mock_context):
