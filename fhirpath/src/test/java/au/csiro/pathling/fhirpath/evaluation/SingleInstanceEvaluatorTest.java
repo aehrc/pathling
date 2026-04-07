@@ -337,6 +337,42 @@ class SingleInstanceEvaluatorTest {
     }
 
     @Test
+    void updatesParentSchemaForSanitisedNestedStructs() {
+      // The parent's StructField dataType for a nested struct must match the sanitised nested
+      // Row's schema, so that Row.json() positional mapping remains correct.
+      final StructType nestedSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("id", DataTypes.StringType, true),
+                DataTypes.createStructField("start", DataTypes.StringType, true),
+                DataTypes.createStructField("end", DataTypes.StringType, true),
+              });
+
+      final StructType outerSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("family", DataTypes.StringType, true),
+                DataTypes.createStructField("period", nestedSchema, true),
+              });
+
+      final Row nestedRow =
+          new GenericRowWithSchema(new Object[] {null, "2000", "2002"}, nestedSchema);
+      final Row outerRow = new GenericRowWithSchema(new Object[] {"Smith", nestedRow}, outerSchema);
+
+      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(outerRow);
+
+      // The parent's "period" field dataType should have 2 fields (id stripped as null).
+      final StructType periodType = (StructType) sanitised.schema().apply("period").dataType();
+      assertEquals(2, periodType.fields().length);
+      assertEquals("start", periodType.fields()[0].name());
+      assertEquals("end", periodType.fields()[1].name());
+
+      // The parent's dataType should match the nested Row's own schema.
+      final Row sanitisedNested = sanitised.getAs("period");
+      assertEquals(sanitisedNested.schema(), periodType);
+    }
+
+    @Test
     void preservesFieldsWithNonNullValues() {
       // All non-null fields should be kept, even if some are null.
       final StructType schema =
@@ -383,6 +419,38 @@ class SingleInstanceEvaluatorTest {
       assertFalse(json.contains("value_scale"));
       assertTrue(json.contains("\"value\":\"100\""));
       assertTrue(json.contains("\"code\":\"mg\""));
+    }
+
+    @Test
+    void jsonCorrectlyMapsNestedStructFieldsAfterNullStripping() {
+      // Nested struct with null fields should produce correct field-to-value mapping in JSON.
+      // Without the fix, Row.json() uses the parent's original dataType to interpret the nested
+      // row, causing positional misalignment when null fields have been stripped.
+      final StructType nestedSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("id", DataTypes.StringType, true),
+                DataTypes.createStructField("start", DataTypes.StringType, true),
+                DataTypes.createStructField("end", DataTypes.StringType, true),
+              });
+
+      final StructType outerSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("family", DataTypes.StringType, true),
+                DataTypes.createStructField("period", nestedSchema, true),
+              });
+
+      final Row nestedRow =
+          new GenericRowWithSchema(new Object[] {null, "2000", "2002"}, nestedSchema);
+      final Row outerRow = new GenericRowWithSchema(new Object[] {"Smith", nestedRow}, outerSchema);
+
+      final String json = SingleInstanceEvaluator.rowToJson(outerRow);
+
+      assertTrue(json.contains("\"start\":\"2000\""));
+      assertTrue(json.contains("\"end\":\"2002\""));
+      assertFalse(json.contains("\"id\""));
+      assertTrue(json.contains("\"family\":\"Smith\""));
     }
 
     @Test

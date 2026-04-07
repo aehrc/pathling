@@ -385,11 +385,17 @@ public class SingleInstanceEvaluator {
         if (value == null) {
           continue;
         }
-        filteredFields.add(field);
-        // Recursively sanitise nested struct values.
+        // Recursively sanitise nested struct values, updating the parent field's dataType
+        // to match the sanitised schema. This is critical because Row.json() uses the parent's
+        // dataType (not the nested row's own schema) to map field names positionally.
         if (value instanceof final Row nestedRow) {
-          filteredValues.add(sanitiseRow(nestedRow));
+          final Row sanitisedNested = sanitiseRow(nestedRow);
+          filteredValues.add(sanitisedNested);
+          filteredFields.add(
+              new StructField(
+                  field.name(), sanitisedNested.schema(), field.nullable(), field.metadata()));
         } else {
+          filteredFields.add(field);
           filteredValues.add(value);
         }
       }
