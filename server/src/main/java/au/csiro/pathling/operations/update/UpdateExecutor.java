@@ -135,26 +135,37 @@ public class UpdateExecutor {
 
     if (deltaTableExists(spark, tablePath)) {
       if (schemaAutoMerge) {
-        // Enable automatic schema merging so that tables created with an older encoder schema can
-        // accept resources encoded with a newer schema (e.g. additional synthetic fields).
-        spark.conf().set("spark.databricks.delta.schema.autoMerge.enabled", "true");
+        // Delta's MERGE — even with spark.databricks.delta.schema.autoMerge.enabled=true —
+        // does not support adding new fields to nested structs inside arrays. This is the exact
+        // failure mode when the FHIR encoder gains new value-type columns (e.g. valueDecimal,
+        // valueDecimal_scale inside the extension element struct): the MERGE planner throws
+        // DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION because it cannot cast the richer source struct
+        // to the narrower target struct.
+        //
+        // A regular write with mergeSchema=true DOES support nested-struct field evolution.
+        // Writing limit(0) — zero rows, same schema as the encoder output — causes Delta to add
+        // any missing nested fields to the target table schema (with null for existing rows)
+        // without inserting any data. The MERGE that follows then sees compatible schemas and
+        // succeeds.
+        updates
+            .limit(0)
+            .write()
+            .format("delta")
+            .mode(SaveMode.Append)
+            .option("mergeSchema", "true")
+            .save(tablePath);
       }
-      try {
-        // Perform a merge operation on the existing table.
-        final DeltaTable table = DeltaTable.forPath(spark, tablePath);
-        table
-            .as("original")
-            .merge(updates.as("updates"), "original.id = updates.id")
-            .whenMatched()
-            .updateAll()
-            .whenNotMatched()
-            .insertAll()
-            .execute();
-      } finally {
-        if (schemaAutoMerge) {
-          spark.conf().set("spark.databricks.delta.schema.autoMerge.enabled", "false");
-        }
-      }
+
+      // Perform a merge operation on the existing table.
+      final DeltaTable table = DeltaTable.forPath(spark, tablePath);
+      table
+          .as("original")
+          .merge(updates.as("updates"), "original.id = updates.id")
+          .whenMatched()
+          .updateAll()
+          .whenNotMatched()
+          .insertAll()
+          .execute();
     } else {
       // Create a new table with the resources.
       log.debug("Creating new Delta table for resource type: {}", resourceCode);
