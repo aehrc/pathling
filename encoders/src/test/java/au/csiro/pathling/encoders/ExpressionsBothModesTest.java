@@ -292,4 +292,69 @@ public abstract class ExpressionsBothModesTest {
       assertEquals(expected.get(i), actual.get(i), "Row " + i + " mismatch");
     }
   }
+
+  /**
+   * Tests that {@link ValueFunctions#rowCounterGet}, {@link ValueFunctions#rowCounterIncrement},
+   * and {@link ValueFunctions#resetCounter} work together to assign sequential indices within an
+   * array transform and reset between rows.
+   */
+  @Test
+  void testRowCounterExpressions() {
+    // Create a dataset with two rows, each containing an array of structs.
+    final StructType itemType =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("value", DataTypes.StringType, true, Metadata.empty())
+            });
+    final StructType schema =
+        DataTypes.createStructType(
+            new StructField[] {
+              new StructField("id", DataTypes.StringType, true, Metadata.empty()),
+              new StructField("items", DataTypes.createArrayType(itemType), true, Metadata.empty())
+            });
+
+    final List<Row> data =
+        Arrays.asList(
+            RowFactory.create(
+                "r1",
+                Arrays.asList(
+                    RowFactory.create("a"), RowFactory.create("b"), RowFactory.create("c"))),
+            RowFactory.create("r2", Arrays.asList(RowFactory.create("x"), RowFactory.create("y"))));
+
+    final Dataset<Row> ds = spark.createDataFrame(data, schema).repartition(1);
+
+    // Build a transform that assigns a row index to each array element using the counter
+    // expressions.
+    final RowIndexCounter counter = new RowIndexCounter();
+    final Column indexCol = ValueFunctions.rowCounterGet(counter);
+
+    // Transform each item: struct(value, index), then increment the counter.
+    final Column transformed =
+        functions.transform(
+            col("items"),
+            item ->
+                ValueFunctions.rowCounterIncrement(
+                    struct(item.getField("value").alias("value"), indexCol.alias("idx")), counter));
+
+    // Wrap with resetCounter so the index restarts at zero for each row.
+    final Column withReset = ValueFunctions.resetCounter(transformed, counter);
+
+    final Dataset<Row> result = ds.select(col("id"), withReset.alias("indexed_items"));
+    final List<Row> rows = result.collectAsList();
+
+    assertEquals(2, rows.size());
+
+    // Row 1: three items with indices 0, 1, 2.
+    final List<Row> items1 = rows.get(0).getList(1);
+    assertEquals(3, items1.size());
+    assertEquals(0, items1.get(0).getInt(1));
+    assertEquals(1, items1.get(1).getInt(1));
+    assertEquals(2, items1.get(2).getInt(1));
+
+    // Row 2: two items with indices 0, 1 (counter was reset).
+    final List<Row> items2 = rows.get(1).getList(1);
+    assertEquals(2, items2.size());
+    assertEquals(0, items2.get(0).getInt(1));
+    assertEquals(1, items2.get(1).getInt(1));
+  }
 }
