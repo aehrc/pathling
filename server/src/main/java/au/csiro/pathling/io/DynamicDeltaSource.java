@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import au.csiro.pathling.QueryHelpers;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.FileSystemPersistence;
@@ -56,6 +57,8 @@ public class DynamicDeltaSource implements QueryableDataSource {
 
   @Nonnull private final FhirEncoders fhirEncoders;
 
+  private final boolean cacheDatasets;
+
   @Nonnull private final Set<String> dynamicallyDiscoveredTypes = ConcurrentHashMap.newKeySet();
 
   /**
@@ -65,16 +68,19 @@ public class DynamicDeltaSource implements QueryableDataSource {
    * @param spark the Spark session for Delta table operations
    * @param databasePath the path to the Delta database
    * @param fhirEncoders the FHIR encoders for creating empty datasets
+   * @param storageConfiguration the storage configuration
    */
   public DynamicDeltaSource(
       @Nonnull final QueryableDataSource delegate,
       @Nonnull final SparkSession spark,
       @Nonnull final String databasePath,
-      @Nonnull final FhirEncoders fhirEncoders) {
+      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final StorageConfiguration storageConfiguration) {
     this.delegate = delegate;
     this.spark = spark;
     this.databasePath = databasePath;
     this.fhirEncoders = fhirEncoders;
+    this.cacheDatasets = storageConfiguration.getCacheDatasets();
   }
 
   @Override
@@ -86,12 +92,12 @@ public class DynamicDeltaSource implements QueryableDataSource {
 
     // If delegate knows about this type, use it.
     if (delegate.getResourceTypes().contains(resourceCode)) {
-      return delegate.read(resourceCode);
+      return cacheIfEnabled(delegate.read(resourceCode));
     }
 
     // If we've already discovered this type dynamically, read from Delta.
     if (dynamicallyDiscoveredTypes.contains(resourceCode)) {
-      return readFromDelta(resourceCode);
+      return cacheIfEnabled(readFromDelta(resourceCode));
     }
 
     // Try to discover the Delta table.
@@ -99,7 +105,7 @@ public class DynamicDeltaSource implements QueryableDataSource {
     if (DeltaTable.isDeltaTable(spark, tablePath)) {
       log.debug("Dynamically discovered Delta table for resource type: {}", resourceCode);
       dynamicallyDiscoveredTypes.add(resourceCode);
-      return readFromDelta(resourceCode);
+      return cacheIfEnabled(readFromDelta(resourceCode));
     }
 
     // No data found - return an empty dataset with the correct schema.
@@ -151,6 +157,14 @@ public class DynamicDeltaSource implements QueryableDataSource {
   @Nonnull
   public DataSource cache() {
     return delegate.cache();
+  }
+
+  @Nonnull
+  private Dataset<Row> cacheIfEnabled(@Nonnull final Dataset<Row> dataset) {
+    if (cacheDatasets) {
+      return dataset.cache();
+    }
+    return dataset;
   }
 
   @Nonnull

@@ -89,7 +89,8 @@ public class Dependencies {
         baseSource,
         pathlingContext.getSpark(),
         databaseLocation,
-        pathlingContext.getFhirEncoders());
+        pathlingContext.getFhirEncoders(),
+        serverConfiguration.getStorage());
   }
 
   @Bean
