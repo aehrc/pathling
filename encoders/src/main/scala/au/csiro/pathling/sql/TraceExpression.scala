@@ -27,12 +27,16 @@ import org.apache.spark.sql.types.DataType
 import org.slf4j.{Logger, LoggerFactory}
 
 /**
- * Shared logging and collection logic for trace expressions.
+ * Shared logging and collection logic for trace expressions. Both
+ * [[TraceExpression]] and [[TraceProjectionExpression]] use the same logger
+ * so that a single log appender can capture all trace output.
  */
 private[sql] object TraceHelper {
 
+  private[sql] val log: Logger = LoggerFactory.getLogger(classOf[TraceExpression])
+
   private[sql] def logAndCollect(
-      log: Logger, name: String, fhirType: String, collector: TraceCollector,
+      name: String, fhirType: String, collector: TraceCollector,
       value: Any, toScala: Any => Any): Unit = {
     val converted = toScala(value)
     if (log.isTraceEnabled) {
@@ -70,9 +74,6 @@ case class TraceExpression(child: Expression, name: String, fhirType: String,
                            collector: TraceCollector)
   extends UnaryExpression with CodegenFallback with Nondeterministic {
 
-  @transient
-  private lazy val log = LoggerFactory.getLogger(classOf[TraceExpression])
-
   override def dataType: DataType = child.dataType
 
   override def nullable: Boolean = child.nullable
@@ -87,8 +88,8 @@ case class TraceExpression(child: Expression, name: String, fhirType: String,
 
   override protected def evalInternal(input: InternalRow): Any = {
     val value = child.eval(input)
-    if (value != null && (log.isTraceEnabled || collector != null)) {
-      TraceHelper.logAndCollect(log, name, fhirType, collector, value, toScala)
+    if (value != null && (TraceHelper.log.isTraceEnabled || collector != null)) {
+      TraceHelper.logAndCollect(name, fhirType, collector, value, toScala)
     }
     value
   }
@@ -121,9 +122,6 @@ case class TraceProjectionExpression(left: Expression, right: Expression,
                                      collector: TraceCollector)
   extends BinaryExpression with CodegenFallback with Nondeterministic {
 
-  @transient
-  private lazy val log = LoggerFactory.getLogger(classOf[TraceExpression])
-
   override def dataType: DataType = left.dataType
 
   override def nullable: Boolean = left.nullable
@@ -143,8 +141,8 @@ case class TraceProjectionExpression(left: Expression, right: Expression,
       return null
     }
     val toLog = right.eval(input)
-    if (toLog != null && (log.isTraceEnabled || collector != null)) {
-      TraceHelper.logAndCollect(log, name, fhirType, collector, toLog, toScala)
+    if (toLog != null && (TraceHelper.log.isTraceEnabled || collector != null)) {
+      TraceHelper.logAndCollect(name, fhirType, collector, toLog, toScala)
     }
     passThrough
   }
