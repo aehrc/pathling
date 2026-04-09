@@ -1,3 +1,52 @@
+## ADDED Requirements
+
+### Requirement: trace with projection logs projected value and returns input unchanged
+
+The `trace(name, projection)` function SHALL evaluate the projection expression
+against the input collection and log the projected result. The function SHALL
+return the input collection unchanged, regardless of the projection result.
+
+#### Scenario: trace with projection on a primitive path
+
+- **WHEN** evaluating `Patient.name.trace('ids', id)` where `id` is a valid
+  path on HumanName
+- **THEN** the result SHALL be identical to evaluating `Patient.name`
+- **AND** the logged value SHALL be the result of evaluating `id` on each
+  HumanName element
+
+#### Scenario: trace with projection on a complex expression
+
+- **WHEN** evaluating `Patient.name.trace('full', given.first() + ' ' + family)`
+- **THEN** the result SHALL be identical to evaluating `Patient.name`
+- **AND** the logged value SHALL be the concatenated string
+
+#### Scenario: trace with projection returning empty
+
+- **WHEN** evaluating `Patient.name.trace('missing', deceased)` where `deceased`
+  does not exist on HumanName
+- **THEN** the result SHALL be identical to evaluating `Patient.name`
+- **AND** no value SHALL be logged for that element
+
+#### Scenario: trace with projection on an empty input collection
+
+- **WHEN** evaluating `{}.trace('empty', id)`
+- **THEN** the result SHALL be an empty collection
+
+### Requirement: trace is a nondeterministic expression
+
+The Spark Catalyst expression underlying `trace()` SHALL be marked as
+nondeterministic to prevent the query optimizer from eliminating trace
+expressions or caching their results via common subexpression elimination. Each
+`trace()` call SHALL execute its logging side effect independently.
+
+#### Scenario: duplicate trace calls both execute
+
+- **WHEN** evaluating an expression where the same `trace()` call appears in
+  two branches of a computation
+- **THEN** both trace calls SHALL produce log output independently
+
+## MODIFIED Requirements
+
 ### Requirement: trace returns input collection unchanged
 
 The `trace(name [, projection])` function SHALL return the input collection
@@ -136,48 +185,3 @@ two arguments SHALL NOT produce parse errors or "unknown function" errors.
 
 - **WHEN** parsing the expression `Patient.active.trace()`
 - **THEN** an error SHALL be raised indicating a missing required argument
-
-### Requirement: trace with projection logs projected value and returns input unchanged
-
-The `trace(name, projection)` function SHALL evaluate the projection expression
-against the input collection and log the projected result. The function SHALL
-return the input collection unchanged, regardless of the projection result.
-
-#### Scenario: trace with projection on a primitive path
-
-- **WHEN** evaluating `Patient.name.trace('ids', id)` where `id` is a valid
-  path on HumanName
-- **THEN** the result SHALL be identical to evaluating `Patient.name`
-- **AND** the logged value SHALL be the result of evaluating `id` on each
-  HumanName element
-
-#### Scenario: trace with projection on a complex expression
-
-- **WHEN** evaluating `Patient.name.trace('full', given.first() + ' ' + family)`
-- **THEN** the result SHALL be identical to evaluating `Patient.name`
-- **AND** the logged value SHALL be the concatenated string
-
-#### Scenario: trace with projection returning empty
-
-- **WHEN** evaluating `Patient.name.trace('missing', deceased)` where `deceased`
-  does not exist on HumanName
-- **THEN** the result SHALL be identical to evaluating `Patient.name`
-- **AND** no value SHALL be logged for that element
-
-#### Scenario: trace with projection on an empty input collection
-
-- **WHEN** evaluating `{}.trace('empty', id)`
-- **THEN** the result SHALL be an empty collection
-
-### Requirement: trace is a nondeterministic expression
-
-The Spark Catalyst expression underlying `trace()` SHALL be marked as
-nondeterministic to prevent the query optimizer from eliminating trace
-expressions or caching their results via common subexpression elimination. Each
-`trace()` call SHALL execute its logging side effect independently.
-
-#### Scenario: duplicate trace calls both execute
-
-- **WHEN** evaluating an expression where the same `trace()` call appears in
-  two branches of a computation
-- **THEN** both trace calls SHALL produce log output independently

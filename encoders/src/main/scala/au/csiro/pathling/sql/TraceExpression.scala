@@ -19,50 +19,66 @@ package au.csiro.pathling.sql
 
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.CatalystTypeConverters
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.{BinaryExpression, Expression, Nondeterministic}
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
-import org.apache.spark.sql.catalyst.expressions.{Expression, UnaryExpression}
 import org.apache.spark.sql.types.DataType
 import org.slf4j.LoggerFactory
 
 /**
- * A Catalyst expression that logs the string representation of each evaluated
- * value via SLF4J, then returns the value unchanged. This implements the
- * FHIRPath trace() function semantics.
+ * A Catalyst expression that returns one value (left) while logging another
+ * (right) via SLF4J. This implements the FHIRPath trace() function semantics,
+ * including the optional projection argument.
+ *
+ * When no projection is provided, both children reference the same column, so
+ * the logged value equals the returned value.
  *
  * When a [[TraceCollector]] is provided, each value is also added to the
  * collector with the trace label and FHIR type, enabling programmatic capture
  * of trace output.
  *
- * Note: this expression extends [[UnaryExpression]] and overrides
- * `nullSafeEval`, so null values are passed through without being logged or
- * collected. This is intentional — null represents an absent value in the
- * FHIRPath collection and should not produce a trace entry.
+ * This expression is marked [[Nondeterministic]] because it has side effects
+ * (logging, collector accumulation) that must not be eliminated by the Catalyst
+ * optimizer.
  *
- * @param child     the child expression whose value is traced
+ * Null handling is asymmetric: a null left (pass-through) value returns null
+ * without logging. A null right (projected) value skips logging but still
+ * returns the left value.
+ *
+ * @param left      the pass-through expression whose value is returned
+ * @param right     the expression whose value is logged
  * @param name      the diagnostic label included in log messages
- * @param fhirType  the FHIR type code of the traced collection (e.g., "HumanName")
+ * @param fhirType  the FHIR type code of the logged expression (e.g., "string")
  * @param collector an optional collector for programmatic trace capture, or null
  */
-case class TraceExpression(child: Expression, name: String, fhirType: String,
-                           collector: TraceCollector)
-  extends UnaryExpression with CodegenFallback {
+case class TraceExpression(left: Expression, right: Expression, name: String,
+                           fhirType: String, collector: TraceCollector)
+  extends BinaryExpression with CodegenFallback with Nondeterministic {
 
   @transient
   private lazy val log = LoggerFactory.getLogger(classOf[TraceExpression])
 
-  override def dataType: DataType = child.dataType
+  override def dataType: DataType = left.dataType
 
-  override def nullable: Boolean = child.nullable
+  override def nullable: Boolean = left.nullable
 
-  override protected def withNewChildInternal(newChild: Expression): Expression =
-    copy(child = newChild)
+  override protected def withNewChildrenInternal(
+      newLeft: Expression, newRight: Expression): Expression =
+    copy(left = newLeft, right = newRight)
+
+  override protected def initializeInternal(partitionIndex: Int): Unit = ()
 
   @transient
-  private lazy val toScala = CatalystTypeConverters.createToScalaConverter(dataType)
+  private lazy val toScala = CatalystTypeConverters.createToScalaConverter(right.dataType)
 
-  override def nullSafeEval(value: Any): Any = {
-    if (log.isTraceEnabled || collector != null) {
-      val converted = toScala(value)
+  override protected def evalInternal(input: InternalRow): Any = {
+    val passThrough = left.eval(input)
+    if (passThrough == null) {
+      return null
+    }
+    val toLog = right.eval(input)
+    if (toLog != null && (log.isTraceEnabled || collector != null)) {
+      val converted = toScala(toLog)
       if (log.isTraceEnabled) {
         log.trace("[trace:{}] {}", name, toReadableString(converted))
       }
@@ -70,7 +86,7 @@ case class TraceExpression(child: Expression, name: String, fhirType: String,
         collector.add(name, fhirType, converted)
       }
     }
-    value
+    passThrough
   }
 
   private def toReadableString(value: Any): String = value match {

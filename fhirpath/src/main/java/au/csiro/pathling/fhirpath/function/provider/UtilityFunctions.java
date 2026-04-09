@@ -23,6 +23,7 @@ import static org.apache.spark.sql.classic.ExpressionUtils.expression;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.sql.TraceCollector;
 import au.csiro.pathling.sql.TraceExpression;
@@ -46,8 +47,11 @@ public class UtilityFunctions {
    * Adds a string representation of the input collection to the diagnostic log, using the {@code
    * name} argument as the label in the log. Returns the input collection unchanged.
    *
+   * <p>When a projection expression is provided, the projected value is logged instead of the input
+   * value, but the input collection is still returned unchanged.
+   *
    * <p>When a {@link TraceCollector} is available on the evaluation context, each traced value is
-   * also added to the collector with the trace label and the FHIR type of the input collection.
+   * also added to the collector with the trace label and the FHIR type of the logged expression.
    *
    * <p><strong>Limitation:</strong> The {@code name} argument must be a string literal. Dynamic
    * expressions (e.g., {@code trace(someField)}) are not supported and will raise an error.
@@ -55,6 +59,8 @@ public class UtilityFunctions {
    * @param input the input collection
    * @param name a {@link StringCollection} containing the diagnostic label for the trace output
    *     (must be a literal value)
+   * @param projection an optional expression to evaluate on the input for logging; when null, the
+   *     input value itself is logged
    * @param context the evaluation context, used to obtain the optional trace collector
    * @return the input collection, unchanged
    * @see <a
@@ -66,29 +72,42 @@ public class UtilityFunctions {
   public static Collection trace(
       @Nonnull final Collection input,
       @Nonnull final StringCollection name,
+      @Nullable final CollectionTransform projection,
       @Nonnull final EvaluationContext context) {
     final String label = name.toLiteralValue();
-    final String fhirType = input.getFhirType().map(t -> t.toCode()).orElse("unknown");
     @Nullable final TraceCollector collector = context.getTraceCollector().orElse(null);
+
+    final Collection toLog = projection != null ? projection.apply(input) : input;
+    final String fhirType = toLog.getFhirType().map(t -> t.toCode()).orElse("unknown");
+    // Normalise the projected column so that empty arrays become null, preventing trace entries
+    // for empty collections.
+    final Column toLogColumn = toLog.getColumn().normaliseNull().getValue();
+
     return input.copyWith(
-        input.getColumn().call(col -> wrapWithTrace(col, label, fhirType, collector)));
+        input
+            .getColumn()
+            .call(inputCol -> wrapWithTrace(inputCol, toLogColumn, label, fhirType, collector)));
   }
 
   /**
-   * Wraps a Spark Column with a {@link TraceExpression} that logs each evaluated value.
+   * Wraps a Spark Column with a {@link TraceExpression} that returns the pass-through value while
+   * logging the projected value.
    *
-   * @param col the column to wrap
+   * @param passThrough the column whose value is returned
+   * @param toLog the column whose value is logged
    * @param name the diagnostic label
-   * @param fhirType the FHIR type code
+   * @param fhirType the FHIR type code of the logged expression
    * @param collector the optional trace collector, or null
    * @return a new column that logs values during evaluation
    */
   @Nonnull
   private static Column wrapWithTrace(
-      @Nonnull final Column col,
+      @Nonnull final Column passThrough,
+      @Nonnull final Column toLog,
       @Nonnull final String name,
       @Nonnull final String fhirType,
       @Nullable final TraceCollector collector) {
-    return column(new TraceExpression(expression(col), name, fhirType, collector));
+    return column(
+        new TraceExpression(expression(passThrough), expression(toLog), name, fhirType, collector));
   }
 }

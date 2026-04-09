@@ -184,6 +184,30 @@ class TraceFunctionTest {
       final CollectionDataset result = evaluate("{}.trace('empty')");
       assertNotNull(result);
     }
+
+    @Test
+    void trace_withProjection_returnsInputUnchanged() {
+      assertTraceIsPassThrough("Patient.name", "Patient.name.trace('fam', family)");
+    }
+
+    @Test
+    void trace_withProjection_complexExpression_returnsInputUnchanged() {
+      assertTraceIsPassThrough(
+          "Patient.name", "Patient.name.trace('full', given.first() + ' ' + family)");
+    }
+
+    @Test
+    void trace_withProjection_returningNull_returnsInputUnchanged() {
+      // Patient.name.text is null for all test patients; projection produces null but input is
+      // returned unchanged.
+      assertTraceIsPassThrough("Patient.name", "Patient.name.trace('missing', text)");
+    }
+
+    @Test
+    void trace_withProjection_onEmptyCollection_returnsEmpty() {
+      final CollectionDataset result = evaluate("{}.trace('empty', id)");
+      assertNotNull(result);
+    }
   }
 
   @Nested
@@ -211,6 +235,47 @@ class TraceFunctionTest {
           logAppender.list.stream()
               .anyMatch(event -> event.getFormattedMessage().contains("Smith"));
       assertTrue(hasSmith, "Expected log entry containing 'Smith'");
+    }
+
+    @Test
+    void trace_withProjection_complexExpression_logsProjectedValue() {
+      evaluate("Patient.name.trace('full', given.first() + ' ' + family)")
+          .toCanonical()
+          .toIdValueDataset()
+          .collectAsList();
+
+      final boolean hasJaneSmith =
+          logAppender.list.stream()
+              .anyMatch(event -> event.getFormattedMessage().contains("Jane Smith"));
+      assertTrue(hasJaneSmith, "Expected log entry containing concatenated 'Jane Smith'");
+    }
+
+    @Test
+    void trace_withProjection_returningNull_doesNotLog() {
+      // When the projection evaluates to an empty collection, the normalised column is null, so no
+      // trace entry is produced.
+      evaluate("Patient.name.trace('missing', text)")
+          .toCanonical()
+          .toIdValueDataset()
+          .collectAsList();
+
+      final boolean hasMissingLabel =
+          logAppender.list.stream()
+              .anyMatch(event -> event.getFormattedMessage().contains("[trace:missing]"));
+      assertFalse(hasMissingLabel, "Expected no log entries when projection evaluates to null");
+    }
+
+    @Test
+    void trace_withProjection_logsProjectedValue() {
+      evaluate("Patient.name.trace('fam', family)")
+          .toCanonical()
+          .toIdValueDataset()
+          .collectAsList();
+
+      final boolean hasSmith =
+          logAppender.list.stream()
+              .anyMatch(event -> event.getFormattedMessage().contains("Smith"));
+      assertTrue(hasSmith, "Expected log entry containing projected value 'Smith'");
     }
 
     @Test
@@ -301,6 +366,18 @@ class TraceFunctionTest {
       final List<TraceEntry> entries = collector.getEntries();
       assertTrue(entries.stream().anyMatch(e -> "a".equals(e.label())));
       assertTrue(entries.stream().anyMatch(e -> "b".equals(e.label())));
+    }
+
+    @Test
+    void collector_withProjection_capturesProjectedFhirType() {
+      materialize("Patient.name.trace('fam', family)");
+
+      final List<TraceEntry> entries = collector.getEntries();
+      assertFalse(entries.isEmpty());
+      assertTrue(
+          entries.stream().allMatch(e -> "string".equals(e.fhirType())),
+          "Expected projected FHIR type 'string', not input type 'HumanName'");
+      assertTrue(entries.stream().allMatch(e -> "fam".equals(e.label())));
     }
 
     @Test

@@ -36,9 +36,11 @@ serializable and SHALL implement `AutoCloseable` for registry cleanup.
 
 ### Requirement: Trace entries carry FHIR type metadata
 
-Each trace entry SHALL include the FHIR type code of the traced collection
-(e.g., `"HumanName"`, `"string"`, `"boolean"`), derived from the input
-collection's type information at the point where `trace()` is invoked.
+Each trace entry SHALL include the FHIR type code of the expression being
+logged. When no projection is provided, this is the FHIR type of the input
+collection. When a projection is provided, this is the FHIR type of the
+projected result (e.g., `"string"` for a `family` projection on a `HumanName`
+input).
 
 #### Scenario: Trace entry for a complex type
 
@@ -49,6 +51,12 @@ collection's type information at the point where `trace()` is invoked.
 
 - **WHEN** `Patient.active.trace('flag')` is evaluated with a collector
 - **THEN** each trace entry SHALL have FHIR type `"boolean"`
+
+#### Scenario: Trace entry type reflects projection
+
+- **WHEN** `Patient.name.trace('fam', family)` is evaluated with a collector
+- **THEN** each trace entry SHALL have FHIR type `"string"` (the projected
+  type), not `"HumanName"` (the input type)
 
 ### Requirement: Trace collector is optional on EvaluationContext
 
