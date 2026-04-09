@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.sql.TraceCollector;
 import au.csiro.pathling.sql.TraceExpression;
+import au.csiro.pathling.sql.TraceProjectionExpression;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import org.apache.spark.sql.Column;
@@ -77,37 +78,33 @@ public class UtilityFunctions {
     final String label = name.toLiteralValue();
     @Nullable final TraceCollector collector = context.getTraceCollector().orElse(null);
 
-    final Collection toLog = projection != null ? projection.apply(input) : input;
-    final String fhirType = toLog.getFhirType().map(t -> t.toCode()).orElse("unknown");
-    // Normalise the projected column so that empty arrays become null, preventing trace entries
-    // for empty collections.
-    final Column toLogColumn = toLog.getColumn().normaliseNull().getValue();
-
-    return input.copyWith(
-        input
-            .getColumn()
-            .call(inputCol -> wrapWithTrace(inputCol, toLogColumn, label, fhirType, collector)));
-  }
-
-  /**
-   * Wraps a Spark Column with a {@link TraceExpression} that returns the pass-through value while
-   * logging the projected value.
-   *
-   * @param passThrough the column whose value is returned
-   * @param toLog the column whose value is logged
-   * @param name the diagnostic label
-   * @param fhirType the FHIR type code of the logged expression
-   * @param collector the optional trace collector, or null
-   * @return a new column that logs values during evaluation
-   */
-  @Nonnull
-  private static Column wrapWithTrace(
-      @Nonnull final Column passThrough,
-      @Nonnull final Column toLog,
-      @Nonnull final String name,
-      @Nonnull final String fhirType,
-      @Nullable final TraceCollector collector) {
-    return column(
-        new TraceExpression(expression(passThrough), expression(toLog), name, fhirType, collector));
+    if (projection != null) {
+      final Collection projected = projection.apply(input);
+      final String fhirType = projected.getFhirType().map(t -> t.toCode()).orElse("unknown");
+      // Normalise the projected column so that empty arrays become null, preventing trace entries
+      // for empty collections.
+      final Column projectedColumn = projected.getColumn().normaliseNull().getValue();
+      return input.copyWith(
+          input
+              .getColumn()
+              .call(
+                  inputCol ->
+                      column(
+                          new TraceProjectionExpression(
+                              expression(inputCol),
+                              expression(projectedColumn),
+                              label,
+                              fhirType,
+                              collector))));
+    } else {
+      final String fhirType = input.getFhirType().map(t -> t.toCode()).orElse("unknown");
+      return input.copyWith(
+          input
+              .getColumn()
+              .call(
+                  inputCol ->
+                      column(
+                          new TraceExpression(expression(inputCol), label, fhirType, collector))));
+    }
   }
 }

@@ -381,6 +381,24 @@ class TraceFunctionTest {
     }
 
     @Test
+    void collector_chainedTrace_innerNotDoubleEvaluated() {
+      // When trace('inner').trace('outer') is evaluated without a projection, the outer
+      // TraceExpression has the same expression for both left and right children. This test
+      // verifies
+      // that the inner trace fires exactly once per element, not twice due to double evaluation.
+      materialize("Patient.name.trace('inner').trace('outer')");
+
+      final long innerCount =
+          collector.getEntries().stream().filter(e -> "inner".equals(e.label())).count();
+      final long outerCount =
+          collector.getEntries().stream().filter(e -> "outer".equals(e.label())).count();
+      assertEquals(
+          outerCount,
+          innerCount,
+          "Inner trace should fire the same number of times as outer trace, not double");
+    }
+
+    @Test
     void evaluationWithoutCollector_stillWorks() {
       // The default evaluator has no collector; evaluation should succeed with SLF4J only.
       final CollectionDataset result = evaluate("Patient.active.trace('test')");
