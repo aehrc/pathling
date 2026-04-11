@@ -178,6 +178,7 @@ excludeSet:
           - "Patient.name.given.repeat(id)"
       - title: "repeat() on heterogeneous Quantity collections after combine() fails canonicalization"
         type: bug
+        id: "#2588"
         comment: |
           These tests combine two Quantity literals with different structural shapes
           (calendar year vs month, UCUM minute vs second) and then apply repeat($this).
