@@ -35,10 +35,6 @@ import org.apache.spark.sql.Column;
  * Coding, temporal types) use element-wise comparison. The array-level merge primitives are shared
  * with {@link CombineOperator} via {@link CombiningLogic}.
  *
- * <p>This operator is also reachable via the FHIRPath {@code union(other)} function, which is
- * desugared at parse time into the same AST used for the {@code |} operator. See the invocation
- * visitor for details.
- *
  * @author Piotr Szul
  * @see <a href="https://hl7.org/fhirpath/#union-collections">union</a>
  */

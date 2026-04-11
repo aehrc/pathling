@@ -28,15 +28,8 @@ import org.apache.spark.sql.Column;
  * of order in the resulting collection.
  *
  * <p>Unlike {@link UnionOperator}, {@code combine} does not deduplicate and does not need to
- * consult the collection's equality comparator. Type reconciliation, Decimal normalization, and
- * empty-operand dispatch are inherited from {@link SameTypeBinaryOperator}, and the array-level
- * merge primitive is shared with {@link UnionOperator} via {@link CombiningLogic}.
- *
- * <p>FHIRPath does not define a symbolic operator for {@code combine}. This class is reachable only
- * via the parser's invocation visitor, which desugars {@code x.combine(y)} into an {@code
- * EvalOperator} using this operator as the merge step. This mirrors the desugaring used by {@code
- * x.union(y)} and ensures that {@code combine()} honours the surrounding iteration context in the
- * same way that the {@code |} operator does.
+ * consult the collection's equality comparator. The array-level merge primitive is shared with
+ * {@link UnionOperator} via {@link CombiningLogic}.
  *
  * @author Piotr Szul
  * @see <a href="https://hl7.org/fhirpath/#combineother-collection-collection">combine</a>
@@ -47,8 +40,7 @@ public class CombineOperator extends SameTypeBinaryOperator {
   @Override
   protected Collection handleOneEmpty(
       @Nonnull final Collection nonEmpty, @Nonnull final BinaryOperatorInput input) {
-    // Combine preserves duplicates, so there is nothing to normalise when one side is empty:
-    // just return the non-empty operand unchanged.
+    // Combine preserves duplicates, so no deduplication is required against an empty peer.
     return nonEmpty;
   }
 

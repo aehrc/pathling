@@ -129,6 +129,9 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
     return invocationSubject.andThen(invocationVerb);
   }
 
+  private static final Map<String, FhirPathBinaryOperator> COMBINING_FUNCTION_OPERATORS =
+      Map.of("union", new UnionOperator(), "combine", new CombineOperator());
+
   /**
    * Returns the binary operator instance to use when desugaring a combining-function invocation, or
    * {@code null} if the function name is not one of the combining functions.
@@ -138,11 +141,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Nullable
   private static FhirPathBinaryOperator combiningOperatorFor(@Nonnull final String functionName) {
-    return switch (functionName) {
-      case "union" -> new UnionOperator();
-      case "combine" -> new CombineOperator();
-      default -> null;
-    };
+    return COMBINING_FUNCTION_OPERATORS.get(functionName);
   }
 
   private static final Map<String, FhirPathBinaryOperator> BINARY_OPERATORS =
