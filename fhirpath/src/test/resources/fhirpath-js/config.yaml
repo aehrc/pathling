@@ -176,6 +176,20 @@ excludeSet:
           Pathling does not support accessing the id attribute of primitive elements.
         any:
           - "Patient.name.given.repeat(id)"
+      - title: "repeat() on heterogeneous Quantity collections after combine() fails canonicalization"
+        type: bug
+        comment: |
+          These tests combine two Quantity literals with different structural shapes
+          (calendar year vs month, UCUM minute vs second) and then apply repeat($this).
+          The combined array contains Quantity structs whose canonicalized subfields
+          differ in nullability (VOID vs DECIMAL/STRUCT), which causes Pathling's
+          repeat() implementation to fail when it attempts to cast the struct to VARIANT
+          for deduplication. The failure is independent of combine() — it surfaces the
+          same latent Quantity canonicalization issue as the indefinite calendar duration
+          union deduplication limitation documented in the 5.4_combining exclusions.
+        any:
+          - "(1 year).combine(12 months).repeat($this)"
+          - "(3 'min').combine(180 seconds).repeat($this)"
   - title: Equality exclusions
     glob: "fhirpath-js/cases/6.1_equality.yaml"
     exclude:
@@ -444,14 +458,18 @@ excludeSet:
   - title: Combining exclusions
     glob: "fhirpath-js/cases/5.4_combining.yaml"
     exclude:
-      - title: "Polymorphic unions not supported"
+      - title: "Polymorphic unions and combines not supported"
         type: feature
         id: "#2398"
         comment: |
-          Union operator currently only supports primitive types with native Spark equality
-          (Boolean, Integer, String). Cross-type unions like Integer | Boolean are not supported.
+          The combining operators (`|`, `union()`, `combine()`) currently only support
+          primitive types with native Spark equality (Boolean, Integer, String). Cross-type
+          merges like Integer | Boolean or Functions.attrdouble.combine(Boolean) are not
+          supported because the SameTypeBinaryOperator dispatch cannot reconcile them to a
+          common FHIRPath type.
         any:
           - "Functions.attrdouble | Functions.coll1.colltrue.attr"
+          - "Functions.attrdouble.combine(Functions.coll1.colltrue.attr)"
       - title: "Indefinite calendar duration union deduplication"
         type: wontfix
         outcome: failure
@@ -462,17 +480,21 @@ excludeSet:
           both values since the equality comparison returns NULL for incomparable quantities.
         any:
           - "(1 year | 12 months)"
-      - title: "Union with count() on primitive elements with extensions but no value"
+      - title: "Union/combine with count() on primitive elements with extensions but no value"
         type: feature
         outcome: failure
         id: "#437"
         comment: |
-          This test uses count() on a union that includes Patient.name.given[3], which
+          These tests use count() on a merge that includes Patient.name.given[3], which
           is a primitive element with extensions but no value. Since Pathling doesn't
-          support accessing such elements, the union returns 0 elements instead of 1,
-          causing count() to return 0 instead of 1.
+          support accessing such elements, the merge returns fewer elements than the
+          reference implementation, causing count() to return the wrong result. The same
+          underlying #437 limitation applies equally to the `|` operator and to the
+          desugared `union()` / `combine()` function forms.
         any:
           - "(Patient.name.given[0] | Patient.name.given[3]).count()"
+          - "Patient.name.given[0].union(Patient.name.given[3]).count()"
+          - "(Patient.name.given[0]).combine(Patient.name.given[3]).count()"
   - title: FHIR R4 Exclusions
     glob: "fhirpath-js/cases/fhir-r4.yaml"
     exclude:
