@@ -47,7 +47,7 @@ object FlexiDecimalSupport {
         lit(normalizedValue.scale()).as("scale")
       )
     } else {
-      lit(null)
+      lit(null).cast(FlexiDecimal.DATA_TYPE)
     }
   }
 

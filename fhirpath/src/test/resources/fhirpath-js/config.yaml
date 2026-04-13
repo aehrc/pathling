@@ -176,21 +176,19 @@ excludeSet:
           Pathling does not support accessing the id attribute of primitive elements.
         any:
           - "Patient.name.given.repeat(id)"
-      - title: "repeat() on heterogeneous Quantity collections after combine() fails canonicalization"
-        type: bug
-        id: "#2588"
+      - title: "Indefinite calendar duration equality in repeat() deduplication"
+        type: wontfix
+        outcome: failure
         comment: |
-          These tests combine two Quantity literals with different structural shapes
-          (calendar year vs month, UCUM minute vs second) and then apply repeat($this).
-          The combined array contains Quantity structs whose canonicalized subfields
-          differ in nullability (VOID vs DECIMAL/STRUCT), which causes Pathling's
-          repeat() implementation to fail when it attempts to cast the struct to VARIANT
-          for deduplication. The failure is independent of combine() — it surfaces the
-          same latent Quantity canonicalization issue as the indefinite calendar duration
-          union deduplication limitation documented in the 5.4_combining exclusions.
+          Pathling does not perform year-to-month conversion during Quantity equality
+          comparison. The reference implementation treats 1 year = 12 months, so
+          repeat($this) deduplicates them to one value. Pathling keeps both because its
+          QuantityComparator only compares canonical forms (null for indefinite durations)
+          or exact original values (which require matching unit codes). This is the same
+          limitation as the "Indefinite calendar duration union deduplication" exclusion
+          in the 5.4_combining section.
         any:
           - "(1 year).combine(12 months).repeat($this)"
-          - "(3 'min').combine(180 seconds).repeat($this)"
   - title: Equality exclusions
     glob: "fhirpath-js/cases/6.1_equality.yaml"
     exclude:

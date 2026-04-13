@@ -253,17 +253,22 @@ public class QuantityEncoding {
   public static Column encodeLiteral(@Nonnull final FhirPathQuantity quantity) {
     final BigDecimal value = quantity.getValue();
     @Nullable final Ucum.ValueWithUnit canonical = canonicalOf(quantity);
+    // Cast the struct to the canonical Quantity schema so that fields set to lit(null) carry their
+    // declared types instead of Spark's NullType (VOID). VOID-typed fields prevent the struct from
+    // being converted to VARIANT, which is required by variantTransformTree in
+    // repeat()/repeatAll().
     return toStruct(
-        lit(null),
-        lit(value),
-        lit(value.scale()),
-        lit(null),
-        lit(quantity.getUnitName()),
-        lit(quantity.getSystem()),
-        lit(quantity.getCode()),
-        FlexiDecimalSupport.toLiteral(canonical != null ? canonical.value() : null),
-        lit(canonical != null ? canonical.unit() : null),
-        lit(null));
+            lit(null),
+            lit(value),
+            lit(value.scale()),
+            lit(null),
+            lit(quantity.getUnitName()),
+            lit(quantity.getSystem()),
+            lit(quantity.getCode()),
+            FlexiDecimalSupport.toLiteral(canonical != null ? canonical.value() : null),
+            lit(canonical != null ? canonical.unit() : null),
+            lit(null))
+        .cast(dataType());
   }
 
   /**
