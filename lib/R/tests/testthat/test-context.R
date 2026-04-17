@@ -247,20 +247,24 @@ test_that("evaluate_fhirpath returns a string result for name.family", {
   # Evaluating name.family should return family names as strings.
   result <- pathling_evaluate_fhirpath(setup$pc, "Patient", PATIENT_JSON, "name.family")
   expect_type(result, "list")
-  expect_true("results" %in% names(result))
+  expect_true("resultGroups" %in% names(result))
   expect_true("expectedReturnType" %in% names(result))
   expect_equal(result$expectedReturnType, "string")
-  expect_equal(length(result$results), 2)
-  expect_equal(result$results[[1]]$type, "string")
-  expect_equal(result$results[[1]]$value, "Smith")
+  expect_equal(length(result$resultGroups), 1)
+  group <- result$resultGroups[[1]]
+  expect_null(group$contextKey)
+  expect_equal(length(group$results), 2)
+  expect_equal(group$results[[1]]$type, "string")
+  expect_equal(group$results[[1]]$value, "Smith")
 })
 
 test_that("evaluate_fhirpath returns multiple values for name.given", {
   setup <- evaluate_test_setup()
   # Evaluating name.given should return all given names.
   result <- pathling_evaluate_fhirpath(setup$pc, "Patient", PATIENT_JSON, "name.given")
-  expect_equal(length(result$results), 3)
-  values <- sapply(result$results, function(x) x$value)
+  group <- result$resultGroups[[1]]
+  expect_equal(length(group$results), 3)
+  values <- sapply(group$results, function(x) x$value)
   expect_true("John" %in% values)
   expect_true("James" %in% values)
   expect_true("Johnny" %in% values)
@@ -270,16 +274,18 @@ test_that("evaluate_fhirpath returns empty results for missing element", {
   setup <- evaluate_test_setup()
   # Evaluating a path that matches nothing should return an empty list.
   result <- pathling_evaluate_fhirpath(setup$pc, "Patient", PATIENT_JSON, "multipleBirthBoolean")
-  expect_equal(length(result$results), 0)
+  group <- result$resultGroups[[1]]
+  expect_equal(length(group$results), 0)
 })
 
 test_that("evaluate_fhirpath returns boolean result for active", {
   setup <- evaluate_test_setup()
   # Evaluating active should return a boolean.
   result <- pathling_evaluate_fhirpath(setup$pc, "Patient", PATIENT_JSON, "active")
-  expect_equal(length(result$results), 1)
-  expect_equal(result$results[[1]]$type, "boolean")
-  expect_equal(result$results[[1]]$value, TRUE)
+  group <- result$resultGroups[[1]]
+  expect_equal(length(group$results), 1)
+  expect_equal(group$results[[1]]$type, "boolean")
+  expect_equal(group$results[[1]]$value, TRUE)
   expect_equal(result$expectedReturnType, "boolean")
 })
 
@@ -293,16 +299,19 @@ test_that("evaluate_fhirpath raises error for invalid expression", {
 
 test_that("evaluate_fhirpath with context expression", {
   setup <- evaluate_test_setup()
-  # Using a context expression to compose the evaluation.
+  # Using a context expression produces one result group per context element.
   result <- pathling_evaluate_fhirpath(
     setup$pc, "Patient", PATIENT_JSON, "given",
     context_expression = "name"
   )
-  expect_equal(length(result$results), 3)
-  values <- sapply(result$results, function(x) x$value)
-  expect_true("John" %in% values)
-  expect_true("James" %in% values)
-  expect_true("Johnny" %in% values)
+  expect_equal(length(result$resultGroups), 2)
+  expect_equal(result$resultGroups[[1]]$contextKey, "name[0]")
+  expect_equal(result$resultGroups[[2]]$contextKey, "name[1]")
+  values0 <- sapply(result$resultGroups[[1]]$results, function(x) x$value)
+  expect_true("John" %in% values0)
+  expect_true("James" %in% values0)
+  values1 <- sapply(result$resultGroups[[2]]$results, function(x) x$value)
+  expect_true("Johnny" %in% values1)
 })
 
 test_that("evaluate_fhirpath with variable substitution", {
@@ -312,7 +321,8 @@ test_that("evaluate_fhirpath with variable substitution", {
     setup$pc, "Patient", PATIENT_JSON, "%myVar",
     variables = list(myVar = "test")
   )
-  expect_equal(length(result$results), 1)
-  expect_equal(result$results[[1]]$type, "string")
-  expect_equal(result$results[[1]]$value, "test")
+  group <- result$resultGroups[[1]]
+  expect_equal(length(group$results), 1)
+  expect_equal(group$results[[1]]$type, "string")
+  expect_equal(group$results[[1]]$value, "test")
 })

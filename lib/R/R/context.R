@@ -444,8 +444,10 @@ pathling_with_column <- function(df, pc, resource_type, expression, column) {
 #' Evaluate a FHIRPath expression against a single FHIR resource
 #'
 #' Evaluates a FHIRPath expression against a single FHIR resource provided as a JSON string and
-#' returns materialised typed results. The resource is encoded into a one-row Spark Dataset
-#' internally, and the existing FHIRPath engine is used to evaluate the expression.
+#' returns materialised typed results grouped by evaluation scope. When a context expression is
+#' provided, the main expression is evaluated independently for each context element, producing
+#' one result group per element. When no context expression is provided, a single result group
+#' with a NULL context key is returned.
 #'
 #' @param pc The PathlingContext object.
 #' @param resource_type A string containing the FHIR resource type code (e.g., "Patient",
@@ -454,15 +456,16 @@ pathling_with_column <- function(df, pc, resource_type, expression, column) {
 #' @param fhirpath_expression A FHIRPath expression to evaluate (e.g., "name.family",
 #'   "gender = 'male'").
 #' @param context_expression An optional context expression string. If provided, the main
-#'   expression is evaluated once for each result of the context expression. Defaults to NULL.
+#'   expression is evaluated once per context element with grouped results. Defaults to NULL.
 #' @param variables An optional named list of variables available via \code{\%variable} syntax.
 #'   Defaults to NULL.
 #'
 #' @return A list with two elements:
 #'   \describe{
-#'     \item{\code{results}}{A list of lists, each containing \code{type} (character) and
-#'       \code{value} (the materialised R value or NULL).}
 #'     \item{\code{expectedReturnType}}{A character string indicating the inferred return type.}
+#'     \item{\code{resultGroups}}{A list of result groups, each containing \code{contextKey}
+#'       (character or NULL), \code{results} (list of lists with \code{type} and \code{value}),
+#'       and \code{traces} (list of trace entries with \code{label} and \code{values}).}
 #'   }
 #'
 #' @importFrom sparklyr invoke j_invoke j_invoke_new spark_connection
@@ -475,8 +478,10 @@ pathling_with_column <- function(df, pc, resource_type, expression, column) {
 #' pc <- pathling_connect()
 #' patient_json <- '{"resourceType": "Patient", "id": "example", "gender": "male"}'
 #' result <- pathling_evaluate_fhirpath(pc, "Patient", patient_json, "gender")
-#' for (entry in result$results) {
-#'   cat(entry$type, ": ", entry$value, "\n")
+#' for (group in result$resultGroups) {
+#'   for (entry in group$results) {
+#'     cat(entry$type, ": ", entry$value, "\n")
+#'   }
 #' }
 #' pathling_disconnect(pc)
 #' }
@@ -504,14 +509,58 @@ pathling_evaluate_fhirpath <- function(pc, resource_type, resource_json,
   )
 
   # Convert Java SingleInstanceEvaluationResult to an R list.
-  jtyped_values <- invoke(jresult, "getResults")
-  size <- jtyped_values %>% invoke("size")
-  results <- if (size > 0L) {
-    lapply(seq_len(size), function(i) {
-      jtv <- jtyped_values %>% invoke("get", as.integer(i - 1))
+  jresult_groups <- invoke(jresult, "getResultGroups")
+  group_count <- jresult_groups %>% invoke("size")
+  result_groups <- if (group_count > 0L) {
+    lapply(seq_len(group_count), function(gi) {
+      jgroup <- jresult_groups %>% invoke("get", as.integer(gi - 1))
+      context_key <- jgroup %>% invoke("getContextKey")
+
+      jtyped_values <- invoke(jgroup, "getResults")
+      size <- jtyped_values %>% invoke("size")
+      results <- if (size > 0L) {
+        lapply(seq_len(size), function(i) {
+          jtv <- jtyped_values %>% invoke("get", as.integer(i - 1))
+          list(
+            type = jtv %>% invoke("getType"),
+            value = jtv %>% invoke("getValue")
+          )
+        })
+      } else {
+        list()
+      }
+
+      jtrace_values <- invoke(jgroup, "getTraces")
+      trace_count <- jtrace_values %>% invoke("size")
+      traces <- if (trace_count > 0L) {
+        lapply(seq_len(trace_count), function(ti) {
+          jtrace <- jtrace_values %>% invoke("get", as.integer(ti - 1))
+          jtrace_typed <- invoke(jtrace, "getValues")
+          tv_count <- jtrace_typed %>% invoke("size")
+          values <- if (tv_count > 0L) {
+            lapply(seq_len(tv_count), function(vi) {
+              jtv <- jtrace_typed %>% invoke("get", as.integer(vi - 1))
+              list(
+                type = jtv %>% invoke("getType"),
+                value = jtv %>% invoke("getValue")
+              )
+            })
+          } else {
+            list()
+          }
+          list(
+            label = jtrace %>% invoke("getLabel"),
+            values = values
+          )
+        })
+      } else {
+        list()
+      }
+
       list(
-        type = jtv %>% invoke("getType"),
-        value = jtv %>% invoke("getValue")
+        contextKey = context_key,
+        results = results,
+        traces = traces
       )
     })
   } else {
@@ -519,7 +568,7 @@ pathling_evaluate_fhirpath <- function(pc, resource_type, resource_json,
   }
 
   list(
-    results = results,
-    expectedReturnType = invoke(jresult, "getExpectedReturnType")
+    expectedReturnType = invoke(jresult, "getExpectedReturnType"),
+    resultGroups = result_groups
   )
 }
