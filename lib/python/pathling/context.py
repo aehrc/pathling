@@ -15,7 +15,7 @@
 
 # noinspection PyPackageRequirements
 
-from typing import TYPE_CHECKING, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Iterable, Optional, Sequence
 
 from py4j.java_gateway import JavaObject
 from pyspark.sql import Column, DataFrame, SparkSession
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 __all__ = ["PathlingContext"]
 
 
-def _convert_java_value(value):
+def _convert_java_value(value: Any) -> Any:
     """Converts a Java value from Py4J to an equivalent Python type."""
     if isinstance(value, (str, int, float, bool)):
         return value
@@ -41,7 +41,7 @@ def _convert_java_value(value):
     return str(value)
 
 
-def _convert_typed_values(jtyped_values) -> list:
+def _convert_typed_values(jtyped_values: Iterable[Any]) -> list:
     """Converts a Java list of TypedValue objects to Python dicts.
 
     :param jtyped_values: iterable of Java TypedValue objects with getType() and getValue()

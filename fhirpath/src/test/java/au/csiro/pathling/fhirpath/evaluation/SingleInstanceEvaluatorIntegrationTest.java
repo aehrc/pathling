@@ -148,6 +148,36 @@ class SingleInstanceEvaluatorIntegrationTest {
   }
 
   @Test
+  void evaluateWithContextExpression() {
+    // Context evaluation should produce one ResultGroup per context element with correct keys.
+    final SingleInstanceEvaluationResult result =
+        SingleInstanceEvaluator.evaluate(
+            patientDf, "Patient", fhirContext, "given.first()", "name", null);
+
+    assertEquals(1, result.getResultGroups().size());
+
+    final ResultGroup group = result.getResultGroups().getFirst();
+    assertEquals("name[0]", group.getContextKey());
+    assertEquals(1, group.getResults().size());
+    assertEquals("John", group.getResults().get(0).getValue());
+  }
+
+  @Test
+  void contextEvaluationIsolatesTraces() {
+    // Traces should be scoped to each context element.
+    final SingleInstanceEvaluationResult result =
+        SingleInstanceEvaluator.evaluate(
+            patientDf, "Patient", fhirContext, "trace('trc').given.first()", "name", null);
+
+    assertEquals(1, result.getResultGroups().size());
+
+    for (final ResultGroup group : result.getResultGroups()) {
+      assertFalse(group.getTraces().isEmpty(), "Each group should have trace output");
+      assertEquals("trc", group.getTraces().getFirst().getLabel());
+    }
+  }
+
+  @Test
   void evaluateTraceOnComplexType() {
     // Tracing a complex type should produce a JSON string without synthetic fields.
     final SingleInstanceEvaluationResult result =

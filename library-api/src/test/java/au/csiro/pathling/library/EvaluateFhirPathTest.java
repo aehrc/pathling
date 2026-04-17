@@ -284,10 +284,28 @@ public class EvaluateFhirPathTest {
   }
 
   @Test
-  void emptyContextProducesNoResultGroups() {
-    // When the context expression evaluates to an empty collection, zero groups are returned.
+  void nullContextProducesNoResultGroups() {
+    // When the context expression evaluates to null, zero groups are returned.
     final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "value", "communication", null);
+
+    assertNotNull(result);
+    assertTrue(result.getResultGroups().isEmpty());
+  }
+
+  @Test
+  void emptyArrayContextProducesNoResultGroups() {
+    // When the context expression evaluates to an empty array, zero groups are returned.
+    final String patientWithEmptyContact =
+        """
+        {
+          "resourceType": "Patient",
+          "id": "empty-contact",
+          "contact": []
+        }
+        """;
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", patientWithEmptyContact, "name.text", "contact", null);
 
     assertNotNull(result);
     assertTrue(result.getResultGroups().isEmpty());
