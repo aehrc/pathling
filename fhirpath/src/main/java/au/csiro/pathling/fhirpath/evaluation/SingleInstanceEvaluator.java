@@ -157,7 +157,9 @@ public class SingleInstanceEvaluator {
       final List<TypedValue> results = collectResults(resourceDf, resultColumn, expectedReturnType);
       final List<TraceResult> traces = buildTraceResults(traceCollector);
       final ResultGroup group = new ResultGroup(null, results, traces);
-      return new SingleInstanceEvaluationResult(List.of(group), expectedReturnType);
+      final List<ResultGroup> groups = new ArrayList<>();
+      groups.add(group);
+      return new SingleInstanceEvaluationResult(groups, expectedReturnType);
     }
   }
 
@@ -242,7 +244,7 @@ public class SingleInstanceEvaluator {
     final List<Row> contextRows = contextDf.collectAsList();
 
     if (contextRows.isEmpty() || contextRows.getFirst().isNullAt(0)) {
-      return new SingleInstanceEvaluationResult(List.of(), expectedReturnType);
+      return new SingleInstanceEvaluationResult(new ArrayList<>(), expectedReturnType);
     }
 
     final Object rawContext = contextRows.getFirst().get(0);
@@ -348,12 +350,12 @@ public class SingleInstanceEvaluator {
     final List<Row> rows = resultDf.collectAsList();
 
     if (rows.isEmpty()) {
-      return List.of();
+      return new ArrayList<>();
     }
 
     final Row row = rows.getFirst();
     if (row.isNullAt(0)) {
-      return List.of();
+      return new ArrayList<>();
     }
 
     final Object rawValue = row.get(0);
@@ -474,7 +476,7 @@ public class SingleInstanceEvaluator {
   static List<TraceResult> buildTraceResults(@Nonnull final ListTraceCollector collector) {
     final List<TraceEntry> entries = collector.getEntries();
     if (entries.isEmpty()) {
-      return List.of();
+      return new ArrayList<>();
     }
 
     // Group entries by label, preserving insertion order.
