@@ -248,43 +248,70 @@ public class SingleInstanceEvaluator {
     final Object rawContext = contextRows.getFirst().get(0);
     final List<ResultGroup> resultGroups = new ArrayList<>();
 
+    // Flush any traces accumulated during type inference before per-element evaluation.
+    traceCollector.clear();
+
     if (rawContext instanceof final scala.collection.Seq<?> seq) {
-      // Array context: iterate per element.
       for (int i = 0; i < seq.size(); i++) {
         final String contextKey = contextExpression + "[" + i + "]";
-        traceCollector.clear();
-        try {
-          // Create a Column for this specific element and evaluate the main expression against it.
-          final Column elementColumn = contextColumn.getItem(i);
-          final Collection elementContext = contextCollection.copyWithColumn(elementColumn);
-          final Collection elementResult = evaluator.evaluate(mainPath, elementContext);
-          final Column resultColumn = elementResult.getColumn().getValue();
-
-          final List<TypedValue> results =
-              collectResults(resourceDf, resultColumn, expectedReturnType);
-          final List<TraceResult> traces = buildTraceResults(traceCollector);
-          resultGroups.add(new ResultGroup(contextKey, results, traces));
-        } finally {
-          traceCollector.clear();
-        }
+        final Column elementColumn = contextColumn.getItem(i);
+        final Collection elementContext = contextCollection.copyWithColumn(elementColumn);
+        resultGroups.add(
+            evaluateSingleContext(
+                resourceDf,
+                evaluator,
+                mainPath,
+                elementContext,
+                contextKey,
+                expectedReturnType,
+                traceCollector));
       }
     } else {
-      // Scalar context: single element without index.
-      traceCollector.clear();
-      try {
-        final Collection elementResult = evaluator.evaluate(mainPath, contextCollection);
-        final Column resultColumn = elementResult.getColumn().getValue();
-
-        final List<TypedValue> results =
-            collectResults(resourceDf, resultColumn, expectedReturnType);
-        final List<TraceResult> traces = buildTraceResults(traceCollector);
-        resultGroups.add(new ResultGroup(contextExpression, results, traces));
-      } finally {
-        traceCollector.clear();
-      }
+      resultGroups.add(
+          evaluateSingleContext(
+              resourceDf,
+              evaluator,
+              mainPath,
+              contextCollection,
+              contextExpression,
+              expectedReturnType,
+              traceCollector));
     }
 
     return new SingleInstanceEvaluationResult(resultGroups, expectedReturnType);
+  }
+
+  /**
+   * Evaluates the main expression against a single context element, collecting results and traces
+   * into a {@link ResultGroup}. The trace collector is cleared after results are captured.
+   *
+   * @param resourceDf the encoded resource as a single-row DataFrame
+   * @param evaluator the single resource evaluator
+   * @param mainPath the parsed main expression
+   * @param inputContext the context element to evaluate against
+   * @param contextKey the context key for the resulting group
+   * @param expectedReturnType the inferred return type of the main expression
+   * @param traceCollector the trace collector for capturing trace() output
+   * @return a ResultGroup containing the results and traces for this context element
+   */
+  @Nonnull
+  private static ResultGroup evaluateSingleContext(
+      @Nonnull final Dataset<Row> resourceDf,
+      @Nonnull final SingleResourceEvaluator evaluator,
+      @Nonnull final FhirPath mainPath,
+      @Nonnull final Collection inputContext,
+      @Nonnull final String contextKey,
+      @Nonnull final String expectedReturnType,
+      @Nonnull final ListTraceCollector traceCollector) {
+    try {
+      final Collection elementResult = evaluator.evaluate(mainPath, inputContext);
+      final Column resultColumn = elementResult.getColumn().getValue();
+      final List<TypedValue> results = collectResults(resourceDf, resultColumn, expectedReturnType);
+      final List<TraceResult> traces = buildTraceResults(traceCollector);
+      return new ResultGroup(contextKey, results, traces);
+    } finally {
+      traceCollector.clear();
+    }
   }
 
   /**
@@ -321,12 +348,12 @@ public class SingleInstanceEvaluator {
     final List<Row> rows = resultDf.collectAsList();
 
     if (rows.isEmpty()) {
-      return new ArrayList<>();
+      return List.of();
     }
 
     final Row row = rows.getFirst();
     if (row.isNullAt(0)) {
-      return new ArrayList<>();
+      return List.of();
     }
 
     final Object rawValue = row.get(0);
