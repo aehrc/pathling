@@ -27,6 +27,7 @@ import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ResourceTypes;
+import au.csiro.pathling.fhirpath.evaluation.ResultGroup;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
@@ -696,8 +697,10 @@ public class PathlingContext {
    * <pre>{@code
    * PathlingContext pc = PathlingContext.create(spark);
    * SingleInstanceEvaluationResult result = pc.evaluateFhirPath("Patient", patientJson, "name.family");
-   * for (SingleInstanceEvaluationResult.TypedValue value : result.getResults()) {
-   *     System.out.println(value.getType() + ": " + value.getValue());
+   * for (ResultGroup group : result.getResultGroups()) {
+   *     for (SingleInstanceEvaluationResult.TypedValue value : group.getResults()) {
+   *         System.out.println(value.getType() + ": " + value.getValue());
+   *     }
    * }
    * }</pre>
    *
@@ -720,18 +723,18 @@ public class PathlingContext {
    * Evaluates a FHIRPath expression against a single FHIR resource with an optional context
    * expression and variables.
    *
-   * <p>When a context expression is provided, the context expression is evaluated first. The main
-   * expression is then evaluated once for each item in the context result, with each context item
-   * used as the input. Results are returned as a flat list of typed values.
+   * <p>When a context expression is provided, the main expression is evaluated independently for
+   * each context element, producing one {@link ResultGroup} per element with scoped results and
+   * traces. When no context expression is provided, a single {@link ResultGroup} with a null
+   * context key is returned.
    *
    * @param resourceType the FHIR resource type (e.g., "Patient", "Observation")
    * @param resourceJson the FHIR resource as a JSON string
    * @param fhirPathExpression the FHIRPath expression to evaluate
    * @param contextExpression an optional context expression; if non-null, the main expression is
-   *     evaluated once per context item
+   *     evaluated once per context element with grouped results
    * @param variables optional named variables available via %variable syntax, or null
-   * @return a {@link SingleInstanceEvaluationResult} containing typed result values and type
-   *     metadata
+   * @return a {@link SingleInstanceEvaluationResult} containing result groups and type metadata
    * @throws IllegalArgumentException if the resource type is invalid
    */
   @Nonnull

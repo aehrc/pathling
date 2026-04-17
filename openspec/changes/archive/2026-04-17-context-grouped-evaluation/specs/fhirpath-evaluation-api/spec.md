@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Evaluate FHIRPath expression against a single resource
 
@@ -87,55 +87,6 @@ included in the appropriate `ResultGroup` alongside the typed values.
 
 - **WHEN** the method is called with an expression that does not use `trace()`
 - **THEN** each `ResultGroup` SHALL include an empty traces list
-
-### Requirement: Return type metadata with evaluation results
-
-The library API evaluation method SHALL return type information alongside each
-result value, indicating the FHIR data type of the result (e.g., `string`,
-`boolean`, `integer`, `Patient`, `HumanName`).
-
-#### Scenario: Primitive type identification
-
-- **WHEN** evaluating the expression `name.family` against a Patient resource
-- **THEN** each result value is annotated with the type `string`
-
-#### Scenario: Complex type identification
-
-- **WHEN** evaluating the expression `name` against a Patient resource
-- **THEN** each result value is annotated with the type `HumanName`
-
-#### Scenario: Boolean type identification
-
-- **WHEN** evaluating the expression `active` against a Patient resource
-- **THEN** the result value is annotated with the type `boolean`
-
-### Requirement: Provide expression parsing metadata
-
-The library API evaluation method SHALL return the parsed abstract syntax tree
-(AST) of the expression as a JSON string, and the statically inferred return
-type of the expression.
-
-#### Scenario: AST available after evaluation
-
-- **WHEN** a FHIRPath expression is evaluated
-- **THEN** the result includes a JSON representation of the parsed expression
-  tree
-
-#### Scenario: Return type inference
-
-- **WHEN** the expression `name.family` is evaluated against a Patient resource
-- **THEN** the result includes `string` as the expected return type
-
-### Requirement: Support environment variables
-
-The library API evaluation method SHALL accept optional named variables that are
-available to the expression via the `%variable` syntax.
-
-#### Scenario: Variable substitution
-
-- **WHEN** the method is called with a variable `myVar` set to `"test"` and the
-  expression `%myVar`
-- **THEN** the method returns a result containing the string `"test"`
 
 ### Requirement: Python bindings for evaluation method
 

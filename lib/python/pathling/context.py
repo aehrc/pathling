@@ -448,28 +448,32 @@ class PathlingContext:
     ) -> dict:
         """
         Evaluates a FHIRPath expression against a single FHIR resource and returns
-        materialised typed results.
+        materialised typed results grouped by evaluation scope.
 
-        The resource is encoded into a one-row Spark Dataset internally, and the
-        existing FHIRPath engine is used to evaluate the expression. Results are
-        collected and returned as typed values.
+        When a context expression is provided, the main expression is evaluated
+        independently for each context element, producing one result group per
+        element with scoped results and traces. When no context expression is
+        provided, a single result group with ``contextKey`` set to ``None`` is
+        returned.
 
         Example usage::
 
             pc = PathlingContext.create(spark)
             result = pc.evaluate_fhirpath("Patient", patient_json, "name.family")
-            for value in result["results"]:
-                print(f"{value['type']}: {value['value']}")
+            for group in result["resultGroups"]:
+                for value in group["results"]:
+                    print(f"{value['type']}: {value['value']}")
 
         :param resource_type: the FHIR resource type (e.g., "Patient", "Observation")
         :param resource_json: the FHIR resource as a JSON string
         :param fhirpath_expression: the FHIRPath expression to evaluate
-        :param context_expression: an optional context expression; if provided, the main
-               expression is composed with the context expression
+        :param context_expression: an optional context expression; if provided, the
+               main expression is evaluated once per context element with grouped
+               results
         :param variables: optional named variables available via %variable syntax, or None
-        :return: a dict with ``results`` (list of dicts with ``type`` and ``value``
-                 keys), ``expectedReturnType`` (string), and ``traces`` (list of
-                 dicts with ``label`` and ``values`` keys)
+        :return: a dict with ``expectedReturnType`` (string) and ``resultGroups``
+                 (list of dicts with ``contextKey``, ``results``, and ``traces``
+                 keys)
         :raises: Exception if the expression is invalid or evaluation fails
         """
         jresult = self._jpc.evaluateFhirPath(
@@ -479,22 +483,30 @@ class PathlingContext:
             context_expression,
             variables,
         )
-        # Convert Java FhirPathResult to Python dict.
-        results = _convert_typed_values(jresult.getResults())
 
-        # Convert trace results.
-        traces = [
-            {
-                "label": jtrace.getLabel(),
-                "values": _convert_typed_values(jtrace.getValues()),
-            }
-            for jtrace in jresult.getTraces()
-        ]
+        # Convert Java result groups to Python dicts.
+        result_groups = []
+        for jgroup in jresult.getResultGroups():
+            context_key = jgroup.getContextKey()
+            results = _convert_typed_values(jgroup.getResults())
+            traces = [
+                {
+                    "label": jtrace.getLabel(),
+                    "values": _convert_typed_values(jtrace.getValues()),
+                }
+                for jtrace in jgroup.getTraces()
+            ]
+            result_groups.append(
+                {
+                    "contextKey": context_key,
+                    "results": results,
+                    "traces": traces,
+                }
+            )
 
         return {
-            "results": results,
             "expectedReturnType": jresult.getExpectedReturnType(),
-            "traces": traces,
+            "resultGroups": result_groups,
         }
 
     def search_to_column(self, resource_type: str, search_expression: str) -> Column:

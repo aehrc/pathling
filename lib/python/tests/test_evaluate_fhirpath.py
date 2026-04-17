@@ -44,9 +44,14 @@ def test_string_result(pathling_ctx):
     result = pathling_ctx.evaluate_fhirpath("Patient", PATIENT_JSON, "gender")
 
     assert result == {
-        "results": [{"type": "code", "value": "male"}],
         "expectedReturnType": "code",
-        "traces": [],
+        "resultGroups": [
+            {
+                "contextKey": None,
+                "results": [{"type": "code", "value": "male"}],
+                "traces": [],
+            }
+        ],
     }
 
 
@@ -55,9 +60,14 @@ def test_boolean_result(pathling_ctx):
     result = pathling_ctx.evaluate_fhirpath("Patient", PATIENT_JSON, "active")
 
     assert result == {
-        "results": [{"type": "boolean", "value": True}],
         "expectedReturnType": "boolean",
-        "traces": [],
+        "resultGroups": [
+            {
+                "contextKey": None,
+                "results": [{"type": "boolean", "value": True}],
+                "traces": [],
+            }
+        ],
     }
 
 
@@ -66,9 +76,14 @@ def test_date_result(pathling_ctx):
     result = pathling_ctx.evaluate_fhirpath("Patient", PATIENT_JSON, "birthDate")
 
     assert result == {
-        "results": [{"type": "date", "value": "1990-01-01"}],
         "expectedReturnType": "date",
-        "traces": [],
+        "resultGroups": [
+            {
+                "contextKey": None,
+                "results": [{"type": "date", "value": "1990-01-01"}],
+                "traces": [],
+            }
+        ],
     }
 
 
@@ -77,9 +92,14 @@ def test_integer_result(pathling_ctx):
     result = pathling_ctx.evaluate_fhirpath("Patient", PATIENT_JSON, "name.count()")
 
     assert result == {
-        "results": [{"type": "integer", "value": 2}],
         "expectedReturnType": "integer",
-        "traces": [],
+        "resultGroups": [
+            {
+                "contextKey": None,
+                "results": [{"type": "integer", "value": 2}],
+                "traces": [],
+            }
+        ],
     }
 
 
@@ -88,10 +108,13 @@ def test_multiple_results(pathling_ctx):
     result = pathling_ctx.evaluate_fhirpath("Patient", PATIENT_JSON, "name.given")
 
     assert result["expectedReturnType"] == "string"
-    assert result["traces"] == []
-    values = {r["value"] for r in result["results"]}
+    assert len(result["resultGroups"]) == 1
+    group = result["resultGroups"][0]
+    assert group["contextKey"] is None
+    assert group["traces"] == []
+    values = {r["value"] for r in group["results"]}
     assert values == {"John", "James", "Johnny"}
-    assert all(r["type"] == "string" for r in result["results"])
+    assert all(r["type"] == "string" for r in group["results"])
 
 
 def test_empty_result(pathling_ctx):
@@ -101,9 +124,14 @@ def test_empty_result(pathling_ctx):
     )
 
     assert result == {
-        "results": [],
         "expectedReturnType": "boolean",
-        "traces": [],
+        "resultGroups": [
+            {
+                "contextKey": None,
+                "results": [],
+                "traces": [],
+            }
+        ],
     }
 
 
@@ -113,10 +141,13 @@ def test_complex_type_result(pathling_ctx):
     result = pathling_ctx.evaluate_fhirpath("Patient", PATIENT_JSON, "name")
 
     assert result["expectedReturnType"] == "HumanName"
-    assert result["traces"] == []
-    assert len(result["results"]) == 2
-    assert all(r["type"] == "HumanName" for r in result["results"])
-    assert all(isinstance(r["value"], str) for r in result["results"])
+    assert len(result["resultGroups"]) == 1
+    group = result["resultGroups"][0]
+    assert group["contextKey"] is None
+    assert group["traces"] == []
+    assert len(group["results"]) == 2
+    assert all(r["type"] == "HumanName" for r in group["results"])
+    assert all(isinstance(r["value"], str) for r in group["results"])
 
 
 # ========== Expected return type ==========
@@ -147,25 +178,38 @@ def test_complex_return_type(pathling_ctx):
 
 
 def test_with_context_expression(pathling_ctx):
-    """A context expression composes with the main expression."""
+    """A context expression produces one result group per context element."""
     result = pathling_ctx.evaluate_fhirpath(
         "Patient", PATIENT_JSON, "given", context_expression="name"
     )
 
     assert result["expectedReturnType"] == "unknown"
-    assert result["traces"] == []
-    values = {r["value"] for r in result["results"]}
-    assert values == {"John", "James", "Johnny"}
+    assert len(result["resultGroups"]) == 2
+
+    group0 = result["resultGroups"][0]
+    assert group0["contextKey"] == "name[0]"
+    values0 = {r["value"] for r in group0["results"]}
+    assert values0 == {"John", "James"}
+
+    group1 = result["resultGroups"][1]
+    assert group1["contextKey"] == "name[1]"
+    values1 = {r["value"] for r in group1["results"]}
+    assert values1 == {"Johnny"}
 
 
 def test_without_context_expression(pathling_ctx):
-    """Omitting context_expression evaluates the main expression directly."""
+    """Omitting context_expression returns a single group with null contextKey."""
     result = pathling_ctx.evaluate_fhirpath("Patient", PATIENT_JSON, "active")
 
     assert result == {
-        "results": [{"type": "boolean", "value": True}],
         "expectedReturnType": "boolean",
-        "traces": [],
+        "resultGroups": [
+            {
+                "contextKey": None,
+                "results": [{"type": "boolean", "value": True}],
+                "traces": [],
+            }
+        ],
     }
 
 
@@ -179,9 +223,14 @@ def test_with_string_variable(pathling_ctx):
     )
 
     assert result == {
-        "results": [{"type": "string", "value": "hello"}],
         "expectedReturnType": "string",
-        "traces": [],
+        "resultGroups": [
+            {
+                "contextKey": None,
+                "results": [{"type": "string", "value": "hello"}],
+                "traces": [],
+            }
+        ],
     }
 
 
@@ -192,9 +241,14 @@ def test_with_integer_variable(pathling_ctx):
     )
 
     assert result == {
-        "results": [{"type": "integer", "value": 42}],
         "expectedReturnType": "integer",
-        "traces": [],
+        "resultGroups": [
+            {
+                "contextKey": None,
+                "results": [{"type": "integer", "value": 42}],
+                "traces": [],
+            }
+        ],
     }
 
 
@@ -205,9 +259,14 @@ def test_with_boolean_variable(pathling_ctx):
     )
 
     assert result == {
-        "results": [{"type": "boolean", "value": True}],
         "expectedReturnType": "boolean",
-        "traces": [],
+        "resultGroups": [
+            {
+                "contextKey": None,
+                "results": [{"type": "boolean", "value": True}],
+                "traces": [],
+            }
+        ],
     }
 
 
@@ -216,9 +275,14 @@ def test_without_variables(pathling_ctx):
     result = pathling_ctx.evaluate_fhirpath("Patient", PATIENT_JSON, "active")
 
     assert result == {
-        "results": [{"type": "boolean", "value": True}],
         "expectedReturnType": "boolean",
-        "traces": [],
+        "resultGroups": [
+            {
+                "contextKey": None,
+                "results": [{"type": "boolean", "value": True}],
+                "traces": [],
+            }
+        ],
     }
 
 
@@ -233,12 +297,17 @@ def test_trace_boolean(pathling_ctx):
     )
 
     assert result == {
-        "results": [{"type": "boolean", "value": True}],
         "expectedReturnType": "boolean",
-        "traces": [
+        "resultGroups": [
             {
-                "label": "flag",
-                "values": [{"type": "boolean", "value": True}],
+                "contextKey": None,
+                "results": [{"type": "boolean", "value": True}],
+                "traces": [
+                    {
+                        "label": "flag",
+                        "values": [{"type": "boolean", "value": True}],
+                    }
+                ],
             }
         ],
     }
@@ -250,8 +319,9 @@ def test_trace_entry_has_no_type_key(pathling_ctx):
         "Patient", PATIENT_JSON, "active.trace('flag')"
     )
 
-    for trace in result["traces"]:
-        assert set(trace.keys()) == {"label", "values"}
+    for group in result["resultGroups"]:
+        for trace in group["traces"]:
+            assert set(trace.keys()) == {"label", "values"}
 
 
 def test_multiple_trace_calls(pathling_ctx):
@@ -264,8 +334,9 @@ def test_multiple_trace_calls(pathling_ctx):
     )
 
     assert result["expectedReturnType"] == "string"
-    assert result["results"] == [{"type": "string", "value": "Smith"}]
-    labels = [t["label"] for t in result["traces"]]
+    group = result["resultGroups"][0]
+    assert group["results"] == [{"type": "string", "value": "Smith"}]
+    labels = [t["label"] for t in group["traces"]]
     assert "before" in labels
     assert "after" in labels
 
@@ -274,7 +345,7 @@ def test_no_trace_returns_empty_list(pathling_ctx):
     """An expression without trace() returns an empty traces list."""
     result = pathling_ctx.evaluate_fhirpath("Patient", PATIENT_JSON, "active")
 
-    assert result["traces"] == []
+    assert result["resultGroups"][0]["traces"] == []
 
 
 # ========== Error handling ==========

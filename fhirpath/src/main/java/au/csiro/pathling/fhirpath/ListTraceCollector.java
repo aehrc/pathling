@@ -50,6 +50,11 @@ public class ListTraceCollector implements TraceCollector {
     return List.copyOf(entries);
   }
 
+  /** Removes all collected trace entries, resetting the collector to its initial state. */
+  public void clear() {
+    entries.clear();
+  }
+
   /**
    * A single trace entry captured during evaluation.
    *

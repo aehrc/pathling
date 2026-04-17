@@ -22,42 +22,39 @@ import jakarta.annotation.Nullable;
 import java.util.List;
 
 /**
- * Represents the result of evaluating a FHIRPath expression against a single FHIR resource.
+ * Represents the result of evaluating a FHIRPath expression against a single FHIR resource. Results
+ * are organised into {@link ResultGroup} objects, one per evaluation scope. Non-context evaluation
+ * produces a single group with a null context key; context evaluation produces one group per
+ * context element.
  *
  * @author John Grimes
  */
 public class SingleInstanceEvaluationResult {
 
-  @Nonnull private final List<TypedValue> results;
+  @Nonnull private final List<ResultGroup> resultGroups;
 
   @Nonnull private final String expectedReturnType;
-
-  @Nonnull private final List<TraceResult> traces;
 
   /**
    * Creates a new SingleInstanceEvaluationResult.
    *
-   * @param results the typed result values from the evaluation
+   * @param resultGroups the result groups from the evaluation
    * @param expectedReturnType the statically inferred return type of the expression
-   * @param traces the trace entries collected during evaluation
    */
   public SingleInstanceEvaluationResult(
-      @Nonnull final List<TypedValue> results,
-      @Nonnull final String expectedReturnType,
-      @Nonnull final List<TraceResult> traces) {
-    this.results = results;
+      @Nonnull final List<ResultGroup> resultGroups, @Nonnull final String expectedReturnType) {
+    this.resultGroups = resultGroups;
     this.expectedReturnType = expectedReturnType;
-    this.traces = traces;
   }
 
   /**
-   * Gets the typed result values from the evaluation.
+   * Gets the result groups from the evaluation.
    *
-   * @return the list of typed values
+   * @return the list of result groups
    */
   @Nonnull
-  public List<TypedValue> getResults() {
-    return results;
+  public List<ResultGroup> getResultGroups() {
+    return resultGroups;
   }
 
   /**
@@ -68,16 +65,6 @@ public class SingleInstanceEvaluationResult {
   @Nonnull
   public String getExpectedReturnType() {
     return expectedReturnType;
-  }
-
-  /**
-   * Gets the trace entries collected during evaluation.
-   *
-   * @return the list of trace results, or an empty list if no trace() calls were present
-   */
-  @Nonnull
-  public List<TraceResult> getTraces() {
-    return traces;
   }
 
   /**

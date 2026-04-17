@@ -69,7 +69,7 @@ public class SingleInstanceEvaluator {
    * @param fhirContext the FHIR context
    * @param fhirPathExpression the FHIRPath expression to evaluate
    * @param contextExpression an optional context expression; if non-null, the main expression is
-   *     composed with the context
+   *     evaluated once per context element with results grouped by element
    * @param variables optional named variables available via %variable syntax, or null
    * @return a {@link SingleInstanceEvaluationResult} containing typed result values and type
    *     metadata
@@ -101,7 +101,7 @@ public class SingleInstanceEvaluator {
    * @param fhirContext the FHIR context
    * @param fhirPathExpression the FHIRPath expression to evaluate
    * @param contextExpression an optional context expression; if non-null, the main expression is
-   *     composed with the context
+   *     evaluated once per context element with results grouped by element
    * @param variables optional named variables available via %variable syntax, or null
    * @param configuration the FHIRPath evaluation configuration
    * @return a {@link SingleInstanceEvaluationResult} containing typed result values and type
@@ -152,11 +152,12 @@ public class SingleInstanceEvaluator {
             traceCollector);
       }
 
-      // Apply the result Column to the dataset and collect the results.
+      // Non-context evaluation: collect results and wrap in a single ResultGroup.
       final Column resultColumn = resultCollection.getColumn().getValue();
       final List<TypedValue> results = collectResults(resourceDf, resultColumn, expectedReturnType);
       final List<TraceResult> traces = buildTraceResults(traceCollector);
-      return new SingleInstanceEvaluationResult(results, expectedReturnType, traces);
+      final ResultGroup group = new ResultGroup(null, results, traces);
+      return new SingleInstanceEvaluationResult(List.of(group), expectedReturnType);
     }
   }
 
@@ -208,7 +209,9 @@ public class SingleInstanceEvaluator {
   }
 
   /**
-   * Evaluates the main expression once per context item, returning flat results.
+   * Evaluates the main expression once per context element, returning grouped results. The context
+   * array is materialised via a single Spark action. Each element is then evaluated independently,
+   * with trace collection reset between elements.
    *
    * @param resourceDf the encoded resource as a single-row DataFrame
    * @param parser the FHIRPath parser
@@ -217,7 +220,7 @@ public class SingleInstanceEvaluator {
    * @param evaluator the single resource evaluator
    * @param expectedReturnType the inferred return type of the main expression
    * @param traceCollector the trace collector for capturing trace() output
-   * @return a SingleInstanceEvaluationResult with results for each context item
+   * @return a SingleInstanceEvaluationResult with result groups for each context element
    */
   @Nonnull
   private static SingleInstanceEvaluationResult evaluateWithContext(
@@ -229,29 +232,59 @@ public class SingleInstanceEvaluator {
       @Nonnull final String expectedReturnType,
       @Nonnull final ListTraceCollector traceCollector) {
 
-    // Parse and evaluate the context expression.
+    // Parse and evaluate the context expression to get the context Column.
     final FhirPath contextPath = parser.parse(contextExpression);
     final Collection contextCollection = evaluator.evaluate(contextPath);
     final Column contextColumn = contextCollection.getColumn().getValue();
 
-    // Collect context items.
+    // Materialise the context value to determine array vs scalar and element count.
     final Dataset<Row> contextDf = resourceDf.select(contextColumn.alias("_ctx"));
     final List<Row> contextRows = contextDf.collectAsList();
 
     if (contextRows.isEmpty() || contextRows.getFirst().isNullAt(0)) {
-      return new SingleInstanceEvaluationResult(new ArrayList<>(), expectedReturnType, List.of());
+      return new SingleInstanceEvaluationResult(List.of(), expectedReturnType);
     }
 
-    // The context value is an array; evaluate the main expression against the input context
-    // for each item. In flat schema mode, the evaluator uses the context expression to scope
-    // the main expression, so we compose the expressions.
-    final FhirPath composedPath = contextPath.andThen(mainPath);
-    final Collection composedResult = evaluator.evaluate(composedPath);
-    final Column composedColumn = composedResult.getColumn().getValue();
+    final Object rawContext = contextRows.getFirst().get(0);
+    final List<ResultGroup> resultGroups = new ArrayList<>();
 
-    final List<TypedValue> results = collectResults(resourceDf, composedColumn, expectedReturnType);
-    final List<TraceResult> traces = buildTraceResults(traceCollector);
-    return new SingleInstanceEvaluationResult(results, expectedReturnType, traces);
+    if (rawContext instanceof final scala.collection.Seq<?> seq) {
+      // Array context: iterate per element.
+      for (int i = 0; i < seq.size(); i++) {
+        final String contextKey = contextExpression + "[" + i + "]";
+        traceCollector.clear();
+        try {
+          // Create a Column for this specific element and evaluate the main expression against it.
+          final Column elementColumn = contextColumn.getItem(i);
+          final Collection elementContext = contextCollection.copyWithColumn(elementColumn);
+          final Collection elementResult = evaluator.evaluate(mainPath, elementContext);
+          final Column resultColumn = elementResult.getColumn().getValue();
+
+          final List<TypedValue> results =
+              collectResults(resourceDf, resultColumn, expectedReturnType);
+          final List<TraceResult> traces = buildTraceResults(traceCollector);
+          resultGroups.add(new ResultGroup(contextKey, results, traces));
+        } finally {
+          traceCollector.clear();
+        }
+      }
+    } else {
+      // Scalar context: single element without index.
+      traceCollector.clear();
+      try {
+        final Collection elementResult = evaluator.evaluate(mainPath, contextCollection);
+        final Column resultColumn = elementResult.getColumn().getValue();
+
+        final List<TypedValue> results =
+            collectResults(resourceDf, resultColumn, expectedReturnType);
+        final List<TraceResult> traces = buildTraceResults(traceCollector);
+        resultGroups.add(new ResultGroup(contextExpression, results, traces));
+      } finally {
+        traceCollector.clear();
+      }
+    }
+
+    return new SingleInstanceEvaluationResult(resultGroups, expectedReturnType);
   }
 
   /**

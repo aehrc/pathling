@@ -20,9 +20,11 @@ package au.csiro.pathling.library;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.fhirpath.evaluation.ResultGroup;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
 import java.util.List;
@@ -90,6 +92,19 @@ public class EvaluateFhirPathTest {
     spark.stop();
   }
 
+  /**
+   * Helper to get the results from the first (and typically only) ResultGroup in a non-context
+   * evaluation.
+   */
+  @SuppressWarnings("SameParameterValue")
+  private static ResultGroup getSingleGroup(
+      @SuppressWarnings("SameParameterValue") final SingleInstanceEvaluationResult result) {
+    assertEquals(1, result.getResultGroups().size());
+    final ResultGroup group = result.getResultGroups().getFirst();
+    assertNull(group.getContextKey());
+    return group;
+  }
+
   // ========== Simple expression evaluation ==========
 
   @Test
@@ -99,9 +114,10 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.family");
 
     assertNotNull(result);
-    assertEquals(2, result.getResults().size());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(2, group.getResults().size());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("string", first.getType());
     assertEquals("Smith", first.getValue());
   }
@@ -113,9 +129,10 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.given");
 
     assertNotNull(result);
-    assertEquals(3, result.getResults().size());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(3, group.getResults().size());
 
-    final List<Object> values = result.getResults().stream().map(TypedValue::getValue).toList();
+    final List<Object> values = group.getResults().stream().map(TypedValue::getValue).toList();
     assertTrue(values.contains("John"));
     assertTrue(values.contains("James"));
     assertTrue(values.contains("Johnny"));
@@ -128,9 +145,10 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "active");
 
     assertNotNull(result);
-    assertEquals(1, result.getResults().size());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(1, group.getResults().size());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("boolean", first.getType());
     assertEquals(true, first.getValue());
   }
@@ -138,12 +156,12 @@ public class EvaluateFhirPathTest {
   @Test
   void evaluateEmptyResult() {
     // Evaluating a path that matches nothing should return an empty list.
-    // Use multipleBirth rather than deceased, as deceased is a choice type that requires ofType().
     final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "multipleBirthBoolean");
 
     assertNotNull(result);
-    assertTrue(result.getResults().isEmpty());
+    final ResultGroup group = getSingleGroup(result);
+    assertTrue(group.getResults().isEmpty());
   }
 
   @Test
@@ -153,11 +171,11 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name");
 
     assertNotNull(result);
-    assertEquals(2, result.getResults().size());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(2, group.getResults().size());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("HumanName", first.getType());
-    // The value should be a JSON string for complex types.
     assertNotNull(first.getValue());
   }
 
@@ -168,9 +186,10 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "birthDate");
 
     assertNotNull(result);
-    assertEquals(1, result.getResults().size());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(1, group.getResults().size());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("date", first.getType());
     assertEquals("1990-01-01", first.getValue());
   }
@@ -206,19 +225,86 @@ public class EvaluateFhirPathTest {
 
   @Test
   void evaluateWithContextExpression() {
-    // When a context expression is provided, the main expression is composed with the context.
-    // For name.given, this returns all given names across all name entries.
+    // When a context expression is provided, each context element produces its own ResultGroup.
     final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "given", "name", null);
 
     assertNotNull(result);
-    // The composed path name.given returns all given names.
-    assertEquals(3, result.getResults().size());
+    assertEquals(2, result.getResultGroups().size());
 
-    final List<Object> values = result.getResults().stream().map(TypedValue::getValue).toList();
-    assertTrue(values.contains("John"));
-    assertTrue(values.contains("James"));
-    assertTrue(values.contains("Johnny"));
+    // First name entry has given names "John" and "James".
+    final ResultGroup group0 = result.getResultGroups().get(0);
+    assertEquals("name[0]", group0.getContextKey());
+    final List<Object> values0 = group0.getResults().stream().map(TypedValue::getValue).toList();
+    assertTrue(values0.contains("John"));
+    assertTrue(values0.contains("James"));
+
+    // Second name entry has given name "Johnny".
+    final ResultGroup group1 = result.getResultGroups().get(1);
+    assertEquals("name[1]", group1.getContextKey());
+    assertEquals(1, group1.getResults().size());
+    assertEquals("Johnny", group1.getResults().getFirst().getValue());
+
+    // Without trace() calls, each group should have empty traces.
+    for (final ResultGroup group : result.getResultGroups()) {
+      assertTrue(group.getTraces().isEmpty());
+    }
+  }
+
+  @Test
+  void contextEvaluationWithMultiSegmentPath() {
+    // A multi-segment context expression should produce keys like "telecom[0]".
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "value", "telecom", null);
+
+    assertNotNull(result);
+    assertEquals(1, result.getResultGroups().size());
+
+    final ResultGroup group = result.getResultGroups().getFirst();
+    assertEquals("telecom[0]", group.getContextKey());
+    assertEquals(1, group.getResults().size());
+    assertEquals("555-1234", group.getResults().getFirst().getValue());
+  }
+
+  @Test
+  void contextEvaluationWithTraceIsolation() {
+    // Traces should be scoped to each context element.
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath(
+            "Patient", PATIENT_JSON, "trace('trc').given.first()", "name", null);
+
+    assertNotNull(result);
+    assertEquals(2, result.getResultGroups().size());
+
+    // Each group should have its own trace entries.
+    for (final ResultGroup group : result.getResultGroups()) {
+      assertFalse(group.getTraces().isEmpty(), "Each group should have trace output");
+      assertEquals("trc", group.getTraces().getFirst().getLabel());
+    }
+  }
+
+  @Test
+  void emptyContextProducesNoResultGroups() {
+    // When the context expression evaluates to an empty collection, zero groups are returned.
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "value", "communication", null);
+
+    assertNotNull(result);
+    assertTrue(result.getResultGroups().isEmpty());
+  }
+
+  @Test
+  void scalarContextProducesUnindexedKey() {
+    // When the context expression evaluates to a scalar, the key has no index.
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "toString()", "gender", null);
+
+    assertNotNull(result);
+    assertEquals(1, result.getResultGroups().size());
+
+    final ResultGroup group = result.getResultGroups().getFirst();
+    assertEquals("gender", group.getContextKey());
+    assertFalse(group.getResults().isEmpty());
   }
 
   // ========== Error cases ==========
@@ -237,9 +323,10 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "gender");
 
     assertNotNull(result);
-    assertEquals(1, result.getResults().size());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(1, group.getResults().size());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("code", first.getType());
     assertEquals("male", first.getValue());
   }
@@ -251,9 +338,10 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.count()");
 
     assertNotNull(result);
-    assertEquals(1, result.getResults().size());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(1, group.getResults().size());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("integer", first.getType());
     assertEquals(2, first.getValue());
   }
@@ -265,9 +353,10 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.exists()");
 
     assertNotNull(result);
-    assertFalse(result.getResults().isEmpty());
+    final ResultGroup group = getSingleGroup(result);
+    assertFalse(group.getResults().isEmpty());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("boolean", first.getType());
     assertEquals(true, first.getValue());
   }
@@ -279,9 +368,10 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name.where(use = 'official').family");
 
     assertNotNull(result);
-    assertEquals(1, result.getResults().size());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(1, group.getResults().size());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("string", first.getType());
     assertEquals("Smith", first.getValue());
   }
@@ -313,15 +403,15 @@ public class EvaluateFhirPathTest {
 
   @Test
   void quantityResultExcludesSyntheticFields() {
-    // Evaluating a Quantity expression should return JSON without synthetic fields
-    // like value_scale, _value_canonicalized, or _code_canonicalized.
+    // Evaluating a Quantity expression should return JSON without synthetic fields.
     final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Observation", OBSERVATION_JSON, "value.ofType(Quantity)");
 
     assertNotNull(result);
-    assertFalse(result.getResults().isEmpty());
+    final ResultGroup group = getSingleGroup(result);
+    assertFalse(group.getResults().isEmpty());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("Quantity", first.getType());
 
     final String json = (String) first.getValue();
@@ -341,9 +431,10 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name");
 
     assertNotNull(result);
-    assertFalse(result.getResults().isEmpty());
+    final ResultGroup group = getSingleGroup(result);
+    assertFalse(group.getResults().isEmpty());
 
-    for (final TypedValue tv : result.getResults()) {
+    for (final TypedValue tv : group.getResults()) {
       final String json = (String) tv.getValue();
       assertNotNull(json);
       assertFalse(json.contains("_fid"), "JSON should not contain _fid");
@@ -360,9 +451,10 @@ public class EvaluateFhirPathTest {
             "Patient", PATIENT_JSON, "%greeting", null, Map.of("greeting", "hello"));
 
     assertNotNull(result);
-    assertEquals(1, result.getResults().size());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(1, group.getResults().size());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("string", first.getType());
     assertEquals("hello", first.getValue());
   }
@@ -374,9 +466,10 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "%count", null, Map.of("count", 42));
 
     assertNotNull(result);
-    assertEquals(1, result.getResults().size());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(1, group.getResults().size());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("integer", first.getType());
     assertEquals(42, first.getValue());
   }
@@ -388,9 +481,10 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "%flag", null, Map.of("flag", true));
 
     assertNotNull(result);
-    assertEquals(1, result.getResults().size());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(1, group.getResults().size());
 
-    final TypedValue first = result.getResults().getFirst();
+    final TypedValue first = group.getResults().getFirst();
     assertEquals("boolean", first.getType());
     assertEquals(true, first.getValue());
   }
@@ -403,7 +497,8 @@ public class EvaluateFhirPathTest {
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "active", null, null);
 
     assertNotNull(result);
-    assertEquals(1, result.getResults().size());
-    assertEquals(true, result.getResults().getFirst().getValue());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(1, group.getResults().size());
+    assertEquals(true, group.getResults().getFirst().getValue());
   }
 }

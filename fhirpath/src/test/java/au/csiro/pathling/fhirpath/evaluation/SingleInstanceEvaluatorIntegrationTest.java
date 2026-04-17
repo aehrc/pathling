@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.evaluation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -72,6 +73,14 @@ class SingleInstanceEvaluatorIntegrationTest {
     fhirContext = encoders.getContext();
   }
 
+  /** Helper to get the single ResultGroup from a non-context evaluation result. */
+  private static ResultGroup getSingleGroup(final SingleInstanceEvaluationResult result) {
+    assertEquals(1, result.getResultGroups().size());
+    final ResultGroup group = result.getResultGroups().getFirst();
+    assertNull(group.getContextKey());
+    return group;
+  }
+
   @Test
   void evaluateSimpleExpressionWithTrace() {
     // Evaluating a traced primitive expression should return both the result and trace entries.
@@ -79,13 +88,15 @@ class SingleInstanceEvaluatorIntegrationTest {
         SingleInstanceEvaluator.evaluate(
             patientDf, "Patient", fhirContext, "Patient.gender.trace('gender')", null, null);
 
+    final ResultGroup group = getSingleGroup(result);
+
     // The result should contain the gender value.
-    assertEquals(1, result.getResults().size());
-    assertEquals("male", result.getResults().get(0).getValue());
+    assertEquals(1, group.getResults().size());
+    assertEquals("male", group.getResults().get(0).getValue());
 
     // The traces should contain one entry for the 'gender' label.
-    assertEquals(1, result.getTraces().size());
-    final TraceResult trace = result.getTraces().get(0);
+    assertEquals(1, group.getTraces().size());
+    final TraceResult trace = group.getTraces().get(0);
     assertEquals("gender", trace.getLabel());
     assertEquals(1, trace.getValues().size());
     assertEquals("male", trace.getValues().get(0).getValue());
@@ -103,19 +114,21 @@ class SingleInstanceEvaluatorIntegrationTest {
             null,
             null);
 
+    final ResultGroup group = getSingleGroup(result);
+
     // The result should be the first given name.
-    assertEquals(1, result.getResults().size());
-    assertEquals("John", result.getResults().get(0).getValue());
+    assertEquals(1, group.getResults().size());
+    assertEquals("John", group.getResults().get(0).getValue());
 
     // There should be two trace groups.
-    assertEquals(2, result.getTraces().size());
+    assertEquals(2, group.getTraces().size());
 
-    final TraceResult givenTrace = result.getTraces().get(0);
+    final TraceResult givenTrace = group.getTraces().get(0);
     assertEquals("given", givenTrace.getLabel());
     // The patient has two given names.
     assertEquals(2, givenTrace.getValues().size());
 
-    final TraceResult firstTrace = result.getTraces().get(1);
+    final TraceResult firstTrace = group.getTraces().get(1);
     assertEquals("first", firstTrace.getLabel());
     assertEquals(1, firstTrace.getValues().size());
     assertEquals("John", firstTrace.getValues().get(0).getValue());
@@ -128,9 +141,10 @@ class SingleInstanceEvaluatorIntegrationTest {
         SingleInstanceEvaluator.evaluate(
             patientDf, "Patient", fhirContext, "Patient.active", null, null);
 
-    assertEquals(1, result.getResults().size());
-    assertEquals(true, result.getResults().get(0).getValue());
-    assertTrue(result.getTraces().isEmpty());
+    final ResultGroup group = getSingleGroup(result);
+    assertEquals(1, group.getResults().size());
+    assertEquals(true, group.getResults().get(0).getValue());
+    assertTrue(group.getTraces().isEmpty());
   }
 
   @Test
@@ -140,9 +154,11 @@ class SingleInstanceEvaluatorIntegrationTest {
         SingleInstanceEvaluator.evaluate(
             patientDf, "Patient", fhirContext, "Patient.name.first().trace('name')", null, null);
 
+    final ResultGroup group = getSingleGroup(result);
+
     // The trace should contain a JSON representation of the HumanName.
-    assertEquals(1, result.getTraces().size());
-    final TraceResult trace = result.getTraces().get(0);
+    assertEquals(1, group.getTraces().size());
+    final TraceResult trace = group.getTraces().get(0);
     assertEquals("name", trace.getLabel());
     assertEquals(1, trace.getValues().size());
 

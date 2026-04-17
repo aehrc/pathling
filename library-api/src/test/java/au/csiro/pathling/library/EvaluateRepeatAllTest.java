@@ -97,10 +97,13 @@ class EvaluateRepeatAllTest {
         pathling.evaluateFhirPath("Questionnaire", QUESTIONNAIRE_JSON, "repeatAll(item).linkId");
 
     assertNotNull(result);
-    assertEquals(4, result.getResults().size());
+    assertEquals(4, result.getResultGroups().getFirst().getResults().size());
 
     final Set<Object> linkIds =
-        new HashSet<>(result.getResults().stream().map(TypedValue::getValue).toList());
+        new HashSet<>(
+            result.getResultGroups().getFirst().getResults().stream()
+                .map(TypedValue::getValue)
+                .toList());
     assertEquals(Set.of("1", "2", "1.1", "1.1.1"), linkIds);
   }
 
@@ -111,9 +114,9 @@ class EvaluateRepeatAllTest {
         pathling.evaluateFhirPath("Questionnaire", QUESTIONNAIRE_JSON, "repeatAll(item).count()");
 
     assertNotNull(result);
-    assertEquals(1, result.getResults().size());
+    assertEquals(1, result.getResultGroups().getFirst().getResults().size());
 
-    final TypedValue countValue = result.getResults().getFirst();
+    final TypedValue countValue = result.getResultGroups().getFirst().getResults().getFirst();
     assertEquals("integer", countValue.getType());
     assertEquals(4, countValue.getValue());
   }
@@ -135,10 +138,13 @@ class EvaluateRepeatAllTest {
             "Questionnaire", QUESTIONNAIRE_JSON, "repeatAll(item).linkId");
 
     assertNotNull(result);
-    assertEquals(4, result.getResults().size());
+    assertEquals(4, result.getResultGroups().getFirst().getResults().size());
 
     final Set<Object> linkIds =
-        new HashSet<>(result.getResults().stream().map(TypedValue::getValue).toList());
+        new HashSet<>(
+            result.getResultGroups().getFirst().getResults().stream()
+                .map(TypedValue::getValue)
+                .toList());
     assertEquals(Set.of("1", "2", "1.1", "1.1.1"), linkIds);
   }
 
@@ -175,7 +181,7 @@ class EvaluateRepeatAllTest {
     final SingleInstanceEvaluationResult baselineResult =
         pathling.evaluateFhirPath("Patient", patientJson, "repeatAll(extension).url");
     assertNotNull(baselineResult);
-    assertEquals(3, baselineResult.getResults().size());
+    assertEquals(3, baselineResult.getResultGroups().getFirst().getResults().size());
 
     // Now with maxUnboundTraversalDepth=1, fewer extensions should be returned.
     final PathlingContext shallowDepthPathling =
@@ -189,7 +195,10 @@ class EvaluateRepeatAllTest {
 
     assertNotNull(limitedResult);
     final Set<Object> urls =
-        new HashSet<>(limitedResult.getResults().stream().map(TypedValue::getValue).toList());
+        new HashSet<>(
+            limitedResult.getResultGroups().getFirst().getResults().stream()
+                .map(TypedValue::getValue)
+                .toList());
     // With maxDepth=1: ext1 at depth 0 + ext2 at depth 1 = 2 extensions. ext3 is excluded
     // because reaching it would require depth 2.
     assertEquals(
