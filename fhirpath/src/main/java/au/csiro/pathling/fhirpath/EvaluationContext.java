@@ -22,6 +22,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionError;
+import au.csiro.pathling.sql.TraceCollector;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
@@ -88,5 +89,15 @@ public interface EvaluationContext {
   @Nonnull
   default FhirpathConfiguration getConfiguration() {
     return FhirpathConfiguration.DEFAULT;
+  }
+
+  /**
+   * Returns the trace collector for capturing {@code trace()} output, if one is available.
+   *
+   * @return an optional containing the trace collector, or empty if trace collection is not enabled
+   */
+  @Nonnull
+  default Optional<TraceCollector> getTraceCollector() {
+    return Optional.empty();
   }
 }

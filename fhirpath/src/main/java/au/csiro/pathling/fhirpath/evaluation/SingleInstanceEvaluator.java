@@ -20,11 +20,15 @@ package au.csiro.pathling.fhirpath.evaluation;
 import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.ListTraceCollector;
+import au.csiro.pathling.fhirpath.ListTraceCollector.TraceEntry;
+import au.csiro.pathling.fhirpath.TraceCollectorProxy;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TraceResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.sql.SyntheticFieldUtils;
@@ -34,6 +38,7 @@ import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.experimental.UtilityClass;
@@ -115,31 +120,44 @@ public class SingleInstanceEvaluator {
     // Convert incoming variables to Collection objects for the evaluator.
     final Map<String, Collection> variableCollections = convertVariables(variables);
 
-    // Parse the FHIRPath expression.
-    final Parser parser = new Parser();
-    final FhirPath mainPath = parser.parse(fhirPathExpression);
+    // Create a trace collector and serializable proxy to capture trace() output.
+    final ListTraceCollector traceCollector = new ListTraceCollector();
+    try (final TraceCollectorProxy proxy = TraceCollectorProxy.create(traceCollector)) {
 
-    // Create a single resource evaluator for determining the return type.
-    final SingleResourceEvaluator evaluator =
-        SingleResourceEvaluatorBuilder.create(ResourceType.fromCode(resourceType), fhirContext)
-            .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
-            .withVariables(variableCollections)
-            .withConfiguration(configuration)
-            .build();
+      // Parse the FHIRPath expression.
+      final Parser parser = new Parser();
+      final FhirPath mainPath = parser.parse(fhirPathExpression);
 
-    // Evaluate to determine the return type.
-    final Collection resultCollection = evaluator.evaluate(mainPath);
-    final String expectedReturnType = determineReturnType(resultCollection);
+      // Create a single resource evaluator for determining the return type.
+      final SingleResourceEvaluator evaluator =
+          SingleResourceEvaluatorBuilder.create(ResourceType.fromCode(resourceType), fhirContext)
+              .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
+              .withVariables(variableCollections)
+              .withConfiguration(configuration)
+              .withTraceCollector(proxy)
+              .build();
 
-    if (contextExpression != null) {
-      return evaluateWithContext(
-          resourceDf, parser, mainPath, contextExpression, evaluator, expectedReturnType);
+      // Evaluate to determine the return type.
+      final Collection resultCollection = evaluator.evaluate(mainPath);
+      final String expectedReturnType = determineReturnType(resultCollection);
+
+      if (contextExpression != null) {
+        return evaluateWithContext(
+            resourceDf,
+            parser,
+            mainPath,
+            contextExpression,
+            evaluator,
+            expectedReturnType,
+            traceCollector);
+      }
+
+      // Apply the result Column to the dataset and collect the results.
+      final Column resultColumn = resultCollection.getColumn().getValue();
+      final List<TypedValue> results = collectResults(resourceDf, resultColumn, expectedReturnType);
+      final List<TraceResult> traces = buildTraceResults(traceCollector);
+      return new SingleInstanceEvaluationResult(results, expectedReturnType, traces);
     }
-
-    // Apply the result Column to the dataset and collect the results.
-    final Column resultColumn = resultCollection.getColumn().getValue();
-    final List<TypedValue> results = collectResults(resourceDf, resultColumn, resultCollection);
-    return new SingleInstanceEvaluationResult(results, expectedReturnType);
   }
 
   /**
@@ -198,6 +216,7 @@ public class SingleInstanceEvaluator {
    * @param contextExpression the context expression string
    * @param evaluator the single resource evaluator
    * @param expectedReturnType the inferred return type of the main expression
+   * @param traceCollector the trace collector for capturing trace() output
    * @return a SingleInstanceEvaluationResult with results for each context item
    */
   @Nonnull
@@ -207,7 +226,8 @@ public class SingleInstanceEvaluator {
       @Nonnull final FhirPath mainPath,
       @Nonnull final String contextExpression,
       @Nonnull final SingleResourceEvaluator evaluator,
-      @Nonnull final String expectedReturnType) {
+      @Nonnull final String expectedReturnType,
+      @Nonnull final ListTraceCollector traceCollector) {
 
     // Parse and evaluate the context expression.
     final FhirPath contextPath = parser.parse(contextExpression);
@@ -219,7 +239,7 @@ public class SingleInstanceEvaluator {
     final List<Row> contextRows = contextDf.collectAsList();
 
     if (contextRows.isEmpty() || contextRows.getFirst().isNullAt(0)) {
-      return new SingleInstanceEvaluationResult(new ArrayList<>(), expectedReturnType);
+      return new SingleInstanceEvaluationResult(new ArrayList<>(), expectedReturnType, List.of());
     }
 
     // The context value is an array; evaluate the main expression against the input context
@@ -229,8 +249,9 @@ public class SingleInstanceEvaluator {
     final Collection composedResult = evaluator.evaluate(composedPath);
     final Column composedColumn = composedResult.getColumn().getValue();
 
-    final List<TypedValue> results = collectResults(resourceDf, composedColumn, composedResult);
-    return new SingleInstanceEvaluationResult(results, expectedReturnType);
+    final List<TypedValue> results = collectResults(resourceDf, composedColumn, expectedReturnType);
+    final List<TraceResult> traces = buildTraceResults(traceCollector);
+    return new SingleInstanceEvaluationResult(results, expectedReturnType, traces);
   }
 
   /**
@@ -254,16 +275,15 @@ public class SingleInstanceEvaluator {
    *
    * @param resourceDf the single-row encoded resource Dataset
    * @param resultColumn the Column expression for the result
-   * @param collection the Collection with type metadata
+   * @param typeName the FHIR type name for the result values
    * @return a list of typed values
    */
   @Nonnull
   private static List<TypedValue> collectResults(
       @Nonnull final Dataset<Row> resourceDf,
       @Nonnull final Column resultColumn,
-      @Nonnull final Collection collection) {
+      @Nonnull final String typeName) {
 
-    final String typeName = determineReturnType(collection);
     final Dataset<Row> resultDf = resourceDf.select(resultColumn.alias("_result"));
     final List<Row> rows = resultDf.collectAsList();
 
@@ -314,13 +334,13 @@ public class SingleInstanceEvaluator {
    * Converts a raw Spark value to a Java value suitable for the result.
    *
    * <p>Struct types (complex FHIR types) are sanitised and converted to JSON strings. Primitive
-   * types are returned as-is.
+   * types are returned as-is. Null values are returned as-is.
    *
    * @param value the raw value
    * @return the converted value
    */
-  @Nonnull
-  private static Object convertValue(@Nonnull final Object value) {
+  @Nullable
+  private static Object convertValue(@Nullable final Object value) {
     if (value instanceof final Row row) {
       // Complex type: sanitise and convert to JSON string representation.
       return rowToJson(row);
@@ -364,11 +384,17 @@ public class SingleInstanceEvaluator {
         if (value == null) {
           continue;
         }
-        filteredFields.add(field);
-        // Recursively sanitise nested struct values.
+        // Recursively sanitise nested struct values, updating the parent field's dataType
+        // to match the sanitised schema. This is critical because Row.json() uses the parent's
+        // dataType (not the nested row's own schema) to map field names positionally.
         if (value instanceof final Row nestedRow) {
-          filteredValues.add(sanitiseRow(nestedRow));
+          final Row sanitisedNested = sanitiseRow(nestedRow);
+          filteredValues.add(sanitisedNested);
+          filteredFields.add(
+              new StructField(
+                  field.name(), sanitisedNested.schema(), field.nullable(), field.metadata()));
         } else {
+          filteredFields.add(field);
           filteredValues.add(value);
         }
       }
@@ -376,5 +402,60 @@ public class SingleInstanceEvaluator {
 
     final StructType filteredSchema = new StructType(filteredFields.toArray(new StructField[0]));
     return new GenericRowWithSchema(filteredValues.toArray(), filteredSchema);
+  }
+
+  /**
+   * Builds trace results from the collector, grouping entries by label and sanitizing Row values.
+   *
+   * @param collector the trace collector containing raw entries
+   * @return a list of trace results grouped by label, in order of first appearance
+   */
+  @Nonnull
+  static List<TraceResult> buildTraceResults(@Nonnull final ListTraceCollector collector) {
+    final List<TraceEntry> entries = collector.getEntries();
+    if (entries.isEmpty()) {
+      return List.of();
+    }
+
+    // Group entries by label, preserving insertion order.
+    final Map<String, List<TraceEntry>> grouped = new LinkedHashMap<>();
+    for (final TraceEntry entry : entries) {
+      grouped.computeIfAbsent(entry.label(), k -> new ArrayList<>()).add(entry);
+    }
+
+    // Build TraceResult for each group, expanding array values into individual entries.
+    final List<TraceResult> results = new ArrayList<>();
+    for (final Map.Entry<String, List<TraceEntry>> group : grouped.entrySet()) {
+      final String label = group.getKey();
+      final List<TypedValue> values = new ArrayList<>();
+      for (final TraceEntry entry : group.getValue()) {
+        expandTraceValue(entry.fhirType(), entry.value(), values);
+      }
+      results.add(new TraceResult(label, values));
+    }
+    return results;
+  }
+
+  /**
+   * Expands a trace value into individual typed values. If the value is a Scala collection (which
+   * occurs when the traced column is an array), each element is extracted and sanitized
+   * individually. Otherwise the value is sanitized and added directly.
+   *
+   * @param fhirType the FHIR type code
+   * @param value the raw trace value (may be a Scala Seq for array columns)
+   * @param target the list to add expanded values to
+   */
+  private static void expandTraceValue(
+      @Nonnull final String fhirType,
+      @Nullable final Object value,
+      @Nonnull final List<TypedValue> target) {
+    if (value instanceof final scala.collection.Seq<?> seq) {
+      for (int i = 0; i < seq.size(); i++) {
+        final Object element = seq.apply(i);
+        target.add(new TypedValue(fhirType, convertValue(element)));
+      }
+    } else {
+      target.add(new TypedValue(fhirType, convertValue(value)));
+    }
   }
 }
