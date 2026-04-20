@@ -46,7 +46,7 @@ Working directory: repository root.
 trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
   --skip-files "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*" \
-  --skip-dirs "server,ui,site,fhirpath-lab-api,benchmark,test-data,deployment" \
+  --skip-dirs "server,ui,site,fhirpath-lab-api,benchmark,test-data,deployment,.idea" \
   --exit-code 0
 ```
 
@@ -61,6 +61,7 @@ Working directory: `server/`.
 cd server && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
   --skip-files "**/target/**/*" \
+  --skip-dirs ".idea" \
   --exit-code 0
 ```
 
@@ -74,6 +75,7 @@ Working directory: `ui/`.
 ```bash
 cd ui && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
+  --skip-dirs ".idea" \
   --exit-code 0
 ```
 
@@ -88,6 +90,7 @@ Working directory: `site/`.
 cd site && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
   --skip-files "**/target/**/*" \
+  --skip-dirs ".idea" \
   --exit-code 0
 ```
 
@@ -101,6 +104,7 @@ Working directory: `fhirpath-lab-api/`.
 ```bash
 cd fhirpath-lab-api && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
+  --skip-dirs ".idea" \
   --exit-code 0
 ```
 
@@ -143,9 +147,24 @@ For each vulnerability:
 4. **Recommend an action**:
     - **Exploitable with fix available**: Recommend upgrading to the fixed
       version. Identify the specific `pom.xml`, `package.json`, or other
-      dependency file that needs updating. If it is a transitive dependency,
-      identify the direct dependency that pulls it in and whether a version
-      override or exclusion is appropriate.
+      dependency file that needs updating.
+
+        If the vulnerable package is a **transitive dependency**, always check
+        first whether a newer version of the **direct dependency** that brings
+        it in ships a fixed transitive. Use `mvn dependency:tree` (or the
+        equivalent for the ecosystem) to identify the direct dependency, then
+        inspect the upstream POM / package manifest of newer releases to see
+        which transitive version they bundle.
+
+        **Prefer upgrading the direct dependency over pinning the transitive
+        version.** Rationale: a direct upgrade inherits any other fixes and
+        compatibility work the upstream maintainers have done, whereas pinning
+        a transitive version risks diverging from what the direct dependency
+        was tested against. Only pin the transitive version when no suitable
+        direct-dependency upgrade exists (e.g. upstream hasn't released a
+        version that bundles a patched transitive), and record the reason in a
+        comment adjacent to the override.
+
     - **Exploitable with no fix available**: Recommend tracking for future
       remediation. Suggest a workaround if one exists.
     - **Not exploitable or not applicable**: Recommend adding to the
