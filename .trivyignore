@@ -8,6 +8,8 @@ CVE-2025-55163
 CVE-2025-58057
 CVE-2025-58056
 CVE-2025-67735
+CVE-2026-33870
+CVE-2026-33871
 
 # The vulnerable version of protobuf-java is a transitive provided dependency, we do not bundle it into our distribution.
 CVE-2024-7254
@@ -34,6 +36,11 @@ CVE-2025-48924
 
 # Log4j is provided via Spark, not bundled in distribution.
 CVE-2025-68161
+CVE-2026-34477
+CVE-2026-34478
+CVE-2026-34479
+CVE-2026-34480
+CVE-2026-34481
 
 # Avro is provided via Spark, not bundled in library-runtime distribution.
 CVE-2025-33042

@@ -378,6 +378,21 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <!-- Override org.hl7.fhir.core transitive versions bundled by HAPI FHIR.
+           HAPI FHIR 8.6.0 bundles 6.6.7, which is vulnerable to CVE-2026-33180
+           (credential leak on HTTP redirect) and CVE-2026-34359 (URL prefix
+           matching credential leak). No current HAPI release bundles a fully
+           patched version. -->
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>org.hl7.fhir.r4</artifactId>
+        <version>6.9.6</version>
+      </dependency>
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>org.hl7.fhir.utilities</artifactId>
+        <version>6.9.6</version>
+      </dependency>
       <!-- Woodstox is used by HAPI for XML processing -->
       <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
