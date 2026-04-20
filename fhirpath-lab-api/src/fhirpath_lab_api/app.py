@@ -67,7 +67,7 @@ def create_app(pathling_context=None) -> Flask:
             from pathling import PathlingContext
 
             logger.info("Initialising PathlingContext...")
-            ctx = PathlingContext.create()
+            ctx = PathlingContext.create(enable_extensions=True)
             app.config["pathling_context"] = ctx
             logger.info("PathlingContext initialised.")
         return ctx
