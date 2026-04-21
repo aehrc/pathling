@@ -184,21 +184,34 @@ def build_response_parameters(
     expression: str,
     resource: dict,
     expected_return_type: str,
-    results: list[dict],
+    results: Optional[list[dict]] = None,
     context: Optional[str] = None,
     traces: Optional[list[dict]] = None,
+    grouped_results: Optional[list[tuple[str, list[dict], list[dict]]]] = None,
 ) -> dict:
     """Constructs a FHIR Parameters response from evaluation results.
+
+    Callers must supply either ``results`` (for a flat single-collection
+    response) or ``grouped_results`` (for a per-context-element response with
+    one ``result`` part per group), but not both.
 
     :param evaluator_string: the evaluator identification string
     :param expression: the original expression
     :param resource: the original resource
     :param expected_return_type: the statically inferred return type
-    :param results: the list of typed result values
+    :param results: the flat list of typed result values
     :param context: the optional context expression
-    :param traces: the list of trace entries from trace() calls
+    :param traces: the flat list of trace entries (only used with ``results``)
+    :param grouped_results: an ordered list of ``(label, results, traces)``
+        tuples, one per context element. When supplied, each tuple produces a
+        separate ``result`` part with ``valueString`` set to the label.
     :return: a FHIR Parameters resource dict
+    :raises ValueError: if both ``results`` and ``grouped_results`` are
+        provided
     """
+    if results is not None and grouped_results is not None:
+        raise ValueError("results and grouped_results are mutually exclusive")
+
     # Build the parameters metadata part.
     params_parts = [
         {"name": "evaluator", "valueString": evaluator_string},
@@ -215,12 +228,17 @@ def build_response_parameters(
 
     output_parameters: list[dict] = [{"name": "parameters", "part": params_parts}]
 
-    # Build result and trace parts.
-    if results or traces:
-        result_parts = []
-        for typed_value in results:
-            result_part = _build_result_part(typed_value)
-            result_parts.append(result_part)
+    if grouped_results is not None:
+        # One result part per context element, labelled via valueString.
+        for label, group_results, group_traces in grouped_results:
+            part_list = [_build_result_part(tv) for tv in group_results]
+            part_list.extend(_build_trace_part(t) for t in group_traces)
+            output_parameters.append(
+                {"name": "result", "valueString": label, "part": part_list}
+            )
+    elif results or traces:
+        # Flat result part containing all typed values and trace entries.
+        result_parts = [_build_result_part(tv) for tv in results or []]
         for trace_entry in traces or []:
             result_parts.append(_build_trace_part(trace_entry))
         output_parameters.append({"name": "result", "part": result_parts})

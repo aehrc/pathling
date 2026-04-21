@@ -33,12 +33,32 @@ from flask_cors import CORS
 from py4j.protocol import Py4JJavaError
 
 from fhirpath_lab_api.parameters import (
+    InputParameters,
     build_operation_outcome,
     build_response_parameters,
     parse_input_parameters,
 )
 
 logger = logging.getLogger(__name__)
+
+# Upper bound on the number of context elements permitted in a grouped
+# evaluation. Evaluating the main expression once per context element requires
+# N additional round-trips through the Pathling engine, so a sanity cap
+# prevents accidental denial-of-service on contexts like ``Bundle.entry``.
+MAX_CONTEXT_ELEMENTS = 100
+
+
+class _ContextTooLargeError(Exception):
+    """Raised when the context expression yields more elements than
+    MAX_CONTEXT_ELEMENTS."""
+
+    def __init__(self, count: int, limit: int):
+        super().__init__(
+            f"Context expression produced {count} elements, exceeding the "
+            f"limit of {limit}. Please narrow the context expression."
+        )
+        self.count = count
+        self.limit = limit
 
 
 def create_app(pathling_context=None) -> Flask:
@@ -133,15 +153,21 @@ def _handle_evaluate(get_context) -> Response:
         )
 
     # Evaluate the expression.
+    use_grouped = params.context is not None and params.context.strip() != ""
     try:
         pc = get_context()
-        result = pc.evaluate_fhirpath(
-            resource_type=params.resource_type,
-            resource_json=json.dumps(params.resource),
-            fhirpath_expression=params.expression,
-            context_expression=params.context,
-            variables=params.variables,
-        )
+        if use_grouped:
+            grouped = _evaluate_grouped(pc, params)
+        else:
+            result = pc.evaluate_fhirpath(
+                resource_type=params.resource_type,
+                resource_json=json.dumps(params.resource),
+                fhirpath_expression=params.expression,
+                context_expression=params.context,
+                variables=params.variables,
+            )
+    except _ContextTooLargeError as e:
+        return _error_response(400, "too-costly", str(e))
     except Py4JJavaError as e:
         full_message = str(e)
         logger.exception("Error evaluating FHIRPath expression")
@@ -155,21 +181,89 @@ def _handle_evaluate(get_context) -> Response:
 
     # Build the response.
     evaluator_string = f"Pathling {pc.version()} (R4)"
-    response_body = build_response_parameters(
-        evaluator_string=evaluator_string,
-        expression=params.expression,
-        resource=params.resource,
-        expected_return_type=result["expectedReturnType"],
-        results=result["results"],
-        context=params.context,
-        traces=result.get("traces", []),
-    )
+    if use_grouped:
+        response_body = build_response_parameters(
+            evaluator_string=evaluator_string,
+            expression=params.expression,
+            resource=params.resource,
+            expected_return_type=grouped["expected_return_type"],
+            context=params.context,
+            grouped_results=grouped["groups"],
+        )
+    else:
+        response_body = build_response_parameters(
+            evaluator_string=evaluator_string,
+            expression=params.expression,
+            resource=params.resource,
+            expected_return_type=result["expectedReturnType"],
+            results=result["results"],
+            context=params.context,
+            traces=result.get("traces", []),
+        )
 
     return Response(
         json.dumps(response_body),
         status=200,
         content_type="application/fhir+json",
     )
+
+
+def _evaluate_grouped(pc, params: InputParameters) -> dict:
+    """Evaluates the main expression once per element of the context expression.
+
+    First evaluates the context expression alone to determine its cardinality,
+    then evaluates the main expression N times, each time scoping the context
+    to a single element using the FHIRPath indexer ``(context)[i]``. Each
+    iteration's results and trace entries are collected into a separate group
+    labelled ``"<context>[i]"``.
+
+    This results in 1 + N calls through the Pathling engine. The cardinality
+    is capped by :data:`MAX_CONTEXT_ELEMENTS`.
+
+    :param pc: the PathlingContext to use for evaluation
+    :param params: the parsed input parameters; ``params.context`` must be
+        non-empty
+    :return: a dict with keys ``groups`` (list of
+        ``(label, results, traces)`` tuples), ``expected_return_type`` (string,
+        taken from the first iteration or empty when the context yields no
+        elements), and ``context_count`` (int)
+    :raises _ContextTooLargeError: if the context expression yields more than
+        :data:`MAX_CONTEXT_ELEMENTS` elements
+    """
+    resource_json = json.dumps(params.resource)
+
+    count_result = pc.evaluate_fhirpath(
+        resource_type=params.resource_type,
+        resource_json=resource_json,
+        fhirpath_expression=params.context,
+        context_expression=None,
+        variables=params.variables,
+    )
+    context_count = len(count_result["results"])
+
+    if context_count > MAX_CONTEXT_ELEMENTS:
+        raise _ContextTooLargeError(context_count, MAX_CONTEXT_ELEMENTS)
+
+    groups: list[tuple[str, list[dict], list[dict]]] = []
+    expected_return_type = ""
+    for i in range(context_count):
+        iter_result = pc.evaluate_fhirpath(
+            resource_type=params.resource_type,
+            resource_json=resource_json,
+            fhirpath_expression=params.expression,
+            context_expression=f"({params.context})[{i}]",
+            variables=params.variables,
+        )
+        label = f"{params.context}[{i}]"
+        groups.append((label, iter_result["results"], iter_result.get("traces", [])))
+        if i == 0:
+            expected_return_type = iter_result["expectedReturnType"]
+
+    return {
+        "groups": groups,
+        "expected_return_type": expected_return_type,
+        "context_count": context_count,
+    }
 
 
 # Module-level WSGI application instance for use by production WSGI servers

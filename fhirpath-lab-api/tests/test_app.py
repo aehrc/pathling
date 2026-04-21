@@ -29,6 +29,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from py4j.protocol import Py4JJavaError
 
+from fhirpath_lab_api import app as app_module
 from fhirpath_lab_api.app import _extract_friendly_message, create_app
 
 TEST_CORS_ORIGINS = "https://fhirpath-lab.azurewebsites.net,http://localhost:3000"
@@ -379,17 +380,386 @@ def test_traces_included_in_response(mock_context, valid_request_body):
     assert trace_parts[0]["part"] == [{"name": "boolean", "valueBoolean": True}]
 
 
-def test_context_expression_passed_to_evaluator(client, mock_context):
-    """A context expression is passed through to the evaluator."""
+# ========== Context-grouped evaluation tests ==========
+
+
+def _resource_example():
+    """Returns the canonical Patient resource used in grouped-context tests."""
+    return {"resourceType": "Patient", "id": "example"}
+
+
+def _grouped_request_body(context="name", expression="given.first()"):
+    """Builds a request body with the given context and expression."""
+    return {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "expression", "valueString": expression},
+            {"name": "resource", "resource": _resource_example()},
+            {"name": "context", "valueString": context},
+        ],
+    }
+
+
+def test_grouped_context_multi_element(client, mock_context):
+    """Multi-element context produces one result part per element, with
+    per-call results isolated to the matching group."""
+    mock_context.evaluate_fhirpath.side_effect = [
+        # Count call: context "name" returns 2 elements.
+        {
+            "results": [
+                {"type": "HumanName", "value": '{"family": "Chalmers"}'},
+                {"type": "HumanName", "value": '{"family": "Windsor"}'},
+            ],
+            "expectedReturnType": "HumanName",
+            "traces": [],
+        },
+        # Index 0 evaluation.
+        {
+            "results": [{"type": "string", "value": "Peter"}],
+            "expectedReturnType": "string",
+            "traces": [],
+        },
+        # Index 1 evaluation.
+        {
+            "results": [{"type": "string", "value": "Jim"}],
+            "expectedReturnType": "string",
+            "traces": [],
+        },
+    ]
+
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(_grouped_request_body()),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    result_parts = [p for p in data["parameter"] if p["name"] == "result"]
+    assert len(result_parts) == 2
+    assert result_parts[0]["valueString"] == "name[0]"
+    assert result_parts[0]["part"] == [{"name": "string", "valueString": "Peter"}]
+    assert result_parts[1]["valueString"] == "name[1]"
+    assert result_parts[1]["part"] == [{"name": "string", "valueString": "Jim"}]
+
+    # Three calls in order: count, index 0, index 1.
+    calls = mock_context.evaluate_fhirpath.call_args_list
+    assert len(calls) == 3
+    assert calls[0].kwargs["fhirpath_expression"] == "name"
+    assert calls[0].kwargs["context_expression"] is None
+    assert calls[1].kwargs["fhirpath_expression"] == "given.first()"
+    assert calls[1].kwargs["context_expression"] == "(name)[0]"
+    assert calls[2].kwargs["context_expression"] == "(name)[1]"
+
+
+def test_grouped_context_single_element(client, mock_context):
+    """A single-element context still produces a grouped result (labelled
+    ``name[0]``), not a flattened one."""
+    mock_context.evaluate_fhirpath.side_effect = [
+        {
+            "results": [{"type": "HumanName", "value": '{"family": "Smith"}'}],
+            "expectedReturnType": "HumanName",
+            "traces": [],
+        },
+        {
+            "results": [{"type": "string", "value": "John"}],
+            "expectedReturnType": "string",
+            "traces": [],
+        },
+    ]
+
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(_grouped_request_body()),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    result_parts = [p for p in data["parameter"] if p["name"] == "result"]
+    assert len(result_parts) == 1
+    assert result_parts[0]["valueString"] == "name[0]"
+    assert result_parts[0]["part"] == [{"name": "string", "valueString": "John"}]
+
+
+def test_grouped_context_zero_elements(client, mock_context):
+    """A zero-element context produces no result parts and issues no per-index
+    calls to the evaluator."""
+    mock_context.evaluate_fhirpath.side_effect = [
+        {"results": [], "expectedReturnType": "HumanName", "traces": []},
+    ]
+
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(_grouped_request_body()),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    result_parts = [p for p in data["parameter"] if p["name"] == "result"]
+    assert result_parts == []
+    # Only the count call was made.
+    assert mock_context.evaluate_fhirpath.call_count == 1
+
+
+def test_grouped_context_with_traces(client, mock_context):
+    """Per-iteration trace entries appear inside the matching result part
+    only, not across groups."""
+    mock_context.evaluate_fhirpath.side_effect = [
+        # Count: 2 elements.
+        {
+            "results": [
+                {"type": "HumanName", "value": "{}"},
+                {"type": "HumanName", "value": "{}"},
+            ],
+            "expectedReturnType": "HumanName",
+            "traces": [],
+        },
+        # Index 0.
+        {
+            "results": [{"type": "string", "value": "Peter James, Chalmers"}],
+            "expectedReturnType": "string",
+            "traces": [
+                {
+                    "label": "trc",
+                    "values": [
+                        {"type": "HumanName", "value": '{"family": "Chalmers"}'}
+                    ],
+                }
+            ],
+        },
+        # Index 1.
+        {
+            "results": [{"type": "string", "value": "Peter James, Windsor"}],
+            "expectedReturnType": "string",
+            "traces": [
+                {
+                    "label": "trc",
+                    "values": [{"type": "HumanName", "value": '{"family": "Windsor"}'}],
+                }
+            ],
+        },
+    ]
+
+    body = _grouped_request_body(
+        expression="trace('trc').given.join(' ').combine(family).join(', ')"
+    )
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(body),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    result_parts = [p for p in data["parameter"] if p["name"] == "result"]
+
+    trace0 = next(p for p in result_parts[0]["part"] if p["name"] == "trace")
+    assert "Chalmers" in trace0["part"][0]["extension"][0]["valueString"]
+    assert "Windsor" not in trace0["part"][0]["extension"][0]["valueString"]
+
+    trace1 = next(p for p in result_parts[1]["part"] if p["name"] == "trace")
+    assert "Windsor" in trace1["part"][0]["extension"][0]["valueString"]
+    assert "Chalmers" not in trace1["part"][0]["extension"][0]["valueString"]
+
+
+def test_grouped_context_with_variables(client, mock_context):
+    """Variables are passed through to every call (count + per-index)."""
+    mock_context.evaluate_fhirpath.side_effect = [
+        {
+            "results": [{"type": "HumanName", "value": "{}"}],
+            "expectedReturnType": "HumanName",
+            "traces": [],
+        },
+        {
+            "results": [{"type": "boolean", "value": True}],
+            "expectedReturnType": "boolean",
+            "traces": [],
+        },
+    ]
+
     body = {
         "resourceType": "Parameters",
         "parameter": [
-            {"name": "expression", "valueString": "given.first()"},
-            {
-                "name": "resource",
-                "resource": {"resourceType": "Patient", "id": "example"},
-            },
+            {"name": "expression", "valueString": "given = %target"},
+            {"name": "resource", "resource": _resource_example()},
             {"name": "context", "valueString": "name"},
+            {
+                "name": "variables",
+                "part": [{"name": "target", "valueString": "John"}],
+            },
+        ],
+    }
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(body),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    calls = mock_context.evaluate_fhirpath.call_args_list
+    assert len(calls) == 2
+    for call in calls:
+        assert call.kwargs["variables"] == {"target": "John"}
+
+
+def test_grouped_context_complex_expression(client, mock_context):
+    """A complex context is parenthesised in the per-index call but not in
+    the response label."""
+    mock_context.evaluate_fhirpath.side_effect = [
+        {
+            "results": [{"type": "HumanName", "value": "{}"}],
+            "expectedReturnType": "HumanName",
+            "traces": [],
+        },
+        {
+            "results": [{"type": "string", "value": "John"}],
+            "expectedReturnType": "string",
+            "traces": [],
+        },
+    ]
+
+    context_expr = "name.where(use='official')"
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(_grouped_request_body(context=context_expr)),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    result_parts = [p for p in data["parameter"] if p["name"] == "result"]
+    assert result_parts[0]["valueString"] == "name.where(use='official')[0]"
+
+    calls = mock_context.evaluate_fhirpath.call_args_list
+    assert calls[1].kwargs["context_expression"] == "(name.where(use='official'))[0]"
+
+
+def test_grouped_context_error_in_iteration_returns_500(client, mock_context):
+    """An error during a per-index iteration surfaces as a 500 via the
+    existing error pipeline."""
+    mock_context.evaluate_fhirpath.side_effect = [
+        {
+            "results": [{"type": "HumanName", "value": "{}"}],
+            "expectedReturnType": "HumanName",
+            "traces": [],
+        },
+        RuntimeError("Evaluation failed on index 0"),
+    ]
+
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(_grouped_request_body()),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 500
+    data = json.loads(response.data)
+    assert data["resourceType"] == "OperationOutcome"
+    assert "Evaluation failed on index 0" in data["issue"][0]["details"]["text"]
+
+
+def test_grouped_context_empty_expression_short_circuits(client, mock_context):
+    """An empty expression short-circuits even when a context is supplied,
+    and no Pathling calls are issued."""
+    body = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "expression", "valueString": ""},
+            {"name": "resource", "resource": _resource_example()},
+            {"name": "context", "valueString": "name"},
+        ],
+    }
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(body),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    # Only the parameters part, no result parts.
+    assert len(data["parameter"]) == 1
+    assert data["parameter"][0]["name"] == "parameters"
+    # Context is still echoed in the metadata.
+    context_parts = [p for p in data["parameter"][0]["part"] if p["name"] == "context"]
+    assert context_parts[0]["valueString"] == "name"
+    mock_context.evaluate_fhirpath.assert_not_called()
+
+
+def test_grouped_context_exceeds_limit_returns_400(client, mock_context):
+    """A context that yields more than MAX_CONTEXT_ELEMENTS elements returns
+    400 with an OperationOutcome naming the limit."""
+    oversized = [{"type": "HumanName", "value": "{}"}] * 3
+
+    mock_context.evaluate_fhirpath.side_effect = [
+        {"results": oversized, "expectedReturnType": "HumanName", "traces": []},
+    ]
+
+    with patch.object(app_module, "MAX_CONTEXT_ELEMENTS", 2):
+        response = client.post(
+            "/fhir/$fhirpath",
+            data=json.dumps(_grouped_request_body()),
+            content_type="application/json",
+        )
+
+    assert response.status_code == 400
+    data = json.loads(response.data)
+    assert data["resourceType"] == "OperationOutcome"
+    assert "3 elements" in data["issue"][0]["details"]["text"]
+    assert "limit of 2" in data["issue"][0]["details"]["text"]
+    # No per-index calls were made.
+    assert mock_context.evaluate_fhirpath.call_count == 1
+
+
+def test_grouped_context_expected_return_type_from_first_iteration(
+    client, mock_context
+):
+    """The metadata expectedReturnType is taken from the first per-index
+    iteration."""
+    mock_context.evaluate_fhirpath.side_effect = [
+        {
+            "results": [
+                {"type": "HumanName", "value": "{}"},
+                {"type": "HumanName", "value": "{}"},
+            ],
+            "expectedReturnType": "HumanName",
+            "traces": [],
+        },
+        {
+            "results": [{"type": "string", "value": "John"}],
+            "expectedReturnType": "string",
+            "traces": [],
+        },
+        {
+            "results": [{"type": "string", "value": "Jim"}],
+            "expectedReturnType": "string",
+            "traces": [],
+        },
+    ]
+
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(_grouped_request_body()),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    params_part = data["parameter"][0]["part"]
+    ert = next(p for p in params_part if p["name"] == "expectedReturnType")
+    assert ert["valueString"] == "string"
+
+
+def test_flat_context_no_longer_passed_through_in_flat_path(client, mock_context):
+    """Requests without a context parameter still use the flat single-call
+    path with ``context_expression=None``."""
+    body = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "expression", "valueString": "name.family"},
+            {"name": "resource", "resource": _resource_example()},
         ],
     }
     response = client.post(
@@ -401,9 +771,9 @@ def test_context_expression_passed_to_evaluator(client, mock_context):
     assert response.status_code == 200
     mock_context.evaluate_fhirpath.assert_called_once_with(
         resource_type="Patient",
-        resource_json=json.dumps({"resourceType": "Patient", "id": "example"}),
-        fhirpath_expression="given.first()",
-        context_expression="name",
+        resource_json=json.dumps(_resource_example()),
+        fhirpath_expression="name.family",
+        context_expression=None,
         variables=None,
     )
 
