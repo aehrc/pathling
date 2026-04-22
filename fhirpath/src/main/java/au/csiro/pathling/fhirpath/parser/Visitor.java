@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.parser;
 
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -26,12 +27,14 @@ import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.operator.AsOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.CollectionOperations;
+import au.csiro.pathling.fhirpath.operator.CombineOperator;
 import au.csiro.pathling.fhirpath.operator.FhirPathBinaryOperator;
 import au.csiro.pathling.fhirpath.operator.IsOperator;
 import au.csiro.pathling.fhirpath.operator.MethodDefinedOperator;
 import au.csiro.pathling.fhirpath.operator.MethodInvocationError;
 import au.csiro.pathling.fhirpath.operator.PolarityOperator;
 import au.csiro.pathling.fhirpath.operator.SubsettingOperations;
+import au.csiro.pathling.fhirpath.operator.UnionOperator;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AndExpressionContext;
@@ -49,6 +52,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TermExpression
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnionExpressionContext;
 import au.csiro.pathling.fhirpath.path.Paths;
+import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.fhirpath.path.Paths.EvalOperator;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -99,7 +103,45 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
 
     final FhirPath invocationSubject = new Visitor().visit(requireNonNull(ctx).expression());
     final FhirPath invocationVerb = ctx.invocation().accept(new InvocationVisitor());
+
+    // Desugar the FHIRPath combining functions `x.union(y)` and `x.combine(y)` into
+    // `EvalOperator` ASTs so the function forms are strictly equivalent to the `|` operator
+    // (and to a peer `combine` operator). This is the only way to honour the spec's
+    // `name.select(use.union(given)) ≡ name.select(use | given)` equivalence: evaluating
+    // the argument via the normal function invocation path would lose the surrounding
+    // iteration focus. See https://hl7.org/fhirpath/#combining for the spec definition.
+    if (invocationVerb instanceof final EvalFunction call) {
+      @Nullable
+      final FhirPathBinaryOperator combiningOperator =
+          combiningOperatorFor(call.functionIdentifier());
+      if (combiningOperator != null) {
+        if (call.arguments().size() != 1) {
+          throw new InvalidUserInputError(
+              "Function `"
+                  + call.functionIdentifier()
+                  + "` requires exactly one argument, got "
+                  + call.arguments().size());
+        }
+        return new EvalOperator(invocationSubject, call.arguments().getFirst(), combiningOperator);
+      }
+    }
+
     return invocationSubject.andThen(invocationVerb);
+  }
+
+  private static final Map<String, FhirPathBinaryOperator> COMBINING_FUNCTION_OPERATORS =
+      Map.of("union", new UnionOperator(), "combine", new CombineOperator());
+
+  /**
+   * Returns the binary operator instance to use when desugaring a combining-function invocation, or
+   * {@code null} if the function name is not one of the combining functions.
+   *
+   * @param functionName The FHIRPath function name being invoked
+   * @return The operator to use for desugaring, or {@code null} for any other function name
+   */
+  @Nullable
+  private static FhirPathBinaryOperator combiningOperatorFor(@Nonnull final String functionName) {
+    return COMBINING_FUNCTION_OPERATORS.get(functionName);
   }
 
   private static final Map<String, FhirPathBinaryOperator> BINARY_OPERATORS =

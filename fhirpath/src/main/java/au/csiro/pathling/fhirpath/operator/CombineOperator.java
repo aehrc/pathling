@@ -22,31 +22,26 @@ import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**
- * Provides the functionality of the union operator within FHIRPath, i.e. {@code |}.
+ * Provides the functionality of the FHIRPath {@code combine(other)} function, which merges two
+ * collections into a single collection without eliminating duplicate values. Combining an empty
+ * collection with a non-empty collection returns the non-empty collection. There is no expectation
+ * of order in the resulting collection.
  *
- * <p>Merges two collections into a single collection, eliminating any duplicate values using
- * equality semantics. There is no expectation of order in the resulting collection.
- *
- * <p>Type compatibility is determined through FHIRPath type reconciliation. Collections with
- * compatible types are merged after type promotion (e.g., Date → DateTime, Integer → Decimal).
- *
- * <p>Equality semantics are determined by the collection's comparator. Types using default SQL
- * equality leverage Spark's native array operations, while types with custom equality (Quantity,
- * Coding, temporal types) use element-wise comparison. The array-level merge primitives are shared
- * with {@link CombineOperator} via {@link CombiningLogic}.
+ * <p>Unlike {@link UnionOperator}, {@code combine} does not deduplicate and does not need to
+ * consult the collection's equality comparator. The array-level merge primitive is shared with
+ * {@link UnionOperator} via {@link CombiningLogic}.
  *
  * @author Piotr Szul
- * @see <a href="https://hl7.org/fhirpath/#union-collections">union</a>
+ * @see <a href="https://hl7.org/fhirpath/#combineother-collection-collection">combine</a>
  */
-public class UnionOperator extends SameTypeBinaryOperator {
+public class CombineOperator extends SameTypeBinaryOperator {
 
   @Nonnull
   @Override
   protected Collection handleOneEmpty(
       @Nonnull final Collection nonEmpty, @Nonnull final BinaryOperatorInput input) {
-    final Column array = CombiningLogic.prepareArray(nonEmpty);
-    final Column deduplicatedArray = CombiningLogic.dedupeArray(array, nonEmpty.getComparator());
-    return nonEmpty.copyWithColumn(deduplicatedArray);
+    // Combine preserves duplicates, so no deduplication is required against an empty peer.
+    return nonEmpty;
   }
 
   @Nonnull
@@ -57,14 +52,13 @@ public class UnionOperator extends SameTypeBinaryOperator {
       @Nonnull final BinaryOperatorInput input) {
     final Column leftArray = CombiningLogic.prepareArray(left);
     final Column rightArray = CombiningLogic.prepareArray(right);
-    final Column unionResult =
-        CombiningLogic.unionArrays(leftArray, rightArray, left.getComparator());
-    return left.copyWithColumn(unionResult);
+    final Column combined = CombiningLogic.combineArrays(leftArray, rightArray);
+    return left.copyWithColumn(combined);
   }
 
   @Nonnull
   @Override
   public String getOperatorName() {
-    return "|";
+    return "combine";
   }
 }
