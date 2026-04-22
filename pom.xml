@@ -1010,6 +1010,40 @@
                   <exclude>config/license/*.txt</exclude>
                   <exclude>**/requirements*.txt</exclude>
                   <exclude>**/bin/requirements/**</exclude>
+                  <exclude>**/*.lock</exclude>
+                  <exclude>**/*.toml</exclude>
+                  <exclude>**/*.cff</exclude>
+                  <exclude>**/*.vcl</exclude>
+                  <exclude>**/*.sketch</exclude>
+                  <exclude>**/*.db</exclude>
+                  <exclude>**/*.sarif</exclude>
+                  <exclude>**/*.sbt</exclude>
+                  <exclude>**/plugins.sbt</exclude>
+                  <exclude>**/.dockerignore</exclude>
+                  <exclude>**/.prettierignore</exclude>
+                  <exclude>**/.nojekyll</exclude>
+                  <exclude>**/*.webmanifest</exclude>
+                  <exclude>**/*.Rd</exclude>
+                  <exclude>**/*.rda</exclude>
+                  <exclude>**/DESCRIPTION</exclude>
+                  <exclude>**/NAMESPACE</exclude>
+                  <exclude>**/CITATION</exclude>
+                  <exclude>**/*.R</exclude>
+                  <exclude>**/*.pyc</exclude>
+                  <exclude>**/__pycache__/**</exclude>
+                  <exclude>.tool-versions</exclude>
+                  <exclude>**/.sonar_lock</exclude>
+                  <exclude>**/*.g4</exclude>
+                  <exclude>**/*.ndjson</exclude>
+                  <exclude>**/*.csv</exclude>
+                  <exclude>**/MANIFEST.in</exclude>
+                  <exclude>**/*_t</exclude>
+                  <exclude>**/_version.py</exclude>
+                  <exclude>**/*.cfg</exclude>
+                  <exclude>**/.python-version</exclude>
+                  <exclude>**/.Rbuildignore</exclude>
+                  <exclude>**/.lintr</exclude>
+                  <exclude>**/*.src</exclude>
                 </excludes>
               </licenseSet>
             </licenseSets>
@@ -1024,6 +1058,7 @@
               <css>SLASHSTAR_STYLE</css>
               <html>XML_STYLE</html>
               <txt>SCRIPT_STYLE</txt>
+              <R>SCRIPT_STYLE</R>
             </mapping>
             <strictCheck>true</strictCheck>
           </configuration>

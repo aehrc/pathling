@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-
-#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
-#  Organisation (CSIRO) ABN 41 687 119 230.
-# 
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-# 
-#      http://www.apache.org/licenses/LICENSE-2.0
-# 
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+#
+# Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+# Organisation (CSIRO) ABN 41 687 119 230.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 import xml.etree.ElementTree as ET
 
@@ -150,17 +151,19 @@ class IssueInfo(NamedTuple):
     @property
     def tag(self) -> str:
         hash_object = hashlib.md5()
-        hash_object.update((self.category + self.title).encode('utf-8'))
+        hash_object.update((self.category + self.title).encode("utf-8"))
         return hash_object.hexdigest()
 
 
 def main():
     # load yaml from "../src/test/resources/fhirpath-js/config.yaml"
-    with open("../resources/fhirpath-js/config.yaml", 'r') as stream:
+    with open("../resources/fhirpath-js/config.yaml", "r") as stream:
         config = yaml.full_load(stream)
 
     def to_definition(ex):
-        return dict((k, v) for k, v in ex.items() if k in {"function", "any", "expression"})
+        return dict(
+            (k, v) for k, v in ex.items() if k in {"function", "any", "expression"}
+        )
 
     def to_issue_info(config) -> IssueInfo:
         exclude_set = config.get("excludeSet")
@@ -173,30 +176,37 @@ def main():
                     entry.get("title"),
                     ex.get("type", "undefined"),
                     ex.get("comment"),
-                    yaml.dump(to_definition(ex))
+                    yaml.dump(to_definition(ex)),
                 )
 
     issues = list(to_issue_info(config))
-    issues_by_type = [(key, list(group)) for key, group in
-                      itertools.groupby(sorted(issues, key=lambda x: x.type), key=lambda x: x.type)]
+    issues_by_type = [
+        (key, list(group))
+        for key, group in itertools.groupby(
+            sorted(issues, key=lambda x: x.type), key=lambda x: x.type
+        )
+    ]
     file_report = "../../../target/validation-report.html"
 
     # Load and parse the Surefire XML report
     tree = ET.parse(
-        '../target/surefire-reports/TEST-au.csiro.pathling.fhirpath.yaml.YamlReferenceImplTest.xml')
+        "../target/surefire-reports/TEST-au.csiro.pathling.fhirpath.yaml.YamlReferenceImplTest.xml"
+    )
     test_results = list(to_results(tree))
     sorted_results = sorted(test_results, key=lambda x: x.tag)
     # group test_results by error_message using itrtools.groupby
     test_by_tag = dict(
-        (key, list(group)) for key, group in itertools.groupby(sorted_results, key=lambda x: x.tag))
+        (key, list(group))
+        for key, group in itertools.groupby(sorted_results, key=lambda x: x.tag)
+    )
 
-    # Load and parse the Surefire XML report    
-    template = jinja2.Template(SUMMARY_TEMPLATE, autoescape=True, trim_blocks=True,
-                               lstrip_blocks=True)
-    with open(file_report, 'w') as f:
-        f.write(template.render(
-            dict(issues=issues_by_type, results=test_by_tag)))
+    # Load and parse the Surefire XML report
+    template = jinja2.Template(
+        SUMMARY_TEMPLATE, autoescape=True, trim_blocks=True, lstrip_blocks=True
+    )
+    with open(file_report, "w") as f:
+        f.write(template.render(dict(issues=issues_by_type, results=test_by_tag)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
