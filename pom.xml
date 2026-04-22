@@ -636,7 +636,7 @@
         <executions>
           <execution>
             <id>check-license</id>
-            <phase>verify</phase>
+            <phase>compile</phase>
             <goals>
               <goal>check</goal>
             </goals>
