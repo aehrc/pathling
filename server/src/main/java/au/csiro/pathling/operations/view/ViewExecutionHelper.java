@@ -45,6 +45,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -198,6 +199,67 @@ public class ViewExecutionHelper {
       outputStream.flush();
     } catch (final IOException e) {
       log.error("Error streaming view results", e);
+      throw new InvalidRequestException("Error streaming results: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Streams a pre-built Dataset to the HTTP response in the specified format. This allows other
+   * providers to reuse the streaming logic without going through ViewDefinition parsing.
+   *
+   * @param dataset the dataset to stream
+   * @param format the output format (ndjson, csv, or json), overrides Accept header if provided
+   * @param acceptHeader the HTTP Accept header value, used as fallback if format is not provided
+   * @param includeHeader whether to include a header row in CSV output
+   * @param limit the maximum number of rows to return
+   * @param response the HTTP response for streaming output
+   */
+  public void streamDataset(
+      @Nonnull final Dataset<Row> dataset,
+      @Nullable final String format,
+      @Nullable final String acceptHeader,
+      @Nullable final BooleanType includeHeader,
+      @Nullable final IntegerType limit,
+      @Nonnull final HttpServletResponse response) {
+
+    final ViewOutputFormat outputFormat =
+        (format != null && !format.isBlank())
+            ? ViewOutputFormat.fromString(format)
+            : ViewOutputFormat.fromAcceptHeader(acceptHeader);
+    final boolean shouldIncludeHeader = includeHeader == null || includeHeader.booleanValue();
+
+    Dataset<Row> result = dataset;
+    if (limit != null && limit.getValue() != null) {
+      result = result.limit(limit.getValue());
+    }
+
+    final List<String> columnNames =
+        Arrays.stream(result.schema().fields()).map(StructField::name).toList();
+
+    response.setContentType(outputFormat.getContentType());
+    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    response.setStatus(HttpServletResponse.SC_OK);
+
+    try {
+      final OutputStream outputStream = response.getOutputStream();
+
+      if (outputFormat == ViewOutputFormat.CSV && shouldIncludeHeader) {
+        writeCsvHeader(outputStream, columnNames);
+        outputStream.flush();
+      }
+
+      final StructType schema = result.schema();
+      final Iterator<Row> iterator = result.toLocalIterator();
+
+      switch (outputFormat) {
+        case NDJSON -> streamNdjson(outputStream, iterator, schema);
+        case JSON -> writeJson(outputStream, iterator, schema);
+        default -> streamCsv(outputStream, iterator, schema);
+      }
+
+      outputStream.flush();
+    } catch (final IOException e) {
+      log.error("Error streaming dataset results", e);
       throw new InvalidRequestException("Error streaming results: " + e.getMessage());
     }
   }
