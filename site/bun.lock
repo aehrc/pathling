@@ -20,8 +20,8 @@
   },
   "overrides": {
     "js-yaml": "3.14.2",
-    "lodash": "4.17.23",
-    "lodash-es": "4.17.23",
+    "lodash": "4.18.0",
+    "lodash-es": "4.18.0",
     "mdast-util-to-hast": "13.2.1",
     "node-forge": "1.3.3",
     "qs": "6.15.0",
@@ -1575,9 +1575,9 @@
 
     "locate-path": ["locate-path@7.2.0", "", { "dependencies": { "p-locate": "^6.0.0" } }, "sha512-gvVijfZvn7R+2qyPX8mAuKcFGDf6Nc61GdvGafQsHL0sBIxfKzA+usWn4GFC/bk+QdwPUD4kWFJLhElipq+0VA=="],
 
-    "lodash": ["lodash@4.17.23", "", {}, "sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w=="],
+    "lodash": ["lodash@4.18.0", "", {}, "sha512-l1mfj2atMqndAHI3ls7XqPxEjV2J9ZkcNyHpoZA3r2T1LLwDB69jgkMWh71YKwhBbK0G2f4WSn05ahmQXVxupA=="],
 
-    "lodash-es": ["lodash-es@4.17.23", "", {}, "sha512-kVI48u3PZr38HdYz98UmfPnXl2DXrpdctLrFLCd3kOx1xUkOmpFPx7gCWWM5MPkL/fD8zb+Ph0QzjGFs4+hHWg=="],
+    "lodash-es": ["lodash-es@4.18.0", "", {}, "sha512-koAgswPPA+UTaPN64Etp+PGP+WT6oqOS2NMi5yDkMaiGw9qY4VxQbQF0mtKMyr4BlTznWyzePV5UpECTJQmSUA=="],
 
     "lodash.debounce": ["lodash.debounce@4.0.8", "", {}, "sha512-FT1yDzDYEoYWhnSGnpE/4Kj1fLZkDFyqRb7fNt6FdYOSxlUWAtp42Eh6Wb0rGIv/m9Bgo7x4GhQbm5Ys4SG5ow=="],
 
