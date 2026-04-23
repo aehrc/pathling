@@ -70,6 +70,9 @@ public class OperationConfiguration {
   /** Enables $viewdefinition-export operation. */
   private boolean viewDefinitionExportEnabled = true;
 
+  /** Enables $sqlquery-run operation. */
+  private boolean sqlQueryRunEnabled = true;
+
   /** Enables $bulk-submit operation. */
   private boolean bulkSubmitEnabled = true;
 

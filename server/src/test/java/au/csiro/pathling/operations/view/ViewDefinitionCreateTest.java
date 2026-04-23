@@ -77,13 +77,14 @@ class ViewDefinitionCreateTest {
     // Create a temporary directory for the Delta Lake database.
     tempDatabasePath = Files.createTempDirectory("viewdefinition-create-test-");
 
-    // Create UpdateExecutor with the temp database path.
+    // Create UpdateExecutor with the temp database path (schema auto-merge disabled by default).
     final UpdateExecutor updateExecutor =
         new UpdateExecutor(
             pathlingContext,
             fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
-            cacheableDatabase);
+            cacheableDatabase,
+            false);
 
     // Create the CreateProvider for ViewDefinition.
     createProvider = new CreateProvider(updateExecutor, fhirContext, ViewDefinitionResource.class);
@@ -184,6 +185,56 @@ class ViewDefinitionCreateTest {
     final String tablePath = tempDatabasePath.resolve("ViewDefinition.parquet").toString();
     final Dataset<Row> dataset = sparkSession.read().format("delta").load(tablePath);
     assertThat(dataset.count()).isEqualTo(2);
+  }
+
+  @Test
+  void createViewDefinitionSucceedsWhenDeltaTableHasOlderSchema() {
+    // Given: a provider with schema auto-merge enabled.
+    final UpdateExecutor autoMergeExecutor =
+        new UpdateExecutor(
+            pathlingContext,
+            fhirEncoders,
+            tempDatabasePath.toAbsolutePath().toString(),
+            cacheableDatabase,
+            true);
+    final CreateProvider autoMergeProvider =
+        new CreateProvider(autoMergeExecutor, fhirContext, ViewDefinitionResource.class);
+
+    // Create a ViewDefinition, establishing a Delta table.
+    final ViewDefinitionResource viewDef1 = createViewDefinition(null, "view_1", "Patient");
+    autoMergeProvider.create(viewDef1);
+
+    final String tablePath = tempDatabasePath.resolve("ViewDefinition.parquet").toString();
+    assertThat(DeltaTable.isDeltaTable(sparkSession, tablePath)).isTrue();
+
+    // Simulate an older schema by dropping a column from the existing Delta table.
+    // This reproduces the real-world scenario where the encoder adds new fields
+    // (e.g. valueDecimal, valueDecimal_scale) but the persisted table lacks them.
+    final Dataset<Row> original = sparkSession.read().format("delta").load(tablePath);
+    final String columnToDrop = original.columns()[original.columns().length - 1];
+    final Dataset<Row> narrowed = original.drop(columnToDrop);
+    narrowed
+        .write()
+        .format("delta")
+        .mode("overwrite")
+        .option("overwriteSchema", "true")
+        .save(tablePath);
+
+    // Verify the column was actually dropped.
+    final Dataset<Row> reloaded = sparkSession.read().format("delta").load(tablePath);
+    assertThat(reloaded.schema().fieldNames()).doesNotContain(columnToDrop);
+
+    // When: creating another ViewDefinition (which uses the full current schema).
+    final ViewDefinitionResource viewDef2 = createViewDefinition(null, "view_2", "Observation");
+    final MethodOutcome outcome2 = autoMergeProvider.create(viewDef2);
+
+    // Then: it should succeed despite the schema mismatch.
+    assertThat(outcome2.getId()).isNotNull();
+    assertThat(outcome2.getCreated()).isTrue();
+
+    // And both rows should be present.
+    final Dataset<Row> result = sparkSession.read().format("delta").load(tablePath);
+    assertThat(result.count()).isEqualTo(2);
   }
 
   @Test

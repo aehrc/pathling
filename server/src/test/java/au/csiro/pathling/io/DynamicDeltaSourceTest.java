@@ -19,6 +19,7 @@ package au.csiro.pathling.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -57,7 +58,8 @@ class DynamicDeltaSourceTest {
         Path.of("src/test/resources/test-data/bulk/fhir/delta").toAbsolutePath().toString();
     final QueryableDataSource baseSource = pathlingContext.read().delta(databasePath);
     dynamicDeltaSource =
-        new DynamicDeltaSource(baseSource, sparkSession, databasePath, fhirEncoders);
+        new DynamicDeltaSource(
+            baseSource, sparkSession, databasePath, fhirEncoders, new StorageConfiguration());
   }
 
   // Verifies that reading a resource type that doesn't exist in the database returns an empty
