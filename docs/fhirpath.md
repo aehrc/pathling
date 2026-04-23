@@ -76,11 +76,11 @@ Unary `+` and `-` are also supported for numeric values.
 
 #### Collection operators[​](#collection-operators "Direct link to Collection operators")
 
-| Operator   | Description                         |
-| ---------- | ----------------------------------- |
-| `\|`       | Union of two collections            |
-| `in`       | Test if element is in collection    |
-| `contains` | Test if collection contains element |
+| Operator   | Description                                                     |
+| ---------- | --------------------------------------------------------------- |
+| `\|`       | Union of two collections (equivalent to the `union()` function) |
+| `in`       | Test if element is in collection                                |
+| `contains` | Test if collection contains element                             |
 
 #### Type operators[​](#type-operators "Direct link to Type operators")
 
@@ -116,6 +116,15 @@ The following standard FHIRPath functions are implemented. See [Functions](https
 | Function  | Description                                 |
 | --------- | ------------------------------------------- |
 | `first()` | Returns the first element of the collection |
+
+#### Combining functions[​](#combining-functions "Direct link to Combining functions")
+
+| Function         | Description                                                                              |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| `union(other)`   | Merge two collections, eliminating duplicates via FHIRPath equality (equivalent to `\|`) |
+| `combine(other)` | Merge two collections without eliminating duplicates                                     |
+
+Both functions follow the type-reconciliation rules used by the `|` operator (for example, Integer is promoted to Decimal when merging with a Decimal collection), and neither introduces a new iteration context — arguments are evaluated against the same focus that applies to the function's input, so expressions like `name.select(use.union(given))` resolve `given` against the current `name` element, matching `name.select(use | given)`.
 
 #### Boolean functions[​](#boolean-functions "Direct link to Boolean functions")
 

@@ -69,20 +69,22 @@
            <div itemprop="articleBody">
              
   <h1>Source code for pathling.context</h1><div class="highlight"><pre>
-<span></span><span class="c1">#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research</span>
-<span class="c1">#  Organisation (CSIRO) ABN 41 687 119 230.</span>
+<span></span><span class="c1">#</span>
+<span class="c1"># Copyright © 2018-2026 Commonwealth Scientific and Industrial Research</span>
+<span class="c1"># Organisation (CSIRO) ABN 41 687 119 230.</span>
 <span class="c1">#</span>
-<span class="c1">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span class="c1">#  you may not use this file except in compliance with the License.</span>
-<span class="c1">#  You may obtain a copy of the License at</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
 <span class="c1">#</span>
-<span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
 <span class="c1">#</span>
-<span class="c1">#  Unless required by applicable law or agreed to in writing, software</span>
-<span class="c1">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span class="c1">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span class="c1">#  See the License for the specific language governing permissions and</span>
-<span class="c1">#  limitations under the License.</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
 
 <span class="c1"># noinspection PyPackageRequirements</span>
 
@@ -110,6 +112,21 @@
         <span class="k">return</span> <span class="n">value</span>
     <span class="c1"># For other types (e.g., Java BigDecimal, Row), convert to string.</span>
     <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_convert_typed_values</span><span class="p">(</span><span class="n">jtyped_values</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Converts a Java list of TypedValue objects to Python dicts.</span>
+
+<span class="sd">    :param jtyped_values: iterable of Java TypedValue objects with getType() and getValue()</span>
+<span class="sd">    :return: list of dicts with ``type`` and ``value`` keys</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">jtyped_value</span> <span class="ow">in</span> <span class="n">jtyped_values</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">jtyped_value</span><span class="o">.</span><span class="n">getValue</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">_convert_java_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">jtyped_value</span><span class="o">.</span><span class="n">getType</span><span class="p">(),</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+    <span class="k">return</span> <span class="n">results</span>
 
 
 <div class="viewcode-block" id="StorageType"><a class="viewcode-back" href="../../pathling.html#pathling.context.StorageType">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">StorageType</span><span class="p">:</span>
@@ -524,7 +541,8 @@
 <span class="sd">               expression is composed with the context expression</span>
 <span class="sd">        :param variables: optional named variables available via %variable syntax, or None</span>
 <span class="sd">        :return: a dict with ``results`` (list of dicts with ``type`` and ``value``</span>
-<span class="sd">                 keys) and ``expectedReturnType`` (string)</span>
+<span class="sd">                 keys), ``expectedReturnType`` (string), and ``traces`` (list of</span>
+<span class="sd">                 dicts with ``label`` and ``values`` keys)</span>
 <span class="sd">        :raises: Exception if the expression is invalid or evaluation fails</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">jresult</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">evaluateFhirPath</span><span class="p">(</span>
@@ -535,16 +553,21 @@
             <span class="n">variables</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="c1"># Convert Java FhirPathResult to Python dict.</span>
-        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">jtyped_value</span> <span class="ow">in</span> <span class="n">jresult</span><span class="o">.</span><span class="n">getResults</span><span class="p">():</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">jtyped_value</span><span class="o">.</span><span class="n">getValue</span><span class="p">()</span>
-            <span class="c1"># Convert Java types to Python types.</span>
-            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">value</span> <span class="o">=</span> <span class="n">_convert_java_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">jtyped_value</span><span class="o">.</span><span class="n">getType</span><span class="p">(),</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">_convert_typed_values</span><span class="p">(</span><span class="n">jresult</span><span class="o">.</span><span class="n">getResults</span><span class="p">())</span>
+
+        <span class="c1"># Convert trace results.</span>
+        <span class="n">traces</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="n">jtrace</span><span class="o">.</span><span class="n">getLabel</span><span class="p">(),</span>
+                <span class="s2">&quot;values&quot;</span><span class="p">:</span> <span class="n">_convert_typed_values</span><span class="p">(</span><span class="n">jtrace</span><span class="o">.</span><span class="n">getValues</span><span class="p">()),</span>
+            <span class="p">}</span>
+            <span class="k">for</span> <span class="n">jtrace</span> <span class="ow">in</span> <span class="n">jresult</span><span class="o">.</span><span class="n">getTraces</span><span class="p">()</span>
+        <span class="p">]</span>
+
         <span class="k">return</span> <span class="p">{</span>
             <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="n">results</span><span class="p">,</span>
             <span class="s2">&quot;expectedReturnType&quot;</span><span class="p">:</span> <span class="n">jresult</span><span class="o">.</span><span class="n">getExpectedReturnType</span><span class="p">(),</span>
+            <span class="s2">&quot;traces&quot;</span><span class="p">:</span> <span class="n">traces</span><span class="p">,</span>
         <span class="p">}</span></div>
 
 <div class="viewcode-block" id="PathlingContext.search_to_column"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.search_to_column">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">search_to_column</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resource_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">search_expression</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Column</span><span class="p">:</span>
