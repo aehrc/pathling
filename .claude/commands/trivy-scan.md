@@ -1,27 +1,26 @@
 # Trivy security scan
 
-Run Trivy vulnerability scans scoped to the modules modified on the current
-branch, then analyse the results and provide actionable recommendations.
+Run Trivy vulnerability scans scoped to the requested module(s), then analyse
+the results and provide actionable recommendations.
 
-## Step 1: Determine modified modules
+## Step 1: Determine scan scope from user input
 
-Run `git diff --name-only main...HEAD` to get the list of files changed on the
-current branch. Map each changed file to one of the following scopes based on
-its top-level directory:
+The user passes the scan scope(s) as an argument or instruction. Accept one or
+more of the following values:
 
-| Changed directory                                                                                  | Scope            |
-| -------------------------------------------------------------------------------------------------- | ---------------- |
-| `server/`                                                                                          | server           |
-| `ui/`                                                                                              | ui               |
-| `utilities/`, `encoders/`, `terminology/`, `fhirpath/`, `library-api/`, `library-runtime/`, `lib/` | core-libraries   |
-| `site/`                                                                                            | site             |
-| `fhirpath-lab-api/`                                                                                | fhirpath-lab-api |
+| Scope              | Directories scanned                                                                                |
+| ------------------ | -------------------------------------------------------------------------------------------------- |
+| `server`           | `server/`                                                                                          |
+| `ui`               | `ui/`                                                                                              |
+| `core-libraries`   | `utilities/`, `encoders/`, `terminology/`, `fhirpath/`, `library-api/`, `library-runtime/`, `lib/` |
+| `site`             | `site/`                                                                                            |
+| `fhirpath-lab-api` | `fhirpath-lab-api/`                                                                                |
+| `all`              | All of the above                                                                                   |
 
-Files in other directories (e.g. `.github/`, `openspec/`, `benchmark/`,
-`test-data/`, `deployment/`) do not trigger any scan scope.
+If the user does not specify a scope, default to `all`.
 
-If no scopes are identified, inform the user that no scannable modules were
-modified and stop.
+If the user provides an invalid scope, inform them of the valid options and
+stop.
 
 ## Step 2: Run Trivy for each scope
 
