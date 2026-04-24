@@ -38,13 +38,20 @@ uv run pytest -v
 
 The server is configured via environment variables:
 
-| Variable               | Description                             | Default |
-| ---------------------- | --------------------------------------- | ------- |
-| `PORT`                 | HTTP port to listen on                  | `8080`  |
-| `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed origins | (none)  |
+| Variable               | Description                                                        | Default |
+| ---------------------- | ------------------------------------------------------------------ | ------- |
+| `PORT`                 | HTTP port to listen on                                             | `8080`  |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed origins                            | (none)  |
+| `MAX_CONTEXT_ELEMENTS` | Upper bound on the number of context elements in a grouped request | `100`   |
 
 CORS is disabled unless `CORS_ALLOWED_ORIGINS` is set. The Helm chart provides
 default origins for production deployments.
+
+Requests whose `context` expression yields more than `MAX_CONTEXT_ELEMENTS`
+elements are rejected with HTTP 400 (`OperationOutcome` issue code
+`too-costly`). Each element triggers an additional round-trip through the
+Pathling engine, so the cap protects against denial-of-service via large
+contexts such as `Bundle.entry`.
 
 ## API
 

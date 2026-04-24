@@ -709,6 +709,36 @@ def test_grouped_context_exceeds_limit_returns_400(client, mock_context):
     assert mock_context.evaluate_fhirpath.call_count == 1
 
 
+def test_grouped_context_at_limit_succeeds(client, mock_context):
+    """A context whose cardinality exactly equals MAX_CONTEXT_ELEMENTS is
+    accepted (the limit is inclusive)."""
+    at_limit = [{"type": "HumanName", "value": "{}"}] * 2
+    iter_response = {
+        "results": [{"type": "string", "value": "John"}],
+        "expectedReturnType": "string",
+        "traces": [],
+    }
+    mock_context.evaluate_fhirpath.side_effect = [
+        {"results": at_limit, "expectedReturnType": "HumanName", "traces": []},
+        iter_response,
+        iter_response,
+    ]
+
+    with patch.object(app_module, "MAX_CONTEXT_ELEMENTS", 2):
+        response = client.post(
+            "/fhir/$fhirpath",
+            data=json.dumps(_grouped_request_body()),
+            content_type="application/json",
+        )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    result_parts = [p for p in data["parameter"] if p["name"] == "result"]
+    assert len(result_parts) == 2
+    # Count call plus one call per element.
+    assert mock_context.evaluate_fhirpath.call_count == 3
+
+
 def test_grouped_context_expected_return_type_from_first_iteration(
     client, mock_context
 ):

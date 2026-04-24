@@ -44,8 +44,8 @@ logger = logging.getLogger(__name__)
 
 # Cap context cardinality: each element triggers an extra Pathling round-trip,
 # so an unbounded context like ``Bundle.entry`` could be used to exhaust the
-# server.
-MAX_CONTEXT_ELEMENTS = 100
+# server. Override via the ``MAX_CONTEXT_ELEMENTS`` environment variable.
+MAX_CONTEXT_ELEMENTS = int(os.environ.get("MAX_CONTEXT_ELEMENTS", "100"))
 
 
 class _ContextTooLargeError(Exception):
@@ -253,6 +253,10 @@ def _evaluate_grouped(
             context_expression=f"({params.context})[{i}]",
             variables=params.variables,
         )
+        # Label uses the unparenthesised context for readability; the eval
+        # expression is parenthesised to handle low-precedence operators. This
+        # asymmetry matches other FHIRPath Lab implementations (e.g. Aidbox,
+        # fhirpath-py).
         label = f"{params.context}[{i}]"
         groups.append((label, iter_result["results"], iter_result.get("traces", [])))
         # The static return type is identical across iterations; capture it once.
