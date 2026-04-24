@@ -34,6 +34,7 @@ from py4j.protocol import Py4JJavaError
 
 from fhirpath_lab_api.parameters import (
     InputParameters,
+    build_grouped_response_parameters,
     build_operation_outcome,
     build_response_parameters,
     parse_input_parameters,
@@ -41,24 +42,20 @@ from fhirpath_lab_api.parameters import (
 
 logger = logging.getLogger(__name__)
 
-# Upper bound on the number of context elements permitted in a grouped
-# evaluation. Evaluating the main expression once per context element requires
-# N additional round-trips through the Pathling engine, so a sanity cap
-# prevents accidental denial-of-service on contexts like ``Bundle.entry``.
+# Cap context cardinality: each element triggers an extra Pathling round-trip,
+# so an unbounded context like ``Bundle.entry`` could be used to exhaust the
+# server.
 MAX_CONTEXT_ELEMENTS = 100
 
 
 class _ContextTooLargeError(Exception):
-    """Raised when the context expression yields more elements than
-    MAX_CONTEXT_ELEMENTS."""
+    """Raised when the context yields more elements than MAX_CONTEXT_ELEMENTS."""
 
     def __init__(self, count: int, limit: int):
         super().__init__(
             f"Context expression produced {count} elements, exceeding the "
             f"limit of {limit}. Please narrow the context expression."
         )
-        self.count = count
-        self.limit = limit
 
 
 def create_app(pathling_context=None) -> Flask:
@@ -157,7 +154,7 @@ def _handle_evaluate(get_context) -> Response:
     try:
         pc = get_context()
         if use_grouped:
-            grouped = _evaluate_grouped(pc, params)
+            groups, grouped_return_type = _evaluate_grouped(pc, params)
         else:
             result = pc.evaluate_fhirpath(
                 resource_type=params.resource_type,
@@ -182,13 +179,13 @@ def _handle_evaluate(get_context) -> Response:
     # Build the response.
     evaluator_string = f"Pathling {pc.version()} (R4)"
     if use_grouped:
-        response_body = build_response_parameters(
+        response_body = build_grouped_response_parameters(
             evaluator_string=evaluator_string,
             expression=params.expression,
             resource=params.resource,
-            expected_return_type=grouped["expected_return_type"],
+            expected_return_type=grouped_return_type,
             context=params.context,
-            grouped_results=grouped["groups"],
+            grouped_results=groups,
         )
     else:
         response_body = build_response_parameters(
@@ -208,7 +205,9 @@ def _handle_evaluate(get_context) -> Response:
     )
 
 
-def _evaluate_grouped(pc, params: InputParameters) -> dict:
+def _evaluate_grouped(
+    pc, params: InputParameters
+) -> tuple[list[tuple[str, list[dict], list[dict]]], str]:
     """Evaluates the main expression once per element of the context expression.
 
     First evaluates the context expression alone to determine its cardinality,
@@ -223,10 +222,10 @@ def _evaluate_grouped(pc, params: InputParameters) -> dict:
     :param pc: the PathlingContext to use for evaluation
     :param params: the parsed input parameters; ``params.context`` must be
         non-empty
-    :return: a dict with keys ``groups`` (list of
-        ``(label, results, traces)`` tuples), ``expected_return_type`` (string,
-        taken from the first iteration or empty when the context yields no
-        elements), and ``context_count`` (int)
+    :return: a tuple of ``(groups, expected_return_type)`` where ``groups`` is
+        an ordered list of ``(label, results, traces)`` tuples and
+        ``expected_return_type`` is taken from the first iteration (empty
+        string when the context yields no elements)
     :raises _ContextTooLargeError: if the context expression yields more than
         :data:`MAX_CONTEXT_ELEMENTS` elements
     """
@@ -256,14 +255,11 @@ def _evaluate_grouped(pc, params: InputParameters) -> dict:
         )
         label = f"{params.context}[{i}]"
         groups.append((label, iter_result["results"], iter_result.get("traces", [])))
-        if i == 0:
+        # The static return type is identical across iterations; capture it once.
+        if not expected_return_type:
             expected_return_type = iter_result["expectedReturnType"]
 
-    return {
-        "groups": groups,
-        "expected_return_type": expected_return_type,
-        "context_count": context_count,
-    }
+    return groups, expected_return_type
 
 
 # Module-level WSGI application instance for use by production WSGI servers

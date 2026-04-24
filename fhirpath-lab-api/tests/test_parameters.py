@@ -26,6 +26,7 @@ import pytest
 
 from fhirpath_lab_api.parameters import (
     JSON_VALUE_EXTENSION_URL,
+    build_grouped_response_parameters,
     build_operation_outcome,
     build_response_parameters,
     parse_input_parameters,
@@ -344,7 +345,7 @@ def test_build_response_with_complex_trace_values():
 
 def test_build_response_grouped_empty():
     """A zero-element grouped response emits only the parameters part."""
-    response = build_response_parameters(
+    response = build_grouped_response_parameters(
         evaluator_string="Pathling 9.6.0 (R4)",
         expression="given.first()",
         resource={"resourceType": "Patient", "id": "example"},
@@ -359,7 +360,7 @@ def test_build_response_grouped_empty():
 
 def test_build_response_grouped_single_group():
     """A single-group grouped response emits one labelled result part."""
-    response = build_response_parameters(
+    response = build_grouped_response_parameters(
         evaluator_string="Pathling 9.6.0 (R4)",
         expression="given.first()",
         resource={"resourceType": "Patient", "id": "example"},
@@ -392,7 +393,7 @@ def test_build_response_grouped_multiple_groups():
             [{"label": "trc", "values": [{"type": "string", "value": "hit1"}]}],
         ),
     ]
-    response = build_response_parameters(
+    response = build_grouped_response_parameters(
         evaluator_string="Pathling 9.6.0 (R4)",
         expression="given.first().trace('trc')",
         resource={"resourceType": "Patient", "id": "example"},
@@ -433,7 +434,7 @@ def test_build_response_grouped_complex_trace_value():
             ],
         ),
     ]
-    response = build_response_parameters(
+    response = build_grouped_response_parameters(
         evaluator_string="Pathling 9.6.0 (R4)",
         expression="trace('trc')",
         resource={"resourceType": "Patient", "id": "example"},
@@ -453,7 +454,7 @@ def test_build_response_grouped_complex_trace_value():
 
 def test_build_response_grouped_preserves_metadata():
     """The parameters metadata part is present and correct in grouped responses."""
-    response = build_response_parameters(
+    response = build_grouped_response_parameters(
         evaluator_string="Pathling 9.6.0 (R4)",
         expression="given.first()",
         resource={"resourceType": "Patient", "id": "example"},
@@ -476,7 +477,7 @@ def test_build_response_grouped_preserves_metadata():
 def test_build_response_grouped_empty_group_still_emitted():
     """A group with no results and no traces still produces a labelled result
     part with an empty part list, preserving index continuity."""
-    response = build_response_parameters(
+    response = build_grouped_response_parameters(
         evaluator_string="Pathling 9.6.0 (R4)",
         expression="given.first()",
         resource={"resourceType": "Patient", "id": "example"},
@@ -493,21 +494,6 @@ def test_build_response_grouped_empty_group_still_emitted():
     labels = [p["valueString"] for p in result_parts]
     assert labels == ["name[0]", "name[1]", "name[2]"]
     assert result_parts[1]["part"] == []
-
-
-def test_build_response_results_and_grouped_mutually_exclusive():
-    """Supplying both results and grouped_results raises ValueError."""
-    with pytest.raises(ValueError, match="mutually exclusive"):
-        build_response_parameters(
-            evaluator_string="Pathling 9.6.0 (R4)",
-            expression="given.first()",
-            resource={"resourceType": "Patient", "id": "example"},
-            expected_return_type="string",
-            results=[{"type": "string", "value": "John"}],
-            grouped_results=[
-                ("name[0]", [{"type": "string", "value": "John"}], []),
-            ],
-        )
 
 
 # ========== OperationOutcome construction tests ==========

@@ -346,7 +346,7 @@ def test_cors_multiple_origins(mock_context, valid_request_body):
                 ), f"Expected CORS header for {origin}"
 
 
-def test_traces_included_in_response(mock_context, valid_request_body):
+def test_traces_included_in_response(client, mock_context, valid_request_body):
     """Trace entries from evaluation appear inside the result part."""
     mock_context.evaluate_fhirpath.return_value = {
         "results": [{"type": "boolean", "value": True}],
@@ -359,15 +359,11 @@ def test_traces_included_in_response(mock_context, valid_request_body):
         ],
     }
 
-    with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": TEST_CORS_ORIGINS}):
-        app = create_app(pathling_context=mock_context)
-        app.config["TESTING"] = True
-        with app.test_client() as c:
-            response = c.post(
-                "/fhir/$fhirpath",
-                data=json.dumps(valid_request_body),
-                content_type="application/json",
-            )
+    response = client.post(
+        "/fhir/$fhirpath",
+        data=json.dumps(valid_request_body),
+        content_type="application/json",
+    )
 
     assert response.status_code == 200
     data = json.loads(response.data)
