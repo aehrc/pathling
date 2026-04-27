@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
@@ -59,7 +58,7 @@ const config = {
           lastVersion: "current",
           versions: {
             current: {
-              label: "9.5.0",
+              label: "9.6.0",
               path: "",
             },
             "7.2.0": {

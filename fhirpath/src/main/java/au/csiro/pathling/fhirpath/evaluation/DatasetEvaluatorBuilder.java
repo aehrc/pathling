@@ -21,10 +21,12 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.sql.TraceCollector;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -66,6 +68,8 @@ public class DatasetEvaluatorBuilder {
   @Nonnull private FunctionRegistry functionRegistry = StaticFunctionRegistry.getInstance();
 
   @Nonnull private CrossResourceStrategy crossResourceStrategy = CrossResourceStrategy.FAIL;
+
+  @Nonnull private Optional<TraceCollector> traceCollector = Optional.empty();
 
   /** Private constructor. Use factory methods to create instances. */
   private DatasetEvaluatorBuilder(
@@ -184,6 +188,20 @@ public class DatasetEvaluatorBuilder {
   }
 
   /**
+   * Sets the trace collector for capturing trace() output.
+   *
+   * <p>Default is none (no collection, SLF4J logging only).
+   *
+   * @param traceCollector the trace collector
+   * @return this builder for method chaining
+   */
+  @Nonnull
+  public DatasetEvaluatorBuilder withTraceCollector(@Nonnull final TraceCollector traceCollector) {
+    this.traceCollector = Optional.of(traceCollector);
+    return this;
+  }
+
+  /**
    * Builds the {@link DatasetEvaluator} with the configured options.
    *
    * <p>If a DataSource was provided via {@link #withDataSource(DataSource)}, the dataset will be
@@ -197,12 +215,13 @@ public class DatasetEvaluatorBuilder {
     // Resolve the dataset, either from the provided dataSource or from the directly set dataset.
     final Dataset<Row> resolvedDataset = resolveDataset();
 
-    final SingleResourceEvaluator evaluator =
+    final SingleResourceEvaluatorBuilder evalBuilder =
         SingleResourceEvaluatorBuilder.create(subjectResourceCode, fhirContext)
             .withCrossResourceStrategy(crossResourceStrategy)
             .withFunctionRegistry(functionRegistry)
-            .withVariables(variables)
-            .build();
+            .withVariables(variables);
+    traceCollector.ifPresent(evalBuilder::withTraceCollector);
+    final SingleResourceEvaluator evaluator = evalBuilder.build();
 
     return new DatasetEvaluator(evaluator, resolvedDataset);
   }

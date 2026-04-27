@@ -1,20 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
-  ~ Organisation (CSIRO) ABN 41 687 119 230.
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~     http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  -->
+
+    Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+    Organisation (CSIRO) ABN 41 687 119 230.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -22,7 +24,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>9.5.0</version>
+    <version>9.6.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -54,6 +56,7 @@
       <url>https://www.apache.org/licenses/LICENSE-2.0</url>
     </license>
   </licenses>
+  <inceptionYear>2018</inceptionYear>
 
   <scm>
     <url>https://github.com/aehrc/pathling</url>
@@ -378,6 +381,21 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <!-- Override org.hl7.fhir.core transitive versions bundled by HAPI FHIR.
+           HAPI FHIR 8.6.0 bundles 6.6.7, which is vulnerable to CVE-2026-33180
+           (credential leak on HTTP redirect) and CVE-2026-34359 (URL prefix
+           matching credential leak). No current HAPI release bundles a fully
+           patched version. -->
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>org.hl7.fhir.r4</artifactId>
+        <version>6.9.6</version>
+      </dependency>
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>org.hl7.fhir.utilities</artifactId>
+        <version>6.9.6</version>
+      </dependency>
       <!-- Woodstox is used by HAPI for XML processing -->
       <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
@@ -609,6 +627,19 @@
               <goal>check</goal>
             </goals>
             <phase>compile</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.mycila</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>check-license</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
@@ -917,6 +948,127 @@
               </googleJavaFormat>
             </java>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>com.mycila</groupId>
+          <artifactId>license-maven-plugin</artifactId>
+          <version>5.0.0</version>
+          <configuration>
+            <licenseSets>
+              <licenseSet>
+                <header>config/license/header.txt</header>
+                <excludes>
+                  <exclude>**/src/test/resources/**</exclude>
+                  <exclude>**/src/main/resources/**</exclude>
+                  <exclude>**/src/license/**</exclude>
+                  <exclude>**/target/**</exclude>
+                  <exclude>**/node_modules/**</exclude>
+                  <exclude>**/.venv/**</exclude>
+                  <exclude>**/spark-warehouse/**</exclude>
+                  <exclude>**/metastore_db/**</exclude>
+                  <exclude>**/.ipynb_checkpoints/**</exclude>
+                  <exclude>**/derby.log</exclude>
+                  <exclude>**/*.properties</exclude>
+                  <exclude>**/*.yml</exclude>
+                  <exclude>**/*.yaml</exclude>
+                  <exclude>**/*.json</exclude>
+                  <exclude>**/*.sh</exclude>
+                  <exclude>**/*.md</exclude>
+                  <exclude>**/LICENSE</exclude>
+                  <exclude>**/NOTICE</exclude>
+                  <exclude>**/Dockerfile</exclude>
+                  <exclude>**/*.Dockerfile</exclude>
+                  <exclude>.github/**</exclude>
+                  <exclude>.mvn/**</exclude>
+                  <exclude>mvnw</exclude>
+                  <exclude>mvnw.cmd</exclude>
+                  <exclude>sql-on-fhir/**</exclude>
+                  <exclude>**/pathling.Rcheck/**</exclude>
+                  <exclude>**/testdata/**</exclude>
+                  <exclude>**/extdata/**</exclude>
+                  <exclude>**/test-data/**</exclude>
+                  <exclude>**/dist/**</exclude>
+                  <exclude>**/coverage/**</exclude>
+                  <exclude>**/.docusaurus/**</exclude>
+                  <exclude>**/static/assets/**</exclude>
+                  <exclude>**/static/robots.txt</exclude>
+                  <exclude>**/static/google*.html</exclude>
+                  <exclude>**/static/browserconfig.xml</exclude>
+                  <exclude>**/ui/.env*</exclude>
+                  <exclude>**/ui/bun.lock</exclude>
+                  <exclude>**/ui/.playwright-mcp/**</exclude>
+                  <exclude>**/ui/.trivyignore</exclude>
+                  <exclude>**/ui/.prettierignore</exclude>
+                  <exclude>**/.trivyignore</exclude>
+                  <exclude>**/.githooks/**</exclude>
+                  <exclude>**/.pytest_cache/**</exclude>
+                  <exclude>**/.ruff_cache/**</exclude>
+                  <exclude>**/.local/**</exclude>
+                  <exclude>**/ui/dist/**</exclude>
+                  <exclude>ui/**</exclude>
+                  <exclude>licenses/**</exclude>
+                  <exclude>config/license/*.txt</exclude>
+                  <exclude>**/requirements*.txt</exclude>
+                  <exclude>**/bin/requirements/**</exclude>
+                  <exclude>**/*.lock</exclude>
+                  <exclude>**/*.toml</exclude>
+                  <exclude>**/*.cff</exclude>
+                  <exclude>**/*.vcl</exclude>
+                  <exclude>**/*.sketch</exclude>
+                  <exclude>**/*.db</exclude>
+                  <exclude>**/*.sarif</exclude>
+                  <exclude>**/*.sbt</exclude>
+                  <exclude>**/plugins.sbt</exclude>
+                  <exclude>**/.dockerignore</exclude>
+                  <exclude>**/.prettierignore</exclude>
+                  <exclude>**/.nojekyll</exclude>
+                  <exclude>**/*.webmanifest</exclude>
+                  <exclude>**/*.Rd</exclude>
+                  <exclude>**/*.rda</exclude>
+                  <exclude>**/DESCRIPTION</exclude>
+                  <exclude>**/NAMESPACE</exclude>
+                  <exclude>**/CITATION</exclude>
+                  <exclude>**/*.R</exclude>
+                  <exclude>**/*.pyc</exclude>
+                  <exclude>**/__pycache__/**</exclude>
+                  <exclude>.tool-versions</exclude>
+                  <exclude>**/.sonar_lock</exclude>
+                  <exclude>**/*.g4</exclude>
+                  <exclude>**/*.ndjson</exclude>
+                  <exclude>**/*.csv</exclude>
+                  <exclude>**/MANIFEST.in</exclude>
+                  <exclude>**/*_t</exclude>
+                  <exclude>**/_version.py</exclude>
+                  <exclude>**/*.cfg</exclude>
+                  <exclude>**/.python-version</exclude>
+                  <exclude>**/.Rbuildignore</exclude>
+                  <exclude>**/.lintr</exclude>
+                  <exclude>**/*.src</exclude>
+                </excludes>
+              </licenseSet>
+            </licenseSets>
+            <mapping>
+              <java>SLASHSTAR_STYLE</java>
+              <scala>SLASHSTAR_STYLE</scala>
+              <xml>XML_STYLE</xml>
+              <py>SCRIPT_STYLE</py>
+              <ts>SLASHSTAR_STYLE</ts>
+              <tsx>SLASHSTAR_STYLE</tsx>
+              <js>SLASHSTAR_STYLE</js>
+              <css>SLASHSTAR_STYLE</css>
+              <html>XML_STYLE</html>
+              <txt>SCRIPT_STYLE</txt>
+              <R>SCRIPT_STYLE</R>
+            </mapping>
+            <strictCheck>true</strictCheck>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>com.mycila</groupId>
+              <artifactId>license-maven-plugin-git</artifactId>
+              <version>5.0.0</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

@@ -57,6 +57,15 @@ public class DefaultChoiceDefinition implements ChoiceDefinition {
     return getChildElement(name + StringUtils.capitalize(type)).map(ElementDefinition.class::cast);
   }
 
+  @Nonnull
+  @Override
+  public List<ElementDefinition> getAllChildTypes() {
+    return choices.stream()
+        .filter(ElementDefinition.class::isInstance)
+        .map(ElementDefinition.class::cast)
+        .toList();
+  }
+
   /**
    * Returns the child element with the specified name, if it exists in the list of choices. This
    * method is used to find a specific type option within this choice element.

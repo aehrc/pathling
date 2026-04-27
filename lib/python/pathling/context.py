@@ -1,17 +1,19 @@
-#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
-#  Organisation (CSIRO) ABN 41 687 119 230.
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+# Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+# Organisation (CSIRO) ABN 41 687 119 230.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 # noinspection PyPackageRequirements
 
@@ -39,6 +41,21 @@ def _convert_java_value(value):
         return value
     # For other types (e.g., Java BigDecimal, Row), convert to string.
     return str(value)
+
+
+def _convert_typed_values(jtyped_values) -> list:
+    """Converts a Java list of TypedValue objects to Python dicts.
+
+    :param jtyped_values: iterable of Java TypedValue objects with getType() and getValue()
+    :return: list of dicts with ``type`` and ``value`` keys
+    """
+    results = []
+    for jtyped_value in jtyped_values:
+        value = jtyped_value.getValue()
+        if value is not None:
+            value = _convert_java_value(value)
+        results.append({"type": jtyped_value.getType(), "value": value})
+    return results
 
 
 class StorageType:
@@ -453,7 +470,8 @@ class PathlingContext:
                expression is composed with the context expression
         :param variables: optional named variables available via %variable syntax, or None
         :return: a dict with ``results`` (list of dicts with ``type`` and ``value``
-                 keys) and ``expectedReturnType`` (string)
+                 keys), ``expectedReturnType`` (string), and ``traces`` (list of
+                 dicts with ``label`` and ``values`` keys)
         :raises: Exception if the expression is invalid or evaluation fails
         """
         jresult = self._jpc.evaluateFhirPath(
@@ -464,16 +482,21 @@ class PathlingContext:
             variables,
         )
         # Convert Java FhirPathResult to Python dict.
-        results = []
-        for jtyped_value in jresult.getResults():
-            value = jtyped_value.getValue()
-            # Convert Java types to Python types.
-            if value is not None:
-                value = _convert_java_value(value)
-            results.append({"type": jtyped_value.getType(), "value": value})
+        results = _convert_typed_values(jresult.getResults())
+
+        # Convert trace results.
+        traces = [
+            {
+                "label": jtrace.getLabel(),
+                "values": _convert_typed_values(jtrace.getValues()),
+            }
+            for jtrace in jresult.getTraces()
+        ]
+
         return {
             "results": results,
             "expectedReturnType": jresult.getExpectedReturnType(),
+            "traces": traces,
         }
 
     def search_to_column(self, resource_type: str, search_expression: str) -> Column:

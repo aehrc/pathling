@@ -17,12 +17,18 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import au.csiro.pathling.fhirpath.TypeInfo;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
+import au.csiro.pathling.fhirpath.collection.mixed.ChoiceElementCollection;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
+import java.util.function.UnaryOperator;
+import org.apache.spark.sql.Column;
 
 /**
  * Contains functions for type checking and type operations.
@@ -78,5 +84,51 @@ public class TypeFunctions {
   public static Collection as(
       @Nonnull final Collection input, @Nonnull final TypeSpecifier typeSpecifier) {
     return input.asType(typeSpecifier);
+  }
+
+  /**
+   * Returns the type information for each element in the input collection, using concrete subtypes
+   * of TypeInfo. The result is a collection of TypeInfo structures with {@code namespace}, {@code
+   * name}, and {@code baseType} fields.
+   *
+   * <p>The namespace and name are determined by the origin of the collection:
+   *
+   * <ul>
+   *   <li>FHIR model elements return {@code FHIR} namespace with the FHIR type code.
+   *   <li>System literals return {@code System} namespace with the FHIRPath type specifier.
+   *   <li>TypeInfo results return {@code System.Object}.
+   *   <li>Choice collections return per-row TypeInfo based on which field is non-null.
+   *   <li>Empty collections return empty.
+   * </ul>
+   *
+   * @param input The input collection
+   * @return A collection of TypeInfo structures, or empty
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#reflection">FHIRPath Reflection</a>
+   */
+  @FhirPathFunction
+  @Nonnull
+  public static Collection type(@Nonnull final Collection input) {
+    // Choice collections require per-row type resolution based on which field is non-null.
+    if (input instanceof final ChoiceElementCollection choice) {
+      final UnaryOperator<Column> mapper =
+          TypeInfo.choiceTypeInfoMapper(choice.getChoiceDefinition().getAllChildTypes());
+      final Column mappedValue = choice.getParent().getColumn().transform(mapper).getValue();
+      return Collection.buildWithDefinition(
+          new DefaultRepresentation(mappedValue), TypeInfo.DEFINITION);
+    }
+
+    return TypeInfo.fromCollection(input)
+        .map(
+            typeInfo -> {
+              // Transform each element to a TypeInfo struct element-wise, handling both singular
+              // and plural (array) representations. Use transform (not map) so that array elements
+              // are processed individually. Wrap in DefaultRepresentation so struct field access
+              // works correctly for navigation (e.g., .namespace, .name, .baseType).
+              final Column mappedValue =
+                  input.getColumn().transform(col -> typeInfo.toStructColumn()).getValue();
+              return Collection.buildWithDefinition(
+                  new DefaultRepresentation(mappedValue), TypeInfo.DEFINITION);
+            })
+        .orElse(EmptyCollection.getInstance());
   }
 }

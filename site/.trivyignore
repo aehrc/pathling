@@ -12,3 +12,28 @@ GHSA-5c6j-r48x-rmvq
 
 # svgo XML entity expansion DoS — build-time SVG optimiser, only processes trusted source files.
 CVE-2026-29074
+
+# dompurify XSS variants — shipped via mermaid but no user input in static site.
+CVE-2026-41238
+CVE-2026-41239
+CVE-2026-41240
+GHSA-39q2-94rc-95cp
+GHSA-cj63-jhhr-wcxv
+GHSA-cjmm-f4jc-qw8r
+GHSA-h8r8-wccr-v5f2
+
+# follow-redirects header leak — webpack-dev-server transitive, dev-only.
+GHSA-r4q5-vmmm-2653
+
+# picomatch ReDoS and method injection — build-time file globbing, not deployed.
+CVE-2026-33671
+CVE-2026-33672
+
+# brace-expansion DoS — build-time minimatch transitive, not deployed.
+CVE-2026-33750
+
+# serialize-javascript DoS — build-time webpack plugin transitive, not deployed.
+CVE-2026-34043
+
+# uuid buffer bounds check — mermaid internal use and sockjs dev server only.
+GHSA-w5hq-g745-h8pq

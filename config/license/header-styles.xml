@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+    Organisation (CSIRO) ABN 41 687 119 230.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<!--
+  ~ Custom header definitions for the Pathling codebase.
+  ~
+  ~ SCRIPT_STYLE_2SP: hash-prefixed headers with two spaces of padding,
+  ~ matching the convention used in the Python and R sources.
+  ~
+  ~ SLASHSTAR_STYLE_BLANK_END: C-style block comment that includes a blank
+  ~ comment line before the closing delimiter, matching the Bunsen-derived
+  ~ convention used throughout the encoders module.
+  -->
+<additionalHeaders>
+    <script_style_2sp>
+        <firstLine>EOL</firstLine>
+        <beforeEachLine>#  </beforeEachLine>
+        <endLine>EOL</endLine>
+        <skipLinePattern>^#!.*$</skipLinePattern>
+        <firstLineDetectionPattern>^#.*$</firstLineDetectionPattern>
+        <lastLineDetectionPattern>^#.*$</lastLineDetectionPattern>
+        <allowBlankLines>true</allowBlankLines>
+        <isMultiline>true</isMultiline>
+        <padLines>true</padLines>
+    </script_style_2sp>
+    <slashstar_style_blank_end>
+        <firstLine>/*</firstLine>
+        <beforeEachLine> * </beforeEachLine>
+        <endLine> *&#10; */</endLine>
+        <firstLineDetectionPattern>(\s|\t)*/\*.*$</firstLineDetectionPattern>
+        <lastLineDetectionPattern>.*\*/(\s|\t)*$</lastLineDetectionPattern>
+        <allowBlankLines>false</allowBlankLines>
+        <isMultiline>true</isMultiline>
+        <padLines>false</padLines>
+    </slashstar_style_blank_end>
+</additionalHeaders>
