@@ -118,6 +118,76 @@ Response (FHIR Parameters):
 }
 ```
 
+#### Trace entries
+
+Each invocation of the FHIRPath `trace()` function inside the expression
+contributes an additional part inside the `result` part. The trace part is
+named `trace`, its `valueString` is the trace label, and its `part` list
+contains the typed values that flowed through the trace. Trace parts appear
+after the typed result values within the same `result` part.
+
+For an expression such as `name.given.trace('all-given').first()`:
+
+```json
+{
+    "name": "result",
+    "part": [
+        { "name": "string", "valueString": "John" },
+        {
+            "name": "trace",
+            "valueString": "all-given",
+            "part": [
+                { "name": "string", "valueString": "John" },
+                { "name": "string", "valueString": "Jim" }
+            ]
+        }
+    ]
+}
+```
+
+#### Grouped responses (with `context`)
+
+When a `context` parameter is supplied, the main expression is evaluated once
+per element of the context. The response then contains one `result` part per
+context element, in order. Each result part carries a `valueString` label of
+the form `"<context>[i]"` identifying the element it relates to, and its
+`part` list contains the typed values (and any `trace` parts) produced by
+that iteration.
+
+For an expression of `given.first()` with a context of `name` against a
+patient with two names:
+
+```json
+{
+    "resourceType": "Parameters",
+    "parameter": [
+        {
+            "name": "parameters",
+            "part": [
+                { "name": "evaluator", "valueString": "Pathling 9.6.0 (R4)" },
+                { "name": "expression", "valueString": "given.first()" },
+                { "name": "context", "valueString": "name" },
+                { "name": "expectedReturnType", "valueString": "string" }
+            ]
+        },
+        {
+            "name": "result",
+            "valueString": "name[0]",
+            "part": [{ "name": "string", "valueString": "Peter" }]
+        },
+        {
+            "name": "result",
+            "valueString": "name[1]",
+            "part": [{ "name": "string", "valueString": "Jim" }]
+        }
+    ]
+}
+```
+
+A context that yields zero elements produces a successful response with no
+`result` parts. A context that yields more than `MAX_CONTEXT_ELEMENTS`
+elements is rejected with HTTP 400 - see the configuration section above.
+
 ## Docker
 
 Build the image:
