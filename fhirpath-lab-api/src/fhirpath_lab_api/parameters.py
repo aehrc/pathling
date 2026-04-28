@@ -186,42 +186,111 @@ def build_response_parameters(
     expected_return_type: str,
     results: list[dict],
     context: Optional[str] = None,
+    traces: Optional[list[dict]] = None,
 ) -> dict:
-    """Constructs a FHIR Parameters response from evaluation results.
+    """Constructs a FHIR Parameters response with a single flat result part.
 
     :param evaluator_string: the evaluator identification string
     :param expression: the original expression
     :param resource: the original resource
     :param expected_return_type: the statically inferred return type
-    :param results: the list of typed result values
+    :param results: the flat list of typed result values
+    :param context: the optional context expression
+    :param traces: the flat list of trace entries
+    :return: a FHIR Parameters resource dict
+    """
+    output_parameters: list[dict] = [
+        {
+            "name": "parameters",
+            "part": _build_metadata_parts(
+                evaluator_string, expression, resource, expected_return_type, context
+            ),
+        }
+    ]
+
+    if results or traces:
+        output_parameters.append(
+            {"name": "result", "part": _build_part_list(results, traces or [])}
+        )
+
+    return {"resourceType": "Parameters", "parameter": output_parameters}
+
+
+def build_grouped_response_parameters(
+    evaluator_string: str,
+    expression: str,
+    resource: dict,
+    expected_return_type: str,
+    grouped_results: list[tuple[str, list[dict], list[dict]]],
+    context: Optional[str] = None,
+) -> dict:
+    """Constructs a FHIR Parameters response with one result part per context element.
+
+    :param evaluator_string: the evaluator identification string
+    :param expression: the original expression
+    :param resource: the original resource
+    :param expected_return_type: the statically inferred return type
+    :param grouped_results: an ordered list of ``(label, results, traces)``
+        tuples, one per context element. Each tuple produces a separate
+        ``result`` part with ``valueString`` set to the label.
     :param context: the optional context expression
     :return: a FHIR Parameters resource dict
     """
-    # Build the parameters metadata part.
-    params_parts = [
+    output_parameters: list[dict] = [
+        {
+            "name": "parameters",
+            "part": _build_metadata_parts(
+                evaluator_string, expression, resource, expected_return_type, context
+            ),
+        }
+    ]
+
+    for label, group_results, group_traces in grouped_results:
+        output_parameters.append(
+            {
+                "name": "result",
+                "valueString": label,
+                "part": _build_part_list(group_results, group_traces),
+            }
+        )
+
+    return {"resourceType": "Parameters", "parameter": output_parameters}
+
+
+def _build_metadata_parts(
+    evaluator_string: str,
+    expression: str,
+    resource: dict,
+    expected_return_type: str,
+    context: Optional[str],
+) -> list[dict]:
+    """Builds the metadata ``parameters`` part list shared by both response shapes."""
+    parts = [
         {"name": "evaluator", "valueString": evaluator_string},
         {"name": "expression", "valueString": expression},
         {"name": "resource", "resource": resource},
     ]
-
     if context is not None:
-        params_parts.append({"name": "context", "valueString": context})
+        parts.append({"name": "context", "valueString": context})
+    parts.append({"name": "expectedReturnType", "valueString": expected_return_type})
+    return parts
 
-    params_parts.append(
-        {"name": "expectedReturnType", "valueString": expected_return_type}
-    )
 
-    output_parameters: list[dict] = [{"name": "parameters", "part": params_parts}]
+def _build_part_list(results: list[dict], traces: list[dict]) -> list[dict]:
+    """Builds a result part list combining typed values and trace entries."""
+    parts = [_build_result_part(tv) for tv in results]
+    parts.extend(_build_trace_part(t) for t in traces)
+    return parts
 
-    # Build result parts.
-    if results:
-        result_parts = []
-        for typed_value in results:
-            result_part = _build_result_part(typed_value)
-            result_parts.append(result_part)
-        output_parameters.append({"name": "result", "part": result_parts})
 
-    return {"resourceType": "Parameters", "parameter": output_parameters}
+def _build_trace_part(trace_entry: dict) -> dict:
+    """Builds a trace part from a trace entry.
+
+    :param trace_entry: a dict with 'label' and 'values' keys
+    :return: a FHIR Parameters part dict with the trace name and typed values
+    """
+    value_parts = [_build_result_part(tv) for tv in trace_entry["values"]]
+    return {"name": "trace", "valueString": trace_entry["label"], "part": value_parts}
 
 
 def _build_result_part(typed_value: dict) -> dict:
