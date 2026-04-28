@@ -33,12 +33,29 @@ from flask_cors import CORS
 from py4j.protocol import Py4JJavaError
 
 from fhirpath_lab_api.parameters import (
+    InputParameters,
+    build_grouped_response_parameters,
     build_operation_outcome,
     build_response_parameters,
     parse_input_parameters,
 )
 
 logger = logging.getLogger(__name__)
+
+# Cap context cardinality: each element triggers an extra Pathling round-trip,
+# so an unbounded context like ``Bundle.entry`` could be used to exhaust the
+# server. Override via the ``MAX_CONTEXT_ELEMENTS`` environment variable.
+MAX_CONTEXT_ELEMENTS = int(os.environ.get("MAX_CONTEXT_ELEMENTS", "100"))
+
+
+class _ContextTooLargeError(Exception):
+    """Raised when the context yields more elements than MAX_CONTEXT_ELEMENTS."""
+
+    def __init__(self, count: int, limit: int):
+        super().__init__(
+            f"Context expression produced {count} elements, exceeding the "
+            f"limit of {limit}. Please narrow the context expression."
+        )
 
 
 def create_app(pathling_context=None) -> Flask:
@@ -133,15 +150,21 @@ def _handle_evaluate(get_context) -> Response:
         )
 
     # Evaluate the expression.
+    use_grouped = params.context is not None and params.context.strip() != ""
     try:
         pc = get_context()
-        result = pc.evaluate_fhirpath(
-            resource_type=params.resource_type,
-            resource_json=json.dumps(params.resource),
-            fhirpath_expression=params.expression,
-            context_expression=params.context,
-            variables=params.variables,
-        )
+        if use_grouped:
+            groups, grouped_return_type = _evaluate_grouped(pc, params)
+        else:
+            result = pc.evaluate_fhirpath(
+                resource_type=params.resource_type,
+                resource_json=json.dumps(params.resource),
+                fhirpath_expression=params.expression,
+                context_expression=params.context,
+                variables=params.variables,
+            )
+    except _ContextTooLargeError as e:
+        return _error_response(400, "too-costly", str(e))
     except Py4JJavaError as e:
         full_message = str(e)
         logger.exception("Error evaluating FHIRPath expression")
@@ -155,20 +178,92 @@ def _handle_evaluate(get_context) -> Response:
 
     # Build the response.
     evaluator_string = f"Pathling {pc.version()} (R4)"
-    response_body = build_response_parameters(
-        evaluator_string=evaluator_string,
-        expression=params.expression,
-        resource=params.resource,
-        expected_return_type=result["expectedReturnType"],
-        results=result["results"],
-        context=params.context,
-    )
+    if use_grouped:
+        response_body = build_grouped_response_parameters(
+            evaluator_string=evaluator_string,
+            expression=params.expression,
+            resource=params.resource,
+            expected_return_type=grouped_return_type,
+            context=params.context,
+            grouped_results=groups,
+        )
+    else:
+        response_body = build_response_parameters(
+            evaluator_string=evaluator_string,
+            expression=params.expression,
+            resource=params.resource,
+            expected_return_type=result["expectedReturnType"],
+            results=result["results"],
+            context=params.context,
+            traces=result.get("traces", []),
+        )
 
     return Response(
         json.dumps(response_body),
         status=200,
         content_type="application/fhir+json",
     )
+
+
+def _evaluate_grouped(
+    pc, params: InputParameters
+) -> tuple[list[tuple[str, list[dict], list[dict]]], str]:
+    """Evaluates the main expression once per element of the context expression.
+
+    First evaluates the context expression alone to determine its cardinality,
+    then evaluates the main expression N times, each time scoping the context
+    to a single element using the FHIRPath indexer ``(context)[i]``. Each
+    iteration's results and trace entries are collected into a separate group
+    labelled ``"<context>[i]"``.
+
+    This results in 1 + N calls through the Pathling engine. The cardinality
+    is capped by :data:`MAX_CONTEXT_ELEMENTS`.
+
+    :param pc: the PathlingContext to use for evaluation
+    :param params: the parsed input parameters; ``params.context`` must be
+        non-empty
+    :return: a tuple of ``(groups, expected_return_type)`` where ``groups`` is
+        an ordered list of ``(label, results, traces)`` tuples and
+        ``expected_return_type`` is taken from the first iteration (empty
+        string when the context yields no elements)
+    :raises _ContextTooLargeError: if the context expression yields more than
+        :data:`MAX_CONTEXT_ELEMENTS` elements
+    """
+    resource_json = json.dumps(params.resource)
+
+    count_result = pc.evaluate_fhirpath(
+        resource_type=params.resource_type,
+        resource_json=resource_json,
+        fhirpath_expression=params.context,
+        context_expression=None,
+        variables=params.variables,
+    )
+    context_count = len(count_result["results"])
+
+    if context_count > MAX_CONTEXT_ELEMENTS:
+        raise _ContextTooLargeError(context_count, MAX_CONTEXT_ELEMENTS)
+
+    groups: list[tuple[str, list[dict], list[dict]]] = []
+    expected_return_type = ""
+    for i in range(context_count):
+        iter_result = pc.evaluate_fhirpath(
+            resource_type=params.resource_type,
+            resource_json=resource_json,
+            fhirpath_expression=params.expression,
+            context_expression=f"({params.context})[{i}]",
+            variables=params.variables,
+        )
+        # Label uses the unparenthesised context for readability; the eval
+        # expression is parenthesised to handle low-precedence operators. This
+        # asymmetry matches other FHIRPath Lab implementations (e.g. Aidbox,
+        # fhirpath-py).
+        label = f"{params.context}[{i}]"
+        groups.append((label, iter_result["results"], iter_result.get("traces", [])))
+        # The static return type is identical across iterations; capture it once.
+        if not expected_return_type:
+            expected_return_type = iter_result["expectedReturnType"]
+
+    return groups, expected_return_type
 
 
 # Module-level WSGI application instance for use by production WSGI servers
