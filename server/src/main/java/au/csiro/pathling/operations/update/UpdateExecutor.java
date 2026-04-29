@@ -134,7 +134,8 @@ public class UpdateExecutor {
     final String tablePath = getTablePath(resourceCode);
 
     if (deltaTableExists(spark, tablePath)) {
-      if (schemaAutoMerge) {
+      if (schemaAutoMerge
+          && !updates.schema().equals(spark.read().format("delta").load(tablePath).schema())) {
         // Delta's MERGE — even with spark.databricks.delta.schema.autoMerge.enabled=true —
         // does not support adding new fields to nested structs inside arrays. This is the exact
         // failure mode when the FHIR encoder gains new value-type columns (e.g. valueDecimal,
@@ -147,6 +148,10 @@ public class UpdateExecutor {
         // any missing nested fields to the target table schema (with null for existing rows)
         // without inserting any data. The MERGE that follows then sees compatible schemas and
         // succeeds.
+        //
+        // The schema-equality guard above ensures this second transaction is only paid when the
+        // encoder schema has actually drifted from the table schema; in the steady-state case
+        // where they already match, the warmup is skipped and the update is a single transaction.
         updates
             .limit(0)
             .write()

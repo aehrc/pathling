@@ -56,7 +56,6 @@
     <pathling.awsSdkVersion>2.40.3</pathling.awsSdkVersion>
     <pathling.bulkExportVersion>1.0.4</pathling.bulkExportVersion>
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
-    <pathling.testcontainersVersion>1.21.3</pathling.testcontainersVersion>
   </properties>
 
   <repositories>
@@ -318,18 +317,6 @@
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>5.13.4</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>testcontainers</artifactId>
-      <version>${pathling.testcontainersVersion}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>${pathling.testcontainersVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
