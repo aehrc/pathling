@@ -142,11 +142,16 @@ class UpdateExecutorSchemaAutoMergeTest {
     final ViewDefinitionResource initial = createViewDefinition(VIEW_ID, "initial_view", "Patient");
     seed.merge("ViewDefinition", initial);
 
-    final Path deltaLogDir =
-        tempDatabasePath.resolve("ViewDefinition.parquet").resolve("_delta_log");
+    final Path tablePath = tempDatabasePath.resolve("ViewDefinition.parquet");
+    final Path deltaLogDir = tablePath.resolve("_delta_log");
     downgradeDeltaSchema(deltaLogDir);
+    invalidateDeltaMetadataCache(tablePath);
   }
 
+  private void invalidateDeltaMetadataCache(@Nonnull final Path tablePath) {
+    pathlingContext.getSpark().catalog().clearCache();
+    pathlingContext.getSpark().catalog().refreshByPath(tablePath.toAbsolutePath().toString());
+  }
   @Nonnull
   private UpdateExecutor newExecutor(final boolean schemaAutoMerge) {
     return new UpdateExecutor(
