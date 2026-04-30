@@ -108,7 +108,14 @@ public class SqlQueryInstanceRunProvider implements IResourceProvider {
     final String acceptHeader = requestDetails.getServletRequest().getHeader("Accept");
 
     executionHelper.executeSqlQuery(
-        queryResource, format, acceptHeader, includeHeader, limit, parameterValues, response);
+        queryResource,
+        format,
+        acceptHeader,
+        includeHeader,
+        limit,
+        parameterValues,
+        requestDetails.getRequestId(),
+        response);
   }
 
   /**
@@ -138,7 +145,14 @@ public class SqlQueryInstanceRunProvider implements IResourceProvider {
     final String acceptHeader = requestDetails.getServletRequest().getHeader("Accept");
 
     executionHelper.executeSqlQuery(
-        libraryResource, format, acceptHeader, includeHeader, limit, parameterValues, response);
+        libraryResource,
+        format,
+        acceptHeader,
+        includeHeader,
+        limit,
+        parameterValues,
+        requestDetails.getRequestId(),
+        response);
   }
 
   /** Reads a Library resource by ID. */

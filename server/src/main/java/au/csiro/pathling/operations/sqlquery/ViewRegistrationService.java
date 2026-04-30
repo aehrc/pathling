@@ -25,10 +25,11 @@ import au.csiro.pathling.views.FhirViewExecutor;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -37,13 +38,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Manages the lifecycle of Spark temporary views for SQL query execution. Views are registered
- * using the label names from the SQLQuery Library's relatedArtifact entries, so the SQL can
- * reference them directly. All registered views are dropped after execution completes.
+ * Manages the lifecycle of Spark temporary views for SQL query execution. Each execution scopes its
+ * views to the HAPI per-request id so that concurrent {@code $sqlquery-run} requests using the same
+ * label cannot clobber one another in Spark's session-global temporary view catalog.
  */
 @Slf4j
 @Component
 public class ViewRegistrationService {
+
+  private static final String VIEW_NAME_PREFIX = "sqlquery_";
+
+  private static final Pattern UNSAFE_REQUEST_ID_CHARS = Pattern.compile("[^A-Za-z0-9_]");
 
   @Nonnull private final SparkSession sparkSession;
 
@@ -69,18 +74,21 @@ public class ViewRegistrationService {
   }
 
   /**
-   * Registers resolved ViewDefinitions as Spark temporary views. Each view is registered using its
-   * label name directly, so the SQL query can reference it without rewriting.
+   * Registers resolved ViewDefinitions as Spark temporary views, scoped by the request id so that
+   * concurrent executions cannot clobber one another in the session-global catalog.
    *
    * @param resolvedViews a map from label (table alias) to the parsed FhirView
    * @param dataSource the data source to use for view execution
-   * @return the list of registered view names (for cleanup)
+   * @param requestId the per-request id used to namespace registered view names
+   * @return a map from original label to the actual temporary view name
    */
   @Nonnull
-  public List<String> registerViews(
-      @Nonnull final Map<String, FhirView> resolvedViews, @Nonnull final DataSource dataSource) {
+  public Map<String, String> registerViews(
+      @Nonnull final Map<String, FhirView> resolvedViews,
+      @Nonnull final DataSource dataSource,
+      @Nonnull final String requestId) {
 
-    final List<String> registeredViewNames = new ArrayList<>();
+    final Map<String, String> labelToViewName = new LinkedHashMap<>();
 
     for (final Map.Entry<String, FhirView> entry : resolvedViews.entrySet()) {
       final String label = entry.getKey();
@@ -93,26 +101,45 @@ public class ViewRegistrationService {
         result = executor.buildQuery(view);
       } catch (final Exception e) {
         // Drop any views that were already registered before failing.
-        dropViews(registeredViewNames);
+        dropViews(labelToViewName.values());
         throw new InvalidRequestException(
             "Failed to execute ViewDefinition for label '" + label + "': " + e.getMessage());
       }
 
-      result.createOrReplaceTempView(label);
-      registeredViewNames.add(label);
-      log.info("Registered temporary view '{}' for resource type '{}'", label, view.getResource());
+      final String tempViewName = registerDataset(label, result, requestId);
+      labelToViewName.put(label, tempViewName);
+      log.info(
+          "Registered temporary view '{}' for label '{}' (resource type '{}')",
+          tempViewName,
+          label,
+          view.getResource());
     }
 
-    return registeredViewNames;
+    return labelToViewName;
+  }
+
+  /**
+   * Registers an already-built dataset under a request-scoped temp view name and returns that name.
+   * Visible for tests that need to exercise the temp-view namespacing without going through
+   * FhirViewExecutor.
+   */
+  @Nonnull
+  String registerDataset(
+      @Nonnull final String label,
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String requestId) {
+    final String tempViewName = resolveTempViewName(requestId, label);
+    dataset.createOrReplaceTempView(tempViewName);
+    return tempViewName;
   }
 
   /**
    * Drops the specified temporary views from the Spark session.
    *
-   * @param viewNames the names of the temporary views to drop
+   * @param tempViewNames the names of the temporary views to drop
    */
-  public void dropViews(@Nonnull final Collection<String> viewNames) {
-    for (final String viewName : viewNames) {
+  public void dropViews(@Nonnull final Collection<String> tempViewNames) {
+    for (final String viewName : tempViewNames) {
       try {
         sparkSession.catalog().dropTempView(viewName);
         log.debug("Dropped temporary view '{}'", viewName);
@@ -120,5 +147,54 @@ public class ViewRegistrationService {
         log.warn("Failed to drop temporary view '{}': {}", viewName, e.getMessage());
       }
     }
+  }
+
+  /**
+   * Rewrites SQL table references to use the prefixed temporary view names. Each label in the SQL
+   * is replaced with the corresponding temporary view name, matched on word boundaries so that
+   * labels appearing as substrings of other identifiers are not affected.
+   *
+   * @param sql the original SQL query
+   * @param labelToViewName the mapping from labels to temporary view names
+   * @return the rewritten SQL query
+   */
+  @Nonnull
+  public String rewriteSql(
+      @Nonnull final String sql, @Nonnull final Map<String, String> labelToViewName) {
+
+    String rewritten = sql;
+    // Replace longest labels first to avoid partial replacements where one label is a prefix of
+    // another.
+    final var sortedEntries =
+        labelToViewName.entrySet().stream()
+            .sorted((a, b) -> Integer.compare(b.getKey().length(), a.getKey().length()))
+            .toList();
+
+    for (final Map.Entry<String, String> entry : sortedEntries) {
+      final String label = entry.getKey();
+      final String viewName = entry.getValue();
+      final Pattern pattern = Pattern.compile("\\b" + Pattern.quote(label) + "\\b");
+      final Matcher matcher = pattern.matcher(rewritten);
+      rewritten = matcher.replaceAll(Matcher.quoteReplacement(viewName));
+    }
+
+    return rewritten;
+  }
+
+  /**
+   * Constructs the request-scoped temp view name for a given label.
+   *
+   * <p>The request id is sanitised to keep the resulting identifier valid for use as a Spark temp
+   * view name (HAPI default is 16 alphanumerics, but {@code X-Request-ID} can carry arbitrary
+   * characters).
+   */
+  @Nonnull
+  static String resolveTempViewName(@Nonnull final String requestId, @Nonnull final String label) {
+    return VIEW_NAME_PREFIX + sanitiseRequestId(requestId) + "_" + label;
+  }
+
+  @Nonnull
+  private static String sanitiseRequestId(@Nonnull final String requestId) {
+    return UNSAFE_REQUEST_ID_CHARS.matcher(requestId).replaceAll("");
   }
 }

@@ -131,6 +131,7 @@ public class SqlQueryExecutionHelper {
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
    * @param parameterValues runtime parameter values to bind to the SQL query
+   * @param requestId the HAPI per-request id used to namespace registered temp views
    * @param response the HTTP response for streaming output
    */
   @SuppressWarnings("java:S107")
@@ -141,6 +142,7 @@ public class SqlQueryExecutionHelper {
       @Nullable final BooleanType includeHeader,
       @Nullable final IntegerType limit,
       @Nullable final List<ParametersParameterComponent> parameterValues,
+      @Nonnull final String requestId,
       @Nullable final HttpServletResponse response) {
 
     if (response == null) {
@@ -180,24 +182,27 @@ public class SqlQueryExecutionHelper {
             : SqlQueryOutputFormat.fromAcceptHeader(acceptHeader);
     final boolean shouldIncludeHeader = includeHeader == null || includeHeader.booleanValue();
 
-    // Register views and execute the query.
-    List<String> registeredViewNames = List.of();
+    // Register views (request-scoped names) and execute the query.
+    Map<String, String> registeredViews = Map.of();
     try {
-      registeredViewNames = viewRegistrationService.registerViews(resolvedViews, deltaLake);
+      registeredViews = viewRegistrationService.registerViews(resolvedViews, deltaLake, requestId);
+
+      // Rewrite SQL so the user-supplied labels resolve to the request-scoped temp views.
+      final String rewrittenSql =
+          viewRegistrationService.rewriteSql(parsedQuery.getSql(), registeredViews);
 
       // Build parameter map for Spark parameterized queries.
-      final String sql = parsedQuery.getSql();
       final Map<String, String> parameterMap = buildParameterMap(parameterValues);
 
       // Execute the SQL query. Use parameterized queries only when parameters are provided.
       Dataset<Row> result;
       if (parameterMap.isEmpty()) {
-        result = sparkSession.sql(sql);
+        result = sparkSession.sql(rewrittenSql);
       } else {
         @SuppressWarnings("unchecked")
         final java.util.Map<String, Object> objectMap =
             (java.util.Map<String, Object>) (java.util.Map<String, ?>) parameterMap;
-        result = sparkSession.sql(sql, objectMap);
+        result = sparkSession.sql(rewrittenSql, objectMap);
       }
 
       // Apply limit if specified.
@@ -209,7 +214,7 @@ public class SqlQueryExecutionHelper {
       streamResults(result, outputFormat, shouldIncludeHeader, response);
 
     } finally {
-      viewRegistrationService.dropViews(registeredViewNames);
+      viewRegistrationService.dropViews(registeredViews.values());
     }
   }
 
