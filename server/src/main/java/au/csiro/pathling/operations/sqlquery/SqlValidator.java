@@ -69,6 +69,14 @@ import scala.jdk.javaapi.CollectionConverters;
 @Component
 public class SqlValidator {
 
+  /**
+   * FQN prefix for Pathling-defined Catalyst plan nodes and expressions. Classes from this package
+   * are trusted because Pathling owns them and uses them internally (e.g. for FhirView execution).
+   * Without this carve-out, every expression class injected by the FhirView executor would have to
+   * be hand-listed and kept in sync with the encoders module.
+   */
+  private static final String PATHLING_PACKAGE_PREFIX = "au.csiro.pathling.";
+
   @Nonnull private final SparkSession sparkSession;
 
   // Fully-qualified plan node class names that are permitted. All Command subclasses are
@@ -322,32 +330,38 @@ public class SqlValidator {
     } catch (final Exception e) {
       throw new InvalidRequestException("Invalid SQL syntax: " + e.getMessage());
     }
-    walkPlan(plan);
+    walkPlan(plan, /* strict= */ true);
   }
 
   /**
-   * Validates an analyzed logical plan against the same allow-lists as {@link #validate(String)}.
-   * Required to catch constructs like {@code HiveSimpleUDF} / {@code HiveGenericUDF} that are
-   * inserted by the analyser and so are absent from the unresolved tree.
+   * Validates an analyzed logical plan against the reject-list. Required to catch constructs like
+   * {@code HiveSimpleUDF} / {@code HiveGenericUDF} that are inserted by the analyser and so are
+   * absent from the unresolved tree.
+   *
+   * <p>Unlike {@link #validate(String)}, this walk does <em>not</em> enforce the allow-list,
+   * because the analyser legitimately introduces many Spark expression types ({@code Flatten},
+   * {@code GetStructField} variants, etc.) that user-written SQL would not name directly. The
+   * unresolved-plan walk is the appropriate place to enforce the allow-list; the analyzed-plan
+   * walk's job is to catch constructs that <em>only</em> appear post-analysis.
    *
    * @param plan an analyzed logical plan, typically obtained via {@code
    *     dataset.queryExecution().analyzed()}
-   * @throws InvalidRequestException if the plan contains disallowed operations
+   * @throws InvalidRequestException if the plan contains rejected operations
    */
   public void validateAnalyzed(@Nonnull final LogicalPlan plan) {
-    walkPlan(plan);
+    walkPlan(plan, /* strict= */ false);
   }
 
   /** Recursively validates a logical plan node and all its children and expressions. */
-  private void walkPlan(@Nonnull final LogicalPlan plan) {
-    validatePlanNode(plan);
+  private void walkPlan(@Nonnull final LogicalPlan plan, final boolean strict) {
+    validatePlanNode(plan, strict);
     final List<Expression> expressions = CollectionConverters.asJava(plan.expressions());
     for (final Expression expr : expressions) {
-      walkExpression(expr);
+      walkExpression(expr, strict);
     }
     final List<LogicalPlan> children = CollectionConverters.asJava(plan.children());
     for (final LogicalPlan child : children) {
-      walkPlan(child);
+      walkPlan(child, strict);
     }
   }
 
@@ -355,34 +369,46 @@ public class SqlValidator {
    * Recursively validates an expression and all its child expressions. If the expression is a
    * subquery expression, its inner plan is also validated.
    */
-  private void walkExpression(@Nonnull final Expression expr) {
-    validateExpression(expr);
+  private void walkExpression(@Nonnull final Expression expr, final boolean strict) {
+    validateExpression(expr, strict);
     if (expr instanceof final SubqueryExpression subquery) {
-      walkPlan(subquery.plan());
+      walkPlan(subquery.plan(), strict);
     }
     final List<Expression> children = CollectionConverters.asJava(expr.children());
     for (final Expression child : children) {
-      walkExpression(child);
+      walkExpression(child, strict);
     }
   }
 
   /**
-   * Validates that a plan node is in the allowed FQN set. All {@link Command} subclasses (DDL, DML,
-   * SHOW, DESCRIBE, etc.) are rejected outright, regardless of package.
+   * Validates that a plan node is permitted. All {@link Command} subclasses (DDL, DML, SHOW,
+   * DESCRIBE, etc.) are rejected outright, regardless of package, in both modes. In strict mode,
+   * the allow-list is additionally enforced.
    */
-  private void validatePlanNode(@Nonnull final LogicalPlan plan) {
+  private void validatePlanNode(@Nonnull final LogicalPlan plan, final boolean strict) {
     if (plan instanceof Command) {
       throw new InvalidRequestException(
           "SQL contains a disallowed operation: " + plan.getClass().getSimpleName());
     }
-    if (!ALLOWED_PLAN_NODES.contains(canonicalClassName(plan))) {
+    if (!strict) {
+      return;
+    }
+    final String fqn = canonicalClassName(plan);
+    if (fqn.startsWith(PATHLING_PACKAGE_PREFIX)) {
+      return;
+    }
+    if (!ALLOWED_PLAN_NODES.contains(fqn)) {
       throw new InvalidRequestException(
           "SQL contains a disallowed plan node: " + plan.getClass().getSimpleName());
     }
   }
 
-  /** Validates that an expression is in the allowed FQN set or recognised as a Pathling UDF. */
-  private void validateExpression(@Nonnull final Expression expr) {
+  /**
+   * Validates an expression. In both modes, explicitly rejected expression types and disallowed
+   * function names are caught, and ScalaUDF is gated by the Pathling UDF allow-list. In strict
+   * mode, the expression allow-list is additionally enforced.
+   */
+  private void validateExpression(@Nonnull final Expression expr, final boolean strict) {
     final String fqn = canonicalClassName(expr);
 
     if (REJECTED_EXPRESSION_NAMES.contains(fqn)) {
@@ -397,6 +423,14 @@ public class SqlValidator {
 
     if (expr instanceof final ScalaUDF scalaUdf) {
       validateUdf(scalaUdf);
+      return;
+    }
+
+    if (!strict) {
+      return;
+    }
+
+    if (fqn.startsWith(PATHLING_PACKAGE_PREFIX)) {
       return;
     }
 
