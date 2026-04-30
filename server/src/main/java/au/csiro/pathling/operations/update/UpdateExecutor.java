@@ -53,6 +53,8 @@ public class UpdateExecutor {
 
   @Nonnull private final CacheableDatabase cacheableDatabase;
 
+  private final boolean schemaAutoMerge;
+
   /**
    * Constructs a new UpdateExecutor.
    *
@@ -60,17 +62,20 @@ public class UpdateExecutor {
    * @param fhirEncoders encoders for converting FHIR resources to Spark Datasets
    * @param databasePath the path to the Delta database
    * @param cacheableDatabase the cacheable database for cache invalidation
+   * @param schemaAutoMerge whether to enable Delta Lake schema auto-merge during merge operations
    */
   public UpdateExecutor(
       @Nonnull final PathlingContext pathlingContext,
       @Nonnull final FhirEncoders fhirEncoders,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") @Nonnull
           final String databasePath,
-      @Nonnull final CacheableDatabase cacheableDatabase) {
+      @Nonnull final CacheableDatabase cacheableDatabase,
+      @Value("${pathling.storage.schemaAutoMerge:false}") final boolean schemaAutoMerge) {
     this.pathlingContext = pathlingContext;
     this.fhirEncoders = fhirEncoders;
     this.databasePath = databasePath;
     this.cacheableDatabase = cacheableDatabase;
+    this.schemaAutoMerge = schemaAutoMerge;
   }
 
   /**
@@ -129,6 +134,33 @@ public class UpdateExecutor {
     final String tablePath = getTablePath(resourceCode);
 
     if (deltaTableExists(spark, tablePath)) {
+      if (schemaAutoMerge
+          && !updates.schema().equals(spark.read().format("delta").load(tablePath).schema())) {
+        // Delta's MERGE — even with spark.databricks.delta.schema.autoMerge.enabled=true —
+        // does not support adding new fields to nested structs inside arrays. This is the exact
+        // failure mode when the FHIR encoder gains new value-type columns (e.g. valueDecimal,
+        // valueDecimal_scale inside the extension element struct): the MERGE planner throws
+        // DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION because it cannot cast the richer source struct
+        // to the narrower target struct.
+        //
+        // A regular write with mergeSchema=true DOES support nested-struct field evolution.
+        // Writing limit(0) — zero rows, same schema as the encoder output — causes Delta to add
+        // any missing nested fields to the target table schema (with null for existing rows)
+        // without inserting any data. The MERGE that follows then sees compatible schemas and
+        // succeeds.
+        //
+        // The schema-equality guard above ensures this second transaction is only paid when the
+        // encoder schema has actually drifted from the table schema; in the steady-state case
+        // where they already match, the warmup is skipped and the update is a single transaction.
+        updates
+            .limit(0)
+            .write()
+            .format("delta")
+            .mode(SaveMode.Append)
+            .option("mergeSchema", "true")
+            .save(tablePath);
+      }
+
       // Perform a merge operation on the existing table.
       final DeltaTable table = DeltaTable.forPath(spark, tablePath);
       table

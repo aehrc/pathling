@@ -84,7 +84,8 @@ class DeleteProviderTest {
             pathlingContext,
             fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
-            cacheableDatabase);
+            cacheableDatabase,
+            false);
 
     // Create DeleteExecutor with the temp database path.
     final DeleteExecutor deleteExecutor =
