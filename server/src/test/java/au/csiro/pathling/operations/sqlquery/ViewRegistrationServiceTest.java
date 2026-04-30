@@ -144,6 +144,75 @@ class ViewRegistrationServiceTest {
     assertThat(rewritten).contains("JOIN sqlquery_req1_obs_summary ");
   }
 
+  @Test
+  void rewriteSqlPreservesSingleQuotedLiteralsContainingLabel() {
+    final String rewritten =
+        service.rewriteSql(
+            "SELECT * FROM patients WHERE name = 'patients'",
+            Map.of("patients", "sqlquery_req1_patients"));
+    assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_req1_patients WHERE name = 'patients'");
+  }
+
+  @Test
+  void rewriteSqlPreservesDoubleQuotedLiteralsContainingLabel() {
+    final String rewritten =
+        service.rewriteSql(
+            "SELECT * FROM patients WHERE note = \"patients are interesting\"",
+            Map.of("patients", "sqlquery_req1_patients"));
+    assertThat(rewritten)
+        .isEqualTo(
+            "SELECT * FROM sqlquery_req1_patients WHERE note = \"patients are interesting\"");
+  }
+
+  @Test
+  void rewriteSqlPreservesLineCommentMentioningLabel() {
+    final String rewritten =
+        service.rewriteSql(
+            "SELECT * FROM patients -- patients comment\nWHERE x = 1",
+            Map.of("patients", "sqlquery_req1_patients"));
+    assertThat(rewritten)
+        .isEqualTo("SELECT * FROM sqlquery_req1_patients -- patients comment\nWHERE x = 1");
+  }
+
+  @Test
+  void rewriteSqlPreservesBlockCommentMentioningLabel() {
+    final String rewritten =
+        service.rewriteSql(
+            "SELECT /* patients in here */ * FROM patients",
+            Map.of("patients", "sqlquery_req1_patients"));
+    assertThat(rewritten).isEqualTo("SELECT /* patients in here */ * FROM sqlquery_req1_patients");
+  }
+
+  @Test
+  void rewriteSqlHandlesDoubledQuoteEscape() {
+    // Spark accepts doubled single quotes as an embedded apostrophe. The 'pat''s patients'
+    // literal must be preserved including the inner "patients" word.
+    final String rewritten =
+        service.rewriteSql(
+            "SELECT * FROM patients WHERE label = 'pat''s patients'",
+            Map.of("patients", "sqlquery_req1_patients"));
+    assertThat(rewritten)
+        .isEqualTo("SELECT * FROM sqlquery_req1_patients WHERE label = 'pat''s patients'");
+  }
+
+  @Test
+  void rewriteSqlRewritesBacktickQuotedLabel() {
+    final String rewritten =
+        service.rewriteSql(
+            "SELECT * FROM `patients`", Map.of("patients", "sqlquery_req1_patients"));
+    assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_req1_patients");
+  }
+
+  @Test
+  void rewriteSqlPreservesBacktickIdentifierThatIsNotALabel() {
+    final String rewritten =
+        service.rewriteSql(
+            "SELECT * FROM patients WHERE `random col` = 'x'",
+            Map.of("patients", "sqlquery_req1_patients"));
+    assertThat(rewritten)
+        .isEqualTo("SELECT * FROM sqlquery_req1_patients WHERE `random col` = 'x'");
+  }
+
   // ---------------------------------------------------------------------------
   // Concurrent registration regression.
   // ---------------------------------------------------------------------------
