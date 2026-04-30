@@ -22,8 +22,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.nio.charset.StandardCharsets;
+import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.ParameterDefinition.ParameterUse;
 import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +33,9 @@ import org.junit.jupiter.api.Test;
 
 /** Unit tests for {@link SqlQueryLibraryParser}. */
 class SqlQueryLibraryParserTest {
+
+  private static final String LIBRARY_TYPE_SYSTEM =
+      "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes";
 
   private SqlQueryLibraryParser parser;
 
@@ -74,11 +79,7 @@ class SqlQueryLibraryParserTest {
   @Test
   void extractsParameters() {
     final Library library = createMinimalLibrary("SELECT * FROM t WHERE age > :min_age");
-    library
-        .addParameter()
-        .setName("min_age")
-        .setType("integer")
-        .setUse(org.hl7.fhir.r4.model.ParameterDefinition.ParameterUse.IN);
+    library.addParameter().setName("min_age").setType("integer").setUse(ParameterUse.IN);
 
     final ParsedSqlQuery result = parser.parse(library);
 
@@ -97,10 +98,15 @@ class SqlQueryLibraryParserTest {
     assertThat(result.getDeclaredParameters()).isEmpty();
   }
 
+  // ---------------------------------------------------------------------------
+  // SQL content rejections.
+  // ---------------------------------------------------------------------------
+
   @Test
   void rejectsLibraryWithNoSqlContent() {
     final Library library = new Library();
     library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(sqlQueryTypeCoding());
 
     assertThatThrownBy(() -> parser.parse(library))
         .isInstanceOf(InvalidRequestException.class)
@@ -111,6 +117,7 @@ class SqlQueryLibraryParserTest {
   void rejectsLibraryWithWrongContentType() {
     final Library library = new Library();
     library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(sqlQueryTypeCoding());
     library
         .addContent()
         .setContentType("text/plain")
@@ -125,12 +132,80 @@ class SqlQueryLibraryParserTest {
   void rejectsLibraryWithEmptySqlData() {
     final Library library = new Library();
     library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(sqlQueryTypeCoding());
     library.addContent().setContentType("application/sql").setData(new byte[0]);
 
     assertThatThrownBy(() -> parser.parse(library))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("no data");
   }
+
+  // ---------------------------------------------------------------------------
+  // Library.type profile invariant.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void rejectsLibraryWithoutTypeCoding() {
+    final Library library = new Library();
+    library.setStatus(PublicationStatus.ACTIVE);
+    library
+        .addContent()
+        .setContentType("application/sql")
+        .setData("SELECT 1".getBytes(StandardCharsets.UTF_8));
+
+    assertThatThrownBy(() -> parser.parse(library))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("Library.type")
+        .hasMessageContaining("sql-query");
+  }
+
+  @Test
+  void rejectsLibraryWithUnrelatedTypeCoding() {
+    final Library library = new Library();
+    library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(
+        new CodeableConcept()
+            .addCoding(
+                new org.hl7.fhir.r4.model.Coding()
+                    .setSystem("http://terminology.hl7.org/CodeSystem/library-type")
+                    .setCode("logic-library")));
+    library
+        .addContent()
+        .setContentType("application/sql")
+        .setData("SELECT 1".getBytes(StandardCharsets.UTF_8));
+
+    assertThatThrownBy(() -> parser.parse(library))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining(LIBRARY_TYPE_SYSTEM)
+        .hasMessageContaining("sql-query");
+  }
+
+  @Test
+  void acceptsLibraryWithAdditionalTypeCodings() {
+    final Library library = new Library();
+    library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(
+        new CodeableConcept()
+            .addCoding(
+                new org.hl7.fhir.r4.model.Coding()
+                    .setSystem("http://example.org/extra")
+                    .setCode("anything"))
+            .addCoding(
+                new org.hl7.fhir.r4.model.Coding()
+                    .setSystem(LIBRARY_TYPE_SYSTEM)
+                    .setCode("sql-query")));
+    library
+        .addContent()
+        .setContentType("application/sql")
+        .setData("SELECT 1".getBytes(StandardCharsets.UTF_8));
+
+    final ParsedSqlQuery result = parser.parse(library);
+    assertThat(result.getSql()).isEqualTo("SELECT 1");
+  }
+
+  // ---------------------------------------------------------------------------
+  // relatedArtifact profile invariants.
+  // ---------------------------------------------------------------------------
 
   @Test
   void rejectsRelatedArtifactWithMissingLabel() {
@@ -157,12 +232,81 @@ class SqlQueryLibraryParserTest {
   }
 
   @Test
+  void rejectsRelatedArtifactWithNonDependsOnType() {
+    final Library library = createMinimalLibrary("SELECT 1");
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.CITATION)
+            .setLabel("patients")
+            .setResource("ViewDefinition/patient-view"));
+
+    assertThatThrownBy(() -> parser.parse(library))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("depends-on");
+  }
+
+  @Test
+  void rejectsRelatedArtifactWithMissingType() {
+    final Library library = createMinimalLibrary("SELECT 1");
+    library.addRelatedArtifact(
+        new RelatedArtifact().setLabel("patients").setResource("ViewDefinition/patient-view"));
+
+    assertThatThrownBy(() -> parser.parse(library))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("depends-on");
+  }
+
+  @Test
+  void rejectsRelatedArtifactLabelStartingWithDigit() {
+    final Library library = createMinimalLibrary("SELECT 1");
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("1patients")
+            .setResource("ViewDefinition/patient-view"));
+
+    assertThatThrownBy(() -> parser.parse(library))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("1patients")
+        .hasMessageContaining("pattern");
+  }
+
+  @Test
+  void rejectsRelatedArtifactLabelWithIllegalCharacters() {
+    final Library library = createMinimalLibrary("SELECT 1");
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("patients; DROP TABLE x")
+            .setResource("ViewDefinition/patient-view"));
+
+    assertThatThrownBy(() -> parser.parse(library))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("pattern");
+  }
+
+  @Test
+  void acceptsRelatedArtifactLabelWithUnderscoresAndDigits() {
+    final Library library = createMinimalLibrary("SELECT 1");
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("patients_2024")
+            .setResource("ViewDefinition/patient-view"));
+
+    final ParsedSqlQuery result = parser.parse(library);
+    assertThat(result.getViewReferences()).hasSize(1);
+    assertThat(result.getViewReferences().get(0).getLabel()).isEqualTo("patients_2024");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parameter profile invariants.
+  // ---------------------------------------------------------------------------
+
+  @Test
   void rejectsParameterWithMissingName() {
     final Library library = createMinimalLibrary("SELECT 1");
-    library
-        .addParameter()
-        .setType("string")
-        .setUse(org.hl7.fhir.r4.model.ParameterDefinition.ParameterUse.IN);
+    library.addParameter().setType("string").setUse(ParameterUse.IN);
 
     assertThatThrownBy(() -> parser.parse(library))
         .isInstanceOf(InvalidRequestException.class)
@@ -172,10 +316,7 @@ class SqlQueryLibraryParserTest {
   @Test
   void rejectsParameterWithMissingType() {
     final Library library = createMinimalLibrary("SELECT 1");
-    library
-        .addParameter()
-        .setName("param1")
-        .setUse(org.hl7.fhir.r4.model.ParameterDefinition.ParameterUse.IN);
+    library.addParameter().setName("param1").setUse(ParameterUse.IN);
 
     assertThatThrownBy(() -> parser.parse(library))
         .isInstanceOf(InvalidRequestException.class)
@@ -183,9 +324,35 @@ class SqlQueryLibraryParserTest {
   }
 
   @Test
+  void rejectsParameterWithOutUse() {
+    final Library library = createMinimalLibrary("SELECT 1");
+    library.addParameter().setName("param1").setType("string").setUse(ParameterUse.OUT);
+
+    assertThatThrownBy(() -> parser.parse(library))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("param1")
+        .hasMessageContaining("use = in");
+  }
+
+  @Test
+  void rejectsParameterWithMissingUse() {
+    final Library library = createMinimalLibrary("SELECT 1");
+    library.addParameter().setName("param1").setType("string");
+
+    assertThatThrownBy(() -> parser.parse(library))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("use = in");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Content type negotiation.
+  // ---------------------------------------------------------------------------
+
+  @Test
   void acceptsSqlContentTypeWithDialect() {
     final Library library = new Library();
     library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(sqlQueryTypeCoding());
     library
         .addContent()
         .setContentType("application/sql;dialect=spark")
@@ -199,10 +366,18 @@ class SqlQueryLibraryParserTest {
   private Library createMinimalLibrary(final String sql) {
     final Library library = new Library();
     library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(sqlQueryTypeCoding());
     library
         .addContent()
         .setContentType("application/sql")
         .setData(sql.getBytes(StandardCharsets.UTF_8));
     return library;
+  }
+
+  /** Returns the SQLQuery profile's required Library.type coding. */
+  private static CodeableConcept sqlQueryTypeCoding() {
+    return new CodeableConcept()
+        .addCoding(
+            new org.hl7.fhir.r4.model.Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode("sql-query"));
   }
 }

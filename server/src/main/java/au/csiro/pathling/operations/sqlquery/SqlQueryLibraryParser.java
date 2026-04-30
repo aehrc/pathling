@@ -22,24 +22,32 @@ import jakarta.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.hl7.fhir.r4.model.Attachment;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.ParameterDefinition;
+import org.hl7.fhir.r4.model.ParameterDefinition.ParameterUse;
 import org.hl7.fhir.r4.model.RelatedArtifact;
+import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
 import org.springframework.stereotype.Component;
 
 /**
  * Parses a FHIR R4 Library resource conforming to the SQLQuery profile. Extracts the SQL text,
- * ViewDefinition dependencies, and parameter declarations.
+ * ViewDefinition dependencies, and parameter declarations, and enforces the profile invariants.
  *
  * <p>The SQLQuery profile requires:
  *
  * <ul>
+ *   <li>{@code Library.type} carrying a coding of {@code sql-query} from the SQL on FHIR library
+ *       types code system.
  *   <li>A {@code content} entry with content type starting with {@code application/sql} containing
  *       Base64-encoded SQL text.
- *   <li>Zero or more {@code relatedArtifact} entries, each with a {@code label} (table alias) and
- *       {@code resource} (canonical URL of the ViewDefinition).
- *   <li>Zero or more {@code parameter} entries declaring typed input parameters.
+ *   <li>Each {@code relatedArtifact} of type {@code depends-on}, with a label matching {@code
+ *       ^[A-Za-z][A-Za-z0-9_]*$} and a {@code resource} canonical URL pointing at the referenced
+ *       ViewDefinition.
+ *   <li>Each {@code parameter} declared with {@code use = in} and a name and type.
  * </ul>
  *
  * @see <a
@@ -50,6 +58,13 @@ public class SqlQueryLibraryParser {
 
   private static final String SQL_CONTENT_TYPE_PREFIX = "application/sql";
 
+  private static final String LIBRARY_TYPE_SYSTEM =
+      "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes";
+
+  private static final String LIBRARY_TYPE_CODE = "sql-query";
+
+  private static final Pattern LABEL_PATTERN = Pattern.compile("^[A-Za-z][A-Za-z0-9_]*$");
+
   /**
    * Parses a Library resource into a {@link ParsedSqlQuery}.
    *
@@ -59,10 +74,39 @@ public class SqlQueryLibraryParser {
    */
   @Nonnull
   public ParsedSqlQuery parse(@Nonnull final Library library) {
+    validateLibraryType(library);
     final String sql = extractSql(library);
     final List<ViewArtifactReference> viewReferences = extractViewReferences(library);
     final List<SqlParameterDeclaration> parameters = extractParameters(library);
     return new ParsedSqlQuery(sql, viewReferences, parameters);
+  }
+
+  /**
+   * Verifies that the Library carries the SQLQuery profile's type coding. The check accepts any
+   * coding with the expected system and code, regardless of additional codings, so that authors can
+   * layer their own classifications without breaking conformance.
+   */
+  private void validateLibraryType(@Nonnull final Library library) {
+    final CodeableConcept type = library.getType();
+    if (type == null || type.isEmpty()) {
+      throw new InvalidRequestException(
+          "SQLQuery Library must declare Library.type with the SQLQuery coding ("
+              + LIBRARY_TYPE_SYSTEM
+              + "#"
+              + LIBRARY_TYPE_CODE
+              + ")");
+    }
+    for (final Coding coding : type.getCoding()) {
+      if (LIBRARY_TYPE_SYSTEM.equals(coding.getSystem())
+          && LIBRARY_TYPE_CODE.equals(coding.getCode())) {
+        return;
+      }
+    }
+    throw new InvalidRequestException(
+        "SQLQuery Library.type must include a coding with system "
+            + LIBRARY_TYPE_SYSTEM
+            + " and code "
+            + LIBRARY_TYPE_CODE);
   }
 
   /**
@@ -92,7 +136,8 @@ public class SqlQueryLibraryParser {
   }
 
   /**
-   * Extracts ViewDefinition references from the Library's related artifacts.
+   * Extracts ViewDefinition references from the Library's related artifacts, enforcing that each
+   * artifact is of type {@code depends-on} with a label matching the SQLQuery profile pattern.
    *
    * @param library the Library resource
    * @return the list of view artifact references
@@ -101,11 +146,24 @@ public class SqlQueryLibraryParser {
   private List<ViewArtifactReference> extractViewReferences(@Nonnull final Library library) {
     final List<ViewArtifactReference> references = new ArrayList<>();
     for (final RelatedArtifact artifact : library.getRelatedArtifact()) {
+      if (artifact.getType() != RelatedArtifactType.DEPENDSON) {
+        throw new InvalidRequestException(
+            "SQLQuery Library relatedArtifact must have type 'depends-on', but found '"
+                + (artifact.getType() == null ? "null" : artifact.getType().toCode())
+                + "'");
+      }
       final String label = artifact.getLabel();
       final String resource = artifact.getResource();
       if (label == null || label.isBlank()) {
         throw new InvalidRequestException(
             "Each relatedArtifact in the SQLQuery Library must have a label");
+      }
+      if (!LABEL_PATTERN.matcher(label).matches()) {
+        throw new InvalidRequestException(
+            "SQLQuery Library relatedArtifact label '"
+                + label
+                + "' does not match the required pattern "
+                + LABEL_PATTERN.pattern());
       }
       if (resource == null || resource.isBlank()) {
         throw new InvalidRequestException(
@@ -117,7 +175,8 @@ public class SqlQueryLibraryParser {
   }
 
   /**
-   * Extracts parameter declarations from the Library's parameter entries.
+   * Extracts parameter declarations from the Library's parameter entries, enforcing that each
+   * declaration is an input ({@code use = in}) and carries both a name and a type.
    *
    * @param library the Library resource
    * @return the list of parameter declarations
@@ -135,6 +194,14 @@ public class SqlQueryLibraryParser {
       if (type == null || type.isBlank()) {
         throw new InvalidRequestException(
             "Each parameter in the SQLQuery Library must have a type");
+      }
+      if (param.getUse() != ParameterUse.IN) {
+        throw new InvalidRequestException(
+            "SQLQuery Library parameter '"
+                + name
+                + "' must declare use = in, but found '"
+                + (param.getUse() == null ? "null" : param.getUse().toCode())
+                + "'");
       }
       parameters.add(new SqlParameterDeclaration(name, type));
     }

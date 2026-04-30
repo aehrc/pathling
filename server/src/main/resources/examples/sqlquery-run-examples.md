@@ -230,7 +230,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
-        \"type\": {\"coding\": [{\"code\": \"logic-library\"}]},
+        \"type\": {\"coding\": [{\"system\": \"https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes\", \"code\": \"sql-query\"}]},
         \"content\": [{
           \"contentType\": \"application/sql\",
           \"data\": \"${SQL_B64}\"
@@ -280,7 +280,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
-        \"type\": {\"coding\": [{\"code\": \"logic-library\"}]},
+        \"type\": {\"coding\": [{\"system\": \"https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes\", \"code\": \"sql-query\"}]},
         \"content\": [{
           \"contentType\": \"application/sql\",
           \"data\": \"${SQL_B64}\"
@@ -328,7 +328,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
-        \"type\": {\"coding\": [{\"code\": \"logic-library\"}]},
+        \"type\": {\"coding\": [{\"system\": \"https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes\", \"code\": \"sql-query\"}]},
         \"content\": [{
           \"contentType\": \"application/sql\",
           \"data\": \"${SQL_B64}\"
@@ -386,7 +386,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
-        \"type\": {\"coding\": [{\"code\": \"logic-library\"}]},
+        \"type\": {\"coding\": [{\"system\": \"https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes\", \"code\": \"sql-query\"}]},
         \"content\": [{
           \"contentType\": \"application/sql\",
           \"data\": \"${SQL_B64}\"
@@ -416,7 +416,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run" \
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
-        \"type\": {\"coding\": [{\"code\": \"logic-library\"}]},
+        \"type\": {\"coding\": [{\"system\": \"https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes\", \"code\": \"sql-query\"}]},
         \"content\": [{
           \"contentType\": \"application/sql\",
           \"data\": \"${SQL_B64}\"
@@ -444,7 +444,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=json" \
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
-        \"type\": {\"coding\": [{\"code\": \"logic-library\"}]},
+        \"type\": {\"coding\": [{\"system\": \"https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes\", \"code\": \"sql-query\"}]},
         \"content\": [{
           \"contentType\": \"application/sql\",
           \"data\": \"${SQL_B64}\"
@@ -472,7 +472,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run" \
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
-        \"type\": {\"coding\": [{\"code\": \"logic-library\"}]},
+        \"type\": {\"coding\": [{\"system\": \"https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes\", \"code\": \"sql-query\"}]},
         \"content\": [{
           \"contentType\": \"application/sql\",
           \"data\": \"${SQL_B64}\"
