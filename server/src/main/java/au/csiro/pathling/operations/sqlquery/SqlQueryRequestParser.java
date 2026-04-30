@@ -183,6 +183,10 @@ public class SqlQueryRequestParser {
       if (value == null) {
         throw new InvalidRequestException("Runtime parameter '" + name + "' has no value[x]");
       }
+      if (bindings.containsKey(name)) {
+        throw new InvalidRequestException(
+            "Runtime parameter '" + name + "' is supplied more than once");
+      }
       bindings.put(name, convertTypedValue(name, declaredType, value));
     }
     return bindings;

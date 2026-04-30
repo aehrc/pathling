@@ -259,7 +259,7 @@ ORDER BY p.family_name, c.onset_date
 
 ```bash
 SQL="SELECT p.given_name, p.family_name, p.gender, p.birth_date, c.condition_name, c.onset_date FROM patients p JOIN conditions c ON concat('Patient/', p.patient_id) = c.patient_ref ORDER BY p.family_name, c.onset_date"
-SQL_B64=$(echo -n "$SQL" | base64)
+SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
 curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
   -H "Content-Type: application/fhir+json" \
@@ -309,7 +309,7 @@ ORDER BY patient_count DESC
 
 ```bash
 SQL="SELECT c.condition_name, count(*) AS patient_count FROM conditions c GROUP BY c.condition_name ORDER BY patient_count DESC"
-SQL_B64=$(echo -n "$SQL" | base64)
+SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
 curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
   -H "Content-Type: application/fhir+json" \
@@ -357,7 +357,7 @@ ORDER BY condition_count DESC
 
 ```bash
 SQL="SELECT p.given_name, p.family_name, count(*) AS condition_count FROM patients p JOIN conditions c ON concat('Patient/', p.patient_id) = c.patient_ref GROUP BY p.given_name, p.family_name ORDER BY condition_count DESC"
-SQL_B64=$(echo -n "$SQL" | base64)
+SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
 curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
   -H "Content-Type: application/fhir+json" \
@@ -415,7 +415,7 @@ ORDER BY age_group, c.condition_name
 
 ```bash
 SQL="SELECT CASE WHEN floor(datediff(current_date(), p.birth_date) / 365.25) < 30 THEN '0-29' WHEN floor(datediff(current_date(), p.birth_date) / 365.25) < 50 THEN '30-49' WHEN floor(datediff(current_date(), p.birth_date) / 365.25) < 70 THEN '50-69' ELSE '70+' END AS age_group, c.condition_name, count(DISTINCT p.patient_id) AS patient_count FROM patients p JOIN conditions c ON concat('Patient/', p.patient_id) = c.patient_ref GROUP BY age_group, c.condition_name ORDER BY age_group, c.condition_name"
-SQL_B64=$(echo -n "$SQL" | base64)
+SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
 curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
   -H "Content-Type: application/fhir+json" \
@@ -444,7 +444,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
 
 ```bash
 SQL="SELECT patient_id, given_name, family_name FROM patients LIMIT 3"
-SQL_B64=$(echo -n "$SQL" | base64)
+SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
 curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run" \
   -H "Content-Type: application/fhir+json" \
@@ -473,7 +473,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run" \
 
 ```bash
 SQL="SELECT condition_name, onset_date FROM conditions ORDER BY onset_date"
-SQL_B64=$(echo -n "$SQL" | base64)
+SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
 curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=json" \
   -H "Content-Type: application/fhir+json" \
@@ -501,7 +501,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=json" \
 
 ```bash
 SQL="DROP TABLE conditions"
-SQL_B64=$(echo -n "$SQL" | base64)
+SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
 curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run" \
   -H "Content-Type: application/fhir+json" \

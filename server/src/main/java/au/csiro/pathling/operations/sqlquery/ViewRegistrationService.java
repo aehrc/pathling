@@ -193,8 +193,18 @@ public class ViewRegistrationService {
     return VIEW_NAME_PREFIX + sanitiseRequestId(requestId) + "_" + label;
   }
 
+  /**
+   * Strips characters that aren't valid in a Spark identifier. Falls back to a hash of the original
+   * input when the result would otherwise be empty (e.g. a request id consisting only of dashes,
+   * which would collide with another all-special-chars id and reintroduce the temp-view clobbering
+   * this namespacing exists to prevent).
+   */
   @Nonnull
   private static String sanitiseRequestId(@Nonnull final String requestId) {
-    return UNSAFE_REQUEST_ID_CHARS.matcher(requestId).replaceAll("");
+    final String sanitised = UNSAFE_REQUEST_ID_CHARS.matcher(requestId).replaceAll("");
+    if (!sanitised.isEmpty()) {
+      return sanitised;
+    }
+    return "r" + Integer.toUnsignedString(requestId.hashCode(), 16);
   }
 }

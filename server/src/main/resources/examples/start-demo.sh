@@ -136,7 +136,7 @@ mvn -q spring-boot:run \
   -Dspring-boot.run.jvmArguments="--add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED -XX:ReservedCodeCacheSize=256m" \
   &
 SERVER_PID=$!
-trap 'echo "Stopping server (PID $SERVER_PID)..."; kill $SERVER_PID 2>/dev/null; wait $SERVER_PID 2>/dev/null; rm -rf "$DATA_DIR"' EXIT
+trap 'echo "Stopping server (PID $SERVER_PID)..."; kill $SERVER_PID 2>/dev/null; wait $SERVER_PID 2>/dev/null; rm -rf "$DATA_DIR" "$(dirname "$WAREHOUSE_DIR")"' EXIT
 
 wait_for_server
 

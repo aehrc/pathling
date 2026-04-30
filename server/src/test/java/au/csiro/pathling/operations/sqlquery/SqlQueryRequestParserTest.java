@@ -260,6 +260,20 @@ class SqlQueryRequestParserTest {
         .hasMessageContaining("name");
   }
 
+  @Test
+  void rejectsRuntimeParameterSuppliedMoreThanOnce() {
+    final Library library = libraryWithSql("SELECT * FROM t WHERE age > :min_age");
+    library.addParameter().setName("min_age").setType("integer").setUse(ParameterUse.IN);
+    final Parameters params = new Parameters();
+    params.addParameter().setName("min_age").setValue(new IntegerType(18));
+    params.addParameter().setName("min_age").setValue(new IntegerType(21));
+
+    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, params))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("min_age")
+        .hasMessageContaining("more than once");
+  }
+
   /** Builds a minimal SQLQuery-typed Library carrying the given SQL. */
   private static Library libraryWithSql(final String sql) {
     final Library library = new Library();

@@ -67,7 +67,9 @@ public class SqlQueryResultStreamer {
       @Nonnull final HttpServletResponse response) {
 
     response.setContentType(outputFormat.getContentType());
-    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    if (outputFormat != SqlQueryOutputFormat.PARQUET) {
+      response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    }
     response.setStatus(HttpServletResponse.SC_OK);
 
     try {

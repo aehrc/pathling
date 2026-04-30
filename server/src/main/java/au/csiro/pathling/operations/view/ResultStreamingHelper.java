@@ -237,18 +237,20 @@ public class ResultStreamingHelper {
 
     rejectUnsupportedColumnTypes(schema);
 
+    // Don't try-with-resources the JsonWriter: closing it cascades through the wrapped writer
+    // and closes the servlet response output stream, which the container still needs.
     final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
-    try (final JsonWriter json = new JsonWriter(writer)) {
-      json.beginObject();
-      json.name("resourceType").value("Parameters");
-      json.name("parameter").beginArray();
-      while (iterator.hasNext()) {
-        final Row row = iterator.next();
-        writeFhirRow(json, row, schema);
-      }
-      json.endArray();
-      json.endObject();
+    final JsonWriter json = new JsonWriter(writer);
+    json.beginObject();
+    json.name("resourceType").value("Parameters");
+    json.name("parameter").beginArray();
+    while (iterator.hasNext()) {
+      final Row row = iterator.next();
+      writeFhirRow(json, row, schema);
     }
+    json.endArray();
+    json.endObject();
+    json.flush();
     outputStream.flush();
   }
 

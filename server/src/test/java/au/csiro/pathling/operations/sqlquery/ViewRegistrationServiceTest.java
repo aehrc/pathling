@@ -98,6 +98,18 @@ class ViewRegistrationServiceTest {
     assertThat(a).isNotEqualTo(b);
   }
 
+  @Test
+  void resolveTempViewNameFallsBackToHashWhenSanitisedRequestIdIsEmpty() {
+    // A request id consisting only of unsafe characters would otherwise sanitise to an empty
+    // string and produce the same prefix for every such request (sqlquery__patients), defeating
+    // the namespacing fix.
+    final String dashes = ViewRegistrationService.resolveTempViewName("---", "patients");
+    final String slashes = ViewRegistrationService.resolveTempViewName("///", "patients");
+    assertThat(dashes).startsWith("sqlquery_r").endsWith("_patients");
+    assertThat(slashes).startsWith("sqlquery_r").endsWith("_patients");
+    assertThat(dashes).isNotEqualTo(slashes);
+  }
+
   // ---------------------------------------------------------------------------
   // SQL rewriting.
   // ---------------------------------------------------------------------------
