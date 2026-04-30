@@ -17,14 +17,21 @@
 
 package au.csiro.pathling.operations.view;
 
+import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import com.google.gson.Gson;
+import com.google.gson.stream.JsonWriter;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,8 +40,23 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.BinaryType;
+import org.apache.spark.sql.types.BooleanType;
+import org.apache.spark.sql.types.ByteType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DateType;
+import org.apache.spark.sql.types.DecimalType;
+import org.apache.spark.sql.types.DoubleType;
+import org.apache.spark.sql.types.FloatType;
+import org.apache.spark.sql.types.IntegerType;
+import org.apache.spark.sql.types.LongType;
+import org.apache.spark.sql.types.MapType;
+import org.apache.spark.sql.types.ShortType;
+import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.types.TimestampNTZType;
+import org.apache.spark.sql.types.TimestampType;
 import scala.jdk.javaapi.CollectionConverters;
 
 /**
@@ -191,6 +213,162 @@ public class ResultStreamingHelper {
       return list;
     }
     return value;
+  }
+
+  /**
+   * Streams results as a FHIR {@code Parameters} resource in JSON, with one repeating {@code row}
+   * parameter per result row. Each column is rendered as a part with a typed {@code value[x]}
+   * matched to the Spark column type. NULL values are represented by omitting the part.
+   *
+   * <p>The output is written row-by-row so memory stays bounded regardless of result size.
+   *
+   * @param outputStream the output stream to write to
+   * @param iterator the row iterator
+   * @param schema the result schema
+   * @throws IOException if writing fails
+   * @throws UnprocessableEntityException if any column has a Spark type that cannot be mapped to a
+   *     FHIR primitive
+   */
+  public void streamFhirJson(
+      @Nonnull final OutputStream outputStream,
+      @Nonnull final Iterator<Row> iterator,
+      @Nonnull final StructType schema)
+      throws IOException {
+
+    rejectUnsupportedColumnTypes(schema);
+
+    final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
+    try (final JsonWriter json = new JsonWriter(writer)) {
+      json.beginObject();
+      json.name("resourceType").value("Parameters");
+      json.name("parameter").beginArray();
+      while (iterator.hasNext()) {
+        final Row row = iterator.next();
+        writeFhirRow(json, row, schema);
+      }
+      json.endArray();
+      json.endObject();
+    }
+    outputStream.flush();
+  }
+
+  /** Walks the result schema once and rejects any column whose type cannot be FHIR-encoded. */
+  private void rejectUnsupportedColumnTypes(@Nonnull final StructType schema) {
+    for (final StructField field : schema.fields()) {
+      final DataType dt = field.dataType();
+      if (dt instanceof ArrayType || dt instanceof MapType || dt instanceof StructType) {
+        throw new UnprocessableEntityException(
+            "Column '"
+                + field.name()
+                + "' of type "
+                + dt.simpleString()
+                + " cannot be expressed as a FHIR primitive; use a different _format");
+      }
+    }
+  }
+
+  private void writeFhirRow(
+      @Nonnull final JsonWriter json, @Nonnull final Row row, @Nonnull final StructType schema)
+      throws IOException {
+    json.beginObject();
+    json.name("name").value("row");
+    json.name("part").beginArray();
+    final StructField[] fields = schema.fields();
+    for (int i = 0; i < fields.length; i++) {
+      final Object value = row.get(i);
+      if (value == null) {
+        // Per spec, SQL NULL is represented by omitting the part.
+        continue;
+      }
+      writeFhirPart(json, fields[i], value);
+    }
+    json.endArray();
+    json.endObject();
+  }
+
+  private void writeFhirPart(
+      @Nonnull final JsonWriter json, @Nonnull final StructField field, @Nonnull final Object value)
+      throws IOException {
+    json.beginObject();
+    json.name("name").value(field.name());
+
+    final DataType dt = field.dataType();
+    if (dt instanceof BooleanType) {
+      json.name("valueBoolean").value((Boolean) value);
+    } else if (dt instanceof IntegerType || dt instanceof ShortType || dt instanceof ByteType) {
+      json.name("valueInteger").value(((Number) value).intValue());
+    } else if (dt instanceof LongType
+        || dt instanceof DecimalType
+        || dt instanceof DoubleType
+        || dt instanceof FloatType) {
+      json.name("valueDecimal").value(toBigDecimal((Number) value));
+    } else if (dt instanceof StringType) {
+      json.name("valueString").value(value.toString());
+    } else if (dt instanceof DateType) {
+      json.name("valueDate").value(formatDate(value));
+    } else if (dt instanceof TimestampType) {
+      json.name("valueInstant").value(formatInstant(value));
+    } else if (dt instanceof TimestampNTZType) {
+      json.name("valueDateTime").value(formatLocalDateTime(value));
+    } else if (dt instanceof BinaryType) {
+      json.name("valueBase64Binary").value(Base64.getEncoder().encodeToString((byte[]) value));
+    } else {
+      throw new UnprocessableEntityException(
+          "Column '"
+              + field.name()
+              + "' of type "
+              + dt.simpleString()
+              + " cannot be expressed as a FHIR primitive");
+    }
+
+    json.endObject();
+  }
+
+  @Nonnull
+  private BigDecimal toBigDecimal(@Nonnull final Number value) {
+    if (value instanceof final BigDecimal bd) {
+      return bd;
+    }
+    if (value instanceof final java.math.BigInteger bi) {
+      return new BigDecimal(bi);
+    }
+    if (value instanceof final Double d) {
+      return BigDecimal.valueOf(d);
+    }
+    if (value instanceof final Float f) {
+      return BigDecimal.valueOf(f.doubleValue());
+    }
+    return BigDecimal.valueOf(value.longValue());
+  }
+
+  @Nonnull
+  private String formatDate(@Nonnull final Object value) {
+    if (value instanceof final LocalDate ld) {
+      return ld.toString();
+    }
+    if (value instanceof final java.sql.Date sqlDate) {
+      return sqlDate.toLocalDate().toString();
+    }
+    return value.toString();
+  }
+
+  @Nonnull
+  private String formatInstant(@Nonnull final Object value) {
+    if (value instanceof final Instant instant) {
+      return instant.toString();
+    }
+    if (value instanceof final java.sql.Timestamp ts) {
+      return ts.toInstant().toString();
+    }
+    return value.toString();
+  }
+
+  @Nonnull
+  private String formatLocalDateTime(@Nonnull final Object value) {
+    if (value instanceof final LocalDateTime ldt) {
+      return ldt.toString();
+    }
+    return value.toString();
   }
 
   /** Converts a Spark Row to a list of values for CSV output. */

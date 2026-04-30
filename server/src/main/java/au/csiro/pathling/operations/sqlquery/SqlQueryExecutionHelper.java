@@ -23,12 +23,12 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.List;
 import java.util.Map;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IntegerType;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Reference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -49,6 +49,8 @@ public class SqlQueryExecutionHelper {
 
   @Nonnull private final QueryableDataSource deltaLake;
 
+  @Nonnull private final LibraryReferenceResolver libraryReferenceResolver;
+
   /**
    * Constructs a new SqlQueryExecutionHelper.
    *
@@ -57,41 +59,48 @@ public class SqlQueryExecutionHelper {
    * @param executor validates and runs the SQL against Spark
    * @param streamer streams the result dataset in the requested format
    * @param deltaLake the queryable data source backing FhirView execution
+   * @param libraryReferenceResolver resolves a queryReference to a stored Library
    */
+  @SuppressWarnings("java:S107")
   @Autowired
   public SqlQueryExecutionHelper(
       @Nonnull final SqlQueryRequestParser requestParser,
       @Nonnull final ViewResolver viewResolver,
       @Nonnull final SqlQueryExecutor executor,
       @Nonnull final SqlQueryResultStreamer streamer,
-      @Nonnull final QueryableDataSource deltaLake) {
+      @Nonnull final QueryableDataSource deltaLake,
+      @Nonnull final LibraryReferenceResolver libraryReferenceResolver) {
     this.requestParser = requestParser;
     this.viewResolver = viewResolver;
     this.executor = executor;
     this.streamer = streamer;
     this.deltaLake = deltaLake;
+    this.libraryReferenceResolver = libraryReferenceResolver;
   }
 
   /**
-   * Executes a SQL query from a Library resource and streams results to the HTTP response.
+   * Executes a {@code $sqlquery-run} request and streams results to the HTTP response. Exactly one
+   * of {@code queryResource} and {@code queryReference} must be provided.
    *
-   * @param libraryResource the Library resource containing the SQLQuery
+   * @param queryResource the inline SQLQuery Library resource, if supplied
+   * @param queryReference reference to a stored SQLQuery Library, if supplied
    * @param format the output format, overrides Accept header if provided
    * @param acceptHeader the HTTP Accept header value, used as fallback if format is not provided
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
-   * @param parameterValues runtime parameter values to bind to the SQL query
+   * @param parameters runtime parameter bindings as a Parameters resource
    * @param requestId the HAPI per-request id used to namespace registered temp views
    * @param response the HTTP response for streaming output
    */
   @SuppressWarnings("java:S107")
   public void executeSqlQuery(
-      @Nonnull final IBaseResource libraryResource,
+      @Nullable final IBaseResource queryResource,
+      @Nullable final Reference queryReference,
       @Nullable final String format,
       @Nullable final String acceptHeader,
       @Nullable final BooleanType includeHeader,
       @Nullable final IntegerType limit,
-      @Nullable final List<ParametersParameterComponent> parameterValues,
+      @Nullable final Parameters parameters,
       @Nonnull final String requestId,
       @Nullable final HttpServletResponse response) {
 
@@ -99,9 +108,10 @@ public class SqlQueryExecutionHelper {
       throw new InvalidRequestException("HTTP response is required for this operation");
     }
 
+    final IBaseResource library = selectLibrary(queryResource, queryReference);
+
     final SqlQueryRequest request =
-        requestParser.parse(
-            libraryResource, format, acceptHeader, includeHeader, limit, parameterValues);
+        requestParser.parse(library, format, acceptHeader, includeHeader, limit, parameters);
 
     final Map<String, FhirView> resolvedViews =
         viewResolver.resolve(request.getParsedQuery().getViewReferences());
@@ -114,5 +124,30 @@ public class SqlQueryExecutionHelper {
         result ->
             streamer.stream(
                 result, request.getOutputFormat(), request.isIncludeHeader(), response));
+  }
+
+  /**
+   * Enforces the OperationDefinition's "exactly one of queryResource / queryReference" contract and
+   * returns the resolved Library resource. Returns 400 if neither or both are provided; bubbles up
+   * the resolver's 404 if a queryReference doesn't match a stored Library.
+   */
+  @Nonnull
+  private IBaseResource selectLibrary(
+      @Nullable final IBaseResource queryResource, @Nullable final Reference queryReference) {
+    final boolean hasResource = queryResource != null;
+    final boolean hasReference = queryReference != null && !queryReference.isEmpty();
+
+    if (hasResource && hasReference) {
+      throw new InvalidRequestException(
+          "Exactly one of 'queryResource' and 'queryReference' must be provided, not both");
+    }
+    if (!hasResource && !hasReference) {
+      throw new InvalidRequestException(
+          "One of 'queryResource' or 'queryReference' must be provided");
+    }
+    if (hasResource) {
+      return queryResource;
+    }
+    return libraryReferenceResolver.resolve(queryReference);
   }
 }

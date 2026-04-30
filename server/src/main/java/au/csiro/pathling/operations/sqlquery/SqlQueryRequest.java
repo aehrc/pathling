@@ -19,9 +19,8 @@ package au.csiro.pathling.operations.sqlquery;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.List;
+import java.util.Map;
 import lombok.Value;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 
 /**
  * The validated, normalised inputs to a single {@code $sqlquery-run} invocation. Produced by {@link
@@ -43,6 +42,10 @@ public class SqlQueryRequest {
   /** Optional row cap; {@code null} means no cap. */
   @Nullable Integer limit;
 
-  /** Raw runtime parameter bindings as supplied on the wire. */
-  @Nonnull List<ParametersParameterComponent> parameterValues;
+  /**
+   * Runtime parameter bindings, typed against the declarations in {@code Library.parameter}. Keys
+   * are the parameter names; values are typed Java objects ready to hand to Spark's parameterised
+   * SQL API.
+   */
+  @Nonnull Map<String, Object> parameterBindings;
 }

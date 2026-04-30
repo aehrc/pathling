@@ -39,16 +39,26 @@ import scala.jdk.javaapi.CollectionConverters;
  * prevents SQL injection attacks and ensures that users cannot execute DDL, DML, or other dangerous
  * operations through the {@code $sqlquery-run} endpoint.
  *
- * <p>Validation is performed on the unresolved logical plan produced by Spark's SQL parser. The
- * validator walks the entire plan tree and checks every plan node and expression against a
- * whitelist. Any node not in the whitelist causes the query to be rejected.
+ * <p>Allow-lists and reject-lists are matched on fully-qualified class names so that classes from
+ * unrelated packages (for example a third-party plugin's {@code Project}) cannot slip through.
+ *
+ * <p>Two validation entry-points are exposed:
+ *
+ * <ul>
+ *   <li>{@link #validate(String)} parses the SQL and walks the unresolved logical plan. Cheap and
+ *       suitable for early rejection before any temp views are registered.
+ *   <li>{@link #validateAnalyzed(LogicalPlan)} walks an analyzed plan. Required to catch constructs
+ *       like {@code HiveSimpleUDF} / {@code HiveGenericUDF}, which are inserted by the analyser and
+ *       so are absent from the unresolved tree.
+ * </ul>
  *
  * <p>Three validation layers are applied:
  *
  * <ol>
- *   <li><strong>Plan node whitelist</strong> — only read-only plan nodes are permitted.
- *   <li><strong>Expression whitelist</strong> — only safe expression types are permitted.
- *   <li><strong>UDF allowlist</strong> — {@code ScalaUDF} is permitted only for Pathling's
+ *   <li><strong>Plan node allow-list</strong> — only read-only plan nodes are permitted. All {@link
+ *       Command} subclasses are rejected outright.
+ *   <li><strong>Expression allow-list</strong> — only safe expression types are permitted.
+ *   <li><strong>UDF allow-list</strong> — {@link ScalaUDF} is permitted only for Pathling's
  *       registered UDFs.
  * </ol>
  *
@@ -61,75 +71,62 @@ public class SqlValidator {
 
   @Nonnull private final SparkSession sparkSession;
 
-  // Allowed plan node class names (simple names). Any plan node not in this set is rejected.
-  // All Command subclasses (DDL/DML) are additionally rejected via instanceof check.
+  // Fully-qualified plan node class names that are permitted. All Command subclasses are
+  // additionally rejected via instanceof check.
   private static final Set<String> ALLOWED_PLAN_NODES =
       Set.of(
-          // Basic operations.
-          "Project",
-          "Filter",
-          "Sort",
-          "GlobalLimit",
-          "LocalLimit",
-          "Tail",
-          "Offset",
-          "ReturnAnswer",
-          // Set operations.
-          "Union",
-          "Intersect",
-          "Except",
-          // Joins.
-          "Join",
-          "LateralJoin",
-          "AsOfJoin",
-          // Aggregation and grouping.
-          "Aggregate",
-          "Expand",
-          "Window",
-          "WithWindowDefinition",
-          // Table and relation access.
-          "UnresolvedRelation",
-          "SubqueryAlias",
-          "LocalRelation",
-          "OneRowRelation",
-          "EmptyRelation",
-          "Range",
-          "View",
-          "UnresolvedInlineTable",
-          "UnresolvedTableValuedFunction",
-          // Common table expressions.
-          "WithCTE",
-          "CTERelationDef",
-          "CTERelationRef",
-          "UnresolvedWith",
-          // Deduplication.
-          "Distinct",
-          "Deduplicate",
-          // Pivot and unpivot.
-          "Pivot",
-          "Unpivot",
-          // Generate (LATERAL VIEW / EXPLODE).
-          "Generate",
-          // Hints.
-          "ResolvedHint",
-          "UnresolvedHint",
-          // Sampling.
-          "Sample",
-          // Repartitioning (read-only).
-          "Repartition",
-          "RebalancePartitions",
-          // Transposition.
-          "Transpose",
-          // Subquery wrapper.
-          "Subquery",
-          // Unresolved plan-specific nodes.
-          "UnresolvedSubqueryColumnAliases");
+          // org.apache.spark.sql.catalyst.plans.logical
+          "org.apache.spark.sql.catalyst.plans.logical.Project",
+          "org.apache.spark.sql.catalyst.plans.logical.Filter",
+          "org.apache.spark.sql.catalyst.plans.logical.Sort",
+          "org.apache.spark.sql.catalyst.plans.logical.GlobalLimit",
+          "org.apache.spark.sql.catalyst.plans.logical.LocalLimit",
+          "org.apache.spark.sql.catalyst.plans.logical.Tail",
+          "org.apache.spark.sql.catalyst.plans.logical.Offset",
+          "org.apache.spark.sql.catalyst.plans.logical.ReturnAnswer",
+          "org.apache.spark.sql.catalyst.plans.logical.Union",
+          "org.apache.spark.sql.catalyst.plans.logical.Intersect",
+          "org.apache.spark.sql.catalyst.plans.logical.Except",
+          "org.apache.spark.sql.catalyst.plans.logical.Join",
+          "org.apache.spark.sql.catalyst.plans.logical.LateralJoin",
+          "org.apache.spark.sql.catalyst.plans.logical.AsOfJoin",
+          "org.apache.spark.sql.catalyst.plans.logical.Aggregate",
+          "org.apache.spark.sql.catalyst.plans.logical.Expand",
+          "org.apache.spark.sql.catalyst.plans.logical.Window",
+          "org.apache.spark.sql.catalyst.plans.logical.WithWindowDefinition",
+          "org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias",
+          "org.apache.spark.sql.catalyst.plans.logical.LocalRelation",
+          "org.apache.spark.sql.catalyst.plans.logical.OneRowRelation",
+          "org.apache.spark.sql.catalyst.plans.logical.EmptyRelation",
+          "org.apache.spark.sql.catalyst.plans.logical.Range",
+          "org.apache.spark.sql.catalyst.plans.logical.View",
+          "org.apache.spark.sql.catalyst.plans.logical.WithCTE",
+          "org.apache.spark.sql.catalyst.plans.logical.CTERelationDef",
+          "org.apache.spark.sql.catalyst.plans.logical.CTERelationRef",
+          "org.apache.spark.sql.catalyst.plans.logical.UnresolvedWith",
+          "org.apache.spark.sql.catalyst.plans.logical.Distinct",
+          "org.apache.spark.sql.catalyst.plans.logical.Deduplicate",
+          "org.apache.spark.sql.catalyst.plans.logical.Pivot",
+          "org.apache.spark.sql.catalyst.plans.logical.Unpivot",
+          "org.apache.spark.sql.catalyst.plans.logical.Generate",
+          "org.apache.spark.sql.catalyst.plans.logical.ResolvedHint",
+          "org.apache.spark.sql.catalyst.plans.logical.UnresolvedHint",
+          "org.apache.spark.sql.catalyst.plans.logical.Sample",
+          "org.apache.spark.sql.catalyst.plans.logical.Repartition",
+          "org.apache.spark.sql.catalyst.plans.logical.RebalancePartitions",
+          "org.apache.spark.sql.catalyst.plans.logical.Subquery",
+          // org.apache.spark.sql.catalyst.analysis
+          "org.apache.spark.sql.catalyst.analysis.UnresolvedRelation",
+          "org.apache.spark.sql.catalyst.analysis.UnresolvedInlineTable",
+          "org.apache.spark.sql.catalyst.analysis.UnresolvedTableValuedFunction",
+          "org.apache.spark.sql.catalyst.analysis.UnresolvedSubqueryColumnAliases");
 
-  // Function names that are explicitly rejected because they enable arbitrary code execution.
+  // Function names rejected outright because they enable arbitrary code execution.
   private static final Set<String> REJECTED_FUNCTION_NAMES =
       Set.of("reflect", "java_method", "try_reflect");
 
-  // Pathling-registered UDF names that are allowed in ScalaUDF expressions.
+  // Pathling-registered UDF names that are allowed in ScalaUDF expressions. Source of truth lives
+  // here; SqlValidatorIntegrityTest fails if this drifts from the actual Spark function registry.
   private static final Set<String> ALLOWED_UDF_NAMES =
       Set.of(
           // Terminology UDFs (registered by TerminologyUdfRegistrar).
@@ -157,155 +154,149 @@ public class SqlValidator {
           "low_boundary_for_time",
           "high_boundary_for_time");
 
-  // Allowed expression class names for the unresolved plan. Expressions not in this set (and not
-  // covered by special handling for UnresolvedFunction and ScalaUDF) are rejected.
+  // Fully-qualified expression class names that are permitted (besides UnresolvedFunction and
+  // ScalaUDF, which receive special handling).
   @SuppressWarnings("java:S1192")
   private static final Set<String> ALLOWED_EXPRESSION_NAMES =
       Set.of(
           // Literals and references.
-          "Literal",
-          "UnresolvedAttribute",
-          "UnresolvedStar",
-          "UnresolvedNamedLambdaVariable",
-          "NamedLambdaVariable",
-          "LambdaVariable",
-          "Alias",
-          "UnresolvedAlias",
-          "OuterReference",
-          "UnresolvedOrdinal",
-          "VariableReference",
-          "AttributeReference",
-          "BoundReference",
+          "org.apache.spark.sql.catalyst.expressions.Literal",
+          "org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute",
+          "org.apache.spark.sql.catalyst.analysis.UnresolvedStar",
+          "org.apache.spark.sql.catalyst.expressions.UnresolvedNamedLambdaVariable",
+          "org.apache.spark.sql.catalyst.expressions.NamedLambdaVariable",
+          "org.apache.spark.sql.catalyst.expressions.objects.LambdaVariable",
+          "org.apache.spark.sql.catalyst.expressions.Alias",
+          "org.apache.spark.sql.catalyst.analysis.UnresolvedAlias",
+          "org.apache.spark.sql.catalyst.expressions.OuterReference",
+          "org.apache.spark.sql.catalyst.analysis.UnresolvedOrdinal",
+          "org.apache.spark.sql.catalyst.expressions.VariableReference",
+          "org.apache.spark.sql.catalyst.expressions.AttributeReference",
+          "org.apache.spark.sql.catalyst.expressions.BoundReference",
           // Arithmetic.
-          "Add",
-          "Subtract",
-          "Multiply",
-          "Divide",
-          "IntegralDivide",
-          "Remainder",
-          "Pmod",
-          "UnaryMinus",
-          "UnaryPositive",
-          "Abs",
+          "org.apache.spark.sql.catalyst.expressions.Add",
+          "org.apache.spark.sql.catalyst.expressions.Subtract",
+          "org.apache.spark.sql.catalyst.expressions.Multiply",
+          "org.apache.spark.sql.catalyst.expressions.Divide",
+          "org.apache.spark.sql.catalyst.expressions.IntegralDivide",
+          "org.apache.spark.sql.catalyst.expressions.Remainder",
+          "org.apache.spark.sql.catalyst.expressions.Pmod",
+          "org.apache.spark.sql.catalyst.expressions.UnaryMinus",
+          "org.apache.spark.sql.catalyst.expressions.UnaryPositive",
+          "org.apache.spark.sql.catalyst.expressions.Abs",
           // Comparison.
-          "EqualTo",
-          "EqualNullSafe",
-          "LessThan",
-          "LessThanOrEqual",
-          "GreaterThan",
-          "GreaterThanOrEqual",
+          "org.apache.spark.sql.catalyst.expressions.EqualTo",
+          "org.apache.spark.sql.catalyst.expressions.EqualNullSafe",
+          "org.apache.spark.sql.catalyst.expressions.LessThan",
+          "org.apache.spark.sql.catalyst.expressions.LessThanOrEqual",
+          "org.apache.spark.sql.catalyst.expressions.GreaterThan",
+          "org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual",
           // Predicates.
-          "In",
-          "InSet",
-          "InSubquery",
-          "Between",
-          "Like",
-          "ILike",
-          "RLike",
-          "LikeAll",
-          "LikeAny",
-          "NotLikeAll",
-          "NotLikeAny",
-          "Contains",
-          "StartsWith",
-          "EndsWith",
-          "StringInstr",
-          "StringLocate",
-          "FindInSet",
+          "org.apache.spark.sql.catalyst.expressions.In",
+          "org.apache.spark.sql.catalyst.expressions.InSet",
+          "org.apache.spark.sql.catalyst.expressions.InSubquery",
+          "org.apache.spark.sql.catalyst.expressions.Between",
+          "org.apache.spark.sql.catalyst.expressions.Like",
+          "org.apache.spark.sql.catalyst.expressions.ILike",
+          "org.apache.spark.sql.catalyst.expressions.RLike",
+          "org.apache.spark.sql.catalyst.expressions.LikeAll",
+          "org.apache.spark.sql.catalyst.expressions.LikeAny",
+          "org.apache.spark.sql.catalyst.expressions.NotLikeAll",
+          "org.apache.spark.sql.catalyst.expressions.NotLikeAny",
+          "org.apache.spark.sql.catalyst.expressions.Contains",
+          "org.apache.spark.sql.catalyst.expressions.StartsWith",
+          "org.apache.spark.sql.catalyst.expressions.EndsWith",
+          "org.apache.spark.sql.catalyst.expressions.StringInstr",
+          "org.apache.spark.sql.catalyst.expressions.StringLocate",
+          "org.apache.spark.sql.catalyst.expressions.FindInSet",
           // Logical operators.
-          "And",
-          "Or",
-          "Not",
+          "org.apache.spark.sql.catalyst.expressions.And",
+          "org.apache.spark.sql.catalyst.expressions.Or",
+          "org.apache.spark.sql.catalyst.expressions.Not",
           // Null handling.
-          "IsNull",
-          "IsNotNull",
-          "Coalesce",
-          "NullIf",
-          "Nvl",
-          "Nvl2",
-          "IfNull",
-          "NaNvl",
-          "IsNaN",
+          "org.apache.spark.sql.catalyst.expressions.IsNull",
+          "org.apache.spark.sql.catalyst.expressions.IsNotNull",
+          "org.apache.spark.sql.catalyst.expressions.Coalesce",
+          "org.apache.spark.sql.catalyst.expressions.NullIf",
+          "org.apache.spark.sql.catalyst.expressions.Nvl",
+          "org.apache.spark.sql.catalyst.expressions.Nvl2",
+          "org.apache.spark.sql.catalyst.expressions.NaNvl",
+          "org.apache.spark.sql.catalyst.expressions.IsNaN",
           // Conditional.
-          "If",
-          "CaseWhen",
-          "Greatest",
-          "Least",
+          "org.apache.spark.sql.catalyst.expressions.If",
+          "org.apache.spark.sql.catalyst.expressions.CaseWhen",
+          "org.apache.spark.sql.catalyst.expressions.Greatest",
+          "org.apache.spark.sql.catalyst.expressions.Least",
           // Type casting.
-          "Cast",
-          "AnsiCast",
-          "ToBinary",
-          "TryToBinary",
-          "ToNumber",
-          "TryToNumber",
-          "ToCharacter",
+          "org.apache.spark.sql.catalyst.expressions.Cast",
+          "org.apache.spark.sql.catalyst.expressions.ToBinary",
+          "org.apache.spark.sql.catalyst.expressions.TryToBinary",
+          "org.apache.spark.sql.catalyst.expressions.ToNumber",
+          "org.apache.spark.sql.catalyst.expressions.TryToNumber",
+          "org.apache.spark.sql.catalyst.expressions.ToCharacter",
           // Sorting.
-          "SortOrder",
+          "org.apache.spark.sql.catalyst.expressions.SortOrder",
           // Subquery expressions.
-          "ScalarSubquery",
-          "Exists",
-          "ListQuery",
-          "LateralSubquery",
+          "org.apache.spark.sql.catalyst.expressions.ScalarSubquery",
+          "org.apache.spark.sql.catalyst.expressions.Exists",
+          "org.apache.spark.sql.catalyst.expressions.ListQuery",
+          "org.apache.spark.sql.catalyst.expressions.LateralSubquery",
           // Generator expressions.
-          "Explode",
-          "PosExplode",
-          "Inline",
-          "Stack",
+          "org.apache.spark.sql.catalyst.expressions.Explode",
+          "org.apache.spark.sql.catalyst.expressions.PosExplode",
+          "org.apache.spark.sql.catalyst.expressions.Inline",
+          "org.apache.spark.sql.catalyst.expressions.Stack",
           // Window expressions.
-          "WindowExpression",
-          "WindowSpecDefinition",
-          "SpecifiedWindowFrame",
-          "UnspecifiedFrame",
+          "org.apache.spark.sql.catalyst.expressions.WindowExpression",
+          "org.apache.spark.sql.catalyst.expressions.WindowSpecDefinition",
+          "org.apache.spark.sql.catalyst.expressions.SpecifiedWindowFrame",
+          "org.apache.spark.sql.catalyst.expressions.UnspecifiedFrame",
           // Struct, array, and map expressions.
-          "CreateNamedStruct",
-          "CreateArray",
-          "CreateMap",
-          "GetStructField",
-          "GetArrayStructFields",
-          "GetArrayItem",
-          "GetMapValue",
+          "org.apache.spark.sql.catalyst.expressions.CreateNamedStruct",
+          "org.apache.spark.sql.catalyst.expressions.CreateArray",
+          "org.apache.spark.sql.catalyst.expressions.CreateMap",
+          "org.apache.spark.sql.catalyst.expressions.GetStructField",
+          "org.apache.spark.sql.catalyst.expressions.GetArrayStructFields",
+          "org.apache.spark.sql.catalyst.expressions.GetArrayItem",
+          "org.apache.spark.sql.catalyst.expressions.GetMapValue",
           // Higher-order functions.
-          "LambdaFunction",
+          "org.apache.spark.sql.catalyst.expressions.LambdaFunction",
           // Grouping.
-          "Grouping",
-          "GroupingID",
+          "org.apache.spark.sql.catalyst.expressions.Grouping",
+          "org.apache.spark.sql.catalyst.expressions.GroupingID",
           // Unresolved expression types.
-          "UnresolvedExtractValue",
-          "UnresolvedRegex",
-          "NamedArgumentExpression",
+          "org.apache.spark.sql.catalyst.analysis.UnresolvedExtractValue",
+          "org.apache.spark.sql.catalyst.analysis.UnresolvedRegex",
+          "org.apache.spark.sql.catalyst.expressions.NamedArgumentExpression",
           // Non-deterministic (safe).
-          "Rand",
-          "Randn",
-          "Uuid",
-          "Shuffle",
-          "RandStr",
-          "Uniform",
+          "org.apache.spark.sql.catalyst.expressions.Rand",
+          "org.apache.spark.sql.catalyst.expressions.Randn",
+          "org.apache.spark.sql.catalyst.expressions.Uuid",
+          "org.apache.spark.sql.catalyst.expressions.Shuffle",
           // Error handling.
-          "RaiseError",
-          "TryEval",
-          "AssertTrue",
+          "org.apache.spark.sql.catalyst.expressions.RaiseError",
+          "org.apache.spark.sql.catalyst.expressions.TryEval",
+          "org.apache.spark.sql.catalyst.expressions.AssertTrue",
           // Utility.
-          "Empty2Null",
-          "TypeOf",
+          "org.apache.spark.sql.catalyst.expressions.Empty2Null",
+          "org.apache.spark.sql.catalyst.expressions.TypeOf",
           // Bitwise operations.
-          "BitwiseAnd",
-          "BitwiseOr",
-          "BitwiseXor",
-          "BitwiseNot");
+          "org.apache.spark.sql.catalyst.expressions.BitwiseAnd",
+          "org.apache.spark.sql.catalyst.expressions.BitwiseOr",
+          "org.apache.spark.sql.catalyst.expressions.BitwiseXor",
+          "org.apache.spark.sql.catalyst.expressions.BitwiseNot");
 
-  // Expression types that are explicitly rejected because they enable unsafe operations.
+  // Fully-qualified expression class names that are explicitly rejected.
   private static final Set<String> REJECTED_EXPRESSION_NAMES =
       Set.of(
-          "CallMethodViaReflection",
-          "TryReflect",
-          "PythonUDF",
-          "HiveSimpleUDF",
-          "HiveGenericUDF",
-          "HiveUDAF",
-          "PrintToStderr",
-          "StaticInvoke",
-          "Invoke",
-          "NewInstance");
+          "org.apache.spark.sql.catalyst.expressions.CallMethodViaReflection",
+          "org.apache.spark.sql.catalyst.expressions.PythonUDF",
+          "org.apache.spark.sql.hive.HiveSimpleUDF",
+          "org.apache.spark.sql.hive.HiveGenericUDF",
+          "org.apache.spark.sql.catalyst.expressions.PrintToStderr",
+          "org.apache.spark.sql.catalyst.expressions.objects.StaticInvoke",
+          "org.apache.spark.sql.catalyst.expressions.objects.Invoke",
+          "org.apache.spark.sql.catalyst.expressions.objects.NewInstance");
 
   /**
    * Constructs a new SqlValidator.
@@ -318,7 +309,8 @@ public class SqlValidator {
   }
 
   /**
-   * Validates that the given SQL query is read-only and contains only allowed operations.
+   * Validates that the given SQL parses to an unresolved logical plan that contains only allowed
+   * operations. Suitable for early rejection before any temp views are registered.
    *
    * @param sql the SQL query to validate
    * @throws InvalidRequestException if the query contains disallowed operations
@@ -334,10 +326,19 @@ public class SqlValidator {
   }
 
   /**
-   * Recursively validates a logical plan node and all its children and expressions.
+   * Validates an analyzed logical plan against the same allow-lists as {@link #validate(String)}.
+   * Required to catch constructs like {@code HiveSimpleUDF} / {@code HiveGenericUDF} that are
+   * inserted by the analyser and so are absent from the unresolved tree.
    *
-   * @param plan the logical plan node to validate
+   * @param plan an analyzed logical plan, typically obtained via {@code
+   *     dataset.queryExecution().analyzed()}
+   * @throws InvalidRequestException if the plan contains disallowed operations
    */
+  public void validateAnalyzed(@Nonnull final LogicalPlan plan) {
+    walkPlan(plan);
+  }
+
+  /** Recursively validates a logical plan node and all its children and expressions. */
   private void walkPlan(@Nonnull final LogicalPlan plan) {
     validatePlanNode(plan);
     final List<Expression> expressions = CollectionConverters.asJava(plan.expressions());
@@ -353,12 +354,9 @@ public class SqlValidator {
   /**
    * Recursively validates an expression and all its child expressions. If the expression is a
    * subquery expression, its inner plan is also validated.
-   *
-   * @param expr the expression to validate
    */
   private void walkExpression(@Nonnull final Expression expr) {
     validateExpression(expr);
-    // Subquery expressions contain an inner logical plan that must also be validated.
     if (expr instanceof final SubqueryExpression subquery) {
       walkPlan(subquery.plan());
     }
@@ -369,67 +367,46 @@ public class SqlValidator {
   }
 
   /**
-   * Validates that a plan node is in the allowed set.
-   *
-   * @param plan the plan node to validate
-   * @throws InvalidRequestException if the plan node is not allowed
+   * Validates that a plan node is in the allowed FQN set. All {@link Command} subclasses (DDL, DML,
+   * SHOW, DESCRIBE, etc.) are rejected outright, regardless of package.
    */
   private void validatePlanNode(@Nonnull final LogicalPlan plan) {
-    // All Command subclasses are rejected (DDL, DML, SHOW, DESCRIBE, etc.).
     if (plan instanceof Command) {
       throw new InvalidRequestException(
           "SQL contains a disallowed operation: " + plan.getClass().getSimpleName());
     }
-    final String className = plan.getClass().getSimpleName();
-    // Scala objects have a trailing '$' in their class name which must be stripped for matching.
-    final String normalised =
-        className.endsWith("$") ? className.substring(0, className.length() - 1) : className;
-    if (!ALLOWED_PLAN_NODES.contains(normalised)) {
-      throw new InvalidRequestException("SQL contains a disallowed plan node: " + className);
+    if (!ALLOWED_PLAN_NODES.contains(canonicalClassName(plan))) {
+      throw new InvalidRequestException(
+          "SQL contains a disallowed plan node: " + plan.getClass().getSimpleName());
     }
   }
 
-  /**
-   * Validates that an expression is in the allowed set.
-   *
-   * @param expr the expression to validate
-   * @throws InvalidRequestException if the expression is not allowed
-   */
+  /** Validates that an expression is in the allowed FQN set or recognised as a Pathling UDF. */
   private void validateExpression(@Nonnull final Expression expr) {
-    final String className = expr.getClass().getSimpleName();
+    final String fqn = canonicalClassName(expr);
 
-    // Check explicitly rejected types first.
-    if (REJECTED_EXPRESSION_NAMES.contains(className)) {
-      throw new InvalidRequestException("SQL contains a disallowed expression: " + className);
+    if (REJECTED_EXPRESSION_NAMES.contains(fqn)) {
+      throw new InvalidRequestException(
+          "SQL contains a disallowed expression: " + expr.getClass().getSimpleName());
     }
 
-    // Special handling for UnresolvedFunction: validate the function name.
     if (expr instanceof final UnresolvedFunction unresolvedFunc) {
       validateFunctionName(unresolvedFunc);
       return;
     }
 
-    // Special handling for ScalaUDF: validate against UDF allowlist.
     if (expr instanceof final ScalaUDF scalaUdf) {
       validateUdf(scalaUdf);
       return;
     }
 
-    // Check against the allowed expression names. Scala objects have a trailing '$' in their
-    // class name which must be stripped for matching.
-    final String normalised =
-        className.endsWith("$") ? className.substring(0, className.length() - 1) : className;
-    if (!ALLOWED_EXPRESSION_NAMES.contains(normalised)) {
-      throw new InvalidRequestException("SQL contains a disallowed expression: " + className);
+    if (!ALLOWED_EXPRESSION_NAMES.contains(fqn)) {
+      throw new InvalidRequestException(
+          "SQL contains a disallowed expression: " + expr.getClass().getSimpleName());
     }
   }
 
-  /**
-   * Validates that an unresolved function is not a known-dangerous function.
-   *
-   * @param func the unresolved function to validate
-   * @throws InvalidRequestException if the function is dangerous
-   */
+  /** Validates that an unresolved function is not a known-dangerous function. */
   private void validateFunctionName(@Nonnull final UnresolvedFunction func) {
     final List<String> nameParts = CollectionConverters.asJava(func.nameParts());
     if (!nameParts.isEmpty()) {
@@ -441,12 +418,7 @@ public class SqlValidator {
     }
   }
 
-  /**
-   * Validates that a ScalaUDF is in the Pathling UDF allowlist.
-   *
-   * @param udf the ScalaUDF to validate
-   * @throws InvalidRequestException if the UDF is not in the allowlist
-   */
+  /** Validates that a ScalaUDF is in the Pathling UDF allow-list. */
   private void validateUdf(@Nonnull final ScalaUDF udf) {
     final Option<String> nameOpt = udf.udfName();
     if (nameOpt.isDefined()) {
@@ -457,5 +429,39 @@ public class SqlValidator {
     } else {
       throw new InvalidRequestException("SQL contains an unnamed UDF, which is not allowed");
     }
+  }
+
+  /**
+   * Returns the FQN of the object's class with any trailing {@code $} stripped, so that Scala case
+   * objects (whose runtime class name ends in {@code $}) match the form held in the allow-lists.
+   */
+  @Nonnull
+  private static String canonicalClassName(@Nonnull final Object node) {
+    final String name = node.getClass().getName();
+    return name.endsWith("$") ? name.substring(0, name.length() - 1) : name;
+  }
+
+  /** Allow-list entries, exposed for build-time integrity tests. */
+  @Nonnull
+  static Set<String> allowedPlanNodes() {
+    return ALLOWED_PLAN_NODES;
+  }
+
+  /** Allow-list entries, exposed for build-time integrity tests. */
+  @Nonnull
+  static Set<String> allowedExpressionNames() {
+    return ALLOWED_EXPRESSION_NAMES;
+  }
+
+  /** Reject-list entries, exposed for build-time integrity tests. */
+  @Nonnull
+  static Set<String> rejectedExpressionNames() {
+    return REJECTED_EXPRESSION_NAMES;
+  }
+
+  /** Allow-list entries, exposed for build-time integrity tests. */
+  @Nonnull
+  static Set<String> allowedUdfNames() {
+    return ALLOWED_UDF_NAMES;
   }
 }

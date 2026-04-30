@@ -71,15 +71,22 @@ public class SqlQueryResultStreamer {
     response.setStatus(HttpServletResponse.SC_OK);
 
     try {
-      if (outputFormat == SqlQueryOutputFormat.PARQUET) {
-        streamParquet(result, response);
-      } else {
-        streamTabular(result, outputFormat, includeHeader, response);
+      switch (outputFormat) {
+        case PARQUET -> streamParquet(result, response);
+        case FHIR -> streamFhir(result, response);
+        default -> streamTabular(result, outputFormat, includeHeader, response);
       }
     } catch (final IOException e) {
       log.error("Error streaming SQL query results", e);
       throw new InvalidRequestException("Error streaming results: " + e.getMessage());
     }
+  }
+
+  private void streamFhir(
+      @Nonnull final Dataset<Row> result, @Nonnull final HttpServletResponse response)
+      throws IOException {
+    final OutputStream outputStream = response.getOutputStream();
+    streamingHelper.streamFhirJson(outputStream, result.toLocalIterator(), result.schema());
   }
 
   private void streamTabular(

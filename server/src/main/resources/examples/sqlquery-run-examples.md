@@ -205,6 +205,46 @@ SQLQuery profile. The Library contains Base64-encoded SQL in its `content`,
 and references stored ViewDefinitions via `relatedArtifact`. The `label` on
 each artifact becomes the table name used in the SQL.
 
+### Resolving the Library by reference
+
+Instead of passing the Library inline as `queryResource`, you can supply a
+`queryReference` pointing at a stored Library. Either form (relative literal
+or canonical) is accepted; exactly one of `queryResource` and `queryReference`
+must be present.
+
+Relative literal reference (`Library/<id>`):
+
+```bash
+curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
+  -H "Content-Type: application/fhir+json" \
+  -d '{
+    "resourceType": "Parameters",
+    "parameter": [{
+      "name": "queryReference",
+      "valueReference": {"reference": "Library/<LIBRARY_ID>"}
+    }]
+  }'
+```
+
+Canonical reference (`[url]` or `[url]|[version]`, matched against
+`Library.url` and `Library.version`):
+
+```bash
+curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
+  -H "Content-Type: application/fhir+json" \
+  -d '{
+    "resourceType": "Parameters",
+    "parameter": [{
+      "name": "queryReference",
+      "valueReference": {"reference": "https://example.org/Library/patients-with-conditions|1.0"}
+    }]
+  }'
+```
+
+If no Library matches, the server responds with 404. If neither (or both) of
+`queryResource` and `queryReference` are supplied, the server responds with
+400.
+
 ### JOIN patients with conditions
 
 SQL:

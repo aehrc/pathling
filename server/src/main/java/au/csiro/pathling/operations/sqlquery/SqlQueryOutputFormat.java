@@ -41,7 +41,13 @@ public enum SqlQueryOutputFormat {
   JSON("json", "application/json"),
 
   /** Apache Parquet columnar format. */
-  PARQUET("parquet", "application/vnd.apache.parquet");
+  PARQUET("parquet", "application/vnd.apache.parquet"),
+
+  /**
+   * FHIR-native format — emits a {@code Parameters} resource (JSON) with one repeating {@code row}
+   * parameter per result row, each column rendered as a part with a typed {@code value[x]}.
+   */
+  FHIR("fhir", "application/fhir+json");
 
   @Nonnull private final String code;
 

@@ -20,14 +20,11 @@ package au.csiro.pathling.operations.sqlquery;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.hl7.fhir.r4.model.Type;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -90,8 +87,9 @@ public class SqlQueryExecutor {
       final String rewrittenSql =
           viewRegistrationService.rewriteSql(request.getParsedQuery().getSql(), registeredViews);
 
-      final Map<String, String> parameterMap = buildParameterMap(request.getParameterValues());
-      Dataset<Row> result = runSql(rewrittenSql, parameterMap);
+      Dataset<Row> result = runSql(rewrittenSql, request.getParameterBindings());
+
+      sqlValidator.validateAnalyzed(result.queryExecution().analyzed());
 
       if (request.getLimit() != null) {
         result = result.limit(request.getLimit());
@@ -105,43 +103,10 @@ public class SqlQueryExecutor {
 
   @Nonnull
   private Dataset<Row> runSql(
-      @Nonnull final String sql, @Nonnull final Map<String, String> parameterMap) {
-    if (parameterMap.isEmpty()) {
+      @Nonnull final String sql, @Nonnull final Map<String, Object> parameterBindings) {
+    if (parameterBindings.isEmpty()) {
       return sparkSession.sql(sql);
     }
-    @SuppressWarnings("unchecked")
-    final Map<String, Object> objectMap = (Map<String, Object>) (Map<String, ?>) parameterMap;
-    return sparkSession.sql(sql, objectMap);
-  }
-
-  /**
-   * Builds the name → string-value map handed to Spark's parameterised query API. Parameter values
-   * are flattened to their primitive string representation; typed binding will replace this when
-   * comment #8 lands.
-   */
-  @Nonnull
-  private Map<String, String> buildParameterMap(
-      @Nonnull final java.util.List<ParametersParameterComponent> parameterValues) {
-    final Map<String, String> params = new HashMap<>();
-
-    for (final ParametersParameterComponent param : parameterValues) {
-      String name = null;
-      String value = null;
-
-      for (final ParametersParameterComponent part : param.getPart()) {
-        if ("name".equals(part.getName()) && part.getValue() != null) {
-          name = part.getValue().primitiveValue();
-        } else if ("value".equals(part.getName()) && part.getValue() != null) {
-          final Type valueType = part.getValue();
-          value = valueType.primitiveValue();
-        }
-      }
-
-      if (name != null && value != null) {
-        params.put(name, value);
-      }
-    }
-
-    return params;
+    return sparkSession.sql(sql, parameterBindings);
   }
 }

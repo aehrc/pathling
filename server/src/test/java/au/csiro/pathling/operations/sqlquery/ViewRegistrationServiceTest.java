@@ -190,7 +190,7 @@ class ViewRegistrationServiceTest {
               DataTypes.createStructField(columnName, DataTypes.StringType, false)
             });
     final List<Row> rows =
-        Arrays.stream(values.toArray(new String[0])).map(v -> (Row) RowFactory.create(v)).toList();
+        Arrays.stream(values.toArray(new String[0])).map(RowFactory::create).toList();
     return spark.createDataFrame(rows, schema);
   }
 }

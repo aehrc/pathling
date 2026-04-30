@@ -24,11 +24,11 @@ import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.List;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IntegerType;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Reference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -59,26 +59,29 @@ public class SqlQueryRunProvider {
   }
 
   /**
-   * Executes a SQL query provided inline as a Library resource and returns the results in the
-   * requested format. This is the system-level operation at {@code /fhir/$sqlquery-run}.
+   * Executes a SQL query provided either inline ({@code queryResource}) or by reference ({@code
+   * queryReference}) and returns the results in the requested format. This is the system-level
+   * operation at {@code /fhir/$sqlquery-run}.
    *
-   * @param queryResource the SQLQuery Library resource
+   * @param queryResource the inline SQLQuery Library resource
+   * @param queryReference reference to a stored SQLQuery Library
    * @param format the output format (ndjson, csv, json, or parquet), overrides Accept header
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
-   * @param parameterValues query parameter values to bind
+   * @param parameters runtime parameter bindings as a Parameters resource
    * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
   @Operation(name = "$sqlquery-run", idempotent = true, manualResponse = true)
   @OperationAccess("sqlquery-run")
+  @SuppressWarnings("java:S107")
   public void run(
-      @Nonnull @OperationParam(name = "queryResource") final IBaseResource queryResource,
+      @Nullable @OperationParam(name = "queryResource") final IBaseResource queryResource,
+      @Nullable @OperationParam(name = "queryReference") final Reference queryReference,
       @Nullable @OperationParam(name = "_format") final String format,
       @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
       @Nullable @OperationParam(name = "_limit") final IntegerType limit,
-      @Nullable @OperationParam(name = "parameter")
-          final List<ParametersParameterComponent> parameterValues,
+      @Nullable @OperationParam(name = "parameters") final Parameters parameters,
       @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
 
@@ -86,11 +89,12 @@ public class SqlQueryRunProvider {
 
     executionHelper.executeSqlQuery(
         queryResource,
+        queryReference,
         format,
         acceptHeader,
         includeHeader,
         limit,
-        parameterValues,
+        parameters,
         requestDetails.getRequestId(),
         response);
   }

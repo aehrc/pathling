@@ -230,4 +230,52 @@ class SqlValidatorTest {
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("Invalid SQL syntax");
   }
+
+  // -------------------------------------------------------------------------
+  // Regression corpus — known-bad queries the validator must reject.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Documents the queries that must always be rejected. New entries here lock current rejection
+   * behaviour into the test suite and double as a security-model checklist for future readers.
+   */
+  @org.junit.jupiter.params.ParameterizedTest(name = "rejects: {0}")
+  @org.junit.jupiter.params.provider.ValueSource(
+      strings = {
+        // Hive metastore commands.
+        "LOAD DATA INPATH '/tmp/x' INTO TABLE my_table",
+        "MSCK REPAIR TABLE my_table",
+        // Session configuration.
+        "SET spark.sql.shuffle.partitions = 200",
+        "SET",
+        "RESET",
+        // INSERT variants.
+        "INSERT OVERWRITE TABLE my_table SELECT 1",
+        "INSERT INTO my_table SELECT 1",
+        // Data manipulation.
+        "TRUNCATE TABLE my_table",
+        "ALTER TABLE my_table ADD COLUMNS (x INT)",
+        "MERGE INTO target USING source ON target.id = source.id WHEN MATCHED THEN UPDATE SET"
+            + " target.x = source.x",
+        // Catalog management.
+        "CREATE DATABASE my_db",
+        "DROP DATABASE my_db",
+        "USE my_db",
+        // Cache control.
+        "CACHE TABLE my_table",
+        "UNCACHE TABLE my_table",
+        "REFRESH TABLE my_table",
+        // Discovery / SHOW.
+        "SHOW TABLES",
+        "DESCRIBE my_table",
+        "EXPLAIN SELECT 1",
+        // Reflection-style functions.
+        "SELECT reflect('java.lang.Runtime', 'getRuntime')",
+        "SELECT java_method('java.lang.Math', 'random')"
+      })
+  void rejectsKnownDangerousQueries(final String sql) {
+    assertThatThrownBy(() -> sqlValidator.validate(sql))
+        .as("validator must reject: %s", sql)
+        .isInstanceOf(InvalidRequestException.class);
+  }
 }

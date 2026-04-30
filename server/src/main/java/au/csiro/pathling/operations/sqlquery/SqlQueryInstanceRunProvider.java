@@ -17,25 +17,22 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
-import au.csiro.pathling.errors.ResourceNotFoundError;
-import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.List;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Library;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Reference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -61,20 +58,21 @@ public class SqlQueryInstanceRunProvider implements IResourceProvider {
 
   @Nonnull private final SqlQueryExecutionHelper executionHelper;
 
-  @Nonnull private final ReadExecutor readExecutor;
+  @Nonnull private final LibraryReferenceResolver libraryReferenceResolver;
 
   /**
    * Constructs a new SqlQueryInstanceRunProvider.
    *
    * @param executionHelper the helper for executing SQL queries
-   * @param readExecutor the read executor for reading stored Library resources
+   * @param libraryReferenceResolver resolves a Library reference to a stored resource, with the
+   *     same 404 semantics used by the type-level operation
    */
   @Autowired
   public SqlQueryInstanceRunProvider(
       @Nonnull final SqlQueryExecutionHelper executionHelper,
-      @Nonnull final ReadExecutor readExecutor) {
+      @Nonnull final LibraryReferenceResolver libraryReferenceResolver) {
     this.executionHelper = executionHelper;
-    this.readExecutor = readExecutor;
+    this.libraryReferenceResolver = libraryReferenceResolver;
   }
 
   @Override
@@ -83,25 +81,28 @@ public class SqlQueryInstanceRunProvider implements IResourceProvider {
   }
 
   /**
-   * Type-level {@code $sqlquery-run} operation that accepts a SQLQuery Library inline.
+   * Type-level {@code $sqlquery-run} operation that accepts a SQLQuery Library either inline
+   * ({@code queryResource}) or by reference ({@code queryReference}).
    *
-   * @param queryResource the SQLQuery Library resource
+   * @param queryResource the inline SQLQuery Library resource
+   * @param queryReference reference to a stored SQLQuery Library
    * @param format the output format (ndjson, csv, json, or parquet), overrides Accept header
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
-   * @param parameterValues query parameter values to bind
+   * @param parameters runtime parameter bindings as a Parameters resource
    * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
   @Operation(name = "$sqlquery-run", idempotent = true, manualResponse = true)
   @OperationAccess("sqlquery-run")
+  @SuppressWarnings("java:S107")
   public void runTypeLevel(
-      @Nonnull @OperationParam(name = "queryResource") final IBaseResource queryResource,
+      @Nullable @OperationParam(name = "queryResource") final IBaseResource queryResource,
+      @Nullable @OperationParam(name = "queryReference") final Reference queryReference,
       @Nullable @OperationParam(name = "_format") final String format,
       @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
       @Nullable @OperationParam(name = "_limit") final IntegerType limit,
-      @Nullable @OperationParam(name = "parameter")
-          final List<ParametersParameterComponent> parameterValues,
+      @Nullable @OperationParam(name = "parameters") final Parameters parameters,
       @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
 
@@ -109,11 +110,12 @@ public class SqlQueryInstanceRunProvider implements IResourceProvider {
 
     executionHelper.executeSqlQuery(
         queryResource,
+        queryReference,
         format,
         acceptHeader,
         includeHeader,
         limit,
-        parameterValues,
+        parameters,
         requestDetails.getRequestId(),
         response);
   }
@@ -125,7 +127,7 @@ public class SqlQueryInstanceRunProvider implements IResourceProvider {
    * @param format the output format (ndjson, csv, json, or parquet), overrides Accept header
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
-   * @param parameterValues query parameter values to bind
+   * @param parameters runtime parameter bindings as a Parameters resource
    * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
@@ -136,39 +138,23 @@ public class SqlQueryInstanceRunProvider implements IResourceProvider {
       @Nullable @OperationParam(name = "_format") final String format,
       @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
       @Nullable @OperationParam(name = "_limit") final IntegerType limit,
-      @Nullable @OperationParam(name = "parameter")
-          final List<ParametersParameterComponent> parameterValues,
+      @Nullable @OperationParam(name = "parameters") final Parameters parameters,
       @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
 
-    final IBaseResource libraryResource = readLibrary(libraryId);
+    final IBaseResource libraryResource =
+        libraryReferenceResolver.resolve(new Reference("Library/" + libraryId.getIdPart()));
     final String acceptHeader = requestDetails.getServletRequest().getHeader("Accept");
 
     executionHelper.executeSqlQuery(
         libraryResource,
+        null,
         format,
         acceptHeader,
         includeHeader,
         limit,
-        parameterValues,
+        parameters,
         requestDetails.getRequestId(),
         response);
-  }
-
-  /** Reads a Library resource by ID. */
-  @Nonnull
-  private IBaseResource readLibrary(@Nonnull final IdType libraryId) {
-    try {
-      return readExecutor.read("Library", libraryId.getIdPart());
-    } catch (final ResourceNotFoundError e) {
-      throw new ResourceNotFoundException(
-          "Library with ID '" + libraryId.getIdPart() + "' not found");
-    } catch (final IllegalArgumentException e) {
-      if (e.getMessage() != null && e.getMessage().contains("No data found for resource type")) {
-        throw new ResourceNotFoundException(
-            "Library with ID '" + libraryId.getIdPart() + "' not found");
-      }
-      throw e;
-    }
   }
 }

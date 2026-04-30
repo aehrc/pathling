@@ -35,7 +35,7 @@
       "use": "in",
       "min": 0,
       "max": "1",
-      "documentation": "The output format for the query results. Supported values are 'ndjson' (default), 'csv', 'json', and 'parquet'.",
+      "documentation": "The output format for the query results. Supported values are 'ndjson' (default), 'csv', 'json', 'parquet', and 'fhir'. The 'fhir' format returns a Parameters resource (application/fhir+json) with one repeating 'row' parameter per result row, each column rendered as a part with a typed value[x].",
       "type": "code"
     },
     {
@@ -55,29 +55,12 @@
       "type": "integer"
     },
     {
-      "name": "parameter",
+      "name": "parameters",
       "use": "in",
       "min": 0,
-      "max": "*",
-      "documentation": "Query parameter values to bind to the SQL query. Each parameter has a name and a value.",
-      "part": [
-        {
-          "name": "name",
-          "use": "in",
-          "min": 1,
-          "max": "1",
-          "documentation": "The name of the parameter, matching the colon-prefixed placeholder in the SQL.",
-          "type": "string"
-        },
-        {
-          "name": "value",
-          "use": "in",
-          "min": 1,
-          "max": "1",
-          "documentation": "The value to bind to the parameter.",
-          "type": "string"
-        }
-      ]
+      "max": "1",
+      "documentation": "Runtime parameter bindings as a Parameters resource. Each entry's name must match a Library.parameter declaration, and its value[x] must match the declared FHIR type.",
+      "type": "Parameters"
     }
   ]
 }
