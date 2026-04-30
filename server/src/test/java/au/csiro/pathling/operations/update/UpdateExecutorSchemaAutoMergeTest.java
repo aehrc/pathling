@@ -152,6 +152,7 @@ class UpdateExecutorSchemaAutoMergeTest {
     pathlingContext.getSpark().catalog().clearCache();
     pathlingContext.getSpark().catalog().refreshByPath(tablePath.toAbsolutePath().toString());
   }
+
   @Nonnull
   private UpdateExecutor newExecutor(final boolean schemaAutoMerge) {
     return new UpdateExecutor(
