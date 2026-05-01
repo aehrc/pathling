@@ -178,10 +178,10 @@ class ResultStreamingHelperTest {
               DataTypes.createStructField(
                   "tags", DataTypes.createArrayType(DataTypes.StringType), true)
             });
-    final List<Row> rows = List.of();
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    final Iterator<Row> rows = List.<Row>of().iterator();
 
-    assertThatThrownBy(
-            () -> helper.streamFhirJson(new ByteArrayOutputStream(), rows.iterator(), schema))
+    assertThatThrownBy(() -> helper.streamFhirJson(out, rows, schema))
         .isInstanceOf(UnprocessableEntityException.class)
         .hasMessageContaining("tags");
   }
@@ -198,11 +198,10 @@ class ResultStreamingHelperTest {
             new org.apache.spark.sql.types.StructField[] {
               DataTypes.createStructField("payload", nested, true)
             });
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    final Iterator<Row> rows = List.<Row>of().iterator();
 
-    assertThatThrownBy(
-            () ->
-                helper.streamFhirJson(
-                    new ByteArrayOutputStream(), List.<Row>of().iterator(), schema))
+    assertThatThrownBy(() -> helper.streamFhirJson(out, rows, schema))
         .isInstanceOf(UnprocessableEntityException.class)
         .hasMessageContaining("payload");
   }

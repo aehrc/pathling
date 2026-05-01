@@ -63,7 +63,7 @@ public class SqlQueryLibraryParser {
 
   private static final String LIBRARY_TYPE_CODE = "sql-query";
 
-  private static final Pattern LABEL_PATTERN = Pattern.compile("^[A-Za-z][A-Za-z0-9_]*$");
+  private static final Pattern LABEL_PATTERN = Pattern.compile("^[A-Za-z]\\w*$");
 
   /**
    * Parses a Library resource into a {@link ParsedSqlQuery}.

@@ -118,7 +118,7 @@ class SqlQueryRequestParserTest {
 
     final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
 
-    assertThat(request.getParameterBindings().get("is_active")).isEqualTo(true);
+    assertThat(request.getParameterBindings()).containsEntry("is_active", true);
   }
 
   @Test
@@ -130,7 +130,7 @@ class SqlQueryRequestParserTest {
 
     final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
 
-    assertThat(request.getParameterBindings().get("name")).isEqualTo("alice");
+    assertThat(request.getParameterBindings()).containsEntry("name", "alice");
   }
 
   @Test

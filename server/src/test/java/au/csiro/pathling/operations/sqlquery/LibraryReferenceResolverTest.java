@@ -19,7 +19,6 @@ package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -75,7 +74,7 @@ class LibraryReferenceResolverTest {
     @Test
     void resolvesLibrarySlashId() {
       final Library stored = newLibrary("abc", null, null, PublicationStatus.ACTIVE);
-      when(readExecutor.read(eq("Library"), eq("abc"))).thenReturn(stored);
+      when(readExecutor.read("Library", "abc")).thenReturn(stored);
 
       final IBaseResource resolved = resolver.resolve(new Reference("Library/abc"));
 
@@ -85,7 +84,7 @@ class LibraryReferenceResolverTest {
     @Test
     void resolvesBareId() {
       final Library stored = newLibrary("abc", null, null, PublicationStatus.ACTIVE);
-      when(readExecutor.read(eq("Library"), eq("abc"))).thenReturn(stored);
+      when(readExecutor.read("Library", "abc")).thenReturn(stored);
 
       final IBaseResource resolved = resolver.resolve(new Reference("abc"));
 
@@ -94,7 +93,8 @@ class LibraryReferenceResolverTest {
 
     @Test
     void rejectsReferenceToOtherResourceType() {
-      assertThatThrownBy(() -> resolver.resolve(new Reference("Patient/abc")))
+      final Reference reference = new Reference("Patient/abc");
+      assertThatThrownBy(() -> resolver.resolve(reference))
           .isInstanceOf(InvalidRequestException.class)
           .hasMessageContaining("Library");
       verifyNoInteractions(readExecutor);
@@ -102,7 +102,8 @@ class LibraryReferenceResolverTest {
 
     @Test
     void rejectsBlankReference() {
-      assertThatThrownBy(() -> resolver.resolve(new Reference("")))
+      final Reference reference = new Reference("");
+      assertThatThrownBy(() -> resolver.resolve(reference))
           .isInstanceOf(InvalidRequestException.class)
           .hasMessageContaining("non-blank");
       verifyNoInteractions(readExecutor);
@@ -110,7 +111,8 @@ class LibraryReferenceResolverTest {
 
     @Test
     void rejectsLibrarySlashWithEmptyId() {
-      assertThatThrownBy(() -> resolver.resolve(new Reference("Library/")))
+      final Reference reference = new Reference("Library/");
+      assertThatThrownBy(() -> resolver.resolve(reference))
           .isInstanceOf(InvalidRequestException.class)
           .hasMessageContaining("missing");
       verifyNoInteractions(readExecutor);
@@ -118,20 +120,22 @@ class LibraryReferenceResolverTest {
 
     @Test
     void translatesResourceNotFoundErrorToResourceNotFoundException() {
-      when(readExecutor.read(eq("Library"), eq("missing")))
+      when(readExecutor.read("Library", "missing"))
           .thenThrow(new ResourceNotFoundError("not there"));
+      final Reference reference = new Reference("Library/missing");
 
-      assertThatThrownBy(() -> resolver.resolve(new Reference("Library/missing")))
+      assertThatThrownBy(() -> resolver.resolve(reference))
           .isInstanceOf(ResourceNotFoundException.class)
           .hasMessageContaining("missing");
     }
 
     @Test
     void translatesNoDataIllegalArgumentToResourceNotFoundException() {
-      when(readExecutor.read(eq("Library"), eq("anyone")))
+      when(readExecutor.read("Library", "anyone"))
           .thenThrow(new IllegalArgumentException("No data found for resource type Library"));
+      final Reference reference = new Reference("Library/anyone");
 
-      assertThatThrownBy(() -> resolver.resolve(new Reference("Library/anyone")))
+      assertThatThrownBy(() -> resolver.resolve(reference))
           .isInstanceOf(ResourceNotFoundException.class)
           .hasMessageContaining("anyone");
     }
@@ -236,9 +240,9 @@ class LibraryReferenceResolverTest {
     @Test
     void returns404WhenCanonicalDoesNotMatch() {
       when(dataSource.read("Library")).thenReturn(libraryDataset());
+      final Reference reference = new Reference("https://example.org/Library/missing");
 
-      assertThatThrownBy(
-              () -> resolver.resolve(new Reference("https://example.org/Library/missing")))
+      assertThatThrownBy(() -> resolver.resolve(reference))
           .isInstanceOf(ResourceNotFoundException.class)
           .hasMessageContaining("missing");
     }
@@ -248,9 +252,9 @@ class LibraryReferenceResolverTest {
       final Library v1 =
           newLibrary("a", "https://example.org/Library/foo", "1.0", PublicationStatus.ACTIVE);
       when(dataSource.read("Library")).thenReturn(libraryDataset(v1));
+      final Reference reference = new Reference("https://example.org/Library/foo|99.0");
 
-      assertThatThrownBy(
-              () -> resolver.resolve(new Reference("https://example.org/Library/foo|99.0")))
+      assertThatThrownBy(() -> resolver.resolve(reference))
           .isInstanceOf(ResourceNotFoundException.class);
     }
 

@@ -26,8 +26,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +49,22 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class SqlQueryResultStreamer {
+
+  /**
+   * Mode {@code 0700} on POSIX file systems so that other local users cannot read, list, or write
+   * the temporary directory holding Parquet output. Empty on non-POSIX file systems, where the
+   * platform's default ACLs apply instead.
+   */
+  private static final FileAttribute<?>[] OWNER_ONLY_DIR_ATTRS =
+      FileSystems.getDefault().supportedFileAttributeViews().contains("posix")
+          ? new FileAttribute<?>[] {
+            PosixFilePermissions.asFileAttribute(
+                EnumSet.of(
+                    PosixFilePermission.OWNER_READ,
+                    PosixFilePermission.OWNER_WRITE,
+                    PosixFilePermission.OWNER_EXECUTE))
+          }
+          : new FileAttribute<?>[0];
 
   @Nonnull private final ResultStreamingHelper streamingHelper;
 
@@ -120,7 +141,7 @@ public class SqlQueryResultStreamer {
       @Nonnull final Dataset<Row> result, @Nonnull final HttpServletResponse response)
       throws IOException {
 
-    final Path tempDir = Files.createTempDirectory("sqlquery-parquet-");
+    final Path tempDir = Files.createTempDirectory("sqlquery-parquet-", OWNER_ONLY_DIR_ATTRS);
     final String outputPath = tempDir.resolve("result").toString();
 
     try {

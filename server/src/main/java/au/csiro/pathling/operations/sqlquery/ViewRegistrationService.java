@@ -47,7 +47,7 @@ public class ViewRegistrationService {
 
   private static final String VIEW_NAME_PREFIX = "sqlquery_";
 
-  private static final Pattern UNSAFE_REQUEST_ID_CHARS = Pattern.compile("[^A-Za-z0-9_]");
+  private static final Pattern UNSAFE_REQUEST_ID_CHARS = Pattern.compile("\\W");
 
   @Nonnull private final SparkSession sparkSession;
 
@@ -172,33 +172,36 @@ public class ViewRegistrationService {
     final StringBuilder out = new StringBuilder(n);
     int i = 0;
     while (i < n) {
-      final char c = sql.charAt(i);
-
-      if (c == '\'' || c == '"') {
-        i = copyStringLiteral(sql, i, c, out);
-        continue;
-      }
-      if (c == '`') {
-        i = copyOrRewriteBacktickIdentifier(sql, i, labelToViewName, out);
-        continue;
-      }
-      if (c == '-' && i + 1 < n && sql.charAt(i + 1) == '-') {
-        i = copyLineComment(sql, i, out);
-        continue;
-      }
-      if (c == '/' && i + 1 < n && sql.charAt(i + 1) == '*') {
-        i = copyBlockComment(sql, i, out);
-        continue;
-      }
-      if (Character.isLetter(c) || c == '_') {
-        i = copyOrRewriteIdentifier(sql, i, labelToViewName, out);
-        continue;
-      }
-
-      out.append(c);
-      i++;
+      i = consumeNextToken(sql, n, i, labelToViewName, out);
     }
     return out.toString();
+  }
+
+  /** Consumes one token starting at {@code i} and returns the index after it. */
+  private static int consumeNextToken(
+      @Nonnull final String sql,
+      final int n,
+      final int i,
+      @Nonnull final Map<String, String> labelToViewName,
+      @Nonnull final StringBuilder out) {
+    final char c = sql.charAt(i);
+    if (c == '\'' || c == '"') {
+      return copyStringLiteral(sql, i, c, out);
+    }
+    if (c == '`') {
+      return copyOrRewriteBacktickIdentifier(sql, i, labelToViewName, out);
+    }
+    if (c == '-' && i + 1 < n && sql.charAt(i + 1) == '-') {
+      return copyLineComment(sql, i, out);
+    }
+    if (c == '/' && i + 1 < n && sql.charAt(i + 1) == '*') {
+      return copyBlockComment(sql, i, out);
+    }
+    if (Character.isLetter(c) || c == '_') {
+      return copyOrRewriteIdentifier(sql, i, labelToViewName, out);
+    }
+    out.append(c);
+    return i + 1;
   }
 
   /**
@@ -218,19 +221,17 @@ public class ViewRegistrationService {
       if (d == '\\' && i + 1 < n) {
         out.append(d).append(sql.charAt(i + 1));
         i += 2;
-        continue;
-      }
-      if (d == quote) {
-        if (i + 1 < n && sql.charAt(i + 1) == quote) {
-          out.append(d).append(d);
-          i += 2;
-          continue;
-        }
+      } else if (d == quote && i + 1 < n && sql.charAt(i + 1) == quote) {
+        // Doubled quote inside the literal — Spark treats this as an escaped quote.
+        out.append(d).append(d);
+        i += 2;
+      } else if (d == quote) {
         out.append(d);
         return i + 1;
+      } else {
+        out.append(d);
+        i++;
       }
-      out.append(d);
-      i++;
     }
     return i;
   }

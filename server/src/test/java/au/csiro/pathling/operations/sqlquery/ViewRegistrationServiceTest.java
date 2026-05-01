@@ -129,8 +129,9 @@ class ViewRegistrationServiceTest {
         service.rewriteSql(
             "SELECT * FROM patients JOIN patients_archive ON patients.id = patients_archive.id",
             Map.of("patients", "sqlquery_req1_patients"));
-    assertThat(rewritten).contains("FROM sqlquery_req1_patients JOIN patients_archive");
-    assertThat(rewritten).contains("ON sqlquery_req1_patients.id = patients_archive.id");
+    assertThat(rewritten)
+        .contains("FROM sqlquery_req1_patients JOIN patients_archive")
+        .contains("ON sqlquery_req1_patients.id = patients_archive.id");
   }
 
   @Test
@@ -140,8 +141,9 @@ class ViewRegistrationServiceTest {
             "SELECT * FROM obs JOIN obs_summary ON obs.id = obs_summary.id",
             Map.of("obs", "sqlquery_req1_obs", "obs_summary", "sqlquery_req1_obs_summary"));
     // The longer label is rewritten cleanly; the shorter label only matches the bare token.
-    assertThat(rewritten).contains("FROM sqlquery_req1_obs ");
-    assertThat(rewritten).contains("JOIN sqlquery_req1_obs_summary ");
+    assertThat(rewritten)
+        .contains("FROM sqlquery_req1_obs ")
+        .contains("JOIN sqlquery_req1_obs_summary ");
   }
 
   @Test
