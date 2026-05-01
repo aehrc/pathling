@@ -91,8 +91,7 @@ class SqlQueryResultStreamerTest {
 
     assertThat(response.getContentType()).startsWith("application/json");
     final String body = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
-    assertThat(body).startsWith("[").endsWith("]");
-    assertThat(body).contains("\"alice\"").contains("\"bob\"");
+    assertThat(body).startsWith("[").endsWith("]").contains("\"alice\"").contains("\"bob\"");
   }
 
   @Test
@@ -102,8 +101,7 @@ class SqlQueryResultStreamerTest {
 
     assertThat(response.getContentType()).startsWith("text/csv");
     final String body = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
-    assertThat(body).doesNotContain("id,name");
-    assertThat(body).contains("alice").contains("bob");
+    assertThat(body).doesNotContain("id,name").contains("alice").contains("bob");
   }
 
   @Test

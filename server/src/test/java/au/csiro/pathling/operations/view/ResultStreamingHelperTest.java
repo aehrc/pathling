@@ -207,6 +207,146 @@ class ResultStreamingHelperTest {
   }
 
   // ---------------------------------------------------------------------------
+  // NDJSON streaming.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void streamsNdjsonOneLinePerRow() throws Exception {
+    final StructType schema = idNameSchema();
+    final List<Row> rows = List.of(RowFactory.create(1, "alice"), RowFactory.create(2, "bob"));
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.streamNdjson(out, rows.iterator(), schema);
+
+    final String body = out.toString(StandardCharsets.UTF_8);
+    final String[] lines = body.split("\n");
+    assertThat(lines).hasSize(2);
+    assertThat(lines[0]).contains("\"id\":1").contains("\"name\":\"alice\"");
+    assertThat(lines[1]).contains("\"id\":2").contains("\"name\":\"bob\"");
+  }
+
+  @Test
+  void streamsNdjsonOmitsNullValuesPerSpec() throws Exception {
+    final StructType schema = idNameSchema();
+    final List<Row> rows = List.of(RowFactory.create(1, null));
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.streamNdjson(out, rows.iterator(), schema);
+
+    assertThat(out.toString(StandardCharsets.UTF_8)).contains("\"id\":1").doesNotContain("name");
+  }
+
+  // ---------------------------------------------------------------------------
+  // CSV header + body streaming.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void writeCsvHeaderEmitsCommaSeparatedColumnNames() throws Exception {
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.writeCsvHeader(out, List.of("id", "name", "active"));
+
+    assertThat(out.toString(StandardCharsets.UTF_8)).startsWith("id,name,active");
+  }
+
+  @Test
+  void streamsCsvOneRecordPerRow() throws Exception {
+    final StructType schema = idNameSchema();
+    final List<Row> rows = List.of(RowFactory.create(1, "alice"), RowFactory.create(2, "bob"));
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.streamCsv(out, rows.iterator(), schema);
+
+    final String body = out.toString(StandardCharsets.UTF_8);
+    assertThat(body).contains("1,alice").contains("2,bob");
+  }
+
+  @Test
+  void streamsCsvQuotesValueContainingDelimiter() throws Exception {
+    final StructType schema = idNameSchema();
+    final List<Row> rows = List.of(RowFactory.create(1, "smith, john"));
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.streamCsv(out, rows.iterator(), schema);
+
+    assertThat(out.toString(StandardCharsets.UTF_8)).contains("\"smith, john\"");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Single-document JSON.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void writeJsonEmitsArrayOfObjects() throws Exception {
+    final StructType schema = idNameSchema();
+    final List<Row> rows = List.of(RowFactory.create(1, "alice"), RowFactory.create(2, "bob"));
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.writeJson(out, rows.iterator(), schema);
+
+    final JsonArray array =
+        JsonParser.parseString(out.toString(StandardCharsets.UTF_8)).getAsJsonArray();
+    assertThat(array.size()).isEqualTo(2);
+    final JsonObject first = array.get(0).getAsJsonObject();
+    assertThat(first.get("id").getAsInt()).isEqualTo(1);
+    assertThat(first.get("name").getAsString()).isEqualTo("alice");
+  }
+
+  @Test
+  void writeJsonEmitsEmptyArrayForNoRows() throws Exception {
+    final StructType schema = idNameSchema();
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.writeJson(out, List.<Row>of().iterator(), schema);
+
+    assertThat(out.toString(StandardCharsets.UTF_8)).isEqualTo("[]");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Misc value conversion.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void convertValueReturnsNullForNullInput() {
+    assertThat(helper.convertValue(null, DataTypes.StringType)).isNull();
+  }
+
+  @Test
+  void convertValueForCsvJsonifiesNestedRow() {
+    final StructType nested =
+        DataTypes.createStructType(
+            new org.apache.spark.sql.types.StructField[] {
+              DataTypes.createStructField("inner", DataTypes.StringType, true)
+            });
+    final Row nestedRow = RowFactory.create("hello");
+    final Object converted = helper.convertValueForCsv(nestedRow, nested);
+    assertThat(converted).isInstanceOf(String.class);
+    assertThat((String) converted).contains("\"inner\"").contains("\"hello\"");
+  }
+
+  @Test
+  void convertValueForCsvPassesThroughScalars() {
+    assertThat(helper.convertValueForCsv("alice", DataTypes.StringType)).isEqualTo("alice");
+    assertThat(helper.convertValueForCsv(42, DataTypes.IntegerType)).isEqualTo(42);
+    assertThat(helper.convertValueForCsv(null, DataTypes.StringType)).isNull();
+  }
+
+  @Test
+  void rowToListPreservesColumnOrder() {
+    final StructType schema = idNameSchema();
+    final Row row = RowFactory.create(7, "alice");
+    assertThat(helper.rowToList(row, schema)).containsExactly(7, "alice");
+  }
+
+  private static StructType idNameSchema() {
+    return DataTypes.createStructType(
+        new org.apache.spark.sql.types.StructField[] {
+          DataTypes.createStructField("id", DataTypes.IntegerType, false),
+          DataTypes.createStructField("name", DataTypes.StringType, true)
+        });
+  }
+
+  // ---------------------------------------------------------------------------
   // Helpers.
   // ---------------------------------------------------------------------------
 
