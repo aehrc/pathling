@@ -45,6 +45,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /**
  * Tests for {@link LibraryReferenceResolver} covering both the relative-literal and canonical
@@ -91,30 +93,13 @@ class LibraryReferenceResolverTest {
       assertThat(resolved).isSameAs(stored);
     }
 
-    @Test
-    void rejectsReferenceToOtherResourceType() {
-      final Reference reference = new Reference("Patient/abc");
+    @ParameterizedTest(name = "rejects ''{0}'' with message containing ''{1}''")
+    @CsvSource({"Patient/abc, Library", "'', non-blank", "Library/, missing"})
+    void rejectsInvalidRelativeReference(final String input, final String expectedMessage) {
+      final Reference reference = new Reference(input);
       assertThatThrownBy(() -> resolver.resolve(reference))
           .isInstanceOf(InvalidRequestException.class)
-          .hasMessageContaining("Library");
-      verifyNoInteractions(readExecutor);
-    }
-
-    @Test
-    void rejectsBlankReference() {
-      final Reference reference = new Reference("");
-      assertThatThrownBy(() -> resolver.resolve(reference))
-          .isInstanceOf(InvalidRequestException.class)
-          .hasMessageContaining("non-blank");
-      verifyNoInteractions(readExecutor);
-    }
-
-    @Test
-    void rejectsLibrarySlashWithEmptyId() {
-      final Reference reference = new Reference("Library/");
-      assertThatThrownBy(() -> resolver.resolve(reference))
-          .isInstanceOf(InvalidRequestException.class)
-          .hasMessageContaining("missing");
+          .hasMessageContaining(expectedMessage);
       verifyNoInteractions(readExecutor);
     }
 
