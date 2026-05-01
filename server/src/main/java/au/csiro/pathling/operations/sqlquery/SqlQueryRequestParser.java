@@ -187,6 +187,10 @@ public class SqlQueryRequestParser {
         throw new InvalidRequestException(
             "Runtime parameter '" + name + "' is supplied more than once");
       }
+      if (bindings.containsKey(name)) {
+        throw new InvalidRequestException(
+            "Runtime parameter '" + name + "' is supplied more than once");
+      }
       bindings.put(name, convertTypedValue(name, declaredType, value));
     }
     return bindings;
