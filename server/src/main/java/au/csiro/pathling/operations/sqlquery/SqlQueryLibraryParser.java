@@ -58,10 +58,12 @@ public class SqlQueryLibraryParser {
 
   private static final String SQL_CONTENT_TYPE_PREFIX = "application/sql";
 
-  private static final String LIBRARY_TYPE_SYSTEM =
+  /** Code system identifying the SQLQuery Library profile. */
+  public static final String LIBRARY_TYPE_SYSTEM =
       "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes";
 
-  private static final String LIBRARY_TYPE_CODE = "sql-query";
+  /** {@link #LIBRARY_TYPE_SYSTEM} code identifying a SQLQuery Library. */
+  public static final String LIBRARY_TYPE_CODE = "sql-query";
 
   private static final Pattern LABEL_PATTERN = Pattern.compile("^[A-Za-z]\\w*$");
 
