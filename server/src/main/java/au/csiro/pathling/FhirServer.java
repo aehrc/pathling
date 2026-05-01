@@ -174,6 +174,14 @@ public class FhirServer extends RestfulServer {
 
   @Nonnull private final transient ViewDefinitionExportProvider viewDefinitionExportProvider;
 
+  @Nonnull
+  private final transient au.csiro.pathling.operations.sqlquery.SqlQueryRunProvider
+      sqlQueryRunProvider;
+
+  @Nonnull
+  private final transient au.csiro.pathling.operations.sqlquery.SqlQueryInstanceRunProvider
+      sqlQueryInstanceRunProvider;
+
   /**
    * Constructs a new FhirServer.
    *
@@ -203,7 +211,10 @@ public class FhirServer extends RestfulServer {
    * @param viewDefinitionRunProvider the view definition run provider
    * @param viewDefinitionInstanceRunProvider the view definition instance run provider
    * @param viewDefinitionExportProvider the view definition export provider
+   * @param sqlQueryRunProvider the SQL query run provider
+   * @param sqlQueryInstanceRunProvider the SQL query instance run provider
    */
+  @SuppressWarnings("java:S107")
   public FhirServer(
       @Nonnull final FhirContext fhirContext,
       @Nonnull final ServerConfiguration configuration,
@@ -230,7 +241,11 @@ public class FhirServer extends RestfulServer {
       @Nonnull final BatchProvider batchProvider,
       @Nonnull final ViewDefinitionRunProvider viewDefinitionRunProvider,
       @Nonnull final ViewDefinitionInstanceRunProvider viewDefinitionInstanceRunProvider,
-      @Nonnull final ViewDefinitionExportProvider viewDefinitionExportProvider) {
+      @Nonnull final ViewDefinitionExportProvider viewDefinitionExportProvider,
+      @Nonnull final au.csiro.pathling.operations.sqlquery.SqlQueryRunProvider sqlQueryRunProvider,
+      @Nonnull
+          final au.csiro.pathling.operations.sqlquery.SqlQueryInstanceRunProvider
+              sqlQueryInstanceRunProvider) {
     // Pass the FhirContext to the RestfulServer superclass to ensure custom types like
     // ViewDefinitionResource are recognized when parsing request bodies.
     super(fhirContext);
@@ -259,6 +274,8 @@ public class FhirServer extends RestfulServer {
     this.viewDefinitionRunProvider = viewDefinitionRunProvider;
     this.viewDefinitionInstanceRunProvider = viewDefinitionInstanceRunProvider;
     this.viewDefinitionExportProvider = viewDefinitionExportProvider;
+    this.sqlQueryRunProvider = sqlQueryRunProvider;
+    this.sqlQueryInstanceRunProvider = sqlQueryInstanceRunProvider;
   }
 
   @Override
@@ -375,6 +392,12 @@ public class FhirServer extends RestfulServer {
       // Register view definition export provider.
       if (ops.isViewDefinitionExportEnabled()) {
         registerProvider(viewDefinitionExportProvider);
+      }
+
+      // Register SQL query run providers.
+      if (ops.isSqlQueryRunEnabled()) {
+        registerProvider(sqlQueryRunProvider);
+        registerProvider(sqlQueryInstanceRunProvider);
       }
 
       // CORS configuration.

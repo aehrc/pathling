@@ -504,6 +504,9 @@ public class ConformanceProvider
     addOperationIfEnabled(operations, "viewdefinition-run", ops.isViewDefinitionRunEnabled());
     addOperationIfEnabled(operations, "viewdefinition-export", ops.isViewDefinitionExportEnabled());
 
+    // Add SQL query run operation.
+    addOperationIfEnabled(operations, "sqlquery-run", ops.isSqlQueryRunEnabled());
+
     // Add bulk submit operations if configured and enabled.
     if (configuration.getBulkSubmit() != null && ops.isBulkSubmitEnabled()) {
       addOperationIfEnabled(operations, "bulk-submit", true);
