@@ -400,41 +400,7 @@ class SingleInstanceEvaluatorTest {
     @Test
     void sanitisesElementsInArrayOfStructs() {
       // Synthetic and null-valued fields in array-of-struct elements should also be stripped.
-      // This mirrors the CodeableConcept.coding bug reported in issue #2592.
-      final StructType codingSchema =
-          new StructType(
-              new StructField[] {
-                DataTypes.createStructField("id", DataTypes.StringType, true),
-                DataTypes.createStructField("system", DataTypes.StringType, true),
-                DataTypes.createStructField("version", DataTypes.StringType, true),
-                DataTypes.createStructField("code", DataTypes.StringType, true),
-                DataTypes.createStructField("display", DataTypes.StringType, true),
-                DataTypes.createStructField("userSelected", DataTypes.BooleanType, true),
-                DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
-              });
-      final StructType outerSchema =
-          new StructType(
-              new StructField[] {
-                DataTypes.createStructField(
-                    "coding", DataTypes.createArrayType(codingSchema, true), true),
-              });
-
-      final Row codingRow =
-          new GenericRowWithSchema(
-              new Object[] {
-                null,
-                "http://snomed.info/sct",
-                null,
-                "446141000124107",
-                "Identifies as female gender",
-                null,
-                1468279945
-              },
-              codingSchema);
-      final Row outerRow =
-          new GenericRowWithSchema(new Object[] {SqlHelpers.sql_array(codingRow)}, outerSchema);
-
-      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(outerRow);
+      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(buildCodingOuterRow());
 
       assertEquals(1, sanitised.schema().fields().length);
       assertEquals("coding", sanitised.schema().fields()[0].name());
@@ -573,40 +539,7 @@ class SingleInstanceEvaluatorTest {
     @Test
     void jsonCorrectlyRendersArrayOfStructsAfterSanitisation() {
       // JSON output for array-of-struct fields should not include synthetic or null-valued fields.
-      final StructType codingSchema =
-          new StructType(
-              new StructField[] {
-                DataTypes.createStructField("id", DataTypes.StringType, true),
-                DataTypes.createStructField("system", DataTypes.StringType, true),
-                DataTypes.createStructField("version", DataTypes.StringType, true),
-                DataTypes.createStructField("code", DataTypes.StringType, true),
-                DataTypes.createStructField("display", DataTypes.StringType, true),
-                DataTypes.createStructField("userSelected", DataTypes.BooleanType, true),
-                DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
-              });
-      final StructType outerSchema =
-          new StructType(
-              new StructField[] {
-                DataTypes.createStructField(
-                    "coding", DataTypes.createArrayType(codingSchema, true), true),
-              });
-
-      final Row codingRow =
-          new GenericRowWithSchema(
-              new Object[] {
-                null,
-                "http://snomed.info/sct",
-                null,
-                "446141000124107",
-                "Identifies as female gender",
-                null,
-                1468279945
-              },
-              codingSchema);
-      final Row outerRow =
-          new GenericRowWithSchema(new Object[] {SqlHelpers.sql_array(codingRow)}, outerSchema);
-
-      final String json = SingleInstanceEvaluator.rowToJson(outerRow);
+      final String json = SingleInstanceEvaluator.rowToJson(buildCodingOuterRow());
 
       assertFalse(json.contains("\"_fid\""));
       assertFalse(json.contains("\"id\""));
@@ -805,5 +738,38 @@ class SingleInstanceEvaluatorTest {
       assertEquals("active", results.get(1).getLabel());
       assertEquals(1, results.get(1).getValues().size());
     }
+  }
+
+  private static Row buildCodingOuterRow() {
+    final StructType codingSchema =
+        new StructType(
+            new StructField[] {
+              DataTypes.createStructField("id", DataTypes.StringType, true),
+              DataTypes.createStructField("system", DataTypes.StringType, true),
+              DataTypes.createStructField("version", DataTypes.StringType, true),
+              DataTypes.createStructField("code", DataTypes.StringType, true),
+              DataTypes.createStructField("display", DataTypes.StringType, true),
+              DataTypes.createStructField("userSelected", DataTypes.BooleanType, true),
+              DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
+            });
+    final StructType outerSchema =
+        new StructType(
+            new StructField[] {
+              DataTypes.createStructField(
+                  "coding", DataTypes.createArrayType(codingSchema, true), true),
+            });
+    final Row codingRow =
+        new GenericRowWithSchema(
+            new Object[] {
+              null,
+              "http://snomed.info/sct",
+              null,
+              "446141000124107",
+              "Identifies as female gender",
+              null,
+              1468279945
+            },
+            codingSchema);
+    return new GenericRowWithSchema(new Object[] {SqlHelpers.sql_array(codingRow)}, outerSchema);
   }
 }
