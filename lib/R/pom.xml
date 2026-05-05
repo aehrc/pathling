@@ -224,6 +224,8 @@
                 <argument>-e</argument>
                 <argument>install.packages("devtools", type="source")</argument>
                 <argument>-e</argument>
+                <argument>install.packages("remotes", type="source")</argument>
+                <argument>-e</argument>
                 <argument>devtools::install_dev_deps(type="source")</argument>
                 <argument>-e</argument>
                 <argument>installed.packages()[,c("Package","Version")]</argument>
