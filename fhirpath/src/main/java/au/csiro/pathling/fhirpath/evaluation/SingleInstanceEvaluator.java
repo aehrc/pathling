@@ -397,8 +397,7 @@ public class SingleInstanceEvaluator {
               new StructField(
                   field.name(), sanitisedNested.schema(), field.nullable(), field.metadata()));
         } else if (value instanceof final scala.collection.Seq<?> seq) {
-          // Recurse into array elements that are Row instances, sanitising each one.
-          final List<Object> sanitisedElements = new ArrayList<>();
+          final List<Object> sanitisedElements = new ArrayList<>(seq.length());
           StructType sanitisedElementSchema = null;
           for (int i = 0; i < seq.length(); i++) {
             final Object element = seq.apply(i);
