@@ -81,6 +81,9 @@ class SqlQueryRunWithViewDefinitionsIT {
   private static final String VIEW_REFERENCE =
       "ViewDefinition/" + SqlQueryViewDefinitionTestConfiguration.PATIENT_VIEW_ID;
 
+  private static final String OBSERVATION_VIEW_REFERENCE =
+      "ViewDefinition/" + SqlQueryViewDefinitionTestConfiguration.OBSERVATION_VIEW_ID;
+
   @LocalServerPort int port;
 
   @Autowired WebTestClient webTestClient;
@@ -144,6 +147,42 @@ class SqlQueryRunWithViewDefinitionsIT {
 
     final String[] lines = body.trim().split("\n");
     assertThat(lines).hasSize(2);
+  }
+
+  /**
+   * Exercises the case where the referenced ViewDefinition's FHIRPath compiles to a Pathling-
+   * registered UDF call (here {@code decimal_to_literal}, via {@code Quantity.value.toString()}).
+   * The view's analyzed plan therefore carries a {@code ScalaUDF}, which appears in the user SQL's
+   * analyzed plan after Spark substitutes the temp view in. The validator must permit this even
+   * though the same UDF, called directly from user SQL, would be rejected. Regression for the
+   * change that removed the UDF allow-list.
+   */
+  @Test
+  void runsSqlAgainstViewWithPathlingUdfInFhirPath() {
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT id, subject, weight_kg FROM observations ORDER BY id",
+            "observations",
+            OBSERVATION_VIEW_REFERENCE);
+
+    final String body =
+        postOk(
+            "/fhir/$sqlquery-run",
+            parametersJson(library, SqlQueryOutputFormat.NDJSON),
+            SqlQueryOutputFormat.NDJSON);
+    log.debug("View-with-UDF NDJSON response:\n{}", body);
+
+    final String[] lines = body.trim().split("\n");
+    assertThat(lines).hasSize(3);
+    // decimal_to_literal strips trailing zeros: 70.50 -> "70.5", 82.250 -> "82.25", 65 -> "65".
+    assertThat(body)
+        .contains("\"id\":\"o1\"")
+        .contains("\"subject\":\"Patient/p1\"")
+        .contains("\"weight_kg\":\"70.5\"")
+        .contains("\"id\":\"o2\"")
+        .contains("\"weight_kg\":\"82.25\"")
+        .contains("\"id\":\"o3\"")
+        .contains("\"weight_kg\":\"65\"");
   }
 
   @Test
