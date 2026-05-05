@@ -21,33 +21,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
 import java.util.stream.Stream;
-import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
 /**
- * Build-time integrity checks for {@link SqlValidator}. These tests fail fast if the validator's
- * static allow-lists drift from reality:
- *
- * <ul>
- *   <li>Every entry in the allow-list / reject-list must resolve to a class on the classpath
- *       (catches typos and Spark renames).
- *   <li>The UDF allow-list must match the set of UDFs the test SparkSession has registered (catches
- *       hand-copy drift between {@link SqlValidator} and the registrars).
- * </ul>
+ * Build-time integrity checks for {@link SqlValidator}. Every entry in the allow-list / reject-list
+ * must resolve to a class on the classpath (catches typos and Spark renames).
  */
 @Import(SqlValidator.class)
 @SpringBootUnitTest
 class SqlValidatorIntegrityTest {
-
-  @Autowired private SparkSession sparkSession;
-
-  // ---------------------------------------------------------------------------
-  // FQN entries must resolve on the classpath.
-  // ---------------------------------------------------------------------------
 
   @ParameterizedTest(name = "plan node: {0}")
   @MethodSource("planNodeFqns")
@@ -70,27 +55,6 @@ class SqlValidatorIntegrityTest {
     assertThat(resolves(fqn)).as("FQN '%s' did not resolve on the classpath", fqn).isTrue();
   }
 
-  // ---------------------------------------------------------------------------
-  // UDF allow-list must match what's actually registered.
-  // ---------------------------------------------------------------------------
-
-  @ParameterizedTest(name = "UDF: {0}")
-  @MethodSource("udfNames")
-  @DisplayName("Every allow-listed UDF name corresponds to a function registered in Spark")
-  void allowedUdfIsRegistered(final String name) {
-    assertThat(sparkSession.catalog().functionExists(name))
-        .as(
-            "Allow-list names UDF '%s' but no function with that name is registered in the test "
-                + "SparkSession. Either the UDF was retired (drop it from "
-                + "SqlValidator.ALLOWED_UDF_NAMES) or the registrar configuration drifted.",
-            name)
-        .isTrue();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Helpers.
-  // ---------------------------------------------------------------------------
-
   static Stream<String> planNodeFqns() {
     return SqlValidator.allowedPlanNodes().stream();
   }
@@ -101,10 +65,6 @@ class SqlValidatorIntegrityTest {
 
   static Stream<String> rejectedExpressionFqns() {
     return SqlValidator.rejectedExpressionNames().stream();
-  }
-
-  static Stream<String> udfNames() {
-    return SqlValidator.allowedUdfNames().stream();
   }
 
   /**

@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import org.apache.spark.sql.SparkSession;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
@@ -31,7 +33,16 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class SqlValidatorTest {
 
+  private static final String VIEW_NAME = "sql_validator_test_view";
+
   @Autowired private SqlValidator sqlValidator;
+
+  @Autowired private SparkSession sparkSession;
+
+  @AfterEach
+  void dropView() {
+    sparkSession.catalog().dropTempView(VIEW_NAME);
+  }
 
   // -------------------------------------------------------------------------
   // Valid SQL queries — should not throw.
@@ -218,6 +229,76 @@ class SqlValidatorTest {
             () -> sqlValidator.validate("SELECT java_method('java.lang.Math', 'random') FROM t"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed function");
+  }
+
+  // -------------------------------------------------------------------------
+  // Invalid SQL — Pathling-registered UDFs are not allowed in user SQL.
+  // The analytic surface stays portable; terminology and FHIRPath helpers
+  // belong in ViewDefinitions.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void rejectsTerminologyUdfMemberOf() {
+    assertThatThrownBy(
+            () ->
+                sqlValidator.validate(
+                    "SELECT member_of(coding, 'http://snomed.info/sct?fhir_vs') FROM t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("non-built-in function")
+        .hasMessageContaining("member_of");
+  }
+
+  @Test
+  void rejectsTerminologyUdfDisplay() {
+    assertThatThrownBy(() -> sqlValidator.validate("SELECT display(coding) FROM t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("non-built-in function")
+        .hasMessageContaining("display");
+  }
+
+  @Test
+  void rejectsTerminologyUdfTranslateCoding() {
+    assertThatThrownBy(
+            () ->
+                sqlValidator.validate(
+                    "SELECT translate_coding(coding, 'http://example.org/cm') FROM t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("non-built-in function");
+  }
+
+  @Test
+  void rejectsFhirpathUdfStringToQuantity() {
+    assertThatThrownBy(() -> sqlValidator.validate("SELECT string_to_quantity('5 mg') FROM t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("non-built-in function");
+  }
+
+  // -------------------------------------------------------------------------
+  // View-derived Pathling UDFs flow through unaffected. ViewDefinition
+  // FHIRPath expressions compile to Spark plans that contain ScalaUDFs (for
+  // terminology and FHIRPath helpers). When user SQL references the resulting
+  // temp view, Spark substitutes the view's analyzed plan into the user
+  // plan, so those ScalaUDFs appear in the analyzed-plan walk but never in
+  // the unresolved-plan walk where the non-built-in rejection fires.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void permitsViewDerivedScalaUdfInAnalyzedPlan() {
+    // Build a dataset whose plan contains a Pathling ScalaUDF (decimal_to_literal),
+    // simulating what FhirViewExecutor produces when the view's FHIRPath uses one
+    // of these helpers.
+    final org.apache.spark.sql.Dataset<org.apache.spark.sql.Row> viewBacking =
+        sparkSession.sql("SELECT decimal_to_literal(CAST(1.5 AS DECIMAL(10, 2)), 1) AS literal");
+    viewBacking.createOrReplaceTempView(VIEW_NAME);
+
+    // User SQL is plain ANSI — no UDF reference. The unresolved walk sees only
+    // an UnresolvedRelation; the analyzed walk sees the substituted ScalaUDF.
+    final String userSql = "SELECT literal FROM " + VIEW_NAME;
+    assertThatCode(() -> sqlValidator.validate(userSql)).doesNotThrowAnyException();
+
+    final org.apache.spark.sql.catalyst.plans.logical.LogicalPlan analyzed =
+        sparkSession.sql(userSql).queryExecution().analyzed();
+    assertThatCode(() -> sqlValidator.validateAnalyzed(analyzed)).doesNotThrowAnyException();
   }
 
   // -------------------------------------------------------------------------
