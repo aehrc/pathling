@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireframe - SQL query, inline</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f0f0; color: #333; line-height: 1.4; }
+  .mono { font-family: "SF Mono", "Menlo", "Consolas", monospace; }
+  .wf-container { max-width: 1280px; margin: 0 auto; background: #fff; min-height: 100vh; display: flex; flex-direction: column; }
+  .wf-header { background: #e8e8e8; border-bottom: 2px solid #bbb; padding: 0.85rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .wf-logo { font-weight: bold; font-size: 1rem; color: #555; }
+  .wf-nav { display: flex; gap: 1.25rem; }
+  .wf-nav a { color: #666; text-decoration: none; font-size: 0.85rem; padding: 0.25rem 0.4rem; border-radius: 3px; }
+  .wf-nav a.active { background: #d0d0d0; color: #222; font-weight: 600; }
+  .wf-main { padding: 1.5rem; flex: 1; }
+  .wf-page-title { font-size: 1.4rem; font-weight: 600; margin-bottom: 1rem; color: #333; }
+
+  .wf-segmented { display: inline-flex; border: 2px solid #aaa; border-radius: 6px; overflow: hidden; margin-bottom: 1rem; background: #f0f0f0; }
+  .wf-segmented div { padding: 0.45rem 1rem; font-size: 0.85rem; color: #666; cursor: pointer; border-right: 2px solid #aaa; }
+  .wf-segmented div:last-child { border-right: 0; }
+  .wf-segmented .active { background: #ccc; color: #222; font-weight: 600; }
+
+  .wf-row { display: flex; gap: 1.25rem; align-items: flex-start; }
+  .wf-col { flex: 1; min-width: 0; }
+
+  .wf-card { background: #fafafa; border: 2px solid #ccc; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
+  .wf-card h2 { font-size: 1.1rem; color: #444; margin-bottom: 0.85rem; }
+
+  .wf-tabs { display: flex; border-bottom: 2px solid #ccc; margin-bottom: 1rem; }
+  .wf-tab { padding: 0.5rem 0.85rem; font-size: 0.85rem; color: #777; border-bottom: 3px solid transparent; margin-bottom: -2px; cursor: pointer; }
+  .wf-tab.active { color: #222; border-bottom-color: #555; font-weight: 600; }
+
+  .wf-section { margin-bottom: 1rem; }
+  .wf-section-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: #777; margin-bottom: 0.4rem; font-weight: 600; }
+  .wf-help { font-size: 0.78rem; color: #999; margin-top: 0.3rem; }
+
+  .wf-label { display: block; font-size: 0.82rem; color: #555; margin-bottom: 0.25rem; font-weight: 500; }
+  .wf-input { width: 100%; padding: 0.45rem 0.55rem; border: 2px solid #bbb; border-radius: 4px; background: #fff; font-size: 0.85rem; color: #555; }
+  .wf-input.short { width: 6rem; }
+  .wf-textarea { width: 100%; padding: 0.55rem; border: 2px solid #bbb; border-radius: 4px; background: #fff; font-size: 0.82rem; color: #555; min-height: 7rem; resize: vertical; }
+  .wf-select { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.6rem; border: 2px solid #bbb; border-radius: 4px; background: #fff; font-size: 0.85rem; color: #555; min-width: 12rem; justify-content: space-between; }
+  .wf-select::after { content: "▾"; color: #888; }
+
+  .wf-button { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 0.95rem; background: #ddd; border: 2px solid #aaa; border-radius: 4px; color: #444; font-size: 0.88rem; cursor: pointer; }
+  .wf-button.primary { background: #c4c4c4; border-color: #777; color: #222; font-weight: 600; }
+  .wf-button.icon { padding: 0.3rem 0.4rem; min-width: auto; font-size: 0.8rem; }
+  .wf-icon-btn { width: 1.6rem; height: 1.6rem; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #bbb; border-radius: 3px; background: #fff; color: #888; cursor: pointer; }
+
+  .wf-row-of-fields { display: flex; gap: 0.5rem; align-items: flex-end; margin-bottom: 0.4rem; }
+  .wf-row-of-fields .wf-col { flex: 1; }
+  .wf-row-of-fields .wf-col.narrow { flex: 0 0 8rem; }
+  .wf-row-of-fields .wf-col.label { flex: 0 0 7rem; }
+
+  .wf-switch { display: inline-flex; align-items: center; gap: 0.45rem; }
+  .wf-switch .knob { width: 2.2rem; height: 1.1rem; background: #bbb; border-radius: 999px; position: relative; }
+  .wf-switch .knob::after { content: ""; width: 0.85rem; height: 0.85rem; background: #fff; border-radius: 50%; position: absolute; top: 0.12rem; left: 0.12rem; }
+  .wf-switch.on .knob { background: #888; }
+  .wf-switch.on .knob::after { left: 1.2rem; }
+
+  .wf-actions { display: flex; gap: 0.6rem; margin-top: 0.5rem; }
+  .wf-actions .wf-button { flex: 1; justify-content: center; }
+
+  .wf-empty-results { background: #f5f5f5; border: 2px dashed #ccc; border-radius: 6px; padding: 2rem; color: #999; font-size: 0.85rem; text-align: center; }
+  .wf-annotation { font-size: 0.78rem; color: #999; font-style: italic; margin: 0.4rem 0 0.4rem 0; }
+</style>
+</head>
+<body>
+<div class="wf-container">
+  <header class="wf-header">
+    <div class="wf-logo">Pathling Admin</div>
+    <nav class="wf-nav">
+      <a href="#">Dashboard</a>
+      <a href="#">Resources</a>
+      <a href="#">Import</a>
+      <a href="#">Export</a>
+      <a href="#">Bulk submit</a>
+      <a href="#" class="active">SQL on FHIR</a>
+    </nav>
+  </header>
+
+  <main class="wf-main">
+    <h1 class="wf-page-title">SQL on FHIR</h1>
+
+    <div class="wf-segmented" role="tablist" aria-label="SQL on FHIR mode">
+      <div>View definition</div>
+      <div class="active">SQL query</div>
+    </div>
+    <p class="wf-annotation">SegmentedControl chooses between $viewdefinition-run and $sqlquery-run. SQL query mode is selected.</p>
+
+    <div class="wf-row">
+      <!-- Form column -->
+      <div class="wf-col">
+        <div class="wf-card">
+          <h2>SQL query</h2>
+
+          <div class="wf-tabs" role="tablist" aria-label="Library source">
+            <div class="wf-tab">Select Library</div>
+            <div class="wf-tab active">Provide Library</div>
+          </div>
+
+          <!-- SQL editor -->
+          <div class="wf-section">
+            <label class="wf-label">SQL</label>
+            <textarea class="wf-textarea mono" rows="9" spellcheck="false">SELECT p.given_name, p.family_name, c.condition_name, c.onset_date
+FROM patients p
+JOIN conditions c
+  ON concat('Patient/', p.patient_id) = c.patient_ref
+WHERE p.patient_id = :patient_id
+ORDER BY c.onset_date</textarea>
+            <div class="wf-help">Plain SQL text. Encoded as Base64 into Library.content[0].data on submit; the raw text is preserved in the sql-text extension.</div>
+          </div>
+
+          <!-- Tables (related artifacts) -->
+          <div class="wf-section">
+            <div class="wf-section-title">Tables</div>
+            <div class="wf-row-of-fields">
+              <div class="wf-col label">
+                <label class="wf-label">Label</label>
+                <input class="wf-input mono" value="patients">
+              </div>
+              <div class="wf-col">
+                <label class="wf-label">View definition</label>
+                <div class="wf-select">patients <span style="color:#999">(Patient)</span></div>
+              </div>
+              <button class="wf-icon-btn" aria-label="Remove">×</button>
+            </div>
+            <div class="wf-row-of-fields">
+              <div class="wf-col label">
+                <input class="wf-input mono" value="conditions">
+              </div>
+              <div class="wf-col">
+                <div class="wf-select">conditions <span style="color:#999">(Condition)</span></div>
+              </div>
+              <button class="wf-icon-btn" aria-label="Remove">×</button>
+            </div>
+            <button class="wf-button">+ Add table</button>
+            <div class="wf-help">Each table becomes Library.relatedArtifact[*]. The label is the name used to reference the view in SQL.</div>
+          </div>
+
+          <!-- Declared parameters -->
+          <div class="wf-section">
+            <div class="wf-section-title">Parameters</div>
+            <div class="wf-row-of-fields">
+              <div class="wf-col label">
+                <label class="wf-label">Name</label>
+                <input class="wf-input mono" value="patient_id">
+              </div>
+              <div class="wf-col narrow">
+                <label class="wf-label">Type</label>
+                <div class="wf-select">string</div>
+              </div>
+              <div class="wf-col">
+                <label class="wf-label">Default</label>
+                <input class="wf-input" placeholder="(none)">
+              </div>
+              <button class="wf-icon-btn" aria-label="Remove">×</button>
+            </div>
+            <button class="wf-button">+ Add parameter</button>
+            <div class="wf-help">Maps to Library.parameter[*] (use=in). The runtime value goes below.</div>
+          </div>
+
+          <!-- Runtime values -->
+          <div class="wf-section">
+            <div class="wf-section-title">Runtime parameter values</div>
+            <div class="wf-row-of-fields">
+              <div class="wf-col label">
+                <label class="wf-label mono">patient_id</label>
+              </div>
+              <div class="wf-col">
+                <input class="wf-input" value="Patient/pat-1">
+              </div>
+            </div>
+            <div class="wf-help">Submitted as a Parameters resource under the request's "parameters" parameter. Inputs are typed against the declared parameter type.</div>
+          </div>
+
+          <!-- Output / limit / header -->
+          <div class="wf-section">
+            <div class="wf-row-of-fields">
+              <div class="wf-col">
+                <label class="wf-label">Output format</label>
+                <div class="wf-select">csv</div>
+              </div>
+              <div class="wf-col narrow">
+                <label class="wf-label">Limit</label>
+                <input class="wf-input short" value="100">
+              </div>
+              <div class="wf-col">
+                <label class="wf-label">Header row</label>
+                <div class="wf-switch on"><span class="knob"></span><span style="font-size:0.82rem;color:#555">on</span></div>
+              </div>
+            </div>
+            <div class="wf-help">Output format is one of csv / ndjson / json / parquet / fhir. Header switch only shown for csv.</div>
+          </div>
+
+          <!-- Actions -->
+          <div class="wf-actions">
+            <button class="wf-button primary">▶ Execute</button>
+            <button class="wf-button">↥ Save to server</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results column -->
+      <div class="wf-col">
+        <div class="wf-empty-results">
+          Execute a query to see results here.<br>
+          <small>Each execution adds a card to this column; cards are independent and closable.</small>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

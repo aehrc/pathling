@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireframe - SQL query result, tabular</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f0f0; color: #333; line-height: 1.4; }
+  .mono { font-family: "SF Mono", "Menlo", "Consolas", monospace; }
+  .wf-container { max-width: 1280px; margin: 0 auto; background: #fff; min-height: 100vh; display: flex; flex-direction: column; }
+  .wf-header { background: #e8e8e8; border-bottom: 2px solid #bbb; padding: 0.85rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .wf-logo { font-weight: bold; font-size: 1rem; color: #555; }
+  .wf-nav { display: flex; gap: 1.25rem; }
+  .wf-nav a { color: #666; text-decoration: none; font-size: 0.85rem; padding: 0.25rem 0.4rem; border-radius: 3px; }
+  .wf-nav a.active { background: #d0d0d0; color: #222; font-weight: 600; }
+  .wf-main { padding: 1.5rem; flex: 1; }
+  .wf-page-title { font-size: 1.4rem; font-weight: 600; margin-bottom: 1rem; color: #333; }
+
+  .wf-segmented { display: inline-flex; border: 2px solid #aaa; border-radius: 6px; overflow: hidden; margin-bottom: 1rem; background: #f0f0f0; }
+  .wf-segmented div { padding: 0.45rem 1rem; font-size: 0.85rem; color: #666; border-right: 2px solid #aaa; }
+  .wf-segmented div:last-child { border-right: 0; }
+  .wf-segmented .active { background: #ccc; color: #222; font-weight: 600; }
+
+  .wf-row { display: flex; gap: 1.25rem; align-items: flex-start; }
+  .wf-col { flex: 1; min-width: 0; }
+  .wf-card { background: #fafafa; border: 2px solid #ccc; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
+
+  .wf-form-stub { color: #888; font-size: 0.85rem; padding: 1rem; border: 2px dashed #ccc; border-radius: 4px; background: #f5f5f5; }
+
+  .wf-result-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+  .wf-result-title { font-weight: 600; color: #333; font-size: 0.95rem; margin-bottom: 0.2rem; }
+  .wf-result-meta { font-size: 0.75rem; color: #888; }
+  .wf-tag { display: inline-block; padding: 0.1rem 0.45rem; background: #e0e0e0; border: 1px solid #bbb; border-radius: 3px; font-size: 0.72rem; color: #555; }
+
+  .wf-button { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; background: #ddd; border: 2px solid #aaa; border-radius: 4px; color: #444; font-size: 0.8rem; }
+  .wf-button.small { padding: 0.25rem 0.55rem; font-size: 0.75rem; }
+  .wf-button.soft { background: #ececec; }
+
+  .wf-result-actions { display: flex; gap: 0.4rem; align-items: center; margin: 0.6rem 0; justify-content: space-between; }
+  .wf-result-controls { display: flex; gap: 0.4rem; }
+
+  .wf-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  .wf-table th, .wf-table td { padding: 0.4rem 0.6rem; border: 1px solid #ccc; text-align: left; white-space: nowrap; }
+  .wf-table th { background: #ececec; font-weight: 600; color: #555; }
+  .wf-table td { color: #555; }
+  .wf-table td.mono { font-family: "SF Mono", "Menlo", monospace; }
+
+  .wf-annotation { font-size: 0.78rem; color: #999; font-style: italic; margin: 0.5rem 0; }
+</style>
+</head>
+<body>
+<div class="wf-container">
+  <header class="wf-header">
+    <div class="wf-logo">Pathling Admin</div>
+    <nav class="wf-nav">
+      <a href="#">Dashboard</a>
+      <a href="#">Resources</a>
+      <a href="#">Import</a>
+      <a href="#">Export</a>
+      <a href="#">Bulk submit</a>
+      <a href="#" class="active">SQL on FHIR</a>
+    </nav>
+  </header>
+
+  <main class="wf-main">
+    <h1 class="wf-page-title">SQL on FHIR</h1>
+
+    <div class="wf-segmented">
+      <div>View definition</div>
+      <div class="active">SQL query</div>
+    </div>
+
+    <div class="wf-row">
+      <div class="wf-col">
+        <div class="wf-card">
+          <div class="wf-form-stub">
+            <strong>SQL query form</strong> (collapsed for brevity - see <a href="./sql-query-inline.html">inline</a> or <a href="./sql-query-stored.html">stored</a> wireframes).
+          </div>
+        </div>
+      </div>
+
+      <!-- Result column -->
+      <div class="wf-col">
+        <div class="wf-card">
+          <div class="wf-result-header">
+            <div>
+              <div class="wf-result-title">SQL query <span class="wf-tag">csv</span></div>
+              <div class="wf-result-meta">Job ID: 7f3e... · 5 May 2026, 14:22 · Library/lib-42</div>
+            </div>
+            <button class="wf-button small soft">× Close</button>
+          </div>
+
+          <div class="wf-result-actions">
+            <span class="wf-tag">4 rows</span>
+            <div class="wf-result-controls">
+              <button class="wf-button small">↓ Download .csv</button>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="wf-table">
+              <thead>
+                <tr>
+                  <th class="mono">given_name</th>
+                  <th class="mono">family_name</th>
+                  <th class="mono">condition_name</th>
+                  <th class="mono">onset_date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>John</td><td>Smith</td><td>Diabetes mellitus</td><td class="mono">2015-03-12</td></tr>
+                <tr><td>John</td><td>Smith</td><td>Hypertension</td><td class="mono">2018-06-01</td></tr>
+                <tr><td>Jane</td><td>Johnson</td><td>Asthma</td><td class="mono">2010-09-20</td></tr>
+                <tr><td>Bob</td><td>Williams</td><td>Diabetes mellitus</td><td class="mono">2020-01-15</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="wf-annotation">Tabular formats (csv / ndjson / json / fhir) parse into rows + columns and render in this Table. The "Download" action streams the raw response. For parquet, the Table is replaced by a download-only block.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>
