@@ -39,11 +39,13 @@ import java.util.List;
 import java.util.Map;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import scala.collection.Seq;
 
 /**
  * Tests for {@link SingleInstanceEvaluator} utility methods: variable conversion and row
@@ -394,6 +396,65 @@ class SingleInstanceEvaluatorTest {
       assertEquals("1.5", sanitised.get(0));
       assertEquals("mmol/L", sanitised.get(1));
     }
+
+    @Test
+    void sanitisesElementsInArrayOfStructs() {
+      // Synthetic and null-valued fields in array-of-struct elements should also be stripped.
+      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(buildCodingOuterRow());
+
+      assertEquals(1, sanitised.schema().fields().length);
+      assertEquals("coding", sanitised.schema().fields()[0].name());
+
+      final Seq<?> codingSeq = sanitised.getAs("coding");
+      assertNotNull(codingSeq);
+      assertEquals(1, codingSeq.length());
+
+      final Row sanitisedCoding = (Row) codingSeq.apply(0);
+      assertEquals(3, sanitisedCoding.schema().fields().length);
+      assertEquals("system", sanitisedCoding.schema().fields()[0].name());
+      assertEquals("code", sanitisedCoding.schema().fields()[1].name());
+      assertEquals("display", sanitisedCoding.schema().fields()[2].name());
+      assertEquals("http://snomed.info/sct", sanitisedCoding.get(0));
+      assertEquals("446141000124107", sanitisedCoding.get(1));
+      assertEquals("Identifies as female gender", sanitisedCoding.get(2));
+    }
+
+    @Test
+    void updatesParentSchemaForSanitisedArrayOfStructs() {
+      // The parent field's ArrayType elementType must be updated to the sanitised element schema so
+      // that Row.json() positional mapping remains correct.
+      final StructType elementSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("id", DataTypes.StringType, true),
+                DataTypes.createStructField("start", DataTypes.StringType, true),
+                DataTypes.createStructField("end", DataTypes.StringType, true),
+              });
+      final StructType outerSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField(
+                    "items", DataTypes.createArrayType(elementSchema, true), true),
+              });
+
+      final Row elementRow =
+          new GenericRowWithSchema(new Object[] {null, "2020-01-01", "2021-01-01"}, elementSchema);
+      final Row outerRow =
+          new GenericRowWithSchema(new Object[] {SqlHelpers.sql_array(elementRow)}, outerSchema);
+
+      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(outerRow);
+
+      // The parent ArrayType's elementType must match the sanitised element schema.
+      final ArrayType itemsType = (ArrayType) sanitised.schema().apply("items").dataType();
+      final StructType sanitisedElementSchema = (StructType) itemsType.elementType();
+      assertEquals(2, sanitisedElementSchema.fields().length);
+      assertEquals("start", sanitisedElementSchema.fields()[0].name());
+      assertEquals("end", sanitisedElementSchema.fields()[1].name());
+
+      // The element Row's own schema must also match.
+      final Seq<?> seq = sanitised.getAs("items");
+      assertEquals(sanitisedElementSchema, ((Row) seq.apply(0)).schema());
+    }
   }
 
   @Nested
@@ -473,6 +534,20 @@ class SingleInstanceEvaluatorTest {
       assertFalse(json.contains("\"comparator\""));
       assertTrue(json.contains("\"value\":\"100\""));
       assertTrue(json.contains("\"unit\":\"mg\""));
+    }
+
+    @Test
+    void jsonCorrectlyRendersArrayOfStructsAfterSanitisation() {
+      // JSON output for array-of-struct fields should not include synthetic or null-valued fields.
+      final String json = SingleInstanceEvaluator.rowToJson(buildCodingOuterRow());
+
+      assertFalse(json.contains("\"_fid\""));
+      assertFalse(json.contains("\"id\""));
+      assertFalse(json.contains("\"version\""));
+      assertFalse(json.contains("\"userSelected\""));
+      assertTrue(json.contains("\"system\":\"http://snomed.info/sct\""));
+      assertTrue(json.contains("\"code\":\"446141000124107\""));
+      assertTrue(json.contains("\"display\":\"Identifies as female gender\""));
     }
   }
 
@@ -663,5 +738,38 @@ class SingleInstanceEvaluatorTest {
       assertEquals("active", results.get(1).getLabel());
       assertEquals(1, results.get(1).getValues().size());
     }
+  }
+
+  private static Row buildCodingOuterRow() {
+    final StructType codingSchema =
+        new StructType(
+            new StructField[] {
+              DataTypes.createStructField("id", DataTypes.StringType, true),
+              DataTypes.createStructField("system", DataTypes.StringType, true),
+              DataTypes.createStructField("version", DataTypes.StringType, true),
+              DataTypes.createStructField("code", DataTypes.StringType, true),
+              DataTypes.createStructField("display", DataTypes.StringType, true),
+              DataTypes.createStructField("userSelected", DataTypes.BooleanType, true),
+              DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
+            });
+    final StructType outerSchema =
+        new StructType(
+            new StructField[] {
+              DataTypes.createStructField(
+                  "coding", DataTypes.createArrayType(codingSchema, true), true),
+            });
+    final Row codingRow =
+        new GenericRowWithSchema(
+            new Object[] {
+              null,
+              "http://snomed.info/sct",
+              null,
+              "446141000124107",
+              "Identifies as female gender",
+              null,
+              1468279945
+            },
+            codingSchema);
+    return new GenericRowWithSchema(new Object[] {SqlHelpers.sql_array(codingRow)}, outerSchema);
   }
 }

@@ -46,9 +46,12 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import scala.collection.mutable.ArraySeq;
 
 /**
  * Evaluates FHIRPath expressions against a single encoded FHIR resource and returns materialised
@@ -393,6 +396,35 @@ public class SingleInstanceEvaluator {
           filteredFields.add(
               new StructField(
                   field.name(), sanitisedNested.schema(), field.nullable(), field.metadata()));
+        } else if (value instanceof final scala.collection.Seq<?> seq) {
+          final List<Object> sanitisedElements = new ArrayList<>(seq.length());
+          StructType sanitisedElementSchema = null;
+          for (int i = 0; i < seq.length(); i++) {
+            final Object element = seq.apply(i);
+            if (element instanceof final Row elementRow) {
+              final Row sanitisedElement = sanitiseRow(elementRow);
+              sanitisedElements.add(sanitisedElement);
+              if (sanitisedElementSchema == null) {
+                sanitisedElementSchema = sanitisedElement.schema();
+              }
+            } else {
+              sanitisedElements.add(element);
+            }
+          }
+          filteredValues.add(new ArraySeq.ofRef<>(sanitisedElements.toArray()));
+          // Update the parent field's ArrayType elementType so Row.json() positional mapping is
+          // correct after fields are stripped from array elements.
+          if (sanitisedElementSchema != null
+              && field.dataType() instanceof final ArrayType arrayType) {
+            filteredFields.add(
+                new StructField(
+                    field.name(),
+                    DataTypes.createArrayType(sanitisedElementSchema, arrayType.containsNull()),
+                    field.nullable(),
+                    field.metadata()));
+          } else {
+            filteredFields.add(field);
+          }
         } else {
           filteredFields.add(field);
           filteredValues.add(value);
