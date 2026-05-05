@@ -25,8 +25,9 @@ import java.util.Optional;
 import lombok.Getter;
 
 /**
- * Output format options for the {@code $sqlquery-run} operation. Supports NDJSON, CSV, JSON, and
- * Parquet formats as specified in the SQL on FHIR v2 specification.
+ * Output format options for the {@code $sqlquery-run} operation. Supports NDJSON, CSV, JSON,
+ * Parquet, and FHIR ({@code Parameters} resource) formats as specified in the SQL on FHIR v2
+ * specification.
  */
 @Getter
 public enum SqlQueryOutputFormat {
