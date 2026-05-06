@@ -208,10 +208,12 @@ class ViewDefinitionCreateTest {
     assertThat(DeltaTable.isDeltaTable(sparkSession, tablePath)).isTrue();
 
     // Simulate an older schema by dropping a known non-key column from the existing Delta
-    // table. This reproduces the real-world scenario where the encoder adds new fields
-    // (e.g. valueDecimal, valueDecimal_scale) but the persisted table lacks them.
+    // table. This reproduces the real-world scenario where the encoder adds new fields not
+    // present in the persisted table. Use a stable, named column rather than a positional
+    // pick so the test does not depend on Spark column ordering or accidentally drop "id".
     final Dataset<Row> original = sparkSession.read().format("delta").load(tablePath);
-    final String columnToDrop = "valueDecimal_scale";
+    final String columnToDrop = "name";
+    assertThat(columnToDrop).isNotEqualTo("id");
     assertThat(java.util.Arrays.asList(original.columns())).contains(columnToDrop);
     final Dataset<Row> narrowed = original.drop(columnToDrop);
     narrowed
