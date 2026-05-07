@@ -46,10 +46,10 @@ interface SqlQueryRuntimeBindingsProps {
  * If no parameters are declared, a short hint is shown instead.
  *
  * @param props - The component props.
- * @param props.parameters
- * @param props.bindings
- * @param props.onChange
- * @param props.disabled
+ * @param props.parameters - Declared parameters for the active Library.
+ * @param props.bindings - Current runtime bindings, keyed by parameter name.
+ * @param props.onChange - Callback fired when a binding changes.
+ * @param props.disabled - Whether the inputs should be disabled.
  * @returns The runtime bindings panel.
  */
 export function SqlQueryRuntimeBindings({
@@ -113,7 +113,9 @@ export function SqlQueryRuntimeBindings({
 
 /**
  * Returns placeholder text appropriate for a parameter type.
- * @param type
+ *
+ * @param type - The declared parameter type.
+ * @returns A short example string used as the input's placeholder.
  */
 function placeholderForType(type: SqlQueryParameterType): string {
   switch (type) {
@@ -135,7 +137,9 @@ function placeholderForType(type: SqlQueryParameterType): string {
 
 /**
  * Returns a human-readable label used in error messages.
- * @param type
+ *
+ * @param type - The declared parameter type.
+ * @returns A short label naming the expected value form.
  */
 function describeType(type: SqlQueryParameterType): string {
   switch (type) {

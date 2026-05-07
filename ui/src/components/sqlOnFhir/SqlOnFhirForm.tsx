@@ -68,16 +68,16 @@ interface SqlOnFhirFormProps {
  * Renders the SQL on FHIR mode switch and the active form variant.
  *
  * @param props - The component props.
- * @param props.mode
- * @param props.onModeChange
- * @param props.onExecuteViewDefinition
- * @param props.onSaveViewDefinition
- * @param props.onExecuteSqlQuery
- * @param props.onSaveSqlQueryLibrary
- * @param props.isViewDefinitionExecuting
- * @param props.isViewDefinitionSaving
- * @param props.isSqlQueryExecuting
- * @param props.isSqlQuerySaving
+ * @param props.mode - The currently selected mode.
+ * @param props.onModeChange - Callback fired when the mode changes.
+ * @param props.onExecuteViewDefinition - Callback fired when the user executes a ViewDefinition.
+ * @param props.onSaveViewDefinition - Callback fired when the user saves an inline ViewDefinition to the server.
+ * @param props.onExecuteSqlQuery - Callback fired when the user executes a SQL query.
+ * @param props.onSaveSqlQueryLibrary - Callback fired when the user saves an inline SQL query Library.
+ * @param props.isViewDefinitionExecuting - Whether ViewDefinition execution is in progress.
+ * @param props.isViewDefinitionSaving - Whether ViewDefinition save is in progress.
+ * @param props.isSqlQueryExecuting - Whether SQL query execution is in progress.
+ * @param props.isSqlQuerySaving - Whether SQL query Library save is in progress.
  * @returns The form shell.
  */
 export function SqlOnFhirForm({

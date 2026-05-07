@@ -60,11 +60,11 @@ interface SqlQueryStoredTabProps {
  * Renders the "Select Library" tab body.
  *
  * @param props - The component props.
- * @param props.libraries
- * @param props.isLoading
- * @param props.selectedId
- * @param props.onSelect
- * @param props.disabled
+ * @param props.libraries - Stored SQLQuery Library summaries.
+ * @param props.isLoading - Whether the libraries query is loading.
+ * @param props.selectedId - The currently selected Library ID.
+ * @param props.onSelect - Callback fired when the user picks a Library.
+ * @param props.disabled - Whether the controls should be disabled.
  * @returns The tab body.
  */
 export function SqlQueryStoredTab({

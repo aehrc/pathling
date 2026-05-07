@@ -76,16 +76,16 @@ interface SqlQueryInlineTabProps {
  * Renders the "Provide Library" tab body.
  *
  * @param props - The component props.
- * @param props.title
- * @param props.onTitleChange
- * @param props.sql
- * @param props.onSqlChange
- * @param props.tables
- * @param props.onTablesChange
- * @param props.parameters
- * @param props.onParametersChange
- * @param props.viewDefinitions
- * @param props.disabled
+ * @param props.title - Library title (used for `Library.title` on save).
+ * @param props.onTitleChange - Callback fired when the title changes.
+ * @param props.sql - SQL text.
+ * @param props.onSqlChange - Callback fired when the SQL changes.
+ * @param props.tables - Configured tables (related artefacts).
+ * @param props.onTablesChange - Callback fired when the tables list changes.
+ * @param props.parameters - Configured declared parameters.
+ * @param props.onParametersChange - Callback fired when the parameters list changes.
+ * @param props.viewDefinitions - Available stored ViewDefinitions for the table selector.
+ * @param props.disabled - Whether the controls should be disabled.
  * @returns The tab body.
  */
 export function SqlQueryInlineTab({

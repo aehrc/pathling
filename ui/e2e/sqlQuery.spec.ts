@@ -37,7 +37,8 @@ import type { Page } from "@playwright/test";
 
 /**
  * Mocks the `metadata` endpoint without auth requirements.
- * @param page
+ *
+ * @param page - The Playwright Page to attach the route to.
  */
 async function mockMetadata(page: Page) {
   await page.route("**/metadata", async (route) => {
@@ -53,8 +54,9 @@ async function mockMetadata(page: Page) {
  * Mocks the Library search endpoint, branching on the type filter so the
  * SQLQuery search returns the SQLQuery bundle while other Library
  * searches return an empty bundle.
- * @param page
- * @param bundle
+ *
+ * @param page - The Playwright Page to attach the route to.
+ * @param bundle - The Bundle to return for SQLQuery searches.
  */
 async function mockSqlQueryLibraries(
   page: Page,
@@ -86,7 +88,8 @@ async function mockSqlQueryLibraries(
 /**
  * Mocks the ViewDefinition search endpoint with the standard fixture so
  * the inline tab's table picker has options to render.
- * @param page
+ *
+ * @param page - The Playwright Page to attach the route to.
  */
 async function mockViewDefinitions(page: Page) {
   const fulfill = (route: import("@playwright/test").Route) =>
@@ -101,7 +104,8 @@ async function mockViewDefinitions(page: Page) {
 
 /**
  * Mocks the `$sqlquery-run` endpoint with a CSV response.
- * @param page
+ *
+ * @param page - The Playwright Page to attach the route to.
  */
 async function mockSqlQueryRunCsvResponse(page: Page) {
   await page.route("**/$sqlquery-run", async (route) => {
@@ -115,7 +119,8 @@ async function mockSqlQueryRunCsvResponse(page: Page) {
 
 /**
  * Mocks the `$sqlquery-run` endpoint with a 400 + OperationOutcome response.
- * @param page
+ *
+ * @param page - The Playwright Page to attach the route to.
  */
 async function mockSqlQueryRunFailure(page: Page) {
   await page.route("**/$sqlquery-run", async (route) => {
@@ -129,7 +134,8 @@ async function mockSqlQueryRunFailure(page: Page) {
 
 /**
  * Mocks the Library create endpoint to return a created Library.
- * @param page
+ *
+ * @param page - The Playwright Page to attach the route to.
  */
 async function mockSaveSqlQueryLibrary(page: Page) {
   await page.route(/\/Library$/, async (route) => {
@@ -156,7 +162,8 @@ async function mockSaveSqlQueryLibrary(page: Page) {
 
 /**
  * Switches the page to SQL query mode using the segmented control.
- * @param page
+ *
+ * @param page - The Playwright Page on the SQL on FHIR route.
  */
 async function selectSqlQueryMode(page: Page) {
   await page.getByRole("tab", { name: /^sql query$/i }).click();

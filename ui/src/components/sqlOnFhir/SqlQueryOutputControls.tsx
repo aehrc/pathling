@@ -53,13 +53,13 @@ const OUTPUT_FORMATS: SqlQueryOutputFormat[] = ["ndjson", "csv", "json", "parque
  * header switch.
  *
  * @param props - The component props.
- * @param props.format
- * @param props.onFormatChange
- * @param props.limit
- * @param props.onLimitChange
- * @param props.header
- * @param props.onHeaderChange
- * @param props.disabled
+ * @param props.format - The currently selected output format.
+ * @param props.onFormatChange - Callback fired when the format changes.
+ * @param props.limit - Row limit captured as a string so empty input is preserved.
+ * @param props.onLimitChange - Callback fired when the limit changes.
+ * @param props.header - Whether the CSV header switch is on.
+ * @param props.onHeaderChange - Callback fired when the header switch toggles.
+ * @param props.disabled - Whether the controls should be disabled.
  * @returns The output controls.
  */
 export function SqlQueryOutputControls({

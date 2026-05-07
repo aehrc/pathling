@@ -101,7 +101,9 @@ export function flattenFhirParameters(
  * Handles the FHIR primitive types emitted by the SQL on FHIR FHIR-format
  * implementation: boolean, integer, decimal, string, code, date, dateTime,
  * instant, quantity and coding. Unknown shapes fall back to a JSON dump.
- * @param part
+ *
+ * @param part - The Parameters part to render.
+ * @returns A display string for the part's `value[x]`.
  */
 function renderPartValue(part: ParametersParameter): string {
   if (part.valueBoolean !== undefined) {
@@ -139,7 +141,9 @@ function renderPartValue(part: ParametersParameter): string {
 
 /**
  * Renders a FHIR Quantity as `<value> <unit>` or just `<value>`.
- * @param quantity
+ *
+ * @param quantity - The Quantity to render.
+ * @returns A short display string.
  */
 function renderQuantity(quantity: Quantity): string {
   const value = quantity.value !== undefined ? String(quantity.value) : "";
@@ -149,7 +153,9 @@ function renderQuantity(quantity: Quantity): string {
 
 /**
  * Renders a FHIR Coding as its display, falling back to `system|code`.
- * @param coding
+ *
+ * @param coding - The Coding to render.
+ * @returns A short display string.
  */
 function renderCoding(coding: Coding): string {
   if (coding.display) {

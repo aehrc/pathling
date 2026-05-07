@@ -59,9 +59,9 @@ interface SqlQueryCardProps {
  * Renders a SQL query result card.
  *
  * @param props - The component props.
- * @param props.job
- * @param props.onError
- * @param props.onClose
+ * @param props.job - The SQL query job describing the request.
+ * @param props.onError - Callback for surfacing errors to the parent.
+ * @param props.onClose - Optional callback to remove the card once it has terminated.
  * @returns The card.
  */
 export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardProps>) {
@@ -150,9 +150,11 @@ interface SqlQueryResultBodyProps {
 /**
  * Renders the body for a successful SQL query response, branching on the
  * result kind.
- * @param root0
- * @param root0.result
- * @param root0.sql
+ *
+ * @param props - The component props.
+ * @param props.result - The successful execution result.
+ * @param props.sql - The submitted SQL text, displayed beneath the table.
+ * @returns The result body.
  */
 function SqlQueryResultBody({ result, sql }: Readonly<SqlQueryResultBodyProps>) {
   if (result.kind === "binary") {
@@ -253,9 +255,11 @@ interface SqlQueryErrorBodyProps {
 
 /**
  * Renders the error body, including the submitted SQL above the callout.
- * @param root0
- * @param root0.sql
- * @param root0.error
+ *
+ * @param props - The component props.
+ * @param props.sql - The submitted SQL text to render above the callout.
+ * @param props.error - The error returned by the request.
+ * @returns The error body.
  */
 function SqlQueryErrorBody({ sql, error }: Readonly<SqlQueryErrorBodyProps>) {
   const message =
@@ -289,7 +293,9 @@ function SqlQueryErrorBody({ sql, error }: Readonly<SqlQueryErrorBodyProps>) {
 
 /**
  * Extracts the most useful display text from an OperationOutcome.
- * @param error
+ *
+ * @param error - The OperationOutcome error to render.
+ * @returns The first available diagnostic or details text.
  */
 function extractOutcomeText(error: OperationOutcomeError): string {
   const issue = error.operationOutcome.issue?.[0];
@@ -298,7 +304,9 @@ function extractOutcomeText(error: OperationOutcomeError): string {
 
 /**
  * Formats a cell value for display.
- * @param value
+ *
+ * @param value - The cell value to render.
+ * @returns A string suitable for display in a table cell.
  */
 function formatCellValue(value: unknown): string {
   if (value === null || value === undefined) {
@@ -312,8 +320,9 @@ function formatCellValue(value: unknown): string {
 
 /**
  * Triggers a browser download for the given Blob.
- * @param blob
- * @param filename
+ *
+ * @param blob - The Blob to download.
+ * @param filename - The filename to suggest to the browser.
  */
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -328,7 +337,9 @@ function downloadBlob(blob: Blob, filename: string) {
 
 /**
  * Renders a byte count as a short human-readable string.
- * @param size
+ *
+ * @param size - The byte count.
+ * @returns A short string with an appropriate unit suffix.
  */
 function humanFileSize(size: number): string {
   if (size < 1024) {

@@ -73,11 +73,11 @@ interface SqlQueryFormProps {
  * Renders the SQL query form.
  *
  * @param props - The component props.
- * @param props.onExecute
- * @param props.onSaveToServer
- * @param props.isExecuting
- * @param props.isSaving
- * @param props.disabled
+ * @param props.onExecute - Callback fired when the user clicks Execute.
+ * @param props.onSaveToServer - Callback fired to save an inline Library to the server.
+ * @param props.isExecuting - Whether a query is currently executing.
+ * @param props.isSaving - Whether a save is currently in progress.
+ * @param props.disabled - Optional disable for the whole form.
  * @returns The form card.
  */
 export function SqlQueryForm({

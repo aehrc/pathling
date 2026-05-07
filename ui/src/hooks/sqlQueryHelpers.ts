@@ -91,7 +91,10 @@ export function mapLibraryBundle(bundle: Bundle): SqlQueryLibrarySummary[] {
  *
  * Returns `undefined` if the resource is missing the data the form
  * requires (an ID or any SQL content).
- * @param library
+ *
+ * @param library - The Library resource to summarise.
+ * @returns The picker-friendly summary, or `undefined` when the resource
+ *   is unusable.
  */
 export function libraryToSummary(
   library: Library,
@@ -230,7 +233,9 @@ export function parseTabularBody(
  *
  * Columns appear in first-seen order so the rendered table follows the
  * server's natural column ordering when present.
- * @param rows
+ *
+ * @param rows - The parsed result rows.
+ * @returns The column names in first-seen order.
  */
 function extractColumns(rows: Record<string, unknown>[]): string[] {
   const columns: string[] = [];
@@ -249,7 +254,9 @@ function extractColumns(rows: Record<string, unknown>[]): string[] {
 /**
  * Returns the MIME type to attach to the downloadable Blob produced from
  * a tabular response body.
- * @param format
+ *
+ * @param format - The output format the body was produced with.
+ * @returns The MIME type to attach to the Blob.
  */
 function tabularContentType(
   format: Exclude<SqlQueryOutputFormat, "parquet">,

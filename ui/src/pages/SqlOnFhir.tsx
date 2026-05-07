@@ -108,7 +108,8 @@ export function SqlOnFhir() {
 
   /**
    * Removes a result card from the column.
-   * @param id
+   *
+   * @param id - The job ID of the card to remove.
    */
   const handleCloseJob = (id: string) => {
     setPageJobs((prev) => prev.filter((entry) => entry.job.id !== id));
@@ -186,7 +187,10 @@ export function SqlOnFhir() {
  * Looks at the `sql-text` extension on `Library.content[0]` first, then
  * falls back to decoding `Library.content[0].data`. Returns the empty
  * string when neither is available.
- * @param request
+ *
+ * @param request - The SQL query request to inspect.
+ * @returns The plain SQL text, or an empty string if it cannot be
+ *   recovered.
  */
 function extractSqlText(request: SqlQueryRequest): string {
   if (request.mode !== "inline") {
