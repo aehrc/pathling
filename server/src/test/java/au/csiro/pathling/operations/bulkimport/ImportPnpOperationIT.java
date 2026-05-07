@@ -440,6 +440,178 @@ class ImportPnpOperationIT {
     log.info("Import-pnp job completed successfully");
   }
 
+  /**
+   * Sets up WireMock stubs for a bulk export workflow where the manifest contains a poisoned type
+   * field with path traversal sequences.
+   */
+  private void setupPoisonedBulkExportStubs() {
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+
+    // Stub 1: OAuth token endpoint.
+    wireMockServer.stubFor(
+        post(urlEqualTo("/oauth/token"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                        {
+                          "access_token": "test-access-token",
+                          "token_type": "bearer",
+                          "expires_in": 3600
+                        }
+                        """)));
+
+    // Stub 2: Bulk export kick-off endpoint.
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/fhir/$export"))
+            .willReturn(
+                aResponse()
+                    .withStatus(202)
+                    .withHeader("Content-Location", baseUrl + "/fhir/$export-status/poisoned")));
+
+    // Stub 3: Export status endpoint - first call returns in-progress.
+    wireMockServer.stubFor(
+        get(urlEqualTo("/fhir/$export-status/poisoned"))
+            .inScenario("Poisoned Export Status")
+            .whenScenarioStateIs("Started")
+            .willReturn(aResponse().withStatus(202).withHeader("X-Progress", "in-progress"))
+            .willSetStateTo("In Progress"));
+
+    // Stub 4: Export status endpoint - subsequent calls return complete with poisoned manifest.
+    final String manifest =
+        String.format(
+            """
+            {
+              "transactionTime": "2025-11-11T00:00:00Z",
+              "request": "%s/fhir/$export",
+              "requiresAccessToken": false,
+              "output": [
+                {
+                  "type": "../escaped",
+                  "url": "%s/data/escaped.ndjson"
+                }
+              ],
+              "error": []
+            }
+            """,
+            baseUrl, baseUrl);
+
+    wireMockServer.stubFor(
+        get(urlEqualTo("/fhir/$export-status/poisoned"))
+            .inScenario("Poisoned Export Status")
+            .whenScenarioStateIs("In Progress")
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(manifest)));
+
+    // Stub 5: Escaped NDJSON file.
+    final String escapedNdjson =
+        """
+        {"resourceType":"Patient","id":"evil","name":[{"family":"Attacker"}]}
+        """;
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/escaped.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(escapedNdjson)));
+
+    log.info("Set up poisoned bulk export stubs on WireMock server");
+  }
+
+  /**
+   * Tests that a manifest with a poisoned type field containing path traversal sequences causes the
+   * $import-pnp job to fail with an error, and that no file can be retrieved via the
+   * /jobs/{jobId}/{filename} endpoint.
+   */
+  @Test
+  void testPoisonedManifestTypeFailsJobAndBlocksExfiltration() {
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+    setupPoisonedBulkExportStubs();
+
+    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
+    final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
+    final String requestBody =
+        String.format(
+            """
+            {
+              "resourceType": "Parameters",
+              "parameter": [
+                {
+                  "name": "exportUrl",
+                  "valueUrl": "%s"
+                },
+                {
+                  "name": "exportType",
+                  "valueCode": "dynamic"
+                }
+              ]
+            }
+            """,
+            exportUrl);
+
+    final var result =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists(HttpHeaders.CONTENT_LOCATION)
+            .returnResult(String.class);
+
+    final String contentLocation =
+        result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
+    assertThat(contentLocation).isNotNull().contains("$job");
+
+    // Extract the job ID from the Content-Location header.
+    final String jobId =
+        java.util.regex.Pattern.compile("id=([^&]+)")
+            .matcher(contentLocation)
+            .results()
+            .findFirst()
+            .map(m -> m.group(1))
+            .orElse(null);
+    assertThat(jobId).isNotNull();
+
+    // Poll the job status until it completes (either success or failure).
+    await()
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(2, TimeUnit.SECONDS)
+        .untilAsserted(
+            () ->
+                webTestClient
+                    .get()
+                    .uri(contentLocation)
+                    .header("Accept", "application/fhir+json")
+                    .exchange()
+                    .expectStatus()
+                    .isOk()
+                    .expectBody()
+                    .jsonPath("$.issue[0].severity")
+                    .value(severity -> assertThat(severity).isIn("error", "fatal")));
+
+    // Verify that the exfiltration request returns 404.
+    webTestClient
+        .get()
+        .uri("http://localhost:" + port + "/jobs/" + jobId + "/escaped.0000.ndjson")
+        .exchange()
+        .expectStatus()
+        .isNotFound();
+
+    log.info("Poisoned manifest job failed as expected and exfiltration was blocked");
+  }
+
   @Test
   void testStaticModeReturnsError() {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
