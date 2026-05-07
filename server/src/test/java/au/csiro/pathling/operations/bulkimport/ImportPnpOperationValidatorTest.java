@@ -56,6 +56,28 @@ import org.springframework.context.annotation.Primary;
 @Import(ImportPnpOperationValidatorTest.TestConfig.class)
 class ImportPnpOperationValidatorTest {
 
+  // Default permissive allowlist for the test fixture. Enumerates each host that downstream
+  // tests use as an exportUrl so they can reach the SSRF check (rather than failing earlier
+  // at the allowlist check). Specific tests override this when they want to assert allowlist
+  // behaviour itself.
+  private static final List<String> TEST_ALLOWABLE_EXPORT_URLS =
+      List.of(
+          "https://example.com/",
+          "https://example.org/",
+          "https://nonexistent.invalid/",
+          "http://127.0.0.1/",
+          "http://10.0.0.1/",
+          "http://169.254.169.254/",
+          "http://0.0.0.0/",
+          "http://0.1.2.3/",
+          "http://100.64.0.1/",
+          "http://224.0.0.1/",
+          "http://255.255.255.255/",
+          "http://[fd00::1]/",
+          "http://[ff02::1]/",
+          "http://[::ffff:127.0.0.1]/",
+          "http://[::ffff:169.254.169.254]/");
+
   @TestConfiguration
   static class TestConfig {
 
@@ -69,7 +91,7 @@ class ImportPnpOperationValidatorTest {
       final ImportConfiguration importConfig = new ImportConfiguration();
       importConfig.setAllowableSources(List.of("s3://test-bucket/"));
       final PnpConfiguration pnpConfig = new PnpConfiguration();
-      pnpConfig.setAllowableExportUrls(List.of("http://", "https://"));
+      pnpConfig.setAllowableExportUrls(TEST_ALLOWABLE_EXPORT_URLS);
       importConfig.setPnp(pnpConfig);
       config.setImport(importConfig);
       return config;
@@ -102,7 +124,7 @@ class ImportPnpOperationValidatorTest {
     final ImportConfiguration importConfig = new ImportConfiguration();
     importConfig.setAllowableSources(List.of("s3://test-bucket/"));
     final PnpConfiguration pnpConfig = new PnpConfiguration();
-    pnpConfig.setAllowableExportUrls(List.of("http://", "https://"));
+    pnpConfig.setAllowableExportUrls(TEST_ALLOWABLE_EXPORT_URLS);
     importConfig.setPnp(pnpConfig);
     serverConfiguration.setImport(importConfig);
   }

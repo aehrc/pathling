@@ -21,6 +21,7 @@ import au.csiro.pathling.ParamUtil;
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.config.PnpConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.UrlAllowlist;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.operations.OperationValidation;
@@ -214,8 +215,7 @@ public class ImportPnpOperationValidator {
           "No trusted export URLs are configured. "
               + "Set pathling.import.pnp.allowableExportUrls to enable $import-pnp.");
     }
-    final boolean allowed = allowableExportUrls.stream().anyMatch(exportUrl::startsWith);
-    if (!allowed) {
+    if (!UrlAllowlist.matches(allowableExportUrls, exportUrl)) {
       throw new InvalidUserInputError("exportUrl not in allowableExportUrls: " + exportUrl);
     }
 

@@ -77,14 +77,15 @@ public class BulkSubmitConfiguration {
    *
    * <p>The allowlist is mandatory: if no prefixes are configured the URL is rejected. This
    * fails-closed default prevents the server being used as an SSRF or credential-forwarding proxy
-   * when the operator has not yet configured trusted sources.
+   * when the operator has not yet configured trusted sources. Matching is performed by {@link
+   * UrlAllowlist} with proper URI semantics, so subdomain confusion and userinfo bypasses are
+   * rejected.
    *
    * @param url the URL to check.
    * @return true if at least one configured prefix matches the URL, false otherwise (including when
    *     no prefixes are configured).
    */
   public boolean isSourceAllowed(@Nonnull final String url) {
-    final List<String> prefixes = getAllowableSources();
-    return prefixes.stream().anyMatch(url::startsWith);
+    return UrlAllowlist.matches(getAllowableSources(), url);
   }
 }

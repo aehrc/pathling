@@ -5,7 +5,7 @@ pathling:
     allowableSources:
       - file://
       - http://localhost
-      - https://
+      - https://example.org
     pnp:
       # Integration tests use WireMock on localhost; allow internal URLs so the
       # request reaches the executor where the relevant code paths are tested.

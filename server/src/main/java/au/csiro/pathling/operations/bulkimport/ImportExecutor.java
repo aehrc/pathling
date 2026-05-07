@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.bulkimport;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.UrlAllowlist;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
@@ -181,8 +182,7 @@ public class ImportExecutor {
     if (allowableSources.isEmpty()) {
       return;
     }
-    final boolean allowed = allowableSources.stream().anyMatch(url::startsWith);
-    if (!allowed) {
+    if (!UrlAllowlist.matches(allowableSources, url)) {
       throw new AccessDeniedError("URL: '" + url + "' is not an allowed source.");
     }
   }

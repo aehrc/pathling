@@ -35,9 +35,16 @@ Additionally, you can set any variable supported by Spring Boot, see
 
 - `pathling.import.allowableSources` - (default: `file:///usr/share/staging`) A
   set of URL prefixes which are allowable for use within the import operation.
-  **Important note**: a trailing slash should be used in cases where an attacker
-  could create an alternative URL with the same prefix, e.g. `s3://some-bucket`
-  would also match `s3://some-bucket-alternative`.
+  HTTP(S) prefixes are matched with proper URI semantics: scheme,
+  host (case-insensitive), effective port (default 80 or 443) and a
+  path-segment boundary must all match, and any candidate that contains a
+  userinfo component is rejected. So `https://example.com` admits
+  `https://example.com/foo` but not `https://example.com.evil.com/foo` or
+  `https://example.com@evil.com/foo`. Non-HTTP prefixes (e.g. `s3://`,
+  `file://`) are matched by case-sensitive string prefix; for these,
+  **a trailing slash should be used in cases where an attacker could create
+  an alternative URL with the same prefix**, e.g. `s3://some-bucket` would
+  also match `s3://some-bucket-alternative`.
 
 #### Ping and pull
 
@@ -47,8 +54,10 @@ operation, which retrieves data from external FHIR bulk export endpoints.
 - `pathling.import.pnp.allowableExportUrls` - (default: `[]`) A list of URL
   prefixes which are allowable for use as export URLs within the `$import-pnp`
   operation. This list is mandatory: when it is empty every `$import-pnp`
-  request is rejected. Any `exportUrl` that does not start with one of the
-  configured prefixes is also rejected.
+  request is rejected. Any `exportUrl` that does not match one of the
+  configured prefixes is also rejected. HTTP(S) prefixes are matched with
+  proper URI semantics (see `pathling.import.allowableSources` above for the
+  full rules).
 - `pathling.import.pnp.clientId` - The client identifier for SMART Backend
   Services authentication.
 - `pathling.import.pnp.tokenEndpoint` - The token endpoint URL for obtaining
@@ -93,7 +102,9 @@ and rejects all `$import-pnp` requests.
   are allowed as sources for manifest and file URLs. This list is mandatory:
   when it is empty every URL is rejected and the operation cannot be used.
   This applies to the `manifestUrl` parameter, every `output[].url` discovered
-  within fetched manifests, and the `oauthMetadataUrl` parameter.
+  within fetched manifests, and the `oauthMetadataUrl` parameter. HTTP(S)
+  prefixes are matched with proper URI semantics (see
+  `pathling.import.allowableSources` above for the full rules).
 
 ### Asynchronous processing
 

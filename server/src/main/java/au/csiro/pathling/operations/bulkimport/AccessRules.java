@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.bulkimport;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ImportConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.UrlAllowlist;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.SecurityError;
 import jakarta.annotation.Nonnull;
@@ -81,6 +82,6 @@ public class AccessRules {
   }
 
   private boolean canImportFrom(@Nonnull final String url) {
-    return allowableSources.stream().anyMatch(url::startsWith);
+    return UrlAllowlist.matches(allowableSources, url);
   }
 }

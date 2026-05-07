@@ -55,7 +55,7 @@ class BulkSubmitValidatorTest {
         List.of(
             new SubmitterConfiguration(
                 SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null)));
-    bulkSubmitConfig.setAllowableSources(List.of("https://"));
+    bulkSubmitConfig.setAllowableSources(List.of("https://example.org/"));
 
     serverConfiguration = new ServerConfiguration();
     serverConfiguration.setBulkSubmit(bulkSubmitConfig);
@@ -272,19 +272,20 @@ class BulkSubmitValidatorTest {
 
   @Test
   void extractsOauthMetadataUrl() {
-    // Validate that oauthMetadataUrl is extracted correctly.
+    // Validate that oauthMetadataUrl is extracted correctly. Use a host that matches the
+    // default test allowlist so the request reaches the extraction step.
     final Parameters params = minimalInProgressParams();
     params
         .addParameter()
         .setName("oauthMetadataUrl")
-        .setValue(new StringType("https://auth.example.org/.well-known/smart-configuration"));
+        .setValue(new StringType("https://example.org/.well-known/smart-configuration"));
 
     final RequestDetails mockRequest =
         MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.oauthMetadataUrl())
-        .isEqualTo("https://auth.example.org/.well-known/smart-configuration");
+        .isEqualTo("https://example.org/.well-known/smart-configuration");
   }
 
   @Test
