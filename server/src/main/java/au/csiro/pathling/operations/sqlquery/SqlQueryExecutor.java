@@ -21,6 +21,7 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.views.FhirView;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.Set;
@@ -50,6 +51,8 @@ public class SqlQueryExecutor {
 
   @Nonnull private final SqlQueryConfiguration sqlQueryConfig;
 
+  @Nonnull private final SqlQueryWatchdog watchdog;
+
   /**
    * Constructs a new SqlQueryExecutor.
    *
@@ -58,17 +61,21 @@ public class SqlQueryExecutor {
    * @param sqlValidator validates the SQL before execution
    * @param serverConfiguration the server configuration, used to resolve the resource limits
    *     applied to each query
+   * @param watchdog the watchdog used to schedule wall-clock timeouts and Spark job-group
+   *     cancellation for each query
    */
   @Autowired
   public SqlQueryExecutor(
       @Nonnull final SparkSession sparkSession,
       @Nonnull final ViewRegistrationService viewRegistrationService,
       @Nonnull final SqlValidator sqlValidator,
-      @Nonnull final ServerConfiguration serverConfiguration) {
+      @Nonnull final ServerConfiguration serverConfiguration,
+      @Nonnull final SqlQueryWatchdog watchdog) {
     this.sparkSession = sparkSession;
     this.viewRegistrationService = viewRegistrationService;
     this.sqlValidator = sqlValidator;
     this.sqlQueryConfig = serverConfiguration.getSqlQuery();
+    this.watchdog = watchdog;
   }
 
   /**
@@ -96,7 +103,13 @@ public class SqlQueryExecutor {
             .collect(Collectors.toUnmodifiableSet());
     sqlValidator.validate(request.getParsedQuery().getSql(), declaredLabels);
 
+    final String jobGroupId = "sqlquery-" + requestId;
+    sparkSession
+        .sparkContext()
+        .setJobGroup(jobGroupId, "$sqlquery-run " + requestId, /* interruptOnCancel= */ true);
+
     Map<String, String> registeredViews = Map.of();
+    final SqlQueryWatchdog.Watch watch = watchdog.start(jobGroupId);
     try {
       registeredViews = viewRegistrationService.registerViews(resolvedViews, dataSource, requestId);
 
@@ -111,7 +124,17 @@ public class SqlQueryExecutor {
       result = result.limit(effectiveLimit(request.getLimit(), requestId));
 
       consumer.accept(result);
+    } catch (final RuntimeException e) {
+      if (watch.timedOut()) {
+        throw new InvalidRequestException(
+            "Query exceeded the configured timeout of "
+                + sqlQueryConfig.getTimeoutSeconds()
+                + " seconds.");
+      }
+      throw e;
     } finally {
+      watch.complete();
+      sparkSession.sparkContext().clearJobGroup();
       viewRegistrationService.dropViews(registeredViews.values());
     }
   }

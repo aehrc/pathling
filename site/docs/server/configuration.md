@@ -129,6 +129,21 @@ error response and is excluded from the CapabilityStatement.
 - `pathling.operations.bulkSubmitEnabled` - (default: `true`) Enables the
   [$bulk-submit](./operations/bulk-submit) operation.
 
+### SQL query
+
+These settings apply resource limits to the `$sqlquery-run` operation. Both
+limits are always applied; they cannot be disabled per request.
+
+- `pathling.sqlQuery.maxRows` - (default: `1000000`) The maximum number of rows
+  that a single `$sqlquery-run` response may stream. Always applied; clamps the
+  caller-supplied `_limit` when that value is larger.
+- `pathling.sqlQuery.timeoutSeconds` - (default: `60`) The maximum wall-clock
+  time in seconds that a single query may run before its Spark job group is
+  cancelled. A timeout that fires before the response stream begins produces a
+  4xx response; a timeout that fires mid-stream aborts the connection and is
+  recorded as a server warning. Long-running queries should use the
+  asynchronous path.
+
 ### Encoding
 
 - `pathling.encoding.maxNestingLevel` - (default: `3`) Controls the maximum

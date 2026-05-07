@@ -71,6 +71,7 @@ class SqlQueryExecutorTest {
         mock(SparkSession.class),
         mock(ViewRegistrationService.class),
         mock(SqlValidator.class),
-        serverConfiguration);
+        serverConfiguration,
+        mock(SqlQueryWatchdog.class));
   }
 }
