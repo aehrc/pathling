@@ -9,6 +9,13 @@ CVE-2025-58057
 CVE-2025-58056
 CVE-2025-67735
 
+# Netty epoll transport DoS via RST on half-closed TCP connection. Fixed only
+# in Netty 4.2.13.Final; the 4.1.x line has no patch. Pathling cannot move to
+# 4.2.x because Spark and Spring Boot's BOMs still pin the 4.1.x line. The
+# Linux epoll transport is used by Netty-based clients/servers in Spark
+# internals; Pathling does not expose Netty servers on its public HTTP path.
+CVE-2026-42577
+
 # The vulnerable version of protobuf-java is a transitive dependency provided via the Spark runtime.
 CVE-2024-7254
 
@@ -19,6 +26,8 @@ CVE-2022-46751
 CVE-2023-44981
 CVE-2024-23944
 CVE-2025-58457
+CVE-2026-24281
+CVE-2026-24308
 
 # Jersey Client is a transitive dependency provided via the Spark runtime.
 CVE-2025-12383
@@ -32,6 +41,11 @@ CVE-2025-48924
 
 # Log4j is a transitive dependency provided via the Spark runtime.
 CVE-2025-68161
+CVE-2026-34477
+CVE-2026-34478
+CVE-2026-34479
+CVE-2026-34480
+CVE-2026-34481
 
 # Avro is provided via the Spark runtime. Server overrides to patched version
 # 1.12.1 in server/pom.xml.
