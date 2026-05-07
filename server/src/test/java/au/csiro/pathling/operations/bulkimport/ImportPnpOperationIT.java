@@ -21,7 +21,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -134,7 +134,14 @@ class ImportPnpOperationIT {
     FileUtils.cleanDirectory(warehouseDir.toFile());
   }
 
-  /** Sets up WireMock stubs for a complete bulk export workflow. */
+  /**
+   * Sets up WireMock stubs for a complete bulk export workflow.
+   *
+   * <p>The kick-off stub uses a regex matcher that accepts any path ending in {@code $export}, so
+   * tests can supply distinct {@code exportUrl} base paths to differentiate themselves. This is
+   * required because {@code AsyncAspect} coalesces requests that share a cache key, and the cache
+   * key includes {@code exportUrl}: tests with identical signatures otherwise share one job.
+   */
   private void setupSuccessfulBulkExportStubs() {
     final String baseUrl = "http://localhost:" + wireMockServer.port();
 
@@ -155,9 +162,10 @@ class ImportPnpOperationIT {
                         """)));
 
     // Stub 2: Bulk export kick-off endpoint (GET for system-level export).
-    // Use urlPathEqualTo to match regardless of query parameters.
+    // Match any path ending in $export so individual tests can use distinct base paths to avoid
+    // sharing an async-job cache key (see helper Javadoc).
     wireMockServer.stubFor(
-        get(urlPathEqualTo("/fhir/$export"))
+        get(urlPathMatching(".*/\\$export"))
             .willReturn(
                 aResponse()
                     .withStatus(202)
@@ -310,7 +318,11 @@ class ImportPnpOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     setupSuccessfulBulkExportStubs();
 
-    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
+    // Use a path unique to this test so the async cache key (which incorporates exportUrl) does
+    // not collide with sibling dynamic-mode tests, which would otherwise cause one test to
+    // inherit another's job result.
+    final String exportUrl =
+        "http://localhost:" + wireMockServer.port() + "/fhir/missing-input-source";
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
     final String requestBody =
         String.format(
@@ -350,10 +362,11 @@ class ImportPnpOperationIT {
         result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
     assertThat(contentLocation).isNotNull().contains("$job");
 
-    // Poll the job status until completion.
+    // Poll the job status until completion. The budget accommodates serialisation behind earlier
+    // tests on the single-threaded async executor.
     await()
-        .atMost(30, TimeUnit.SECONDS)
-        .pollInterval(2, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
         .untilAsserted(
             () -> {
               webTestClient
@@ -373,8 +386,9 @@ class ImportPnpOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     setupSuccessfulBulkExportStubs();
 
-    // Use base URL for fhir-bulk-java client.
-    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
+    // Use a path unique to this test so the async cache key (which incorporates exportUrl) does
+    // not collide with sibling dynamic-mode tests.
+    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir/valid-request";
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
     final String requestBody =
         String.format(
@@ -423,10 +437,11 @@ class ImportPnpOperationIT {
 
     log.info("Import-pnp job created with Content-Location: {}", contentLocation);
 
-    // Poll the job status until completion (200 OK indicates job is done).
+    // Poll the job status until completion (200 OK indicates job is done). The budget
+    // accommodates serialisation behind earlier tests on the single-threaded async executor.
     await()
-        .atMost(30, TimeUnit.SECONDS)
-        .pollInterval(2, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
         .untilAsserted(
             () ->
                 webTestClient
@@ -463,9 +478,10 @@ class ImportPnpOperationIT {
                         }
                         """)));
 
-    // Stub 2: Bulk export kick-off endpoint.
+    // Stub 2: Bulk export kick-off endpoint. Matches any path ending in $export so individual
+    // tests can use distinct base paths to avoid sharing an async-job cache key.
     wireMockServer.stubFor(
-        get(urlPathEqualTo("/fhir/$export"))
+        get(urlPathMatching(".*/\\$export"))
             .willReturn(
                 aResponse()
                     .withStatus(202)
@@ -534,7 +550,8 @@ class ImportPnpOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     setupPoisonedBulkExportStubs();
 
-    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
+    // Unique path so the async cache key does not collide with sibling dynamic-mode tests.
+    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir/poisoned";
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
     final String requestBody =
         String.format(
