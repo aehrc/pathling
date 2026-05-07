@@ -118,6 +118,9 @@ public class BulkSubmitValidator {
 
     // Extract oauthMetadataUrl (optional).
     final String oauthMetadataUrl = extractOptionalUrl(parameters, "oauthMetadataUrl");
+    if (oauthMetadataUrl != null) {
+      validateUrl(oauthMetadataUrl, "oauthMetadataUrl", config);
+    }
 
     // Extract metadata (optional).
     final SubmissionMetadata metadata = extractMetadata(parameters);
