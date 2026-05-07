@@ -633,6 +633,32 @@ class ImportPnpOperationValidatorTest {
   }
 
   /**
+   * Tests that an exportUrl pointing to an IPv6 unique-local address (RFC 4193, fc00::/7) is
+   * rejected. Java's InetAddress.isSiteLocalAddress() does not cover this range, so it requires an
+   * explicit check.
+   */
+  @Test
+  void rejectsIpv6UniqueLocalExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://[fd00::1]/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /** Tests that an exportUrl pointing to the IPv4 unspecified address (0.0.0.0) is rejected. */
+  @Test
+  void rejectsAnyLocalExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://0.0.0.0/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
    * Tests that an exportUrl pointing to a loopback address is accepted when internal URLs are
    * explicitly allowed.
    */

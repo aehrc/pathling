@@ -24,6 +24,7 @@ import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.operations.OperationValidation;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -213,12 +214,23 @@ public class ImportPnpOperationValidator {
    * Checks whether the given IP address is an internal/private address.
    *
    * @param address the address to check
-   * @return true if the address is loopback, link-local, site-local, or unique-local
+   * @return true if the address is loopback, link-local, site-local, or IPv6 unique-local
    */
   private static boolean isInternalAddress(@Nonnull final InetAddress address) {
-    return address.isLoopbackAddress()
+    if (address.isLoopbackAddress()
         || address.isLinkLocalAddress()
-        || address.isSiteLocalAddress();
+        || address.isSiteLocalAddress()
+        || address.isAnyLocalAddress()) {
+      return true;
+    }
+    // RFC 4193 IPv6 unique-local addresses (fc00::/7). Java's
+    // Inet6Address.isSiteLocalAddress() only matches the deprecated fec0::/10 block,
+    // so we check fc00::/7 explicitly.
+    if (address instanceof Inet6Address) {
+      final byte[] bytes = address.getAddress();
+      return (bytes[0] & 0xfe) == 0xfc;
+    }
+    return false;
   }
 
   /**
