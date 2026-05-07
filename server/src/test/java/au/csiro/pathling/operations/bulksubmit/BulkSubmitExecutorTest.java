@@ -609,6 +609,135 @@ class BulkSubmitExecutorTest {
     await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> verify(sparkContext).clearJobGroup());
   }
 
+  @Test
+  @DisplayName("downloadManifestJob rejects off-allowlist file URL")
+  void downloadManifestJobRejectsOffAllowlistFileUrl() {
+    // Given: a manifest served from an allowlisted endpoint that references a file URL
+    // that does not match the allowableSources prefix.
+    final Submission submission = createTestSubmission();
+    final ManifestJob manifestJob = createTestManifestJob();
+    setupManifestWithOffAllowlistFileUrl();
+
+    // Configure allowableSources to only allow the manifest endpoint prefix.
+    final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
+    bulkSubmitConfig.setAllowableSources(
+        List.of("http://localhost:" + wireMockServer.port() + "/allowed/"));
+    when(serverConfiguration.getBulkSubmit()).thenReturn(bulkSubmitConfig);
+
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<UnaryOperator<ManifestJob>> updateCaptor =
+        ArgumentCaptor.forClass(UnaryOperator.class);
+
+    // When: calling downloadManifestJob.
+    executor.downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE);
+
+    // Then: the manifest job should transition to FAILED with error referencing the URL.
+    await()
+        .atMost(Duration.ofSeconds(5))
+        .untilAsserted(
+            () -> {
+              verify(submissionRegistry, times(3))
+                  .updateManifestJob(
+                      eq(submitterIdentifier),
+                      eq(SUBMISSION_ID),
+                      eq(MANIFEST_JOB_ID),
+                      updateCaptor.capture());
+
+              final UnaryOperator<ManifestJob> thirdUpdate = updateCaptor.getAllValues().get(2);
+              final ManifestJob updatedJob = thirdUpdate.apply(manifestJob);
+              assertThat(updatedJob.state()).isEqualTo(ManifestJobState.FAILED);
+              assertThat(updatedJob.errorMessage())
+                  .contains("http://localhost:" + wireMockServer.port() + "/evil/Patient.ndjson")
+                  .contains("does not match any allowed source prefixes");
+            });
+
+    // And: WireMock should receive zero requests for the off-allowlist file endpoint.
+    wireMockServer.verify(0, getRequestedFor(urlEqualTo("/evil/Patient.ndjson")));
+  }
+
+  @Test
+  @DisplayName("downloadManifestJob accepts on-allowlist file URL")
+  void downloadManifestJobAcceptsOnAllowlistFileUrl() {
+    // Given: a manifest served from an allowlisted endpoint with a matching file URL.
+    final Submission submission = createTestSubmission();
+    final ManifestJob manifestJob = createTestManifestJob();
+    setupManifestWithOnAllowlistFileUrl();
+
+    final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
+    bulkSubmitConfig.setAllowableSources(
+        List.of("http://localhost:" + wireMockServer.port() + "/allowed/"));
+    when(serverConfiguration.getBulkSubmit()).thenReturn(bulkSubmitConfig);
+
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<UnaryOperator<ManifestJob>> updateCaptor =
+        ArgumentCaptor.forClass(UnaryOperator.class);
+
+    // When: calling downloadManifestJob.
+    executor.downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE);
+
+    // Then: the manifest job should transition to DOWNLOADED successfully.
+    await()
+        .atMost(Duration.ofSeconds(5))
+        .untilAsserted(
+            () -> {
+              verify(submissionRegistry, times(3))
+                  .updateManifestJob(
+                      eq(submitterIdentifier),
+                      eq(SUBMISSION_ID),
+                      eq(MANIFEST_JOB_ID),
+                      updateCaptor.capture());
+
+              final UnaryOperator<ManifestJob> thirdUpdate = updateCaptor.getAllValues().get(2);
+              final ManifestJob updatedJob = thirdUpdate.apply(manifestJob);
+              assertThat(updatedJob.state()).isEqualTo(ManifestJobState.DOWNLOADED);
+              assertThat(updatedJob.downloadedFiles()).isNotEmpty();
+            });
+
+    // And: the file endpoint should have been requested.
+    wireMockServer.verify(getRequestedFor(urlEqualTo("/allowed/Patient.ndjson")));
+  }
+
+  @Test
+  @DisplayName("downloadManifestJob allows any file URL when allowableSources is empty")
+  void downloadManifestJobAllowsAnyUrlWhenAllowableSourcesEmpty() {
+    // Given: a manifest with a file URL and empty allowableSources.
+    final Submission submission = createTestSubmission();
+    final ManifestJob manifestJob = createTestManifestJob();
+    setupManifestWithOffAllowlistFileUrl();
+
+    final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
+    bulkSubmitConfig.setAllowableSources(new ArrayList<>());
+    when(serverConfiguration.getBulkSubmit()).thenReturn(bulkSubmitConfig);
+
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<UnaryOperator<ManifestJob>> updateCaptor =
+        ArgumentCaptor.forClass(UnaryOperator.class);
+
+    // When: calling downloadManifestJob.
+    executor.downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE);
+
+    // Then: the manifest job should transition to DOWNLOADED (open configuration).
+    await()
+        .atMost(Duration.ofSeconds(5))
+        .untilAsserted(
+            () -> {
+              verify(submissionRegistry, times(3))
+                  .updateManifestJob(
+                      eq(submitterIdentifier),
+                      eq(SUBMISSION_ID),
+                      eq(MANIFEST_JOB_ID),
+                      updateCaptor.capture());
+
+              final UnaryOperator<ManifestJob> thirdUpdate = updateCaptor.getAllValues().get(2);
+              final ManifestJob updatedJob = thirdUpdate.apply(manifestJob);
+              assertThat(updatedJob.state()).isEqualTo(ManifestJobState.DOWNLOADED);
+              assertThat(updatedJob.downloadedFiles()).isNotEmpty();
+            });
+
+    // And: the file endpoint should have been requested.
+    wireMockServer.verify(getRequestedFor(urlEqualTo("/evil/Patient.ndjson")));
+  }
+
   // ========================================
   // abortSubmission Tests
   // ========================================
@@ -1213,5 +1342,79 @@ class BulkSubmitExecutorTest {
                     .withStatus(200)
                     .withHeader("Content-Type", "application/json")
                     .withBody(manifest)));
+  }
+
+  private void setupManifestWithOffAllowlistFileUrl() {
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+
+    // Manifest references a file URL that does not match the allowed prefix.
+    final String manifest =
+        String.format(
+            """
+            {
+              "transactionTime": "2025-11-28T00:00:00Z",
+              "request": "%s/fhir/$export",
+              "requiresAccessToken": false,
+              "output": [
+                {"type": "Patient", "url": "%s/evil/Patient.ndjson"}
+              ],
+              "error": []
+            }
+            """,
+            baseUrl, baseUrl);
+
+    wireMockServer.stubFor(
+        get(urlEqualTo("/manifest.json"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(manifest)));
+
+    // Stub the off-allowlist file endpoint - should never be requested.
+    wireMockServer.stubFor(
+        get(urlEqualTo("/evil/Patient.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody("{\"resourceType\":\"Patient\",\"id\":\"evil\"}")));
+  }
+
+  private void setupManifestWithOnAllowlistFileUrl() {
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+
+    // Manifest references a file URL that matches the allowed prefix.
+    final String manifest =
+        String.format(
+            """
+            {
+              "transactionTime": "2025-11-28T00:00:00Z",
+              "request": "%s/fhir/$export",
+              "requiresAccessToken": false,
+              "output": [
+                {"type": "Patient", "url": "%s/allowed/Patient.ndjson"}
+              ],
+              "error": []
+            }
+            """,
+            baseUrl, baseUrl);
+
+    wireMockServer.stubFor(
+        get(urlEqualTo("/manifest.json"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(manifest)));
+
+    // Stub the on-allowlist file endpoint.
+    wireMockServer.stubFor(
+        get(urlEqualTo("/allowed/Patient.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody("{\"resourceType\":\"Patient\",\"id\":\"patient1\"}")));
   }
 }

@@ -71,4 +71,19 @@ public class BulkSubmitConfiguration {
   public boolean isSubmitterAllowed(@Nonnull final SubmitterIdentifier submitter) {
     return findSubmitterConfig(submitter).isPresent();
   }
+
+  /**
+   * Checks if a URL is allowed based on the configured allowableSources prefixes.
+   *
+   * @param url the URL to check.
+   * @return true if allowableSources is empty or the URL starts with at least one configured
+   *     prefix, false otherwise.
+   */
+  public boolean isSourceAllowed(@Nonnull final String url) {
+    final List<String> prefixes = getAllowableSources();
+    if (prefixes.isEmpty()) {
+      return true;
+    }
+    return prefixes.stream().anyMatch(url::startsWith);
+  }
 }
