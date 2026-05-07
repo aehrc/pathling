@@ -18,7 +18,9 @@
 package au.csiro.pathling;
 
 import java.net.URI;
-import org.apache.hadoop.fs.Path;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -60,22 +62,29 @@ public class FileController {
   public ResponseEntity<Resource> serveFile(
       @PathVariable("jobId") final String jobId, @PathVariable("filename") final String filename) {
 
-    final Path requestedFilePath =
-        new Path(
-            URI.create(databasePath).getPath()
-                + Path.SEPARATOR
-                + "jobs"
-                + Path.SEPARATOR
-                + jobId
-                + Path.SEPARATOR
-                + filename);
-    final Resource resource = new FileSystemResource(requestedFilePath.toString());
+    try {
+      final Path basePath =
+          Paths.get(URI.create(databasePath).getPath()).toAbsolutePath().normalize();
+      final Path jobsDir = basePath.resolve("jobs").normalize().toAbsolutePath();
+      final Path jobDir = jobsDir.resolve(jobId).normalize().toAbsolutePath();
+      final Path requestedFile = jobDir.resolve(filename).normalize().toAbsolutePath();
 
-    if (!resource.exists() || !resource.isFile()) {
+      // Validate that the job directory remains within the jobs directory,
+      // and that the requested file remains within the job directory.
+      if (!jobDir.startsWith(jobsDir) || !requestedFile.startsWith(jobDir)) {
+        return ResponseEntity.notFound().build();
+      }
+
+      if (!Files.isRegularFile(requestedFile)) {
+        return ResponseEntity.notFound().build();
+      }
+
+      final Resource resource = new FileSystemResource(requestedFile.toString());
+      return ResponseEntity.ok()
+          .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+          .body(resource);
+    } catch (final Exception e) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok()
-        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-        .body(resource);
   }
 }
