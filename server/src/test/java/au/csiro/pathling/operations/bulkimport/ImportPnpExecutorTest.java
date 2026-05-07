@@ -18,15 +18,43 @@
 package au.csiro.pathling.operations.bulkimport;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
+import au.csiro.fhir.export.BulkExportClient;
+import au.csiro.fhir.export.BulkExportResult;
+import au.csiro.pathling.config.ImportConfiguration;
+import au.csiro.pathling.config.PnpConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.library.io.SaveMode;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * Unit tests for ImportPnpExecutor, focusing on error message extraction from nested exceptions.
+ * Unit tests for ImportPnpExecutor, focusing on error message extraction from nested exceptions and
+ * download location validation.
  *
  * @author John Grimes
  */
+@ExtendWith(MockitoExtension.class)
 class ImportPnpExecutorTest {
+
+  // ========================================
+  // Error message extraction tests
+  // ========================================
 
   /**
    * Tests that when an exception is thrown with a null message but a nested cause with a message,
@@ -150,5 +178,171 @@ class ImportPnpExecutorTest {
 
     // Then - the first non-blank message (middle) should be returned.
     assertThat(result).isEqualTo("Middle message");
+  }
+
+  // ========================================
+  // Download location validation tests
+  // ========================================
+
+  /**
+   * Tests that when a BulkExportResult contains a file whose destination resolves outside the
+   * output directory, validateDownloadResult throws InvalidUserInputError and deletes the escaped
+   * file.
+   */
+  @Test
+  void rejectsDownloadedFileOutsideOutputDir(@TempDir final Path tempDir) throws IOException {
+    final Path outputDir = tempDir.resolve("export-output");
+    Files.createDirectories(outputDir);
+    final Path escapedFile = tempDir.resolve("escaped.ndjson");
+    Files.writeString(escapedFile, "escaped content");
+
+    final BulkExportResult exportResult =
+        BulkExportResult.of(
+            Instant.now(),
+            List.of(
+                BulkExportResult.FileResult.of(
+                    URI.create("http://example.org/test.ndjson"), escapedFile.toUri(), 100L)));
+
+    assertThatThrownBy(() -> ImportPnpExecutor.validateDownloadResult(exportResult, outputDir))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("outside the download directory");
+
+    // The escaped file should be deleted.
+    assertThat(escapedFile).doesNotExist();
+  }
+
+  /**
+   * Tests that when a BulkExportResult contains only files within the output directory,
+   * validateDownloadResult completes without error.
+   */
+  @Test
+  void acceptsDownloadedFilesInsideOutputDir(@TempDir final Path tempDir) throws IOException {
+    final Path outputDir = tempDir.resolve("export-output");
+    Files.createDirectories(outputDir);
+    final Path validFile = outputDir.resolve("Patient.0000.ndjson");
+    Files.writeString(validFile, "valid content");
+
+    final BulkExportResult exportResult =
+        BulkExportResult.of(
+            Instant.now(),
+            List.of(
+                BulkExportResult.FileResult.of(
+                    URI.create("http://example.org/test.ndjson"), validFile.toUri(), 100L)));
+
+    // Should not throw.
+    ImportPnpExecutor.validateDownloadResult(exportResult, outputDir);
+  }
+
+  /**
+   * Tests that downloadFiles delegates to the client, validates the result, and returns organised
+   * files for valid downloads.
+   */
+  @Test
+  void downloadFilesReturnsOrganisedFilesForValidResult(@TempDir final Path tempDir)
+      throws Exception {
+    final Path outputDir = tempDir.resolve("export-output");
+    Files.createDirectories(outputDir);
+    final Path patientFile = outputDir.resolve("Patient.0000.ndjson");
+    Files.writeString(patientFile, "{}");
+
+    final BulkExportClient mockClient = mock(BulkExportClient.class);
+    when(mockClient.export())
+        .thenReturn(
+            BulkExportResult.of(
+                Instant.now(),
+                List.of(
+                    BulkExportResult.FileResult.of(
+                        URI.create("http://example.org/Patient.ndjson"),
+                        patientFile.toUri(),
+                        2L))));
+
+    final ImportPnpExecutor executor =
+        new ImportPnpExecutor(new ServerConfiguration(), mock(ImportExecutor.class));
+    final var result = executor.downloadFiles(mockClient, outputDir, ".ndjson");
+
+    assertThat(result).containsKey("Patient");
+    assertThat(result.get("Patient")).containsExactly(patientFile.toUri().toString());
+  }
+
+  /**
+   * Tests that when execute() aborts due to a path escape, the temporary directory is still cleaned
+   * up in the finally block.
+   */
+  @Test
+  void cleansUpTempDirAfterPathEscape(@TempDir final Path tempDir) throws Exception {
+    final ServerConfiguration config = new ServerConfiguration();
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setDownloadLocation(tempDir.toAbsolutePath().toString());
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setPnp(pnpConfig);
+    importConfig.setAllowableSources(java.util.List.of());
+    config.setImport(importConfig);
+
+    final Path outputDir = tempDir.resolve("pathling-pnp-import-testjob").resolve("export-output");
+    Files.createDirectories(outputDir);
+    final Path escapedFile = tempDir.resolve("escaped.ndjson");
+    Files.writeString(escapedFile, "escaped");
+
+    final BulkExportClient mockClient = mock(BulkExportClient.class);
+    when(mockClient.export())
+        .thenReturn(
+            BulkExportResult.of(
+                Instant.now(),
+                java.util.List.of(
+                    BulkExportResult.FileResult.of(
+                        URI.create("http://example.org/test.ndjson"), escapedFile.toUri(), 100L))));
+
+    final ImportExecutor mockImportExecutor = mock(ImportExecutor.class);
+    final ImportPnpExecutor spyExecutor = spy(new ImportPnpExecutor(config, mockImportExecutor));
+    doReturn(mockClient).when(spyExecutor).buildBulkExportClient(any(), any(), any());
+
+    final ImportPnpRequest request =
+        new ImportPnpRequest(
+            "test-url",
+            "http://example.org/fhir",
+            "dynamic",
+            SaveMode.OVERWRITE,
+            ImportFormat.NDJSON,
+            java.util.List.of(),
+            java.util.Optional.empty(),
+            java.util.Optional.empty(),
+            java.util.List.of(),
+            java.util.List.of(),
+            java.util.List.of());
+
+    assertThatThrownBy(() -> spyExecutor.execute(request, "testjob"))
+        .isInstanceOf(InvalidUserInputError.class);
+
+    // The temp directory should be cleaned up.
+    assertThat(tempDir.resolve("pathling-pnp-import-testjob")).doesNotExist();
+  }
+
+  /**
+   * Tests that downloadFiles propagates the InvalidUserInputError when validateDownloadResult
+   * detects an escaped file.
+   */
+  @Test
+  void downloadFilesThrowsWhenResultContainsEscapedFile(@TempDir final Path tempDir)
+      throws Exception {
+    final Path outputDir = tempDir.resolve("export-output");
+    Files.createDirectories(outputDir);
+    final Path escapedFile = tempDir.resolve("escaped.ndjson");
+    Files.writeString(escapedFile, "escaped content");
+
+    final BulkExportClient mockClient = mock(BulkExportClient.class);
+    when(mockClient.export())
+        .thenReturn(
+            BulkExportResult.of(
+                Instant.now(),
+                List.of(
+                    BulkExportResult.FileResult.of(
+                        URI.create("http://example.org/test.ndjson"), escapedFile.toUri(), 100L))));
+
+    final ImportPnpExecutor executor =
+        new ImportPnpExecutor(new ServerConfiguration(), mock(ImportExecutor.class));
+
+    assertThatThrownBy(() -> executor.downloadFiles(mockClient, outputDir, ".ndjson"))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("outside the download directory");
   }
 }

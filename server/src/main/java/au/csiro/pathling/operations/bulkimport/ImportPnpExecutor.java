@@ -19,13 +19,17 @@ package au.csiro.pathling.operations.bulkimport;
 
 import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.fhir.export.BulkExportClient;
+import au.csiro.fhir.export.BulkExportResult;
+import au.csiro.fhir.export.BulkExportResult.FileResult;
 import au.csiro.pathling.config.PnpConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -132,8 +136,10 @@ public class ImportPnpExecutor {
       final String fileExtension = "." + pnpRequest.importFormat().getExtension();
 
       // Download files using fhir-bulk-java.
+      final Path outputDir = tempDir.resolve("export-output");
+      final BulkExportClient client = buildBulkExportClient(pnpRequest, pnpConfig, outputDir);
       final Map<String, Collection<String>> downloadedFiles =
-          downloadFiles(pnpRequest, pnpConfig, tempDir, fileExtension);
+          downloadFiles(client, outputDir, fileExtension);
 
       // Create an ImportRequest from the downloaded files.
       final ImportRequest importRequest =
@@ -168,16 +174,18 @@ public class ImportPnpExecutor {
     }
   }
 
-  private Map<String, Collection<String>> downloadFiles(
-      final ImportPnpRequest pnpRequest,
-      final PnpConfiguration pnpConfig,
-      final Path tempDir,
-      final String fileExtension)
-      throws Exception {
+  /**
+   * Builds a {@link BulkExportClient} configured for the given request and output directory.
+   *
+   * @param pnpRequest the ping and pull import request
+   * @param pnpConfig the PnP configuration
+   * @param outputDir the directory where downloaded files will be written
+   * @return the configured bulk export client
+   */
+  BulkExportClient buildBulkExportClient(
+      final ImportPnpRequest pnpRequest, final PnpConfiguration pnpConfig, final Path outputDir) {
 
-    // Build the BulkExportClient based on export type.
-    // Note: Static mode (manifest-based) is not directly supported by the current API,
-    // so we only support dynamic mode for now.
+    // Static mode is not currently supported.
     if ("static".equals(pnpRequest.exportType())) {
       throw new InvalidUserInputError(
           "Static export type is not currently supported. Please use dynamic mode.");
@@ -213,7 +221,6 @@ public class ImportPnpExecutor {
     // Build the client.
     // Note: fhir-bulk-java creates the output directory, so we pass the parent and a subdirectory
     // name.
-    final Path outputDir = tempDir.resolve("export-output");
     final var clientBuilder =
         BulkExportClient.systemBuilder()
             .withFhirEndpointUrl(pnpRequest.exportUrl())
@@ -247,15 +254,65 @@ public class ImportPnpExecutor {
       clientBuilder.withIncludeAssociatedData(pnpRequest.includeAssociatedData());
     }
 
-    final BulkExportClient client = clientBuilder.build();
+    return clientBuilder.build();
+  }
+
+  /**
+   * Executes the bulk export download, validates that all downloaded files remain within the output
+   * directory, and organises the files by resource type.
+   *
+   * @param client the bulk export client
+   * @param outputDir the expected output directory for downloaded files
+   * @param fileExtension the file extension to filter for
+   * @return a map of resource type to file URLs
+   */
+  Map<String, Collection<String>> downloadFiles(
+      final BulkExportClient client, final Path outputDir, final String fileExtension)
+      throws Exception {
 
     // Execute the export and wait for completion.
-    log.info("Starting bulk export download from: {}", pnpRequest.exportUrl());
-    client.export();
+    log.info("Starting bulk export download");
+    final BulkExportResult exportResult = client.export();
     log.info("Bulk export download completed");
+
+    validateDownloadResult(exportResult, outputDir);
 
     // Scan the output directory to find downloaded files and organise by resource type.
     return organiseDownloadedFiles(outputDir, fileExtension);
+  }
+
+  /**
+   * Validates that all downloaded files in the export result are located within the specified
+   * output directory. If any file is found outside the output directory, it is deleted and an
+   * {@link InvalidUserInputError} is thrown.
+   *
+   * @param exportResult the result of the bulk export operation
+   * @param outputDir the allowed output directory
+   */
+  static void validateDownloadResult(
+      @Nonnull final BulkExportResult exportResult, @Nonnull final Path outputDir) {
+
+    final Path normalizedOutputDir = outputDir.toAbsolutePath().normalize();
+
+    for (final FileResult fileResult : exportResult.getResults()) {
+      final URI destination = fileResult.getDestination();
+      if (!"file".equals(destination.getScheme())) {
+        throw new InvalidUserInputError(
+            "Downloaded file has unexpected URI scheme: " + destination);
+      }
+
+      final Path filePath = Paths.get(destination).toAbsolutePath().normalize();
+      if (!filePath.startsWith(normalizedOutputDir)) {
+        // Attempt to delete the escaped file to prevent it from being accessed later.
+        try {
+          Files.deleteIfExists(filePath);
+        } catch (final IOException e) {
+          log.warn("Failed to delete escaped file: {}", filePath, e);
+        }
+        throw new InvalidUserInputError(
+            "Downloaded file is outside the download directory: " + filePath);
+      }
+    }
   }
 
   /**
