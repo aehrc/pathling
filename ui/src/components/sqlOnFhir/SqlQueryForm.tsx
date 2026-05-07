@@ -126,13 +126,20 @@ export function SqlQueryForm({
 
   const inlineInput = { title, sql, tables, parameters };
 
-  const baseRequestOptions = () => ({
-    format,
-    limit: limit.trim() === "" ? undefined : Number.parseInt(limit, 10),
-    header: format === "csv" ? csvHeader : undefined,
-    bindings,
-    parameterTypes: buildParameterTypes(declaredParameters),
-  });
+  const baseRequestOptions = () => {
+    // The result card shows at most 10 rows as a preview, so cap the request
+    // accordingly. Full-result downloads will be handled by a future SQL
+    // query export operation.
+    const parsedLimit = limit.trim() === "" ? undefined : Number.parseInt(limit, 10);
+    const requestLimit = parsedLimit === undefined ? 10 : Math.min(parsedLimit, 10);
+    return {
+      format,
+      limit: requestLimit,
+      header: format === "csv" ? csvHeader : undefined,
+      bindings,
+      parameterTypes: buildParameterTypes(declaredParameters),
+    };
+  };
 
   const handleExecute = () => {
     if (source === "stored") {

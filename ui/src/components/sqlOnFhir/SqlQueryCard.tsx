@@ -25,7 +25,7 @@
  * @author John Grimes
  */
 
-import { Cross2Icon, DownloadIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { Cross2Icon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import {
   Badge,
   Box,
@@ -88,8 +88,6 @@ export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardPro
     }
   }, [error, onError]);
 
-  const formatLabel = job.request.format ?? "ndjson";
-
   return (
     <Card>
       <Flex direction="column" gap="3">
@@ -109,7 +107,6 @@ export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardPro
             </Text>
           </Box>
           <Flex align="center" gap="2">
-            <Badge color="gray">{formatLabel}</Badge>
             {canClose && onClose && (
               <Button
                 size="1"
@@ -159,21 +156,10 @@ interface SqlQueryResultBodyProps {
 function SqlQueryResultBody({ result, sql }: Readonly<SqlQueryResultBodyProps>) {
   if (result.kind === "binary") {
     return (
-      <Flex direction="column" gap="2">
-        <Text size="2" color="gray">
-          {humanFileSize(result.blob.size)} of binary data ready to download.
-        </Text>
-        <Flex>
-          <Button
-            size="2"
-            variant="solid"
-            onClick={() => downloadBlob(result.blob, "sql-query.parquet")}
-          >
-            <DownloadIcon />
-            Download .parquet
-          </Button>
-        </Flex>
-      </Flex>
+      <Text size="2" color="gray">
+        Binary results cannot be previewed. Download will be supported by a future SQL query export
+        operation.
+      </Text>
     );
   }
 
@@ -185,20 +171,12 @@ function SqlQueryResultBody({ result, sql }: Readonly<SqlQueryResultBodyProps>) 
     );
   }
 
+  const previewRows = result.rows.slice(0, 10);
+
   return (
     <Flex direction="column" gap="3">
       <Flex align="center" justify="between">
-        <Badge color="gray">{result.rows.length} rows</Badge>
-        <Button
-          size="1"
-          variant="soft"
-          color="gray"
-          onClick={() => downloadBlob(result.rawBody, `sql-query.${result.format}`)}
-          aria-label={`Download .${result.format}`}
-        >
-          <DownloadIcon />
-          Download .{result.format}
-        </Button>
+        <Badge color="gray">{previewRows.length} rows</Badge>
       </Flex>
       <Box style={{ width: "100%", overflowX: "auto" }}>
         <Table.Root size="1">
@@ -214,7 +192,7 @@ function SqlQueryResultBody({ result, sql }: Readonly<SqlQueryResultBodyProps>) 
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {result.rows.map((row, rowIndex) => (
+            {previewRows.map((row, rowIndex) => (
               // eslint-disable-next-line @eslint-react/no-array-index-key -- Query result rows have no stable identifier.
               <Table.Row key={rowIndex}>
                 {result.columns.map((column) => (
@@ -316,37 +294,4 @@ function formatCellValue(value: unknown): string {
     return JSON.stringify(value);
   }
   return String(value);
-}
-
-/**
- * Triggers a browser download for the given Blob.
- *
- * @param blob - The Blob to download.
- * @param filename - The filename to suggest to the browser.
- */
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-/**
- * Renders a byte count as a short human-readable string.
- *
- * @param size - The byte count.
- * @returns A short string with an appropriate unit suffix.
- */
-function humanFileSize(size: number): string {
-  if (size < 1024) {
-    return `${size} B`;
-  }
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`;
-  }
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }

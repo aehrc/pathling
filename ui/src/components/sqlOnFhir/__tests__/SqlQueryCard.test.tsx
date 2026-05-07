@@ -19,8 +19,8 @@
  * Tests for the SqlQueryCard component.
  *
  * Verifies the format-aware result branching: tabular formats render a
- * table with a download button, parquet renders a download-only body and
- * errors surface in a Callout with the submitted SQL above.
+ * preview table (capped at 10 rows), parquet renders an export-pending
+ * notice and errors surface in a Callout with the submitted SQL above.
  *
  * @author John Grimes
  */
@@ -139,7 +139,34 @@ describe("SqlQueryCard", () => {
     expect(screen.getByText("given_name")).toBeInTheDocument();
     expect(screen.getByText("pat-1")).toBeInTheDocument();
     expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.getByLabelText(/download \.csv/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/download/i)).not.toBeInTheDocument();
+  });
+
+  // The card is a preview only and clamps the rendered rows to 10, with
+  // full-result downloads deferred to a future SQL query export operation.
+  it("clamps the rendered rows to 10 even if the result has more", () => {
+    mockStatus = "success";
+    mockResult = {
+      ...TABULAR_RESULT,
+      rows: Array.from({ length: 25 }, (_, i) => ({
+        patient_id: `pat-${i + 1}`,
+        given_name: `Name ${i + 1}`,
+      })),
+    };
+    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    expect(screen.getByText(/10 rows/i)).toBeInTheDocument();
+    expect(screen.getByText("pat-10")).toBeInTheDocument();
+    expect(screen.queryByText("pat-11")).not.toBeInTheDocument();
+  });
+
+  // The format indicator (e.g. "ndjson") is not rendered alongside the
+  // close button - format selection is owned by the form.
+  it("does not render a format badge in the header", () => {
+    mockStatus = "success";
+    mockResult = TABULAR_RESULT;
+    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    expect(screen.queryByText(/^csv$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^ndjson$/i)).not.toBeInTheDocument();
   });
 
   // Empty tabular results show "No rows returned" instead of an empty
@@ -154,8 +181,10 @@ describe("SqlQueryCard", () => {
     expect(screen.getByText(/no rows returned/i)).toBeInTheDocument();
   });
 
-  // The parquet branch renders only a download button and no table.
-  it("renders a download-only body for parquet results", () => {
+  // Binary (parquet) results cannot be previewed in the card; the body
+  // explains that downloads will be supported by a future export
+  // operation.
+  it("renders an export-pending notice for parquet results", () => {
     mockStatus = "success";
     mockResult = BINARY_RESULT;
     render(
@@ -167,7 +196,8 @@ describe("SqlQueryCard", () => {
         onClose={onClose}
       />,
     );
-    expect(screen.getByRole("button", { name: /download \.parquet/i })).toBeInTheDocument();
+    expect(screen.getByText(/binary results cannot be previewed/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /download/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
