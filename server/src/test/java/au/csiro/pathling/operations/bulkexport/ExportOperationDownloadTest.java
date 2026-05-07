@@ -102,6 +102,10 @@ class ExportOperationDownloadTest {
         """);
 
     exportResultRegistry.put(TEST_JOB_ID, new ExportResult(Optional.empty()));
+
+    // Create a marker file outside the job directory to detect traversal success.
+    final Path secretFile = tempDir.resolve("secret.txt");
+    Files.writeString(secretFile, "secret-content");
   }
 
   @Test
@@ -136,5 +140,75 @@ class ExportOperationDownloadTest {
     assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "unknown-file.ndjson", response))
         .isExactlyInstanceOf(ResourceNotFoundError.class)
         .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  // -------------------------------------------------------------------------
+  // Path traversal tests
+  // -------------------------------------------------------------------------
+
+  @Test
+  void testTraversalToParentDirectoryIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "../../secret.txt", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testTraversalWithUrlEncodingIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "..%2f..%2fsecret.txt", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testTraversalWithBackslashesIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "..\\..\\secret.txt", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testAbsolutePathIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "/etc/passwd", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testNullByteInjectionIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(
+            () -> exportResultProvider.result(TEST_JOB_ID, "test.txt\0../../etc/passwd", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testNestedTraversalEscapingJobDirIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(
+            () -> exportResultProvider.result(TEST_JOB_ID, "subdir/../../../secret.txt", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testValidNestedFileIsServed() throws Exception {
+    // Create a nested file within the job directory.
+    final Path jobDir = tempDir.resolve("jobs").resolve(TEST_JOB_ID);
+    final Path subDir = jobDir.resolve("subdir");
+    Files.createDirectories(subDir);
+    final Path nestedFile = subDir.resolve("nested-file.ndjson");
+    final String nestedContent = "{\"resourceType\":\"Patient\",\"id\":\"nested\"}";
+    Files.writeString(nestedFile, nestedContent);
+
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    exportResultProvider.result(TEST_JOB_ID, "subdir/nested-file.ndjson", response);
+    assertThat(response.getStatus()).isEqualTo(200);
+    assertThat(response.getContentAsString()).isEqualTo(nestedContent);
   }
 }
