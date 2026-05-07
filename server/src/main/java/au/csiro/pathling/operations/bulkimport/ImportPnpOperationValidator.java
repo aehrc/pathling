@@ -244,18 +244,20 @@ public class ImportPnpOperationValidator {
       throw new InvalidUserInputError("exportUrl must contain a host: " + exportUrl);
     }
 
+    final InetAddress[] addresses;
     try {
-      final InetAddress[] addresses = InetAddress.getAllByName(uri.getHost());
-      for (final InetAddress address : addresses) {
-        if (isInternalAddress(address)) {
-          throw new InvalidUserInputError(
-              "exportUrl points to an internal address: " + uri.getHost());
-        }
-      }
+      addresses = InetAddress.getAllByName(uri.getHost());
     } catch (final UnknownHostException e) {
-      // If the host cannot be resolved, we allow it through. The connection will fail later
-      // if the host is genuinely invalid.
-      log.debug("Could not resolve host for SSRF validation: {}", uri.getHost());
+      // Fail closed: an unresolvable host could resolve later in the executor (split-horizon
+      // DNS, transient resolver failure, TTL=0 NXDOMAIN windows), so we reject the request
+      // rather than allowing it through unchecked.
+      throw new InvalidUserInputError("exportUrl host could not be resolved: " + uri.getHost());
+    }
+    for (final InetAddress address : addresses) {
+      if (isInternalAddress(address)) {
+        throw new InvalidUserInputError(
+            "exportUrl points to an internal address: " + uri.getHost());
+      }
     }
   }
 

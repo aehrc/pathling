@@ -695,6 +695,26 @@ class ImportPnpOperationValidatorTest {
   }
 
   /**
+   * Tests that an exportUrl whose host cannot be resolved is rejected. The validator must fail
+   * closed rather than allowing the request through, since the host might resolve later in the
+   * executor under split-horizon DNS or transient resolver failure.
+   */
+  @Test
+  void rejectsUnresolvableExportUrlHostWhenInternalUrlsDisallowed() {
+    // Use a TLD reserved for documentation/testing per RFC 6761 to ensure the lookup fails
+    // deterministically without contacting the public DNS.
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://nonexistent.invalid/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("could not be resolved");
+  }
+
+  /**
    * Tests that an exportUrl pointing to a loopback address is accepted when internal URLs are
    * explicitly allowed.
    */
@@ -759,7 +779,7 @@ class ImportPnpOperationValidatorTest {
   @Test
   void rejectsExportUrlNotInAllowableExportUrls() {
     final PnpConfiguration pnpConfig = new PnpConfiguration();
-    pnpConfig.setAllowableExportUrls(List.of("https://trusted.example.com/fhir"));
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
     final ImportConfiguration importConfig = new ImportConfiguration();
     importConfig.setAllowableSources(List.of("s3://test-bucket/"));
     importConfig.setPnp(pnpConfig);
@@ -780,7 +800,7 @@ class ImportPnpOperationValidatorTest {
   @Test
   void acceptsExportUrlMatchingConfiguredPrefix() {
     final PnpConfiguration pnpConfig = new PnpConfiguration();
-    pnpConfig.setAllowableExportUrls(List.of("https://trusted.example.com/fhir"));
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
     final ImportConfiguration importConfig = new ImportConfiguration();
     importConfig.setAllowableSources(List.of("s3://test-bucket/"));
     importConfig.setPnp(pnpConfig);
@@ -790,7 +810,7 @@ class ImportPnpOperationValidatorTest {
     params
         .addParameter()
         .setName("exportUrl")
-        .setValue(new UrlType("https://trusted.example.com/fhir/$export"));
+        .setValue(new UrlType("https://example.com/fhir/$export"));
 
     assertThatNoException()
         .isThrownBy(() -> validator.validateParametersRequest(mockRequest, params));
@@ -851,7 +871,7 @@ class ImportPnpOperationValidatorTest {
     final PnpConfiguration pnpConfig = new PnpConfiguration();
     pnpConfig.setClientId("test-client");
     pnpConfig.setClientSecret("test-secret");
-    pnpConfig.setAllowableExportUrls(List.of("https://trusted.example.com/fhir"));
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
     final ImportConfiguration importConfig = new ImportConfiguration();
     importConfig.setAllowableSources(List.of("s3://test-bucket/"));
     importConfig.setPnp(pnpConfig);
@@ -862,7 +882,7 @@ class ImportPnpOperationValidatorTest {
     params
         .addParameter()
         .setName("exportUrl")
-        .setValue(new UrlType("https://trusted.example.com/fhir/$export"));
+        .setValue(new UrlType("https://example.com/fhir/$export"));
 
     assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
@@ -877,7 +897,7 @@ class ImportPnpOperationValidatorTest {
     final PnpConfiguration pnpConfig = new PnpConfiguration();
     pnpConfig.setClientId("test-client");
     pnpConfig.setClientSecret("test-secret");
-    pnpConfig.setAllowableExportUrls(List.of("https://trusted.example.com/fhir"));
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
     final ImportConfiguration importConfig = new ImportConfiguration();
     importConfig.setAllowableSources(List.of("s3://test-bucket/"));
     importConfig.setPnp(pnpConfig);
@@ -888,7 +908,7 @@ class ImportPnpOperationValidatorTest {
     params
         .addParameter()
         .setName("exportUrl")
-        .setValue(new UrlType("https://trusted.example.com/fhir/$export"));
+        .setValue(new UrlType("https://example.com/fhir/$export"));
 
     assertThatNoException()
         .isThrownBy(() -> validator.validateParametersRequest(mockRequest, params));
