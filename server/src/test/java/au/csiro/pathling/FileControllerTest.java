@@ -103,4 +103,62 @@ class FileControllerTest {
 
     assertThat(response.getStatusCode().value()).isEqualTo(404);
   }
+
+  /**
+   * Tests that a regular file inside the job directory which is a symlink to a target outside the
+   * jobs hierarchy returns HTTP 404. A purely lexical {@code startsWith} check would incorrectly
+   * permit this; filesystem-aware resolution must be used.
+   */
+  @Test
+  void rejectsSymlinkPointingOutsideJobsDirectory(@TempDir final Path tempDir) throws IOException {
+    final Path jobDir = tempDir.resolve("jobs").resolve("abc123");
+    Files.createDirectories(jobDir);
+
+    // Create a sensitive target file outside the jobs hierarchy.
+    final Path outside = tempDir.resolve("outside.txt");
+    Files.writeString(outside, "secret content");
+
+    // Place a symlink inside the job directory that points to the outside file.
+    final Path link = jobDir.resolve("escape.ndjson");
+    try {
+      Files.createSymbolicLink(link, outside);
+    } catch (final UnsupportedOperationException | IOException e) {
+      // Symlink creation is unsupported on this filesystem (e.g. Windows without privileges).
+      // Skip the test in that environment.
+      return;
+    }
+
+    final FileController controller = new FileController(tempDir.toUri().toString());
+    final ResponseEntity<?> response = controller.serveFile("abc123", "escape.ndjson");
+
+    assertThat(response.getStatusCode().value()).isEqualTo(404);
+  }
+
+  /**
+   * Tests that when the per-job directory itself is a symlink pointing outside the jobs hierarchy,
+   * requests for files under it are rejected with HTTP 404.
+   */
+  @Test
+  void rejectsJobDirectorySymlinkedOutside(@TempDir final Path tempDir) throws IOException {
+    final Path jobsDir = tempDir.resolve("jobs");
+    Files.createDirectories(jobsDir);
+
+    // Create a directory outside the jobs hierarchy with a regular file inside.
+    final Path outsideDir = tempDir.resolve("outside-dir");
+    Files.createDirectories(outsideDir);
+    Files.writeString(outsideDir.resolve("loot.txt"), "secret content");
+
+    // Symlink the per-job directory to the outside directory.
+    final Path linkedJobDir = jobsDir.resolve("abc123");
+    try {
+      Files.createSymbolicLink(linkedJobDir, outsideDir);
+    } catch (final UnsupportedOperationException | IOException e) {
+      return;
+    }
+
+    final FileController controller = new FileController(tempDir.toUri().toString());
+    final ResponseEntity<?> response = controller.serveFile("abc123", "loot.txt");
+
+    assertThat(response.getStatusCode().value()).isEqualTo(404);
+  }
 }

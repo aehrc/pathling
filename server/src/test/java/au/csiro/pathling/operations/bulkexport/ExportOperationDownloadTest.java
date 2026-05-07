@@ -197,6 +197,28 @@ class ExportOperationDownloadTest {
   }
 
   @Test
+  void testSymlinkEscapingJobDirIsRejected() throws Exception {
+    // Create a sensitive target file outside the jobs hierarchy.
+    final Path outside = tempDir.resolve("outside-secret.txt");
+    Files.writeString(outside, "secret content");
+
+    // Place a symlink inside the job directory that points to the outside file.
+    final Path jobDir = tempDir.resolve("jobs").resolve(TEST_JOB_ID);
+    final Path link = jobDir.resolve("escape.ndjson");
+    try {
+      Files.createSymbolicLink(link, outside);
+    } catch (final UnsupportedOperationException | IOException e) {
+      // Symlink creation is unsupported on this filesystem; skip.
+      return;
+    }
+
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "escape.ndjson", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
   void testValidNestedFileIsServed() throws Exception {
     // Create a nested file within the job directory.
     final Path jobDir = tempDir.resolve("jobs").resolve(TEST_JOB_ID);

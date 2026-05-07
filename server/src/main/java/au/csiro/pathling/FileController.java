@@ -71,7 +71,7 @@ public class FileController {
       final Path jobDir = jobsDir.resolve(jobId).normalize().toAbsolutePath();
       final Path requestedFile = jobDir.resolve(filename).normalize().toAbsolutePath();
 
-      // Validate that the job directory remains within the jobs directory,
+      // Validate lexically that the job directory remains within the jobs directory,
       // and that the requested file remains within the job directory.
       if (!jobDir.startsWith(jobsDir) || !requestedFile.startsWith(jobDir)) {
         return ResponseEntity.notFound().build();
@@ -81,7 +81,15 @@ public class FileController {
         return ResponseEntity.notFound().build();
       }
 
-      final Resource resource = new FileSystemResource(requestedFile.toString());
+      // Resolve any symbolic links and re-check containment against the canonical jobs directory.
+      // This prevents a symlink within the jobs hierarchy from escaping to an arbitrary file.
+      final Path realJobsDir = jobsDir.toRealPath();
+      final Path realRequestedFile = requestedFile.toRealPath();
+      if (!realRequestedFile.startsWith(realJobsDir)) {
+        return ResponseEntity.notFound().build();
+      }
+
+      final Resource resource = new FileSystemResource(realRequestedFile.toString());
       return ResponseEntity.ok()
           .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
           .body(resource);

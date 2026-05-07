@@ -119,28 +119,42 @@ public class ExportResultProvider {
     }
 
     // Validate that the requested file stays within the job directory.
+    final java.nio.file.Path jobsDir;
     final java.nio.file.Path jobDir;
     final java.nio.file.Path resolvedFile;
     try {
-      jobDir =
+      jobsDir =
           java.nio.file.Path.of(URI.create(databasePath).getPath())
               .resolve("jobs")
-              .resolve(jobId)
               .normalize()
               .toAbsolutePath();
-
+      jobDir = jobsDir.resolve(jobId).normalize().toAbsolutePath();
       resolvedFile = jobDir.resolve(file).normalize().toAbsolutePath();
     } catch (final java.nio.file.InvalidPathException e) {
       throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
     }
 
-    if (!resolvedFile.startsWith(jobDir)) {
+    if (!jobDir.startsWith(jobsDir) || !resolvedFile.startsWith(jobDir)) {
       throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
     }
 
     final Resource resource = new FileSystemResource(resolvedFile.toString());
 
     if (!resource.exists() || !resource.isFile()) {
+      throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
+    }
+
+    // Resolve any symbolic links and re-check containment against the canonical jobs directory.
+    // This prevents a symlink within the jobs hierarchy from escaping to an arbitrary file.
+    final java.nio.file.Path realJobsDir;
+    final java.nio.file.Path realResolvedFile;
+    try {
+      realJobsDir = jobsDir.toRealPath();
+      realResolvedFile = resolvedFile.toRealPath();
+    } catch (final IOException e) {
+      throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
+    }
+    if (!realResolvedFile.startsWith(realJobsDir)) {
       throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
     }
 
