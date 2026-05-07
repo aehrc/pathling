@@ -695,6 +695,107 @@ class ImportPnpOperationValidatorTest {
   }
 
   /**
+   * Tests that an exportUrl pointing to a "this network" address (RFC 1122, 0.0.0.0/8) is rejected.
+   * Java's isAnyLocalAddress() only matches 0.0.0.0 exactly, so the broader range needs an explicit
+   * check.
+   */
+  @Test
+  void rejectsThisNetworkRangeExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://0.1.2.3/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to a CGNAT shared address (RFC 6598, 100.64.0.0/10) is
+   * rejected. CGNAT space can reach cloud-metadata services in some VPC configurations.
+   */
+  @Test
+  void rejectsCgnatExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://100.64.0.1/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /** Tests that an exportUrl pointing to an IPv4 multicast address (224.0.0.0/4) is rejected. */
+  @Test
+  void rejectsIpv4MulticastExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://224.0.0.1/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to an IPv4 reserved Class E address (240.0.0.0/4) is rejected.
+   * This range also includes the limited broadcast 255.255.255.255.
+   */
+  @Test
+  void rejectsClassEReservedExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://255.255.255.255/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to an IPv4-mapped IPv6 loopback (::ffff:127.0.0.1) is
+   * rejected. The address must be unwrapped to its IPv4 form before classification, since Java's
+   * predicates on the wrapped form behave inconsistently across JVMs.
+   */
+  @Test
+  void rejectsIpv4MappedLoopbackExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://[::ffff:127.0.0.1]/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to an IPv4-mapped IPv6 link-local address
+   * (::ffff:169.254.169.254) is rejected. This is the AWS instance metadata address in its
+   * v4-mapped form.
+   */
+  @Test
+  void rejectsIpv4MappedLinkLocalExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://[::ffff:169.254.169.254]/latest/meta-data/"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /** Tests that an exportUrl pointing to an IPv6 multicast address (ff00::/8) is rejected. */
+  @Test
+  void rejectsIpv6MulticastExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://[ff02::1]/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
    * Tests that an exportUrl whose host cannot be resolved is rejected. The validator must fail
    * closed rather than allowing the request through, since the host might resolve later in the
    * executor under split-horizon DNS or transient resolver failure.

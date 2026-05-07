@@ -262,26 +262,79 @@ public class ImportPnpOperationValidator {
   }
 
   /**
-   * Checks whether the given IP address is an internal/private address.
+   * Checks whether the given IP address belongs to a range that should not be reachable from an
+   * exportUrl. Covers loopback, link-local, site-local, any-local, multicast, IPv6 unique-local
+   * (fc00::/7), CGNAT shared address space (100.64.0.0/10), the reserved Class E block
+   * (240.0.0.0/4, which subsumes the limited broadcast 255.255.255.255), and the "this network"
+   * range (0.0.0.0/8). IPv4-mapped IPv6 addresses (::ffff:0:0/96) are unwrapped to their embedded
+   * IPv4 form before classification, since Java's predicates behave inconsistently on the wrapped
+   * form.
    *
    * @param address the address to check
-   * @return true if the address is loopback, link-local, site-local, or IPv6 unique-local
+   * @return true if the address is in any range that should be considered internal
    */
   private static boolean isInternalAddress(@Nonnull final InetAddress address) {
-    if (address.isLoopbackAddress()
-        || address.isLinkLocalAddress()
-        || address.isSiteLocalAddress()
-        || address.isAnyLocalAddress()) {
+    final InetAddress canonical = unwrapIpv4Mapped(address);
+    if (canonical.isLoopbackAddress()
+        || canonical.isLinkLocalAddress()
+        || canonical.isSiteLocalAddress()
+        || canonical.isAnyLocalAddress()
+        || canonical.isMulticastAddress()) {
       return true;
     }
-    // RFC 4193 IPv6 unique-local addresses (fc00::/7). Java's
-    // Inet6Address.isSiteLocalAddress() only matches the deprecated fec0::/10 block,
-    // so we check fc00::/7 explicitly.
-    if (address instanceof Inet6Address) {
-      final byte[] bytes = address.getAddress();
+    final byte[] bytes = canonical.getAddress();
+    if (canonical instanceof Inet6Address) {
+      // RFC 4193 IPv6 unique-local addresses (fc00::/7). Java's
+      // Inet6Address.isSiteLocalAddress() only matches the deprecated fec0::/10 block,
+      // so we check fc00::/7 explicitly.
       return (bytes[0] & 0xfe) == 0xfc;
     }
-    return false;
+    // IPv4 ranges that Java's predicates do not cover.
+    final int first = bytes[0] & 0xff;
+    final int second = bytes[1] & 0xff;
+    // RFC 1122 "this network" (0.0.0.0/8).
+    if (first == 0) {
+      return true;
+    }
+    // RFC 6598 CGNAT shared address space (100.64.0.0/10).
+    if (first == 100 && (second & 0xc0) == 0x40) {
+      return true;
+    }
+    // RFC 1112 Class E reserved (240.0.0.0/4), which also covers the limited broadcast
+    // address 255.255.255.255.
+    return (first & 0xf0) == 0xf0;
+  }
+
+  /**
+   * Unwraps an IPv4-mapped IPv6 address (::ffff:a.b.c.d) to its embedded IPv4 form so that
+   * subsequent classification uses the IPv4 predicates. Returns the input unchanged for any other
+   * address.
+   *
+   * @param address the address to unwrap
+   * @return the embedded IPv4 address if {@code address} is an IPv4-mapped IPv6 address, otherwise
+   *     the input
+   */
+  @Nonnull
+  private static InetAddress unwrapIpv4Mapped(@Nonnull final InetAddress address) {
+    if (!(address instanceof Inet6Address)) {
+      return address;
+    }
+    final byte[] bytes = address.getAddress();
+    for (int i = 0; i < 10; i++) {
+      if (bytes[i] != 0) {
+        return address;
+      }
+    }
+    if ((bytes[10] & 0xff) != 0xff || (bytes[11] & 0xff) != 0xff) {
+      return address;
+    }
+    final byte[] v4 = {bytes[12], bytes[13], bytes[14], bytes[15]};
+    try {
+      return InetAddress.getByAddress(v4);
+    } catch (final UnknownHostException e) {
+      // getByAddress only fails on an array length other than 4 or 16; impossible here.
+      return address;
+    }
   }
 
   /**
