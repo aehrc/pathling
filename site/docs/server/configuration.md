@@ -75,7 +75,9 @@ operation, which retrieves data from external FHIR bulk export endpoints.
 - `pathling.bulkSubmit.allowedSubmitters` - (default: `[]`) The list of allowed
   submitters (by system and value) that can use the $bulk-submit operation.
 - `pathling.bulkSubmit.allowableSources` - (default: `https://`) URL prefixes
-  that are allowed as sources for manifest and file URLs.
+  that are allowed as sources for manifest and file URLs. This applies to both
+  the `manifestUrl` parameter and every `output[].url` discovered within fetched
+  manifests.
 
 ### Asynchronous processing
 
