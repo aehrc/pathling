@@ -28,6 +28,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.operations.delete.DeleteExecutor;
 import au.csiro.pathling.security.OperationAccess;
 import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess;
 import ca.uhn.fhir.rest.annotation.Transaction;
 import ca.uhn.fhir.rest.annotation.TransactionParam;
 import jakarta.annotation.Nonnull;
@@ -163,6 +164,11 @@ public class BatchProvider {
     final ResourceType resourceType =
         validateResourceTypeForCreate(entry, resourceTypeCode, urlErrorMessage);
 
+    if (configuration.getAuth().isEnabled()) {
+      checkHasAuthority(
+          PathlingAuthority.resourceAccess(ResourceAccess.AccessType.WRITE, resourceTypeCode));
+    }
+
     // Generate a new UUID, ignoring any client-provided ID.
     final String generatedId = UUID.randomUUID().toString();
     resource.setId(generatedId);
@@ -189,6 +195,12 @@ public class BatchProvider {
     final String urlId = urlComponents.get(1);
     final ResourceType resourceType =
         validateResourceType(entry, resourceTypeCode, urlErrorMessage);
+
+    if (configuration.getAuth().isEnabled()) {
+      checkHasAuthority(
+          PathlingAuthority.resourceAccess(ResourceAccess.AccessType.WRITE, resourceTypeCode));
+    }
+
     final IBaseResource preparedResource = prepareResourceForUpdate(resource, urlId);
     addToResourceMap(resourcesForUpdate, resourceType, preparedResource);
     addUpdateResponse(response, preparedResource);
@@ -210,6 +222,8 @@ public class BatchProvider {
 
     if (configuration.getAuth().isEnabled()) {
       checkHasAuthority(PathlingAuthority.operationAccess("delete"));
+      checkHasAuthority(
+          PathlingAuthority.resourceAccess(ResourceAccess.AccessType.WRITE, resourceTypeCode));
     }
 
     log.debug("Batch deleting {} with ID: {}", resourceTypeCode, resourceId);

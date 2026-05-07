@@ -55,6 +55,8 @@ class ReadProviderFactoryTest {
 
   @Autowired private FhirEncoders fhirEncoders;
 
+  @Autowired private au.csiro.pathling.config.ServerConfiguration configuration;
+
   private ReadProviderFactory readProviderFactory;
 
   @BeforeEach
@@ -64,7 +66,8 @@ class ReadProviderFactoryTest {
     final CustomObjectDataSource dataSource =
         new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
 
-    readProviderFactory = new ReadProviderFactory(fhirContext, dataSource, fhirEncoders);
+    readProviderFactory =
+        new ReadProviderFactory(configuration, fhirContext, dataSource, fhirEncoders);
   }
 
   // -------------------------------------------------------------------------

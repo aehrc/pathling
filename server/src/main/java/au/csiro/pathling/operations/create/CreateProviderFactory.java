@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.create;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.operations.update.UpdateExecutor;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
@@ -37,6 +38,8 @@ public class CreateProviderFactory {
 
   @Nonnull private final ApplicationContext applicationContext;
 
+  @Nonnull private final ServerConfiguration configuration;
+
   @Nonnull private final FhirContext fhirContext;
 
   @Nonnull private final UpdateExecutor updateExecutor;
@@ -45,14 +48,17 @@ public class CreateProviderFactory {
    * Constructs a new CreateProviderFactory.
    *
    * @param applicationContext the Spring application context for bean creation
+   * @param configuration the server configuration
    * @param fhirContext the FHIR context for resource definitions
    * @param updateExecutor the executor for performing update operations
    */
   public CreateProviderFactory(
       @Nonnull final ApplicationContext applicationContext,
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final UpdateExecutor updateExecutor) {
     this.applicationContext = applicationContext;
+    this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.updateExecutor = updateExecutor;
   }
@@ -69,7 +75,7 @@ public class CreateProviderFactory {
         fhirContext.getResourceDefinition(resourceType.name()).getImplementingClass();
 
     return applicationContext.getBean(
-        CreateProvider.class, updateExecutor, fhirContext, resourceTypeClass);
+        CreateProvider.class, configuration, updateExecutor, fhirContext, resourceTypeClass);
   }
 
   /**
@@ -85,6 +91,6 @@ public class CreateProviderFactory {
         fhirContext.getResourceDefinition(resourceTypeCode).getImplementingClass();
 
     return applicationContext.getBean(
-        CreateProvider.class, updateExecutor, fhirContext, resourceTypeClass);
+        CreateProvider.class, configuration, updateExecutor, fhirContext, resourceTypeClass);
   }
 }

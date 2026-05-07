@@ -17,9 +17,13 @@
 
 package au.csiro.pathling.operations.delete;
 
+import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.security.OperationAccess;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.IdParam;
@@ -45,6 +49,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class DeleteProvider implements IResourceProvider {
 
+  @Nonnull private final ServerConfiguration configuration;
+
   @Nonnull private final DeleteExecutor deleteExecutor;
 
   @Nonnull private final Class<? extends IBaseResource> resourceClass;
@@ -54,14 +60,17 @@ public class DeleteProvider implements IResourceProvider {
   /**
    * Constructs a new DeleteProvider for a specific resource type.
    *
+   * @param configuration the server configuration
    * @param deleteExecutor the executor for performing delete operations
    * @param fhirContext the FHIR context for resource definitions
    * @param resourceClass the class of the resource type this provider handles
    */
   public DeleteProvider(
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final DeleteExecutor deleteExecutor,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
+    this.configuration = configuration;
     this.deleteExecutor = deleteExecutor;
     this.resourceClass = resourceClass;
     this.resourceTypeCode = fhirContext.getResourceDefinition(resourceClass).getName();
@@ -84,6 +93,11 @@ public class DeleteProvider implements IResourceProvider {
   @SuppressWarnings("UnusedReturnValue")
   public MethodOutcome delete(@Nullable @IdParam final IdType id) {
     checkUserInput(id != null && !id.isEmpty(), "ID must be supplied");
+
+    if (configuration.getAuth().isEnabled()) {
+      checkHasAuthority(
+          PathlingAuthority.resourceAccess(ResourceAccess.AccessType.WRITE, resourceTypeCode));
+    }
 
     final String resourceId = id.getIdPart();
     log.debug("Deleting {} with ID: {}", resourceTypeCode, resourceId);

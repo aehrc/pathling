@@ -67,6 +67,8 @@ class ViewDefinitionCreateTest {
 
   @Autowired private FhirContext fhirContext;
 
+  @Autowired private au.csiro.pathling.config.ServerConfiguration configuration;
+
   @Autowired private CacheableDatabase cacheableDatabase;
 
   private Path tempDatabasePath;
@@ -86,7 +88,9 @@ class ViewDefinitionCreateTest {
             cacheableDatabase);
 
     // Create the CreateProvider for ViewDefinition.
-    createProvider = new CreateProvider(updateExecutor, fhirContext, ViewDefinitionResource.class);
+    createProvider =
+        new CreateProvider(
+            configuration, updateExecutor, fhirContext, ViewDefinitionResource.class);
   }
 
   @AfterEach

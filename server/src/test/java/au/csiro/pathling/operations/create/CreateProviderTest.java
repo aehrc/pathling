@@ -70,6 +70,8 @@ class CreateProviderTest {
 
   @Autowired private FhirContext fhirContext;
 
+  @Autowired private au.csiro.pathling.config.ServerConfiguration configuration;
+
   @Autowired private CacheableDatabase cacheableDatabase;
 
   private Path tempDatabasePath;
@@ -90,7 +92,7 @@ class CreateProviderTest {
             cacheableDatabase);
 
     // Create the CreateProvider.
-    createProvider = new CreateProvider(updateExecutor, fhirContext, Patient.class);
+    createProvider = new CreateProvider(configuration, updateExecutor, fhirContext, Patient.class);
   }
 
   @AfterEach
