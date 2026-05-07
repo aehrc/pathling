@@ -125,6 +125,8 @@ pathling:
   import:
     allowableSources:
       - "file:///usr/share/staging"
+    pnp:
+      allowInternalUrls: false
 
   # This section configures the server's support asynchronous processing of HTTP requests.
   async:

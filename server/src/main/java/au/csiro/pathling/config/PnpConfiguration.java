@@ -66,4 +66,10 @@ public class PnpConfiguration {
    * specified.
    */
   @Nullable private String fileExtension;
+
+  /**
+   * Whether to allow exportUrl values that resolve to internal or private IP addresses. Defaults to
+   * false for security.
+   */
+  private boolean allowInternalUrls = false;
 }

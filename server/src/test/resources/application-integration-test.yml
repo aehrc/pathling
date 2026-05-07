@@ -10,6 +10,7 @@ pathling:
       clientId: test-client
       clientSecret: test-secret
       scope: system/*.read
+      allowInternalUrls: false
 spring:
   main:
     banner-mode: off

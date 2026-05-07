@@ -156,6 +156,10 @@ pathling:
   import:
     allowableSources:
       - "file:///usr/share/staging"
+    pnp:
+      # Whether to allow exportUrl values that resolve to internal or private IP addresses.
+      # Defaults to false for security.
+      allowInternalUrls: false
 
   # This section configures the $bulk-submit operation for receiving data from external systems.
   bulkSubmit:

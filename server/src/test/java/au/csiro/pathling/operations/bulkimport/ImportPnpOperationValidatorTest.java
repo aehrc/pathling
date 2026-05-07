@@ -55,7 +55,7 @@ class ImportPnpOperationValidatorTest {
 
     @Bean
     public ImportPnpOperationValidator importPnpOperationValidator() {
-      return new ImportPnpOperationValidator();
+      return new ImportPnpOperationValidator(false);
     }
   }
 
@@ -562,6 +562,91 @@ class ImportPnpOperationValidatorTest {
               assertThat(result.result().exportUrl())
                   .isEqualTo("https://public-fhir-server.org/$export");
             });
+  }
+
+  // ========================================
+  // SSRF / Internal URL validation
+  // ========================================
+
+  /**
+   * Tests that an exportUrl pointing to a loopback address is rejected when internal URLs are
+   * disallowed.
+   */
+  @Test
+  void rejectsLoopbackExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://127.0.0.1/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to a private IP address is rejected when internal URLs are
+   * disallowed.
+   */
+  @Test
+  void rejectsPrivateIpExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://10.0.0.1/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to a link-local address is rejected when internal URLs are
+   * disallowed.
+   */
+  @Test
+  void rejectsLinkLocalExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://169.254.169.254/latest/meta-data/"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /** Tests that a public exportUrl is accepted regardless of the allowInternalUrls setting. */
+  @Test
+  void acceptsPublicExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    assertThatNoException()
+        .isThrownBy(() -> validator.validateParametersRequest(mockRequest, params));
+  }
+
+  /**
+   * Tests that an exportUrl pointing to a loopback address is accepted when internal URLs are
+   * explicitly allowed.
+   */
+  @Test
+  void acceptsLoopbackExportUrlWhenInternalUrlsAllowed() {
+    final ImportPnpOperationValidator permissiveValidator = new ImportPnpOperationValidator(true);
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://127.0.0.1/fhir/$export"));
+
+    assertThatNoException()
+        .isThrownBy(() -> permissiveValidator.validateParametersRequest(mockRequest, params));
   }
 
   /** Tests that all export parameters are extracted together correctly. */

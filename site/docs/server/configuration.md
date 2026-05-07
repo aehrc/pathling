@@ -64,6 +64,11 @@ operation, which retrieves data from external FHIR bulk export endpoints.
   operations. This location should have sufficient space for large FHIR exports.
 - `pathling.import.pnp.fileExtension` - (default: `.ndjson`) The file extension
   to filter for when processing downloaded files.
+- `pathling.import.pnp.allowInternalUrls` - (default: `false`) When set to
+  `false`, the `$import-pnp` operation will reject `exportUrl` values that
+  resolve to internal or private IP addresses (loopback, link-local,
+  site-local, and unique-local). Set to `true` only if your deployment
+  legitimately uses internal FHIR bulk export endpoints.
 
 ### Export
 

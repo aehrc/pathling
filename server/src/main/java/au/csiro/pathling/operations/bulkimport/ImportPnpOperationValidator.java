@@ -24,6 +24,9 @@ import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.operations.OperationValidation;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -37,6 +40,7 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UrlType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -50,6 +54,19 @@ public class ImportPnpOperationValidator {
 
   private static final String EXPORT_TYPE_DYNAMIC = "dynamic";
   private static final String EXPORT_TYPE_STATIC = "static";
+
+  private final boolean allowInternalUrls;
+
+  /**
+   * Creates a new ImportPnpOperationValidator.
+   *
+   * @param allowInternalUrls whether to allow exportUrl values that resolve to internal or private
+   *     IP addresses
+   */
+  public ImportPnpOperationValidator(
+      @Value("${pathling.import.pnp.allowInternalUrls:false}") final boolean allowInternalUrls) {
+    this.allowInternalUrls = allowInternalUrls;
+  }
 
   /**
    * Validates a ping and pull import request from a FHIR Parameters resource.
@@ -72,6 +89,8 @@ public class ImportPnpOperationValidator {
                 false,
                 Optional.of(new InvalidUserInputError("Missing required parameter: exportUrl")))
             .orElseThrow(() -> new InvalidUserInputError("exportUrl must not be null"));
+
+    validateExportUrl(exportUrl);
 
     // Extract exportType parameter (optional, defaults to "dynamic").
     final String exportType =
@@ -151,6 +170,55 @@ public class ImportPnpOperationValidator {
             .toList();
 
     return new PreAsyncValidationResult<>(importPnpRequest, issues);
+  }
+
+  /**
+   * Validates that the exportUrl does not point to an internal or private IP address, unless
+   * explicitly allowed by configuration.
+   *
+   * @param exportUrl the export URL to validate
+   */
+  private void validateExportUrl(@Nonnull final String exportUrl) {
+    if (allowInternalUrls) {
+      return;
+    }
+
+    final URI uri;
+    try {
+      uri = URI.create(exportUrl);
+    } catch (final IllegalArgumentException e) {
+      throw new InvalidUserInputError("Invalid exportUrl: " + exportUrl);
+    }
+
+    if (uri.getHost() == null) {
+      throw new InvalidUserInputError("exportUrl must contain a host: " + exportUrl);
+    }
+
+    try {
+      final InetAddress[] addresses = InetAddress.getAllByName(uri.getHost());
+      for (final InetAddress address : addresses) {
+        if (isInternalAddress(address)) {
+          throw new InvalidUserInputError(
+              "exportUrl points to an internal address: " + uri.getHost());
+        }
+      }
+    } catch (final UnknownHostException e) {
+      // If the host cannot be resolved, we allow it through. The connection will fail later
+      // if the host is genuinely invalid.
+      log.debug("Could not resolve host for SSRF validation: {}", uri.getHost());
+    }
+  }
+
+  /**
+   * Checks whether the given IP address is an internal/private address.
+   *
+   * @param address the address to check
+   * @return true if the address is loopback, link-local, site-local, or unique-local
+   */
+  private static boolean isInternalAddress(@Nonnull final InetAddress address) {
+    return address.isLoopbackAddress()
+        || address.isLinkLocalAddress()
+        || address.isSiteLocalAddress();
   }
 
   /**
