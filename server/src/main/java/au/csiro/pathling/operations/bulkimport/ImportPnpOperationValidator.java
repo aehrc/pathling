@@ -19,11 +19,14 @@ package au.csiro.pathling.operations.bulkimport;
 
 import au.csiro.pathling.ParamUtil;
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
+import au.csiro.pathling.config.PnpConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.operations.OperationValidation;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.PostConstruct;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -50,6 +53,27 @@ public class ImportPnpOperationValidator {
 
   private static final String EXPORT_TYPE_DYNAMIC = "dynamic";
   private static final String EXPORT_TYPE_STATIC = "static";
+
+  @Nonnull private final ServerConfiguration serverConfiguration;
+
+  /**
+   * Constructor for ImportPnpOperationValidator.
+   *
+   * @param serverConfiguration the server configuration
+   */
+  public ImportPnpOperationValidator(@Nonnull final ServerConfiguration serverConfiguration) {
+    this.serverConfiguration = serverConfiguration;
+  }
+
+  /** Logs a warning at startup if PNP credentials are configured without authentication enabled. */
+  @PostConstruct
+  public void checkAuthConfiguration() {
+    if (pnpCredentialsConfigured() && !serverConfiguration.getAuth().isEnabled()) {
+      log.warn(
+          "PNP credentials are configured but authentication is disabled. "
+              + "The $import-pnp operation will reject requests until authentication is enabled.");
+    }
+  }
 
   /**
    * Validates a ping and pull import request from a FHIR Parameters resource.
@@ -94,7 +118,7 @@ public class ImportPnpOperationValidator {
 
     // Note: inputSource parameter is accepted but ignored for backwards compatibility.
 
-    // Extract saveMode parameter (optional, defaults to OVERWRITE).
+    // Extract saveMode parameter (optional, defaults to MERGE).
     final SaveMode saveMode =
         ParamUtil.extractFromPart(
                 parameters.getParameter(),
@@ -102,7 +126,7 @@ public class ImportPnpOperationValidator {
                 CodeType.class,
                 code -> SaveMode.fromCode(code.getCode()),
                 true,
-                Optional.of(SaveMode.OVERWRITE),
+                Optional.of(SaveMode.MERGE),
                 false,
                 Optional.of(new InvalidUserInputError("Unknown saveMode.")))
             .orElseThrow();
@@ -129,6 +153,9 @@ public class ImportPnpOperationValidator {
     final List<String> includeAssociatedData =
         extractCodeList(parameters.getParameter(), "includeAssociatedData");
 
+    validateExportUrl(exportUrl);
+    validateAuthConfiguration();
+
     final ImportPnpRequest importPnpRequest =
         new ImportPnpRequest(
             requestDetails.getCompleteUrl(),
@@ -151,6 +178,66 @@ public class ImportPnpOperationValidator {
             .toList();
 
     return new PreAsyncValidationResult<>(importPnpRequest, issues);
+  }
+
+  /**
+   * Validates that the exportUrl is allowed based on the configured allowableExportUrls.
+   *
+   * @param exportUrl the export URL to validate
+   * @throws InvalidUserInputError if the URL is not allowed
+   */
+  private void validateExportUrl(@Nonnull final String exportUrl) {
+    final PnpConfiguration pnpConfig =
+        serverConfiguration.getImport() != null ? serverConfiguration.getImport().getPnp() : null;
+    final List<String> allowableExportUrls =
+        pnpConfig != null && pnpConfig.getAllowableExportUrls() != null
+            ? pnpConfig.getAllowableExportUrls()
+            : List.of();
+
+    if (allowableExportUrls.isEmpty()) {
+      if (pnpCredentialsConfigured()) {
+        throw new InvalidUserInputError(
+            "No trusted export URLs are configured. "
+                + "Set pathling.import.pnp.allowableExportUrls to enable $import-pnp.");
+      }
+      return;
+    }
+
+    final boolean allowed = allowableExportUrls.stream().anyMatch(exportUrl::startsWith);
+    if (!allowed) {
+      throw new InvalidUserInputError("exportUrl not in allowableExportUrls: " + exportUrl);
+    }
+  }
+
+  /**
+   * Validates that authentication is enabled when PNP credentials are configured.
+   *
+   * @throws InvalidUserInputError if auth is disabled but PNP credentials are present
+   */
+  private void validateAuthConfiguration() {
+    if (pnpCredentialsConfigured() && !serverConfiguration.getAuth().isEnabled()) {
+      throw new InvalidUserInputError(
+          "Authentication is required when PNP credentials are configured.");
+    }
+  }
+
+  /**
+   * Checks whether PNP credentials are configured.
+   *
+   * @return true if clientId and either clientSecret or privateKeyJwk are configured
+   */
+  private boolean pnpCredentialsConfigured() {
+    final PnpConfiguration pnpConfig =
+        serverConfiguration.getImport() != null ? serverConfiguration.getImport().getPnp() : null;
+    if (pnpConfig == null) {
+      return false;
+    }
+    final String clientId = pnpConfig.getClientId();
+    if (clientId == null || clientId.isBlank()) {
+      return false;
+    }
+    return (pnpConfig.getClientSecret() != null && !pnpConfig.getClientSecret().isBlank())
+        || (pnpConfig.getPrivateKeyJwk() != null && !pnpConfig.getPrivateKeyJwk().isBlank());
   }
 
   /**

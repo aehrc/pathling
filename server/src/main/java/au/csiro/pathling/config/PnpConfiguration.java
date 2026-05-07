@@ -18,6 +18,7 @@
 package au.csiro.pathling.config;
 
 import jakarta.annotation.Nullable;
+import java.util.List;
 import lombok.Data;
 import lombok.ToString;
 
@@ -28,6 +29,13 @@ import lombok.ToString;
  */
 @Data
 public class PnpConfiguration {
+
+  /**
+   * A list of URL prefixes which are allowable for use as export URLs within the $import-pnp
+   * operation. When this list is non-empty, any exportUrl that does not start with one of these
+   * prefixes will be rejected.
+   */
+  @Nullable private List<String> allowableExportUrls;
 
   /** The client identifier for SMART Backend Services authentication. */
   @Nullable private String clientId;

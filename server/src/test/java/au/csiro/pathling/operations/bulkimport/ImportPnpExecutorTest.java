@@ -18,7 +18,15 @@
 package au.csiro.pathling.operations.bulkimport;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import au.csiro.fhir.export.BulkExportResult;
+import au.csiro.fhir.export.BulkExportResult.FileResult;
+import au.csiro.pathling.errors.InvalidUserInputError;
+import java.net.URI;
+import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -150,5 +158,66 @@ class ImportPnpExecutorTest {
 
     // Then - the first non-blank message (middle) should be returned.
     assertThat(result).isEqualTo("Middle message");
+  }
+
+  // ========================================
+  // Manifest URL Validation Tests
+  // ========================================
+
+  /** Tests that manifest URLs on the same origin as the export URL are accepted. */
+  @Test
+  void acceptsManifestUrlsOnSameOrigin() {
+    final BulkExportResult result =
+        BulkExportResult.of(
+            Instant.now(),
+            List.of(
+                FileResult.of(
+                    URI.create("https://trusted.example.com/data/Patient.ndjson"),
+                    URI.create("file:/tmp/Patient.ndjson"),
+                    100L)));
+
+    assertThatCode(
+            () ->
+                ImportPnpExecutor.validateManifestUrls("https://trusted.example.com/fhir", result))
+        .doesNotThrowAnyException();
+  }
+
+  /** Tests that manifest URLs on a different origin than the export URL are rejected. */
+  @Test
+  void rejectsManifestUrlsOnDifferentOrigin() {
+    final BulkExportResult result =
+        BulkExportResult.of(
+            Instant.now(),
+            List.of(
+                FileResult.of(
+                    URI.create("https://evil.com/data/Patient.ndjson"),
+                    URI.create("file:/tmp/Patient.ndjson"),
+                    100L)));
+
+    assertThatThrownBy(
+            () ->
+                ImportPnpExecutor.validateManifestUrls("https://trusted.example.com/fhir", result))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("Manifest download URL origin does not match export URL origin");
+  }
+
+  /** Tests that origin extraction works correctly for standard HTTP and HTTPS URLs. */
+  @Test
+  void extractsOriginCorrectly() {
+    assertThat(ImportPnpExecutor.originOf(URI.create("https://example.com/path")))
+        .isEqualTo("https://example.com");
+    assertThat(ImportPnpExecutor.originOf(URI.create("http://example.com/path")))
+        .isEqualTo("http://example.com");
+    assertThat(ImportPnpExecutor.originOf(URI.create("https://example.com:8443/path")))
+        .isEqualTo("https://example.com:8443");
+    assertThat(ImportPnpExecutor.originOf(URI.create("http://example.com:8080/path")))
+        .isEqualTo("http://example.com:8080");
+  }
+
+  /** Tests that origin extraction normalises scheme and host to lowercase. */
+  @Test
+  void normalisesOriginToLowercase() {
+    assertThat(ImportPnpExecutor.originOf(URI.create("HTTPS://EXAMPLE.COM/path")))
+        .isEqualTo("https://example.com");
   }
 }

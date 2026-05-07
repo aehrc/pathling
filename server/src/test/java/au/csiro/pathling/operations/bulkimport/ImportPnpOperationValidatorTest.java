@@ -22,12 +22,17 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
+import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.ImportConfiguration;
+import au.csiro.pathling.config.PnpConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.MockUtil;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import java.time.Instant;
+import java.util.List;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.InstantType;
@@ -40,6 +45,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 
 /**
  * Tests for ImportPnpOperationValidator.
@@ -54,18 +60,45 @@ class ImportPnpOperationValidatorTest {
   static class TestConfig {
 
     @Bean
-    public ImportPnpOperationValidator importPnpOperationValidator() {
-      return new ImportPnpOperationValidator();
+    @Primary
+    public ServerConfiguration serverConfiguration() {
+      final ServerConfiguration config = new ServerConfiguration();
+      final AuthorizationConfiguration auth = new AuthorizationConfiguration();
+      auth.setEnabled(false);
+      config.setAuth(auth);
+      final ImportConfiguration importConfig = new ImportConfiguration();
+      importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+      config.setImport(importConfig);
+      return config;
+    }
+
+    @Bean
+    public ImportPnpOperationValidator importPnpOperationValidator(
+        final ServerConfiguration serverConfiguration) {
+      return new ImportPnpOperationValidator(serverConfiguration);
     }
   }
 
   @Autowired private ImportPnpOperationValidator validator;
+
+  @Autowired private ServerConfiguration serverConfiguration;
 
   private RequestDetails mockRequest;
 
   @BeforeEach
   void setUp() {
     mockRequest = MockUtil.mockRequest("application/fhir+json", "respond-async", false);
+    resetServerConfiguration();
+  }
+
+  /** Resets the server configuration to the default test state. */
+  private void resetServerConfiguration() {
+    final AuthorizationConfiguration auth = new AuthorizationConfiguration();
+    auth.setEnabled(false);
+    serverConfiguration.setAuth(auth);
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    serverConfiguration.setImport(importConfig);
   }
 
   // ========================================
@@ -111,7 +144,7 @@ class ImportPnpOperationValidatorTest {
         validator.validateParametersRequest(mockRequest, params);
 
     assertThat(result.result().exportType()).isEqualTo("dynamic"); // Default.
-    assertThat(result.result().saveMode()).isEqualTo(SaveMode.OVERWRITE); // Default.
+    assertThat(result.result().saveMode()).isEqualTo(SaveMode.MERGE); // Default.
     assertThat(result.result().importFormat()).isEqualTo(ImportFormat.NDJSON); // Default.
   }
 
@@ -601,5 +634,149 @@ class ImportPnpOperationValidatorTest {
     assertThat(request.elements()).containsExactly("id");
     assertThat(request.typeFilters()).containsExactly("Patient?active=true");
     assertThat(request.includeAssociatedData()).containsExactly("LatestProvenanceResources");
+  }
+
+  // ========================================
+  // Export URL Whitelist Tests
+  // ========================================
+
+  /** Tests that an exportUrl not matching any configured prefix is rejected. */
+  @Test
+  void rejectsExportUrlNotInAllowableExportUrls() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setAllowableExportUrls(List.of("https://trusted.example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://evil.com/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("exportUrl not in allowableExportUrls");
+  }
+
+  /** Tests that an exportUrl matching a configured prefix is accepted. */
+  @Test
+  void acceptsExportUrlMatchingConfiguredPrefix() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setAllowableExportUrls(List.of("https://trusted.example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://trusted.example.com/fhir/$export"));
+
+    assertThatNoException()
+        .isThrownBy(() -> validator.validateParametersRequest(mockRequest, params));
+  }
+
+  /**
+   * Tests that when allowableExportUrls is empty and credentials are configured, the request is
+   * rejected.
+   */
+  @Test
+  void rejectsExportUrlWhenAllowableExportUrlsEmptyAndCredentialsConfigured() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setClientId("test-client");
+    pnpConfig.setClientSecret("test-secret");
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("No trusted export URLs are configured");
+  }
+
+  // ========================================
+  // Save Mode Default Tests
+  // ========================================
+
+  /** Tests that the default saveMode is MERGE when omitted. */
+  @Test
+  void defaultsSaveModeToMerge() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().saveMode()).isEqualTo(SaveMode.MERGE);
+  }
+
+  // ========================================
+  // Authentication Interlock Tests
+  // ========================================
+
+  /**
+   * Tests that when PNP credentials are configured and auth is disabled, the request is rejected.
+   */
+  @Test
+  void rejectsImportPnpWhenAuthDisabledAndPnpCredentialsPresent() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setClientId("test-client");
+    pnpConfig.setClientSecret("test-secret");
+    pnpConfig.setAllowableExportUrls(List.of("https://trusted.example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+    serverConfiguration.getAuth().setEnabled(false);
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://trusted.example.com/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("Authentication is required");
+  }
+
+  /**
+   * Tests that when PNP credentials are configured and auth is enabled, the request is accepted.
+   */
+  @Test
+  void acceptsImportPnpWhenAuthEnabledAndPnpCredentialsPresent() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setClientId("test-client");
+    pnpConfig.setClientSecret("test-secret");
+    pnpConfig.setAllowableExportUrls(List.of("https://trusted.example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+    serverConfiguration.getAuth().setEnabled(true);
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://trusted.example.com/fhir/$export"));
+
+    assertThatNoException()
+        .isThrownBy(() -> validator.validateParametersRequest(mockRequest, params));
   }
 }

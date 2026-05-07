@@ -19,11 +19,14 @@ package au.csiro.pathling.operations.bulkimport;
 
 import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.fhir.export.BulkExportClient;
+import au.csiro.fhir.export.BulkExportResult;
+import au.csiro.fhir.export.BulkExportResult.FileResult;
 import au.csiro.pathling.config.PnpConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -251,8 +254,11 @@ public class ImportPnpExecutor {
 
     // Execute the export and wait for completion.
     log.info("Starting bulk export download from: {}", pnpRequest.exportUrl());
-    client.export();
+    final BulkExportResult exportResult = client.export();
     log.info("Bulk export download completed");
+
+    // Validate that all downloaded files came from the same origin as the export URL.
+    validateManifestUrls(pnpRequest.exportUrl(), exportResult);
 
     // Scan the output directory to find downloaded files and organise by resource type.
     return organiseDownloadedFiles(outputDir, fileExtension);
@@ -306,6 +312,53 @@ public class ImportPnpExecutor {
 
     log.info("Organised downloaded files by resource type: {}", result.keySet());
     return result;
+  }
+
+  /**
+   * Validates that all manifest download URLs share the same origin as the export URL.
+   *
+   * @param exportUrl the original export URL
+   * @param exportResult the bulk export result containing downloaded file sources
+   * @throws InvalidUserInputError if any download URL originates from a different host
+   */
+  static void validateManifestUrls(
+      @Nonnull final String exportUrl, @Nonnull final BulkExportResult exportResult) {
+    final URI exportUri = URI.create(exportUrl);
+    final String exportOrigin = originOf(exportUri);
+
+    for (final FileResult fileResult : exportResult.getResults()) {
+      final String sourceOrigin = originOf(fileResult.getSource());
+      if (!exportOrigin.equalsIgnoreCase(sourceOrigin)) {
+        throw new InvalidUserInputError(
+            "Manifest download URL origin does not match export URL origin: "
+                + fileResult.getSource()
+                + " (expected origin: "
+                + exportOrigin
+                + ")");
+      }
+    }
+  }
+
+  /**
+   * Extracts the origin (scheme + host + port) from a URI.
+   *
+   * @param uri the URI to extract the origin from
+   * @return the origin string in the form scheme://host:port (or scheme://host if default port)
+   */
+  @Nonnull
+  static String originOf(@Nonnull final URI uri) {
+    final String scheme = uri.getScheme();
+    final String host = uri.getHost();
+    final int port = uri.getPort();
+    if (scheme == null || host == null) {
+      throw new InvalidUserInputError("Invalid URL: " + uri);
+    }
+    final boolean isDefaultPort =
+        ("http".equalsIgnoreCase(scheme) && port == 80)
+            || ("https".equalsIgnoreCase(scheme) && port == 443);
+    return isDefaultPort || port == -1
+        ? scheme.toLowerCase() + "://" + host.toLowerCase()
+        : scheme.toLowerCase() + "://" + host.toLowerCase() + ":" + port;
   }
 
   /**
