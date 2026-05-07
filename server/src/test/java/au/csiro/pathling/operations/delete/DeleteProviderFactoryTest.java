@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Patient;
@@ -46,6 +47,7 @@ import org.springframework.context.ApplicationContext;
 class DeleteProviderFactoryTest {
 
   @Mock private ApplicationContext applicationContext;
+  @Mock private ServerConfiguration configuration;
   @Mock private DeleteExecutor deleteExecutor;
 
   private DeleteProviderFactory factory;
@@ -54,34 +56,35 @@ class DeleteProviderFactoryTest {
   @BeforeEach
   void setUp() {
     fhirContext = FhirContext.forR4();
-    factory = new DeleteProviderFactory(applicationContext, fhirContext, deleteExecutor);
+    factory =
+        new DeleteProviderFactory(applicationContext, configuration, fhirContext, deleteExecutor);
   }
 
   @Test
   void createsProviderForResourceType() {
     // The factory should request a DeleteProvider bean for the resolved resource class.
     final DeleteProvider mockProvider = mock(DeleteProvider.class);
-    when(applicationContext.getBean(eq(DeleteProvider.class), any(), any(), any()))
+    when(applicationContext.getBean(eq(DeleteProvider.class), any(), any(), any(), any()))
         .thenReturn(mockProvider);
 
     final DeleteProvider result = factory.createDeleteProvider(ResourceType.PATIENT);
 
     assertNotNull(result);
     verify(applicationContext)
-        .getBean(DeleteProvider.class, deleteExecutor, fhirContext, Patient.class);
+        .getBean(DeleteProvider.class, configuration, deleteExecutor, fhirContext, Patient.class);
   }
 
   @Test
   void createsProviderForResourceTypeCode() {
     // The factory should also support creation by string resource type code.
     final DeleteProvider mockProvider = mock(DeleteProvider.class);
-    when(applicationContext.getBean(eq(DeleteProvider.class), any(), any(), any()))
+    when(applicationContext.getBean(eq(DeleteProvider.class), any(), any(), any(), any()))
         .thenReturn(mockProvider);
 
     final DeleteProvider result = factory.createDeleteProvider("Patient");
 
     assertNotNull(result);
     verify(applicationContext)
-        .getBean(DeleteProvider.class, deleteExecutor, fhirContext, Patient.class);
+        .getBean(DeleteProvider.class, configuration, deleteExecutor, fhirContext, Patient.class);
   }
 }
