@@ -44,6 +44,11 @@ Additionally, you can set any variable supported by Spring Boot, see
 These settings configure the [ping and pull import](./operations/import-pnp)
 operation, which retrieves data from external FHIR bulk export endpoints.
 
+- `pathling.import.pnp.allowableExportUrls` - (default: `[]`) A list of URL
+  prefixes which are allowable for use as export URLs within the `$import-pnp`
+  operation. When this list is non-empty, any `exportUrl` that does not start
+  with one of these prefixes is rejected. When PNP credentials are configured,
+  this list must be explicitly populated.
 - `pathling.import.pnp.clientId` - The client identifier for SMART Backend
   Services authentication.
 - `pathling.import.pnp.tokenEndpoint` - The token endpoint URL for obtaining
@@ -64,6 +69,11 @@ operation, which retrieves data from external FHIR bulk export endpoints.
   operations. This location should have sufficient space for large FHIR exports.
 - `pathling.import.pnp.fileExtension` - (default: `.ndjson`) The file extension
   to filter for when processing downloaded files.
+
+**Security note**: When PNP credentials are configured,
+`pathling.auth.enabled` must also be set to `true`. If authentication is
+disabled but PNP credentials are present, the server logs a warning at startup
+and rejects all `$import-pnp` requests.
 
 ### Export
 
