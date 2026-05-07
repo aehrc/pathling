@@ -59,34 +59,39 @@ adherence to the project's Radix Themes conventions.
 ### Single page, mode-toggled form
 
 The SQL on FHIR page hosts both `$viewdefinition-run` and
-`$sqlquery-run` behind a `SegmentedControl` ("View definition" vs "SQL
-query") at the top of the form card. Switching modes swaps the form
-body but keeps the result column visible, so cards from either mode can
+`$sqlquery-run` behind a top-level `Tabs.Root` ("View definition" vs
+"SQL query") above the form card. Switching tabs swaps the form body
+but keeps the result column visible, so cards from either mode can
 coexist.
 
 **Rationale:** Both operations are SQL on FHIR primitives that operate
 on ViewDefinitions; users will naturally compare results. A single
 page is simpler than two routes, avoids navigation friction during query
-development, and keeps the existing left-form/right-results layout intact.
+development, and keeps the existing left-form/right-results layout
+intact. The Import page already uses a top-level `Tabs.Root` to switch
+between "Import from URLs" and "Import from FHIR server"; reusing that
+pattern keeps page-level mode switches visually consistent across the
+admin UI.
 
 **Alternatives considered:**
 
 - Separate `/sql-query` route - rejected because it duplicates the auth
   guard, capabilities check and result column wiring without a
   meaningful UX gain.
-- Tabs (`Tabs.Root`) inside the form card - the existing form already
-  uses `Tabs` to switch between "Select view definition" and "Provide
-  JSON" within the ViewDefinition flow. Reusing `Tabs` for the
-  outer mode would visually clash with the inner `Tabs`. A
-  `SegmentedControl` reads as a higher-level mode switch.
+- A `SegmentedControl` for the outer mode - inconsistent with the rest
+  of the admin UI, which uses tabs at the page level (e.g. the Import
+  page). The inner ViewDefinition form already uses `Tabs.Root` for
+  "Select view definition" / "Provide JSON"; nesting tabs inside tabs
+  is acceptable here because the inner tabs sit inside their own card
+  with distinct styling.
 
 ### Form structure in SQL query mode
 
 The SQL query form uses the same outer `Card` as the ViewDefinition
 form, with the following sections (top to bottom):
 
-1. `Tabs.Root` to switch between "Select Library" (stored) and
-   "Provide Library" (inline) - mirrors the ViewDefinition flow.
+1. `Tabs.Root` to switch between "Select query" (stored) and
+   "Provide SQL" (inline) - mirrors the ViewDefinition flow.
 2. **Stored tab:** `Select.Root` listing Libraries with
    `type.coding.code = sql-query`. Below the picker, a read-only
    `TextArea` previews the decoded SQL with a copy-to-clipboard
@@ -205,9 +210,9 @@ synced via an effect, in line with the project React rules.
 Lo-fi HTML wireframes are produced via the wireframing skill and
 written to `wireframes/` under this change directory. They cover:
 
-1. SQL on FHIR page - SQL query mode, "Provide Library" tab,
+1. SQL on FHIR page - SQL query mode, "Provide SQL" tab,
    parameters declared, runtime values bound, ready to execute.
-2. SQL on FHIR page - SQL query mode, "Select Library" tab, with a
+2. SQL on FHIR page - SQL query mode, "Select query" tab, with a
    stored Library selected.
 3. Result card - tabular result rendered after execution, with a
    format badge and download (when applicable).

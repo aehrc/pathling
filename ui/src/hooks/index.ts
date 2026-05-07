@@ -50,6 +50,15 @@ export { useViewDefinitions } from "./useViewDefinitions";
 export type { ViewDefinitionSummary } from "./useViewDefinitions";
 export { useSaveViewDefinition } from "./useSaveViewDefinition";
 
+// SQL query operations.
+export { useSqlQueryLibraries } from "./useSqlQueryLibraries";
+export { useSaveSqlQueryLibrary } from "./useSaveSqlQueryLibrary";
+export { useSqlQueryRun } from "./useSqlQueryRun";
+export type {
+  UseSqlQueryRunOptions,
+  UseSqlQueryRunResult,
+} from "./useSqlQueryRun";
+
 // Other operations.
 export { useClipboard } from "./useClipboard";
 export { useDownloadFile } from "./useDownloadFile";

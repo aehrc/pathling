@@ -7,8 +7,9 @@ between two operations: "View definition" (which invokes
 `$viewdefinition-run`, the existing behaviour) and "SQL query" (which
 invokes `$sqlquery-run`). The selector SHALL be visible at the top of the
 page above the form card and SHALL persist for the lifetime of the page.
-The selector SHALL be implemented as a Radix Themes `SegmentedControl`
-component.
+The selector SHALL be implemented as a Radix Themes `Tabs.Root`
+component, mirroring the top-level mode-switch pattern used on the
+Import page.
 
 #### Scenario: Page renders with View definition mode active by default
 
@@ -38,28 +39,28 @@ component.
 ### Requirement: SQL query Library source tabs
 
 The SQL query form SHALL provide two tabs that select the source of the
-SQLQuery Library: "Select Library" (a stored Library is referenced by
-ID) and "Provide Library" (the Library is authored inline). The tabs
+SQLQuery Library: "Select query" (a stored Library is referenced by
+ID) and "Provide SQL" (the Library is authored inline). The tabs
 SHALL be implemented as a Radix Themes `Tabs.Root` component nested
 inside the form card.
 
 #### Scenario: Tabs are visible in SQL query mode
 
 - **WHEN** the user is in SQL query mode
-- **THEN** the form card SHALL display two tabs: "Select Library" and
-  "Provide Library"
+- **THEN** the form card SHALL display two tabs: "Select query" and
+  "Provide SQL"
 
 #### Scenario: Switching tabs preserves runtime input values
 
 - **WHEN** the user has entered runtime parameter values, an output
-  format and a row limit, and switches between the "Select Library" and
-  "Provide Library" tabs
+  format and a row limit, and switches between the "Select query" and
+  "Provide SQL" tabs
 - **THEN** the runtime parameter values, output format and row limit
   SHALL be retained
 
 ### Requirement: Stored SQLQuery Library selection
 
-In the "Select Library" tab, the form SHALL display a `Select.Root`
+In the "Select query" tab, the form SHALL display a `Select.Root`
 populated with stored Library resources whose
 `type.coding[].code = sql-query` (queried from the FHIR server). When
 the user selects a Library, the form SHALL display:
@@ -80,7 +81,7 @@ the user selects a Library, the form SHALL display:
   SQLQuery type code
 - **THEN** the `Select.Root` SHALL not render
 - **AND** the form SHALL display guidance prompting the user to use the
-  "Provide Library" tab
+  "Provide SQL" tab
 
 #### Scenario: User selects a stored Library
 
@@ -101,7 +102,7 @@ the user selects a Library, the form SHALL display:
 
 ### Requirement: Inline SQLQuery Library authoring
 
-In the "Provide Library" tab, the form SHALL allow the user to author a
+In the "Provide SQL" tab, the form SHALL allow the user to author a
 SQLQuery Library inline, comprising:
 
 - a `TextArea` for the SQL text rendered with a monospace font;
@@ -200,8 +201,8 @@ When the user clicks the Execute button, the form SHALL submit a POST
 to the FHIR server's `$sqlquery-run` operation with a Parameters body
 containing:
 
-- exactly one of `queryReference` (in "Select Library" tab) or
-  `queryResource` (in "Provide Library" tab);
+- exactly one of `queryReference` (in "Select query" tab) or
+  `queryResource` (in "Provide SQL" tab);
 - the `_format` parameter when an output format is selected;
 - the `_limit` parameter when a numeric limit is provided;
 - the `_header` parameter when output format is `csv`;
@@ -211,24 +212,24 @@ containing:
 
 The Execute button SHALL be disabled while a request is in flight or
 when required inputs are missing (no Library selected in the "Select
-Library" tab, or empty SQL or zero tables in the "Provide Library"
+Library" tab, or empty SQL or zero tables in the "Provide SQL"
 tab).
 
 #### Scenario: Execute is disabled when SQL is empty in inline mode
 
-- **WHEN** the user is in the "Provide Library" tab with an empty SQL
+- **WHEN** the user is in the "Provide SQL" tab with an empty SQL
   text area
 - **THEN** the Execute button SHALL be disabled
 
 #### Scenario: Execute is disabled when no Library is selected in stored mode
 
-- **WHEN** the user is in the "Select Library" tab and has not
+- **WHEN** the user is in the "Select query" tab and has not
   selected a Library
 - **THEN** the Execute button SHALL be disabled
 
 #### Scenario: Execute submits queryResource for an inline Library
 
-- **WHEN** the user clicks Execute in the "Provide Library" tab with
+- **WHEN** the user clicks Execute in the "Provide SQL" tab with
   a non-empty SQL, at least one table row and a runtime value for each
   declared parameter
 - **THEN** the form SHALL POST to `/$sqlquery-run` with a Parameters
@@ -239,7 +240,7 @@ tab).
 
 #### Scenario: Execute submits queryReference for a stored Library
 
-- **WHEN** the user clicks Execute in the "Select Library" tab with a
+- **WHEN** the user clicks Execute in the "Select query" tab with a
   Library selected
 - **THEN** the form SHALL POST to `/$sqlquery-run` with a Parameters
   body containing exactly one `queryReference` parameter whose value
@@ -247,19 +248,19 @@ tab).
 
 ### Requirement: Save inline SQLQuery Library to server
 
-In the "Provide Library" tab, the form SHALL display a "Save to server"
+In the "Provide SQL" tab, the form SHALL display a "Save to server"
 button alongside the Execute button. Clicking it SHALL POST the
 assembled SQLQuery Library to `/Library` and, on success, switch the
-form to the "Select Library" tab with the new Library's ID
+form to the "Select query" tab with the new Library's ID
 pre-selected. On failure, the form SHALL display the server-returned
 error message in a `Callout`. The button SHALL be hidden in the
-"Select Library" tab.
+"Select query" tab.
 
 #### Scenario: Successful save switches to stored mode
 
-- **WHEN** the user clicks "Save to server" in the "Provide Library"
+- **WHEN** the user clicks "Save to server" in the "Provide SQL"
   tab and the server responds with `201 Created`
-- **THEN** the form SHALL switch to the "Select Library" tab
+- **THEN** the form SHALL switch to the "Select query" tab
 - **AND** the new Library's ID SHALL be the selected value in the
   Library picker
 
@@ -269,7 +270,7 @@ error message in a `Callout`. The button SHALL be hidden in the
   with a 4xx or 5xx status
 - **THEN** the form SHALL display a red `Callout` containing the
   server error message
-- **AND** the form SHALL remain in the "Provide Library" tab with the
+- **AND** the form SHALL remain in the "Provide SQL" tab with the
   user's input intact
 
 ### Requirement: SQL query result card

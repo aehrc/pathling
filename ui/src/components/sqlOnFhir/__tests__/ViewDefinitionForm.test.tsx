@@ -16,7 +16,7 @@
  */
 
 /**
- * Tests for the SqlOnFhirForm component which handles ViewDefinition execution
+ * Tests for the ViewDefinitionForm component which handles ViewDefinition execution
  * and saving.
  *
  * These tests verify that the form correctly renders tabs for stored and custom
@@ -31,7 +31,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fireEvent, render, screen, waitFor } from "../../../test/testUtils";
-import { SqlOnFhirForm } from "../SqlOnFhirForm";
+import { ViewDefinitionForm } from "../ViewDefinitionForm";
 
 import type { ViewRunRequest } from "../../../hooks";
 import type { CreateViewDefinitionResult } from "../../../types/sqlOnFhir";
@@ -48,7 +48,7 @@ vi.mock("../../../hooks", () => ({
   useClipboard: () => mockCopyToClipboard,
 }));
 
-describe("SqlOnFhirForm", () => {
+describe("ViewDefinitionForm", () => {
   const mockOnExecute = vi.fn();
   const mockOnSaveToServer = vi.fn();
 
@@ -80,7 +80,7 @@ describe("SqlOnFhirForm", () => {
   describe("initial render", () => {
     it("renders the form heading", () => {
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -88,12 +88,12 @@ describe("SqlOnFhirForm", () => {
         />,
       );
 
-      expect(screen.getByRole("heading", { name: /sql on fhir/i })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /view definition/i })).toBeInTheDocument();
     });
 
     it("renders tabs for stored and custom ViewDefinitions", () => {
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -107,7 +107,7 @@ describe("SqlOnFhirForm", () => {
 
     it("renders the execute button", () => {
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -120,7 +120,7 @@ describe("SqlOnFhirForm", () => {
 
     it("defaults to stored tab", () => {
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -141,7 +141,7 @@ describe("SqlOnFhirForm", () => {
       });
 
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -159,7 +159,7 @@ describe("SqlOnFhirForm", () => {
       });
 
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -172,7 +172,7 @@ describe("SqlOnFhirForm", () => {
 
     it("renders view definition selector when definitions exist", () => {
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -186,7 +186,7 @@ describe("SqlOnFhirForm", () => {
     it("shows view definition options in the selector", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -203,7 +203,7 @@ describe("SqlOnFhirForm", () => {
 
     it("shows selection hint when no view definition is selected", () => {
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -219,7 +219,7 @@ describe("SqlOnFhirForm", () => {
     it("shows JSON preview when a view definition is selected", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -239,7 +239,7 @@ describe("SqlOnFhirForm", () => {
     it("shows copy button when a view definition is selected", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -257,7 +257,7 @@ describe("SqlOnFhirForm", () => {
     it("copies JSON to clipboard when copy button is clicked", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -282,7 +282,7 @@ describe("SqlOnFhirForm", () => {
     it("switches to custom tab when clicked", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -299,7 +299,7 @@ describe("SqlOnFhirForm", () => {
     it("renders JSON textarea in custom tab", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -315,7 +315,7 @@ describe("SqlOnFhirForm", () => {
     it("shows save to server button in custom tab", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -330,7 +330,7 @@ describe("SqlOnFhirForm", () => {
 
     it("does not show save to server button in stored tab", () => {
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -344,7 +344,7 @@ describe("SqlOnFhirForm", () => {
     it("allows entering custom JSON", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -366,7 +366,7 @@ describe("SqlOnFhirForm", () => {
     it("executes stored ViewDefinition when execute is clicked", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -391,7 +391,7 @@ describe("SqlOnFhirForm", () => {
     it("executes inline ViewDefinition when execute is clicked in custom tab", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -424,7 +424,7 @@ describe("SqlOnFhirForm", () => {
       mockOnSaveToServer.mockResolvedValue(saveResult);
 
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -453,7 +453,7 @@ describe("SqlOnFhirForm", () => {
       mockOnSaveToServer.mockRejectedValue(new Error("Save failed"));
 
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -482,7 +482,7 @@ describe("SqlOnFhirForm", () => {
       mockOnSaveToServer.mockResolvedValue(saveResult);
 
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -513,7 +513,7 @@ describe("SqlOnFhirForm", () => {
   describe("button disabled states", () => {
     it("disables execute button when no stored ViewDefinition is selected", () => {
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -528,7 +528,7 @@ describe("SqlOnFhirForm", () => {
     it("enables execute button when a stored ViewDefinition is selected", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -547,7 +547,7 @@ describe("SqlOnFhirForm", () => {
     it("disables execute button when no custom JSON is entered", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -564,7 +564,7 @@ describe("SqlOnFhirForm", () => {
     it("enables execute button when custom JSON is entered", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -584,7 +584,7 @@ describe("SqlOnFhirForm", () => {
     it("disables execute button when isExecuting is true", async () => {
       const user = userEvent.setup();
       const { rerender } = render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -597,7 +597,7 @@ describe("SqlOnFhirForm", () => {
       await user.click(screen.getByRole("option", { name: "Patient View" }));
 
       rerender(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={true}
@@ -612,7 +612,7 @@ describe("SqlOnFhirForm", () => {
     it("disables execute button when disabled is true", async () => {
       const user = userEvent.setup();
       const { rerender } = render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -625,7 +625,7 @@ describe("SqlOnFhirForm", () => {
       await user.click(screen.getByRole("option", { name: "Patient View" }));
 
       rerender(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -641,7 +641,7 @@ describe("SqlOnFhirForm", () => {
     it("disables save button when no custom JSON is entered", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -658,7 +658,7 @@ describe("SqlOnFhirForm", () => {
     it("disables save button when isSaving is true", async () => {
       const user = userEvent.setup();
       const { rerender } = render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -672,7 +672,7 @@ describe("SqlOnFhirForm", () => {
       fireEvent.change(textarea, { target: { value: '{"resourceType": "ViewDefinition"}' } });
 
       rerender(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -687,7 +687,7 @@ describe("SqlOnFhirForm", () => {
     it("shows executing text when isExecuting is true", async () => {
       const user = userEvent.setup();
       const { rerender } = render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -700,7 +700,7 @@ describe("SqlOnFhirForm", () => {
       await user.click(screen.getByRole("option", { name: "Patient View" }));
 
       rerender(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={true}
@@ -714,7 +714,7 @@ describe("SqlOnFhirForm", () => {
     it("shows saving text when isSaving is true", async () => {
       const user = userEvent.setup();
       const { rerender } = render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -728,7 +728,7 @@ describe("SqlOnFhirForm", () => {
       fireEvent.change(textarea, { target: { value: '{"resourceType": "ViewDefinition"}' } });
 
       rerender(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
@@ -744,7 +744,7 @@ describe("SqlOnFhirForm", () => {
     it("displays JSON input help text in custom tab", async () => {
       const user = userEvent.setup();
       render(
-        <SqlOnFhirForm
+        <ViewDefinitionForm
           onExecute={mockOnExecute}
           onSaveToServer={mockOnSaveToServer}
           isExecuting={false}
