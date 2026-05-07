@@ -80,7 +80,8 @@ class ImportLockTest {
             pathlingContext,
             databasePath,
             serverConfiguration,
-            cacheableDatabase);
+            cacheableDatabase,
+            true);
   }
 
   @Test

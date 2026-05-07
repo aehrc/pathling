@@ -60,7 +60,7 @@ class BulkSubmitValidatorTest {
     serverConfiguration = new ServerConfiguration();
     serverConfiguration.setBulkSubmit(bulkSubmitConfig);
 
-    validator = new BulkSubmitValidator(serverConfiguration);
+    validator = new BulkSubmitValidator(serverConfiguration, true);
   }
 
   @Test

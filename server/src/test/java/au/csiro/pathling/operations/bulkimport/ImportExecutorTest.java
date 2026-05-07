@@ -83,7 +83,8 @@ class ImportExecutorTest {
             pathlingContext,
             databasePath,
             serverConfiguration,
-            cacheableDatabase);
+            cacheableDatabase,
+            true);
   }
 
   // ========================================
@@ -402,11 +403,12 @@ class ImportExecutorTest {
 
     final ImportExecutor executorWithRules =
         new ImportExecutor(
-            Optional.of(new AccessRules(serverConfiguration)),
+            Optional.of(new AccessRules(serverConfiguration, true)),
             pathlingContext,
             "file://" + uniqueTempDir.toAbsolutePath(),
             serverConfiguration,
-            cacheableDatabase);
+            cacheableDatabase,
+            true);
 
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request =
@@ -432,11 +434,12 @@ class ImportExecutorTest {
 
     final ImportExecutor executorWithRules =
         new ImportExecutor(
-            Optional.of(new AccessRules(serverConfiguration)),
+            Optional.of(new AccessRules(serverConfiguration, true)),
             pathlingContext,
             "file://" + uniqueTempDir.toAbsolutePath(),
             serverConfiguration,
-            cacheableDatabase);
+            cacheableDatabase,
+            true);
 
     final String deniedUrl = "s3://denied-bucket/Patient.ndjson";
     final ImportRequest request =
@@ -481,11 +484,12 @@ class ImportExecutorTest {
 
     final ImportExecutor executorWithRules =
         new ImportExecutor(
-            Optional.of(new AccessRules(serverConfiguration)),
+            Optional.of(new AccessRules(serverConfiguration, true)),
             pathlingContext,
             "file://" + uniqueTempDir.toAbsolutePath(),
             serverConfiguration,
-            cacheableDatabase);
+            cacheableDatabase,
+            true);
 
     final String allowedUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final String deniedUrl = "s3://denied-bucket/Condition.ndjson";
@@ -559,11 +563,12 @@ class ImportExecutorTest {
 
     final ImportExecutor executorWithRules =
         new ImportExecutor(
-            Optional.of(new AccessRules(serverConfiguration)),
+            Optional.of(new AccessRules(serverConfiguration, true)),
             pathlingContext,
             "file://" + uniqueTempDir.toAbsolutePath(),
             serverConfiguration,
-            cacheableDatabase);
+            cacheableDatabase,
+            true);
 
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final List<String> customAllowableSources = List.of("file://");

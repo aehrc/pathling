@@ -155,13 +155,43 @@ class UrlAllowlistTest {
   void listOverloadReturnsTrueIfAnyMatches() {
     final List<String> prefixes =
         List.of("https://allowed1.example.com/", "https://allowed2.example.com/");
-    assertThat(UrlAllowlist.matches(prefixes, "https://allowed2.example.com/foo")).isTrue();
-    assertThat(UrlAllowlist.matches(prefixes, "https://disallowed.example.com/foo")).isFalse();
+    assertThat(UrlAllowlist.matches(prefixes, "https://allowed2.example.com/foo", false)).isTrue();
+    assertThat(UrlAllowlist.matches(prefixes, "https://disallowed.example.com/foo", false))
+        .isFalse();
   }
 
   // Empty list never matches, regardless of the candidate.
   @Test
   void emptyListRejectsAll() {
-    assertThat(UrlAllowlist.matches(List.of(), "https://example.com/")).isFalse();
+    assertThat(UrlAllowlist.matches(List.of(), "https://example.com/", false)).isFalse();
+  }
+
+  // When allowInsecure is false, plain-http candidates are rejected even if a matching
+  // http:// prefix is configured. This enforces the server's TLS-only default for outgoing
+  // requests.
+  @Test
+  void rejectsPlainHttpCandidateWhenAllowInsecureFalse() {
+    final List<String> prefixes = List.of("http://example.com/");
+    assertThat(UrlAllowlist.matches(prefixes, "http://example.com/foo", false)).isFalse();
+  }
+
+  // When allowInsecure is true, plain-http candidates are matched normally against the
+  // allowlist.
+  @Test
+  void allowsPlainHttpCandidateWhenAllowInsecureTrue() {
+    final List<String> prefixes = List.of("http://example.com/");
+    assertThat(UrlAllowlist.matches(prefixes, "http://example.com/foo", true)).isTrue();
+    assertThat(UrlAllowlist.matches(prefixes, "http://other.com/foo", true)).isFalse();
+  }
+
+  // The insecure-URL policy applies only to http: https candidates and non-HTTP schemes are
+  // unaffected by the flag.
+  @Test
+  void insecurePolicyDoesNotAffectHttpsOrOtherSchemes() {
+    assertThat(
+            UrlAllowlist.matches(List.of("https://example.com/"), "https://example.com/foo", false))
+        .isTrue();
+    assertThat(UrlAllowlist.matches(List.of("s3://bucket/"), "s3://bucket/file.ndjson", false))
+        .isTrue();
   }
 }

@@ -143,7 +143,8 @@ class BulkSubmitExecutorTest {
             sparkSession,
             databasePath,
             fhirContext,
-            authProvider);
+            authProvider,
+            true);
 
     submitterIdentifier = new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE);
 
@@ -203,7 +204,8 @@ class BulkSubmitExecutorTest {
             sparkSession,
             databasePath,
             fhirContext,
-            authProvider);
+            authProvider,
+            true);
 
     final Submission submission = createTestSubmission();
     final ManifestJob manifestJob = createTestManifestJob();
@@ -241,7 +243,8 @@ class BulkSubmitExecutorTest {
             null, // no SparkSession
             databasePath,
             fhirContext,
-            authProvider);
+            authProvider,
+            true);
 
     final Submission submission = createTestSubmission();
     final ManifestJob manifestJob = createTestManifestJob();
@@ -877,7 +880,8 @@ class BulkSubmitExecutorTest {
             sparkSession,
             databasePath,
             fhirContext,
-            authProvider);
+            authProvider,
+            true);
 
     final ManifestJob manifestJob =
         ManifestJob.createPending(MANIFEST_JOB_ID, "http://example.org/manifest", null, null)

@@ -1,4 +1,8 @@
 pathling:
+  # Integration tests use WireMock on http://localhost, so allow plain-http
+  # outgoing URLs in this profile. Production deployments leave this at the
+  # secure default (false).
+  allowInsecureUrls: true
   storage:
     databaseName: delta
   import:

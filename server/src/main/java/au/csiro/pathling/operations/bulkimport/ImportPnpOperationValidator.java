@@ -64,6 +64,8 @@ public class ImportPnpOperationValidator {
 
   private final boolean allowInternalUrls;
 
+  private final boolean allowInsecureUrls;
+
   /**
    * Creates a new ImportPnpOperationValidator.
    *
@@ -71,12 +73,16 @@ public class ImportPnpOperationValidator {
    *     and check the authentication interlock
    * @param allowInternalUrls whether to allow exportUrl values that resolve to internal or private
    *     IP addresses
+   * @param allowInsecureUrls whether to allow URLs with the http scheme for outgoing requests;
+   *     defaults to false, since the SMART Bulk Data Import spec requires TLS for all exchanges
    */
   public ImportPnpOperationValidator(
       @Nonnull final ServerConfiguration serverConfiguration,
-      @Value("${pathling.import.pnp.allowInternalUrls:false}") final boolean allowInternalUrls) {
+      @Value("${pathling.import.pnp.allowInternalUrls:false}") final boolean allowInternalUrls,
+      @Value("${pathling.allowInsecureUrls:false}") final boolean allowInsecureUrls) {
     this.serverConfiguration = serverConfiguration;
     this.allowInternalUrls = allowInternalUrls;
+    this.allowInsecureUrls = allowInsecureUrls;
   }
 
   /** Logs a warning at startup if PNP credentials are configured without authentication enabled. */
@@ -215,7 +221,7 @@ public class ImportPnpOperationValidator {
           "No trusted export URLs are configured. "
               + "Set pathling.import.pnp.allowableExportUrls to enable $import-pnp.");
     }
-    if (!UrlAllowlist.matches(allowableExportUrls, exportUrl)) {
+    if (!UrlAllowlist.matches(allowableExportUrls, exportUrl, allowInsecureUrls)) {
       throw new InvalidUserInputError("exportUrl not in allowableExportUrls: " + exportUrl);
     }
 

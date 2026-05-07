@@ -59,16 +59,32 @@ public final class UrlAllowlist {
   /**
    * Returns true if the candidate URL is allowed by at least one prefix in the list.
    *
+   * <p>When {@code allowInsecure} is false, candidate URLs with the {@code http} scheme are
+   * rejected outright, regardless of whether any prefix would otherwise match. This enforces the
+   * server's default policy that outgoing connections use TLS.
+   *
    * @param prefixes the configured allowlist entries
    * @param url the candidate URL
+   * @param allowInsecure if false, plain-{@code http} candidates are rejected before any
+   *     prefix-matching is attempted
    * @return true if the candidate matches at least one prefix per the rules above
    */
-  public static boolean matches(@Nonnull final List<String> prefixes, @Nonnull final String url) {
+  public static boolean matches(
+      @Nonnull final List<String> prefixes,
+      @Nonnull final String url,
+      final boolean allowInsecure) {
+    if (!allowInsecure && isPlainHttp(url)) {
+      return false;
+    }
     return prefixes.stream().anyMatch(prefix -> matches(prefix, url));
   }
 
   /**
    * Returns true if the candidate URL is allowed by the given prefix.
+   *
+   * <p>This single-prefix variant performs only structural matching and does not enforce the
+   * insecure-URL policy: callers that need that policy must use the list-based variant or apply the
+   * check separately.
    *
    * @param prefix the configured allowlist entry
    * @param url the candidate URL
@@ -98,6 +114,14 @@ public final class UrlAllowlist {
     }
     // For non-HTTP(S) schemes (e.g. s3://), fall back to case-sensitive string prefix matching.
     return url.startsWith(prefix);
+  }
+
+  private static boolean isPlainHttp(@Nonnull final String url) {
+    final URI uri = parse(url);
+    if (uri == null || uri.getScheme() == null) {
+      return false;
+    }
+    return "http".equals(uri.getScheme().toLowerCase(Locale.ROOT));
   }
 
   private static String bareSchemeOf(@Nonnull final String prefix) {

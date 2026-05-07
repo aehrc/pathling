@@ -100,7 +100,7 @@ class ImportPnpOperationValidatorTest {
     @Bean
     public ImportPnpOperationValidator importPnpOperationValidator(
         final ServerConfiguration serverConfiguration) {
-      return new ImportPnpOperationValidator(serverConfiguration, false);
+      return new ImportPnpOperationValidator(serverConfiguration, false, true);
     }
   }
 
@@ -844,7 +844,7 @@ class ImportPnpOperationValidatorTest {
   @Test
   void acceptsLoopbackExportUrlWhenInternalUrlsAllowed() {
     final ImportPnpOperationValidator permissiveValidator =
-        new ImportPnpOperationValidator(serverConfiguration, true);
+        new ImportPnpOperationValidator(serverConfiguration, true, true);
     final Parameters params = new Parameters();
     params
         .addParameter()

@@ -106,6 +106,8 @@ public class BulkSubmitExecutor {
 
   @Nonnull private final BulkSubmitAuthProvider authProvider;
 
+  private final boolean allowInsecureUrls;
+
   /**
    * Creates a new BulkSubmitExecutor.
    *
@@ -120,6 +122,8 @@ public class BulkSubmitExecutor {
    * @param databasePath The path to the database storage location.
    * @param fhirContext The FHIR context for serialising resources.
    * @param authProvider The authentication provider for OAuth2 token acquisition.
+   * @param allowInsecureUrls whether plain-http URLs are accepted; defaults to false so that
+   *     outgoing requests use TLS by default.
    */
   public BulkSubmitExecutor(
       @Nonnull final ImportExecutor importExecutor,
@@ -132,7 +136,8 @@ public class BulkSubmitExecutor {
       @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
           final String databasePath,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final BulkSubmitAuthProvider authProvider) {
+      @Nonnull final BulkSubmitAuthProvider authProvider,
+      @Value("${pathling.allowInsecureUrls:false}") final boolean allowInsecureUrls) {
     this.importExecutor = importExecutor;
     this.submissionRegistry = submissionRegistry;
     this.exportResultRegistry = exportResultRegistry;
@@ -145,6 +150,7 @@ public class BulkSubmitExecutor {
     this.httpClient = HttpClient.newBuilder().connectTimeout(HTTP_TIMEOUT).build();
     this.fhirContext = fhirContext;
     this.authProvider = authProvider;
+    this.allowInsecureUrls = allowInsecureUrls;
   }
 
   /**
@@ -695,7 +701,7 @@ public class BulkSubmitExecutor {
     }
     for (final Collection<String> urls : fileUrls.values()) {
       for (final String url : urls) {
-        if (!config.isSourceAllowed(url)) {
+        if (!config.isSourceAllowed(url, allowInsecureUrls)) {
           throw new InvalidUserInputError(
               "File URL '%s' does not match any allowed source prefixes.".formatted(url));
         }

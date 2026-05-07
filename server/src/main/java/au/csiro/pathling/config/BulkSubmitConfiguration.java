@@ -82,10 +82,12 @@ public class BulkSubmitConfiguration {
    * rejected.
    *
    * @param url the URL to check.
+   * @param allowInsecure if false, plain-http candidates are rejected before any prefix-matching is
+   *     attempted, in line with the server's default TLS-only policy for outgoing requests.
    * @return true if at least one configured prefix matches the URL, false otherwise (including when
    *     no prefixes are configured).
    */
-  public boolean isSourceAllowed(@Nonnull final String url) {
-    return UrlAllowlist.matches(getAllowableSources(), url);
+  public boolean isSourceAllowed(@Nonnull final String url, final boolean allowInsecure) {
+    return UrlAllowlist.matches(getAllowableSources(), url, allowInsecure);
   }
 }

@@ -31,6 +31,14 @@ framework (see
 Additionally, you can set any variable supported by Spring Boot, see
 [Spring Boot Reference Documentation: Common Application properties](https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#common-application-properties).
 
+### Outgoing connections
+
+- `pathling.allowInsecureUrls` - (default: `false`) Whether plain-`http` URLs
+  may be used for outgoing connections from the server (the `$import`,
+  `$import-pnp` and `$bulk-submit` operations). Setting this to `true` is
+  intended for local testing against `http://` endpoints; production
+  deployments should leave it at the default.
+
 ### Import
 
 - `pathling.import.allowableSources` - (default: `file:///usr/share/staging`) A

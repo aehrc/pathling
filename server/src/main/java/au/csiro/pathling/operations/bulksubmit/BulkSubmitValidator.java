@@ -34,6 +34,7 @@ import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -54,13 +55,20 @@ public class BulkSubmitValidator {
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
+  private final boolean allowInsecureUrls;
+
   /**
    * Creates a new BulkSubmitValidator.
    *
-   * @param serverConfiguration The server configuration.
+   * @param serverConfiguration the server configuration.
+   * @param allowInsecureUrls whether plain-http URLs are accepted; defaults to false so that
+   *     outgoing requests use TLS by default.
    */
-  public BulkSubmitValidator(@Nonnull final ServerConfiguration serverConfiguration) {
+  public BulkSubmitValidator(
+      @Nonnull final ServerConfiguration serverConfiguration,
+      @Value("${pathling.allowInsecureUrls:false}") final boolean allowInsecureUrls) {
     this.serverConfiguration = serverConfiguration;
+    this.allowInsecureUrls = allowInsecureUrls;
   }
 
   /**
@@ -239,7 +247,7 @@ public class BulkSubmitValidator {
       @Nonnull final String url,
       @Nonnull final String paramName,
       @Nonnull final BulkSubmitConfiguration config) {
-    if (!config.isSourceAllowed(url)) {
+    if (!config.isSourceAllowed(url, allowInsecureUrls)) {
       throw new InvalidUserInputError(
           "%s '%s' does not match any allowed source prefixes.".formatted(paramName, url));
     }

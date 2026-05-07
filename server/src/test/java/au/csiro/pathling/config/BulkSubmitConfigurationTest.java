@@ -37,9 +37,9 @@ class BulkSubmitConfigurationTest {
     config.setAllowableSources(new ArrayList<>());
 
     // Then: every URL is rejected, since the allowlist is mandatory.
-    assertThat(config.isSourceAllowed("https://example.org/file.ndjson")).isFalse();
-    assertThat(config.isSourceAllowed("http://localhost:8080/file.ndjson")).isFalse();
-    assertThat(config.isSourceAllowed("s3://bucket/file.ndjson")).isFalse();
+    assertThat(config.isSourceAllowed("https://example.org/file.ndjson", false)).isFalse();
+    assertThat(config.isSourceAllowed("http://localhost:8080/file.ndjson", false)).isFalse();
+    assertThat(config.isSourceAllowed("s3://bucket/file.ndjson", false)).isFalse();
   }
 
   @Test
@@ -49,8 +49,9 @@ class BulkSubmitConfigurationTest {
     config.setAllowableSources(List.of("https://allowed.example.org/"));
 
     // Then: a URL starting with that prefix is allowed.
-    assertThat(config.isSourceAllowed("https://allowed.example.org/file.ndjson")).isTrue();
-    assertThat(config.isSourceAllowed("https://allowed.example.org/path/to/file.ndjson")).isTrue();
+    assertThat(config.isSourceAllowed("https://allowed.example.org/file.ndjson", false)).isTrue();
+    assertThat(config.isSourceAllowed("https://allowed.example.org/path/to/file.ndjson", false))
+        .isTrue();
   }
 
   @Test
@@ -60,8 +61,9 @@ class BulkSubmitConfigurationTest {
     config.setAllowableSources(List.of("https://allowed.example.org/"));
 
     // Then: a URL not starting with that prefix is rejected.
-    assertThat(config.isSourceAllowed("https://disallowed.example.org/file.ndjson")).isFalse();
-    assertThat(config.isSourceAllowed("http://allowed.example.org/file.ndjson")).isFalse();
+    assertThat(config.isSourceAllowed("https://disallowed.example.org/file.ndjson", false))
+        .isFalse();
+    assertThat(config.isSourceAllowed("http://allowed.example.org/file.ndjson", false)).isFalse();
   }
 
   @Test
@@ -71,11 +73,12 @@ class BulkSubmitConfigurationTest {
     config.setAllowableSources(List.of("https://example.org/"));
 
     // Then: a URL with additional domain components after the prefix is rejected.
-    assertThat(config.isSourceAllowed("https://example.org.evil/file.ndjson")).isFalse();
-    assertThat(config.isSourceAllowed("https://example.org.attacker.com/file.ndjson")).isFalse();
+    assertThat(config.isSourceAllowed("https://example.org.evil/file.ndjson", false)).isFalse();
+    assertThat(config.isSourceAllowed("https://example.org.attacker.com/file.ndjson", false))
+        .isFalse();
 
     // And: legitimate subpaths are still allowed.
-    assertThat(config.isSourceAllowed("https://example.org/subdir/file.ndjson")).isTrue();
+    assertThat(config.isSourceAllowed("https://example.org/subdir/file.ndjson", false)).isTrue();
   }
 
   @Test
@@ -86,10 +89,11 @@ class BulkSubmitConfigurationTest {
         List.of("https://allowed1.example.org/", "https://allowed2.example.org/"));
 
     // Then: URLs matching either prefix are allowed.
-    assertThat(config.isSourceAllowed("https://allowed1.example.org/file.ndjson")).isTrue();
-    assertThat(config.isSourceAllowed("https://allowed2.example.org/file.ndjson")).isTrue();
+    assertThat(config.isSourceAllowed("https://allowed1.example.org/file.ndjson", false)).isTrue();
+    assertThat(config.isSourceAllowed("https://allowed2.example.org/file.ndjson", false)).isTrue();
 
     // And: URLs not matching any prefix are rejected.
-    assertThat(config.isSourceAllowed("https://disallowed.example.org/file.ndjson")).isFalse();
+    assertThat(config.isSourceAllowed("https://disallowed.example.org/file.ndjson", false))
+        .isFalse();
   }
 }
