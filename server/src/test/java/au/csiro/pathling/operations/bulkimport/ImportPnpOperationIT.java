@@ -18,14 +18,20 @@
 package au.csiro.pathling.operations.bulkimport;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.util.TestDataSetup;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -33,6 +39,8 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -49,9 +57,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
@@ -64,7 +75,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
 @ActiveProfiles({"integration-test"})
+@MockitoBean(types = JwtDecoder.class)
+@MockitoBean(types = OidcConfiguration.class)
 class ImportPnpOperationIT {
+
+  private static final String AUTH_TOKEN = "mock-token";
 
   private static WireMockServer wireMockServer;
 
@@ -81,6 +96,8 @@ class ImportPnpOperationIT {
   @Autowired private FhirContext fhirContext;
 
   @Autowired private PathlingContext pathlingContext;
+
+  @Autowired private JwtDecoder jwtDecoder;
 
   private IParser parser;
 
@@ -104,6 +121,10 @@ class ImportPnpOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
 
+    // Enable authentication since PNP credentials are configured.
+    registry.add("pathling.auth.enabled", () -> "true");
+    registry.add("pathling.auth.issuer", () -> "https://auth.example.com/fhir");
+
     // Configure PnP settings for testing with WireMock token endpoint.
     registry.add("pathling.import.pnp.clientId", () -> "test-client");
     registry.add("pathling.import.pnp.clientSecret", () -> "test-secret");
@@ -113,6 +134,9 @@ class ImportPnpOperationIT {
         () -> "http://localhost:" + wireMockServer.port() + "/oauth/token");
     registry.add(
         "pathling.import.pnp.downloadLocation", () -> pnpDownloadDir.toAbsolutePath().toString());
+    registry.add(
+        "pathling.import.pnp.allowableExportUrls",
+        () -> "http://localhost:" + wireMockServer.port() + "/fhir");
   }
 
   @BeforeEach
@@ -127,6 +151,24 @@ class ImportPnpOperationIT {
 
     // Reset WireMock stubs before each test.
     wireMockServer.resetAll();
+
+    // Configure the mock JWT decoder to accept our test token and return a JWT with the required
+    // authorities.
+    final Jwt jwt =
+        Jwt.withTokenValue(AUTH_TOKEN)
+            .header("alg", "none")
+            .claim("sub", "test-user")
+            .claim(
+                "authorities",
+                List.of(
+                    "pathling:import-pnp",
+                    "pathling:write",
+                    "pathling:write:Patient",
+                    "pathling:write:Observation"))
+            .issuedAt(Instant.now())
+            .expiresAt(Instant.now().plusSeconds(3600))
+            .build();
+    when(jwtDecoder.decode(any())).thenReturn(jwt);
   }
 
   @AfterEach
@@ -242,6 +284,79 @@ class ImportPnpOperationIT {
     log.info("Set up successful bulk export stubs on WireMock server");
   }
 
+  /** Sets up WireMock stubs where the manifest references an off-host download URL. */
+  private void setupOffHostManifestStubs() {
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+
+    // Stub 1: OAuth token endpoint.
+    wireMockServer.stubFor(
+        post(urlEqualTo("/oauth/token"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                        {
+                          "access_token": "test-access-token",
+                          "token_type": "bearer",
+                          "expires_in": 3600
+                        }
+                        """)));
+
+    // Stub 2: Bulk export kick-off endpoint.
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/fhir/$export"))
+            .willReturn(
+                aResponse()
+                    .withStatus(202)
+                    .withHeader("Content-Location", baseUrl + "/fhir/$export-status/job456")));
+
+    // Stub 3: Export status endpoint - returns complete with off-host manifest.
+    // Use 127.0.0.1 instead of localhost to create a different origin while still hitting the
+    // same WireMock server.
+    final String manifest =
+        String.format(
+            """
+            {
+              "transactionTime": "2025-11-11T00:00:00Z",
+              "request": "%s/fhir/$export",
+              "requiresAccessToken": false,
+              "output": [
+                {
+                  "type": "Patient",
+                  "url": "http://127.0.0.1:%d/data/Patient-1.ndjson"
+                }
+              ],
+              "error": []
+            }
+            """,
+            baseUrl, wireMockServer.port());
+
+    wireMockServer.stubFor(
+        get(urlEqualTo("/fhir/$export-status/job456"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(manifest)));
+
+    // Stub 4: Patient NDJSON file accessible via 127.0.0.1 (different origin).
+    final String patientNdjson =
+        """
+        {"resourceType":"Patient","id":"patient1","name":[{"family":"Smith","given":["John"]}]}
+        """;
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/Patient-1.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(patientNdjson)));
+
+    log.info("Set up off-host manifest stubs on WireMock server");
+  }
+
   @Test
   void testMissingRespondAsyncHeaderReturnsError() {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
@@ -269,15 +384,12 @@ class ImportPnpOperationIT {
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
+        .header("Authorization", "Bearer " + AUTH_TOKEN)
         .bodyValue(requestBody)
         .exchange()
         .expectStatus()
         .is4xxClientError();
   }
-
-  // Note: Missing PnP configuration no longer causes an error. The operation now uses sensible
-  // defaults when no configuration is provided, enabling use against unauthenticated FHIR servers
-  // without requiring any explicit configuration.
 
   @Test
   void testMissingExportUrlReturnsError() {
@@ -303,6 +415,7 @@ class ImportPnpOperationIT {
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .header("Prefer", "respond-async")
+        .header("Authorization", "Bearer " + AUTH_TOKEN)
         .bodyValue(requestBody)
         .exchange()
         .expectStatus()
@@ -350,6 +463,7 @@ class ImportPnpOperationIT {
             .header("Content-Type", "application/fhir+json")
             .header("Accept", "application/fhir+json")
             .header("Prefer", "respond-async")
+            .header("Authorization", "Bearer " + AUTH_TOKEN)
             .bodyValue(requestBody)
             .exchange()
             .expectStatus()
@@ -373,6 +487,7 @@ class ImportPnpOperationIT {
                   .get()
                   .uri(contentLocation)
                   .header("Accept", "application/fhir+json")
+                  .header("Authorization", "Bearer " + AUTH_TOKEN)
                   .exchange()
                   .expectStatus()
                   .isOk();
@@ -420,6 +535,7 @@ class ImportPnpOperationIT {
             .header("Content-Type", "application/fhir+json")
             .header("Accept", "application/fhir+json")
             .header("Prefer", "respond-async")
+            .header("Authorization", "Bearer " + AUTH_TOKEN)
             .bodyValue(requestBody)
             .exchange()
             .expectStatus()
@@ -448,6 +564,7 @@ class ImportPnpOperationIT {
                     .get()
                     .uri(contentLocation)
                     .header("Accept", "application/fhir+json")
+                    .header("Authorization", "Bearer " + AUTH_TOKEN)
                     .exchange()
                     .expectStatus()
                     .isOk());
@@ -684,6 +801,7 @@ class ImportPnpOperationIT {
             .header("Content-Type", "application/fhir+json")
             .header("Accept", "application/fhir+json")
             .header("Prefer", "respond-async")
+            .header("Authorization", "Bearer " + AUTH_TOKEN)
             .bodyValue(requestBody)
             .exchange()
             .expectStatus()
@@ -709,8 +827,127 @@ class ImportPnpOperationIT {
                     .get()
                     .uri(contentLocation)
                     .header("Accept", "application/fhir+json")
+                    .header("Authorization", "Bearer " + AUTH_TOKEN)
                     .exchange()
                     .expectStatus()
                     .value(status -> assertThat(status).isIn(200, 202, 400, 500)));
+  }
+
+  /** Tests that a request with an exportUrl not in allowableExportUrls returns 400. */
+  @Test
+  void rejectsExportUrlNotInAllowableExportUrls() {
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+
+    final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
+    final String requestBody =
+        """
+        {
+          "resourceType": "Parameters",
+          "parameter": [
+            {
+              "name": "exportUrl",
+              "valueUrl": "https://evil.com/fhir/$export"
+            }
+          ]
+        }
+        """;
+
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .header("Prefer", "respond-async")
+        .header("Authorization", "Bearer " + AUTH_TOKEN)
+        .bodyValue(requestBody)
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectBody()
+        .jsonPath("$.issue[0].diagnostics")
+        .value(diagnostics -> assertThat(diagnostics.toString()).contains("exportUrl"));
+
+    // Verify that WireMock receives zero requests to the export endpoint.
+    wireMockServer.verify(exactly(0), getRequestedFor(urlPathEqualTo("/fhir/$export")));
+  }
+
+  /**
+   * Tests that when the export manifest contains a download URL on a different origin, the job
+   * fails.
+   */
+  @Test
+  void returnsErrorWhenManifestContainsOffHostDownloadUrl() {
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+    setupOffHostManifestStubs();
+
+    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
+    final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
+    final String requestBody =
+        String.format(
+            """
+            {
+              "resourceType": "Parameters",
+              "parameter": [
+                {
+                  "name": "exportUrl",
+                  "valueUrl": "%s"
+                },
+                {
+                  "name": "exportType",
+                  "valueCode": "dynamic"
+                },
+                {
+                  "name": "saveMode",
+                  "valueCode": "overwrite"
+                }
+              ]
+            }
+            """,
+            exportUrl);
+
+    final var result =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .header("Authorization", "Bearer " + AUTH_TOKEN)
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists(HttpHeaders.CONTENT_LOCATION)
+            .returnResult(String.class);
+
+    final String contentLocation =
+        result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
+    assertThat(contentLocation).isNotNull();
+
+    // Poll until the job fails with an error due to origin mismatch.
+    await()
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(2, TimeUnit.SECONDS)
+        .untilAsserted(
+            () -> {
+              final var response =
+                  webTestClient
+                      .get()
+                      .uri(contentLocation)
+                      .header("Accept", "application/fhir+json")
+                      .header("Authorization", "Bearer " + AUTH_TOKEN)
+                      .exchange()
+                      .returnResult(String.class);
+              final int status = response.getStatus().value();
+              assertThat(status).isIn(400, 500);
+              final String body =
+                  response.getResponseBodyContent() != null
+                      ? new String(response.getResponseBodyContent())
+                      : "";
+              assertThat(body).contains("Manifest download URL origin");
+            });
+
+    log.info("Off-host manifest URL correctly rejected");
   }
 }

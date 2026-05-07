@@ -139,7 +139,7 @@ public class ImportPnpExecutor {
       final Path outputDir = tempDir.resolve("export-output");
       final BulkExportClient client = buildBulkExportClient(pnpRequest, pnpConfig, outputDir);
       final Map<String, Collection<String>> downloadedFiles =
-          downloadFiles(client, outputDir, fileExtension);
+          downloadFiles(client, pnpRequest.exportUrl(), outputDir, fileExtension);
 
       // Create an ImportRequest from the downloaded files.
       final ImportRequest importRequest =
@@ -262,19 +262,28 @@ public class ImportPnpExecutor {
    * directory, and organises the files by resource type.
    *
    * @param client the bulk export client
+   * @param exportUrl the original export URL, used to verify manifest URL origin
    * @param outputDir the expected output directory for downloaded files
    * @param fileExtension the file extension to filter for
    * @return a map of resource type to file URLs
    */
   Map<String, Collection<String>> downloadFiles(
-      final BulkExportClient client, final Path outputDir, final String fileExtension)
+      final BulkExportClient client,
+      final String exportUrl,
+      final Path outputDir,
+      final String fileExtension)
       throws Exception {
 
     // Execute the export and wait for completion.
-    log.info("Starting bulk export download");
+    log.info("Starting bulk export download from: {}", exportUrl);
     final BulkExportResult exportResult = client.export();
     log.info("Bulk export download completed");
 
+    // Reject manifest entries that point to a different origin than the export URL, so that
+    // bearer tokens are not forwarded to untrusted hosts.
+    validateManifestUrls(exportUrl, exportResult);
+
+    // Reject downloads that ended up outside the expected staging directory.
     validateDownloadResult(exportResult, outputDir);
 
     // Scan the output directory to find downloaded files and organise by resource type.
@@ -367,6 +376,53 @@ public class ImportPnpExecutor {
 
     log.info("Organised downloaded files by resource type: {}", result.keySet());
     return result;
+  }
+
+  /**
+   * Validates that all manifest download URLs share the same origin as the export URL.
+   *
+   * @param exportUrl the original export URL
+   * @param exportResult the bulk export result containing downloaded file sources
+   * @throws InvalidUserInputError if any download URL originates from a different host
+   */
+  static void validateManifestUrls(
+      @Nonnull final String exportUrl, @Nonnull final BulkExportResult exportResult) {
+    final URI exportUri = URI.create(exportUrl);
+    final String exportOrigin = originOf(exportUri);
+
+    for (final FileResult fileResult : exportResult.getResults()) {
+      final String sourceOrigin = originOf(fileResult.getSource());
+      if (!exportOrigin.equalsIgnoreCase(sourceOrigin)) {
+        throw new InvalidUserInputError(
+            "Manifest download URL origin does not match export URL origin: "
+                + fileResult.getSource()
+                + " (expected origin: "
+                + exportOrigin
+                + ")");
+      }
+    }
+  }
+
+  /**
+   * Extracts the origin (scheme + host + port) from a URI.
+   *
+   * @param uri the URI to extract the origin from
+   * @return the origin string in the form scheme://host:port (or scheme://host if default port)
+   */
+  @Nonnull
+  static String originOf(@Nonnull final URI uri) {
+    final String scheme = uri.getScheme();
+    final String host = uri.getHost();
+    final int port = uri.getPort();
+    if (scheme == null || host == null) {
+      throw new InvalidUserInputError("Invalid URL: " + uri);
+    }
+    final boolean isDefaultPort =
+        ("http".equalsIgnoreCase(scheme) && port == 80)
+            || ("https".equalsIgnoreCase(scheme) && port == 443);
+    return isDefaultPort || port == -1
+        ? scheme.toLowerCase() + "://" + host.toLowerCase()
+        : scheme.toLowerCase() + "://" + host.toLowerCase() + ":" + port;
   }
 
   /**

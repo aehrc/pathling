@@ -158,7 +158,7 @@ class ImportOperationValidatorTest {
 
   private static Stream<Arguments> provide_mode_params() {
     return Stream.of(
-        arguments(minimalValidParams(), SaveMode.OVERWRITE),
+        arguments(minimalValidParams(), SaveMode.MERGE),
         arguments(paramsWithMode("overwrite"), SaveMode.OVERWRITE),
         arguments(paramsWithMode("merge"), SaveMode.MERGE),
         arguments(paramsWithMode("error"), SaveMode.ERROR_IF_EXISTS),
@@ -230,6 +230,24 @@ class ImportOperationValidatorTest {
             "https://example.org/source",
             List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
             "merge");
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
+
+    final PreAsyncValidationResult<ImportRequest> result =
+        importOperationValidator.validateJsonRequest(mockRequest, manifest);
+
+    assertThat(result.result().saveMode()).isEqualTo(SaveMode.MERGE);
+  }
+
+  /** Tests that the default saveMode is MERGE when omitted from a JSON manifest. */
+  @Test
+  void defaultsSaveModeToMergeForJsonManifest() {
+    final ImportManifest manifest =
+        new ImportManifest(
+            "application/fhir+ndjson",
+            "https://example.org/source",
+            List.of(new ImportManifestInput("Patient", "s3://bucket/patients.ndjson")),
+            null);
     final RequestDetails mockRequest =
         MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
