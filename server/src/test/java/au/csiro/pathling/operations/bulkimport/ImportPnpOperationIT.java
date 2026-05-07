@@ -530,7 +530,7 @@ class ImportPnpOperationIT {
    * /jobs/{jobId}/{filename} endpoint.
    */
   @Test
-  void testPoisonedManifestTypeFailsJobAndBlocksExfiltration() {
+  void testPoisonedManifestTypeFailsJobAndBlocksExfiltration() throws IOException {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     setupPoisonedBulkExportStubs();
 
@@ -584,9 +584,12 @@ class ImportPnpOperationIT {
             .orElse(null);
     assertThat(jobId).isNotNull();
 
-    // Poll the job status until it completes (either success or failure).
+    // Poll the job status until it completes. The async framework surfaces a failed job as a
+    // 4xx response carrying an OperationOutcome whose diagnostics describe the failure cause.
+    // Allow extra time as preceding tests in the suite may leave the async thread pool busy
+    // with not-yet-drained Spark imports.
     await()
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(120, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
         .untilAsserted(
             () ->
@@ -596,10 +599,15 @@ class ImportPnpOperationIT {
                     .header("Accept", "application/fhir+json")
                     .exchange()
                     .expectStatus()
-                    .isOk()
+                    .is4xxClientError()
                     .expectBody()
                     .jsonPath("$.issue[0].severity")
-                    .value(severity -> assertThat(severity).isIn("error", "fatal")));
+                    .value(severity -> assertThat(severity).isIn("error", "fatal"))
+                    .jsonPath("$.issue[0].diagnostics")
+                    .value(
+                        diagnostics ->
+                            assertThat(diagnostics.toString())
+                                .contains("outside the download directory")));
 
     // Verify that the exfiltration request returns 404.
     webTestClient
@@ -608,6 +616,17 @@ class ImportPnpOperationIT {
         .exchange()
         .expectStatus()
         .isNotFound();
+
+    // Verify no escaped files appear anywhere under the warehouse directory.
+    try (final var paths = java.nio.file.Files.walk(warehouseDir)) {
+      assertThat(
+              paths
+                  .filter(java.nio.file.Files::isRegularFile)
+                  .map(p -> p.getFileName().toString())
+                  .toList())
+          .as("no file matching the poisoned manifest's filename should appear in the warehouse")
+          .noneMatch(name -> name.contains("escaped"));
+    }
 
     log.info("Poisoned manifest job failed as expected and exfiltration was blocked");
   }
