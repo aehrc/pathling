@@ -81,6 +81,9 @@ class SqlQueryRunSecurityIT {
     final Path warehouseDir =
         Path.of("src/test/resources/test-data/bulk/fhir/delta").toAbsolutePath();
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir);
+    // Use a deliberately small cap so the test can demonstrate clamping without depending on
+    // the production default.
+    registry.add("pathling.sqlQuery.maxRows", () -> "2");
   }
 
   @BeforeEach
@@ -115,6 +118,29 @@ class SqlQueryRunSecurityIT {
   void baselineHappyPathStillWorks() {
     final String body = postOk(parametersJson(sqlQueryLibrary(BASELINE_SQL)));
     assertThat(body).contains("alice").contains("bob");
+  }
+
+  @Test
+  void rejectsTvfDosAttack() {
+    // The literal exploit recorded in the threat model: a Cartesian product over two range TVFs.
+    // Must be rejected by the validator before any work is scheduled.
+    final String body =
+        postExpect4xx(
+            parametersJson(
+                sqlQueryLibrary(
+                    "SELECT count(*) FROM range(0, 1000000) a CROSS JOIN range(0, 1000000) b")));
+    assertThat(body).contains("disallowed plan node");
+  }
+
+  @Test
+  void enforcesServerRowCap() {
+    // The configured cap is 2; the source has 5 rows. Only 2 should make it through.
+    final String body =
+        postOk(
+            parametersJson(
+                sqlQueryLibrary("SELECT * FROM (VALUES (1), (2), (3), (4), (5)) AS t(id)")));
+    final long rowCount = body.lines().filter(line -> !line.isBlank()).count();
+    assertThat(rowCount).isEqualTo(2L);
   }
 
   @Nonnull

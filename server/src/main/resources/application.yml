@@ -82,6 +82,17 @@ pathling:
     viewDefinitionExportEnabled: true
     bulkSubmitEnabled: true
 
+  # Resource limits applied to the $sqlquery-run operation. Both limits are always applied,
+  # regardless of any caller-supplied parameters.
+  sqlQuery:
+    # The maximum number of rows that a single response may stream. Clamps the caller-supplied
+    # _limit when that value is larger.
+    maxRows: 1000000
+
+    # The maximum wall-clock time in seconds that a single query may run before its Spark job
+    # group is cancelled. Long-running queries should use the asynchronous path.
+    timeoutSeconds: 60
+
   auth:
     # Enables authorization.
     enabled: false
