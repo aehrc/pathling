@@ -112,31 +112,31 @@ ORDER BY c.onset_date</textarea>
             <div class="wf-help">Plain SQL text. Encoded as Base64 into Library.content[0].data on submit; the raw text is preserved in the sql-text extension.</div>
           </div>
 
-          <!-- Tables (related artifacts) -->
+          <!-- Dependencies (related artifacts) -->
           <div class="wf-section">
-            <div class="wf-section-title">Tables</div>
+            <div class="wf-section-title">Dependencies</div>
             <div class="wf-row-of-fields">
-              <div class="wf-col label">
+              <div class="wf-col" style="flex:1;">
                 <label class="wf-label">Label</label>
                 <input class="wf-input mono" value="patients">
               </div>
-              <div class="wf-col">
+              <div class="wf-col" style="flex:1;">
                 <label class="wf-label">View definition</label>
-                <div class="wf-select">patients <span style="color:#999">(Patient)</span></div>
+                <div class="wf-select" style="width:100%; min-width:0;"><span>patients <span style="color:#999">(Patient)</span></span></div>
               </div>
               <button class="wf-icon-btn" aria-label="Remove">×</button>
             </div>
             <div class="wf-row-of-fields">
-              <div class="wf-col label">
+              <div class="wf-col" style="flex:1;">
                 <input class="wf-input mono" value="conditions">
               </div>
-              <div class="wf-col">
-                <div class="wf-select">conditions <span style="color:#999">(Condition)</span></div>
+              <div class="wf-col" style="flex:1;">
+                <div class="wf-select" style="width:100%; min-width:0;"><span>conditions <span style="color:#999">(Condition)</span></span></div>
               </div>
               <button class="wf-icon-btn" aria-label="Remove">×</button>
             </div>
-            <button class="wf-button">+ Add table</button>
-            <div class="wf-help">Each table becomes Library.relatedArtifact[*]. The label is the name used to reference the view in SQL.</div>
+            <button class="wf-button">+ Add dependency</button>
+            <div class="wf-help">Each dependency becomes Library.relatedArtifact[*]. The label is the name used to reference the view in SQL.</div>
           </div>
 
           <!-- Declared parameters -->
@@ -149,7 +149,7 @@ ORDER BY c.onset_date</textarea>
               </div>
               <div class="wf-col narrow">
                 <label class="wf-label">Type</label>
-                <div class="wf-select">string</div>
+                <div class="wf-select" style="width:100%; min-width:0;">string</div>
               </div>
               <div class="wf-col">
                 <label class="wf-label">Default</label>

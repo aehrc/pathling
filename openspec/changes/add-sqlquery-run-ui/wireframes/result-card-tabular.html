@@ -31,11 +31,15 @@
   .wf-result-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
   .wf-result-title { font-weight: 600; color: #333; font-size: 0.95rem; margin-bottom: 0.2rem; }
   .wf-result-meta { font-size: 0.75rem; color: #888; }
+  .wf-result-meta div { margin-bottom: 0.15rem; }
   .wf-tag { display: inline-block; padding: 0.1rem 0.45rem; background: #e0e0e0; border: 1px solid #bbb; border-radius: 3px; font-size: 0.72rem; color: #555; }
 
   .wf-button { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; background: #ddd; border: 2px solid #aaa; border-radius: 4px; color: #444; font-size: 0.8rem; }
   .wf-button.small { padding: 0.25rem 0.55rem; font-size: 0.75rem; }
   .wf-button.soft { background: #ececec; }
+
+  .wf-select.small { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.45rem; border: 2px solid #bbb; border-radius: 4px; background: #fff; font-size: 0.75rem; color: #555; }
+  .wf-select.small::after { content: "▾"; color: #888; }
 
   .wf-result-actions { display: flex; gap: 0.4rem; align-items: center; margin: 0.6rem 0; justify-content: space-between; }
   .wf-result-controls { display: flex; gap: 0.4rem; }
@@ -86,7 +90,11 @@
           <div class="wf-result-header">
             <div>
               <div class="wf-result-title">SQL query <span class="wf-tag">csv</span></div>
-              <div class="wf-result-meta">Job ID: 7f3e... · 5 May 2026, 14:22 · Library/lib-42</div>
+              <div class="wf-result-meta">
+                <div>Job ID: 7f3e...</div>
+                <div>Library ID: lib-42</div>
+                <div>5 May 2026, 14:22</div>
+              </div>
             </div>
             <button class="wf-button small soft">× Close</button>
           </div>
@@ -94,7 +102,8 @@
           <div class="wf-result-actions">
             <span class="wf-tag">4 rows</span>
             <div class="wf-result-controls">
-              <button class="wf-button small">↓ Download .csv</button>
+              <div class="wf-select small">CSV</div>
+              <button class="wf-button small">↓ Export</button>
             </div>
           </div>
 
@@ -117,7 +126,7 @@
             </table>
           </div>
 
-          <p class="wf-annotation">Tabular formats (csv / ndjson / json / fhir) parse into rows + columns and render in this Table. The "Download" action streams the raw response. For parquet, the Table is replaced by a download-only block.</p>
+          <p class="wf-annotation">Tabular formats (csv / ndjson / json / fhir) parse into rows + columns and render in this Table. The format selector chooses the export format (csv / ndjson / json / parquet / fhir) and "Export" streams the raw response in that format. For parquet, the Table is replaced by a download-only block.</p>
         </div>
       </div>
     </div>
