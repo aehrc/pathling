@@ -386,6 +386,50 @@ class SqlValidatorTest {
   }
 
   // -------------------------------------------------------------------------
+  // Table-valued function (TVF) rejection. Built-in TVFs in the FROM clause
+  // (range, explode, json_tuple, ...) are an open denial-of-service lane:
+  // `SELECT count(*) FROM range(0, 1e6) a CROSS JOIN range(0, 1e6) b` is a
+  // 1e12-row Cartesian product. Drop the entire UnresolvedTableValuedFunction
+  // node class from the allow-list.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void rejectsRangeTvfInFromClause() {
+    assertThatThrownBy(() -> validate("SELECT * FROM range(0, 100)"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed plan node");
+  }
+
+  @Test
+  void rejectsRangeCrossJoinTvfDosAttack() {
+    // The literal exploit recorded in the threat model.
+    assertThatThrownBy(
+            () ->
+                validate("SELECT count(*) FROM range(0, 1000000) a CROSS JOIN range(0, 1000000) b"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed plan node");
+  }
+
+  @Test
+  void rejectsExplodeTvfInFromClause() {
+    assertThatThrownBy(() -> validate("SELECT * FROM explode(array(1, 2, 3))"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed plan node");
+  }
+
+  // -------------------------------------------------------------------------
+  // Non-regression: explode in projection position is rewritten by the
+  // analyser to a Generate node with an Explode expression. Both are
+  // allow-listed, so closing the TVF lane must not affect this form.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsExplodeInProjection() {
+    assertThatCode(() -> validate("SELECT explode(array(1, 2, 3)) AS x"))
+        .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
   // Invalid SQL syntax.
   // -------------------------------------------------------------------------
 

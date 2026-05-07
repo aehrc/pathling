@@ -146,7 +146,6 @@ public class SqlValidator {
           // org.apache.spark.sql.catalyst.analysis
           "org.apache.spark.sql.catalyst.analysis.UnresolvedRelation",
           "org.apache.spark.sql.catalyst.analysis.UnresolvedInlineTable",
-          "org.apache.spark.sql.catalyst.analysis.UnresolvedTableValuedFunction",
           "org.apache.spark.sql.catalyst.analysis.UnresolvedSubqueryColumnAliases");
 
   // Function names rejected outright because they enable arbitrary code execution.
