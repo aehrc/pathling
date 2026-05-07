@@ -262,11 +262,14 @@ public class BulkSubmitExecutor {
     // Determine file access token based on manifest requirements.
     final String fileAccessToken = getFileAccessToken(manifest, accessToken, submission);
 
-    // Extract and validate file URLs.
+    // Extract file URLs.
     final Map<String, Collection<String>> fileUrls = extractUrlsFromManifest(manifest);
     if (fileUrls.isEmpty()) {
       throw new InvalidUserInputError("No files found in manifest");
     }
+
+    // Validate file URLs against allowableSources.
+    validateFileUrls(fileUrls);
 
     // Download files to persistent storage.
     final Path downloadDir = createDownloadDirectory(submission.submissionId());
@@ -676,6 +679,27 @@ public class BulkSubmitExecutor {
     } catch (final InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new InvalidUserInputError("Manifest fetch was interrupted", e);
+    }
+  }
+
+  /**
+   * Validates that all file URLs match the configured allowableSources prefixes.
+   *
+   * @param fileUrls The map of resource type to collection of file URLs.
+   * @throws InvalidUserInputError If any URL does not match an allowed source prefix.
+   */
+  private void validateFileUrls(@Nonnull final Map<String, Collection<String>> fileUrls) {
+    final BulkSubmitConfiguration config = serverConfiguration.getBulkSubmit();
+    if (config == null) {
+      return;
+    }
+    for (final Collection<String> urls : fileUrls.values()) {
+      for (final String url : urls) {
+        if (!config.isSourceAllowed(url)) {
+          throw new InvalidUserInputError(
+              "File URL '%s' does not match any allowed source prefixes.".formatted(url));
+        }
+      }
     }
   }
 

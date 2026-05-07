@@ -236,12 +236,7 @@ public class BulkSubmitValidator {
       @Nonnull final String url,
       @Nonnull final String paramName,
       @Nonnull final BulkSubmitConfiguration config) {
-    final List<String> allowableSources = config.getAllowableSources();
-    if (allowableSources.isEmpty()) {
-      return;
-    }
-    final boolean allowed = allowableSources.stream().anyMatch(url::startsWith);
-    if (!allowed) {
+    if (!config.isSourceAllowed(url)) {
       throw new InvalidUserInputError(
           "%s '%s' does not match any allowed source prefixes.".formatted(paramName, url));
     }
