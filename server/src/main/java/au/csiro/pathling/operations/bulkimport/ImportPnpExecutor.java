@@ -292,6 +292,10 @@ public class ImportPnpExecutor {
   static void validateDownloadResult(
       @Nonnull final BulkExportResult exportResult, @Nonnull final Path outputDir) {
 
+    // This check relies on the bulk-export library reporting accurate destination URIs in the
+    // result. If the library ever wrote to a path different from the one it reports, this guard
+    // would not detect it; the root-cause fix belongs in fhir-bulk-java. This is a compensating
+    // control that closes the documented PoC on the assumption that destinations are truthful.
     final Path normalizedOutputDir = outputDir.toAbsolutePath().normalize();
 
     for (final FileResult fileResult : exportResult.getResults()) {

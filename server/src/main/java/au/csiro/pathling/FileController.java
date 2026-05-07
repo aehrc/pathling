@@ -21,6 +21,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -36,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author Felix Naumann
  */
 @RestController
+@Slf4j
 public class FileController {
 
   private final String databasePath;
@@ -84,6 +86,9 @@ public class FileController {
           .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
           .body(resource);
     } catch (final Exception e) {
+      // Fail closed on any unexpected error (e.g. malformed databasePath, invalid path
+      // characters). Log at debug to aid operator diagnosis without leaking detail to the client.
+      log.debug("Failed to serve file for jobId={}, filename={}", jobId, filename, e);
       return ResponseEntity.notFound().build();
     }
   }
