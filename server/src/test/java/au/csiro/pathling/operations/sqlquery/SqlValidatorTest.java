@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import jakarta.annotation.Nonnull;
+import java.util.Set;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -44,59 +46,79 @@ class SqlValidatorTest {
     sparkSession.catalog().dropTempView(VIEW_NAME);
   }
 
+  /** Convenience wrapper threading a varargs label set into {@link SqlValidator#validate}. */
+  private void validate(@Nonnull final String sql, @Nonnull final String... labels) {
+    sqlValidator.validate(sql, Set.of(labels));
+  }
+
   // -------------------------------------------------------------------------
   // Valid SQL queries — should not throw.
   // -------------------------------------------------------------------------
 
   @Test
   void acceptsSimpleSelect() {
-    assertThatCode(() -> sqlValidator.validate("SELECT 1")).doesNotThrowAnyException();
+    assertThatCode(() -> validate("SELECT 1")).doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithAlias() {
-    assertThatCode(() -> sqlValidator.validate("SELECT 1 AS value")).doesNotThrowAnyException();
+    assertThatCode(() -> validate("SELECT 1 AS value")).doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectFromTable() {
-    assertThatCode(() -> sqlValidator.validate("SELECT * FROM my_view")).doesNotThrowAnyException();
+    assertThatCode(() -> validate("SELECT * FROM my_view", "my_view")).doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithWhere() {
-    assertThatCode(() -> sqlValidator.validate("SELECT a, b FROM t WHERE a > 10"))
+    assertThatCode(() -> validate("SELECT a, b FROM t WHERE a > 10", "t"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithJoin() {
-    assertThatCode(
-            () -> sqlValidator.validate("SELECT a.id, b.name FROM a JOIN b ON a.id = b.a_id"))
+    assertThatCode(() -> validate("SELECT a.id, b.name FROM a JOIN b ON a.id = b.a_id", "a", "b"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithAggregation() {
-    assertThatCode(() -> sqlValidator.validate("SELECT count(*), sum(x) FROM t GROUP BY y"))
+    assertThatCode(() -> validate("SELECT count(*), sum(x) FROM t GROUP BY y", "t"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithSubquery() {
-    assertThatCode(() -> sqlValidator.validate("SELECT * FROM (SELECT 1 AS x) sub"))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> validate("SELECT * FROM (SELECT 1 AS x) sub")).doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithCte() {
-    assertThatCode(() -> sqlValidator.validate("WITH cte AS (SELECT 1 AS x) SELECT * FROM cte"))
+    // The CTE name 'cte' is defined in the query itself, so no label is required.
+    assertThatCode(() -> validate("WITH cte AS (SELECT 1 AS x) SELECT * FROM cte"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsCteReferencingDeclaredLabel() {
+    // A CTE can wrap a declared label; the declared label is required, the CTE name is not.
+    assertThatCode(
+            () -> validate("WITH foo AS (SELECT * FROM patients) SELECT * FROM foo", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsNestedCtes() {
+    // Nested CTEs - both 'a' and 'b' are CTE-local names.
+    assertThatCode(
+            () -> validate("WITH a AS (SELECT 1 AS x), b AS (SELECT * FROM a) SELECT * FROM b"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithOrderByAndLimit() {
-    assertThatCode(() -> sqlValidator.validate("SELECT * FROM t ORDER BY id LIMIT 10"))
+    assertThatCode(() -> validate("SELECT * FROM t ORDER BY id LIMIT 10", "t"))
         .doesNotThrowAnyException();
   }
 
@@ -104,64 +126,60 @@ class SqlValidatorTest {
   void acceptsSelectWithCaseWhen() {
     assertThatCode(
             () ->
-                sqlValidator.validate(
-                    "SELECT CASE WHEN x > 0 THEN 'positive' ELSE 'negative' END FROM t"))
+                validate("SELECT CASE WHEN x > 0 THEN 'positive' ELSE 'negative' END FROM t", "t"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithStringFunctions() {
-    assertThatCode(
-            () -> sqlValidator.validate("SELECT upper(name), lower(name), length(name) FROM t"))
+    assertThatCode(() -> validate("SELECT upper(name), lower(name), length(name) FROM t", "t"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithMathFunctions() {
-    assertThatCode(() -> sqlValidator.validate("SELECT abs(-1), sqrt(4), round(3.14, 1)"))
+    assertThatCode(() -> validate("SELECT abs(-1), sqrt(4), round(3.14, 1)"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithDateFunctions() {
-    assertThatCode(() -> sqlValidator.validate("SELECT current_date(), current_timestamp()"))
+    assertThatCode(() -> validate("SELECT current_date(), current_timestamp()"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithUnion() {
-    assertThatCode(() -> sqlValidator.validate("SELECT 1 AS x UNION ALL SELECT 2 AS x"))
+    assertThatCode(() -> validate("SELECT 1 AS x UNION ALL SELECT 2 AS x"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithWindowFunction() {
-    assertThatCode(
-            () -> sqlValidator.validate("SELECT id, row_number() OVER (ORDER BY id) AS rn FROM t"))
+    assertThatCode(() -> validate("SELECT id, row_number() OVER (ORDER BY id) AS rn FROM t", "t"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithDistinct() {
-    assertThatCode(() -> sqlValidator.validate("SELECT DISTINCT name FROM t"))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> validate("SELECT DISTINCT name FROM t", "t")).doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithInClause() {
-    assertThatCode(() -> sqlValidator.validate("SELECT * FROM t WHERE id IN (1, 2, 3)"))
+    assertThatCode(() -> validate("SELECT * FROM t WHERE id IN (1, 2, 3)", "t"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithCast() {
-    assertThatCode(() -> sqlValidator.validate("SELECT CAST(x AS STRING) FROM t"))
+    assertThatCode(() -> validate("SELECT CAST(x AS STRING) FROM t", "t"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void acceptsSelectWithCoalesce() {
-    assertThatCode(() -> sqlValidator.validate("SELECT coalesce(a, b, 'default') FROM t"))
+    assertThatCode(() -> validate("SELECT coalesce(a, b, 'default') FROM t", "t"))
         .doesNotThrowAnyException();
   }
 
@@ -171,42 +189,42 @@ class SqlValidatorTest {
 
   @Test
   void rejectsDropTable() {
-    assertThatThrownBy(() -> sqlValidator.validate("DROP TABLE my_table"))
+    assertThatThrownBy(() -> validate("DROP TABLE my_table"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed");
   }
 
   @Test
   void rejectsCreateTable() {
-    assertThatThrownBy(() -> sqlValidator.validate("CREATE TABLE my_table (id INT)"))
+    assertThatThrownBy(() -> validate("CREATE TABLE my_table (id INT)"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed");
   }
 
   @Test
   void rejectsInsertInto() {
-    assertThatThrownBy(() -> sqlValidator.validate("INSERT INTO my_table VALUES (1, 'a')"))
+    assertThatThrownBy(() -> validate("INSERT INTO my_table VALUES (1, 'a')"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed");
   }
 
   @Test
   void rejectsDeleteFrom() {
-    assertThatThrownBy(() -> sqlValidator.validate("DELETE FROM my_table WHERE id = 1"))
+    assertThatThrownBy(() -> validate("DELETE FROM my_table WHERE id = 1"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed");
   }
 
   @Test
   void rejectsUpdateStatement() {
-    assertThatThrownBy(() -> sqlValidator.validate("UPDATE my_table SET name = 'x' WHERE id = 1"))
+    assertThatThrownBy(() -> validate("UPDATE my_table SET name = 'x' WHERE id = 1"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed");
   }
 
   @Test
   void rejectsCreateView() {
-    assertThatThrownBy(() -> sqlValidator.validate("CREATE VIEW my_view AS SELECT 1"))
+    assertThatThrownBy(() -> validate("CREATE VIEW my_view AS SELECT 1"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed");
   }
@@ -218,15 +236,14 @@ class SqlValidatorTest {
   @Test
   void rejectsReflectFunction() {
     assertThatThrownBy(
-            () -> sqlValidator.validate("SELECT reflect('java.lang.Runtime', 'getRuntime') FROM t"))
+            () -> validate("SELECT reflect('java.lang.Runtime', 'getRuntime') FROM t", "t"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed function");
   }
 
   @Test
   void rejectsJavaMethodFunction() {
-    assertThatThrownBy(
-            () -> sqlValidator.validate("SELECT java_method('java.lang.Math', 'random') FROM t"))
+    assertThatThrownBy(() -> validate("SELECT java_method('java.lang.Math', 'random') FROM t", "t"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed function");
   }
@@ -241,8 +258,7 @@ class SqlValidatorTest {
   void rejectsTerminologyUdfMemberOf() {
     assertThatThrownBy(
             () ->
-                sqlValidator.validate(
-                    "SELECT member_of(coding, 'http://snomed.info/sct?fhir_vs') FROM t"))
+                validate("SELECT member_of(coding, 'http://snomed.info/sct?fhir_vs') FROM t", "t"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("non-built-in function")
         .hasMessageContaining("member_of");
@@ -250,7 +266,7 @@ class SqlValidatorTest {
 
   @Test
   void rejectsTerminologyUdfDisplay() {
-    assertThatThrownBy(() -> sqlValidator.validate("SELECT display(coding) FROM t"))
+    assertThatThrownBy(() -> validate("SELECT display(coding) FROM t", "t"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("non-built-in function")
         .hasMessageContaining("display");
@@ -259,18 +275,85 @@ class SqlValidatorTest {
   @Test
   void rejectsTerminologyUdfTranslateCoding() {
     assertThatThrownBy(
-            () ->
-                sqlValidator.validate(
-                    "SELECT translate_coding(coding, 'http://example.org/cm') FROM t"))
+            () -> validate("SELECT translate_coding(coding, 'http://example.org/cm') FROM t", "t"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("non-built-in function");
   }
 
   @Test
   void rejectsFhirpathUdfStringToQuantity() {
-    assertThatThrownBy(() -> sqlValidator.validate("SELECT string_to_quantity('5 mg') FROM t"))
+    assertThatThrownBy(() -> validate("SELECT string_to_quantity('5 mg') FROM t", "t"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("non-built-in function");
+  }
+
+  // -------------------------------------------------------------------------
+  // Arbitrary local file read protection — the datasource short-name syntax
+  // (parquet/csv/text/binaryFile/...) parses as a 2-part UnresolvedRelation
+  // and must always be rejected, even when its first part happens to match a
+  // declared label.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void rejectsCsvShortNameFileRead() {
+    assertThatThrownBy(() -> validate("SELECT * FROM csv.`/etc/passwd`"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsTextShortNameFileRead() {
+    assertThatThrownBy(() -> validate("SELECT * FROM text.`/Users/gri306/.ssh/known_hosts`"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsBinaryFileShortNameRead() {
+    assertThatThrownBy(
+            () -> validate("SELECT base64(content) FROM binaryFile.`/Users/gri306/.ssh/personal`"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsParquetShortNameEvenWhenLabelMatchesDatasource() {
+    // Even when 'Patient' is declared, parquet.`...` parses as parquet/`...`, so the relation
+    // identifier is 'parquet'.'<path>', not 'Patient'. The rule still fires.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT id, gender FROM"
+                        + " parquet.`/Users/gri306/Warehouse/default/Patient.parquet`",
+                    "Patient"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsBinaryFileGlobShortName() {
+    assertThatThrownBy(() -> validate("SELECT path FROM binaryFile.`/etc/*.conf`"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsTwoPartCatalogReference() {
+    assertThatThrownBy(() -> validate("SELECT * FROM default.sometable"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsRelationNotInLabelSet() {
+    assertThatThrownBy(() -> validate("SELECT * FROM not_declared", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void acceptsRelationInLabelSet() {
+    assertThatCode(() -> validate("SELECT * FROM patients", "patients")).doesNotThrowAnyException();
   }
 
   // -------------------------------------------------------------------------
@@ -294,11 +377,12 @@ class SqlValidatorTest {
     // User SQL is plain ANSI — no UDF reference. The unresolved walk sees only
     // an UnresolvedRelation; the analyzed walk sees the substituted ScalaUDF.
     final String userSql = "SELECT literal FROM " + VIEW_NAME;
-    assertThatCode(() -> sqlValidator.validate(userSql)).doesNotThrowAnyException();
+    assertThatCode(() -> validate(userSql, VIEW_NAME)).doesNotThrowAnyException();
 
     final org.apache.spark.sql.catalyst.plans.logical.LogicalPlan analyzed =
         sparkSession.sql(userSql).queryExecution().analyzed();
-    assertThatCode(() -> sqlValidator.validateAnalyzed(analyzed)).doesNotThrowAnyException();
+    assertThatCode(() -> sqlValidator.validateAnalyzed(analyzed, Set.of(VIEW_NAME)))
+        .doesNotThrowAnyException();
   }
 
   // -------------------------------------------------------------------------
@@ -307,7 +391,7 @@ class SqlValidatorTest {
 
   @Test
   void rejectsInvalidSqlSyntax() {
-    assertThatThrownBy(() -> sqlValidator.validate("NOT VALID SQL AT ALL"))
+    assertThatThrownBy(() -> validate("NOT VALID SQL AT ALL"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("Invalid SQL syntax");
   }
@@ -355,7 +439,7 @@ class SqlValidatorTest {
         "SELECT java_method('java.lang.Math', 'random')"
       })
   void rejectsKnownDangerousQueries(final String sql) {
-    assertThatThrownBy(() -> sqlValidator.validate(sql))
+    assertThatThrownBy(() -> validate(sql))
         .as("validator must reject: %s", sql)
         .isInstanceOf(InvalidRequestException.class);
   }

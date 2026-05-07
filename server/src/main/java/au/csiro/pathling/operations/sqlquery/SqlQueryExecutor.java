@@ -21,7 +21,9 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -78,7 +80,11 @@ public class SqlQueryExecutor {
       @Nonnull final String requestId,
       @Nonnull final Consumer<Dataset<Row>> consumer) {
 
-    sqlValidator.validate(request.getParsedQuery().getSql());
+    final Set<String> declaredLabels =
+        request.getParsedQuery().getViewReferences().stream()
+            .map(ViewArtifactReference::getLabel)
+            .collect(Collectors.toUnmodifiableSet());
+    sqlValidator.validate(request.getParsedQuery().getSql(), declaredLabels);
 
     Map<String, String> registeredViews = Map.of();
     try {
@@ -89,7 +95,8 @@ public class SqlQueryExecutor {
 
       Dataset<Row> result = runSql(rewrittenSql, request.getParameterBindings());
 
-      sqlValidator.validateAnalyzed(result.queryExecution().analyzed());
+      sqlValidator.validateAnalyzed(
+          result.queryExecution().analyzed(), Set.copyOf(registeredViews.values()));
 
       if (request.getLimit() != null) {
         result = result.limit(request.getLimit());

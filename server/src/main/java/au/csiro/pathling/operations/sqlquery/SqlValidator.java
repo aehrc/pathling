@@ -19,20 +19,28 @@ package au.csiro.pathling.operations.sqlquery;
 
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.FunctionIdentifier;
 import org.apache.spark.sql.catalyst.analysis.UnresolvedFunction;
+import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation;
+import org.apache.spark.sql.catalyst.catalog.HiveTableRelation;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.ExpressionInfo;
 import org.apache.spark.sql.catalyst.expressions.SubqueryExpression;
 import org.apache.spark.sql.catalyst.plans.logical.Command;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias;
+import org.apache.spark.sql.catalyst.plans.logical.UnresolvedWith;
+import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import scala.Option;
+import scala.Tuple2;
 import scala.jdk.javaapi.CollectionConverters;
 
 /**
@@ -46,18 +54,25 @@ import scala.jdk.javaapi.CollectionConverters;
  * <p>Two validation entry-points are exposed:
  *
  * <ul>
- *   <li>{@link #validate(String)} parses the SQL and walks the unresolved logical plan. Cheap and
- *       suitable for early rejection before any temp views are registered.
- *   <li>{@link #validateAnalyzed(LogicalPlan)} walks an analyzed plan. Required to catch constructs
- *       like {@code HiveSimpleUDF} / {@code HiveGenericUDF}, which are inserted by the analyser and
- *       so are absent from the unresolved tree.
+ *   <li>{@link #validate(String, Set)} parses the SQL and walks the unresolved logical plan,
+ *       enforcing that every relation reference resolves to a declared label or a CTE defined
+ *       within the same query. Cheap and suitable for early rejection before any temp views are
+ *       registered.
+ *   <li>{@link #validateAnalyzed(LogicalPlan, Set)} walks an analyzed plan. Required to catch
+ *       constructs like {@code HiveSimpleUDF} / {@code HiveGenericUDF}, which are inserted by the
+ *       analyser and so are absent from the unresolved tree, and to reject any leaf physical
+ *       relation whose source is not one of the registered request-scoped temp views.
  * </ul>
  *
- * <p>Three validation layers are applied:
+ * <p>Four validation layers are applied:
  *
  * <ol>
  *   <li><strong>Plan node allow-list</strong> — only read-only plan nodes are permitted. All {@link
  *       Command} subclasses are rejected outright.
+ *   <li><strong>Relation allow-list</strong> — every {@link UnresolvedRelation} must be a
+ *       single-part identifier present in the declared label set or among the CTEs defined within
+ *       the query. This rejects datasource short-name file reads such as {@code
+ *       parquet.`/etc/passwd`}, which would otherwise be resolved by Spark to a direct file read.
  *   <li><strong>Expression allow-list</strong> — only safe expression types are permitted.
  *   <li><strong>Built-in functions only</strong> — every {@link UnresolvedFunction} in user SQL
  *       must resolve to a built-in Spark function. Pathling-registered UDFs (terminology, FHIRPath
@@ -298,81 +313,174 @@ public class SqlValidator {
   }
 
   /**
+   * Pattern that legitimate relation identifiers must match. Mirrors the {@code
+   * SqlQueryLibraryParser} label pattern so that anything Spark's parser produces as an
+   * UnresolvedRelation but which could not have been a declared label is rejected outright.
+   */
+  private static final Pattern LABEL_PATTERN = Pattern.compile("^[A-Za-z]\\w*$");
+
+  /**
    * Validates that the given SQL parses to an unresolved logical plan that contains only allowed
-   * operations. Suitable for early rejection before any temp views are registered.
+   * operations and that every relation reference resolves to either a declared label or a CTE
+   * defined within the same query. Suitable for early rejection before any temp views are
+   * registered.
    *
    * @param sql the SQL query to validate
-   * @throws InvalidRequestException if the query contains disallowed operations
+   * @param allowedLabels the set of relation labels declared in the request (i.e. the labels of the
+   *     {@code Library.relatedArtifact} entries) that may appear as relation references
+   * @throws InvalidRequestException if the query contains disallowed operations or references an
+   *     undeclared table
    */
-  public void validate(@Nonnull final String sql) {
+  public void validate(@Nonnull final String sql, @Nonnull final Set<String> allowedLabels) {
     final LogicalPlan plan;
     try {
       plan = sparkSession.sessionState().sqlParser().parsePlan(sql);
     } catch (final Exception e) {
       throw new InvalidRequestException("Invalid SQL syntax: " + e.getMessage());
     }
-    walkPlan(plan, /* strict= */ true);
+    final Set<String> effectiveLabels = new HashSet<>(allowedLabels);
+    collectCteNames(plan, effectiveLabels);
+    walkPlanStrict(plan, effectiveLabels);
   }
 
   /**
-   * Validates an analyzed logical plan against the reject-list. Required to catch constructs like
-   * {@code HiveSimpleUDF} / {@code HiveGenericUDF} that are inserted by the analyser and so are
-   * absent from the unresolved tree.
+   * Validates an analyzed logical plan against the reject-list and additionally rejects any leaf
+   * relation whose source is not one of the request-scoped temp views the executor registered.
+   * Required to catch constructs like {@code HiveSimpleUDF} / {@code HiveGenericUDF} that are
+   * inserted by the analyser and so are absent from the unresolved tree, and to catch any future
+   * parser change that would let a datasource short-name reference (e.g. {@code parquet.`/path`})
+   * slip past the parse-time check.
    *
-   * <p>Unlike {@link #validate(String)}, this walk does <em>not</em> enforce the allow-list,
-   * because the analyser legitimately introduces many Spark expression types ({@code Flatten},
-   * {@code GetStructField} variants, etc.) that user-written SQL would not name directly. The
-   * unresolved-plan walk is the appropriate place to enforce the allow-list; the analyzed-plan
-   * walk's job is to catch constructs that <em>only</em> appear post-analysis.
+   * <p>Unlike {@link #validate(String, Set)}, this walk does <em>not</em> enforce the expression
+   * allow-list, because the analyser legitimately introduces many Spark expression types ({@code
+   * Flatten}, {@code GetStructField} variants, etc.) that user-written SQL would not name directly.
    *
    * @param plan an analyzed logical plan, typically obtained via {@code
    *     dataset.queryExecution().analyzed()}
-   * @throws InvalidRequestException if the plan contains rejected operations
+   * @param registeredViewNames the names of the request-scoped temporary views that were registered
+   *     for this query - any leaf physical relation must be reachable only as a descendant of a
+   *     {@link SubqueryAlias} whose name appears in this set
+   * @throws InvalidRequestException if the plan contains rejected operations or references a
+   *     relation that is not one of the registered temp views
    */
-  public void validateAnalyzed(@Nonnull final LogicalPlan plan) {
-    walkPlan(plan, /* strict= */ false);
+  public void validateAnalyzed(
+      @Nonnull final LogicalPlan plan, @Nonnull final Set<String> registeredViewNames) {
+    walkPlanAnalyzed(plan, registeredViewNames, /* inTrustedAlias= */ false);
   }
 
-  /** Recursively validates a logical plan node and all its children and expressions. */
-  private void walkPlan(@Nonnull final LogicalPlan plan, final boolean strict) {
-    validatePlanNode(plan, strict);
-    final List<Expression> expressions = CollectionConverters.asJava(plan.expressions());
-    for (final Expression expr : expressions) {
-      walkExpression(expr, strict);
+  /**
+   * Pre-walks the parsed plan to collect names of common-table-expressions defined anywhere in the
+   * tree, so that {@code WITH ... SELECT} queries can refer to their CTEs without each CTE name
+   * being a declared label.
+   */
+  private static void collectCteNames(
+      @Nonnull final LogicalPlan plan, @Nonnull final Set<String> out) {
+    if (plan instanceof final UnresolvedWith with) {
+      final List<Tuple2<String, SubqueryAlias>> ctes =
+          CollectionConverters.asJava(with.cteRelations());
+      for (final Tuple2<String, SubqueryAlias> cte : ctes) {
+        out.add(cte._1());
+        collectCteNames(cte._2(), out);
+      }
     }
     final List<LogicalPlan> children = CollectionConverters.asJava(plan.children());
     for (final LogicalPlan child : children) {
-      walkPlan(child, strict);
+      collectCteNames(child, out);
+    }
+    final List<Expression> expressions = CollectionConverters.asJava(plan.expressions());
+    for (final Expression expr : expressions) {
+      collectCteNamesInExpression(expr, out);
     }
   }
 
-  /**
-   * Recursively validates an expression and all its child expressions. If the expression is a
-   * subquery expression, its inner plan is also validated.
-   */
-  private void walkExpression(@Nonnull final Expression expr, final boolean strict) {
-    validateExpression(expr, strict);
+  /** Recurses through expression subqueries to pick up CTEs defined inside them. */
+  private static void collectCteNamesInExpression(
+      @Nonnull final Expression expr, @Nonnull final Set<String> out) {
     if (expr instanceof final SubqueryExpression subquery) {
-      walkPlan(subquery.plan(), strict);
+      collectCteNames(subquery.plan(), out);
     }
     final List<Expression> children = CollectionConverters.asJava(expr.children());
     for (final Expression child : children) {
-      walkExpression(child, strict);
+      collectCteNamesInExpression(child, out);
+    }
+  }
+
+  /** Recursively validates a parsed plan in strict mode. */
+  private void walkPlanStrict(
+      @Nonnull final LogicalPlan plan, @Nonnull final Set<String> allowedLabels) {
+    validatePlanNodeStrict(plan, allowedLabels);
+    final List<Expression> expressions = CollectionConverters.asJava(plan.expressions());
+    for (final Expression expr : expressions) {
+      walkExpressionStrict(expr, allowedLabels);
+    }
+    final List<LogicalPlan> children = CollectionConverters.asJava(plan.children());
+    for (final LogicalPlan child : children) {
+      walkPlanStrict(child, allowedLabels);
+    }
+  }
+
+  /** Recursively validates an analyzed plan, tracking whether we are inside a trusted alias. */
+  private void walkPlanAnalyzed(
+      @Nonnull final LogicalPlan plan,
+      @Nonnull final Set<String> registeredViewNames,
+      final boolean inTrustedAlias) {
+    validatePlanNodeAnalyzed(plan, registeredViewNames, inTrustedAlias);
+    final List<Expression> expressions = CollectionConverters.asJava(plan.expressions());
+    for (final Expression expr : expressions) {
+      walkExpressionAnalyzed(expr, registeredViewNames);
+    }
+    final boolean childTrust = inTrustedAlias || isTrustedAlias(plan, registeredViewNames);
+    final List<LogicalPlan> children = CollectionConverters.asJava(plan.children());
+    for (final LogicalPlan child : children) {
+      walkPlanAnalyzed(child, registeredViewNames, childTrust);
+    }
+  }
+
+  /** Returns true when the given node is a SubqueryAlias whose name is a registered temp view. */
+  private static boolean isTrustedAlias(
+      @Nonnull final LogicalPlan plan, @Nonnull final Set<String> registeredViewNames) {
+    if (!(plan instanceof final SubqueryAlias alias)) {
+      return false;
+    }
+    return registeredViewNames.contains(alias.identifier().name());
+  }
+
+  /** Recursively validates an expression tree (strict mode). */
+  private void walkExpressionStrict(
+      @Nonnull final Expression expr, @Nonnull final Set<String> allowedLabels) {
+    validateExpression(expr, /* strict= */ true);
+    if (expr instanceof final SubqueryExpression subquery) {
+      walkPlanStrict(subquery.plan(), allowedLabels);
+    }
+    final List<Expression> children = CollectionConverters.asJava(expr.children());
+    for (final Expression child : children) {
+      walkExpressionStrict(child, allowedLabels);
+    }
+  }
+
+  /** Recursively validates an expression tree (analyzed mode). */
+  private void walkExpressionAnalyzed(
+      @Nonnull final Expression expr, @Nonnull final Set<String> registeredViewNames) {
+    validateExpression(expr, /* strict= */ false);
+    if (expr instanceof final SubqueryExpression subquery) {
+      walkPlanAnalyzed(subquery.plan(), registeredViewNames, /* inTrustedAlias= */ false);
+    }
+    final List<Expression> children = CollectionConverters.asJava(expr.children());
+    for (final Expression child : children) {
+      walkExpressionAnalyzed(child, registeredViewNames);
     }
   }
 
   /**
-   * Validates that a plan node is permitted. All {@link Command} subclasses (DDL, DML, SHOW,
-   * DESCRIBE, etc.) are rejected outright, regardless of package, in both modes. In strict mode,
-   * the allow-list is additionally enforced.
+   * Validates that a parsed plan node is permitted. All {@link Command} subclasses (DDL, DML, SHOW,
+   * DESCRIBE, etc.) are rejected outright. The plan-node allow-list is enforced and relation
+   * references are checked against the supplied label set.
    */
-  private void validatePlanNode(@Nonnull final LogicalPlan plan, final boolean strict) {
+  private void validatePlanNodeStrict(
+      @Nonnull final LogicalPlan plan, @Nonnull final Set<String> allowedLabels) {
     if (plan instanceof Command) {
       throw new InvalidRequestException(
           "SQL contains a disallowed operation: " + plan.getClass().getSimpleName());
-    }
-    if (!strict) {
-      return;
     }
     final String fqn = canonicalClassName(plan);
     if (fqn.startsWith(PATHLING_PACKAGE_PREFIX)) {
@@ -382,6 +490,56 @@ public class SqlValidator {
       throw new InvalidRequestException(
           "SQL contains a disallowed plan node: " + plan.getClass().getSimpleName());
     }
+    if (plan instanceof final UnresolvedRelation relation) {
+      validateRelationReference(relation, allowedLabels);
+    }
+  }
+
+  /**
+   * Validates that an analyzed plan node is permitted. All {@link Command} subclasses are rejected
+   * outright. Any {@link UnresolvedRelation} surviving analysis is rejected. Leaf physical
+   * relations ({@link LogicalRelation}, {@link HiveTableRelation}) are rejected unless they are
+   * descendants of a trusted {@link SubqueryAlias}.
+   */
+  private void validatePlanNodeAnalyzed(
+      @Nonnull final LogicalPlan plan,
+      @Nonnull final Set<String> registeredViewNames,
+      final boolean inTrustedAlias) {
+    if (plan instanceof Command) {
+      throw new InvalidRequestException(
+          "SQL contains a disallowed operation: " + plan.getClass().getSimpleName());
+    }
+    if (plan instanceof final UnresolvedRelation relation) {
+      throw new InvalidRequestException(
+          "SQL references an undeclared table: " + joinIdentifier(relation));
+    }
+    if (!inTrustedAlias && (plan instanceof LogicalRelation || plan instanceof HiveTableRelation)) {
+      throw new InvalidRequestException(
+          "SQL references an unauthorised data source: " + plan.getClass().getSimpleName());
+    }
+  }
+
+  /**
+   * Enforces that an unresolved relation is a single-part identifier matching {@link
+   * #LABEL_PATTERN} and present in the allowed-label set. Rejects two-part datasource short-name
+   * references such as {@code parquet.`/etc/passwd`}.
+   */
+  private static void validateRelationReference(
+      @Nonnull final UnresolvedRelation relation, @Nonnull final Set<String> allowedLabels) {
+    final List<String> parts = CollectionConverters.asJava(relation.multipartIdentifier());
+    if (parts.size() != 1) {
+      throw new InvalidRequestException(
+          "SQL references an undeclared table: " + String.join(".", parts));
+    }
+    final String name = parts.get(0);
+    if (!LABEL_PATTERN.matcher(name).matches() || !allowedLabels.contains(name)) {
+      throw new InvalidRequestException("SQL references an undeclared table: " + name);
+    }
+  }
+
+  @Nonnull
+  private static String joinIdentifier(@Nonnull final UnresolvedRelation relation) {
+    return String.join(".", CollectionConverters.asJava(relation.multipartIdentifier()));
   }
 
   /**
