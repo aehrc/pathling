@@ -90,9 +90,9 @@ and rejects all `$import-pnp` requests.
 - `pathling.bulkSubmit.allowedSubmitters` - (default: `[]`) The list of allowed
   submitters (by system and value) that can use the $bulk-submit operation.
 - `pathling.bulkSubmit.allowableSources` - (default: `https://`) URL prefixes
-  that are allowed as sources for manifest and file URLs. This applies to both
-  the `manifestUrl` parameter and every `output[].url` discovered within fetched
-  manifests.
+  that are allowed as sources for manifest and file URLs. This applies to the
+  `manifestUrl` parameter, every `output[].url` discovered within fetched
+  manifests, and the `oauthMetadataUrl` parameter.
 
 ### Asynchronous processing
 
