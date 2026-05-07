@@ -37,7 +37,6 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.fs.Path;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -119,20 +118,30 @@ public class ExportResultProvider {
               .formatted(currentUserId.orElse("null")));
     }
 
-    final Path requestedFilepath =
-        new Path(
-            URI.create(databasePath).getPath()
-                + Path.SEPARATOR
-                + "jobs"
-                + Path.SEPARATOR
-                + jobId
-                + Path.SEPARATOR
-                + file);
-    final Resource resource = new FileSystemResource(requestedFilepath.toString());
+    // Validate that the requested file stays within the job directory.
+    final java.nio.file.Path jobDir;
+    final java.nio.file.Path resolvedFile;
+    try {
+      jobDir =
+          java.nio.file.Path.of(URI.create(databasePath).getPath())
+              .resolve("jobs")
+              .resolve(jobId)
+              .normalize()
+              .toAbsolutePath();
+
+      resolvedFile = jobDir.resolve(file).normalize().toAbsolutePath();
+    } catch (final java.nio.file.InvalidPathException e) {
+      throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
+    }
+
+    if (!resolvedFile.startsWith(jobDir)) {
+      throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
+    }
+
+    final Resource resource = new FileSystemResource(resolvedFile.toString());
 
     if (!resource.exists() || !resource.isFile()) {
-      throw new ResourceNotFoundError(
-          "File '%s' does not exist or is not a file.".formatted(requestedFilepath));
+      throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
     }
 
     response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file + "\"");

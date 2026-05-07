@@ -554,6 +554,41 @@ class ExportOperationIT {
   }
 
   @Test
+  void testExportResultRejectsPathTraversal() {
+    // Kick off a valid export and wait for completion.
+    final String uri =
+        "http://localhost:"
+            + port
+            + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z&_type=Patient";
+    final String pollUrl = kickOffRequest(webTestClient, uri);
+    await()
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(1, TimeUnit.SECONDS)
+        .until(
+            () ->
+                doPolling(
+                    webTestClient,
+                    pollUrl,
+                    result -> {
+                      assertNotNull(result.getResponseBody());
+                    }));
+
+    // Attempt to download a file using path traversal.
+    final String traversalUrl =
+        UriComponentsBuilder.fromUriString("http://localhost:" + port + "/fhir/$result")
+            .queryParam("job", extractJobIdFromPollUrl(pollUrl))
+            .queryParam("file", "../../secret.txt")
+            .toUriString();
+
+    webTestClient.get().uri(traversalUrl).exchange().expectStatus().isNotFound();
+  }
+
+  @Nullable
+  private String extractJobIdFromPollUrl(final String pollUrl) {
+    return UriComponentsBuilder.fromUriString(pollUrl).build().getPathSegments().getLast();
+  }
+
+  @Test
   void testExportWithTypeFilterImplicitTypeInclusion() {
     // When _type is absent but _typeFilter is present, resource types should be implicitly included
     // from the _typeFilter values.

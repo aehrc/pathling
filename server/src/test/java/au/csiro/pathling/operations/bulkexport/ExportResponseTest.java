@@ -18,6 +18,7 @@
 package au.csiro.pathling.operations.bulkexport;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.sink.WriteDetails;
@@ -320,6 +321,55 @@ class ExportResponseTest {
 
     assertThat(json.get("output").isArray()).isTrue();
     assertThat(json.get("output").isEmpty()).isTrue();
+  }
+
+  // -------------------------------------------------------------------------
+  // Defence-in-depth tests
+  // -------------------------------------------------------------------------
+
+  @Test
+  void manifestRejectsFileWithForwardSlash() {
+    final FileInformation fileInfo =
+        new FileInformation("Patient", "file:///tmp/jobs/job-id/../secret.txt");
+    final WriteDetails writeDetails = new WriteDetails(List.of(fileInfo));
+
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
+
+    assertThatThrownBy(response::toOutput)
+        .isExactlyInstanceOf(ca.uhn.fhir.rest.server.exceptions.InternalErrorException.class)
+        .hasMessageContaining("Invalid file name in export result");
+  }
+
+  @Test
+  void manifestRejectsFileWithBackslash() {
+    final FileInformation fileInfo =
+        new FileInformation("Patient", "file:///tmp/jobs/job-id/..\\secret.txt");
+    final WriteDetails writeDetails = new WriteDetails(List.of(fileInfo));
+
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
+
+    assertThatThrownBy(response::toOutput)
+        .isExactlyInstanceOf(ca.uhn.fhir.rest.server.exceptions.InternalErrorException.class)
+        .hasMessageContaining("Invalid file name in export result");
+  }
+
+  @Test
+  void manifestRejectsFileWithDotDot() {
+    final FileInformation fileInfo =
+        new FileInformation("Patient", "file:///tmp/jobs/job-id/..secret.txt");
+    final WriteDetails writeDetails = new WriteDetails(List.of(fileInfo));
+
+    final ExportResponse response =
+        new ExportResponse(
+            "http://example.org/fhir/$export", "http://example.org/fhir", writeDetails, false);
+
+    assertThatThrownBy(response::toOutput)
+        .isExactlyInstanceOf(ca.uhn.fhir.rest.server.exceptions.InternalErrorException.class)
+        .hasMessageContaining("Invalid file name in export result");
   }
 
   // -------------------------------------------------------------------------
