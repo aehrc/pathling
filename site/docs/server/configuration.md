@@ -46,9 +46,9 @@ operation, which retrieves data from external FHIR bulk export endpoints.
 
 - `pathling.import.pnp.allowableExportUrls` - (default: `[]`) A list of URL
   prefixes which are allowable for use as export URLs within the `$import-pnp`
-  operation. When this list is non-empty, any `exportUrl` that does not start
-  with one of these prefixes is rejected. When PNP credentials are configured,
-  this list must be explicitly populated.
+  operation. This list is mandatory: when it is empty every `$import-pnp`
+  request is rejected. Any `exportUrl` that does not start with one of the
+  configured prefixes is also rejected.
 - `pathling.import.pnp.clientId` - The client identifier for SMART Backend
   Services authentication.
 - `pathling.import.pnp.tokenEndpoint` - The token endpoint URL for obtaining
@@ -89,10 +89,11 @@ and rejects all `$import-pnp` requests.
 
 - `pathling.bulkSubmit.allowedSubmitters` - (default: `[]`) The list of allowed
   submitters (by system and value) that can use the $bulk-submit operation.
-- `pathling.bulkSubmit.allowableSources` - (default: `https://`) URL prefixes
-  that are allowed as sources for manifest and file URLs. This applies to the
-  `manifestUrl` parameter, every `output[].url` discovered within fetched
-  manifests, and the `oauthMetadataUrl` parameter.
+- `pathling.bulkSubmit.allowableSources` - (default: `[]`) URL prefixes that
+  are allowed as sources for manifest and file URLs. This list is mandatory:
+  when it is empty every URL is rejected and the operation cannot be used.
+  This applies to the `manifestUrl` parameter, every `output[].url` discovered
+  within fetched manifests, and the `oauthMetadataUrl` parameter.
 
 ### Asynchronous processing
 

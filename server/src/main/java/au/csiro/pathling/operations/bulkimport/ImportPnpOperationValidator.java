@@ -195,7 +195,8 @@ public class ImportPnpOperationValidator {
 
   /**
    * Validates the exportUrl against both the configured whitelist (allowableExportUrls) and the
-   * SSRF policy that rejects internal or private addresses unless allowInternalUrls is set.
+   * SSRF policy that rejects internal or private addresses unless allowInternalUrls is set. The
+   * allowlist is mandatory: requests are rejected when no prefixes have been configured.
    *
    * @param exportUrl the export URL to validate
    * @throws InvalidUserInputError if the URL is not allowed by either check
@@ -209,16 +210,13 @@ public class ImportPnpOperationValidator {
             : List.of();
 
     if (allowableExportUrls.isEmpty()) {
-      if (pnpCredentialsConfigured()) {
-        throw new InvalidUserInputError(
-            "No trusted export URLs are configured. "
-                + "Set pathling.import.pnp.allowableExportUrls to enable $import-pnp.");
-      }
-    } else {
-      final boolean allowed = allowableExportUrls.stream().anyMatch(exportUrl::startsWith);
-      if (!allowed) {
-        throw new InvalidUserInputError("exportUrl not in allowableExportUrls: " + exportUrl);
-      }
+      throw new InvalidUserInputError(
+          "No trusted export URLs are configured. "
+              + "Set pathling.import.pnp.allowableExportUrls to enable $import-pnp.");
+    }
+    final boolean allowed = allowableExportUrls.stream().anyMatch(exportUrl::startsWith);
+    if (!allowed) {
+      throw new InvalidUserInputError("exportUrl not in allowableExportUrls: " + exportUrl);
     }
 
     validateInternalAddressPolicy(exportUrl);

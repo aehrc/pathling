@@ -134,13 +134,12 @@ To prevent credential leakage and server-side request forgery (SSRF), the
 whitelist.
 
 - `pathling.import.pnp.allowableExportUrls` - A list of URL prefixes which are
-  allowable for use as export URLs. When this list is non-empty, any `exportUrl`
-  that does not start with one of these prefixes is rejected with a `400 Bad
-Request`.
+  allowable for use as export URLs. Any `exportUrl` that does not start with
+  one of these prefixes is rejected with a `400 Bad Request`.
 
-When PNP credentials are configured, this list must be explicitly configured.
-If the list is empty and credentials are present, the operation rejects all
-requests.
+This list is mandatory. If it is empty the operation rejects every request,
+regardless of whether PNP credentials have been configured. This prevents
+`$import-pnp` from being used as an SSRF or warehouse-poisoning vector.
 
 ### Authentication interlock
 

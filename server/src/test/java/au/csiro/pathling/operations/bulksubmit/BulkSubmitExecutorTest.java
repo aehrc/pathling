@@ -698,9 +698,10 @@ class BulkSubmitExecutorTest {
   }
 
   @Test
-  @DisplayName("downloadManifestJob allows any file URL when allowableSources is empty")
-  void downloadManifestJobAllowsAnyUrlWhenAllowableSourcesEmpty() {
-    // Given: a manifest with a file URL and empty allowableSources.
+  @DisplayName("downloadManifestJob rejects all file URLs when allowableSources is empty")
+  void downloadManifestJobRejectsAllUrlsWhenAllowableSourcesEmpty() {
+    // Given: a manifest with a file URL and empty allowableSources. The allowlist is mandatory,
+    // so the file URL must be rejected even though no prefixes are configured.
     final Submission submission = createTestSubmission();
     final ManifestJob manifestJob = createTestManifestJob();
     setupManifestWithOffAllowlistFileUrl();
@@ -716,7 +717,7 @@ class BulkSubmitExecutorTest {
     // When: calling downloadManifestJob.
     executor.downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE);
 
-    // Then: the manifest job should transition to DOWNLOADED (open configuration).
+    // Then: the manifest job should transition to FAILED with an allowlist error.
     await()
         .atMost(Duration.ofSeconds(5))
         .untilAsserted(
@@ -730,12 +731,13 @@ class BulkSubmitExecutorTest {
 
               final UnaryOperator<ManifestJob> thirdUpdate = updateCaptor.getAllValues().get(2);
               final ManifestJob updatedJob = thirdUpdate.apply(manifestJob);
-              assertThat(updatedJob.state()).isEqualTo(ManifestJobState.DOWNLOADED);
-              assertThat(updatedJob.downloadedFiles()).isNotEmpty();
+              assertThat(updatedJob.state()).isEqualTo(ManifestJobState.FAILED);
+              assertThat(updatedJob.errorMessage())
+                  .contains("does not match any allowed source prefixes");
             });
 
-    // And: the file endpoint should have been requested.
-    wireMockServer.verify(getRequestedFor(urlEqualTo("/evil/Patient.ndjson")));
+    // And: WireMock should receive zero requests for the file endpoint.
+    wireMockServer.verify(0, getRequestedFor(urlEqualTo("/evil/Patient.ndjson")));
   }
 
   // ========================================

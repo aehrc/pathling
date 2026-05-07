@@ -275,10 +275,10 @@ credentials for authenticated file downloads.
 
 ### Configuration options
 
-| Property                                | Type | Description                                                      |
-| --------------------------------------- | ---- | ---------------------------------------------------------------- |
-| `pathling.bulkSubmit.allowedSubmitters` | List | List of allowed submitter identifiers (system and value)         |
-| `pathling.bulkSubmit.allowableSources`  | List | URL prefixes allowed for manifest and file URLs (see note below) |
+| Property                                | Type | Description                                                                 |
+| --------------------------------------- | ---- | --------------------------------------------------------------------------- |
+| `pathling.bulkSubmit.allowedSubmitters` | List | List of allowed submitter identifiers (system and value)                    |
+| `pathling.bulkSubmit.allowableSources`  | List | URL prefixes allowed for manifest and file URLs - mandatory, see note below |
 
 ### Submitter configuration
 
@@ -304,12 +304,13 @@ When OAuth credentials are configured, Pathling will:
    and files (if the manifest specifies `requiresAccessToken: true`).
 
 :::note
-The `allowableSources` configuration applies to **every URL fetched** during
-`$bulk-submit` processing, including the `manifestUrl` provided in the request,
-every `output[].url` discovered within fetched manifests, and the
-`oauthMetadataUrl` parameter when supplied. A manifest served from an
-allowlisted source that references file URLs on a different host will be
-rejected before any file download is attempted.
+The `allowableSources` configuration is mandatory: when no prefixes have been
+configured every URL is rejected and the operation cannot be used. It applies
+to **every URL fetched** during `$bulk-submit` processing, including the
+`manifestUrl` provided in the request, every `output[].url` discovered within
+fetched manifests, and the `oauthMetadataUrl` parameter when supplied. A
+manifest served from an allowlisted source that references file URLs on a
+different host will be rejected before any file download is attempted.
 :::
 
 ### Example configuration

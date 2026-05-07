@@ -68,6 +68,9 @@ class ImportPnpOperationValidatorTest {
       config.setAuth(auth);
       final ImportConfiguration importConfig = new ImportConfiguration();
       importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+      final PnpConfiguration pnpConfig = new PnpConfiguration();
+      pnpConfig.setAllowableExportUrls(List.of("http://", "https://"));
+      importConfig.setPnp(pnpConfig);
       config.setImport(importConfig);
       return config;
     }
@@ -98,6 +101,9 @@ class ImportPnpOperationValidatorTest {
     serverConfiguration.setAuth(auth);
     final ImportConfiguration importConfig = new ImportConfiguration();
     importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setAllowableExportUrls(List.of("http://", "https://"));
+    importConfig.setPnp(pnpConfig);
     serverConfiguration.setImport(importConfig);
   }
 
@@ -574,27 +580,24 @@ class ImportPnpOperationValidatorTest {
   // ========================================
 
   /**
-   * Tests that validation passes without requiring any PnP configuration. This enables the
-   * operation to be used against unauthenticated FHIR servers without explicit configuration.
+   * Tests that validation fails when no PnP configuration is present, because the operation
+   * requires the export URL allowlist to be configured before it can be used.
    */
   @Test
-  void validatesWithoutPnpConfiguration() {
+  void rejectsWhenPnpConfigurationAbsent() {
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    serverConfiguration.setImport(importConfig);
+
     final Parameters params = new Parameters();
     params
         .addParameter()
         .setName("exportUrl")
         .setValue(new UrlType("https://public-fhir-server.org/$export"));
 
-    // Should succeed without any PnP configuration required.
-    assertThatNoException()
-        .isThrownBy(
-            () -> {
-              final PreAsyncValidationResult<ImportPnpRequest> result =
-                  validator.validateParametersRequest(mockRequest, params);
-              assertThat(result.result()).isNotNull();
-              assertThat(result.result().exportUrl())
-                  .isEqualTo("https://public-fhir-server.org/$export");
-            });
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("No trusted export URLs are configured");
   }
 
   // ========================================
@@ -794,14 +797,13 @@ class ImportPnpOperationValidatorTest {
   }
 
   /**
-   * Tests that when allowableExportUrls is empty and credentials are configured, the request is
-   * rejected.
+   * Tests that when allowableExportUrls is empty the request is rejected, regardless of whether PNP
+   * credentials are configured. The allowlist is mandatory to prevent the operation being used as
+   * an SSRF or warehouse-poisoning vector.
    */
   @Test
-  void rejectsExportUrlWhenAllowableExportUrlsEmptyAndCredentialsConfigured() {
+  void rejectsExportUrlWhenAllowableExportUrlsEmpty() {
     final PnpConfiguration pnpConfig = new PnpConfiguration();
-    pnpConfig.setClientId("test-client");
-    pnpConfig.setClientSecret("test-secret");
     final ImportConfiguration importConfig = new ImportConfiguration();
     importConfig.setAllowableSources(List.of("s3://test-bucket/"));
     importConfig.setPnp(pnpConfig);

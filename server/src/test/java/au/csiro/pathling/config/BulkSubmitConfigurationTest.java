@@ -31,15 +31,15 @@ import org.junit.jupiter.api.Test;
 class BulkSubmitConfigurationTest {
 
   @Test
-  void emptyAllowableSourcesAllowsAnyUrl() {
+  void emptyAllowableSourcesRejectsAllUrls() {
     // Given: a configuration with empty allowableSources.
     final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
     config.setAllowableSources(new ArrayList<>());
 
-    // Then: any URL is allowed.
-    assertThat(config.isSourceAllowed("https://example.org/file.ndjson")).isTrue();
-    assertThat(config.isSourceAllowed("http://localhost:8080/file.ndjson")).isTrue();
-    assertThat(config.isSourceAllowed("s3://bucket/file.ndjson")).isTrue();
+    // Then: every URL is rejected, since the allowlist is mandatory.
+    assertThat(config.isSourceAllowed("https://example.org/file.ndjson")).isFalse();
+    assertThat(config.isSourceAllowed("http://localhost:8080/file.ndjson")).isFalse();
+    assertThat(config.isSourceAllowed("s3://bucket/file.ndjson")).isFalse();
   }
 
   @Test
