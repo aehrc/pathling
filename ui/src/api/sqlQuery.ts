@@ -22,7 +22,12 @@
  * @author John Grimes
  */
 
-import { buildHeaders, buildUrl, checkResponse } from "./utils";
+import {
+  buildHeaders,
+  buildUrl,
+  checkResponse,
+  pushOutputParameters,
+} from "./utils";
 
 import type { AuthOptions } from "./rest";
 import type {
@@ -154,15 +159,11 @@ export async function sqlQueryRun(
     });
   }
 
-  if (options.format !== undefined) {
-    parameter.push({ name: "_format", valueString: options.format });
-  }
-  if (options.limit !== undefined) {
-    parameter.push({ name: "_limit", valueInteger: options.limit });
-  }
-  if (options.header !== undefined) {
-    parameter.push({ name: "_header", valueBoolean: options.header });
-  }
+  pushOutputParameters(parameter, {
+    format: options.format,
+    limit: options.limit,
+    header: options.header,
+  });
 
   const bindingParam = buildBindingParameter(
     options.bindings,
@@ -218,8 +219,11 @@ export async function listSqlQueryLibraries(
 /**
  * Builds the nested `parameters` Parameters resource carrying runtime
  * bindings, or returns `undefined` if no non-empty bindings exist.
- * @param bindings
- * @param parameterTypes
+ *
+ * @param bindings - Runtime values keyed by declared parameter name.
+ * @param parameterTypes - Declared FHIR primitive types keyed by name.
+ * @returns The wrapping Parameters part, or `undefined` if there is
+ *   nothing to send.
  */
 function buildBindingParameter(
   bindings: SqlQueryRuntimeBindings | undefined,
@@ -259,9 +263,12 @@ function buildBindingParameter(
  * Returns `undefined` if the value cannot be coerced (e.g. non-numeric
  * input for an integer parameter); the form layer is responsible for
  * blocking submission in that case.
- * @param name
- * @param rawValue
- * @param type
+ *
+ * @param name - The parameter name.
+ * @param rawValue - The string captured from the form input.
+ * @param type - The declared FHIR primitive type.
+ * @returns A Parameters part with the matching `value[x]` slot, or
+ *   `undefined` if the value cannot be parsed.
  */
 function bindingToPart(
   name: string,
