@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireframe - SQL query result, error</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f0f0; color: #333; line-height: 1.4; }
+  .mono { font-family: "SF Mono", "Menlo", "Consolas", monospace; }
+  .wf-container { max-width: 1280px; margin: 0 auto; background: #fff; min-height: 100vh; display: flex; flex-direction: column; }
+  .wf-header { background: #e8e8e8; border-bottom: 2px solid #bbb; padding: 0.85rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .wf-logo { font-weight: bold; font-size: 1rem; color: #555; }
+  .wf-nav { display: flex; gap: 1.25rem; }
+  .wf-nav a { color: #666; text-decoration: none; font-size: 0.85rem; padding: 0.25rem 0.4rem; border-radius: 3px; }
+  .wf-nav a.active { background: #d0d0d0; color: #222; font-weight: 600; }
+  .wf-main { padding: 1.5rem; flex: 1; }
+  .wf-page-title { font-size: 1.4rem; font-weight: 600; margin-bottom: 1rem; color: #333; }
+
+  .wf-segmented { display: inline-flex; border: 2px solid #aaa; border-radius: 6px; overflow: hidden; margin-bottom: 1rem; background: #f0f0f0; }
+  .wf-segmented div { padding: 0.45rem 1rem; font-size: 0.85rem; color: #666; border-right: 2px solid #aaa; }
+  .wf-segmented div:last-child { border-right: 0; }
+  .wf-segmented .active { background: #ccc; color: #222; font-weight: 600; }
+
+  .wf-row { display: flex; gap: 1.25rem; align-items: flex-start; }
+  .wf-col { flex: 1; min-width: 0; }
+  .wf-card { background: #fafafa; border: 2px solid #ccc; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
+
+  .wf-form-stub { color: #888; font-size: 0.85rem; padding: 1rem; border: 2px dashed #ccc; border-radius: 4px; background: #f5f5f5; }
+
+  .wf-result-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.6rem; }
+  .wf-result-title { font-weight: 600; color: #333; font-size: 0.95rem; margin-bottom: 0.2rem; }
+  .wf-result-meta { font-size: 0.75rem; color: #888; }
+  .wf-result-meta div { margin-bottom: 0.15rem; }
+  .wf-tag { display: inline-block; padding: 0.1rem 0.45rem; background: #e0e0e0; border: 1px solid #bbb; border-radius: 3px; font-size: 0.72rem; color: #555; }
+  .wf-tag.error { background: #f0d6d6; border-color: #c08080; color: #803030; }
+
+  .wf-button { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; background: #ddd; border: 2px solid #aaa; border-radius: 4px; color: #444; font-size: 0.8rem; }
+  .wf-button.small { padding: 0.25rem 0.55rem; font-size: 0.75rem; }
+  .wf-button.soft { background: #ececec; }
+
+  .wf-callout { border: 2px solid #c08080; background: #f6e3e3; color: #6a2222; padding: 0.7rem 0.9rem; border-radius: 5px; font-size: 0.85rem; }
+  .wf-callout strong { color: #5b1c1c; }
+  .wf-callout .mono { font-size: 0.8rem; }
+
+  .wf-sql-block { background: #f3f3f3; border: 1px solid #ccc; border-radius: 4px; padding: 0.65rem 0.8rem; font-size: 0.82rem; color: #555; margin-bottom: 0.6rem; white-space: pre-wrap; }
+
+  .wf-annotation { font-size: 0.78rem; color: #999; font-style: italic; margin: 0.5rem 0; }
+</style>
+</head>
+<body>
+<div class="wf-container">
+  <header class="wf-header">
+    <div class="wf-logo">Pathling Admin</div>
+    <nav class="wf-nav">
+      <a href="#">Dashboard</a>
+      <a href="#">Resources</a>
+      <a href="#">Import</a>
+      <a href="#">Export</a>
+      <a href="#">Bulk submit</a>
+      <a href="#" class="active">SQL on FHIR</a>
+    </nav>
+  </header>
+
+  <main class="wf-main">
+    <h1 class="wf-page-title">SQL on FHIR</h1>
+
+    <div class="wf-segmented">
+      <div>View definition</div>
+      <div class="active">SQL query</div>
+    </div>
+
+    <div class="wf-row">
+      <div class="wf-col">
+        <div class="wf-card">
+          <div class="wf-form-stub">
+            <strong>SQL query form</strong> (collapsed - see <a href="./sql-query-inline.html">inline</a> wireframe).
+          </div>
+        </div>
+      </div>
+
+      <div class="wf-col">
+        <div class="wf-card">
+          <div class="wf-result-header">
+            <div>
+              <div class="wf-result-title">SQL query <span class="wf-tag error">failed</span></div>
+              <div class="wf-result-meta">
+                <div>Job ID: 9b1c...</div>
+                <div>Library ID: inline</div>
+                <div>5 May 2026, 14:25</div>
+              </div>
+            </div>
+            <button class="wf-button small soft">× Close</button>
+          </div>
+
+          <div class="wf-section">
+            <div style="font-size: 0.78rem; color: #777; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; margin-bottom: 0.3rem;">Submitted SQL</div>
+            <div class="wf-sql-block mono">DROP TABLE conditions</div>
+          </div>
+
+          <div class="wf-callout">
+            <strong>SQL contains a disallowed operation</strong><br>
+            <span style="font-size: 0.8rem;">HTTP 400 - <span class="mono">OperationOutcome</span> issue: <span class="mono">processing.business-rule</span></span><br>
+            <span class="mono" style="display:block; margin-top:0.4rem;">Only SELECT statements are allowed. DDL / DML statements (DROP, INSERT, UPDATE, DELETE, …) are rejected by the SQL validator.</span>
+          </div>
+
+          <p class="wf-annotation">Server-side validation errors are surfaced as a red Callout (Radix Themes red) with the message extracted from OperationOutcome. The submitted SQL is shown above the Callout so the user can correlate the failure with the input.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

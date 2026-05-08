@@ -349,6 +349,93 @@ export const mockViewRunNdjson =
 export const mockEmptyViewRunNdjson = "";
 
 // ============================================================================
+// SQL query (sql-query) Library mocks
+// ============================================================================
+
+/**
+ * Mock SQLQuery Library for use in `$sqlquery-run` tests.
+ *
+ * Carries Base64-encoded SQL ("SELECT 1"), references a single
+ * ViewDefinition and declares one runtime parameter.
+ */
+export const mockSqlQueryLibrary1 = {
+  resourceType: "Library",
+  id: "lib-sample",
+  status: "active",
+  title: "Sample SQL query",
+  type: {
+    coding: [
+      {
+        system: "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
+        code: "sql-query",
+      },
+    ],
+  },
+  content: [
+    {
+      contentType: "application/sql",
+      data: "U0VMRUNUIDE=",
+    },
+  ],
+  relatedArtifact: [
+    {
+      type: "depends-on",
+      label: "patients",
+      resource: "ViewDefinition/patient-demographics",
+    },
+  ],
+  parameter: [{ name: "patient_id", use: "in", type: "string" }],
+};
+
+/**
+ * Mock Bundle containing SQLQuery Library search results.
+ */
+export const mockSqlQueryLibraryBundle: Bundle = {
+  resourceType: "Bundle",
+  type: "searchset",
+  total: 1,
+  entry: [
+    {
+      resource: mockSqlQueryLibrary1 as Bundle["entry"] extends (infer T)[]
+        ? T extends { resource?: infer R }
+          ? R
+          : never
+        : never,
+    },
+  ],
+};
+
+/**
+ * Mock empty SQLQuery Library Bundle for testing the empty state.
+ */
+export const mockEmptySqlQueryLibraryBundle: Bundle = {
+  resourceType: "Bundle",
+  type: "searchset",
+  total: 0,
+  entry: [],
+};
+
+/**
+ * Mock CSV body for `$sqlquery-run` results.
+ */
+export const mockSqlQueryRunCsv =
+  "patient_id,given_name\npat-1,Alice\npat-2,Bob";
+
+/**
+ * Mock OperationOutcome body for `$sqlquery-run` validation failures.
+ */
+export const mockSqlQueryRunOperationOutcome = {
+  resourceType: "OperationOutcome",
+  issue: [
+    {
+      severity: "error",
+      code: "invalid",
+      diagnostics: "SQL contains a disallowed operation",
+    },
+  ],
+};
+
+// ============================================================================
 // Authentication Mocks
 // ============================================================================
 

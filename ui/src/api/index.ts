@@ -59,3 +59,17 @@ export {
   viewExportDownload,
 } from "./view";
 export type { ViewDefinition } from "./view";
+
+// SQL query operations.
+export {
+  sqlQueryRun,
+  listSqlQueryLibraries,
+  SQL_QUERY_LIBRARY_TYPE_SYSTEM,
+  SQL_QUERY_LIBRARY_TYPE_FILTER,
+  SQL_QUERY_LIBRARY_PROFILE,
+} from "./sqlQuery";
+export type {
+  SqlQueryRunOptions,
+  SqlQueryRunStoredOptions,
+  SqlQueryRunInlineOptions,
+} from "./sqlQuery";
