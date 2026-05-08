@@ -19,9 +19,11 @@ package au.csiro.pathling;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +36,10 @@ import org.springframework.http.ResponseEntity;
  */
 class FileControllerTest {
 
+  private static FileController newController(final Path tempDir) {
+    return new FileController(new JobDirectoryFileSystem(tempDir.toUri(), new Configuration()));
+  }
+
   /**
    * Tests that a legitimate file within the job directory is served successfully with the correct
    * response code and content disposition header.
@@ -45,7 +51,7 @@ class FileControllerTest {
     final Path file = jobsDir.resolve("Patient.0000.ndjson");
     Files.writeString(file, "test content");
 
-    final FileController controller = new FileController(tempDir.toUri().toString());
+    final FileController controller = newController(tempDir);
     final ResponseEntity<?> response = controller.serveFile("abc123", "Patient.0000.ndjson");
 
     assertThat(response.getStatusCode().value()).isEqualTo(200);
@@ -59,7 +65,7 @@ class FileControllerTest {
    */
   @Test
   void rejectsFilenameWithPathTraversal(@TempDir final Path tempDir) {
-    final FileController controller = new FileController(tempDir.toUri().toString());
+    final FileController controller = newController(tempDir);
     final ResponseEntity<?> response = controller.serveFile("abc123", "../../etc/passwd");
 
     assertThat(response.getStatusCode().value()).isEqualTo(404);
@@ -71,7 +77,7 @@ class FileControllerTest {
    */
   @Test
   void rejectsJobIdWithPathTraversal(@TempDir final Path tempDir) {
-    final FileController controller = new FileController(tempDir.toUri().toString());
+    final FileController controller = newController(tempDir);
     final ResponseEntity<?> response = controller.serveFile("../secret", "loot");
 
     assertThat(response.getStatusCode().value()).isEqualTo(404);
@@ -86,7 +92,7 @@ class FileControllerTest {
     final Path jobsDir = tempDir.resolve("jobs").resolve("abc123");
     Files.createDirectories(jobsDir.resolve("secret.0000.ndjson"));
 
-    final FileController controller = new FileController(tempDir.toUri().toString());
+    final FileController controller = newController(tempDir);
     final ResponseEntity<?> response = controller.serveFile("abc123", "secret.0000.ndjson");
 
     assertThat(response.getStatusCode().value()).isEqualTo(404);
@@ -98,7 +104,7 @@ class FileControllerTest {
     final Path jobsDir = tempDir.resolve("jobs").resolve("abc123");
     Files.createDirectories(jobsDir);
 
-    final FileController controller = new FileController(tempDir.toUri().toString());
+    final FileController controller = newController(tempDir);
     final ResponseEntity<?> response = controller.serveFile("abc123", "missing.ndjson");
 
     assertThat(response.getStatusCode().value()).isEqualTo(404);
@@ -128,7 +134,7 @@ class FileControllerTest {
       return;
     }
 
-    final FileController controller = new FileController(tempDir.toUri().toString());
+    final FileController controller = newController(tempDir);
     final ResponseEntity<?> response = controller.serveFile("abc123", "escape.ndjson");
 
     assertThat(response.getStatusCode().value()).isEqualTo(404);
@@ -156,7 +162,7 @@ class FileControllerTest {
       return;
     }
 
-    final FileController controller = new FileController(tempDir.toUri().toString());
+    final FileController controller = newController(tempDir);
     final ResponseEntity<?> response = controller.serveFile("abc123", "loot.txt");
 
     assertThat(response.getStatusCode().value()).isEqualTo(404);

@@ -72,8 +72,11 @@ class ExportOperationDownloadTest {
 
   @BeforeEach
   void setup() throws IOException {
+    final au.csiro.pathling.io.JobDirectoryFileSystem jobDirectoryFileSystem =
+        new au.csiro.pathling.io.JobDirectoryFileSystem(
+            tempDir.toUri(), new org.apache.hadoop.conf.Configuration());
     exportResultProvider =
-        new ExportResultProvider(exportResultRegistry, "file://" + tempDir, serverConfiguration);
+        new ExportResultProvider(exportResultRegistry, jobDirectoryFileSystem, serverConfiguration);
 
     // Create the jobs directory structure
     final Path jobsDir = tempDir.resolve("jobs");

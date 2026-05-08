@@ -23,6 +23,8 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
+import au.csiro.pathling.io.JobFile;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
@@ -30,17 +32,12 @@ import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -50,6 +47,7 @@ import org.springframework.stereotype.Component;
  * Provides the download endpoint for bulk export operation results.
  *
  * @author Felix Naumann
+ * @author John Grimes
  */
 @Component
 @Slf4j
@@ -57,7 +55,7 @@ public class ExportResultProvider {
 
   @Nonnull private final ExportResultRegistry exportResultRegistry;
 
-  @Nonnull private final String databasePath;
+  @Nonnull private final JobDirectoryFileSystem jobDirectoryFileSystem;
 
   @Nonnull private final ServerConfiguration configuration;
 
@@ -65,17 +63,17 @@ public class ExportResultProvider {
    * Creates a new instance of the export result provider.
    *
    * @param exportResultRegistry the registry for tracking export results
-   * @param databasePath the path to the database storage location
+   * @param jobDirectoryFileSystem the helper used to access the per-job directory under the
+   *     warehouse
    * @param configuration the server configuration for cache settings
    */
   @Autowired
   public ExportResultProvider(
       @Nonnull final ExportResultRegistry exportResultRegistry,
-      @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          final String databasePath,
+      @Nonnull final JobDirectoryFileSystem jobDirectoryFileSystem,
       @Nonnull final ServerConfiguration configuration) {
     this.exportResultRegistry = exportResultRegistry;
-    this.databasePath = databasePath;
+    this.jobDirectoryFileSystem = jobDirectoryFileSystem;
     this.configuration = configuration;
   }
 
@@ -118,55 +116,19 @@ public class ExportResultProvider {
               .formatted(currentUserId.orElse("null")));
     }
 
-    // Validate that the requested file stays within the job directory.
-    final java.nio.file.Path jobsDir;
-    final java.nio.file.Path jobDir;
-    final java.nio.file.Path resolvedFile;
-    try {
-      jobsDir =
-          java.nio.file.Path.of(URI.create(databasePath).getPath())
-              .resolve("jobs")
-              .normalize()
-              .toAbsolutePath();
-      jobDir = jobsDir.resolve(jobId).normalize().toAbsolutePath();
-      resolvedFile = jobDir.resolve(file).normalize().toAbsolutePath();
-    } catch (final java.nio.file.InvalidPathException e) {
-      throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
-    }
-
-    if (!jobDir.startsWith(jobsDir) || !resolvedFile.startsWith(jobDir)) {
-      throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
-    }
-
-    final Resource resource = new FileSystemResource(resolvedFile.toString());
-
-    if (!resource.exists() || !resource.isFile()) {
-      throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
-    }
-
-    // Resolve any symbolic links and re-check containment against the canonical jobs directory.
-    // This prevents a symlink within the jobs hierarchy from escaping to an arbitrary file.
-    final java.nio.file.Path realJobsDir;
-    final java.nio.file.Path realResolvedFile;
-    try {
-      realJobsDir = jobsDir.toRealPath();
-      realResolvedFile = resolvedFile.toRealPath();
-    } catch (final IOException e) {
-      throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
-    }
-    if (!realResolvedFile.startsWith(realJobsDir)) {
+    final Optional<JobFile> opened = jobDirectoryFileSystem.openForRead(jobId, file);
+    if (opened.isEmpty()) {
       throw new ResourceNotFoundError("File '%s' does not exist or is not a file.".formatted(file));
     }
 
     response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file + "\"");
     response.setContentType("application/octet-stream");
+    response.setContentLengthLong(opened.orElseThrow().getLength());
     response.setStatus(HttpServletResponse.SC_OK);
-    try (final InputStream inputStream = new FileInputStream(resource.getFile());
+    try (final FSDataInputStream inputStream = opened.orElseThrow().getStream();
         final OutputStream outputStream = response.getOutputStream()) {
-
       inputStream.transferTo(outputStream);
       outputStream.flush();
-
     } catch (final IOException e) {
       throw new InternalErrorException("Failed transferring file.", e);
     }

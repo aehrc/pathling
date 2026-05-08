@@ -17,13 +17,12 @@
 
 package au.csiro.pathling;
 
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
+import au.csiro.pathling.io.JobFile;
+import jakarta.annotation.Nonnull;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -35,22 +34,22 @@ import org.springframework.web.bind.annotation.RestController;
  * REST controller for serving job output files.
  *
  * @author Felix Naumann
+ * @author John Grimes
  */
 @RestController
 @Slf4j
 public class FileController {
 
-  private final String databasePath;
+  @Nonnull private final JobDirectoryFileSystem jobDirectoryFileSystem;
 
   /**
    * Creates a new FileController.
    *
-   * @param databasePath the path to the database directory
+   * @param jobDirectoryFileSystem the helper used to access the per-job directory under the
+   *     warehouse via the Hadoop {@link org.apache.hadoop.fs.FileSystem} API
    */
-  public FileController(
-      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          final String databasePath) {
-    this.databasePath = databasePath;
+  public FileController(@Nonnull final JobDirectoryFileSystem jobDirectoryFileSystem) {
+    this.jobDirectoryFileSystem = jobDirectoryFileSystem;
   }
 
   /**
@@ -64,40 +63,16 @@ public class FileController {
   public ResponseEntity<Resource> serveFile(
       @PathVariable("jobId") final String jobId, @PathVariable("filename") final String filename) {
 
-    try {
-      final Path basePath =
-          Paths.get(URI.create(databasePath).getPath()).toAbsolutePath().normalize();
-      final Path jobsDir = basePath.resolve("jobs").normalize().toAbsolutePath();
-      final Path jobDir = jobsDir.resolve(jobId).normalize().toAbsolutePath();
-      final Path requestedFile = jobDir.resolve(filename).normalize().toAbsolutePath();
-
-      // Validate lexically that the job directory remains within the jobs directory,
-      // and that the requested file remains within the job directory.
-      if (!jobDir.startsWith(jobsDir) || !requestedFile.startsWith(jobDir)) {
-        return ResponseEntity.notFound().build();
-      }
-
-      if (!Files.isRegularFile(requestedFile)) {
-        return ResponseEntity.notFound().build();
-      }
-
-      // Resolve any symbolic links and re-check containment against the canonical jobs directory.
-      // This prevents a symlink within the jobs hierarchy from escaping to an arbitrary file.
-      final Path realJobsDir = jobsDir.toRealPath();
-      final Path realRequestedFile = requestedFile.toRealPath();
-      if (!realRequestedFile.startsWith(realJobsDir)) {
-        return ResponseEntity.notFound().build();
-      }
-
-      final Resource resource = new FileSystemResource(realRequestedFile.toString());
-      return ResponseEntity.ok()
-          .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-          .body(resource);
-    } catch (final Exception e) {
-      // Fail closed on any unexpected error (e.g. malformed databasePath, invalid path
-      // characters). Log at debug to aid operator diagnosis without leaking detail to the client.
-      log.debug("Failed to serve file for jobId={}, filename={}", jobId, filename, e);
+    final Optional<JobFile> opened = jobDirectoryFileSystem.openForRead(jobId, filename);
+    if (opened.isEmpty()) {
       return ResponseEntity.notFound().build();
     }
+
+    final JobFile jobFile = opened.orElseThrow();
+    final Resource resource = new InputStreamResource(jobFile.getStream());
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+        .contentLength(jobFile.getLength())
+        .body(resource);
   }
 }
