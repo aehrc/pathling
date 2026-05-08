@@ -41,7 +41,10 @@ import org.springframework.stereotype.Component;
  * FhirView}s, performing the per-resource-type authorisation check along the way. Has no Spark
  * dependency; the FhirView is the parsed view configuration, not yet a {@code Dataset}.
  */
-@Component
+// Bean name is set explicitly to avoid colliding with Spring MVC's DispatcherServlet, which
+// auto-discovers any bean named "viewResolver" and casts it to
+// org.springframework.web.servlet.ViewResolver.
+@Component("sqlQueryViewResolver")
 public class ViewResolver {
 
   @Nonnull private final ReadExecutor readExecutor;
