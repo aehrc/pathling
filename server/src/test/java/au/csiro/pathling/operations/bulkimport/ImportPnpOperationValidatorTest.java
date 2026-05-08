@@ -26,6 +26,7 @@ import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ImportConfiguration;
 import au.csiro.pathling.config.PnpConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -39,6 +40,7 @@ import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UrlType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +48,10 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * Tests for ImportPnpOperationValidator.
@@ -114,6 +120,21 @@ class ImportPnpOperationValidatorTest {
   void setUp() {
     mockRequest = MockUtil.mockRequest("application/fhir+json", "respond-async", false);
     resetServerConfiguration();
+  }
+
+  /** Clears the security context after each test to avoid leaking authentication state. */
+  @AfterEach
+  void tearDown() {
+    SecurityContextHolder.clearContext();
+  }
+
+  /** Sets an authenticated principal in the security context for the duration of a test. */
+  private void setAuthenticatedPrincipal() {
+    final TestingAuthenticationToken authentication =
+        new TestingAuthenticationToken(
+            "test-user", "test-credentials", List.of(new SimpleGrantedAuthority("ROLE_USER")));
+    authentication.setAuthenticated(true);
+    SecurityContextHolder.getContext().setAuthentication(authentication);
   }
 
   /** Resets the server configuration to the default test state. */
@@ -1013,7 +1034,8 @@ class ImportPnpOperationValidatorTest {
   }
 
   /**
-   * Tests that when PNP credentials are configured and auth is enabled, the request is accepted.
+   * Tests that when PNP credentials are configured and auth is enabled and the request carries an
+   * authenticated principal, the request is accepted.
    */
   @Test
   void acceptsImportPnpWhenAuthEnabledAndPnpCredentialsPresent() {
@@ -1026,6 +1048,86 @@ class ImportPnpOperationValidatorTest {
     importConfig.setPnp(pnpConfig);
     serverConfiguration.setImport(importConfig);
     serverConfiguration.getAuth().setEnabled(true);
+    setAuthenticatedPrincipal();
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.com/fhir/$export"));
+
+    assertThatNoException()
+        .isThrownBy(() -> validator.validateParametersRequest(mockRequest, params));
+  }
+
+  /**
+   * Tests that when PNP credentials are configured and auth is enabled, but the security context
+   * has no authentication, the request is rejected. This guards against a misconfigured filter
+   * chain that allows unauthenticated requests through despite the configuration flag being set.
+   */
+  @Test
+  void rejectsImportPnpWhenAuthEnabledButNoAuthenticatedPrincipal() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setClientId("test-client");
+    pnpConfig.setClientSecret("test-secret");
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+    serverConfiguration.getAuth().setEnabled(true);
+    SecurityContextHolder.clearContext();
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.com/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("authenticated request is required");
+  }
+
+  /**
+   * Tests that when PNP credentials are configured and auth is enabled, an anonymous principal is
+   * treated as unauthenticated and rejected.
+   */
+  @Test
+  void rejectsImportPnpWhenAuthenticationIsAnonymous() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setClientId("test-client");
+    pnpConfig.setClientSecret("test-secret");
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+    serverConfiguration.getAuth().setEnabled(true);
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new AnonymousAuthenticationToken(
+                "key", "anonymousUser", List.of(new SimpleGrantedAuthority("ROLE_ANONYMOUS"))));
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.com/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("authenticated request is required");
+  }
+
+  /**
+   * Tests that when no PNP credentials are configured, the runtime principal check does not run,
+   * even if the security context is empty. The interlock only applies when credentials are present.
+   */
+  @Test
+  void skipsAuthenticationCheckWhenNoPnpCredentialsConfigured() {
+    serverConfiguration.getAuth().setEnabled(true);
+    SecurityContextHolder.clearContext();
 
     final Parameters params = new Parameters();
     params

@@ -22,6 +22,7 @@ import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.config.PnpConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.UrlAllowlist;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.operations.OperationValidation;
@@ -46,6 +47,9 @@ import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UrlType;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -344,14 +348,29 @@ public class ImportPnpOperationValidator {
   }
 
   /**
-   * Validates that authentication is enabled when PNP credentials are configured.
+   * Validates that authentication is enabled and the current request is authenticated when PNP
+   * credentials are configured. The configuration check guards against running with credentials
+   * while auth is switched off; the runtime principal check guards against the security filter
+   * chain being misconfigured (for example, a broken issuer URI) such that requests reach the
+   * operation without an authenticated principal.
    *
    * @throws InvalidUserInputError if auth is disabled but PNP credentials are present
+   * @throws AccessDeniedError if the current request has no authenticated principal
    */
   private void validateAuthConfiguration() {
-    if (pnpCredentialsConfigured() && !serverConfiguration.getAuth().isEnabled()) {
+    if (!pnpCredentialsConfigured()) {
+      return;
+    }
+    if (!serverConfiguration.getAuth().isEnabled()) {
       throw new InvalidUserInputError(
           "Authentication is required when PNP credentials are configured.");
+    }
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null
+        || !authentication.isAuthenticated()
+        || authentication instanceof AnonymousAuthenticationToken) {
+      throw new AccessDeniedError(
+          "An authenticated request is required when PNP credentials are configured.");
     }
   }
 
