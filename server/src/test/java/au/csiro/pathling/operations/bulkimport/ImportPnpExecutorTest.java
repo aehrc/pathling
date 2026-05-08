@@ -37,9 +37,11 @@ import au.csiro.pathling.library.io.SaveMode;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -53,6 +55,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
  */
 @ExtendWith(MockitoExtension.class)
 class ImportPnpExecutorTest {
+
+  /** Constructs an executor against a local file system rooted at the given staging directory. */
+  private static ImportPnpExecutor newExecutor(
+      final ServerConfiguration config,
+      final ImportExecutor importExecutor,
+      final java.nio.file.Path stagingDir) {
+    return new ImportPnpExecutor(
+        config, importExecutor, new Configuration(), "file://" + stagingDir.toAbsolutePath());
+  }
+
+  private static FileSystem localFileSystem(final java.nio.file.Path tempDir) throws IOException {
+    return FileSystem.get(tempDir.toUri(), new Configuration());
+  }
 
   // ========================================
   // Error message extraction tests
@@ -192,10 +207,11 @@ class ImportPnpExecutorTest {
    * file.
    */
   @Test
-  void rejectsDownloadedFileOutsideOutputDir(@TempDir final Path tempDir) throws IOException {
-    final Path outputDir = tempDir.resolve("export-output");
+  void rejectsDownloadedFileOutsideOutputDir(@TempDir final java.nio.file.Path tempDir)
+      throws IOException {
+    final java.nio.file.Path outputDir = tempDir.resolve("export-output");
     Files.createDirectories(outputDir);
-    final Path escapedFile = tempDir.resolve("escaped.ndjson");
+    final java.nio.file.Path escapedFile = tempDir.resolve("escaped.ndjson");
     Files.writeString(escapedFile, "escaped content");
 
     final BulkExportResult exportResult =
@@ -205,7 +221,11 @@ class ImportPnpExecutorTest {
                 BulkExportResult.FileResult.of(
                     URI.create("http://example.org/test.ndjson"), escapedFile.toUri(), 100L)));
 
-    assertThatThrownBy(() -> ImportPnpExecutor.validateDownloadResult(exportResult, outputDir))
+    final FileSystem fs = localFileSystem(tempDir);
+    final Path outputDirPath = new Path(outputDir.toUri());
+
+    assertThatThrownBy(
+            () -> ImportPnpExecutor.validateDownloadResult(exportResult, outputDirPath, fs))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("outside the download directory");
 
@@ -218,10 +238,11 @@ class ImportPnpExecutorTest {
    * validateDownloadResult completes without error.
    */
   @Test
-  void acceptsDownloadedFilesInsideOutputDir(@TempDir final Path tempDir) throws IOException {
-    final Path outputDir = tempDir.resolve("export-output");
+  void acceptsDownloadedFilesInsideOutputDir(@TempDir final java.nio.file.Path tempDir)
+      throws IOException {
+    final java.nio.file.Path outputDir = tempDir.resolve("export-output");
     Files.createDirectories(outputDir);
-    final Path validFile = outputDir.resolve("Patient.0000.ndjson");
+    final java.nio.file.Path validFile = outputDir.resolve("Patient.0000.ndjson");
     Files.writeString(validFile, "valid content");
 
     final BulkExportResult exportResult =
@@ -231,8 +252,47 @@ class ImportPnpExecutorTest {
                 BulkExportResult.FileResult.of(
                     URI.create("http://example.org/test.ndjson"), validFile.toUri(), 100L)));
 
+    final FileSystem fs = localFileSystem(tempDir);
+    final Path outputDirPath = new Path(outputDir.toUri());
+
     // Should not throw.
-    ImportPnpExecutor.validateDownloadResult(exportResult, outputDir);
+    ImportPnpExecutor.validateDownloadResult(exportResult, outputDirPath, fs);
+  }
+
+  /**
+   * Tests that a symlink whose target lies outside the output directory is rejected, even though
+   * the link itself is inside. This exercises the canonical (toRealPath) check applied for the
+   * local file:// scheme.
+   */
+  @Test
+  void rejectsSymlinkPointingOutsideOutputDir(@TempDir final java.nio.file.Path tempDir)
+      throws IOException {
+    final java.nio.file.Path outputDir = tempDir.resolve("export-output");
+    Files.createDirectories(outputDir);
+    final java.nio.file.Path outside = tempDir.resolve("outside.ndjson");
+    Files.writeString(outside, "secret");
+    final java.nio.file.Path link = outputDir.resolve("escape.ndjson");
+    try {
+      Files.createSymbolicLink(link, outside);
+    } catch (final UnsupportedOperationException | IOException e) {
+      // Symlinks unsupported on this filesystem; skip.
+      return;
+    }
+
+    final BulkExportResult exportResult =
+        BulkExportResult.of(
+            Instant.now(),
+            List.of(
+                BulkExportResult.FileResult.of(
+                    URI.create("http://example.org/test.ndjson"), link.toUri(), 100L)));
+
+    final FileSystem fs = localFileSystem(tempDir);
+    final Path outputDirPath = new Path(outputDir.toUri());
+
+    assertThatThrownBy(
+            () -> ImportPnpExecutor.validateDownloadResult(exportResult, outputDirPath, fs))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("outside the download directory");
   }
 
   /**
@@ -240,11 +300,11 @@ class ImportPnpExecutorTest {
    * files for valid downloads.
    */
   @Test
-  void downloadFilesReturnsOrganisedFilesForValidResult(@TempDir final Path tempDir)
+  void downloadFilesReturnsOrganisedFilesForValidResult(@TempDir final java.nio.file.Path tempDir)
       throws Exception {
-    final Path outputDir = tempDir.resolve("export-output");
+    final java.nio.file.Path outputDir = tempDir.resolve("export-output");
     Files.createDirectories(outputDir);
-    final Path patientFile = outputDir.resolve("Patient.0000.ndjson");
+    final java.nio.file.Path patientFile = outputDir.resolve("Patient.0000.ndjson");
     Files.writeString(patientFile, "{}");
 
     final BulkExportClient mockClient = mock(BulkExportClient.class);
@@ -259,12 +319,16 @@ class ImportPnpExecutorTest {
                         2L))));
 
     final ImportPnpExecutor executor =
-        new ImportPnpExecutor(new ServerConfiguration(), mock(ImportExecutor.class));
+        newExecutor(new ServerConfiguration(), mock(ImportExecutor.class), tempDir);
+    final FileSystem fs = localFileSystem(tempDir);
+    final Path outputDirPath = new Path(outputDir.toUri());
+
     final var result =
-        executor.downloadFiles(mockClient, "http://example.org/fhir", outputDir, ".ndjson");
+        executor.downloadFiles(mockClient, "http://example.org/fhir", outputDirPath, fs, ".ndjson");
 
     assertThat(result).containsKey("Patient");
-    assertThat(result.get("Patient")).containsExactly(patientFile.toUri().toString());
+    final String expectedUrl = fs.makeQualified(new Path(patientFile.toUri())).toUri().toString();
+    assertThat(result.get("Patient")).containsExactly(expectedUrl);
   }
 
   /**
@@ -272,7 +336,7 @@ class ImportPnpExecutorTest {
    * up in the finally block.
    */
   @Test
-  void cleansUpTempDirAfterPathEscape(@TempDir final Path tempDir) throws Exception {
+  void cleansUpTempDirAfterPathEscape(@TempDir final java.nio.file.Path tempDir) throws Exception {
     final ServerConfiguration config = new ServerConfiguration();
     final PnpConfiguration pnpConfig = new PnpConfiguration();
     pnpConfig.setDownloadLocation(tempDir.toAbsolutePath().toString());
@@ -281,9 +345,7 @@ class ImportPnpExecutorTest {
     importConfig.setAllowableSources(java.util.List.of());
     config.setImport(importConfig);
 
-    final Path outputDir = tempDir.resolve("pathling-pnp-import-testjob").resolve("export-output");
-    Files.createDirectories(outputDir);
-    final Path escapedFile = tempDir.resolve("escaped.ndjson");
+    final java.nio.file.Path escapedFile = tempDir.resolve("escaped.ndjson");
     Files.writeString(escapedFile, "escaped");
 
     final BulkExportClient mockClient = mock(BulkExportClient.class);
@@ -296,7 +358,7 @@ class ImportPnpExecutorTest {
                         URI.create("http://example.org/test.ndjson"), escapedFile.toUri(), 100L))));
 
     final ImportExecutor mockImportExecutor = mock(ImportExecutor.class);
-    final ImportPnpExecutor spyExecutor = spy(new ImportPnpExecutor(config, mockImportExecutor));
+    final ImportPnpExecutor spyExecutor = spy(newExecutor(config, mockImportExecutor, tempDir));
     doReturn(mockClient).when(spyExecutor).buildBulkExportClient(any(), any(), any());
 
     final ImportPnpRequest request =
@@ -325,11 +387,11 @@ class ImportPnpExecutorTest {
    * detects an escaped file.
    */
   @Test
-  void downloadFilesThrowsWhenResultContainsEscapedFile(@TempDir final Path tempDir)
+  void downloadFilesThrowsWhenResultContainsEscapedFile(@TempDir final java.nio.file.Path tempDir)
       throws Exception {
-    final Path outputDir = tempDir.resolve("export-output");
+    final java.nio.file.Path outputDir = tempDir.resolve("export-output");
     Files.createDirectories(outputDir);
-    final Path escapedFile = tempDir.resolve("escaped.ndjson");
+    final java.nio.file.Path escapedFile = tempDir.resolve("escaped.ndjson");
     Files.writeString(escapedFile, "escaped content");
 
     final BulkExportClient mockClient = mock(BulkExportClient.class);
@@ -342,13 +404,68 @@ class ImportPnpExecutorTest {
                         URI.create("http://example.org/test.ndjson"), escapedFile.toUri(), 100L))));
 
     final ImportPnpExecutor executor =
-        new ImportPnpExecutor(new ServerConfiguration(), mock(ImportExecutor.class));
+        newExecutor(new ServerConfiguration(), mock(ImportExecutor.class), tempDir);
+    final FileSystem fs = localFileSystem(tempDir);
+    final Path outputDirPath = new Path(outputDir.toUri());
 
     assertThatThrownBy(
             () ->
-                executor.downloadFiles(mockClient, "http://example.org/fhir", outputDir, ".ndjson"))
+                executor.downloadFiles(
+                    mockClient, "http://example.org/fhir", outputDirPath, fs, ".ndjson"))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("outside the download directory");
+  }
+
+  // ========================================
+  // Staging URI resolution tests
+  // ========================================
+
+  /**
+   * Tests that when no downloadLocation is configured, the staging URI defaults to a subdirectory
+   * of the warehouse so that non-local deployments do not require a separate persistent volume.
+   */
+  @Test
+  void defaultsStagingUriToWarehouseSubdirectory() {
+    final ImportPnpExecutor executor =
+        new ImportPnpExecutor(
+            new ServerConfiguration(),
+            mock(ImportExecutor.class),
+            new Configuration(),
+            "s3a://my-bucket/warehouse");
+    assertThat(executor.resolveStagingBaseUri(new PnpConfiguration()))
+        .isEqualTo("s3a://my-bucket/warehouse/staging/pnp");
+  }
+
+  /** Tests that a downloadLocation already carrying a scheme is used verbatim. */
+  @Test
+  void preservesSchemedDownloadLocation() {
+    final ImportPnpExecutor executor =
+        new ImportPnpExecutor(
+            new ServerConfiguration(),
+            mock(ImportExecutor.class),
+            new Configuration(),
+            "file:///irrelevant");
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setDownloadLocation("hdfs://nn/staging/pnp");
+    assertThat(executor.resolveStagingBaseUri(pnpConfig)).isEqualTo("hdfs://nn/staging/pnp");
+  }
+
+  /**
+   * Tests that a plain (schemeless) downloadLocation is interpreted as a local filesystem path.
+   * This preserves backward compatibility for operators with the old default.
+   */
+  @Test
+  void treatsSchemelessDownloadLocationAsLocal() {
+    final ImportPnpExecutor executor =
+        new ImportPnpExecutor(
+            new ServerConfiguration(),
+            mock(ImportExecutor.class),
+            new Configuration(),
+            "file:///irrelevant");
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setDownloadLocation("/usr/share/staging/pnp");
+    assertThat(executor.resolveStagingBaseUri(pnpConfig))
+        .isEqualTo("file:///usr/share/staging/pnp");
   }
 
   // ========================================

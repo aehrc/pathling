@@ -21,18 +21,15 @@ import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.fhir.export.BulkExportResult;
 import au.csiro.fhir.export.BulkExportResult.FileResult;
+import au.csiro.filestore.hdfs.HdfsFileStoreFactory;
 import au.csiro.pathling.config.PnpConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,10 +37,21 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
  * Encapsulates the execution of a ping and pull import operation.
+ *
+ * <p>All staging file IO is performed through the Hadoop {@link FileSystem} API so that the same
+ * code path works for {@code file://}, {@code s3a://}, {@code hdfs://} and any other
+ * Spark-supported scheme. fhir-bulk-java is configured with {@link HdfsFileStoreFactory} so that
+ * its own writes use the same scheme handlers.
  *
  * @author John Grimes
  * @see <a href="https://github.com/smart-on-fhir/bulk-import/blob/master/import-pnp.md">Bulk Data
@@ -53,25 +61,38 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ImportPnpExecutor {
 
-  // Pattern to match resource type with optional qualifier, e.g. "Patient.0000" -> "Patient"
+  // Pattern to match resource type with optional qualifier, e.g. "Patient.0000" -> "Patient".
   private static final Pattern BASE_NAME_WITH_QUALIFIER =
       Pattern.compile("^([A-Za-z]+)(\\.[^.]+)?$");
+
+  @Nonnull private static final String DEFAULT_STAGING_SUBDIRECTORY = "staging/pnp";
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
   @Nonnull private final ImportExecutor importExecutor;
+
+  @Nonnull private final Configuration hadoopConfiguration;
+
+  @Nonnull private final String databasePath;
 
   /**
    * Constructor for ImportPnpExecutor.
    *
    * @param serverConfiguration the server configuration
    * @param importExecutor the import executor for processing downloaded files
+   * @param hadoopConfiguration the Hadoop configuration used to access the staging file system
+   * @param databasePath the warehouse + database URL, used to derive the default staging location
    */
   public ImportPnpExecutor(
       @Nonnull final ServerConfiguration serverConfiguration,
-      @Nonnull final ImportExecutor importExecutor) {
+      @Nonnull final ImportExecutor importExecutor,
+      @Nonnull final Configuration hadoopConfiguration,
+      @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
+          final String databasePath) {
     this.serverConfiguration = serverConfiguration;
     this.importExecutor = importExecutor;
+    this.hadoopConfiguration = hadoopConfiguration;
+    this.databasePath = databasePath;
   }
 
   /**
@@ -89,57 +110,43 @@ public class ImportPnpExecutor {
         pnpRequest.exportType());
 
     Path tempDir = null;
+    FileSystem fs = null;
     try {
-      // Create directory for downloaded files with job ID for uniqueness.
-      // Use default configuration if not explicitly configured.
+      // Resolve effective configuration.
       PnpConfiguration pnpConfig =
           serverConfiguration.getImport() != null ? serverConfiguration.getImport().getPnp() : null;
       if (pnpConfig == null) {
         pnpConfig = new PnpConfiguration();
       }
 
-      final String downloadLocation =
-          pnpConfig.getDownloadLocation() != null
-              ? pnpConfig.getDownloadLocation()
-              : "/usr/share/staging/pnp";
-      final Path baseDir = Path.of(downloadLocation);
+      final String stagingBaseUri = resolveStagingBaseUri(pnpConfig);
+      final URI stagingBase = URI.create(stagingBaseUri);
+      fs = FileSystem.get(stagingBase, hadoopConfiguration);
 
-      // Ensure base directory exists.
-      if (!Files.exists(baseDir)) {
-        Files.createDirectories(baseDir);
-        log.debug("Created base download directory: {}", baseDir);
+      final Path baseDir = fs.makeQualified(new Path(stagingBase));
+      if (!fs.exists(baseDir) && !fs.mkdirs(baseDir)) {
+        throw new IOException("Failed to create base download directory: " + baseDir);
       }
 
       // Create job-specific subdirectory.
       final String tempDirName = "pathling-pnp-import-" + jobId;
-      tempDir = baseDir.resolve(tempDirName);
-      if (!Files.exists(tempDir)) {
-        Files.createDirectories(tempDir);
+      tempDir = new Path(baseDir, tempDirName);
+      if (!fs.exists(tempDir) && !fs.mkdirs(tempDir)) {
+        throw new IOException("Failed to create temporary directory: " + tempDir);
       }
       log.debug("Using download directory: {}", tempDir);
 
       // Clean any existing content in the temp directory (in case of retry).
-      try (final var paths = Files.walk(tempDir)) {
-        paths
-            .filter(Files::isRegularFile)
-            .forEach(
-                path -> {
-                  try {
-                    Files.delete(path);
-                  } catch (final IOException e) {
-                    log.warn("Failed to delete existing file in temp directory: {}", path, e);
-                  }
-                });
-      }
+      cleanRegularFiles(fs, tempDir);
 
       // Determine file extension from the import format.
       final String fileExtension = "." + pnpRequest.importFormat().getExtension();
 
       // Download files using fhir-bulk-java.
-      final Path outputDir = tempDir.resolve("export-output");
+      final Path outputDir = new Path(tempDir, "export-output");
       final BulkExportClient client = buildBulkExportClient(pnpRequest, pnpConfig, outputDir);
       final Map<String, Collection<String>> downloadedFiles =
-          downloadFiles(client, pnpRequest.exportUrl(), outputDir, fileExtension);
+          downloadFiles(client, pnpRequest.exportUrl(), outputDir, fs, fileExtension);
 
       // Create an ImportRequest from the downloaded files.
       final ImportRequest importRequest =
@@ -150,9 +157,10 @@ public class ImportPnpExecutor {
               pnpRequest.importFormat());
 
       // Execute the import using the existing ImportExecutor with custom allowable sources.
-      // This bypasses the configured allowableSources validation for locally staged files,
-      // which the server downloaded and trusts.
-      final List<String> pnpAllowableSources = List.of("file://" + tempDir.toAbsolutePath() + "/");
+      // This bypasses the configured allowableSources validation for the staging directory,
+      // which the server downloaded and trusts. The qualified URI ensures the prefix matches
+      // whatever scheme the staging file system uses.
+      final List<String> pnpAllowableSources = List.of(tempDir.toUri().toString() + "/");
       final ImportResponse response =
           importExecutor.execute(importRequest, jobId, pnpAllowableSources);
 
@@ -168,10 +176,38 @@ public class ImportPnpExecutor {
       throw new InvalidUserInputError("Ping and pull import failed: " + errorMessage, e);
     } finally {
       // Clean up temporary directory.
-      if (tempDir != null) {
-        cleanupTempDirectory(tempDir);
+      if (tempDir != null && fs != null) {
+        cleanupTempDirectory(fs, tempDir);
       }
     }
+  }
+
+  /**
+   * Resolves the base staging URI for the given configuration.
+   *
+   * <p>If the configured {@code downloadLocation} carries a scheme it is used verbatim. If it has
+   * no scheme it is interpreted as a local filesystem path and rendered as a {@code file://} URI.
+   * If unset, the default is a {@code staging/pnp} subdirectory of the warehouse, so non-local
+   * deployments do not require a separate persistent volume mount.
+   *
+   * @param pnpConfig the resolved Ping and Pull configuration
+   * @return the base staging URI as a Hadoop-compatible string
+   */
+  @Nonnull
+  String resolveStagingBaseUri(@Nonnull final PnpConfiguration pnpConfig) {
+    final String location = pnpConfig.getDownloadLocation();
+    if (location == null || location.isBlank()) {
+      return databasePath + "/" + DEFAULT_STAGING_SUBDIRECTORY;
+    }
+    try {
+      final URI uri = URI.create(location);
+      if (uri.getScheme() != null) {
+        return location;
+      }
+    } catch (final IllegalArgumentException ignored) {
+      // Fall through; treat as a local filesystem path.
+    }
+    return "file://" + location;
   }
 
   /**
@@ -182,8 +218,11 @@ public class ImportPnpExecutor {
    * @param outputDir the directory where downloaded files will be written
    * @return the configured bulk export client
    */
+  @Nonnull
   BulkExportClient buildBulkExportClient(
-      final ImportPnpRequest pnpRequest, final PnpConfiguration pnpConfig, final Path outputDir) {
+      @Nonnull final ImportPnpRequest pnpRequest,
+      @Nonnull final PnpConfiguration pnpConfig,
+      @Nonnull final Path outputDir) {
 
     // Static mode is not currently supported.
     if ("static".equals(pnpRequest.exportType())) {
@@ -218,13 +257,13 @@ public class ImportPnpExecutor {
       authConfig = authBuilder.build();
     }
 
-    // Build the client.
-    // Note: fhir-bulk-java creates the output directory, so we pass the parent and a subdirectory
-    // name.
+    // Build the client. The Hadoop FileStore factory routes writes through the same scheme
+    // handlers as the rest of the server, allowing s3a://, hdfs:// and other warehouses.
     final var clientBuilder =
         BulkExportClient.systemBuilder()
             .withFhirEndpointUrl(pnpRequest.exportUrl())
-            .withOutputDir(outputDir.toString());
+            .withOutputDir(outputDir.toString())
+            .withFileStoreFactory(new HdfsFileStoreFactory(hadoopConfiguration));
 
     if (authConfig != null) {
       clientBuilder.withAuthConfig(authConfig);
@@ -264,14 +303,16 @@ public class ImportPnpExecutor {
    * @param client the bulk export client
    * @param exportUrl the original export URL, used to verify manifest URL origin
    * @param outputDir the expected output directory for downloaded files
+   * @param fs the file system used to validate and walk the output directory
    * @param fileExtension the file extension to filter for
    * @return a map of resource type to file URLs
    */
   Map<String, Collection<String>> downloadFiles(
-      final BulkExportClient client,
-      final String exportUrl,
-      final Path outputDir,
-      final String fileExtension)
+      @Nonnull final BulkExportClient client,
+      @Nonnull final String exportUrl,
+      @Nonnull final Path outputDir,
+      @Nonnull final FileSystem fs,
+      @Nonnull final String fileExtension)
       throws Exception {
 
     // Execute the export and wait for completion.
@@ -284,10 +325,10 @@ public class ImportPnpExecutor {
     validateManifestUrls(exportUrl, exportResult);
 
     // Reject downloads that ended up outside the expected staging directory.
-    validateDownloadResult(exportResult, outputDir);
+    validateDownloadResult(exportResult, outputDir, fs);
 
     // Scan the output directory to find downloaded files and organise by resource type.
-    return organiseDownloadedFiles(outputDir, fileExtension);
+    return organiseDownloadedFiles(outputDir, fs, fileExtension);
   }
 
   /**
@@ -295,35 +336,63 @@ public class ImportPnpExecutor {
    * output directory. If any file is found outside the output directory, it is deleted and an
    * {@link InvalidUserInputError} is thrown.
    *
+   * <p>For local {@code file://} schemes the canonical (symlink-resolved) path is also checked, to
+   * defeat symlink escapes. For non-local schemes (S3, HDFS, etc.) symlinks do not exist or are not
+   * honoured by the underlying object store, so the lexical containment check is sufficient.
+   *
    * @param exportResult the result of the bulk export operation
    * @param outputDir the allowed output directory
+   * @param fs the file system used to qualify and delete paths
    */
   static void validateDownloadResult(
-      @Nonnull final BulkExportResult exportResult, @Nonnull final Path outputDir) {
+      @Nonnull final BulkExportResult exportResult,
+      @Nonnull final Path outputDir,
+      @Nonnull final FileSystem fs)
+      throws IOException {
 
     // This check relies on the bulk-export library reporting accurate destination URIs in the
     // result. If the library ever wrote to a path different from the one it reports, this guard
     // would not detect it; the root-cause fix belongs in fhir-bulk-java. This is a compensating
     // control that closes the documented PoC on the assumption that destinations are truthful.
-    final Path normalizedOutputDir = outputDir.toAbsolutePath().normalize();
+    final Path qualifiedOutputDir = fs.makeQualified(outputDir);
+    final String outputDirString = qualifiedOutputDir.toString();
+    final String outputPrefix =
+        outputDirString.endsWith("/") ? outputDirString : outputDirString + "/";
 
     for (final FileResult fileResult : exportResult.getResults()) {
       final URI destination = fileResult.getDestination();
-      if (!"file".equals(destination.getScheme())) {
-        throw new InvalidUserInputError(
-            "Downloaded file has unexpected URI scheme: " + destination);
-      }
-
-      final Path filePath = Paths.get(destination).toAbsolutePath().normalize();
-      if (!filePath.startsWith(normalizedOutputDir)) {
+      final Path qualifiedDest = fs.makeQualified(new Path(destination));
+      if (!qualifiedDest.toString().startsWith(outputPrefix)) {
         // Attempt to delete the escaped file to prevent it from being accessed later.
         try {
-          Files.deleteIfExists(filePath);
+          fs.delete(qualifiedDest, false);
         } catch (final IOException e) {
-          log.warn("Failed to delete escaped file: {}", filePath, e);
+          log.warn("Failed to delete escaped file: {}", qualifiedDest, e);
         }
         throw new InvalidUserInputError(
-            "Downloaded file is outside the download directory: " + filePath);
+            "Downloaded file is outside the download directory: " + qualifiedDest);
+      }
+
+      if ("file".equals(qualifiedDest.toUri().getScheme())) {
+        // Resolve symlinks before re-checking containment.
+        try {
+          final java.nio.file.Path realDest =
+              java.nio.file.Path.of(qualifiedDest.toUri()).toRealPath();
+          final java.nio.file.Path realOutputDir =
+              java.nio.file.Path.of(qualifiedOutputDir.toUri()).toRealPath();
+          if (!realDest.startsWith(realOutputDir)) {
+            try {
+              fs.delete(qualifiedDest, false);
+            } catch (final IOException e) {
+              log.warn("Failed to delete escaped file: {}", qualifiedDest, e);
+            }
+            throw new InvalidUserInputError(
+                "Downloaded file is outside the download directory: " + realDest);
+          }
+        } catch (final IOException e) {
+          throw new InvalidUserInputError(
+              "Could not validate downloaded file path: " + qualifiedDest, e);
+        }
       }
     }
   }
@@ -332,41 +401,41 @@ public class ImportPnpExecutor {
    * Scans the downloaded files and organises them by resource type extracted from filenames.
    *
    * @param downloadDir the directory containing downloaded files
+   * @param fs the file system to use for listing
    * @param fileExtension the file extension to filter for
    * @return a map of resource type to file URLs
    */
+  @Nonnull
   private Map<String, Collection<String>> organiseDownloadedFiles(
-      final Path downloadDir, final String fileExtension) throws IOException {
+      @Nonnull final Path downloadDir,
+      @Nonnull final FileSystem fs,
+      @Nonnull final String fileExtension)
+      throws IOException {
     final Map<String, Collection<String>> result = new HashMap<>();
 
-    // Walk through the download directory to find all files with the specified extension.
-    try (final var paths = Files.walk(downloadDir)) {
-      paths
-          .filter(Files::isRegularFile)
-          .filter(path -> path.toString().endsWith(fileExtension))
-          .forEach(
-              path -> {
-                // Get the full filename (with extension)
-                final String fileName = path.getFileName().toString();
-                // Extract the base name (without extension) for resource type matching
-                final String baseName = FilenameUtils.getBaseName(fileName);
+    final RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(downloadDir, true);
+    while (iterator.hasNext()) {
+      final LocatedFileStatus status = iterator.next();
+      if (!status.isFile()) {
+        continue;
+      }
+      final Path path = status.getPath();
+      final String fileName = path.getName();
+      if (!fileName.endsWith(fileExtension)) {
+        continue;
+      }
+      final String baseName = FilenameUtils.getBaseName(fileName);
 
-                // Extract resource type using the same pattern as FileSource
-                final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
-                if (matcher.matches()) {
-                  // Group 1 contains the resource type (e.g., "Patient" from "Patient.0000")
-                  final String resourceType = matcher.group(1);
-
-                  // Convert file path to file:// URL for ImportExecutor
-                  final String fileUrl = path.toUri().toString();
-
-                  // Add to map keyed by resource type
-                  result.computeIfAbsent(resourceType, k -> new ArrayList<>()).add(fileUrl);
-                  log.debug("Found {} file: {}", resourceType, fileName);
-                } else {
-                  log.warn("Could not extract resource type from filename: {}", fileName);
-                }
-              });
+      // Extract resource type using the same pattern as FileSource.
+      final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
+      if (matcher.matches()) {
+        final String resourceType = matcher.group(1);
+        final String fileUrl = fs.makeQualified(path).toUri().toString();
+        result.computeIfAbsent(resourceType, k -> new ArrayList<>()).add(fileUrl);
+        log.debug("Found {} file: {}", resourceType, fileName);
+      } else {
+        log.warn("Could not extract resource type from filename: {}", fileName);
+      }
     }
 
     if (result.isEmpty()) {
@@ -426,25 +495,38 @@ public class ImportPnpExecutor {
   }
 
   /**
+   * Removes regular files within the directory tree rooted at {@code dir}, leaving subdirectories
+   * intact. Used to clean stale content on retry.
+   */
+  private static void cleanRegularFiles(@Nonnull final FileSystem fs, @Nonnull final Path dir)
+      throws IOException {
+    if (!fs.exists(dir)) {
+      return;
+    }
+    final RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(dir, true);
+    while (iterator.hasNext()) {
+      final LocatedFileStatus status = iterator.next();
+      if (!status.isFile()) {
+        continue;
+      }
+      try {
+        fs.delete(status.getPath(), false);
+      } catch (final IOException e) {
+        log.warn("Failed to delete existing file in temp directory: {}", status.getPath(), e);
+      }
+    }
+  }
+
+  /**
    * Recursively deletes the temporary directory and all its contents.
    *
+   * @param fs the file system on which the temporary directory exists
    * @param tempDir the temporary directory to delete
    */
-  private void cleanupTempDirectory(final Path tempDir) {
+  private void cleanupTempDirectory(@Nonnull final FileSystem fs, @Nonnull final Path tempDir) {
     try {
-      if (Files.exists(tempDir)) {
-        try (final var paths = Files.walk(tempDir)) {
-          paths
-              .sorted(Comparator.reverseOrder())
-              .forEach(
-                  path -> {
-                    try {
-                      Files.delete(path);
-                    } catch (final IOException e) {
-                      log.warn("Failed to delete temporary file: {}", path, e);
-                    }
-                  });
-        }
+      if (fs.exists(tempDir)) {
+        fs.delete(tempDir, true);
         log.debug("Cleaned up temporary directory: {}", tempDir);
       }
     } catch (final IOException e) {
