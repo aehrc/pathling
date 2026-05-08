@@ -26,6 +26,7 @@ import pytest
 
 from fhirpath_lab_api.parameters import (
     JSON_VALUE_EXTENSION_URL,
+    build_grouped_response_parameters,
     build_operation_outcome,
     build_response_parameters,
     parse_input_parameters,
@@ -251,6 +252,248 @@ def test_build_response_includes_expected_return_type():
     return_type_parts = [p for p in params_part if p["name"] == "expectedReturnType"]
     assert len(return_type_parts) == 1
     assert return_type_parts[0]["valueString"] == "boolean"
+
+
+# ========== Trace rendering tests ==========
+
+
+def test_build_response_with_traces():
+    """Trace entries appear inside the result part with label and typed values."""
+    traces = [
+        {
+            "label": "myLabel",
+            "values": [
+                {"type": "string", "value": "id1"},
+                {"type": "string", "value": "id2"},
+            ],
+        },
+    ]
+    response = build_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="name.given.trace('myLabel')",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="string",
+        results=[{"type": "string", "value": "John"}],
+        traces=traces,
+    )
+
+    result_part = response["parameter"][1]
+    assert result_part["name"] == "result"
+
+    # First part is the result value, second is the trace.
+    assert result_part["part"][0] == {"name": "string", "valueString": "John"}
+
+    trace_part = result_part["part"][1]
+    assert trace_part["name"] == "trace"
+    assert trace_part["valueString"] == "myLabel"
+    assert trace_part["part"] == [
+        {"name": "string", "valueString": "id1"},
+        {"name": "string", "valueString": "id2"},
+    ]
+
+
+def test_build_response_with_empty_traces():
+    """No trace parts appear when the traces list is empty."""
+    response = build_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="active",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="boolean",
+        results=[{"type": "boolean", "value": True}],
+        traces=[],
+    )
+
+    result_part = response["parameter"][1]
+    trace_parts = [p for p in result_part["part"] if p["name"] == "trace"]
+    assert trace_parts == []
+
+
+def test_build_response_with_complex_trace_values():
+    """Complex trace values use the json-value extension."""
+    traces = [
+        {
+            "label": "names",
+            "values": [
+                {"type": "HumanName", "value": '{"family": "Smith"}'},
+            ],
+        },
+    ]
+    response = build_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="name.trace('names')",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="HumanName",
+        results=[],
+        traces=traces,
+    )
+
+    # Traces present even when results are empty.
+    result_part = response["parameter"][1]
+    assert result_part["name"] == "result"
+
+    trace_part = result_part["part"][0]
+    assert trace_part["name"] == "trace"
+    assert trace_part["valueString"] == "names"
+    value_part = trace_part["part"][0]
+    assert value_part["name"] == "HumanName"
+    assert value_part["extension"][0]["url"] == JSON_VALUE_EXTENSION_URL
+    assert "Smith" in value_part["extension"][0]["valueString"]
+
+
+# ========== Grouped response construction tests ==========
+
+
+def test_build_response_grouped_empty():
+    """A zero-element grouped response emits only the parameters part."""
+    response = build_grouped_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="given.first()",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="",
+        context="name",
+        grouped_results=[],
+    )
+
+    assert len(response["parameter"]) == 1
+    assert response["parameter"][0]["name"] == "parameters"
+
+
+def test_build_response_grouped_single_group():
+    """A single-group grouped response emits one labelled result part."""
+    response = build_grouped_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="given.first()",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="string",
+        context="name",
+        grouped_results=[
+            ("name[0]", [{"type": "string", "value": "John"}], []),
+        ],
+    )
+
+    assert len(response["parameter"]) == 2
+    result_part = response["parameter"][1]
+    assert result_part["name"] == "result"
+    assert result_part["valueString"] == "name[0]"
+    assert result_part["part"] == [{"name": "string", "valueString": "John"}]
+
+
+def test_build_response_grouped_multiple_groups():
+    """Multiple groups each produce their own labelled result part; per-group
+    traces do not bleed across groups."""
+    grouped_results = [
+        (
+            "name[0]",
+            [{"type": "string", "value": "John"}],
+            [{"label": "trc", "values": [{"type": "string", "value": "hit0"}]}],
+        ),
+        (
+            "name[1]",
+            [{"type": "string", "value": "Jane"}],
+            [{"label": "trc", "values": [{"type": "string", "value": "hit1"}]}],
+        ),
+    ]
+    response = build_grouped_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="given.first().trace('trc')",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="string",
+        context="name",
+        grouped_results=grouped_results,
+    )
+
+    result_parts = [p for p in response["parameter"] if p["name"] == "result"]
+    assert len(result_parts) == 2
+
+    assert result_parts[0]["valueString"] == "name[0]"
+    assert result_parts[0]["part"][0] == {"name": "string", "valueString": "John"}
+    trace0 = result_parts[0]["part"][1]
+    assert trace0["name"] == "trace"
+    assert trace0["valueString"] == "trc"
+    assert trace0["part"] == [{"name": "string", "valueString": "hit0"}]
+
+    assert result_parts[1]["valueString"] == "name[1]"
+    assert result_parts[1]["part"][0] == {"name": "string", "valueString": "Jane"}
+    trace1 = result_parts[1]["part"][1]
+    assert trace1["part"] == [{"name": "string", "valueString": "hit1"}]
+
+
+def test_build_response_grouped_complex_trace_value():
+    """Complex trace values inside a group use the json-value extension."""
+    grouped_results = [
+        (
+            "name[0]",
+            [],
+            [
+                {
+                    "label": "trc",
+                    "values": [
+                        {"type": "HumanName", "value": '{"family": "Chalmers"}'}
+                    ],
+                }
+            ],
+        ),
+    ]
+    response = build_grouped_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="trace('trc')",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="HumanName",
+        context="name",
+        grouped_results=grouped_results,
+    )
+
+    result_part = response["parameter"][1]
+    trace_part = result_part["part"][0]
+    assert trace_part["name"] == "trace"
+    value_part = trace_part["part"][0]
+    assert value_part["name"] == "HumanName"
+    assert value_part["extension"][0]["url"] == JSON_VALUE_EXTENSION_URL
+    assert "Chalmers" in value_part["extension"][0]["valueString"]
+
+
+def test_build_response_grouped_preserves_metadata():
+    """The parameters metadata part is present and correct in grouped responses."""
+    response = build_grouped_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="given.first()",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="string",
+        context="name",
+        grouped_results=[
+            ("name[0]", [{"type": "string", "value": "John"}], []),
+        ],
+    )
+
+    params_part = response["parameter"][0]
+    assert params_part["name"] == "parameters"
+    names = {p["name"]: p for p in params_part["part"]}
+    assert names["evaluator"]["valueString"] == "Pathling 9.6.0 (R4)"
+    assert names["expression"]["valueString"] == "given.first()"
+    assert names["context"]["valueString"] == "name"
+    assert names["expectedReturnType"]["valueString"] == "string"
+
+
+def test_build_response_grouped_empty_group_still_emitted():
+    """A group with no results and no traces still produces a labelled result
+    part with an empty part list, preserving index continuity."""
+    response = build_grouped_response_parameters(
+        evaluator_string="Pathling 9.6.0 (R4)",
+        expression="given.first()",
+        resource={"resourceType": "Patient", "id": "example"},
+        expected_return_type="string",
+        context="name",
+        grouped_results=[
+            ("name[0]", [{"type": "string", "value": "John"}], []),
+            ("name[1]", [], []),
+            ("name[2]", [{"type": "string", "value": "Peter"}], []),
+        ],
+    )
+
+    result_parts = [p for p in response["parameter"] if p["name"] == "result"]
+    labels = [p["valueString"] for p in result_parts]
+    assert labels == ["name[0]", "name[1]", "name[2]"]
+    assert result_parts[1]["part"] == []
 
 
 # ========== OperationOutcome construction tests ==========
