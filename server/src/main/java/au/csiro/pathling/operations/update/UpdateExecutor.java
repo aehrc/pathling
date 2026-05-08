@@ -21,16 +21,24 @@ import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.cache.CacheableDatabase;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.MapType;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,6 +61,8 @@ public class UpdateExecutor {
 
   @Nonnull private final CacheableDatabase cacheableDatabase;
 
+  private final boolean schemaAutoMerge;
+
   /**
    * Constructs a new UpdateExecutor.
    *
@@ -60,17 +70,21 @@ public class UpdateExecutor {
    * @param fhirEncoders encoders for converting FHIR resources to Spark Datasets
    * @param databasePath the path to the Delta database
    * @param cacheableDatabase the cacheable database for cache invalidation
+   * @param storageConfiguration the storage configuration, used to read the {@code schemaAutoMerge}
+   *     flag
    */
   public UpdateExecutor(
       @Nonnull final PathlingContext pathlingContext,
       @Nonnull final FhirEncoders fhirEncoders,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") @Nonnull
           final String databasePath,
-      @Nonnull final CacheableDatabase cacheableDatabase) {
+      @Nonnull final CacheableDatabase cacheableDatabase,
+      @Nonnull final StorageConfiguration storageConfiguration) {
     this.pathlingContext = pathlingContext;
     this.fhirEncoders = fhirEncoders;
     this.databasePath = databasePath;
     this.cacheableDatabase = cacheableDatabase;
+    this.schemaAutoMerge = storageConfiguration.getSchemaAutoMerge();
   }
 
   /**
@@ -129,8 +143,39 @@ public class UpdateExecutor {
     final String tablePath = getTablePath(resourceCode);
 
     if (deltaTableExists(spark, tablePath)) {
+      DeltaTable table = DeltaTable.forPath(spark, tablePath);
+
+      if (schemaAutoMerge && hasMissingFields(updates.schema(), table.toDF().schema())) {
+        // Delta's MERGE - even with spark.databricks.delta.schema.autoMerge.enabled=true - does
+        // not support adding new fields to nested structs inside arrays. This is the exact failure
+        // mode when the FHIR encoder gains new value-type columns (e.g. valueDecimal,
+        // valueDecimal_scale inside the extension element struct): the MERGE planner throws
+        // DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION because it cannot cast the richer source struct
+        // to the narrower target struct.
+        //
+        // A regular write with mergeSchema=true DOES support nested-struct field evolution.
+        // Writing limit(0) - zero rows, same schema as the encoder output - causes Delta to add
+        // any missing nested fields to the target table schema (with null for existing rows)
+        // without inserting any data. The MERGE that follows then sees compatible schemas and
+        // succeeds.
+        //
+        // hasMissingFields() compares only field names and structural shape, ignoring nullability
+        // and column metadata. This avoids paying the warmup transaction when the schemas are
+        // semantically equivalent but differ in metadata (e.g. parquet-side annotations).
+        //
+        // After the warmup write the table snapshot has changed, so we re-resolve DeltaTable
+        // before the MERGE.
+        updates
+            .limit(0)
+            .write()
+            .format("delta")
+            .mode(SaveMode.Append)
+            .option("mergeSchema", "true")
+            .save(tablePath);
+        table = DeltaTable.forPath(spark, tablePath);
+      }
+
       // Perform a merge operation on the existing table.
-      final DeltaTable table = DeltaTable.forPath(spark, tablePath);
       table
           .as("original")
           .merge(updates.as("updates"), "original.id = updates.id")
@@ -196,5 +241,44 @@ public class UpdateExecutor {
   private static boolean deltaTableExists(
       @Nonnull final SparkSession spark, @Nonnull final String tablePath) {
     return DeltaTable.isDeltaTable(spark, tablePath);
+  }
+
+  /**
+   * Returns true if the source schema contains any field path (recursing through structs, arrays
+   * and maps) that is absent from the target schema. Compares field names only - nullability and
+   * column metadata are ignored, so two schemas that differ only in those respects are treated as
+   * equivalent.
+   *
+   * @param source the candidate schema (typically the encoder output)
+   * @param target the existing table schema
+   * @return true if {@code source} introduces at least one field name not present in {@code target}
+   */
+  static boolean hasMissingFields(
+      @Nonnull final StructType source, @Nonnull final StructType target) {
+    final Set<String> sourcePaths = collectFieldPaths(source);
+    final Set<String> targetPaths = collectFieldPaths(target);
+    return !targetPaths.containsAll(sourcePaths);
+  }
+
+  @Nonnull
+  private static Set<String> collectFieldPaths(@Nonnull final StructType schema) {
+    final Set<String> paths = new HashSet<>();
+    collectFieldPaths(schema, "", paths);
+    return paths;
+  }
+
+  private static void collectFieldPaths(
+      @Nonnull final DataType type, @Nonnull final String prefix, @Nonnull final Set<String> out) {
+    if (type instanceof final StructType struct) {
+      for (final StructField field : struct.fields()) {
+        final String path = prefix.isEmpty() ? field.name() : prefix + "." + field.name();
+        out.add(path);
+        collectFieldPaths(field.dataType(), path, out);
+      }
+    } else if (type instanceof final ArrayType array) {
+      collectFieldPaths(array.elementType(), prefix, out);
+    } else if (type instanceof final MapType map) {
+      collectFieldPaths(map.valueType(), prefix, out);
+    }
   }
 }

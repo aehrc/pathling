@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.cache.CacheableDatabase;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
@@ -86,7 +87,8 @@ class DeleteProviderTest {
             pathlingContext,
             fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
-            cacheableDatabase);
+            cacheableDatabase,
+            new StorageConfiguration());
 
     // Create DeleteExecutor with the temp database path.
     final DeleteExecutor deleteExecutor =

@@ -217,6 +217,14 @@ limits are always applied; they cannot be disabled per request.
   threshold, the table will be repartitioned back to the default number of
   partitions. This prevents large numbers of small updates causing poor
   subsequent query performance.
+- `pathling.storage.schemaAutoMerge` - (default: `false`) When enabled, update
+  operations will automatically evolve the schema of an existing Delta table to
+  accommodate new fields produced by the FHIR encoder. This is useful when
+  upgrading to a Pathling version whose encoder emits additional columns or
+  nested struct fields that are not yet present in tables written by an earlier
+  version. There is a small additional write cost the first time a merge runs
+  against a table whose schema has drifted; in the steady state the cost is
+  negligible.
 
 Pathling will automatically detect AWS authentication details within the
 environment and use them to access S3 buckets. It uses a chain of authentication

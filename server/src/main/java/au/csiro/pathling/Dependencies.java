@@ -18,6 +18,7 @@
 package au.csiro.pathling;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.DynamicDeltaSource;
 import au.csiro.pathling.library.PathlingContext;
@@ -89,7 +90,8 @@ public class Dependencies {
         baseSource,
         pathlingContext.getSpark(),
         databaseLocation,
-        pathlingContext.getFhirEncoders());
+        pathlingContext.getFhirEncoders(),
+        serverConfiguration.getStorage());
   }
 
   @Bean
@@ -97,5 +99,18 @@ public class Dependencies {
   @Nonnull
   static FhirEncoders fhirEncoders(@Nonnull final PathlingContext pathlingContext) {
     return pathlingContext.getFhirEncoders();
+  }
+
+  /**
+   * Exposes the nested {@link StorageConfiguration} as a top-level bean so that components which
+   * only depend on storage settings can inject it directly without having to pull in the whole
+   * {@link ServerConfiguration} object.
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  @Nonnull
+  static StorageConfiguration storageConfiguration(
+      @Nonnull final ServerConfiguration serverConfiguration) {
+    return serverConfiguration.getStorage();
   }
 }

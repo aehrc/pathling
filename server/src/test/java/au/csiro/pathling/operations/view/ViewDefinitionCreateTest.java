@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.view;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.cache.CacheableDatabase;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
@@ -79,13 +80,14 @@ class ViewDefinitionCreateTest {
     // Create a temporary directory for the Delta Lake database.
     tempDatabasePath = Files.createTempDirectory("viewdefinition-create-test-");
 
-    // Create UpdateExecutor with the temp database path.
+    // Create UpdateExecutor with the temp database path (schema auto-merge disabled by default).
     final UpdateExecutor updateExecutor =
         new UpdateExecutor(
             pathlingContext,
             fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
-            cacheableDatabase);
+            cacheableDatabase,
+            new StorageConfiguration());
 
     // Create the CreateProvider for ViewDefinition.
     createProvider =
