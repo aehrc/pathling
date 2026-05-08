@@ -131,7 +131,10 @@ class BulkSubmitExecutorTest {
     when(resultBuilder.buildStatusManifest(any(), anyString(), anyString()))
         .thenReturn(new Parameters());
 
-    final String databasePath = "file://" + tempDir.toAbsolutePath();
+    final au.csiro.pathling.io.JobDirectoryFileSystem jobDirectoryFileSystem =
+        new au.csiro.pathling.io.JobDirectoryFileSystem(
+            java.net.URI.create("file://" + tempDir.toAbsolutePath()),
+            new org.apache.hadoop.conf.Configuration());
     executor =
         new BulkSubmitExecutor(
             importExecutor,
@@ -141,7 +144,7 @@ class BulkSubmitExecutorTest {
             resultBuilder,
             jobRegistry,
             sparkSession,
-            databasePath,
+            jobDirectoryFileSystem,
             fhirContext,
             authProvider,
             true);
@@ -192,7 +195,10 @@ class BulkSubmitExecutorTest {
   @DisplayName("downloadManifestJob skips job registration when JobRegistry null")
   void downloadManifestJobSkipsJobRegistrationWhenJobRegistryNull() {
     // Given: executor without JobRegistry.
-    final String databasePath = "file://" + tempDir.toAbsolutePath();
+    final au.csiro.pathling.io.JobDirectoryFileSystem jobDirectoryFileSystem =
+        new au.csiro.pathling.io.JobDirectoryFileSystem(
+            java.net.URI.create("file://" + tempDir.toAbsolutePath()),
+            new org.apache.hadoop.conf.Configuration());
     final BulkSubmitExecutor executorNoAsync =
         new BulkSubmitExecutor(
             importExecutor,
@@ -202,7 +208,7 @@ class BulkSubmitExecutorTest {
             resultBuilder,
             null, // no JobRegistry
             sparkSession,
-            databasePath,
+            jobDirectoryFileSystem,
             fhirContext,
             authProvider,
             true);
@@ -231,7 +237,10 @@ class BulkSubmitExecutorTest {
   @DisplayName("downloadManifestJob skips job registration when SparkSession null")
   void downloadManifestJobSkipsJobRegistrationWhenSparkSessionNull() {
     // Given: executor without SparkSession.
-    final String databasePath = "file://" + tempDir.toAbsolutePath();
+    final au.csiro.pathling.io.JobDirectoryFileSystem jobDirectoryFileSystem =
+        new au.csiro.pathling.io.JobDirectoryFileSystem(
+            java.net.URI.create("file://" + tempDir.toAbsolutePath()),
+            new org.apache.hadoop.conf.Configuration());
     final BulkSubmitExecutor executorNoSpark =
         new BulkSubmitExecutor(
             importExecutor,
@@ -241,7 +250,7 @@ class BulkSubmitExecutorTest {
             resultBuilder,
             jobRegistry,
             null, // no SparkSession
-            databasePath,
+            jobDirectoryFileSystem,
             fhirContext,
             authProvider,
             true);
@@ -868,7 +877,10 @@ class BulkSubmitExecutorTest {
   @DisplayName("abortSubmission handles null JobRegistry")
   void abortSubmissionHandlesNullJobRegistry() {
     // Given: executor without JobRegistry.
-    final String databasePath = "file://" + tempDir.toAbsolutePath();
+    final au.csiro.pathling.io.JobDirectoryFileSystem jobDirectoryFileSystem =
+        new au.csiro.pathling.io.JobDirectoryFileSystem(
+            java.net.URI.create("file://" + tempDir.toAbsolutePath()),
+            new org.apache.hadoop.conf.Configuration());
     final BulkSubmitExecutor executorNoAsync =
         new BulkSubmitExecutor(
             importExecutor,
@@ -878,7 +890,7 @@ class BulkSubmitExecutorTest {
             resultBuilder,
             null, // no JobRegistry
             sparkSession,
-            databasePath,
+            jobDirectoryFileSystem,
             fhirContext,
             authProvider,
             true);
