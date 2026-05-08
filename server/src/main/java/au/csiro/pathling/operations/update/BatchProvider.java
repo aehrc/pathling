@@ -161,13 +161,17 @@ public class BatchProvider {
     checkUserInput(CREATE_URL.matcher(request.getUrl()).matches(), urlErrorMessage);
 
     final String resourceTypeCode = request.getUrl();
-    final ResourceType resourceType =
-        validateResourceTypeForCreate(entry, resourceTypeCode, urlErrorMessage);
 
+    // Authority must be checked before any further validation, so that a caller without write
+    // authority for the resource type cannot distinguish between supported and unsupported types
+    // (or between matching and mismatching body types) by the resulting error.
     if (configuration.getAuth().isEnabled()) {
       checkHasAuthority(
           PathlingAuthority.resourceAccess(ResourceAccess.AccessType.WRITE, resourceTypeCode));
     }
+
+    final ResourceType resourceType =
+        validateResourceTypeForCreate(entry, resourceTypeCode, urlErrorMessage);
 
     // Generate a new UUID, ignoring any client-provided ID.
     final String generatedId = UUID.randomUUID().toString();
@@ -193,13 +197,17 @@ public class BatchProvider {
     checkUserInput(urlComponents.size() == 2, urlErrorMessage);
     final String resourceTypeCode = urlComponents.get(0);
     final String urlId = urlComponents.get(1);
-    final ResourceType resourceType =
-        validateResourceType(entry, resourceTypeCode, urlErrorMessage);
 
+    // Authority must be checked before any further validation, so that a caller without write
+    // authority for the resource type cannot distinguish between supported and unsupported types
+    // (or between matching and mismatching body types) by the resulting error.
     if (configuration.getAuth().isEnabled()) {
       checkHasAuthority(
           PathlingAuthority.resourceAccess(ResourceAccess.AccessType.WRITE, resourceTypeCode));
     }
+
+    final ResourceType resourceType =
+        validateResourceType(entry, resourceTypeCode, urlErrorMessage);
 
     final IBaseResource preparedResource = prepareResourceForUpdate(resource, urlId);
     addToResourceMap(resourcesForUpdate, resourceType, preparedResource);
@@ -218,13 +226,17 @@ public class BatchProvider {
     checkUserInput(urlComponents.size() == 2, urlErrorMessage);
     final String resourceTypeCode = urlComponents.get(0);
     final String resourceId = urlComponents.get(1);
-    validateResourceTypeForDelete(resourceTypeCode, urlErrorMessage);
 
+    // Authority must be checked before any further validation, so that a caller without delete or
+    // write authority cannot distinguish between supported and unsupported resource types by the
+    // resulting error.
     if (configuration.getAuth().isEnabled()) {
       checkHasAuthority(PathlingAuthority.operationAccess("delete"));
       checkHasAuthority(
           PathlingAuthority.resourceAccess(ResourceAccess.AccessType.WRITE, resourceTypeCode));
     }
+
+    validateResourceTypeForDelete(resourceTypeCode, urlErrorMessage);
 
     log.debug("Batch deleting {} with ID: {}", resourceTypeCode, resourceId);
     deleteExecutor.delete(resourceTypeCode, resourceId);

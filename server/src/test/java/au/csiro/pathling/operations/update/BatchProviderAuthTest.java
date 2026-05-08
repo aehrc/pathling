@@ -24,12 +24,14 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.operations.delete.DeleteExecutor;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryRequestComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleType;
 import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
+import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -152,6 +154,103 @@ class BatchProviderAuthTest {
     assertThatThrownBy(() -> batchProvider.batch(bundle))
         .isInstanceOf(AccessDeniedError.class)
         .hasMessageContaining("pathling:write:Patient");
+  }
+
+  // The following tests pin the ordering between the per-resource authority check and the resource
+  // type validation. The authority check must run first so that a caller without write authority
+  // cannot use differential errors to enumerate the supported resource types or probe for a
+  // type/body mismatch.
+
+  @Test
+  void batchCreateThrowsAccessDeniedForUnsupportedResourceTypeWhenUnauthorised() {
+    authConfig.setEnabled(true);
+    setSecurityContext("pathling:batch", "pathling:update");
+    final Bundle bundle = new Bundle();
+    bundle.setType(BundleType.BATCH);
+    final BundleEntryComponent entry = bundle.addEntry();
+    entry.setResource(new Patient());
+    final BundleEntryRequestComponent request = new BundleEntryRequestComponent();
+    request.setMethod(HTTPVerb.POST);
+    request.setUrl("Foobar");
+    entry.setRequest(request);
+
+    assertThatThrownBy(() -> batchProvider.batch(bundle))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("pathling:write:Foobar");
+  }
+
+  @Test
+  void batchCreateThrowsAccessDeniedForBodyTypeMismatchWhenUnauthorised() {
+    authConfig.setEnabled(true);
+    setSecurityContext("pathling:batch", "pathling:update");
+    final Bundle bundle = new Bundle();
+    bundle.setType(BundleType.BATCH);
+    final BundleEntryComponent entry = bundle.addEntry();
+    entry.setResource(new Observation());
+    final BundleEntryRequestComponent request = new BundleEntryRequestComponent();
+    request.setMethod(HTTPVerb.POST);
+    request.setUrl("Patient");
+    entry.setRequest(request);
+
+    assertThatThrownBy(() -> batchProvider.batch(bundle))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("pathling:write:Patient");
+  }
+
+  @Test
+  void batchUpdateThrowsAccessDeniedForUnsupportedResourceTypeWhenUnauthorised() {
+    authConfig.setEnabled(true);
+    setSecurityContext("pathling:batch", "pathling:update");
+    final Bundle bundle = new Bundle();
+    bundle.setType(BundleType.BATCH);
+    final BundleEntryComponent entry = bundle.addEntry();
+    final Patient patient = new Patient();
+    patient.setId("patient-1");
+    entry.setResource(patient);
+    final BundleEntryRequestComponent request = new BundleEntryRequestComponent();
+    request.setMethod(HTTPVerb.PUT);
+    request.setUrl("Foobar/x");
+    entry.setRequest(request);
+
+    assertThatThrownBy(() -> batchProvider.batch(bundle))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("pathling:write:Foobar");
+  }
+
+  @Test
+  void batchDeleteThrowsAccessDeniedForUnsupportedResourceTypeWhenUnauthorised() {
+    authConfig.setEnabled(true);
+    setSecurityContext("pathling:batch", "pathling:delete");
+    final Bundle bundle = new Bundle();
+    bundle.setType(BundleType.BATCH);
+    final BundleEntryComponent entry = bundle.addEntry();
+    final BundleEntryRequestComponent request = new BundleEntryRequestComponent();
+    request.setMethod(HTTPVerb.DELETE);
+    request.setUrl("Foobar/x");
+    entry.setRequest(request);
+
+    assertThatThrownBy(() -> batchProvider.batch(bundle))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("pathling:write:Foobar");
+  }
+
+  // Authorised callers must still receive an InvalidUserInputError for unsupported resource types,
+  // so that the type validation continues to work after the authority check has passed.
+
+  @Test
+  void batchCreateThrowsInvalidUserInputForUnsupportedResourceTypeWhenAuthorised() {
+    authConfig.setEnabled(true);
+    setSecurityContext("pathling:batch", "pathling:write:Foobar", "pathling:update");
+    final Bundle bundle = new Bundle();
+    bundle.setType(BundleType.BATCH);
+    final BundleEntryComponent entry = bundle.addEntry();
+    entry.setResource(new Patient());
+    final BundleEntryRequestComponent request = new BundleEntryRequestComponent();
+    request.setMethod(HTTPVerb.POST);
+    request.setUrl("Foobar");
+    entry.setRequest(request);
+
+    assertThatThrownBy(() -> batchProvider.batch(bundle)).isInstanceOf(InvalidUserInputError.class);
   }
 
   private Bundle createBundleWithCreateEntry() {
