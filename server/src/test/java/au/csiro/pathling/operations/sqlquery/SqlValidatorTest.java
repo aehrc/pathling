@@ -386,6 +386,41 @@ class SqlValidatorTest {
   }
 
   // -------------------------------------------------------------------------
+  // Spark normalises identifiers to lowercase when resolving SQL references
+  // against the catalog (default spark.sql.caseSensitive=false), so the
+  // SubqueryAlias produced by ResolveRelations carries a lowercased name even
+  // when the temp view was registered with mixed case. The trust window must
+  // be matched case-insensitively, otherwise every LogicalRelation reachable
+  // through a request-scoped temp view registered with a mixed-case request
+  // id (HAPI's default) would be rejected.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void permitsLogicalRelationUnderTempViewRegisteredWithMixedCaseName(
+      @org.junit.jupiter.api.io.TempDir final java.nio.file.Path tmp) {
+    // A parquet file produces a LogicalRelation in the analyzed plan, so the
+    // trust window must extend through the SubqueryAlias to allow the read.
+    final String parquetPath = tmp.resolve("data").toString();
+    sparkSession.range(3).toDF("id").write().mode("overwrite").parquet(parquetPath);
+
+    // Mixed-case name mirrors what ViewRegistrationService produces from a
+    // HAPI request id like "2JmwEs1TyviJBzyP".
+    final String mixedCaseName = "sqlquery_2JmwEs1TyviJBzyP_patients";
+    sparkSession.read().parquet(parquetPath).createOrReplaceTempView(mixedCaseName);
+
+    try {
+      // Spark accepts either case in user SQL and resolves to the same temp view; the
+      // SubqueryAlias name in the analyzed plan is the lowercased form.
+      final org.apache.spark.sql.catalyst.plans.logical.LogicalPlan analyzed =
+          sparkSession.sql("SELECT id FROM " + mixedCaseName).queryExecution().analyzed();
+      assertThatCode(() -> sqlValidator.validateAnalyzed(analyzed, Set.of(mixedCaseName)))
+          .doesNotThrowAnyException();
+    } finally {
+      sparkSession.catalog().dropTempView(mixedCaseName);
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Table-valued function (TVF) rejection. Built-in TVFs in the FROM clause
   // (range, explode, json_tuple, ...) are an open denial-of-service lane:
   // `SELECT count(*) FROM range(0, 1e6) a CROSS JOIN range(0, 1e6) b` is a

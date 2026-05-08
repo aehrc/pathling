@@ -435,13 +435,29 @@ public class SqlValidator {
     }
   }
 
-  /** Returns true when the given node is a SubqueryAlias whose name is a registered temp view. */
+  /**
+   * Returns true when the given node is a SubqueryAlias whose name is a registered temp view.
+   *
+   * <p>The comparison is case-insensitive because Spark normalises identifiers when resolving SQL
+   * references against the catalog (default {@code spark.sql.caseSensitive=false}). The {@link
+   * SubqueryAlias} synthesised by {@code ResolveRelations} therefore carries a lowercased name even
+   * when the temp view was registered with mixed case (HAPI's request ids, used to scope the temp
+   * view names, are mixed-case alphanumerics). Without this case-insensitive match, every {@link
+   * LogicalRelation} reachable through a request-scoped temp view would be rejected even though it
+   * is the legitimate backing for a registered view.
+   */
   private static boolean isTrustedAlias(
       @Nonnull final LogicalPlan plan, @Nonnull final Set<String> registeredViewNames) {
     if (!(plan instanceof final SubqueryAlias alias)) {
       return false;
     }
-    return registeredViewNames.contains(alias.identifier().name());
+    final String aliasName = alias.identifier().name();
+    for (final String registered : registeredViewNames) {
+      if (registered.equalsIgnoreCase(aliasName)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Recursively validates an expression tree (strict mode). */
