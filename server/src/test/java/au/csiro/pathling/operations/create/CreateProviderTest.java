@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.cache.CacheableDatabase;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.PathlingContext;
@@ -88,7 +89,7 @@ class CreateProviderTest {
             fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
             cacheableDatabase,
-            false);
+            new StorageConfiguration());
 
     // Create the CreateProvider.
     createProvider = new CreateProvider(updateExecutor, fhirContext, Patient.class);

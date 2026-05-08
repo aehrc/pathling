@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.cache.CacheableDatabase;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
@@ -155,12 +156,14 @@ class UpdateExecutorSchemaAutoMergeTest {
 
   @Nonnull
   private UpdateExecutor newExecutor(final boolean schemaAutoMerge) {
+    final StorageConfiguration storageConfiguration = new StorageConfiguration();
+    storageConfiguration.setSchemaAutoMerge(schemaAutoMerge);
     return new UpdateExecutor(
         pathlingContext,
         fhirEncoders,
         tempDatabasePath.toAbsolutePath().toString(),
         cacheableDatabase,
-        schemaAutoMerge);
+        storageConfiguration);
   }
 
   /**

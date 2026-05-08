@@ -85,7 +85,9 @@ class DynamicDeltaSourceTest {
     final Dataset<Row> result = source.read("Patient");
 
     try {
-      assertThat(result.storageLevel()).isNotEqualTo(StorageLevel.NONE());
+      // Dataset.cache() applies MEMORY_AND_DISK; assert on the exact level rather than just
+      // "anything but NONE" so accidental changes to the persistence level are caught.
+      assertThat(result.storageLevel()).isEqualTo(StorageLevel.MEMORY_AND_DISK());
     } finally {
       result.unpersist();
     }

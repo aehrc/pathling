@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.view;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.cache.CacheableDatabase;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
@@ -84,7 +85,7 @@ class ViewDefinitionCreateTest {
             fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
             cacheableDatabase,
-            false);
+            new StorageConfiguration());
 
     // Create the CreateProvider for ViewDefinition.
     createProvider = new CreateProvider(updateExecutor, fhirContext, ViewDefinitionResource.class);
@@ -185,59 +186,6 @@ class ViewDefinitionCreateTest {
     final String tablePath = tempDatabasePath.resolve("ViewDefinition.parquet").toString();
     final Dataset<Row> dataset = sparkSession.read().format("delta").load(tablePath);
     assertThat(dataset.count()).isEqualTo(2);
-  }
-
-  @Test
-  void createViewDefinitionSucceedsWhenDeltaTableHasOlderSchema() {
-    // Given: a provider with schema auto-merge enabled.
-    final UpdateExecutor autoMergeExecutor =
-        new UpdateExecutor(
-            pathlingContext,
-            fhirEncoders,
-            tempDatabasePath.toAbsolutePath().toString(),
-            cacheableDatabase,
-            true);
-    final CreateProvider autoMergeProvider =
-        new CreateProvider(autoMergeExecutor, fhirContext, ViewDefinitionResource.class);
-
-    // Create a ViewDefinition, establishing a Delta table.
-    final ViewDefinitionResource viewDef1 = createViewDefinition(null, "view_1", "Patient");
-    autoMergeProvider.create(viewDef1);
-
-    final String tablePath = tempDatabasePath.resolve("ViewDefinition.parquet").toString();
-    assertThat(DeltaTable.isDeltaTable(sparkSession, tablePath)).isTrue();
-
-    // Simulate an older schema by dropping a known non-key column from the existing Delta
-    // table. This reproduces the real-world scenario where the encoder adds new fields not
-    // present in the persisted table. Use a stable, named column rather than a positional
-    // pick so the test does not depend on Spark column ordering or accidentally drop "id".
-    final Dataset<Row> original = sparkSession.read().format("delta").load(tablePath);
-    final String columnToDrop = "name";
-    assertThat(columnToDrop).isNotEqualTo("id");
-    assertThat(java.util.Arrays.asList(original.columns())).contains(columnToDrop);
-    final Dataset<Row> narrowed = original.drop(columnToDrop);
-    narrowed
-        .write()
-        .format("delta")
-        .mode("overwrite")
-        .option("overwriteSchema", "true")
-        .save(tablePath);
-
-    // Verify the column was actually dropped.
-    final Dataset<Row> reloaded = sparkSession.read().format("delta").load(tablePath);
-    assertThat(reloaded.schema().fieldNames()).doesNotContain(columnToDrop);
-
-    // When: creating another ViewDefinition (which uses the full current schema).
-    final ViewDefinitionResource viewDef2 = createViewDefinition(null, "view_2", "Observation");
-    final MethodOutcome outcome2 = autoMergeProvider.create(viewDef2);
-
-    // Then: it should succeed despite the schema mismatch.
-    assertThat(outcome2.getId()).isNotNull();
-    assertThat(outcome2.getCreated()).isTrue();
-
-    // And both rows should be present.
-    final Dataset<Row> result = sparkSession.read().format("delta").load(tablePath);
-    assertThat(result.count()).isEqualTo(2);
   }
 
   @Test
