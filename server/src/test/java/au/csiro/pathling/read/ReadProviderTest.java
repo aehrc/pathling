@@ -62,6 +62,8 @@ class ReadProviderTest {
 
   @Autowired private FhirContext fhirContext;
 
+  @Autowired private au.csiro.pathling.config.ServerConfiguration configuration;
+
   private CustomObjectDataSource dataSource;
   private ReadProvider readProvider;
 
@@ -75,7 +77,7 @@ class ReadProviderTest {
     dataSource = new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
 
     final ReadExecutor readExecutor = new ReadExecutor(dataSource, fhirEncoders);
-    readProvider = new ReadProvider(readExecutor, fhirContext, Patient.class);
+    readProvider = new ReadProvider(configuration, readExecutor, fhirContext, Patient.class);
   }
 
   // -------------------------------------------------------------------------

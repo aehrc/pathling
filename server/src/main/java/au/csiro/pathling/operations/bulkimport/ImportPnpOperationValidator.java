@@ -19,11 +19,20 @@ package au.csiro.pathling.operations.bulkimport;
 
 import au.csiro.pathling.ParamUtil;
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
+import au.csiro.pathling.config.PnpConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.UrlAllowlist;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.operations.OperationValidation;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.PostConstruct;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -37,6 +46,10 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UrlType;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -50,6 +63,41 @@ public class ImportPnpOperationValidator {
 
   private static final String EXPORT_TYPE_DYNAMIC = "dynamic";
   private static final String EXPORT_TYPE_STATIC = "static";
+
+  @Nonnull private final ServerConfiguration serverConfiguration;
+
+  private final boolean allowInternalUrls;
+
+  private final boolean allowInsecureUrls;
+
+  /**
+   * Creates a new ImportPnpOperationValidator.
+   *
+   * @param serverConfiguration the server configuration, used to look up the export URL whitelist
+   *     and check the authentication interlock
+   * @param allowInternalUrls whether to allow exportUrl values that resolve to internal or private
+   *     IP addresses
+   * @param allowInsecureUrls whether to allow URLs with the http scheme for outgoing requests;
+   *     defaults to false, since the SMART Bulk Data Import spec requires TLS for all exchanges
+   */
+  public ImportPnpOperationValidator(
+      @Nonnull final ServerConfiguration serverConfiguration,
+      @Value("${pathling.import.pnp.allowInternalUrls:false}") final boolean allowInternalUrls,
+      @Value("${pathling.allowInsecureUrls:false}") final boolean allowInsecureUrls) {
+    this.serverConfiguration = serverConfiguration;
+    this.allowInternalUrls = allowInternalUrls;
+    this.allowInsecureUrls = allowInsecureUrls;
+  }
+
+  /** Logs a warning at startup if PNP credentials are configured without authentication enabled. */
+  @PostConstruct
+  public void checkAuthConfiguration() {
+    if (pnpCredentialsConfigured() && !serverConfiguration.getAuth().isEnabled()) {
+      log.warn(
+          "PNP credentials are configured but authentication is disabled. "
+              + "The $import-pnp operation will reject requests until authentication is enabled.");
+    }
+  }
 
   /**
    * Validates a ping and pull import request from a FHIR Parameters resource.
@@ -94,7 +142,7 @@ public class ImportPnpOperationValidator {
 
     // Note: inputSource parameter is accepted but ignored for backwards compatibility.
 
-    // Extract saveMode parameter (optional, defaults to OVERWRITE).
+    // Extract saveMode parameter (optional, defaults to MERGE).
     final SaveMode saveMode =
         ParamUtil.extractFromPart(
                 parameters.getParameter(),
@@ -102,7 +150,7 @@ public class ImportPnpOperationValidator {
                 CodeType.class,
                 code -> SaveMode.fromCode(code.getCode()),
                 true,
-                Optional.of(SaveMode.OVERWRITE),
+                Optional.of(SaveMode.MERGE),
                 false,
                 Optional.of(new InvalidUserInputError("Unknown saveMode.")))
             .orElseThrow();
@@ -129,6 +177,9 @@ public class ImportPnpOperationValidator {
     final List<String> includeAssociatedData =
         extractCodeList(parameters.getParameter(), "includeAssociatedData");
 
+    validateExportUrl(exportUrl);
+    validateAuthConfiguration();
+
     final ImportPnpRequest importPnpRequest =
         new ImportPnpRequest(
             requestDetails.getCompleteUrl(),
@@ -151,6 +202,195 @@ public class ImportPnpOperationValidator {
             .toList();
 
     return new PreAsyncValidationResult<>(importPnpRequest, issues);
+  }
+
+  /**
+   * Validates the exportUrl against both the configured whitelist (allowableExportUrls) and the
+   * SSRF policy that rejects internal or private addresses unless allowInternalUrls is set. The
+   * allowlist is mandatory: requests are rejected when no prefixes have been configured.
+   *
+   * @param exportUrl the export URL to validate
+   * @throws InvalidUserInputError if the URL is not allowed by either check
+   */
+  private void validateExportUrl(@Nonnull final String exportUrl) {
+    final PnpConfiguration pnpConfig =
+        serverConfiguration.getImport() != null ? serverConfiguration.getImport().getPnp() : null;
+    final List<String> allowableExportUrls =
+        pnpConfig != null && pnpConfig.getAllowableExportUrls() != null
+            ? pnpConfig.getAllowableExportUrls()
+            : List.of();
+
+    if (allowableExportUrls.isEmpty()) {
+      throw new InvalidUserInputError(
+          "No trusted export URLs are configured. "
+              + "Set pathling.import.pnp.allowableExportUrls to enable $import-pnp.");
+    }
+    if (!UrlAllowlist.matches(allowableExportUrls, exportUrl, allowInsecureUrls)) {
+      throw new InvalidUserInputError("exportUrl not in allowableExportUrls: " + exportUrl);
+    }
+
+    validateInternalAddressPolicy(exportUrl);
+  }
+
+  /**
+   * Rejects an exportUrl that resolves to an internal or private address, unless explicitly allowed
+   * by configuration.
+   *
+   * @param exportUrl the export URL to validate
+   */
+  private void validateInternalAddressPolicy(@Nonnull final String exportUrl) {
+    if (allowInternalUrls) {
+      return;
+    }
+
+    final URI uri;
+    try {
+      uri = URI.create(exportUrl);
+    } catch (final IllegalArgumentException e) {
+      throw new InvalidUserInputError("Invalid exportUrl: " + exportUrl);
+    }
+
+    if (uri.getHost() == null) {
+      throw new InvalidUserInputError("exportUrl must contain a host: " + exportUrl);
+    }
+
+    final InetAddress[] addresses;
+    try {
+      addresses = InetAddress.getAllByName(uri.getHost());
+    } catch (final UnknownHostException e) {
+      // Fail closed: an unresolvable host could resolve later in the executor (split-horizon
+      // DNS, transient resolver failure, TTL=0 NXDOMAIN windows), so we reject the request
+      // rather than allowing it through unchecked.
+      throw new InvalidUserInputError("exportUrl host could not be resolved: " + uri.getHost());
+    }
+    for (final InetAddress address : addresses) {
+      if (isInternalAddress(address)) {
+        throw new InvalidUserInputError(
+            "exportUrl points to an internal address: " + uri.getHost());
+      }
+    }
+  }
+
+  /**
+   * Checks whether the given IP address belongs to a range that should not be reachable from an
+   * exportUrl. Covers loopback, link-local, site-local, any-local, multicast, IPv6 unique-local
+   * (fc00::/7), CGNAT shared address space (100.64.0.0/10), the reserved Class E block
+   * (240.0.0.0/4, which subsumes the limited broadcast 255.255.255.255), and the "this network"
+   * range (0.0.0.0/8). IPv4-mapped IPv6 addresses (::ffff:0:0/96) are unwrapped to their embedded
+   * IPv4 form before classification, since Java's predicates behave inconsistently on the wrapped
+   * form.
+   *
+   * @param address the address to check
+   * @return true if the address is in any range that should be considered internal
+   */
+  private static boolean isInternalAddress(@Nonnull final InetAddress address) {
+    final InetAddress canonical = unwrapIpv4Mapped(address);
+    if (canonical.isLoopbackAddress()
+        || canonical.isLinkLocalAddress()
+        || canonical.isSiteLocalAddress()
+        || canonical.isAnyLocalAddress()
+        || canonical.isMulticastAddress()) {
+      return true;
+    }
+    final byte[] bytes = canonical.getAddress();
+    if (canonical instanceof Inet6Address) {
+      // RFC 4193 IPv6 unique-local addresses (fc00::/7). Java's
+      // Inet6Address.isSiteLocalAddress() only matches the deprecated fec0::/10 block,
+      // so we check fc00::/7 explicitly.
+      return (bytes[0] & 0xfe) == 0xfc;
+    }
+    // IPv4 ranges that Java's predicates do not cover.
+    final int first = bytes[0] & 0xff;
+    final int second = bytes[1] & 0xff;
+    // RFC 1122 "this network" (0.0.0.0/8).
+    if (first == 0) {
+      return true;
+    }
+    // RFC 6598 CGNAT shared address space (100.64.0.0/10).
+    if (first == 100 && (second & 0xc0) == 0x40) {
+      return true;
+    }
+    // RFC 1112 Class E reserved (240.0.0.0/4), which also covers the limited broadcast
+    // address 255.255.255.255.
+    return (first & 0xf0) == 0xf0;
+  }
+
+  /**
+   * Unwraps an IPv4-mapped IPv6 address (::ffff:a.b.c.d) to its embedded IPv4 form so that
+   * subsequent classification uses the IPv4 predicates. Returns the input unchanged for any other
+   * address.
+   *
+   * @param address the address to unwrap
+   * @return the embedded IPv4 address if {@code address} is an IPv4-mapped IPv6 address, otherwise
+   *     the input
+   */
+  @Nonnull
+  private static InetAddress unwrapIpv4Mapped(@Nonnull final InetAddress address) {
+    if (!(address instanceof Inet6Address)) {
+      return address;
+    }
+    final byte[] bytes = address.getAddress();
+    for (int i = 0; i < 10; i++) {
+      if (bytes[i] != 0) {
+        return address;
+      }
+    }
+    if ((bytes[10] & 0xff) != 0xff || (bytes[11] & 0xff) != 0xff) {
+      return address;
+    }
+    final byte[] v4 = {bytes[12], bytes[13], bytes[14], bytes[15]};
+    try {
+      return InetAddress.getByAddress(v4);
+    } catch (final UnknownHostException e) {
+      // getByAddress only fails on an array length other than 4 or 16; impossible here.
+      return address;
+    }
+  }
+
+  /**
+   * Validates that authentication is enabled and the current request is authenticated when PNP
+   * credentials are configured. The configuration check guards against running with credentials
+   * while auth is switched off; the runtime principal check guards against the security filter
+   * chain being misconfigured (for example, a broken issuer URI) such that requests reach the
+   * operation without an authenticated principal.
+   *
+   * @throws InvalidUserInputError if auth is disabled but PNP credentials are present
+   * @throws AccessDeniedError if the current request has no authenticated principal
+   */
+  private void validateAuthConfiguration() {
+    if (!pnpCredentialsConfigured()) {
+      return;
+    }
+    if (!serverConfiguration.getAuth().isEnabled()) {
+      throw new InvalidUserInputError(
+          "Authentication is required when PNP credentials are configured.");
+    }
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null
+        || !authentication.isAuthenticated()
+        || authentication instanceof AnonymousAuthenticationToken) {
+      throw new AccessDeniedError(
+          "An authenticated request is required when PNP credentials are configured.");
+    }
+  }
+
+  /**
+   * Checks whether PNP credentials are configured.
+   *
+   * @return true if clientId and either clientSecret or privateKeyJwk are configured
+   */
+  private boolean pnpCredentialsConfigured() {
+    final PnpConfiguration pnpConfig =
+        serverConfiguration.getImport() != null ? serverConfiguration.getImport().getPnp() : null;
+    if (pnpConfig == null) {
+      return false;
+    }
+    final String clientId = pnpConfig.getClientId();
+    if (clientId == null || clientId.isBlank()) {
+      return false;
+    }
+    return (pnpConfig.getClientSecret() != null && !pnpConfig.getClientSecret().isBlank())
+        || (pnpConfig.getPrivateKeyJwk() != null && !pnpConfig.getPrivateKeyJwk().isBlank());
   }
 
   /**

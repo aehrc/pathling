@@ -16,251 +16,107 @@
  */
 
 /**
- * Form for executing ViewDefinitions.
+ * Top-level shell for the SQL on FHIR page form. Hosts the mode switch
+ * between `$viewdefinition-run` (ViewDefinitionForm) and `$sqlquery-run`
+ * (SqlQueryForm).
  *
  * @author John Grimes
  */
 
-import { CopyIcon, PlayIcon, UploadIcon } from "@radix-ui/react-icons";
-import {
-  Box,
-  Button,
-  Callout,
-  Card,
-  Flex,
-  Heading,
-  IconButton,
-  Select,
-  Spinner,
-  Tabs,
-  Text,
-  TextArea,
-  Tooltip,
-} from "@radix-ui/themes";
-import { useState } from "react";
+import { Box, Tabs } from "@radix-ui/themes";
 
-import { useClipboard } from "../../hooks";
-import { useViewDefinitions } from "../../hooks/useViewDefinitions";
-import { FieldGuidance } from "../FieldGuidance";
-import { FieldLabel } from "../FieldLabel";
+import { SqlQueryForm } from "./SqlQueryForm";
+import { ViewDefinitionForm } from "./ViewDefinitionForm";
 
 import type { ViewRunRequest } from "../../hooks";
 import type { CreateViewDefinitionResult } from "../../types/sqlOnFhir";
-
-interface SqlOnFhirFormProps {
-  onExecute: (request: ViewRunRequest) => void;
-  onSaveToServer: (json: string) => Promise<CreateViewDefinitionResult>;
-  isExecuting: boolean;
-  isSaving: boolean;
-  disabled?: boolean;
-}
-
-const EXAMPLE_VIEW_DEFINITION = `{
-  "resourceType": "ViewDefinition",
-  "name": "example_view",
-  "resource": "Patient",
-  "select": [
-    {
-      "column": [
-        { "path": "id", "name": "patient_id" },
-        { "path": "gender", "name": "gender" }
-      ]
-    }
-  ]
-}`;
+import type {
+  SaveSqlQueryLibraryResult,
+  SqlQueryLibrary,
+  SqlQueryRequest,
+} from "../../types/sqlQuery";
 
 /**
- * Form for selecting and executing ViewDefinitions.
+ * Mode of the SQL on FHIR page form.
+ */
+export type SqlOnFhirMode = "view-definition" | "sql-query";
+
+interface SqlOnFhirFormProps {
+  /** The currently selected mode. */
+  mode: SqlOnFhirMode;
+  /** Callback fired when the mode changes. */
+  onModeChange: (mode: SqlOnFhirMode) => void;
+  /** Callback fired when the user executes a ViewDefinition. */
+  onExecuteViewDefinition: (request: ViewRunRequest) => void;
+  /** Callback fired when the user saves an inline ViewDefinition to the server. */
+  onSaveViewDefinition: (json: string) => Promise<CreateViewDefinitionResult>;
+  /** Callback fired when the user executes a SQL query. */
+  onExecuteSqlQuery: (request: SqlQueryRequest) => void;
+  /** Callback fired when the user saves an inline SQL query Library. */
+  onSaveSqlQueryLibrary: (library: SqlQueryLibrary) => Promise<SaveSqlQueryLibraryResult>;
+  /** Whether ViewDefinition execution is in progress. */
+  isViewDefinitionExecuting: boolean;
+  /** Whether ViewDefinition save is in progress. */
+  isViewDefinitionSaving: boolean;
+  /** Whether SQL query execution is in progress. */
+  isSqlQueryExecuting: boolean;
+  /** Whether SQL query Library save is in progress. */
+  isSqlQuerySaving: boolean;
+}
+
+/**
+ * Renders the SQL on FHIR mode switch and the active form variant.
  *
- * @param root0 - The component props.
- * @param root0.onExecute - Callback when view is executed.
- * @param root0.onSaveToServer - Callback to save view definition to server.
- * @param root0.isExecuting - Whether execution is in progress.
- * @param root0.isSaving - Whether save is in progress.
- * @param root0.disabled - Whether the form is disabled.
- * @returns The SQL on FHIR form component.
+ * @param props - The component props.
+ * @param props.mode - The currently selected mode.
+ * @param props.onModeChange - Callback fired when the mode changes.
+ * @param props.onExecuteViewDefinition - Callback fired when the user executes a ViewDefinition.
+ * @param props.onSaveViewDefinition - Callback fired when the user saves an inline ViewDefinition to the server.
+ * @param props.onExecuteSqlQuery - Callback fired when the user executes a SQL query.
+ * @param props.onSaveSqlQueryLibrary - Callback fired when the user saves an inline SQL query Library.
+ * @param props.isViewDefinitionExecuting - Whether ViewDefinition execution is in progress.
+ * @param props.isViewDefinitionSaving - Whether ViewDefinition save is in progress.
+ * @param props.isSqlQueryExecuting - Whether SQL query execution is in progress.
+ * @param props.isSqlQuerySaving - Whether SQL query Library save is in progress.
+ * @returns The form shell.
  */
 export function SqlOnFhirForm({
-  onExecute,
-  onSaveToServer,
-  isExecuting,
-  isSaving,
-  disabled = false,
-}: SqlOnFhirFormProps) {
-  const [activeTab, setActiveTab] = useState<"stored" | "custom">("stored");
-  const [selectedViewDefinitionId, setSelectedViewDefinitionId] = useState<string>("");
-  const [customJson, setCustomJson] = useState<string>("");
-  const [saveError, setSaveError] = useState<Error | null>(null);
-
-  const { data: viewDefinitions, isLoading: isLoadingViewDefinitions } = useViewDefinitions();
-  const copyToClipboard = useClipboard();
-
-  const handleExecute = () => {
-    if (activeTab === "stored" && selectedViewDefinitionId) {
-      onExecute({
-        mode: "stored",
-        viewDefinitionId: selectedViewDefinitionId,
-      });
-    } else if (activeTab === "custom" && customJson.trim()) {
-      onExecute({
-        mode: "inline",
-        viewDefinitionJson: customJson,
-      });
-    }
-  };
-
-  const canExecute =
-    (activeTab === "stored" && selectedViewDefinitionId) ||
-    (activeTab === "custom" && customJson.trim());
-
-  const handleSaveToServer = async () => {
-    setSaveError(null);
-    try {
-      const result = await onSaveToServer(customJson);
-      // Switch to stored tab and select the new ViewDefinition.
-      setActiveTab("stored");
-      setSelectedViewDefinitionId(result.id);
-    } catch (err) {
-      setSaveError(err instanceof Error ? err : new Error("Failed to save"));
-    }
-  };
-
+  mode,
+  onModeChange,
+  onExecuteViewDefinition,
+  onSaveViewDefinition,
+  onExecuteSqlQuery,
+  onSaveSqlQueryLibrary,
+  isViewDefinitionExecuting,
+  isViewDefinitionSaving,
+  isSqlQueryExecuting,
+  isSqlQuerySaving,
+}: Readonly<SqlOnFhirFormProps>) {
   return (
-    <Card>
-      <Flex direction="column" gap="4">
-        <Heading size="4">SQL on FHIR</Heading>
+    <Tabs.Root value={mode} onValueChange={(value) => onModeChange(value as SqlOnFhirMode)}>
+      <Tabs.List>
+        <Tabs.Trigger value="view-definition">View definition</Tabs.Trigger>
+        <Tabs.Trigger value="sql-query">SQL query</Tabs.Trigger>
+      </Tabs.List>
 
-        <Tabs.Root
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as "stored" | "custom")}
-        >
-          <Tabs.List>
-            <Tabs.Trigger value="stored">Select view definition</Tabs.Trigger>
-            <Tabs.Trigger value="custom">Provide JSON</Tabs.Trigger>
-          </Tabs.List>
-
-          <Box pt="4">
-            <Tabs.Content value="stored">
-              <Box>
-                <FieldLabel mb="2">View definition</FieldLabel>
-                {isLoadingViewDefinitions ? (
-                  <Flex align="center" gap="2" py="2">
-                    <Spinner size="1" />
-                    <Text size="2" color="gray">
-                      Loading view definitions...
-                    </Text>
-                  </Flex>
-                ) : viewDefinitions && viewDefinitions.length > 0 ? (
-                  <Select.Root
-                    value={selectedViewDefinitionId}
-                    onValueChange={setSelectedViewDefinitionId}
-                  >
-                    <Select.Trigger
-                      style={{ width: "100%" }}
-                      placeholder="Select a view definition"
-                    />
-                    <Select.Content>
-                      {viewDefinitions.map((vd) => (
-                        <Select.Item key={vd.id} value={vd.id}>
-                          {vd.name}
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select.Root>
-                ) : (
-                  <Text size="2" color="gray" as="p">
-                    No view definitions found on the server. You can use the "Provide JSON" tab to
-                    execute a view definition directly.
-                  </Text>
-                )}
-                {viewDefinitions &&
-                  viewDefinitions.length > 0 &&
-                  (selectedViewDefinitionId ? (
-                    <Box mt="2" style={{ position: "relative" }}>
-                      <Tooltip content="Copy to clipboard">
-                        <IconButton
-                          size="1"
-                          variant="ghost"
-                          aria-label="Copy to clipboard"
-                          onClick={() =>
-                            copyToClipboard(
-                              viewDefinitions.find((vd) => vd.id === selectedViewDefinitionId)
-                                ?.json ?? "",
-                            )
-                          }
-                          style={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}
-                        >
-                          <CopyIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <TextArea
-                        readOnly
-                        size="1"
-                        rows={16}
-                        value={
-                          viewDefinitions.find((vd) => vd.id === selectedViewDefinitionId)?.json ??
-                          ""
-                        }
-                        style={{ fontFamily: "monospace" }}
-                      />
-                    </Box>
-                  ) : (
-                    <FieldGuidance mt="2">
-                      Select a view definition that has been loaded into the server.
-                    </FieldGuidance>
-                  ))}
-              </Box>
-            </Tabs.Content>
-
-            <Tabs.Content value="custom">
-              <Box>
-                <FieldLabel mb="2">View definition JSON</FieldLabel>
-                <TextArea
-                  size="1"
-                  resize="vertical"
-                  rows={16}
-                  placeholder={EXAMPLE_VIEW_DEFINITION}
-                  value={customJson}
-                  onChange={(e) => setCustomJson(e.target.value)}
-                  style={{ fontFamily: "monospace" }}
-                />
-                <FieldGuidance mt="2">
-                  Enter a valid view definition resource in JSON format.
-                </FieldGuidance>
-                {saveError && (
-                  <Callout.Root color="red" mt="2" size="1">
-                    <Callout.Text>{saveError.message}</Callout.Text>
-                  </Callout.Root>
-                )}
-              </Box>
-            </Tabs.Content>
-          </Box>
-        </Tabs.Root>
-
-        <Flex gap="3">
-          <Button
-            size="3"
-            onClick={handleExecute}
-            disabled={disabled || isExecuting || !canExecute}
-            style={{ flex: 1 }}
-          >
-            <PlayIcon />
-            {isExecuting ? "Executing..." : "Execute"}
-          </Button>
-          {activeTab === "custom" && (
-            <Button
-              size="3"
-              variant="soft"
-              onClick={handleSaveToServer}
-              disabled={disabled || isSaving || !customJson.trim()}
-              style={{ flex: 1 }}
-            >
-              <UploadIcon />
-              {isSaving ? "Saving..." : "Save to server"}
-            </Button>
-          )}
-        </Flex>
-      </Flex>
-    </Card>
+      <Box pt="4">
+        <Tabs.Content value="view-definition">
+          <ViewDefinitionForm
+            onExecute={onExecuteViewDefinition}
+            onSaveToServer={onSaveViewDefinition}
+            isExecuting={isViewDefinitionExecuting}
+            isSaving={isViewDefinitionSaving}
+          />
+        </Tabs.Content>
+        <Tabs.Content value="sql-query">
+          <SqlQueryForm
+            onExecute={onExecuteSqlQuery}
+            onSaveToServer={onSaveSqlQueryLibrary}
+            isExecuting={isSqlQueryExecuting}
+            isSaving={isSqlQuerySaving}
+          />
+        </Tabs.Content>
+      </Box>
+    </Tabs.Root>
   );
 }

@@ -53,6 +53,11 @@ pathling:
     # prevents large numbers of small updates causing poor subsequent query performance.
     compactionThreshold: 10
 
+    # When enabled, Delta Lake merge operations will automatically evolve the table schema to
+    # accommodate new columns present in the incoming data. This is useful when the FHIR encoder
+    # adds new fields (e.g. synthetic columns) that are not yet present in an existing table.
+    schemaAutoMerge: false
+
   query:
     # Setting this option to true will enable additional logging relating to the query plan used to
     # execute queries.
@@ -81,6 +86,17 @@ pathling:
     viewDefinitionInstanceRunEnabled: true
     viewDefinitionExportEnabled: true
     bulkSubmitEnabled: true
+
+  # Resource limits applied to the $sqlquery-run operation. Both limits are always applied,
+  # regardless of any caller-supplied parameters.
+  sqlQuery:
+    # The maximum number of rows that a single response may stream. Clamps the caller-supplied
+    # _limit when that value is larger.
+    maxRows: 1000000
+
+    # The maximum wall-clock time in seconds that a single query may run before its Spark job
+    # group is cancelled. Long-running queries should use the asynchronous path.
+    timeoutSeconds: 60
 
   auth:
     # Enables authorization.
@@ -156,6 +172,10 @@ pathling:
   import:
     allowableSources:
       - "file:///usr/share/staging"
+    pnp:
+      # Whether to allow exportUrl values that resolve to internal or private IP addresses.
+      # Defaults to false for security.
+      allowInternalUrls: false
 
   # This section configures the $bulk-submit operation for receiving data from external systems.
   bulkSubmit:

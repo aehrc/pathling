@@ -72,8 +72,11 @@ class ExportOperationDownloadTest {
 
   @BeforeEach
   void setup() throws IOException {
+    final au.csiro.pathling.io.JobDirectoryFileSystem jobDirectoryFileSystem =
+        new au.csiro.pathling.io.JobDirectoryFileSystem(
+            tempDir.toUri(), new org.apache.hadoop.conf.Configuration());
     exportResultProvider =
-        new ExportResultProvider(exportResultRegistry, "file://" + tempDir, serverConfiguration);
+        new ExportResultProvider(exportResultRegistry, jobDirectoryFileSystem, serverConfiguration);
 
     // Create the jobs directory structure
     final Path jobsDir = tempDir.resolve("jobs");
@@ -102,6 +105,10 @@ class ExportOperationDownloadTest {
         """);
 
     exportResultRegistry.put(TEST_JOB_ID, new ExportResult(Optional.empty()));
+
+    // Create a marker file outside the job directory to detect traversal success.
+    final Path secretFile = tempDir.resolve("secret.txt");
+    Files.writeString(secretFile, "secret-content");
   }
 
   @Test
@@ -136,5 +143,97 @@ class ExportOperationDownloadTest {
     assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "unknown-file.ndjson", response))
         .isExactlyInstanceOf(ResourceNotFoundError.class)
         .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  // -------------------------------------------------------------------------
+  // Path traversal tests
+  // -------------------------------------------------------------------------
+
+  @Test
+  void testTraversalToParentDirectoryIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "../../secret.txt", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testTraversalWithUrlEncodingIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "..%2f..%2fsecret.txt", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testTraversalWithBackslashesIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "..\\..\\secret.txt", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testAbsolutePathIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "/etc/passwd", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testNullByteInjectionIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(
+            () -> exportResultProvider.result(TEST_JOB_ID, "test.txt\0../../etc/passwd", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testNestedTraversalEscapingJobDirIsRejected() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(
+            () -> exportResultProvider.result(TEST_JOB_ID, "subdir/../../../secret.txt", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testSymlinkEscapingJobDirIsRejected() throws Exception {
+    // Create a sensitive target file outside the jobs hierarchy.
+    final Path outside = tempDir.resolve("outside-secret.txt");
+    Files.writeString(outside, "secret content");
+
+    // Place a symlink inside the job directory that points to the outside file.
+    final Path jobDir = tempDir.resolve("jobs").resolve(TEST_JOB_ID);
+    final Path link = jobDir.resolve("escape.ndjson");
+    try {
+      Files.createSymbolicLink(link, outside);
+    } catch (final UnsupportedOperationException | IOException e) {
+      // Symlink creation is unsupported on this filesystem; skip.
+      return;
+    }
+
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "escape.ndjson", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testValidNestedFileIsServed() throws Exception {
+    // Create a nested file within the job directory.
+    final Path jobDir = tempDir.resolve("jobs").resolve(TEST_JOB_ID);
+    final Path subDir = jobDir.resolve("subdir");
+    Files.createDirectories(subDir);
+    final Path nestedFile = subDir.resolve("nested-file.ndjson");
+    final String nestedContent = "{\"resourceType\":\"Patient\",\"id\":\"nested\"}";
+    Files.writeString(nestedFile, nestedContent);
+
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    exportResultProvider.result(TEST_JOB_ID, "subdir/nested-file.ndjson", response);
+    assertThat(response.getStatus()).isEqualTo(200);
+    assertThat(response.getContentAsString()).isEqualTo(nestedContent);
   }
 }

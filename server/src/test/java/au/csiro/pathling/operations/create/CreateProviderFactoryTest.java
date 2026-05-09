@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.operations.update.UpdateExecutor;
 import ca.uhn.fhir.context.FhirContext;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -47,6 +48,7 @@ import org.springframework.context.ApplicationContext;
 class CreateProviderFactoryTest {
 
   @Mock private ApplicationContext applicationContext;
+  @Mock private ServerConfiguration configuration;
   @Mock private UpdateExecutor updateExecutor;
 
   private CreateProviderFactory factory;
@@ -55,34 +57,35 @@ class CreateProviderFactoryTest {
   @BeforeEach
   void setUp() {
     fhirContext = FhirContext.forR4();
-    factory = new CreateProviderFactory(applicationContext, fhirContext, updateExecutor);
+    factory =
+        new CreateProviderFactory(applicationContext, configuration, fhirContext, updateExecutor);
   }
 
   @Test
   void createsProviderForResourceType() {
     // The factory should request a CreateProvider bean for the resolved resource class.
     final CreateProvider mockProvider = mock(CreateProvider.class);
-    when(applicationContext.getBean(eq(CreateProvider.class), any(), any(), any()))
+    when(applicationContext.getBean(eq(CreateProvider.class), any(), any(), any(), any()))
         .thenReturn(mockProvider);
 
     final CreateProvider result = factory.createCreateProvider(ResourceType.PATIENT);
 
     assertNotNull(result);
     verify(applicationContext)
-        .getBean(CreateProvider.class, updateExecutor, fhirContext, Patient.class);
+        .getBean(CreateProvider.class, configuration, updateExecutor, fhirContext, Patient.class);
   }
 
   @Test
   void createsProviderForResourceTypeCode() {
     // The factory should also support creation by string resource type code.
     final CreateProvider mockProvider = mock(CreateProvider.class);
-    when(applicationContext.getBean(eq(CreateProvider.class), any(), any(), any()))
+    when(applicationContext.getBean(eq(CreateProvider.class), any(), any(), any(), any()))
         .thenReturn(mockProvider);
 
     final CreateProvider result = factory.createCreateProvider("Patient");
 
     assertNotNull(result);
     verify(applicationContext)
-        .getBean(CreateProvider.class, updateExecutor, fhirContext, Patient.class);
+        .getBean(CreateProvider.class, configuration, updateExecutor, fhirContext, Patient.class);
   }
 }

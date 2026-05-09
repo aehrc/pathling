@@ -499,6 +499,59 @@ class BulkSubmitOAuthIT {
   }
 
   @Test
+  void testOAuthWithDisallowedMetadataUrl() {
+    // This test verifies that when oauthMetadataUrl is provided but does not match
+    // allowableSources, the request is rejected with a 4xx error and no outbound
+    // requests are made to the attacker-supplied URL.
+
+    final String submissionId = UUID.randomUUID().toString();
+    final String manifestUrl = "http://localhost:" + wireMockServer.port() + "/manifest.json";
+    final String fhirBaseUrl = "http://localhost:" + wireMockServer.port();
+    final String oauthMetadataUrl = "http://attacker.example.com/.well-known/smart-configuration";
+    final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
+
+    final String requestBody =
+        """
+        {
+          "resourceType": "Parameters",
+          "parameter": [
+            {
+              "name": "submitter",
+              "valueIdentifier": {
+                "system": "%s",
+                "value": "%s"
+              }
+            },
+            {"name": "submissionId", "valueString": "%s"},
+            {"name": "submissionStatus", "valueCoding": {"code": "in-progress"}},
+            {"name": "manifestUrl", "valueString": "%s"},
+            {"name": "fhirBaseUrl", "valueString": "%s"},
+            {"name": "oauthMetadataUrl", "valueString": "%s"}
+          ]
+        }
+        """
+            .formatted(
+                SUBMITTER_SYSTEM,
+                SUBMITTER_VALUE,
+                submissionId,
+                manifestUrl,
+                fhirBaseUrl,
+                oauthMetadataUrl);
+
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(requestBody)
+        .exchange()
+        .expectStatus()
+        .is4xxClientError();
+
+    log.info("Disallowed oauthMetadataUrl correctly rejected");
+  }
+
+  @Test
   void testNoAuthWhenManifestDoesNotRequireToken() {
     // This test verifies that when the manifest has requiresAccessToken: false,
     // the system does not include an Authorization header in file requests,

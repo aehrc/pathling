@@ -20,12 +20,14 @@ package au.csiro.pathling.operations.bulkimport;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ImportConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.UrlAllowlist;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.SecurityError;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -39,13 +41,20 @@ public class AccessRules {
 
   @Nonnull private final List<String> allowableSources;
 
+  private final boolean allowInsecureUrls;
+
   /**
    * Creates a new AccessRules instance.
    *
    * @param configuration a {@link ServerConfiguration} object which controls the behaviour of the
    *     AccessRules
+   * @param allowInsecureUrls whether plain-http URLs are accepted; defaults to false so that
+   *     outgoing requests use TLS by default.
    */
-  public AccessRules(@Nonnull final ServerConfiguration configuration) {
+  public AccessRules(
+      @Nonnull final ServerConfiguration configuration,
+      @Value("${pathling.allowInsecureUrls:false}") final boolean allowInsecureUrls) {
+    this.allowInsecureUrls = allowInsecureUrls;
 
     final ImportConfiguration importConfiguration = configuration.getImport();
     if (importConfiguration == null) {
@@ -81,6 +90,6 @@ public class AccessRules {
   }
 
   private boolean canImportFrom(@Nonnull final String url) {
-    return allowableSources.stream().anyMatch(url::startsWith);
+    return UrlAllowlist.matches(allowableSources, url, allowInsecureUrls);
   }
 }

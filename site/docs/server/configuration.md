@@ -31,19 +31,41 @@ framework (see
 Additionally, you can set any variable supported by Spring Boot, see
 [Spring Boot Reference Documentation: Common Application properties](https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#common-application-properties).
 
+### Outgoing connections
+
+- `pathling.allowInsecureUrls` - (default: `false`) Whether plain-`http` URLs
+  may be used for outgoing connections from the server (the `$import`,
+  `$import-pnp` and `$bulk-submit` operations). Setting this to `true` is
+  intended for local testing against `http://` endpoints; production
+  deployments should leave it at the default.
+
 ### Import
 
 - `pathling.import.allowableSources` - (default: `file:///usr/share/staging`) A
   set of URL prefixes which are allowable for use within the import operation.
-  **Important note**: a trailing slash should be used in cases where an attacker
-  could create an alternative URL with the same prefix, e.g. `s3://some-bucket`
-  would also match `s3://some-bucket-alternative`.
+  HTTP(S) prefixes are matched with proper URI semantics: scheme,
+  host (case-insensitive), effective port (default 80 or 443) and a
+  path-segment boundary must all match, and any candidate that contains a
+  userinfo component is rejected. So `https://example.com` admits
+  `https://example.com/foo` but not `https://example.com.evil.com/foo` or
+  `https://example.com@evil.com/foo`. Non-HTTP prefixes (e.g. `s3://`,
+  `file://`) are matched by case-sensitive string prefix; for these,
+  **a trailing slash should be used in cases where an attacker could create
+  an alternative URL with the same prefix**, e.g. `s3://some-bucket` would
+  also match `s3://some-bucket-alternative`.
 
 #### Ping and pull
 
 These settings configure the [ping and pull import](./operations/import-pnp)
 operation, which retrieves data from external FHIR bulk export endpoints.
 
+- `pathling.import.pnp.allowableExportUrls` - (default: `[]`) A list of URL
+  prefixes which are allowable for use as export URLs within the `$import-pnp`
+  operation. This list is mandatory: when it is empty every `$import-pnp`
+  request is rejected. Any `exportUrl` that does not match one of the
+  configured prefixes is also rejected. HTTP(S) prefixes are matched with
+  proper URI semantics (see `pathling.import.allowableSources` above for the
+  full rules).
 - `pathling.import.pnp.clientId` - The client identifier for SMART Backend
   Services authentication.
 - `pathling.import.pnp.tokenEndpoint` - The token endpoint URL for obtaining
@@ -64,6 +86,16 @@ operation, which retrieves data from external FHIR bulk export endpoints.
   operations. This location should have sufficient space for large FHIR exports.
 - `pathling.import.pnp.fileExtension` - (default: `.ndjson`) The file extension
   to filter for when processing downloaded files.
+- `pathling.import.pnp.allowInternalUrls` - (default: `false`) When set to
+  `false`, the `$import-pnp` operation will reject `exportUrl` values that
+  resolve to internal or private IP addresses (loopback, link-local,
+  site-local, and unique-local). Set to `true` only if your deployment
+  legitimately uses internal FHIR bulk export endpoints.
+
+**Security note**: When PNP credentials are configured,
+`pathling.auth.enabled` must also be set to `true`. If authentication is
+disabled but PNP credentials are present, the server logs a warning at startup
+and rejects all `$import-pnp` requests.
 
 ### Export
 
@@ -74,8 +106,13 @@ operation, which retrieves data from external FHIR bulk export endpoints.
 
 - `pathling.bulkSubmit.allowedSubmitters` - (default: `[]`) The list of allowed
   submitters (by system and value) that can use the $bulk-submit operation.
-- `pathling.bulkSubmit.allowableSources` - (default: `https://`) URL prefixes
-  that are allowed as sources for manifest and file URLs.
+- `pathling.bulkSubmit.allowableSources` - (default: `[]`) URL prefixes that
+  are allowed as sources for manifest and file URLs. This list is mandatory:
+  when it is empty every URL is rejected and the operation cannot be used.
+  This applies to the `manifestUrl` parameter, every `output[].url` discovered
+  within fetched manifests, and the `oauthMetadataUrl` parameter. HTTP(S)
+  prefixes are matched with proper URI semantics (see
+  `pathling.import.allowableSources` above for the full rules).
 
 ### Asynchronous processing
 
@@ -129,6 +166,21 @@ error response and is excluded from the CapabilityStatement.
 - `pathling.operations.bulkSubmitEnabled` - (default: `true`) Enables the
   [$bulk-submit](./operations/bulk-submit) operation.
 
+### SQL query
+
+These settings apply resource limits to the `$sqlquery-run` operation. Both
+limits are always applied; they cannot be disabled per request.
+
+- `pathling.sqlQuery.maxRows` - (default: `1000000`) The maximum number of rows
+  that a single `$sqlquery-run` response may stream. Always applied; clamps the
+  caller-supplied `_limit` when that value is larger.
+- `pathling.sqlQuery.timeoutSeconds` - (default: `60`) The maximum wall-clock
+  time in seconds that a single query may run before its Spark job group is
+  cancelled. A timeout that fires before the response stream begins produces a
+  4xx response; a timeout that fires mid-stream aborts the connection and is
+  recorded as a server warning. Long-running queries should use the
+  asynchronous path.
+
 ### Encoding
 
 - `pathling.encoding.maxNestingLevel` - (default: `3`) Controls the maximum
@@ -165,6 +217,14 @@ error response and is excluded from the CapabilityStatement.
   threshold, the table will be repartitioned back to the default number of
   partitions. This prevents large numbers of small updates causing poor
   subsequent query performance.
+- `pathling.storage.schemaAutoMerge` - (default: `false`) When enabled, update
+  operations will automatically evolve the schema of an existing Delta table to
+  accommodate new fields produced by the FHIR encoder. This is useful when
+  upgrading to a Pathling version whose encoder emits additional columns or
+  nested struct fields that are not yet present in tables written by an earlier
+  version. There is a small additional write cost the first time a merge runs
+  against a table whose schema has drifted; in the steady state the cost is
+  negligible.
 
 Pathling will automatically detect AWS authentication details within the
 environment and use them to access S3 buckets. It uses a chain of authentication

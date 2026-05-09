@@ -28,8 +28,11 @@ import {
   checkResponse,
   extractJobIdFromUrl,
   parseProgressHeader,
+  pushOutputParameters,
   resolveUrl,
 } from "../utils";
+
+import type { ParametersParameter } from "fhir/r4";
 
 describe("buildHeaders", () => {
   it("returns Accept header with FHIR JSON by default", () => {
@@ -362,5 +365,44 @@ describe("parseProgressHeader", () => {
 
   it("handles decimal numbers by taking integer part", () => {
     expect(parseProgressHeader("50.5%")).toBe(50);
+  });
+});
+
+describe("pushOutputParameters", () => {
+  it("appends format, limit and header when supplied", () => {
+    const parts: ParametersParameter[] = [];
+    pushOutputParameters(parts, { format: "csv", limit: 100, header: true });
+    expect(parts).toEqual([
+      { name: "_format", valueString: "csv" },
+      { name: "_limit", valueInteger: 100 },
+      { name: "_header", valueBoolean: true },
+    ]);
+  });
+
+  it("omits options that are undefined", () => {
+    const parts: ParametersParameter[] = [];
+    pushOutputParameters(parts, { format: "ndjson" });
+    expect(parts).toEqual([{ name: "_format", valueString: "ndjson" }]);
+  });
+
+  it("preserves a header value of false", () => {
+    const parts: ParametersParameter[] = [];
+    pushOutputParameters(parts, { header: false });
+    expect(parts).toEqual([{ name: "_header", valueBoolean: false }]);
+  });
+
+  it("preserves a limit of zero", () => {
+    const parts: ParametersParameter[] = [];
+    pushOutputParameters(parts, { limit: 0 });
+    expect(parts).toEqual([{ name: "_limit", valueInteger: 0 }]);
+  });
+
+  it("appends to an existing array without removing existing entries", () => {
+    const parts: ParametersParameter[] = [{ name: "viewResource" }];
+    pushOutputParameters(parts, { format: "csv" });
+    expect(parts).toEqual([
+      { name: "viewResource" },
+      { name: "_format", valueString: "csv" },
+    ]);
   });
 });

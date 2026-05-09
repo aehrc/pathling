@@ -21,8 +21,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 
+import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.MethodOutcome;
@@ -46,12 +49,15 @@ class UpdateProviderTest {
 
   @Mock private UpdateExecutor updateExecutor;
 
+  @Mock private ServerConfiguration configuration;
+
   private UpdateProvider provider;
 
   @BeforeEach
   void setUp() {
     final FhirContext fhirContext = FhirContext.forR4();
-    provider = new UpdateProvider(updateExecutor, fhirContext, Patient.class);
+    lenient().when(configuration.getAuth()).thenReturn(new AuthorizationConfiguration());
+    provider = new UpdateProvider(configuration, updateExecutor, fhirContext, Patient.class);
   }
 
   @Test

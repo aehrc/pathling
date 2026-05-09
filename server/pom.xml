@@ -24,7 +24,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>server</artifactId>
-  <version>1.2.0</version>
+  <version>2.0.0-SNAPSHOT</version>
 
   <name>Pathling Server</name>
   <description>
@@ -37,16 +37,16 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.majorVersion>1</project.majorVersion>
     <pathling.version>9.4.0</pathling.version>
-    <pathling.hapiFhirVersion>8.6.0</pathling.hapiFhirVersion>
-    <pathling.springBootVersion>3.5.9</pathling.springBootVersion>
+    <pathling.hapiFhirVersion>8.6.8</pathling.hapiFhirVersion>
+    <pathling.springBootVersion>3.5.14</pathling.springBootVersion>
     <pathling.sparkVersion>4.0.2</pathling.sparkVersion>
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
     <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
-    <pathling.nettyVersion>4.1.114.Final</pathling.nettyVersion>
+    <pathling.nettyVersion>4.1.133.Final</pathling.nettyVersion>
     <pathling.testSetup.skip>false</pathling.testSetup.skip>
     <pathling.ui.skip>false</pathling.ui.skip>
-    <pathling.jacksonVersion>2.18.1</pathling.jacksonVersion>
+    <pathling.jacksonVersion>2.18.6</pathling.jacksonVersion>
     <pathling.testDataVersion>1.0.0</pathling.testDataVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
     <pathling.jibVersion>3.4.6</pathling.jibVersion>
@@ -188,7 +188,7 @@
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-test</artifactId>
-      <version>6.5.5</version>
+      <version>6.5.10</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -205,12 +205,12 @@
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-oauth2-resource-server</artifactId>
-      <version>6.5.5</version>
+      <version>6.5.10</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-oauth2-jose</artifactId>
-      <version>6.5.5</version>
+      <version>6.5.10</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -375,6 +375,16 @@
 
   <dependencyManagement>
     <dependencies>
+      <!-- Netty BOM is imported before Spring Boot's BOM so that our pinned
+           Netty version (which includes security patches) wins over the
+           version managed by Spring Boot. First BOM import wins in Maven. -->
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${pathling.nettyVersion}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-dependencies</artifactId>
@@ -390,13 +400,6 @@
         <scope>import</scope>
       </dependency>
       <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty-bom</artifactId>
-        <version>${pathling.nettyVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
         <groupId>jakarta.servlet</groupId>
         <artifactId>jakarta.servlet-api</artifactId>
         <version>6.0.0</version>
@@ -406,6 +409,21 @@
         <groupId>org.apache.avro</groupId>
         <artifactId>avro</artifactId>
         <version>1.12.1</version>
+      </dependency>
+      <!-- Override HAPI's transitive org.hl7.fhir.* core libraries to fix
+           CVE-2026-33180 and CVE-2026-34359. No published HAPI release bundles
+           a fixed version yet (8.6.8 ships 6.6.7; 8.8.1 ships 6.7.9).
+           REMOVE THESE TWO OVERRIDES once pathling.hapiFhirVersion is bumped
+           to a HAPI release that bundles org.hl7.fhir.* >= 6.9.4 natively. -->
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>org.hl7.fhir.r4</artifactId>
+        <version>6.9.7</version>
+      </dependency>
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>org.hl7.fhir.utilities</artifactId>
+        <version>6.9.7</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

@@ -71,4 +71,23 @@ public class BulkSubmitConfiguration {
   public boolean isSubmitterAllowed(@Nonnull final SubmitterIdentifier submitter) {
     return findSubmitterConfig(submitter).isPresent();
   }
+
+  /**
+   * Checks if a URL is allowed based on the configured allowableSources prefixes.
+   *
+   * <p>The allowlist is mandatory: if no prefixes are configured the URL is rejected. This
+   * fails-closed default prevents the server being used as an SSRF or credential-forwarding proxy
+   * when the operator has not yet configured trusted sources. Matching is performed by {@link
+   * UrlAllowlist} with proper URI semantics, so subdomain confusion and userinfo bypasses are
+   * rejected.
+   *
+   * @param url the URL to check.
+   * @param allowInsecure if false, plain-http candidates are rejected before any prefix-matching is
+   *     attempted, in line with the server's default TLS-only policy for outgoing requests.
+   * @return true if at least one configured prefix matches the URL, false otherwise (including when
+   *     no prefixes are configured).
+   */
+  public boolean isSourceAllowed(@Nonnull final String url, final boolean allowInsecure) {
+    return UrlAllowlist.matches(getAllowableSources(), url, allowInsecure);
+  }
 }

@@ -42,23 +42,16 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.ArrayType;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -67,7 +60,6 @@ import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * Helper class for executing ViewDefinition queries. Contains shared logic used by both {@link
@@ -94,6 +86,8 @@ public class ViewExecutionHelper {
   @Nonnull private final ServerConfiguration serverConfiguration;
 
   @Nonnull private final Gson gson;
+
+  @Nonnull private final ResultStreamingHelper streamingHelper;
 
   /**
    * Constructs a new ViewExecutionHelper.
@@ -123,6 +117,7 @@ public class ViewExecutionHelper {
     this.groupMemberService = groupMemberService;
     this.serverConfiguration = serverConfiguration;
     this.gson = ViewDefinitionGson.create();
+    this.streamingHelper = new ResultStreamingHelper(gson);
   }
 
   /**
@@ -188,7 +183,7 @@ public class ViewExecutionHelper {
 
       // For CSV with header, write header immediately to minimise TTFB.
       if (outputFormat == ViewOutputFormat.CSV && shouldIncludeHeader) {
-        writeCsvHeader(outputStream, columnNames);
+        streamingHelper.writeCsvHeader(outputStream, columnNames);
         outputStream.flush();
       }
 
@@ -234,9 +229,9 @@ public class ViewExecutionHelper {
     final Iterator<Row> iterator = result.toLocalIterator();
 
     switch (outputFormat) {
-      case NDJSON -> streamNdjson(outputStream, iterator, schema);
-      case JSON -> writeJson(outputStream, iterator, schema);
-      default -> streamCsv(outputStream, iterator, schema);
+      case NDJSON -> streamingHelper.streamNdjson(outputStream, iterator, schema);
+      case JSON -> streamingHelper.writeJson(outputStream, iterator, schema);
+      default -> streamingHelper.streamCsv(outputStream, iterator, schema);
     }
   }
 
@@ -343,147 +338,13 @@ public class ViewExecutionHelper {
         });
   }
 
-  /** Writes the CSV header row. */
-  private void writeCsvHeader(
-      @Nonnull final OutputStream outputStream, @Nonnull final List<String> columnNames)
-      throws IOException {
-    final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
-    final CSVPrinter printer =
-        new CSVPrinter(
-            writer,
-            CSVFormat.DEFAULT
-                .builder()
-                .setHeader(columnNames.toArray(String[]::new))
-                .setSkipHeaderRecord(false)
-                .build());
-    printer.flush();
-    // Don't close the printer as we need to keep the stream open.
-  }
-
-  /** Streams results as NDJSON. */
-  private void streamNdjson(
-      @Nonnull final OutputStream outputStream,
-      @Nonnull final Iterator<Row> iterator,
-      @Nonnull final StructType schema)
-      throws IOException {
-    while (iterator.hasNext()) {
-      final Row row = iterator.next();
-      final String json = rowToJson(row, schema);
-      outputStream.write(json.getBytes(StandardCharsets.UTF_8));
-      outputStream.write('\n');
-      outputStream.flush();
-    }
-  }
-
-  /** Streams results as CSV. The header is written separately for TTFB optimisation. */
-  private void streamCsv(
-      @Nonnull final OutputStream outputStream,
-      @Nonnull final Iterator<Row> iterator,
-      @Nonnull final StructType schema)
-      throws IOException {
-    final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
-    // Header was already written for TTFB optimisation, so always use DEFAULT (no header).
-    final CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT);
-
-    while (iterator.hasNext()) {
-      final Row row = iterator.next();
-      printer.printRecord(rowToList(row, schema));
-      printer.flush();
-    }
-  }
-
   /**
-   * Writes results as a single JSON document containing an array. Unlike NDJSON, this cannot be
-   * streamed row-by-row as it requires proper JSON array formatting.
+   * Returns the result streaming helper for use by other components.
+   *
+   * @return the result streaming helper
    */
-  private void writeJson(
-      @Nonnull final OutputStream outputStream,
-      @Nonnull final Iterator<Row> iterator,
-      @Nonnull final StructType schema)
-      throws IOException {
-    final List<Map<String, Object>> rows = new ArrayList<>();
-    while (iterator.hasNext()) {
-      final Row row = iterator.next();
-      rows.add(rowToMap(row, schema));
-    }
-    final String json = gson.toJson(rows);
-    outputStream.write(json.getBytes(StandardCharsets.UTF_8));
-  }
-
-  /** Converts a Spark Row to a Map for JSON serialisation. */
   @Nonnull
-  private Map<String, Object> rowToMap(@Nonnull final Row row, @Nonnull final StructType schema) {
-    final Map<String, Object> map = new LinkedHashMap<>();
-    final StructField[] fields = schema.fields();
-    for (int i = 0; i < fields.length; i++) {
-      final String name = fields[i].name();
-      final Object value = row.get(i);
-      if (value != null) {
-        map.put(name, convertValue(value, fields[i].dataType()));
-      }
-    }
-    return map;
-  }
-
-  /** Converts a Spark Row to a JSON string. */
-  @Nonnull
-  private String rowToJson(@Nonnull final Row row, @Nonnull final StructType schema) {
-    return gson.toJson(rowToMap(row, schema));
-  }
-
-  /** Converts a value for JSON serialisation. */
-  @Nullable
-  private Object convertValue(
-      @Nullable final Object value, @Nonnull final org.apache.spark.sql.types.DataType dataType) {
-    if (value == null) {
-      return null;
-    }
-    // Handle nested struct.
-    if (value instanceof final Row nestedRow && dataType instanceof final StructType structType) {
-      final Map<String, Object> nested = new LinkedHashMap<>();
-      final StructField[] fields = structType.fields();
-      for (int i = 0; i < fields.length; i++) {
-        final Object nestedValue = nestedRow.get(i);
-        if (nestedValue != null) {
-          nested.put(fields[i].name(), convertValue(nestedValue, fields[i].dataType()));
-        }
-      }
-      return nested;
-    }
-    // Handle array.
-    if (value instanceof final scala.collection.Seq<?> seq) {
-      final List<?> list = CollectionConverters.asJava(seq);
-      if (dataType instanceof final ArrayType arrayType) {
-        return list.stream().map(item -> convertValue(item, arrayType.elementType())).toList();
-      }
-      return list;
-    }
-    return value;
-  }
-
-  /** Converts a Spark Row to a list of values for CSV output. */
-  @Nonnull
-  private List<Object> rowToList(@Nonnull final Row row, @Nonnull final StructType schema) {
-    final List<Object> values = new ArrayList<>();
-    final StructField[] fields = schema.fields();
-    for (int i = 0; i < fields.length; i++) {
-      final Object value = row.get(i);
-      values.add(convertValueForCsv(value, fields[i].dataType()));
-    }
-    return values;
-  }
-
-  /** Converts a value for CSV output. */
-  @Nullable
-  private Object convertValueForCsv(
-      @Nullable final Object value, @Nonnull final org.apache.spark.sql.types.DataType dataType) {
-    if (value == null) {
-      return null;
-    }
-    if (value instanceof Row || value instanceof scala.collection.Seq<?>) {
-      // For complex types in CSV, serialise as JSON.
-      return gson.toJson(convertValue(value, dataType));
-    }
-    return value;
+  public ResultStreamingHelper getStreamingHelper() {
+    return streamingHelper;
   }
 }

@@ -19,15 +19,18 @@ package au.csiro.pathling.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
+import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.storage.StorageLevel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +45,9 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class DynamicDeltaSourceTest {
 
+  private static final String DATABASE_PATH =
+      Path.of("src/test/resources/test-data/bulk/fhir/delta").toAbsolutePath().toString();
+
   @Autowired private SparkSession sparkSession;
 
   @Autowired private PathlingContext pathlingContext;
@@ -52,12 +58,7 @@ class DynamicDeltaSourceTest {
 
   @BeforeEach
   void setUp() {
-    // Use an empty directory as the database path to simulate no data.
-    final String databasePath =
-        Path.of("src/test/resources/test-data/bulk/fhir/delta").toAbsolutePath().toString();
-    final QueryableDataSource baseSource = pathlingContext.read().delta(databasePath);
-    dynamicDeltaSource =
-        new DynamicDeltaSource(baseSource, sparkSession, databasePath, fhirEncoders);
+    dynamicDeltaSource = newDynamicDeltaSource(true);
   }
 
   // Verifies that reading a resource type that doesn't exist in the database returns an empty
@@ -72,5 +73,44 @@ class DynamicDeltaSourceTest {
     assertThat(result.count()).isZero();
     // Verify the schema has the expected structure for an ImmunizationEvaluation resource.
     assertThat(result.schema().fieldNames()).contains("id", "status");
+  }
+
+  // Verifies that when StorageConfiguration.cacheDatasets is true, datasets returned by read()
+  // are marked for caching. Guards against accidental changes to the caching contract introduced
+  // by cacheIfEnabled().
+  @Test
+  void readCachesDatasetWhenCachingEnabled() {
+    final DynamicDeltaSource source = newDynamicDeltaSource(true);
+
+    final Dataset<Row> result = source.read("Patient");
+
+    try {
+      // Dataset.cache() applies MEMORY_AND_DISK; assert on the exact level rather than just
+      // "anything but NONE" so accidental changes to the persistence level are caught.
+      assertThat(result.storageLevel()).isEqualTo(StorageLevel.MEMORY_AND_DISK());
+    } finally {
+      result.unpersist();
+    }
+  }
+
+  // Verifies that when StorageConfiguration.cacheDatasets is false, datasets returned by read()
+  // are not cached. Pairs with readCachesDatasetWhenCachingEnabled() to lock in cacheIfEnabled()
+  // behaviour for both configuration values.
+  @Test
+  void readDoesNotCacheDatasetWhenCachingDisabled() {
+    final DynamicDeltaSource source = newDynamicDeltaSource(false);
+
+    final Dataset<Row> result = source.read("Patient");
+
+    assertThat(result.storageLevel()).isEqualTo(StorageLevel.NONE());
+  }
+
+  @Nonnull
+  private DynamicDeltaSource newDynamicDeltaSource(final boolean cacheDatasets) {
+    final StorageConfiguration storageConfiguration = new StorageConfiguration();
+    storageConfiguration.setCacheDatasets(cacheDatasets);
+    final QueryableDataSource baseSource = pathlingContext.read().delta(DATABASE_PATH);
+    return new DynamicDeltaSource(
+        baseSource, sparkSession, DATABASE_PATH, fhirEncoders, storageConfiguration);
   }
 }

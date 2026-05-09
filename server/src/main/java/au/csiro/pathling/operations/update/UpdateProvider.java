@@ -18,9 +18,13 @@
 package au.csiro.pathling.operations.update;
 
 import static au.csiro.pathling.operations.update.UpdateExecutor.prepareResourceForUpdate;
+import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.security.OperationAccess;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
@@ -47,6 +51,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class UpdateProvider implements IResourceProvider {
 
+  @Nonnull private final ServerConfiguration configuration;
+
   @Nonnull private final UpdateExecutor updateExecutor;
 
   @Nonnull private final Class<? extends IBaseResource> resourceClass;
@@ -56,14 +62,17 @@ public class UpdateProvider implements IResourceProvider {
   /**
    * Constructs a new UpdateProvider for a specific resource type.
    *
+   * @param configuration the server configuration
    * @param updateExecutor the executor for performing update operations
    * @param fhirContext the FHIR context for resource definitions
    * @param resourceClass the class of the resource type this provider handles
    */
   public UpdateProvider(
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final UpdateExecutor updateExecutor,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
+    this.configuration = configuration;
     this.updateExecutor = updateExecutor;
     this.resourceClass = resourceClass;
     this.resourceTypeCode = fhirContext.getResourceDefinition(resourceClass).getName();
@@ -89,6 +98,11 @@ public class UpdateProvider implements IResourceProvider {
       @Nullable @IdParam final IdType id, @Nullable @ResourceParam final IBaseResource resource) {
     checkUserInput(id != null && !id.isEmpty(), "ID must be supplied");
     checkUserInput(resource != null, "Resource must be supplied");
+
+    if (configuration.getAuth().isEnabled()) {
+      checkHasAuthority(
+          PathlingAuthority.resourceAccess(ResourceAccess.AccessType.WRITE, resourceTypeCode));
+    }
 
     final String resourceId = id.getIdPart();
     final IBaseResource preparedResource = prepareResourceForUpdate(resource, resourceId);

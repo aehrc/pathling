@@ -17,10 +17,12 @@
 
 package au.csiro.pathling;
 
-import java.net.URI;
-import org.apache.hadoop.fs.Path;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
+import au.csiro.pathling.io.JobFile;
+import jakarta.annotation.Nonnull;
+import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -32,21 +34,22 @@ import org.springframework.web.bind.annotation.RestController;
  * REST controller for serving job output files.
  *
  * @author Felix Naumann
+ * @author John Grimes
  */
 @RestController
+@Slf4j
 public class FileController {
 
-  private final String databasePath;
+  @Nonnull private final JobDirectoryFileSystem jobDirectoryFileSystem;
 
   /**
    * Creates a new FileController.
    *
-   * @param databasePath the path to the database directory
+   * @param jobDirectoryFileSystem the helper used to access the per-job directory under the
+   *     warehouse via the Hadoop {@link org.apache.hadoop.fs.FileSystem} API
    */
-  public FileController(
-      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          final String databasePath) {
-    this.databasePath = databasePath;
+  public FileController(@Nonnull final JobDirectoryFileSystem jobDirectoryFileSystem) {
+    this.jobDirectoryFileSystem = jobDirectoryFileSystem;
   }
 
   /**
@@ -60,22 +63,16 @@ public class FileController {
   public ResponseEntity<Resource> serveFile(
       @PathVariable("jobId") final String jobId, @PathVariable("filename") final String filename) {
 
-    final Path requestedFilePath =
-        new Path(
-            URI.create(databasePath).getPath()
-                + Path.SEPARATOR
-                + "jobs"
-                + Path.SEPARATOR
-                + jobId
-                + Path.SEPARATOR
-                + filename);
-    final Resource resource = new FileSystemResource(requestedFilePath.toString());
-
-    if (!resource.exists() || !resource.isFile()) {
+    final Optional<JobFile> opened = jobDirectoryFileSystem.openForRead(jobId, filename);
+    if (opened.isEmpty()) {
       return ResponseEntity.notFound().build();
     }
+
+    final JobFile jobFile = opened.orElseThrow();
+    final Resource resource = new InputStreamResource(jobFile.getStream());
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+        .contentLength(jobFile.getLength())
         .body(resource);
   }
 }

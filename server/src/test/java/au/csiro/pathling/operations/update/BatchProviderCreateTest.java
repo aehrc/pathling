@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.operations.delete.DeleteExecutor;
@@ -86,7 +87,8 @@ class BatchProviderCreateTest {
             pathlingContext,
             fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
-            cacheableDatabase);
+            cacheableDatabase,
+            new StorageConfiguration());
 
     // Create DeleteExecutor with the temp database path.
     deleteExecutor =

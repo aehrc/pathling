@@ -17,10 +17,14 @@
 
 package au.csiro.pathling.search;
 
+import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
+
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.security.OperationAccess;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.RawParam;
@@ -109,6 +113,10 @@ public class SearchProvider implements IResourceProvider {
   @OperationAccess("search")
   @SuppressWarnings("UnusedReturnValue")
   public IBundleProvider search(@Nullable @RawParam final Map<String, List<String>> rawParams) {
+    if (configuration.getAuth().isEnabled()) {
+      checkHasAuthority(
+          PathlingAuthority.resourceAccess(ResourceAccess.AccessType.READ, resourceTypeCode));
+    }
     final String queryString = buildQueryString(rawParams);
     return buildSearchExecutor(queryString, Optional.empty());
   }
@@ -127,6 +135,10 @@ public class SearchProvider implements IResourceProvider {
   public IBundleProvider search(
       @Nullable @OptionalParam(name = FILTER_PARAM) final StringAndListParam filters,
       @Nullable @RawParam final Map<String, List<String>> rawParams) {
+    if (configuration.getAuth().isEnabled()) {
+      checkHasAuthority(
+          PathlingAuthority.resourceAccess(ResourceAccess.AccessType.READ, resourceTypeCode));
+    }
     final String queryString = buildQueryString(rawParams);
     return buildSearchExecutor(queryString, Optional.ofNullable(filters));
   }

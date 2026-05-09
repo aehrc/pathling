@@ -96,7 +96,7 @@ timestamp, using merge mode for incremental updates:
 | ------------- | ----------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | `exportUrl`   | 1..1        | url    | The URL of the bulk export endpoint to import from. Can include query parameters (e.g., `$export?_type=Patient`).              |
 | `exportType`  | 0..1        | Coding | The type of export: `dynamic` (default) includes data as of export completion, `static` includes data as of export initiation. |
-| `mode`        | 0..1        | Coding | Controls how data is merged with existing resources. See [Save modes](#save-modes). Defaults to `overwrite`.                   |
+| `mode`        | 0..1        | Coding | Controls how data is merged with existing resources. See [Save modes](#save-modes). Defaults to `merge`.                       |
 | `inputFormat` | 0..1        | Coding | The format of source files. Defaults to `application/fhir+ndjson`. See [Supported formats](./import#supported-formats).        |
 
 ### Bulk export parameters
@@ -117,13 +117,43 @@ URL.
 
 ### Save modes
 
-| Mode        | Description                                                       |
-| ----------- | ----------------------------------------------------------------- |
-| `overwrite` | Delete and replace all existing resources of each type (default)  |
-| `merge`     | Match resources by ID; update existing resources and add new ones |
-| `append`    | Add new resources without modifying existing ones                 |
-| `ignore`    | Skip resources that already exist                                 |
-| `error`     | Fail if any resources already exist                               |
+| Mode        | Description                                                                 |
+| ----------- | --------------------------------------------------------------------------- |
+| `merge`     | Match resources by ID; update existing resources and add new ones (default) |
+| `overwrite` | Delete and replace all existing resources of each type                      |
+| `append`    | Add new resources without modifying existing ones                           |
+| `ignore`    | Skip resources that already exist                                           |
+| `error`     | Fail if any resources already exist                                         |
+
+## Security
+
+### Export URL whitelist
+
+To prevent credential leakage and server-side request forgery (SSRF), the
+`$import-pnp` operation validates the `exportUrl` against a configurable
+whitelist.
+
+- `pathling.import.pnp.allowableExportUrls` - A list of URL prefixes which are
+  allowable for use as export URLs. Any `exportUrl` that does not start with
+  one of these prefixes is rejected with a `400 Bad Request`.
+
+This list is mandatory. If it is empty the operation rejects every request,
+regardless of whether PNP credentials have been configured. This prevents
+`$import-pnp` from being used as an SSRF or warehouse-poisoning vector.
+
+### Authentication interlock
+
+When PNP credentials (`clientId`/`clientSecret` or `privateKeyJwk`) are
+configured, Pathling authentication (`pathling.auth.enabled`) must also be
+enabled. If authentication is disabled but PNP credentials are present, the
+server logs a warning at startup and rejects all `$import-pnp` requests.
+
+### Manifest URL validation
+
+After receiving the export manifest, Pathling validates that every download URL
+in the manifest uses the same origin (scheme + host + port) as the original
+`exportUrl`. If a manifest references a different origin, the job fails with an
+error and no bearer token is sent to the off-host URL.
 
 ## Asynchronous processing
 
@@ -200,7 +230,7 @@ PATHLING_URL = "https://pathling.example.com/fhir"
 SOURCE_EXPORT_URL = "https://source-server.example.com/fhir/$export"
 
 
-def kick_off_import(export_url, mode="overwrite", types=None, since=None):
+def kick_off_import(export_url, mode="merge", types=None, since=None):
     """Initiate a ping and pull import.
 
     Args:

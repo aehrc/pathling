@@ -25,6 +25,7 @@ import au.csiro.fhir.auth.Token;
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SubmitterConfiguration;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.Closeable;
@@ -36,6 +37,7 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClients;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -69,16 +71,23 @@ public class BulkSubmitAuthProvider implements Closeable {
 
   @Nonnull private final AuthTokenProvider tokenProvider;
 
+  private final boolean allowInsecureUrls;
+
   /**
    * Creates a new BulkSubmitAuthProvider.
    *
    * @param serverConfiguration the server configuration containing bulk submit settings.
+   * @param allowInsecureUrls whether plain-http URLs are accepted as discovery or token endpoints;
+   *     defaults to false so that credentials are only sent over TLS.
    */
-  public BulkSubmitAuthProvider(@Nonnull final ServerConfiguration serverConfiguration) {
+  public BulkSubmitAuthProvider(
+      @Nonnull final ServerConfiguration serverConfiguration,
+      @Value("${pathling.allowInsecureUrls:false}") final boolean allowInsecureUrls) {
     this.serverConfiguration = serverConfiguration;
     this.httpClient = createHttpClient();
     this.tokenProvider =
         new AuthTokenProvider(httpClient, SubmitterConfiguration.DEFAULT_TOKEN_EXPIRY_TOLERANCE);
+    this.allowInsecureUrls = allowInsecureUrls;
   }
 
   /**
@@ -89,6 +98,7 @@ public class BulkSubmitAuthProvider implements Closeable {
    * @param oauthMetadataUrl optional explicit URL to OAuth 2.0 metadata.
    * @return an access token if credentials are configured, empty otherwise.
    * @throws IOException if token acquisition fails.
+   * @throws InvalidUserInputError if the discovered token endpoint is not allowlisted.
    */
   @Nonnull
   public Optional<String> acquireToken(
@@ -112,6 +122,15 @@ public class BulkSubmitAuthProvider implements Closeable {
     // Discover token endpoint.
     final String tokenEndpoint = discoverTokenEndpoint(fhirBaseUrl, oauthMetadataUrl);
     log.debug("Using token endpoint: {} for submitter: {}", tokenEndpoint, submitter.toKey());
+
+    // Re-validate the discovered token endpoint against the configured allowlist before sending
+    // any credentials to it. The allowlist on oauthMetadataUrl and fhirBaseUrl only controls where
+    // the discovery document is fetched from; the discovered token_endpoint is the actual
+    // credential destination and so must be subject to the same policy. Without this check, a
+    // legitimate but compromised or misconfigured discovery document could redirect Pathling's
+    // OAuth client credentials (clientSecret or signed JWT assertion) to an attacker-controlled
+    // host.
+    requireAllowedTokenEndpoint(tokenEndpoint);
 
     // Create AuthConfig and get token via shared library.
     final AuthConfig authConfig = submitterConfig.get().toAuthConfig(tokenEndpoint);
@@ -166,6 +185,31 @@ public class BulkSubmitAuthProvider implements Closeable {
       final SMARTDiscoveryResponse discovery =
           SMARTDiscoveryResponse.get(URI.create(fhirBaseUrl), httpClient);
       return discovery.getTokenEndpoint();
+    }
+  }
+
+  /**
+   * Rejects a discovered token endpoint that is not covered by {@code
+   * pathling.bulkSubmit.allowableSources}, or that uses plain {@code http} when {@code
+   * pathling.allowInsecureUrls} is false.
+   *
+   * @throws InvalidUserInputError if the endpoint fails the policy check.
+   */
+  private void requireAllowedTokenEndpoint(@Nullable final String tokenEndpoint) {
+    final BulkSubmitConfiguration bulkSubmitConfig = serverConfiguration.getBulkSubmit();
+    if (bulkSubmitConfig == null) {
+      throw new InvalidUserInputError(
+          "Discovered OAuth token endpoint cannot be validated because $bulk-submit is not"
+              + " configured.");
+    }
+    if (tokenEndpoint == null || tokenEndpoint.isBlank()) {
+      throw new InvalidUserInputError(
+          "OAuth metadata response did not contain a usable token_endpoint.");
+    }
+    if (!bulkSubmitConfig.isSourceAllowed(tokenEndpoint, allowInsecureUrls)) {
+      throw new InvalidUserInputError(
+          "Discovered OAuth token endpoint '%s' does not match any allowed source prefixes."
+              .formatted(tokenEndpoint));
     }
   }
 
