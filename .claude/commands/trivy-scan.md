@@ -22,7 +22,26 @@ If the user does not specify a scope, default to `all`.
 If the user provides an invalid scope, inform them of the valid options and
 stop.
 
-## Step 2: Refresh the vulnerability database
+## Step 2: Verify Trivy version matches CI
+
+Before scanning, confirm that the locally-installed Trivy version matches the
+version pinned in `.github/actions/trivy-scan/action.yml`. Trivy's pom parser
+has shown version-to-version differences in how `dependencyManagement` BOM
+import ordering is honoured, so a local result will not reliably match CI
+unless the versions are aligned.
+
+```bash
+local_version=$(trivy --version | awk '/^Version:/ {print "v"$2; exit}')
+ci_version=$(grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' .github/actions/trivy-scan/action.yml | head -1)
+echo "Local: $local_version  CI: $ci_version"
+[ "$local_version" = "$ci_version" ] || echo "MISMATCH"
+```
+
+If they differ, stop and tell the user. Suggest either upgrading the local
+binary (`brew upgrade trivy`) or bumping the pinned version in
+`.github/actions/trivy-scan/action.yml`, depending on which is older.
+
+## Step 3: Refresh the vulnerability database
 
 Before running any scans, force a refresh of the Trivy vulnerability database.
 Trivy normally only re-downloads the DB if the local copy is older than 24
@@ -33,9 +52,9 @@ data.
 trivy image --download-db-only
 ```
 
-Run this once per invocation, before the scans in Step 3.
+Run this once per invocation, before the scans in Step 4.
 
-## Step 3: Run Trivy for each scope
+## Step 4: Run Trivy for each scope
 
 Each scope has its own `.trivyignore` file. Run Trivy from within the scope's
 directory so that the local `.trivyignore` is picked up automatically.
@@ -124,7 +143,7 @@ Run scans for different scopes in parallel where possible. Use a timeout of
 5 minutes per scan. If Trivy is not installed, inform the user and suggest
 `brew install trivy`.
 
-## Step 4: Analyse results and provide recommendations
+## Step 5: Analyse results and provide recommendations
 
 For each vulnerability reported by Trivy, perform a contextual impact
 assessment before recommending an action. This means reading the relevant parts
