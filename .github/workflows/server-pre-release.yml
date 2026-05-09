@@ -38,6 +38,7 @@ jobs:
           trivyignore: server/.trivyignore
           skip-db-update: "true"
           sarif-output: trivy-results-server.sarif
+          effective-pom: "true"
 
       - name: Run UI security scan
         uses: ./.github/actions/trivy-scan

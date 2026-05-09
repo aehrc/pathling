@@ -83,16 +83,25 @@ trivy repo . \
 
 ### Server scope
 
-Scans the `server` directory. The `server/.trivyignore` contains suppressions
-for Spark runtime transitive dependencies and server-specific libraries.
+The server scope scans a Maven effective POM rather than `server/pom.xml`
+directly. This avoids Trivy pom-parser bugs (aquasecurity/trivy issues #8049,
+#8036, #5748) where BOM imports and property overrides are resolved
+inconsistently between environments. Generating an effective POM flattens all
+`dependencyManagement` BOM imports and resolves all `${...}` properties to
+concrete versions, giving Trivy unambiguous input. The CI workflow does the
+same via the `effective-pom: "true"` input on the `trivy-scan` action.
 
-Working directory: `server/`.
+The `server/.trivyignore` contains suppressions for Spark runtime transitive
+dependencies and server-specific libraries.
+
+Working directory: repository root.
 
 ```bash
-cd server && trivy repo . \
+mkdir -p .trivy-effective/server
+mvn --batch-mode --quiet -f server/pom.xml \
+  help:effective-pom -Doutput="$PWD/.trivy-effective/server/pom.xml"
+TRIVY_IGNOREFILE="$PWD/server/.trivyignore" trivy repo .trivy-effective/server \
   --severity MEDIUM,HIGH,CRITICAL \
-  --skip-files "**/target/**/*" \
-  --skip-dirs ".idea" \
   --exit-code 0
 ```
 

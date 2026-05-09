@@ -35,10 +35,33 @@ inputs:
     description: Path for SARIF output file.
     required: false
     default: "trivy-results.sarif"
+  effective-pom:
+    description: |
+      Generate a Maven effective POM and scan that instead of the source pom.xml.
+      Works around Trivy pom-parser bugs around BOM imports and property
+      overrides (see aquasecurity/trivy issues #8049, #8036, #5748). The
+      effective POM has all dependencyManagement BOM imports flattened and all
+      properties resolved, giving Trivy concrete versions to match against.
+    required: false
+    default: "false"
 
 runs:
   using: composite
   steps:
+    - name: Generate effective POM
+      id: effective-pom
+      if: inputs.effective-pom == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        out_dir="${RUNNER_TEMP}/trivy-effective-pom/${{ inputs.scan-ref }}"
+        mkdir -p "${out_dir}"
+        mvn --batch-mode --quiet \
+          -f "${{ inputs.scan-ref }}/pom.xml" \
+          help:effective-pom \
+          -Doutput="${out_dir}/pom.xml"
+        echo "scan-ref=${out_dir}" >> "$GITHUB_OUTPUT"
+
     - name: Run security scan (SARIF output)
       id: sarif-scan
       uses: aquasecurity/trivy-action@0.35.0
@@ -49,7 +72,7 @@ runs:
         TRIVY_IGNOREFILE: ${{ inputs.trivyignore }}
       with:
         scan-type: repo
-        scan-ref: ${{ inputs.scan-ref }}
+        scan-ref: ${{ steps.effective-pom.outputs.scan-ref || inputs.scan-ref }}
         ignore-unfixed: ${{ inputs.ignore-unfixed }}
         format: sarif
         output: ${{ inputs.sarif-output }}
@@ -68,7 +91,7 @@ runs:
         TRIVY_IGNOREFILE: ${{ inputs.trivyignore }}
       with:
         scan-type: repo
-        scan-ref: ${{ inputs.scan-ref }}
+        scan-ref: ${{ steps.effective-pom.outputs.scan-ref || inputs.scan-ref }}
         ignore-unfixed: ${{ inputs.ignore-unfixed }}
         format: table
         skip-files: ${{ inputs.skip-files }}
