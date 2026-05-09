@@ -22,7 +22,20 @@ If the user does not specify a scope, default to `all`.
 If the user provides an invalid scope, inform them of the valid options and
 stop.
 
-## Step 2: Run Trivy for each scope
+## Step 2: Refresh the vulnerability database
+
+Before running any scans, force a refresh of the Trivy vulnerability database.
+Trivy normally only re-downloads the DB if the local copy is older than 24
+hours; running this command bypasses that check so scans always use the latest
+data.
+
+```bash
+trivy image --download-db-only
+```
+
+Run this once per invocation, before the scans in Step 3.
+
+## Step 3: Run Trivy for each scope
 
 Each scope has its own `.trivyignore` file. Run Trivy from within the scope's
 directory so that the local `.trivyignore` is picked up automatically.
@@ -111,7 +124,7 @@ Run scans for different scopes in parallel where possible. Use a timeout of
 5 minutes per scan. If Trivy is not installed, inform the user and suggest
 `brew install trivy`.
 
-## Step 3: Analyse results and provide recommendations
+## Step 4: Analyse results and provide recommendations
 
 For each vulnerability reported by Trivy, perform a contextual impact
 assessment before recommending an action. This means reading the relevant parts
