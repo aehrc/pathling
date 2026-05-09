@@ -37,3 +37,12 @@ CVE-2026-34043
 
 # uuid buffer bounds check — mermaid internal use and sockjs dev server only.
 GHSA-w5hq-g745-h8pq
+
+# fast-uri path traversal — build-time URI parsing during Docusaurus build, not deployed.
+CVE-2026-6321
+
+# postcss XSS via style tag escaping — build-time CSS processing of trusted source files, not deployed.
+CVE-2026-41305
+
+# uuid out-of-bounds write — build-time Docusaurus internal use only, not deployed.
+CVE-2026-41907
