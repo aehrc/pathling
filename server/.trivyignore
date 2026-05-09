@@ -62,6 +62,11 @@ CVE-2025-66021
 # Pathling uses Spring Boot for web serving, not Vert.x static handlers.
 CVE-2026-1002
 
+# Vert.x SNI SslContext cache unbounded growth DoS - transitive via
+# spark-kubernetes. Pathling does not expose a Vert.x server, so the SNI
+# handling code path is unreachable.
+CVE-2026-6860
+
 # aircompressor Snappy/LZ4 decompressor buffer content leakage (fixed in 3.4).
 # Transitive via Spark 4.0.2 → ORC 2.1.4 → aircompressor 2.0.2.
 # $import with parquet format could trigger the vulnerability, but exploitation
