@@ -537,6 +537,56 @@ class SingleInstanceEvaluatorTest {
     }
 
     @Test
+    void jsonCorrectlyRendersArrayOfStructsWithHeterogeneousNulls() {
+      // Two Coding elements share an input schema but differ in which fields are null.
+      // After sanitisation each element has a different schema (3 vs 2 fields), so the parent
+      // ArrayType.elementType captured from the first element does not match the second. This
+      // causes Row.json() to map field names positionally against the wrong schema for element 1.
+      final StructType codingSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("system", DataTypes.StringType, true),
+                DataTypes.createStructField("code", DataTypes.StringType, true),
+                DataTypes.createStructField("display", DataTypes.StringType, true),
+              });
+      final StructType outerSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField(
+                    "coding", DataTypes.createArrayType(codingSchema, true), true),
+              });
+
+      final Row codingWithDisplay =
+          new GenericRowWithSchema(
+              new Object[] {"http://snomed.info/sct", "111", "has display"}, codingSchema);
+      final Row codingWithoutDisplay =
+          new GenericRowWithSchema(
+              new Object[] {"http://snomed.info/sct", "222", null}, codingSchema);
+      final Row outerRow =
+          new GenericRowWithSchema(
+              new Object[] {SqlHelpers.sql_array(codingWithDisplay, codingWithoutDisplay)},
+              outerSchema);
+
+      final String json = SingleInstanceEvaluator.rowToJson(outerRow);
+
+      // Element 0 has all three fields - should render correctly.
+      assertTrue(
+          json.contains("\"code\":\"111\""), "element 0 code should be present, got: " + json);
+      assertTrue(
+          json.contains("\"display\":\"has display\""),
+          "element 0 display should be present, got: " + json);
+
+      // Element 1 has display=null which should be stripped, but code=222 should still appear
+      // under the key "code" (not mis-mapped to another field name like "display").
+      assertTrue(
+          json.contains("\"code\":\"222\""),
+          "element 1 code should be present and correctly named, got: " + json);
+      assertFalse(
+          json.contains("\"display\":\"222\""),
+          "element 1 code value should not be mis-mapped to display, got: " + json);
+    }
+
+    @Test
     void jsonCorrectlyRendersArrayOfStructsAfterSanitisation() {
       // JSON output for array-of-struct fields should not include synthetic or null-valued fields.
       final String json = SingleInstanceEvaluator.rowToJson(buildCodingOuterRow());
