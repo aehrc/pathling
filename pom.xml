@@ -1044,6 +1044,7 @@
                   <exclude>**/.Rbuildignore</exclude>
                   <exclude>**/.lintr</exclude>
                   <exclude>**/*.src</exclude>
+                  <exclude>openspec/**</exclude>
                 </excludes>
               </licenseSet>
             </licenseSets>
