@@ -75,3 +75,10 @@ CVE-2026-6860
 # data would be raw byte fragments, not coherent records. Risk is low.
 # See: https://github.com/aehrc/pathling/issues/2540
 CVE-2025-67721
+
+# Apache Thrift TSSLTransportFactory certificate hostname validation flaw, no
+# fixed version available. libthrift is a transitive dependency via
+# hapi-fhir-structures-r4 -> jena-shex -> jena-arq. Pathling does not use
+# Thrift's SSL transport (no TSSL/TSocket/Thrift client code anywhere in the
+# server), so the vulnerable code path is unreachable.
+CVE-2026-43869
