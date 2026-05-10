@@ -48,11 +48,30 @@ Trivy normally only re-downloads the DB if the local copy is older than 24
 hours; running this command bypasses that check so scans always use the latest
 data.
 
+The DB image is ~100 MiB. Trivy's default download timeout (5 minutes) can
+expire on slow links. Set `TRIVY_TIMEOUT=15m` to give it room. After the
+download, verify the DB is current (less than 24 hours old) by reading
+`~/Library/Caches/trivy/db/metadata.json` (Linux:
+`~/.cache/trivy/db/metadata.json`). If the download fails or the DB is still
+stale, **stop and tell the user** rather than proceeding with stale data - a
+stale DB will silently miss recently-disclosed CVEs and produce results that
+disagree with CI.
+
 ```bash
-trivy image --download-db-only
+TRIVY_TIMEOUT=15m trivy image --download-db-only
+
+# Verify freshness. The DB is regenerated daily; reject anything older than 24h.
+db_meta=~/Library/Caches/trivy/db/metadata.json
+[ "$(uname)" = "Linux" ] && db_meta=~/.cache/trivy/db/metadata.json
+updated_at=$(jq -r '.UpdatedAt' "$db_meta")
+age_hours=$(( ($(date -u +%s) - $(date -u -j -f "%Y-%m-%dT%H:%M:%S" "${updated_at%.*}" +%s 2>/dev/null || date -u -d "$updated_at" +%s)) / 3600 ))
+echo "DB UpdatedAt: $updated_at (age: ${age_hours}h)"
+[ "$age_hours" -lt 24 ] || { echo "STALE DB - aborting"; exit 1; }
 ```
 
-Run this once per invocation, before the scans in Step 4.
+Run this once per invocation, before the scans in Step 4. Pass
+`--skip-db-update` to the scan commands so Trivy reuses the freshly-downloaded
+DB instead of attempting a second (potentially slower) update mid-scan.
 
 ## Step 4: Run Trivy for each scope
 
@@ -78,7 +97,7 @@ trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
   --skip-files "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*" \
   --skip-dirs "server,ui,site,fhirpath-lab-api,benchmark,test-data,deployment,.idea" \
-  --exit-code 0
+  --skip-db-update --exit-code 0
 ```
 
 ### Server scope
@@ -102,7 +121,7 @@ mvn --batch-mode --quiet -f server/pom.xml \
   help:effective-pom -Doutput="$PWD/.trivy-effective/server/pom.xml"
 TRIVY_IGNOREFILE="$PWD/server/.trivyignore" trivy repo .trivy-effective/server \
   --severity MEDIUM,HIGH,CRITICAL \
-  --exit-code 0
+  --skip-db-update --exit-code 0
 ```
 
 ### UI scope
@@ -116,7 +135,7 @@ Working directory: `ui/`.
 cd ui && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
   --skip-dirs ".idea" \
-  --exit-code 0
+  --skip-db-update --exit-code 0
 ```
 
 ### Site scope
@@ -131,7 +150,7 @@ cd site && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
   --skip-files "**/target/**/*" \
   --skip-dirs ".idea" \
-  --exit-code 0
+  --skip-db-update --exit-code 0
 ```
 
 ### FHIRPath Lab API scope
@@ -145,7 +164,7 @@ Working directory: `fhirpath-lab-api/`.
 cd fhirpath-lab-api && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
   --skip-dirs ".idea" \
-  --exit-code 0
+  --skip-db-update --exit-code 0
 ```
 
 Run scans for different scopes in parallel where possible. Use a timeout of
