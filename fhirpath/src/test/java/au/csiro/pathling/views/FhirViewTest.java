@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static scala.jdk.javaapi.CollectionConverters.asScala;
 
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.io.source.DataSource;
@@ -515,9 +516,18 @@ abstract class FhirViewTest {
                 throw e;
               }
 
-              // Create a new executor and build the query.
+              // Create a new executor with a reduced traversal depth (4 instead of the default
+              // 10) to keep Spark plan complexity manageable. Nested repeat-in-repeat tests
+              // compound the plan depth, and the default of 10 exceeds Spark's analyzer iteration
+              // limit (100). A depth of 4 is sufficient for the current test data, which nests
+              // extensions at most 4 levels deep. If future tests require deeper traversal,
+              // increase
+              // this value but be aware of the Spark analyzer limit.
               final FhirViewExecutor executor =
-                  new FhirViewExecutor(fhirContext, parameters.sourceData());
+                  new FhirViewExecutor(
+                      fhirContext,
+                      parameters.sourceData(),
+                      QueryConfiguration.builder().maxUnboundTraversalDepth(4).build());
               return executor.buildQuery(view);
             });
   }

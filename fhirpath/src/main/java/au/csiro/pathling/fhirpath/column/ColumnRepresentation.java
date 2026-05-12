@@ -33,6 +33,7 @@ import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
@@ -373,6 +374,21 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation transform(final UnaryOperator<Column> lambda) {
     return vectorize(
         c -> functions.transform(c, lambda::apply), c -> when(c.isNotNull(), lambda.apply(c)));
+  }
+
+  /**
+   * Transforms the current {@link ColumnRepresentation} using a lambda that receives both the
+   * element and its 0-based index within the array.
+   *
+   * @param lambda the function to apply to each element and its index
+   * @return a new {@link ColumnRepresentation} that is transformed
+   */
+  @Nonnull
+  public ColumnRepresentation transformWithIndex(
+      @Nonnull final BiFunction<Column, Column, Column> lambda) {
+    return vectorize(
+        c -> functions.transform(c, lambda::apply),
+        c -> when(c.isNotNull(), lambda.apply(c, lit(0))));
   }
 
   /**

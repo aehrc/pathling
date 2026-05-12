@@ -17,9 +17,12 @@
 
 package au.csiro.pathling.projection;
 
+import static org.apache.spark.sql.functions.lit;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import jakarta.annotation.Nonnull;
@@ -30,14 +33,29 @@ import org.apache.spark.sql.Column;
  * Dependencies and logic relating to the traversal of FHIRPath expressions.
  *
  * <p>This context holds an evaluator for FHIRPath expressions and the current input context for
- * expression evaluation.
+ * expression evaluation. It also carries the current row index for use within forEach/forEachOrNull
+ * iterations.
  *
  * @param evaluator an evaluator for FHIRPath expressions (produces Column expressions)
  * @param inputContext the initial context for evaluation
+ * @param rowIndex the current 0-based element index within a forEach/forEachOrNull iteration
  * @author Piotr Szul
  */
 public record ProjectionContext(
-    @Nonnull SingleResourceEvaluator evaluator, @Nonnull Collection inputContext) {
+    @Nonnull SingleResourceEvaluator evaluator,
+    @Nonnull Collection inputContext,
+    @Nonnull Column rowIndex) {
+
+  /**
+   * Creates a new ProjectionContext with the default row index of 0.
+   *
+   * @param evaluator an evaluator for FHIRPath expressions
+   * @param inputContext the initial context for evaluation
+   */
+  public ProjectionContext(
+      @Nonnull final SingleResourceEvaluator evaluator, @Nonnull final Collection inputContext) {
+    this(evaluator, inputContext, lit(0));
+  }
 
   /**
    * Creates a new ProjectionContext with a different input context.
@@ -47,7 +65,18 @@ public record ProjectionContext(
    */
   @Nonnull
   public ProjectionContext withInputContext(@Nonnull final Collection inputContext) {
-    return new ProjectionContext(evaluator, inputContext);
+    return new ProjectionContext(evaluator, inputContext, rowIndex);
+  }
+
+  /**
+   * Creates a new ProjectionContext with a different row index.
+   *
+   * @param rowIndex the new row index column
+   * @return a new ProjectionContext with the specified row index
+   */
+  @Nonnull
+  public ProjectionContext withRowIndex(@Nonnull final Column rowIndex) {
+    return new ProjectionContext(evaluator, inputContext, rowIndex);
   }
 
   /**
@@ -94,15 +123,23 @@ public record ProjectionContext(
     return withInputContext(EmptyCollection.getInstance());
   }
 
+  /** The name of the row index environment variable. */
+  public static final String ROW_INDEX_VARIABLE = "rowIndex";
+
   /**
    * Evaluates the given FHIRPath path and returns the result as a collection.
+   *
+   * <p>The evaluation includes the current row index as the {@code %rowIndex} environment variable.
    *
    * @param path the path to evaluate
    * @return the result as a collection
    */
   @Nonnull
   public Collection evalExpression(@Nonnull final FhirPath path) {
-    return evaluator.evaluate(path, inputContext);
+    return evaluator
+        .withVariable(
+            ROW_INDEX_VARIABLE, IntegerCollection.build(new DefaultRepresentation(rowIndex)))
+        .evaluate(path, inputContext);
   }
 
   /**
