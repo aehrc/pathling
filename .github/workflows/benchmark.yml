@@ -119,7 +119,7 @@ jobs:
         run: |
           EXTRA_ARGS=""
           if [ "${{ github.event.inputs.mode }}" = "extended" ]; then
-            EXTRA_ARGS="-wt 20s -r 10s"
+            EXTRA_ARGS="-w 20s -r 10s"
           fi
           java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
             --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
