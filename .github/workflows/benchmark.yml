@@ -10,6 +10,14 @@ on:
       run_id:
         description: "Workflow run ID of a successful build"
         required: true
+      mode:
+        description: "Benchmark mode: 'default' uses standard settings, 'extended' uses longer warmup (20s) and measurement (10s) times"
+        required: false
+        default: "default"
+        type: choice
+        options:
+          - default
+          - extended
 
 jobs:
   benchmark:
@@ -109,14 +117,19 @@ jobs:
 
       - name: Run benchmark
         run: |
+          EXTRA_ARGS=""
+          if [ "${{ github.event.inputs.mode }}" = "extended" ]; then
+            EXTRA_ARGS="-wt 20s -r 10s"
+          fi
           java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
             --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
             --add-opens=java.base/java.net=ALL-UNNAMED \
             -jar benchmark/target/benchmark-${{ steps.get_version.outputs.version }}.jar \
+            $EXTRA_ARGS \
             -rf json -rff benchmark-${{ steps.get_short_sha.outputs.short_sha }}.json
 
       - name: Save results
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-results-${{ steps.get_short_sha.outputs.short_sha }}
+          name: benchmark-results-${{ steps.get_short_sha.outputs.short_sha }}${{ github.event.inputs.mode == 'extended' && '-extended' || '' }}
           path: benchmark-*.json
