@@ -27,6 +27,7 @@
     <version>9.6.0</version>
   <packaging>pom</packaging>
 
+  <!-- To be removed: only added to trigger the build -->
   <name>Pathling</name>
   <description>
     A set of tools that make it easier to use FHIR® within data analytics, built on Apache Spark.
