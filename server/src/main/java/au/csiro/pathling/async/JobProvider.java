@@ -25,6 +25,7 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.security.PathlingAuthority;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
@@ -39,10 +40,8 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -51,7 +50,6 @@ import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -75,27 +73,23 @@ public class JobProvider {
   @Nonnull private final ServerConfiguration configuration;
 
   @Nonnull private final JobRegistry jobRegistry;
-  private final SparkSession sparkSession;
-  private final String databasePath;
+  @Nonnull private final JobDirectoryFileSystem jobDirectoryFileSystem;
 
   /**
    * Creates a new JobProvider.
    *
    * @param configuration a {@link ServerConfiguration} for determining if authorisation is enabled
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
-   * @param sparkSession the Spark session for file system operations
-   * @param databasePath the path to the database for job file storage
+   * @param jobDirectoryFileSystem the {@link JobDirectoryFileSystem} used to resolve and delete
+   *     per-job directories on the warehouse file system
    */
   public JobProvider(
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final JobRegistry jobRegistry,
-      final SparkSession sparkSession,
-      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          final String databasePath) {
+      @Nonnull final JobDirectoryFileSystem jobDirectoryFileSystem) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
-    this.sparkSession = sparkSession;
-    this.databasePath = new Path(databasePath, "jobs").toString();
+    this.jobDirectoryFileSystem = jobDirectoryFileSystem;
   }
 
   /**
@@ -213,9 +207,8 @@ public class JobProvider {
    * @throws IOException if file deletion fails
    */
   public void deleteJobFiles(final String jobId) throws IOException {
-    final Configuration hadoopConfig = sparkSession.sparkContext().hadoopConfiguration();
-    final FileSystem fs = FileSystem.get(hadoopConfig);
-    final Path jobDirToDel = new Path(databasePath, jobId);
+    final FileSystem fs = jobDirectoryFileSystem.getFileSystem();
+    final Path jobDirToDel = jobDirectoryFileSystem.jobDirectory(jobId);
     log.debug("Deleting dir {}", jobDirToDel);
     final boolean deleted = fs.delete(jobDirToDel, true);
     if (!deleted) {

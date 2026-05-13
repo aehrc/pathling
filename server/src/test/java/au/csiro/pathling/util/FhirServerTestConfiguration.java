@@ -24,6 +24,7 @@ import au.csiro.pathling.async.SparkJobListener;
 import au.csiro.pathling.async.StageMap;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -170,9 +171,8 @@ public class FhirServerTestConfiguration {
   public JobProvider jobProvider(
       ServerConfiguration serverConfiguration,
       JobRegistry jobRegistry,
-      SparkSession sparkSession,
-      @Value("${pathling.storage.warehouseUrl}") String warehouseUrl) {
-    return new JobProvider(serverConfiguration, jobRegistry, sparkSession, warehouseUrl);
+      JobDirectoryFileSystem jobDirectoryFileSystem) {
+    return new JobProvider(serverConfiguration, jobRegistry, jobDirectoryFileSystem);
   }
 
   // NOTE: Removed @ConfigurationProperties to avoid duplicate bean registration

@@ -25,20 +25,24 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.config.AsyncConfiguration;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import org.apache.spark.sql.SparkSession;
+import org.apache.hadoop.conf.Configuration;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -57,6 +61,8 @@ class JobProviderTest {
   private MockHttpServletRequest request;
   private MockHttpServletResponse response;
 
+  @TempDir Path tempDir;
+
   @BeforeEach
   void setUp() {
     jobRegistry = new JobRegistry();
@@ -70,8 +76,9 @@ class JobProviderTest {
     when(asyncConfig.getCacheMaxAge()).thenReturn(60);
     when(config.getAsync()).thenReturn(asyncConfig);
 
-    final SparkSession spark = mock(SparkSession.class);
-    jobProvider = new JobProvider(config, jobRegistry, spark, "/tmp/test");
+    final JobDirectoryFileSystem jobDirectoryFileSystem =
+        new JobDirectoryFileSystem(tempDir.toUri(), new Configuration());
+    jobProvider = new JobProvider(config, jobRegistry, jobDirectoryFileSystem);
     request = new MockHttpServletRequest();
     request.setMethod("GET");
     // Set the servlet path to match the FHIR server mount point.
@@ -278,5 +285,27 @@ class JobProviderTest {
     assertThatThrownBy(() -> jobProvider.job(JOB_ID, request, response))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("Nested error message");
+  }
+
+  @Test
+  void deleteJobFilesRemovesDirectoryFromJobDirectoryFileSystem() throws Exception {
+    // Regression test for issue #2612: deleteJobFiles must resolve the file system from the
+    // warehouse URI rather than the Hadoop default file system, otherwise non-local schemes such
+    // as s3a:// fail with "Wrong FS".
+    final Path jobsDir = tempDir.resolve("jobs").resolve(JOB_ID);
+    Files.createDirectories(jobsDir);
+    Files.writeString(jobsDir.resolve("output.ndjson"), "{}");
+    assertThat(Files.exists(jobsDir)).isTrue();
+
+    jobProvider.deleteJobFiles(JOB_ID);
+
+    assertThat(Files.exists(jobsDir)).isFalse();
+  }
+
+  @Test
+  void deleteJobFilesSucceedsWhenDirectoryDoesNotExist() throws Exception {
+    // Deleting a non-existent job directory should not throw; the underlying delete returns false
+    // and is logged as a warning.
+    jobProvider.deleteJobFiles(JOB_ID);
   }
 }
