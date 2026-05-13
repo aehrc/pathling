@@ -24,6 +24,7 @@ import au.csiro.pathling.async.SparkJobListener;
 import au.csiro.pathling.async.StageMap;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -33,6 +34,7 @@ import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
+import java.net.URI;
 import java.nio.file.Path;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Value;
@@ -170,9 +172,20 @@ public class FhirServerTestConfiguration {
   public JobProvider jobProvider(
       ServerConfiguration serverConfiguration,
       JobRegistry jobRegistry,
+      JobDirectoryFileSystem jobDirectoryFileSystem) {
+    return new JobProvider(serverConfiguration, jobRegistry, jobDirectoryFileSystem);
+  }
+
+  @Bean
+  @Primary
+  @ConditionalOnMissingBean
+  public JobDirectoryFileSystem jobDirectoryFileSystem(
       SparkSession sparkSession,
-      @Value("${pathling.storage.warehouseUrl}") String warehouseUrl) {
-    return new JobProvider(serverConfiguration, jobRegistry, sparkSession, warehouseUrl);
+      @Value("${pathling.storage.warehouseUrl}") String warehouseUrl,
+      @Value("${pathling.storage.databaseName}") String databaseName) {
+    return new JobDirectoryFileSystem(
+        URI.create(warehouseUrl + "/" + databaseName),
+        sparkSession.sparkContext().hadoopConfiguration());
   }
 
   // NOTE: Removed @ConfigurationProperties to avoid duplicate bean registration

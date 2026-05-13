@@ -25,15 +25,18 @@ import au.csiro.pathling.config.AsyncConfiguration;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import jakarta.annotation.Nonnull;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import org.apache.spark.sql.SparkSession;
+import org.apache.hadoop.conf.Configuration;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.GrantedAuthority;
@@ -57,6 +60,8 @@ class JobProviderSecurityTest {
   private MockHttpServletRequest request;
   private MockHttpServletResponse response;
 
+  @TempDir Path tempDir;
+
   @BeforeEach
   void setUp() {
     jobRegistry = new JobRegistry();
@@ -72,10 +77,10 @@ class JobProviderSecurityTest {
     when(asyncConfig.getCacheMaxAge()).thenReturn(1);
     when(serverConfiguration.getAsync()).thenReturn(asyncConfig);
 
-    // Create mock SparkSession.
-    final SparkSession sparkSession = mock(SparkSession.class);
+    final JobDirectoryFileSystem jobDirectoryFileSystem =
+        new JobDirectoryFileSystem(tempDir.toUri(), new Configuration());
 
-    jobProvider = new JobProvider(serverConfiguration, jobRegistry, sparkSession, "/tmp/test");
+    jobProvider = new JobProvider(serverConfiguration, jobRegistry, jobDirectoryFileSystem);
 
     request = new MockHttpServletRequest();
     response = new MockHttpServletResponse();
