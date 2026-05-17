@@ -1,13 +1,11 @@
 ---
-name: "OPSX: Verify"
 description: Verify implementation matches change artifacts before archiving
-category: Workflow
-tags: [workflow, verify, experimental]
 ---
 
 Verify that an implementation matches the change artifacts (specs, tasks, design).
 
-**Input**: Optionally specify a change name after `/opsx:verify` (e.g., `/opsx:verify add-auth`). If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+**Input**: Optionally specify a change name after `/opsx-verify` (e.g., `/opsx-verify add-auth`). If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+**Provided arguments**: $@
 
 **Steps**
 
