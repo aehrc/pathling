@@ -41,8 +41,8 @@ import org.apache.spark.sql.functions;
  * Pathling-specific SQL functions that extend Spark SQL functionality.
  *
  * <p>Provides utilities for working with Spark SQL columns in the context of FHIR data processing,
- * including FHIR-instant formatting, array deduplication with custom equality semantics, and
- * let-binding for safe evaluation of non-deterministic column expressions.
+ * including FHIR-instant formatting, array union and deduplication with custom equality semantics,
+ * and let-binding for safe evaluation of non-deterministic column expressions.
  */
 @UtilityClass
 public class SqlFunctions {

@@ -133,6 +133,7 @@ class DefaultRepresentationTest {
 
     new ColumnAsserts()
         .assertNull(nullValue().singular())
+        .assertNull(nullArray().singular())
         .assertNull(emptyArray().singular())
         .assertEquals(13, valueOf(13).singular())
         .assertEquals("a", arrayOfOne("a").singular())
@@ -281,6 +282,15 @@ class DefaultRepresentationTest {
         .assertEquals(false, arrayOf(true, true).anyFalse())
         .assertEquals(true, arrayOf(false, true).anyFalse())
         .assertEquals(true, arrayOf(false, false).anyFalse())
+        .check();
+  }
+
+  @Test
+  void testNormaliseNull() {
+    new ColumnAsserts()
+        .assertNull(nullArray().normaliseNull())
+        .assertNull(emptyArray().normaliseNull())
+        .assertEquals(arrayOf(1, 2), arrayOf(1, 2).normaliseNull())
         .check();
   }
 }

@@ -70,11 +70,12 @@
       `fhirpath/src/main/java/au/csiro/pathling/fhirpath/` and
       `fhirpath/src/main/java/au/csiro/pathling/sql/`.
 
-      Two design constraints keep the rule free of false positives without requiring inline
+      Three design constraints keep the rule free of false positives without requiring inline
       suppression comments:
 
       1. Identifier length ≥ 7 characters.  Lambda parameters passed to let() are always short
-         (e.g. x, v, lv, rv, ev, nc) or at most 6 characters (leftR, rightR, cdUnit). Real
+         (e.g. x, v, lv, rv, ev, nc). Short local variables elsewhere in the covered packages
+         (e.g. leftR, rightR) are likewise under 7 characters. Real
          column variables that could cause duplicate evaluation use descriptive names of 7+
          characters. The length floor therefore excludes every let()-body false positive
          automatically.

@@ -122,11 +122,11 @@ public class PathlingContext {
 
   /**
    * Verifies that {@code spark.sql.legacy.sizeOfNull} is disabled. Several FHIRPath cardinality
-   * helpers — notably {@code count()} and {@code isEmpty()} on array operands — depend on Spark's
-   * post-3.0 default of {@code size(null) = null}, which {@code coalesce} then maps to the
-   * appropriate empty-collection answer. Toggling the legacy flag back on returns {@code size(null)
-   * = -1}, silently breaking those helpers; we fail fast at context creation rather than producing
-   * wrong counts later.
+   * helpers — notably {@code count()}, {@code isEmpty()}, and {@code toBoolean()} on array operands
+   * — depend on Spark's 3.0+ default of {@code size(null) = null}, which {@code coalesce} then maps
+   * to the appropriate empty-collection answer. Toggling the legacy flag back on returns {@code
+   * size(null) = -1}, silently breaking those helpers; we fail fast at context creation rather than
+   * producing wrong counts later.
    *
    * @param spark the Spark session to validate
    * @throws IllegalStateException if the legacy flag is enabled

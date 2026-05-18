@@ -514,6 +514,10 @@ class TraceFunctionTest {
           // BooleanOperator IMPLIES with a false left — leftValue referenced 2× (equalTo(true)
           // then equalTo(false)), so a traced left operand fires 2× without the fix.
           Arguments.of(new TraceEntryCase("Patient.name.empty().trace('t') implies true", "t", 1)),
+          // BooleanOperator IMPLIES with a traced right operand — rightValue appears in both the
+          // lv==true branch and the otherwise sub-when. Without let()-wrapping a traced right
+          // operand fires 2× per row when the left is null or true.
+          Arguments.of(new TraceEntryCase("true implies 'true'.trace('t').toBoolean()", "t", 1)),
           // EqualityOperator = — left ColumnRepresentation is read via isEmpty(), count(), and
           // singular(), each independently calling getValue(). Without let()-wrapping in
           // handleEquivalentTypes, a traced left operand fires 3× per row.
@@ -532,6 +536,13 @@ class TraceFunctionTest {
           // let()-wrapping, a traced operand fires 2× per row when the input matches the date
           // regex.
           Arguments.of(new TraceEntryCase("'2020-01-01'.trace('t').toDate()", "t", 1)),
+          // ConversionLogic.convertToDateTime (STRING path) — structurally identical to
+          // convertToDate: value appears in both the when() predicate and value branch.
+          Arguments.of(
+              new TraceEntryCase("'2020-01-01T12:00:00Z'.trace('t').toDateTime()", "t", 1)),
+          // ConversionLogic.convertToTime (STRING path) — structurally identical to
+          // convertToDate: value appears in both the when() predicate and value branch.
+          Arguments.of(new TraceEntryCase("'10:30:00'.trace('t').toTime()", "t", 1)),
           // QuantityEncoding.encodeNumeric (via convertToQuantity INTEGER path) — the traced input
           // appears in both the when() predicate (isNotNull check) and the value struct (via cast).
           // let()-wrapping on the raw numericColumn ensures the non-deterministic expression is
