@@ -105,6 +105,12 @@ class ColumnRepresentationTraceTest {
   }
 
   @Test
+  void join_array_singleFire() {
+    // join() requires a string array; uses a dedicated string-array dataset.
+    runStringArray("join", c -> c.join(new DefaultRepresentation(lit(" "))), 1, 3);
+  }
+
+  @Test
   void aggregate_array_singleFire() {
     runArray("aggregate-array", c -> c.aggregate(0, Column::plus), 1, 3);
   }
@@ -209,6 +215,15 @@ class ColumnRepresentationTraceTest {
     runCase(arrayDataset(3), label + "-3", op, expectedMultiRowFires);
   }
 
+  private void runStringArray(
+      @Nonnull final String label,
+      @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> op,
+      final long expectedSingleRowFires,
+      final long expectedMultiRowFires) {
+    runCase(stringArrayDataset(1), label + "-1", op, expectedSingleRowFires);
+    runCase(stringArrayDataset(3), label + "-3", op, expectedMultiRowFires);
+  }
+
   private void runArrayOfSingleton(
       @Nonnull final String label,
       @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> op,
@@ -292,6 +307,22 @@ class ColumnRepresentationTraceTest {
     return spark.createDataFrame(
         IntStream.rangeClosed(1, rows)
             .mapToObj(i -> RowFactory.create(i, new Integer[] {i, i + 1}))
+            .toList(),
+        schema);
+  }
+
+  @Nonnull
+  private Dataset<Row> stringArrayDataset(final int rows) {
+    final StructType schema =
+        new StructType(
+            new StructField[] {
+              new StructField("id", DataTypes.IntegerType, false, Metadata.empty()),
+              new StructField(
+                  "v", new ArrayType(DataTypes.StringType, true), false, Metadata.empty())
+            });
+    return spark.createDataFrame(
+        IntStream.rangeClosed(1, rows)
+            .mapToObj(i -> RowFactory.create(i, new String[] {"a" + i, "b" + i}))
             .toList(),
         schema);
   }

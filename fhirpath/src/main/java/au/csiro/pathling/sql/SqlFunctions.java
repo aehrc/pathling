@@ -136,6 +136,9 @@ public class SqlFunctions {
    * @param value the operand to evaluate once per row
    * @param body the lambda that consumes the evaluated operand
    * @return a column expression applying {@code body} to a single evaluation of {@code value}
+   * @throws org.apache.spark.sql.AnalysisException if {@code value} is non-deterministic and
+   *     contains a SQL aggregate or window expression; Spark's analyser rejects these inside
+   *     higher-order function arguments
    */
   @Nonnull
   public static Column let(@Nonnull final Column value, @Nonnull final UnaryOperator<Column> body) {

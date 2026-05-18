@@ -84,6 +84,12 @@
          regex from matching across mutually-exclusive Java branches (e.g. an early-return
          branch and a later else-branch) that happen to share the same variable name in
          comments or in the other branch's code.
+
+      3. 400-character search window.  The `{0,400}?` quantifier bounds the span over which
+         the repeated identifier is sought. Expressions spanning more than ~400 characters
+         will not be caught — a deliberate false-negative trade-off to avoid catastrophic
+         backtracking on pathological inputs. In practice, `when(...)` call sites in this
+         codebase are well under that limit.
    -->
   <module name="RegexpMultiline">
     <property name="id" value="RepeatedSqlEvaluation"/>

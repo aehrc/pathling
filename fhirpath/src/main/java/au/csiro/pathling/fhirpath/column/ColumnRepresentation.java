@@ -25,7 +25,6 @@ import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.exists;
 import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.nullif;
 import static org.apache.spark.sql.functions.raise_error;
 import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.try_element_at;
@@ -353,9 +352,12 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation normaliseNull() {
-    // nullif(c, array()) returns null when c equals the empty array, and propagates null when c
-    // itself is null. Single-reference rewrite of the original null-or-empty conditional.
-    return vectorize(c -> nullif(c, array()), UnaryOperator.identity());
+    // let() binds c once; size(x) == 0 tests for an empty array without requiring element-type
+    // equality — unlike nullif(c, array()), which applies = and fails for element types that do
+    // not support equality (e.g. MapType).
+    return vectorize(
+        c -> let(c, x -> when(size(x).equalTo(0), lit(null)).otherwise(x)),
+        UnaryOperator.identity());
   }
 
   /**
@@ -484,8 +486,7 @@ public abstract class ColumnRepresentation {
     return vectorize(
         c ->
             Column$.MODULE$.fn(
-                "array_join",
-                Predef.wrapRefArray(new Column[] {getValue(), separator.getValue()}).toSeq()),
+                "array_join", Predef.wrapRefArray(new Column[] {c, separator.getValue()}).toSeq()),
         UnaryOperator.identity());
   }
 
