@@ -82,3 +82,9 @@ CVE-2025-67721
 # Thrift's SSL transport (no TSSL/TSocket/Thrift client code anywhere in the
 # server), so the vulnerable code path is unreachable.
 CVE-2026-43869
+
+# OpenTelemetry W3C Baggage propagation unbounded memory allocation — opentelemetry-api is a
+# transitive dependency via hapi-fhir-base. The server does not configure the OTel SDK or
+# W3C Baggage propagators; the API jar is present only for HAPI FHIR instrumentation
+# annotations, so the vulnerable Baggage parsing code path is never reached.
+CVE-2026-45292

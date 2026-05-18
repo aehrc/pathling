@@ -46,3 +46,11 @@ CVE-2026-41305
 
 # uuid out-of-bounds write — build-time Docusaurus internal use only, not deployed.
 CVE-2026-41907
+
+# @babel/plugin-transform-modules-systemjs arbitrary code generation — triggered only by
+# malicious source files fed to the build-time Babel transpiler. Not deployed in the static site.
+CVE-2026-44728
+
+# fast-uri normalize() percent-encoded authority delimiter issue — fast-uri is pulled in by
+# ajv, a build-time JSON schema validator used by Docusaurus tooling. Not deployed.
+CVE-2026-6322
