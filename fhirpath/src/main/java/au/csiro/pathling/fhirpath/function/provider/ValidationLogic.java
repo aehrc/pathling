@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
@@ -133,18 +134,22 @@ class ValidationLogic {
   Column validateConversionToBoolean(
       @Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
     return switch (sourceType) {
-      case STRING -> {
-        // For strings: check if '1.0'/'0.0' or if cast to boolean succeeds.
-        final Column is10or00 = value.equalTo(lit("1.0")).or(value.equalTo(lit("0.0")));
-        final Column castSucceeds = value.try_cast(DataTypes.BooleanType).isNotNull();
-        yield value.isNotNull().and(is10or00.or(castSucceeds));
-      }
+      case STRING ->
+          // For strings: check if '1.0'/'0.0' or if cast to boolean succeeds.
+          let(
+              value,
+              v ->
+                  v.isNotNull()
+                      .and(
+                          v.equalTo(lit("1.0"))
+                              .or(v.equalTo(lit("0.0")))
+                              .or(v.try_cast(DataTypes.BooleanType).isNotNull())));
       case INTEGER ->
           // Only 0 and 1 can be converted.
-          value.equalTo(lit(0)).or(value.equalTo(lit(1)));
+          let(value, v -> v.equalTo(lit(0)).or(v.equalTo(lit(1))));
       case DECIMAL ->
           // Only 0.0 and 1.0 can be converted.
-          value.equalTo(lit(0.0)).or(value.equalTo(lit(1.0)));
+          let(value, v -> v.equalTo(lit(0.0)).or(v.equalTo(lit(1.0))));
       default ->
           // Other types cannot be converted.
           lit(false);

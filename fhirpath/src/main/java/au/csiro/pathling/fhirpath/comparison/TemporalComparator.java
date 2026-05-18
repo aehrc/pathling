@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
+
 import au.csiro.pathling.sql.misc.HighBoundaryForDateTime;
 import au.csiro.pathling.sql.misc.HighBoundaryForTime;
 import au.csiro.pathling.sql.misc.LowBoundaryForDateTime;
@@ -120,15 +122,21 @@ public class TemporalComparator implements ColumnComparator, ElementWiseEquality
       @Nonnull final Column left,
       @Nonnull final Column right,
       @Nonnull final BinaryOperator<Column> comparator) {
-    final Bounds leftBounds = getBounds(left);
-    final Bounds rightBounds = getBounds(right);
+    return let(
+        left,
+        right,
+        (l, r) -> {
+          final Bounds leftBounds = getBounds(l);
+          final Bounds rightBounds = getBounds(r);
 
-    // if canCompare apply the comparator to the low bound (either one is fine)
-    // else return null
-    return functions
-        .when(
-            canCompare(leftBounds, rightBounds), comparator.apply(leftBounds.low, rightBounds.low))
-        .otherwise(functions.lit(null));
+          // If canCompare apply the comparator to the low bound (either one is fine),
+          // else return null.
+          return functions
+              .when(
+                  canCompare(leftBounds, rightBounds),
+                  comparator.apply(leftBounds.low, rightBounds.low))
+              .otherwise(functions.lit(null));
+        });
   }
 
   @Nonnull

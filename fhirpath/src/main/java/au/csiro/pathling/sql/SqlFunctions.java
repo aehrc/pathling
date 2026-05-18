@@ -110,6 +110,28 @@ public class SqlFunctions {
   }
 
   /**
+   * Evaluates {@code a} and {@code b} exactly once per row each and passes both results to {@code
+   * body}.
+   *
+   * <p>Convenience overload of {@link #let(Column, UnaryOperator)} for binary operations. Expands
+   * to {@code let(a, aa -> let(b, bb -> body.apply(aa, bb)))}, materialising each operand exactly
+   * once before the body runs.
+   *
+   * @param a the first operand to evaluate once per row
+   * @param b the second operand to evaluate once per row
+   * @param body the function that consumes both evaluated operands
+   * @return a column expression applying {@code body} to single evaluations of {@code a} and {@code
+   *     b}
+   */
+  @Nonnull
+  public static Column let(
+      @Nonnull final Column a,
+      @Nonnull final Column b,
+      @Nonnull final BinaryOperator<Column> body) {
+    return let(a, aa -> let(b, bb -> body.apply(aa, bb)));
+  }
+
+  /**
    * Evaluates {@code value} exactly once per row and passes the result to {@code body}.
    *
    * <p>This matters for {@link org.apache.spark.sql.catalyst.expressions.Nondeterministic} operands

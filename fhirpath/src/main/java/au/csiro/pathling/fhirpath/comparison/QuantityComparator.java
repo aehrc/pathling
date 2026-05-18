@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
+
 import au.csiro.pathling.fhirpath.column.QuantityValue;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import jakarta.annotation.Nonnull;
@@ -46,13 +48,17 @@ public class QuantityComparator implements ColumnComparator, ElementWiseEquality
       @Nonnull final BinaryOperator<Column> flexComparator) {
 
     return (left, right) ->
-        functions.coalesce(
-            QuantityValue.of(left)
-                .normalizedValue()
-                .compare(QuantityValue.of(right).normalizedValue(), flexComparator),
-            QuantityValue.of(left)
-                .originalValue()
-                .compare(QuantityValue.of(right).originalValue(), decimalComparator));
+        let(
+            left,
+            right,
+            (l, r) ->
+                functions.coalesce(
+                    QuantityValue.of(l)
+                        .normalizedValue()
+                        .compare(QuantityValue.of(r).normalizedValue(), flexComparator),
+                    QuantityValue.of(l)
+                        .originalValue()
+                        .compare(QuantityValue.of(r).originalValue(), decimalComparator)));
   }
 
   @Override

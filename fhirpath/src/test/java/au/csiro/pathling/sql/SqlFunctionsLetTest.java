@@ -140,6 +140,38 @@ class SqlFunctionsLetTest {
     assertEquals(1, result.getInt(0));
   }
 
+  // ---------------------------------------------------------------------------
+  // Binary let() overload tests.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void let_binary_correctResult_singleRow() {
+    final Dataset<Row> df =
+        spark.range(1).toDF("id").withColumn("a", lit(3)).withColumn("b", lit(4));
+    final Row result = df.select(let(col("a"), col("b"), Column::plus).alias("r")).first();
+    assertEquals(7, result.getInt(0));
+  }
+
+  @Test
+  void let_binary_correctResult_multiRow() {
+    final List<Row> rows =
+        dfPairs()
+            .select(let(col("a"), col("b"), Column::plus).alias("r"))
+            .orderBy("r")
+            .collectAsList();
+    assertEquals(List.of(2, 4, 6), rows.stream().map(r -> r.getInt(0)).toList());
+  }
+
+  @Test
+  void let_binary_overTraceExpressions_firesExactlyOncePerRow() {
+    final Column tracedA = traceColumn(col("a"), "bin-a");
+    final Column tracedB = traceColumn(col("b"), "bin-b");
+    dfPairs().select(let(tracedA, tracedB, Column::plus).alias("r")).collect();
+    // Three rows × one fire each for each operand.
+    assertEquals(3L, countTraceLogs("bin-a"));
+    assertEquals(3L, countTraceLogs("bin-b"));
+  }
+
   private long countTraceLogs(@Nonnull final String label) {
     final String marker = "[trace:" + label + "]";
     return appender.list.stream()
@@ -157,6 +189,20 @@ class SqlFunctionsLetTest {
             });
     return spark.createDataFrame(
         List.of(RowFactory.create(1, 1), RowFactory.create(2, 2), RowFactory.create(3, 3)), schema);
+  }
+
+  @Nonnull
+  private Dataset<Row> dfPairs() {
+    final StructType schema =
+        new StructType(
+            new StructField[] {
+              new StructField("id", DataTypes.IntegerType, false, Metadata.empty()),
+              new StructField("a", DataTypes.IntegerType, false, Metadata.empty()),
+              new StructField("b", DataTypes.IntegerType, false, Metadata.empty())
+            });
+    return spark.createDataFrame(
+        List.of(RowFactory.create(1, 1, 1), RowFactory.create(2, 2, 2), RowFactory.create(3, 3, 3)),
+        schema);
   }
 
   @Nonnull

@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.regexp_extract;
@@ -156,7 +157,8 @@ public class ReferenceValue {
    * @return the validated type column, or null if invalid
    */
   private static Column validateTypeFormat(@Nonnull final Column type) {
-    final Column isValidType = type.isNotNull().and(type.rlike(FHIR_TYPE_NAME_PATTERN));
-    return when(isValidType, type).otherwise(lit(null));
+    return let(
+        type,
+        t -> when(t.isNotNull().and(t.rlike(FHIR_TYPE_NAME_PATTERN)), t).otherwise(lit(null)));
   }
 }
