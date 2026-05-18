@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.callUDF;
@@ -258,21 +259,27 @@ public class QuantityValue {
    */
   @Nonnull
   public Column toUnit(@Nonnull final Column targetUnit) {
-    final ValueWithUnit literal = ValueWithUnit.literalValueOf(quantityColumn);
+    return let(
+        quantityColumn,
+        qc -> {
+          final QuantityValue bound = new QuantityValue(qc);
+          final ValueWithUnit literal = ValueWithUnit.literalValueOf(qc);
 
-    // Try UCUM conversion (will return null for non-UCUM/non-calendar quantities)
-    final Column ucumConverted =
-        callUDF(ConvertQuantityToUnit.FUNCTION_NAME, quantityColumn, targetUnit);
+          // Try UCUM conversion (will return null for non-UCUM/non-calendar quantities).
+          final Column ucumConverted = callUDF(ConvertQuantityToUnit.FUNCTION_NAME, qc, targetUnit);
 
-    // Short-circuit: exact match only if unit matches AND system is UCUM or calendar duration
-    // For non-UCUM/non-calendar systems (e.g., Money), fall through to UCUM conversion (returns
-    // null)
-    final Column hasValidSystem = isUcum().or(isCalendarDuration());
-    final Column exactMatchWithValidSystem = literal.unit().equalTo(targetUnit).and(hasValidSystem);
+          // Short-circuit: exact match only if unit matches AND system is UCUM or calendar
+          // duration. For non-UCUM/non-calendar systems (e.g., Money), fall through to UCUM
+          // conversion (returns null).
+          final Column hasValidSystem = bound.isUcum().or(bound.isCalendarDuration());
+          final Column exactMatchWithValidSystem =
+              literal.unit().equalTo(targetUnit).and(hasValidSystem);
 
-    // Return exact match if available (fast path), otherwise UCUM conversion result (or null)
-    return when(exactMatchWithValidSystem, quantityColumn)
-        .otherwise(coalesce(ucumConverted, lit(null).cast(QuantityEncoding.dataType())));
+          // Return exact match if available (fast path), otherwise UCUM conversion result (or
+          // null).
+          return when(exactMatchWithValidSystem, qc)
+              .otherwise(coalesce(ucumConverted, lit(null).cast(QuantityEncoding.dataType())));
+        });
   }
 
   /**
@@ -295,19 +302,24 @@ public class QuantityValue {
    */
   @Nonnull
   public Column convertibleToUnit(@Nonnull final Column targetUnit) {
-    final ValueWithUnit literal = ValueWithUnit.literalValueOf(quantityColumn);
+    return let(
+        quantityColumn,
+        qc -> {
+          final QuantityValue bound = new QuantityValue(qc);
+          final ValueWithUnit literal = ValueWithUnit.literalValueOf(qc);
 
-    // Check exact string match with valid system (UCUM or calendar duration)
-    final Column hasValidSystem = isUcum().or(isCalendarDuration());
-    final Column exactMatchWithValidSystem = literal.unit().equalTo(targetUnit).and(hasValidSystem);
+          // Check exact string match with valid system (UCUM or calendar duration).
+          final Column hasValidSystem = bound.isUcum().or(bound.isCalendarDuration());
+          final Column exactMatchWithValidSystem =
+              literal.unit().equalTo(targetUnit).and(hasValidSystem);
 
-    // Check UCUM convertibility by attempting conversion and checking if result is non-null
-    final Column ucumConverted =
-        callUDF(ConvertQuantityToUnit.FUNCTION_NAME, quantityColumn, targetUnit);
-    final Column ucumConvertible = ucumConverted.isNotNull();
+          // Check UCUM convertibility by attempting conversion and checking if result is non-null.
+          final Column ucumConverted = callUDF(ConvertQuantityToUnit.FUNCTION_NAME, qc, targetUnit);
+          final Column ucumConvertible = ucumConverted.isNotNull();
 
-    // Return true if either exact match (with valid system) or UCUM conversion is possible
-    // Return null if quantity is null (for empty propagation)
-    return when(quantityColumn.isNotNull(), exactMatchWithValidSystem.or(ucumConvertible));
+          // Return true if either exact match (with valid system) or UCUM conversion is possible.
+          // Return null if quantity is null (for empty propagation).
+          return when(qc.isNotNull(), exactMatchWithValidSystem.or(ucumConvertible));
+        });
   }
 }

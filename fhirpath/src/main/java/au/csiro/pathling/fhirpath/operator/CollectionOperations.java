@@ -101,6 +101,7 @@ public class CollectionOperations {
 
       // non-comparable so false or null
       // but also should enforce singularity of the element
+      // the contains(singular, ...) call below is in the mutually exclusive comparable branch.
       final Column columnResult =
           functions.when(
               singular.count().getValue().geq(1),

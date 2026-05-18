@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -61,18 +62,30 @@ public class BooleanOperator implements FhirPathBinaryOperator {
                   case AND -> leftValue.and(rightValue);
                   case OR -> leftValue.or(rightValue);
                   case XOR ->
-                      when(leftValue.isNull().or(rightValue.isNull()), null)
-                          .when(
-                              leftValue
-                                  .equalTo(true)
-                                  .and(rightValue.equalTo(false))
-                                  .or(leftValue.equalTo(false).and(rightValue.equalTo(true))),
-                              true)
-                          .otherwise(false);
+                      let(
+                          leftValue,
+                          lv ->
+                              let(
+                                  rightValue,
+                                  rv ->
+                                      when(lv.isNull().or(rv.isNull()), null)
+                                          .when(
+                                              lv.equalTo(true)
+                                                  .and(rv.equalTo(false))
+                                                  .or(lv.equalTo(false).and(rv.equalTo(true))),
+                                              true)
+                                          .otherwise(false)));
                   case IMPLIES ->
-                      when(leftValue.equalTo(true), rightValue)
-                          .when(leftValue.equalTo(false), true)
-                          .otherwise(when(rightValue.equalTo(true), true).otherwise(null));
+                      let(
+                          leftValue,
+                          lv ->
+                              let(
+                                  rightValue,
+                                  rv ->
+                                      when(lv.equalTo(true), rv)
+                                          .when(lv.equalTo(false), true)
+                                          .otherwise(
+                                              when(rv.equalTo(true), true).otherwise(null))));
                 });
     return BooleanCollection.build(resultCtx);
   }
