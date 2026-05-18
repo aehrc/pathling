@@ -352,9 +352,6 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation normaliseNull() {
-    // let() binds c once; size(x) == 0 tests for an empty array without requiring element-type
-    // equality — unlike nullif(c, array()), which applies = and fails for element types that do
-    // not support equality (e.g. MapType).
     return vectorize(
         c -> let(c, x -> when(size(x).equalTo(0), lit(null)).otherwise(x)),
         UnaryOperator.identity());
@@ -452,8 +449,8 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation isEmpty() {
-    // size(null) returns null when spark.sql.legacy.sizeOfNull = false (Spark 3.0+ default);
-    // coalesce maps that null to true so a null array reads as empty.
+    // `size(null)` returns null when `spark.sql.legacy.sizeOfNull = false` (Spark 3.0+ default).
+    // `coalesce` maps that null to true so a null array reads as empty.
     return vectorize(c -> coalesce(size(c).equalTo(0), lit(true)), Column::isNull);
   }
 

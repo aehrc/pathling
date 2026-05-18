@@ -494,10 +494,10 @@ class TraceFunctionTest {
               new TraceEntryCase("Patient.name.trace('t') | Patient.name.trace('t')", "t", 6)),
           // Additional FHIRPath surface (D4 in the design) — extends user-visible regression
           // coverage to a count comparison and two extra downstream pipelines that route through
-          // the rewritten ColumnRepresentation methods. The original D4 list also named single()
-          // and iif(); neither is implemented in Pathling, so they are replaced with equivalent
-          // pipelines that exercise the same internal helpers (singular() via ensureSingular()
-          // through .first(), and conditional projection through .where()).
+          // the rewritten ColumnRepresentation methods. The original D4 list also named `single`
+          // and `iif`; neither is implemented in Pathling, so they are replaced with equivalent
+          // pipelines that exercise the same internal helpers (`singular` via `ensureSingular`
+          // through `first`, and conditional projection through `where`).
           Arguments.of(new TraceEntryCase("Patient.name.trace('t').given.count() > 0", "t", 3)),
           Arguments.of(
               new TraceEntryCase(
