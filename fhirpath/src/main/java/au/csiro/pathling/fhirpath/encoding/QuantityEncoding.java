@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.encoding;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 import static org.apache.spark.sql.functions.lit;
@@ -281,27 +282,28 @@ public class QuantityEncoding {
    */
   @Nonnull
   public static Column encodeNumeric(@Nonnull final Column numericColumn) {
-    // Cast value to decimal type
-    final Column decimalValue = numericColumn.cast(DecimalCustomCoder.decimalType());
-
     // Return fully null struct when value is null to maintain FHIRPath empty collection semantics
-    return when(
-            decimalValue.isNotNull(),
-            toStruct(
-                lit(null),
-                decimalValue,
-                // We cannot encode the scale of the results of arithmetic operations.
-                lit(null),
-                lit(null),
-                lit(UcumUnit.ONE.code()),
-                lit(UcumUnit.UCUM_SYSTEM_URI),
-                lit(UcumUnit.ONE.code()),
-                // we do not need to normalize this as the unit is always "1"
-                // so it will be comparable with other quantities with unit "1"
-                lit(null),
-                lit(null),
-                lit(null)))
-        .otherwise(lit(null).cast(dataType()));
+    return let(
+        numericColumn,
+        nc ->
+            when(
+                    nc.isNotNull(),
+                    toStruct(
+                        lit(null),
+                        // Cast value to decimal type
+                        nc.cast(DecimalCustomCoder.decimalType()),
+                        // We cannot encode the scale of the results of arithmetic operations.
+                        lit(null),
+                        lit(null),
+                        lit(UcumUnit.ONE.code()),
+                        lit(UcumUnit.UCUM_SYSTEM_URI),
+                        lit(UcumUnit.ONE.code()),
+                        // we do not need to normalize this as the unit is always "1"
+                        // so it will be comparable with other quantities with unit "1"
+                        lit(null),
+                        lit(null),
+                        lit(null)))
+                .otherwise(lit(null).cast(dataType())));
   }
 
   /**

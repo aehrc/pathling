@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
@@ -232,15 +233,20 @@ class ConversionLogic {
           // String: Handle '1.0' and '0.0' specially, use SparkSQL cast for other values.
           // SparkSQL cast handles 'true', 'false', 't', 'f', 'yes', 'no', 'y', 'n', '1', '0'
           // (case-insensitive).
-          when(value.equalTo(lit("1.0")), lit(true))
-              .when(value.equalTo(lit("0.0")), lit(false))
-              .otherwise(value.try_cast(DataTypes.BooleanType));
+          let(
+              value,
+              v ->
+                  when(v.equalTo(lit("1.0")), lit(true))
+                      .when(v.equalTo(lit("0.0")), lit(false))
+                      .otherwise(v.try_cast(DataTypes.BooleanType)));
       case INTEGER ->
           // Integer: Only 0 or 1 can be converted (1 → true, 0 → false, otherwise null).
-          when(value.equalTo(lit(1)), lit(true)).when(value.equalTo(lit(0)), lit(false));
+          let(value, v -> when(v.equalTo(lit(1)), lit(true)).when(v.equalTo(lit(0)), lit(false)));
       case DECIMAL ->
           // Decimal: Only 0.0 or 1.0 can be converted (1.0 → true, 0.0 → false, otherwise null).
-          when(value.equalTo(lit(1.0)), lit(true)).when(value.equalTo(lit(0.0)), lit(false));
+          let(
+              value,
+              v -> when(v.equalTo(lit(1.0)), lit(true)).when(v.equalTo(lit(0.0)), lit(false)));
       default -> lit(null);
     };
   }
@@ -266,7 +272,7 @@ class ConversionLogic {
       case STRING ->
           // String: Only convert if it matches integer format (no decimal point).
           // Per FHIRPath spec, valid integer strings match: (\+|-)?\d+
-          when(value.rlike(INTEGER_REGEX), value.try_cast(DataTypes.IntegerType));
+          let(value, v -> when(v.rlike(INTEGER_REGEX), v.try_cast(DataTypes.IntegerType)));
       default -> lit(null);
     };
   }
@@ -339,7 +345,7 @@ class ConversionLogic {
     if (sourceType == FhirPathType.STRING) {
       // Date values are stored as strings in FHIR. Validate format before accepting.
       // Date format: YYYY or YYYY-MM or YYYY-MM-DD
-      return when(value.rlike(DATE_REGEX), value);
+      return let(value, v -> when(v.rlike(DATE_REGEX), v));
     }
     return lit(null);
   }
@@ -360,7 +366,7 @@ class ConversionLogic {
     if (sourceType == FhirPathType.STRING) {
       // DateTime values are stored as strings in FHIR. Validate using simplified pattern.
       // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
-      return when(value.rlike(DATETIME_REGEX), value);
+      return let(value, v -> when(v.rlike(DATETIME_REGEX), v));
     }
     return lit(null);
   }
@@ -381,7 +387,7 @@ class ConversionLogic {
     if (sourceType == FhirPathType.STRING) {
       // Time values are stored as strings in FHIR. Validate using simplified pattern.
       // Supports partial precision: hh, hh:mm, hh:mm:ss, hh:mm:ss.fff
-      return when(value.rlike(TIME_REGEX), value);
+      return let(value, v -> when(v.rlike(TIME_REGEX), v));
     }
     return lit(null);
   }

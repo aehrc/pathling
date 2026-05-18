@@ -25,4 +25,13 @@
   <!-- Suppress checks for generated code. -->
   <suppress checks=".*" files="[\\/]generated[\\/]"/>
   <suppress checks=".*" files="[\\/]generated-sources[\\/]"/>
+
+  <!--
+       Scope the RepeatedSqlEvaluation regex check to Java sources in the
+       au.csiro.pathling.fhirpath and au.csiro.pathling.sql package trees. The check itself is
+       defined globally in checkstyle.xml (RegexpMultiline does not support per-check file
+       scoping); this suppression filter excludes every other file via a negative lookahead.
+   -->
+  <suppress id="RepeatedSqlEvaluation"
+    files="^(?!.*[\\/]fhirpath[\\/]src[\\/]main[\\/]java[\\/]au[\\/]csiro[\\/]pathling[\\/](?:fhirpath|sql)[\\/]).*$"/>
 </suppressions>

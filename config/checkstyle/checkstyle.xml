@@ -44,6 +44,66 @@
     <property name="optional" value="true"/>
   </module>
 
+  <!--
+      Plain-text suppression filter for Checker-level (file-scope) checks such as RegexpMultiline.
+      Suppresses checks in the range from a `// CHECKSTYLE.SUPPRESS: <id>` marker to the matching
+      `// CHECKSTYLE.RESUME: <id>` marker. The TreeWalker-scoped SuppressWithNearbyCommentFilter
+      below uses the same marker syntax for token-based checks, but operates on a next-line basis
+      rather than a range; the two filters are complementary, not equivalent.
+   -->
+  <module name="SuppressWithPlainTextCommentFilter">
+    <property name="offCommentFormat" value="CHECKSTYLE\.SUPPRESS\:\s*([\w\|]+)"/>
+    <property name="onCommentFormat" value="CHECKSTYLE\.RESUME\:\s*([\w\|]+)"/>
+    <property name="idFormat" value="$1"/>
+  </module>
+
+  <!--
+      Repeated-SQL-evaluation guard for the FHIRPath column-representation builders.
+
+      Catches `when(P uses x, V uses x)` and `when(P uses x).otherwise(V uses x)` shapes where
+      the same identifier appears in both the predicate and a value branch of a Spark `when`
+      expression. Such constructions cause `Nondeterministic` operands (notably trace) to fire
+      multiple times per row — see issue #2594 and the design under
+      openspec/changes/fix-trace-duplication.
+
+      The check is global; suppressions.xml restricts its effective scope to Java sources under
+      `fhirpath/src/main/java/au/csiro/pathling/fhirpath/` and
+      `fhirpath/src/main/java/au/csiro/pathling/sql/`.
+
+      Two design constraints keep the rule free of false positives without requiring inline
+      suppression comments:
+
+      1. Identifier length ≥ 7 characters.  Lambda parameters passed to let() are always short
+         (e.g. x, v, lv, rv, ev, nc) or at most 6 characters (leftR, rightR, cdUnit). Real
+         column variables that could cause duplicate evaluation use descriptive names of 7+
+         characters. The length floor therefore excludes every let()-body false positive
+         automatically.
+
+      2. `return`-terminated match window.  The `(?:(?!\breturn\b)[\s\S]){0,400}?` quantifier
+         stops the search as soon as a `return` statement is encountered. This prevents the
+         regex from matching across mutually-exclusive Java branches (e.g. an early-return
+         branch and a later else-branch) that happen to share the same variable name in
+         comments or in the other branch's code.
+   -->
+  <module name="RegexpMultiline">
+    <property name="id" value="RepeatedSqlEvaluation"/>
+    <property name="format"
+      value="\bwhen\s*\(\s*(\b[a-z][a-zA-Z0-9]{6,}\b)(?!\s*\()(?:(?!\breturn\b)[\s\S]){0,400}?,\s*(?:(?!\breturn\b)[\s\S]){0,400}?\b\1\b"/>
+    <property name="matchAcrossLines" value="true"/>
+    <property name="message"
+      value="Possible repeated SQL evaluation: the same identifier appears in both the when() predicate and value branch. Wrap the operand in let(c, x -> ...) so it is materialised once. See issue #2594."/>
+    <property name="fileExtensions" value="java"/>
+  </module>
+  <module name="RegexpMultiline">
+    <property name="id" value="RepeatedSqlEvaluation"/>
+    <property name="format"
+      value="\bwhen\s*\(\s*(\b[a-z][a-zA-Z0-9]{6,}\b)(?!\s*\()(?:(?!\breturn\b)[\s\S]){0,400}?\)\s*\.\s*otherwise\s*\(\s*(?:(?!\breturn\b)[\s\S]){0,400}?\b\1\b"/>
+    <property name="matchAcrossLines" value="true"/>
+    <property name="message"
+      value="Possible repeated SQL evaluation: the same identifier appears in both the when() and otherwise() branches. Wrap the operand in let(c, x -> ...) so it is materialised once. See issue #2594."/>
+    <property name="fileExtensions" value="java"/>
+  </module>
+
   <module name="TreeWalker">
 
     <!-- File structure. -->
