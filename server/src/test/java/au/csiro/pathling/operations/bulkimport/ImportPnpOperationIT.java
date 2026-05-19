@@ -701,6 +701,7 @@ class ImportPnpOperationIT {
             .header("Content-Type", "application/fhir+json")
             .header("Accept", "application/fhir+json")
             .header("Prefer", "respond-async")
+            .header("Authorization", "Bearer " + AUTH_TOKEN)
             .bodyValue(requestBody)
             .exchange()
             .expectStatus()
@@ -736,6 +737,7 @@ class ImportPnpOperationIT {
                     .get()
                     .uri(contentLocation)
                     .header("Accept", "application/fhir+json")
+                    .header("Authorization", "Bearer " + AUTH_TOKEN)
                     .exchange()
                     .expectStatus()
                     .is4xxClientError()
@@ -752,6 +754,7 @@ class ImportPnpOperationIT {
     webTestClient
         .get()
         .uri("http://localhost:" + port + "/jobs/" + jobId + "/escaped.0000.ndjson")
+        .header("Authorization", "Bearer " + AUTH_TOKEN)
         .exchange()
         .expectStatus()
         .isNotFound();
