@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.pathling.test.SpringBootUnitTest;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
@@ -27,44 +28,21 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
- * Tests for {@link SqlQueryResultStreamer} covering each output format. Uses a real local
- * SparkSession to materialise a small Dataset and a Spring {@link MockHttpServletResponse} to
- * capture written bytes and headers.
+ * Tests for {@link SqlQueryResultStreamer} covering each output format. Uses the shared Spark
+ * session to materialise a small Dataset and a Spring {@link MockHttpServletResponse} to capture
+ * written bytes and headers.
  */
-@TestInstance(Lifecycle.PER_CLASS)
+@SpringBootUnitTest
 class SqlQueryResultStreamerTest {
 
-  private SparkSession spark;
-  private SqlQueryResultStreamer streamer;
+  @Autowired private SparkSession spark;
 
-  @BeforeAll
-  void setUpAll() {
-    spark =
-        SparkSession.builder()
-            .master("local[1]")
-            .appName("SqlQueryResultStreamerTest")
-            .config("spark.driver.bindAddress", "localhost")
-            .config("spark.driver.host", "localhost")
-            .config("spark.ui.enabled", false)
-            .config("spark.sql.shuffle.partitions", 1)
-            .getOrCreate();
-    streamer = new SqlQueryResultStreamer();
-  }
-
-  @AfterAll
-  void tearDownAll() {
-    if (spark != null) {
-      spark.stop();
-    }
-  }
+  private final SqlQueryResultStreamer streamer = new SqlQueryResultStreamer();
 
   @Test
   void streamsNdjsonWithUtf8Encoding() {

@@ -28,6 +28,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.read.ReadExecutor;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import java.util.List;
@@ -38,21 +39,18 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.Reference;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Tests for {@link LibraryReferenceResolver} covering both the relative-literal and canonical
  * reference resolution paths.
  */
-@TestInstance(Lifecycle.PER_CLASS)
+@SpringBootUnitTest
 class LibraryReferenceResolverTest {
 
   // ---------------------------------------------------------------------------
@@ -127,38 +125,17 @@ class LibraryReferenceResolverTest {
   }
 
   // ---------------------------------------------------------------------------
-  // Canonical references — uses a real Spark session + FhirEncoders.
+  // Canonical references — uses the shared Spark session and FhirEncoders.
   // ---------------------------------------------------------------------------
 
   @Nested
-  @TestInstance(Lifecycle.PER_CLASS)
   class CanonicalReferences {
 
-    private SparkSession spark;
-    private FhirEncoders fhirEncoders;
+    @Autowired private SparkSession spark;
+    @Autowired private FhirEncoders fhirEncoders;
+
     private DataSource dataSource;
     private LibraryReferenceResolver resolver;
-
-    @BeforeAll
-    void setUpAll() {
-      spark =
-          SparkSession.builder()
-              .master("local[1]")
-              .appName("LibraryReferenceResolverTest")
-              .config("spark.driver.bindAddress", "localhost")
-              .config("spark.driver.host", "localhost")
-              .config("spark.ui.enabled", false)
-              .config("spark.sql.shuffle.partitions", 1)
-              .getOrCreate();
-      fhirEncoders = FhirEncoders.forR4().getOrCreate();
-    }
-
-    @AfterAll
-    void tearDownAll() {
-      if (spark != null) {
-        spark.stop();
-      }
-    }
 
     @BeforeEach
     void setUp() {
