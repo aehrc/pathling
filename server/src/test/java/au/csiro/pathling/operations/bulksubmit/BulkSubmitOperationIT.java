@@ -67,7 +67,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @TestPropertySource(
     properties = {
       "pathling.async.enabled=true",
-      "pathling.bulk-submit.allowable-sources[0]=http://localhost",
       "pathling.bulk-submit.allowed-submitters[0].system=http://example.org/submitters",
       "pathling.bulk-submit.allowed-submitters[0].value=test-submitter"
     })
@@ -107,6 +106,11 @@ class BulkSubmitOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
     registry.add("pathling.bulk-submit.staging-directory", stagingDir::toString);
+    // The allowable source must include the WireMock port. Bare "http://localhost" (port 80)
+    // no longer matches "http://localhost:{port}" under the URI-aware UrlAllowlist matching.
+    registry.add(
+        "pathling.bulk-submit.allowable-sources[0]",
+        () -> "http://localhost:" + wireMockServer.port());
   }
 
   @BeforeEach
