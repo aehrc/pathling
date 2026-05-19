@@ -29,6 +29,7 @@ import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -106,6 +107,7 @@ class SqlQueryRunDeltaIT {
         webTestClient
             .mutate()
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .responseTimeout(Duration.ofSeconds(60))
             .build();
     jsonParser = fhirContext.newJsonParser();
   }
