@@ -173,6 +173,11 @@ class ImportPnpOperationIT {
 
   @AfterEach
   void cleanup() throws IOException {
+    // Clear cached Delta table state before deleting files. Otherwise the next test sees a stale
+    // DeltaLog in memory that no longer matches the on-disk warehouse rebuilt from test fixtures,
+    // and Delta refuses the import with DELTA_PATH_EXISTS.
+    pathlingContext.getSpark().catalog().clearCache();
+    org.apache.spark.sql.delta.DeltaLog.clearCache();
     FileUtils.cleanDirectory(warehouseDir.toFile());
   }
 
@@ -696,6 +701,7 @@ class ImportPnpOperationIT {
             .header("Content-Type", "application/fhir+json")
             .header("Accept", "application/fhir+json")
             .header("Prefer", "respond-async")
+            .header("Authorization", "Bearer " + AUTH_TOKEN)
             .bodyValue(requestBody)
             .exchange()
             .expectStatus()
@@ -731,6 +737,7 @@ class ImportPnpOperationIT {
                     .get()
                     .uri(contentLocation)
                     .header("Accept", "application/fhir+json")
+                    .header("Authorization", "Bearer " + AUTH_TOKEN)
                     .exchange()
                     .expectStatus()
                     .is4xxClientError()
@@ -747,6 +754,7 @@ class ImportPnpOperationIT {
     webTestClient
         .get()
         .uri("http://localhost:" + port + "/jobs/" + jobId + "/escaped.0000.ndjson")
+        .header("Authorization", "Bearer " + AUTH_TOKEN)
         .exchange()
         .expectStatus()
         .isNotFound();

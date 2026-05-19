@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.sqlquery;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.List;
@@ -35,42 +36,26 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Tests for {@link ViewRegistrationService}, with particular attention to the request-id
  * namespacing that prevents concurrent {@code $sqlquery-run} requests from clobbering one another's
  * temporary views in Spark's session-global catalog.
  */
-@TestInstance(Lifecycle.PER_CLASS)
+@SpringBootUnitTest
 class ViewRegistrationServiceTest {
 
-  private SparkSession spark;
+  @Autowired private SparkSession spark;
+  @Autowired private FhirContext fhirContext;
+
   private ViewRegistrationService service;
 
-  @BeforeAll
+  @BeforeEach
   void setUp() {
-    spark =
-        SparkSession.builder()
-            .master("local[2]")
-            .appName("ViewRegistrationServiceTest")
-            .config("spark.driver.bindAddress", "localhost")
-            .config("spark.driver.host", "localhost")
-            .config("spark.ui.enabled", false)
-            .config("spark.sql.shuffle.partitions", 1)
-            .getOrCreate();
-    service = new ViewRegistrationService(spark, FhirContext.forR4(), new ServerConfiguration());
-  }
-
-  @AfterAll
-  void tearDown() {
-    if (spark != null) {
-      spark.stop();
-    }
+    service = new ViewRegistrationService(spark, fhirContext, new ServerConfiguration());
   }
 
   // ---------------------------------------------------------------------------
