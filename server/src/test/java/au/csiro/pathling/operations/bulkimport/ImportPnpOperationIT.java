@@ -173,6 +173,11 @@ class ImportPnpOperationIT {
 
   @AfterEach
   void cleanup() throws IOException {
+    // Clear cached Delta table state before deleting files. Otherwise the next test sees a stale
+    // DeltaLog in memory that no longer matches the on-disk warehouse rebuilt from test fixtures,
+    // and Delta refuses the import with DELTA_PATH_EXISTS.
+    pathlingContext.getSpark().catalog().clearCache();
+    org.apache.spark.sql.delta.DeltaLog.clearCache();
     FileUtils.cleanDirectory(warehouseDir.toFile());
   }
 
