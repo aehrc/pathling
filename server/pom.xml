@@ -425,6 +425,26 @@
         <artifactId>org.hl7.fhir.utilities</artifactId>
         <version>6.9.7</version>
       </dependency>
+      <!-- Override Tomcat to fix CVE-2026-41293 (CRITICAL), CVE-2026-43512
+           (CRITICAL), CVE-2026-41284 (HIGH), CVE-2026-42498 (HIGH), and
+           CVE-2026-43513 (HIGH). Spring Boot 3.5.14 bundles 10.1.54; the fix
+           requires 10.1.55. Remove once Spring Boot is upgraded to a release
+           that bundles Tomcat >= 10.1.55. -->
+      <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-core</artifactId>
+        <version>10.1.55</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-el</artifactId>
+        <version>10.1.55</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-websocket</artifactId>
+        <version>10.1.55</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
