@@ -543,6 +543,12 @@ case class UnresolvedTransformTree(node: Expression,
     this(node, extractor, traversals, None, level, false)
   }
 
+  // Wrap the extractor's output in Coalesce(_, []) so that a null array
+  // returned at runtime is replaced with an empty typed array, preventing
+  // null arrays from propagating into the surrounding Concat.
+  val safeExtractor: Expression => Expression = e => Coalesce(
+    Seq(extractor(e), CreateArray(Seq.empty)))
+
   override def mapChildren(f: Expression => Expression): Expression = {
 
     // Only the Catalyst resolution call f(node) is expected to throw FIELD_NOT_FOUND when the
@@ -560,7 +566,7 @@ case class UnresolvedTransformTree(node: Expression,
       // traversal.
       if (level > 0 || !parentType.contains(newValue.dataType))
         Concat(
-          Seq(extractor(node)) ++
+          Seq(safeExtractor(node)) ++
             traversals
               .map(t => UnresolvedTransformTree(t(node), extractor, traversals,
                 Some(newValue.dataType),
