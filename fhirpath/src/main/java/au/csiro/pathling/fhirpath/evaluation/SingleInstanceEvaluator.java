@@ -46,9 +46,12 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import scala.collection.mutable.ArraySeq;
 
 /**
  * Evaluates FHIRPath expressions against a single encoded FHIR resource and returns materialised
@@ -381,27 +384,91 @@ public class SingleInstanceEvaluator {
       if (!SyntheticFieldUtils.isSyntheticField(field.name())) {
         final Object value = row.get(row.fieldIndex(field.name()));
         // Skip fields with null values.
-        if (value == null) {
-          continue;
-        }
-        // Recursively sanitise nested struct values, updating the parent field's dataType
-        // to match the sanitised schema. This is critical because Row.json() uses the parent's
-        // dataType (not the nested row's own schema) to map field names positionally.
-        if (value instanceof final Row nestedRow) {
-          final Row sanitisedNested = sanitiseRow(nestedRow);
-          filteredValues.add(sanitisedNested);
-          filteredFields.add(
-              new StructField(
-                  field.name(), sanitisedNested.schema(), field.nullable(), field.metadata()));
-        } else {
-          filteredFields.add(field);
-          filteredValues.add(value);
+        if (value != null) {
+          sanitiseField(field, value, filteredFields, filteredValues);
         }
       }
     }
 
     final StructType filteredSchema = new StructType(filteredFields.toArray(new StructField[0]));
     return new GenericRowWithSchema(filteredValues.toArray(), filteredSchema);
+  }
+
+  /**
+   * Sanitises a single field value, appending the resulting field and value to the supplied lists.
+   * Nested rows and array-of-struct elements are recursively sanitised so that synthetic and null
+   * fields are stripped at every depth.
+   *
+   * @param field the original struct field
+   * @param value the non-null value associated with the field
+   * @param filteredFields the list to which the (possibly updated) field is appended
+   * @param filteredValues the list to which the sanitised value is appended
+   */
+  private static void sanitiseField(
+      @Nonnull final StructField field,
+      @Nonnull final Object value,
+      @Nonnull final List<StructField> filteredFields,
+      @Nonnull final List<Object> filteredValues) {
+    switch (value) {
+      // Recursively sanitise nested struct values, updating the parent field's dataType to match
+      // the sanitised schema. This is critical because Row.json() uses the parent's dataType (not
+      // the nested row's own schema) to map field names positionally.
+      case final Row nestedRow -> {
+        final Row sanitisedNested = sanitiseRow(nestedRow);
+        filteredFields.add(
+            new StructField(
+                field.name(), sanitisedNested.schema(), field.nullable(), field.metadata()));
+        filteredValues.add(sanitisedNested);
+      }
+      case final scala.collection.Seq<?> seq ->
+          sanitiseSeqField(field, seq, filteredFields, filteredValues);
+      default -> {
+        filteredFields.add(field);
+        filteredValues.add(value);
+      }
+    }
+  }
+
+  /**
+   * Sanitises an array field by recursively sanitising any struct elements and updating the parent
+   * field's {@link ArrayType} element type so that {@link Row#json()} positional mapping remains
+   * correct after fields are stripped from array elements.
+   *
+   * @param field the original array struct field
+   * @param seq the array value
+   * @param filteredFields the list to which the (possibly updated) field is appended
+   * @param filteredValues the list to which the sanitised array is appended
+   */
+  private static void sanitiseSeqField(
+      @Nonnull final StructField field,
+      @Nonnull final scala.collection.Seq<?> seq,
+      @Nonnull final List<StructField> filteredFields,
+      @Nonnull final List<Object> filteredValues) {
+    final List<Object> sanitisedElements = new ArrayList<>(seq.length());
+    StructType sanitisedElementSchema = null;
+    for (int i = 0; i < seq.length(); i++) {
+      final Object element = seq.apply(i);
+      if (element instanceof final Row elementRow) {
+        final Row sanitisedElement = sanitiseRow(elementRow);
+        sanitisedElements.add(sanitisedElement);
+        if (sanitisedElementSchema == null) {
+          sanitisedElementSchema = sanitisedElement.schema();
+        }
+      } else {
+        sanitisedElements.add(element);
+      }
+    }
+    if (sanitisedElementSchema != null && field.dataType() instanceof final ArrayType arrayType) {
+      filteredFields.add(
+          new StructField(
+              field.name(),
+              DataTypes.createArrayType(sanitisedElementSchema, arrayType.containsNull()),
+              field.nullable(),
+              field.metadata()));
+    } else {
+      filteredFields.add(field);
+    }
+    filteredValues.add(new ArraySeq.ofRef<>(sanitisedElements.toArray()));
   }
 
   /**
