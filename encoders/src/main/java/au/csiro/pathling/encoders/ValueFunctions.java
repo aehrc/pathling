@@ -35,7 +35,9 @@ import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.classic.ColumnConversions$;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.StructType;
 import scala.Function1;
+import scala.Option;
 import scala.collection.immutable.Seq;
 import scala.jdk.javaapi.CollectionConverters;
 import scala.jdk.javaapi.FunctionConverters;
@@ -215,22 +217,8 @@ public class ValueFunctions {
       @Nonnull final List<UnaryOperator<Column>> traversals,
       final int maxDepth,
       final boolean errorOnDepthExhaustion) {
-
-    final List<Function1<Expression, Expression>> x =
-        traversals.stream()
-            .map(ValueFunctions::liftToExpression)
-            .map(FunctionConverters::asScalaFromUnaryOperator)
-            .toList();
-
-    final Seq<Function1<Expression, Expression>> scalaSeq = CollectionConverters.asScala(x).toSeq();
-    return column(
-        new UnresolvedTransformTree(
-            expression(value),
-            liftToExpression(extractor)::apply,
-            scalaSeq,
-            scala.Option.empty(),
-            maxDepth,
-            errorOnDepthExhaustion));
+    return transformTreeInternal(
+        value, extractor, traversals, maxDepth, errorOnDepthExhaustion, Option.empty());
   }
 
   /**
@@ -251,7 +239,70 @@ public class ValueFunctions {
       @Nonnull final UnaryOperator<Column> extractor,
       @Nonnull final List<UnaryOperator<Column>> traversals,
       final int maxDepth) {
-    return transformTree(value, extractor, traversals, maxDepth, false);
+    return transformTreeInternal(value, extractor, traversals, maxDepth, false, Option.empty());
+  }
+
+  /**
+   * Performs a recursive tree traversal with a typed empty fallback for traversals that walk past
+   * the encoded schema.
+   *
+   * <p>When the recursive descent encounters a {@code FIELD_NOT_FOUND} resolution failure at the
+   * traversal root, the fallback emits {@code Cast(empty, ArrayType(expectedElementType))} instead
+   * of an untyped empty array. This keeps the element type consistent with sibling array
+   * combinations downstream (e.g. {@code StructProduct}) and prevents {@code ClassCastException}
+   * during type coercion.
+   *
+   * @param value The starting value column to traverse
+   * @param extractor An extraction operation to apply at each node that must return an array type
+   * @param traversals A list of traversal operations to apply recursively to reach child nodes
+   * @param maxDepth The maximum recursion depth for same-type traversals to prevent infinite loops
+   * @param errorOnDepthExhaustion If true, throws an error when same-type depth is exhausted
+   *     instead of returning an empty array
+   * @param expectedElementType The Spark struct type for typed empty fallback at the traversal root
+   * @return A Column containing an array of all extracted values from the tree traversal
+   */
+  @Nonnull
+  public static Column transformTree(
+      @Nonnull final Column value,
+      @Nonnull final UnaryOperator<Column> extractor,
+      @Nonnull final List<UnaryOperator<Column>> traversals,
+      final int maxDepth,
+      final boolean errorOnDepthExhaustion,
+      @Nonnull final StructType expectedElementType) {
+    return transformTreeInternal(
+        value,
+        extractor,
+        traversals,
+        maxDepth,
+        errorOnDepthExhaustion,
+        Option.apply(expectedElementType));
+  }
+
+  @Nonnull
+  private static Column transformTreeInternal(
+      @Nonnull final Column value,
+      @Nonnull final UnaryOperator<Column> extractor,
+      @Nonnull final List<UnaryOperator<Column>> traversals,
+      final int maxDepth,
+      final boolean errorOnDepthExhaustion,
+      @Nonnull final Option<StructType> expectedElementType) {
+
+    final List<Function1<Expression, Expression>> x =
+        traversals.stream()
+            .map(ValueFunctions::liftToExpression)
+            .map(FunctionConverters::asScalaFromUnaryOperator)
+            .toList();
+
+    final Seq<Function1<Expression, Expression>> scalaSeq = CollectionConverters.asScala(x).toSeq();
+    return column(
+        new UnresolvedTransformTree(
+            expression(value),
+            liftToExpression(extractor)::apply,
+            scalaSeq,
+            Option.empty(),
+            maxDepth,
+            errorOnDepthExhaustion,
+            expectedElementType));
   }
 
   /**

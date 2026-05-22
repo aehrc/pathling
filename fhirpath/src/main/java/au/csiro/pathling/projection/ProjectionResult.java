@@ -27,6 +27,9 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import lombok.Value;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 
 /**
  * The result of evaluating a projection, which consists of a list of {@link ProjectedColumn}
@@ -46,6 +49,26 @@ public class ProjectionResult {
 
   /** An array of structs. The struct has a field for each column name in the projection. */
   @Nonnull Column resultColumn;
+
+  /**
+   * Builds a Spark {@link StructType} matching this projection's declared column shape, with one
+   * field per {@link ProjectedColumn} in declaration order.
+   *
+   * <p>Delegates to {@link ProjectedColumn#getSqlType()} for each column's type.
+   *
+   * @return A {@link StructType} with one field per declared column.
+   */
+  @Nonnull
+  public StructType getSqlType() {
+    final StructField[] fields =
+        results.stream()
+            .map(
+                col ->
+                    new StructField(
+                        col.requestedColumn().name(), col.getSqlType(), true, Metadata.empty()))
+            .toArray(StructField[]::new);
+    return new StructType(fields);
+  }
 
   /**
    * Creates a new ProjectionResult with the specified result column, retaining the existing results

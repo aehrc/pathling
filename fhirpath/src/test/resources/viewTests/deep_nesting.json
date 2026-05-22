@@ -1,0 +1,418 @@
+{
+  "title": "deep nesting",
+  "description": "Tests that exercise FHIRPath traversal at or past the encoder's maxNestingLevel for recursive elements. With maxNestingLevel=3 (configured in FhirViewTest), the encoder schema supports four `.item` accesses on Questionnaire (item.item.item.item); a fifth one references a struct field that does not exist in the encoded schema. The surrounding view constructs must handle that gracefully (typed empty result, never a crash and never a missing output column).",
+  "fhirVersion": ["4.0.1"],
+  "resources": [
+    {
+      "resourceType": "Questionnaire",
+      "id": "q1",
+      "item": [
+        {
+          "linkId": "g1",
+          "text": "Group 1",
+          "type": "group",
+          "item": [
+            {
+              "linkId": "g1.1",
+              "text": "Group 1.1",
+              "type": "group",
+              "item": [
+                {
+                  "linkId": "g1.1.1",
+                  "text": "Group 1.1.1",
+                  "type": "group",
+                  "item": [
+                    {
+                      "linkId": "g1.1.1.1",
+                      "text": "Question 1.1.1.1",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resourceType": "Questionnaire",
+      "id": "q-wide",
+      "status": "active",
+      "item": [
+        {
+          "linkId": "g1",
+          "text": "Group 1",
+          "type": "group",
+          "required": true,
+          "item": [
+            {
+              "linkId": "g1.1",
+              "text": "Group 1.1",
+              "type": "group",
+              "definition": "http://example.org/q1.1",
+              "item": [
+                {
+                  "linkId": "g1.1.1",
+                  "text": "Group 1.1.1",
+                  "type": "group",
+                  "maxLength": 50,
+                  "item": [
+                    {
+                      "linkId": "g1.1.1.1",
+                      "text": "Question 1.1.1.1",
+                      "type": "string",
+                      "required": false
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "title": "repeat applied at the deepest schema level",
+      "description": "Navigates via forEach to items at the deepest schema level the encoder supports, then applies repeat. The repeat's first traversal step references the `item` field on a struct that does not have it in the encoded schema. Expected behaviour: the repeat short-circuits with a typed empty result and produces no rows.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "item.item.item.item",
+            "select": [
+              {
+                "repeat": ["item"],
+                "column": [
+                  {
+                    "name": "linkId",
+                    "path": "linkId",
+                    "type": "string"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "linkId"],
+      "expect": []
+    },
+    {
+      "title": "repeat at deepest schema level combined with sibling column",
+      "description": "Same shape as the previous test but the inner select combines a sibling column with the repeat, forcing StructProduct to combine the repeat's output with another typed array. This is the minimal shape that reproduces the StructProduct ClassCast in the shareable nested-repeat tests when the repeat returns an untyped empty array. expectColumns asserts the schema contains both clauses' output columns even when no rows are produced.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "item.item.item.item",
+            "select": [
+              {
+                "column": [
+                  {
+                    "name": "parentLinkId",
+                    "path": "linkId",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "repeat": ["item"],
+                "column": [
+                  {
+                    "name": "descendantLinkId",
+                    "path": "linkId",
+                    "type": "string"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "parentLinkId", "descendantLinkId"],
+      "expect": []
+    },
+    {
+      "title": "forEach on a recursive path that exits the schema",
+      "description": "forEach traversal that walks the recursive item element one step past the encoder's nesting limit. The FHIRPath expression parses successfully but extraction touches a field that does not exist in the encoded schema. Expected behaviour: zero output rows, no crash.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "item.item.item.item.item",
+            "column": [
+              {
+                "name": "linkId",
+                "path": "linkId",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "linkId"],
+      "expect": []
+    },
+    {
+      "title": "forEach on a recursive path that exits the schema with sibling column",
+      "description": "Same as the previous test but the outer select also contains a sibling column, ensuring StructProduct is exercised with the empty forEach output as one of its inputs.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "item.item.item.item.item",
+            "select": [
+              {
+                "column": [
+                  {
+                    "name": "linkId",
+                    "path": "linkId",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "column": [
+                  {
+                    "name": "text",
+                    "path": "text",
+                    "type": "string"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "linkId", "text"],
+      "expect": []
+    },
+    {
+      "title": "nested repeat at schema boundary with wide type coverage",
+      "description": "Outer repeat traverses all ancestor items; inner repeat at each ancestor traverses its descendants using a wide column selection (string, boolean, integer scalars plus boolean[] and uri[] collection columns). When the outer repeat reaches g1.1.1.1 (deepest encoded item), the inner repeat exits the encoded schema. The typed empty fallback produced at that point must have field types that are compatible with the non-empty rows from shallower ancestors so that Spark can concat them. If getSqlType() returns wrong types (e.g. NullType instead of BooleanType for a boolean[] column), the concat fails.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "repeat": ["item"],
+            "select": [
+              {
+                "column": [
+                  {
+                    "name": "ancestorLinkId",
+                    "path": "linkId",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "repeat": ["item"],
+                "column": [
+                  {
+                    "name": "descendantLinkId",
+                    "path": "linkId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "descendantRequired",
+                    "path": "required",
+                    "type": "boolean"
+                  },
+                  {
+                    "name": "descendantMaxLen",
+                    "path": "maxLength",
+                    "type": "integer"
+                  },
+                  {
+                    "name": "descendantDefinitions",
+                    "path": "definition",
+                    "type": "uri",
+                    "collection": true
+                  },
+                  {
+                    "name": "descendantRequiredList",
+                    "path": "required",
+                    "type": "boolean",
+                    "collection": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": [
+        "id",
+        "ancestorLinkId",
+        "descendantLinkId",
+        "descendantRequired",
+        "descendantMaxLen",
+        "descendantDefinitions",
+        "descendantRequiredList"
+      ],
+      "expect": [
+        {
+          "id": "q1",
+          "ancestorLinkId": "g1",
+          "descendantLinkId": "g1.1",
+          "descendantRequired": null,
+          "descendantMaxLen": null,
+          "descendantDefinitions": [],
+          "descendantRequiredList": []
+        },
+        {
+          "id": "q1",
+          "ancestorLinkId": "g1",
+          "descendantLinkId": "g1.1.1",
+          "descendantRequired": null,
+          "descendantMaxLen": null,
+          "descendantDefinitions": [],
+          "descendantRequiredList": []
+        },
+        {
+          "id": "q1",
+          "ancestorLinkId": "g1",
+          "descendantLinkId": "g1.1.1.1",
+          "descendantRequired": null,
+          "descendantMaxLen": null,
+          "descendantDefinitions": [],
+          "descendantRequiredList": []
+        },
+        {
+          "id": "q1",
+          "ancestorLinkId": "g1.1",
+          "descendantLinkId": "g1.1.1",
+          "descendantRequired": null,
+          "descendantMaxLen": null,
+          "descendantDefinitions": [],
+          "descendantRequiredList": []
+        },
+        {
+          "id": "q1",
+          "ancestorLinkId": "g1.1",
+          "descendantLinkId": "g1.1.1.1",
+          "descendantRequired": null,
+          "descendantMaxLen": null,
+          "descendantDefinitions": [],
+          "descendantRequiredList": []
+        },
+        {
+          "id": "q1",
+          "ancestorLinkId": "g1.1.1",
+          "descendantLinkId": "g1.1.1.1",
+          "descendantRequired": null,
+          "descendantMaxLen": null,
+          "descendantDefinitions": [],
+          "descendantRequiredList": []
+        },
+        {
+          "id": "q-wide",
+          "ancestorLinkId": "g1",
+          "descendantLinkId": "g1.1",
+          "descendantRequired": null,
+          "descendantMaxLen": null,
+          "descendantDefinitions": ["http://example.org/q1.1"],
+          "descendantRequiredList": []
+        },
+        {
+          "id": "q-wide",
+          "ancestorLinkId": "g1",
+          "descendantLinkId": "g1.1.1",
+          "descendantRequired": null,
+          "descendantMaxLen": 50,
+          "descendantDefinitions": [],
+          "descendantRequiredList": []
+        },
+        {
+          "id": "q-wide",
+          "ancestorLinkId": "g1",
+          "descendantLinkId": "g1.1.1.1",
+          "descendantRequired": false,
+          "descendantMaxLen": null,
+          "descendantDefinitions": [],
+          "descendantRequiredList": [false]
+        },
+        {
+          "id": "q-wide",
+          "ancestorLinkId": "g1.1",
+          "descendantLinkId": "g1.1.1",
+          "descendantRequired": null,
+          "descendantMaxLen": 50,
+          "descendantDefinitions": [],
+          "descendantRequiredList": []
+        },
+        {
+          "id": "q-wide",
+          "ancestorLinkId": "g1.1",
+          "descendantLinkId": "g1.1.1.1",
+          "descendantRequired": false,
+          "descendantMaxLen": null,
+          "descendantDefinitions": [],
+          "descendantRequiredList": [false]
+        },
+        {
+          "id": "q-wide",
+          "ancestorLinkId": "g1.1.1",
+          "descendantLinkId": "g1.1.1.1",
+          "descendantRequired": false,
+          "descendantMaxLen": null,
+          "descendantDefinitions": [],
+          "descendantRequiredList": [false]
+        }
+      ]
+    }
+  ]
+}

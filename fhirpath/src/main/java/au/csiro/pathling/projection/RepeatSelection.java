@@ -27,6 +27,7 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -73,6 +74,17 @@ public record RepeatSelection(
             .map(context::withInputContext)
             .toList();
 
+    // Compute the output schema based on first non-empty context or empty context.
+    final ProjectionContext schemaContext =
+        startingNodes.stream().findFirst().orElse(context.withEmptyInput());
+    final ProjectionResult schemaResult = component.evaluate(schemaContext);
+
+    // Derive the expected element type from declared projection metadata. Used as the typed
+    // empty fallback when recursive traversal exits the encoded schema at the root of the
+    // repeat, so that sibling column combinations through StructProduct see a consistent
+    // element type instead of an untyped Array<NullType>.
+    final StructType expectedElement = schemaResult.getSqlType();
+
     // Map starting nodes to transformTree expressions and concatenate the results.
     final Column[] nodeResults =
         startingNodes.stream()
@@ -85,7 +97,8 @@ public record RepeatSelection(
                                 component.evaluateElementWise(ctx.withInputColumn(c))),
                         paths.stream().map(ctx::asColumnOperator).toList(),
                         maxDepth,
-                        errorOnDepthExhaustion))
+                        errorOnDepthExhaustion,
+                        expectedElement))
             .toArray(Column[]::new);
 
     final Column result =
@@ -97,11 +110,7 @@ public record RepeatSelection(
                 .flatten()
                 .getValue();
 
-    // Compute the output schema based on first non-empty context or empty context.
-    final ProjectionContext schemaContext =
-        startingNodes.stream().findFirst().orElse(context.withEmptyInput());
-
-    return component.evaluate(schemaContext).withResultColumn(result);
+    return schemaResult.withResultColumn(result);
   }
 
   /**
