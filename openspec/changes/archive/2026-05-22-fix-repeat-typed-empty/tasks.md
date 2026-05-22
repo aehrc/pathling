@@ -83,11 +83,11 @@
 
 - [x] 6.1 Reconcile working-tree edits committed elsewhere on the branch
       with the final implementation; ensure no dead WIP remains.
-- [ ] 6.2 Update commit history on branch `2619` so the change set
+- [x] 6.2 Update commit history on branch `2619` so the change set
       consists of focused, individually-reviewable commits (new helper,
       encoder plumbing, RepeatSelection wiring, test exclusions).
-- [ ] 6.3 File a follow-up issue for the symmetric `forEach` typed-empty
+- [x] 6.3 File a follow-up issue for the symmetric `forEach` typed-empty
       fallback (deep_nesting tests 3 and 4) referencing this change for
-      context.
+      context. (#2625)
 - [ ] 6.4 Update `repeat-directive` capability spec (post-merge) when
       this change is archived, per the OpenSpec archive flow.

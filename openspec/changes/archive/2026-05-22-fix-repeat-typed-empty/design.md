@@ -81,25 +81,32 @@ change sources the type from declared projection metadata instead.
 
 ## Decisions
 
-### D1. Schema derivation lives in a separate helper class
+### D1. Schema derivation added directly to `ProjectedColumn` and `ProjectionResult`
 
-A new class `au.csiro.pathling.projection.ProjectionSchema` exposes a static
-`structTypeOf(ProjectionResult)` method (and supporting per-column helpers)
-that converts a flat `List<ProjectedColumn>` into a Spark `StructType`.
+*As built:* `ProjectedColumn.getSqlType()` and `ProjectionResult.getSqlType()`
+carry schema derivation inline on the existing data-plane records.
+`RepeatSelection` calls `schemaResult.getSqlType()` directly. A separate
+`ProjectionSchema` helper class was prototyped but deleted because the two
+small methods did not justify a new class.
 
-**Alternative considered:** Adding the method to `ProjectionResult` itself.
-Rejected because `ProjectionResult` is a data-plane carrier (results +
-result column); schema derivation is a distinct concern with its own
-surface area and FHIR-type → Spark-type lookup. Keeping them separate
-preserves single-responsibility.
+**Original plan:** A separate `au.csiro.pathling.projection.ProjectionSchema`
+class with `structTypeOf(ProjectionResult)`. Rejected during implementation
+because the surface area turned out to be two short methods; the
+single-responsibility concern that motivated the separate class did not
+outweigh the overhead of an extra file with no independent users.
 
-### D2. Static FHIR-primitive → Spark-type lookup, not per-Collection method
+### D2. FHIR-primitive → Spark-type lookup routes through `FhirPathType.forFhirType`
 
-Inside `ProjectionSchema`, a static `switch` maps `FHIRDefinedType` values
-to Spark `DataType`s. The map covers the primitive types Pathling currently
-supports as column outputs. Non-primitive types throw
-`UnsupportedOperationException`, matching today's `Materializable` failure
-mode for non-primitive columns.
+*As built:* `ProjectedColumn.getSqlType()` calls
+`FhirPathType.forFhirType(fhirType).map(FhirPathType::getSqlDataType)` rather
+than a hand-rolled `switch`. This routes through the canonical mapping already
+maintained in `FhirPathType` and avoids duplicating the table.
+
+**Original plan:** A static `switch` inside `ProjectionSchema`. Replaced during
+implementation when it became clear that `FhirPathType.FHIR_TYPE_TO_FHIR_PATH_TYPE`
+already encodes the correct mappings and the old `sparkTypeFor()` switch had three
+bugs (`BASE64BINARY→BinaryType`, `DECIMAL→StringType`, `INSTANT→TimestampType`)
+that delegating to `FhirPathType` silently fixes.
 
 **Alternative considered:** Adding `DataType getMaterialisedType()` to the
 `Materializable` interface so each Collection class declares its own

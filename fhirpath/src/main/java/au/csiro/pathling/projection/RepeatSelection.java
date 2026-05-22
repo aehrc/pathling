@@ -74,7 +74,9 @@ public record RepeatSelection(
             .map(context::withInputContext)
             .toList();
 
-    // Compute the output schema based on first non-empty context or empty context.
+    // All paths in a repeat directive produce the same column schema; the first non-empty
+    // path is used as the authoritative schema source. When no paths produce non-empty
+    // collections (e.g. the repeat exits the encoded schema), an empty input is used instead.
     final ProjectionContext schemaContext =
         startingNodes.stream().findFirst().orElse(context.withEmptyInput());
     final ProjectionResult schemaResult = component.evaluate(schemaContext);

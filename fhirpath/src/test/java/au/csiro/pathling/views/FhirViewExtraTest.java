@@ -25,6 +25,7 @@ public class FhirViewExtraTest extends FhirViewTest {
     super(
         "classpath:viewTests/*.json",
         Set.of(),
+        // The forEach typed-empty fallback is not yet implemented; see issue #2625.
         Set.of(
             "deep nesting - forEach on a recursive path that exits the schema",
             "deep nesting - forEach on a recursive path that exits the schema with sibling"

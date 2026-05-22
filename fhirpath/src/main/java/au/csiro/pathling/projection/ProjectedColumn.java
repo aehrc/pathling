@@ -88,8 +88,9 @@ public record ProjectedColumn(
   }
 
   /**
-   * Derives the Spark SQL type for this column using only static metadata, mirroring the type
-   * selection logic of {@link #getValue()} without resolving the underlying column expression.
+   * Derives the Spark SQL type for this column using only static metadata. This is the static
+   * analogue of {@link #getValue()}: it applies the same precedence order for type selection but
+   * inspects declared annotations rather than resolving the underlying column expression.
    *
    * <p>Precedence:
    *

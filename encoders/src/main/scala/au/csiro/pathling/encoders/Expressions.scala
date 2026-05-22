@@ -545,8 +545,10 @@ case class UnresolvedTransformTree(node: Expression,
   }
 
   override def mapChildren(f: Expression => Expression): Expression = {
-    // Wrap the extractor's output in Coalesce(_, []) so that a null array returned at runtime
-    // is replaced with an empty array, preventing null propagation into the surrounding Concat.
+    // Wrap the extractor's output in Coalesce(_, []) to guard against null arrays returned at
+    // runtime. FHIR fields that are absent in the source data produce a null array at the current
+    // node level; coalescing to [] prevents null propagation into the surrounding Concat, which
+    // would otherwise produce null output rows instead of empty results.
     val safeExtractor: Expression => Expression = e => Coalesce(
       Seq(extractor(e), CreateArray(Seq.empty)))
 

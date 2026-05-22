@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -136,6 +137,32 @@ class ProjectionResultTest {
         resultOf(column("amount", false, Optional.of(FHIRDefinedType.QUANTITY), Optional.empty()))
             .getSqlType();
     assertEquals(QuantityEncoding.dataType(), quantitySchema.fields()[0].dataType());
+  }
+
+  @Test
+  void base64BinaryMapsToStringType() {
+    // Previously mapped incorrectly to BinaryType; FHIR base64Binary is encoded as StringType.
+    final ProjectionResult result =
+        resultOf(
+            column("data", false, Optional.of(FHIRDefinedType.BASE64BINARY), Optional.empty()));
+    assertEquals(DataTypes.StringType, result.getSqlType().fields()[0].dataType());
+  }
+
+  @Test
+  void decimalMapsToDecimalType() {
+    // Previously mapped incorrectly to StringType; FHIR decimal is encoded as DecimalType.
+    final ProjectionResult result =
+        resultOf(column("amount", false, Optional.of(FHIRDefinedType.DECIMAL), Optional.empty()));
+    assertEquals(DecimalCollection.getDecimalType(), result.getSqlType().fields()[0].dataType());
+  }
+
+  @Test
+  void instantMapsToStringType() {
+    // Previously mapped incorrectly to TimestampType; FHIR instant is encoded as StringType.
+    final ProjectionResult result =
+        resultOf(
+            column("timestamp", false, Optional.of(FHIRDefinedType.INSTANT), Optional.empty()));
+    assertEquals(DataTypes.StringType, result.getSqlType().fields()[0].dataType());
   }
 
   @Test
