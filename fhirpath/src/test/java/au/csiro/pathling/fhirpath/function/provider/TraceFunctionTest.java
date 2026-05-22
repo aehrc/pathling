@@ -523,6 +523,13 @@ class TraceFunctionTest {
           // handleEquivalentTypes, a traced left operand fires 3× per row.
           Arguments.of(
               new TraceEntryCase("Patient.name.family.first().trace('t') = 'Smith'", "t", 1)),
+          // EqualityOperator = — non-equivalent-types branch (string vs integer routes through
+          // handleNonEquivalentTypes). Operand columns appear in left.isEmpty() OR right.isEmpty();
+          // each isEmpty() call must reference its operand exactly once. Guards against a future
+          // rewrite of isEmpty() that references the operand twice (e.g. size(c) == 0 OR c IS NULL)
+          // which would silently re-introduce #2594 on this branch.
+          Arguments.of(new TraceEntryCase("'a'.trace('t') = 1", "t", 1)),
+          Arguments.of(new TraceEntryCase("'a' = 1.trace('t')", "t", 1)),
           // ConversionLogic.convertToBoolean (STRING path) — value appears in both when()
           // predicates ('1.0' and '0.0' checks) and the otherwise() branch. Without let()-wrapping,
           // a traced operand fires 3× per row (all three predicates/branches evaluate value).
