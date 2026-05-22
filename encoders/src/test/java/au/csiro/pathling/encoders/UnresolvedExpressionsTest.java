@@ -106,13 +106,45 @@ class UnresolvedExpressionsTest {
             toIndexedSeq(traversor),
             scala.Option.empty(),
             2,
-            true);
+            true,
+            scala.Option.empty());
     assertUnresolvedExpression(tree);
     assertTrue(tree.errorOnDepthExhaustion());
 
     // The flag should be preserved through withNewChildrenInternal.
     final Expression rebuilt = tree.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2")));
     assertTrue(((UnresolvedTransformTree) rebuilt).errorOnDepthExhaustion());
+  }
+
+  @Test
+  void testUnresolvedTransformTreeWithExpectedElementType() {
+
+    final Function1<Expression, Expression> extractor = x -> x;
+    final Function1<Expression, Expression> traversor = x -> x;
+
+    final StructType elementType =
+        new StructType(
+            new StructField[] {
+              new StructField(
+                  "linkId", DataTypes.StringType, true, org.apache.spark.sql.types.Metadata.empty())
+            });
+
+    final UnresolvedTransformTree tree =
+        new UnresolvedTransformTree(
+            stringLiteral("data1"),
+            extractor,
+            toIndexedSeq(traversor),
+            scala.Option.empty(),
+            2,
+            false,
+            scala.Option.apply(elementType));
+    assertUnresolvedExpression(tree);
+    assertEquals(scala.Option.apply(elementType), tree.expectedElementType());
+
+    // The expected element type should be preserved through withNewChildrenInternal.
+    final Expression rebuilt = tree.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2")));
+    assertEquals(
+        scala.Option.apply(elementType), ((UnresolvedTransformTree) rebuilt).expectedElementType());
   }
 
   private static Expression unresolvedAttribute(@Nonnull final String name) {

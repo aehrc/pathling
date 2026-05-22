@@ -532,7 +532,8 @@ case class UnresolvedTransformTree(node: Expression,
                                    traversals: Seq[Expression => Expression],
                                    parentType: Option[DataType],
                                    level: Int,
-                                   errorOnDepthExhaustion: Boolean = false
+                                   errorOnDepthExhaustion: Boolean = false,
+                                   expectedElementType: Option[StructType] = None
                                   )
   extends Expression with UnevaluableCopy with NonSQLExpression {
 
@@ -540,10 +541,16 @@ case class UnresolvedTransformTree(node: Expression,
            extractor: Expression => Expression,
            traversals: Seq[Expression => Expression],
            level: Int) = {
-    this(node, extractor, traversals, None, level, false)
+    this(node, extractor, traversals, None, level, false, None)
   }
 
   override def mapChildren(f: Expression => Expression): Expression = {
+    // Wrap the extractor's output in Coalesce(_, []) to guard against null arrays returned at
+    // runtime. FHIR fields that are absent in the source data produce a null array at the current
+    // node level; coalescing to [] prevents null propagation into the surrounding Concat, which
+    // would otherwise produce null output rows instead of empty results.
+    val safeExtractor: Expression => Expression = e => Coalesce(
+      Seq(extractor(e), CreateArray(Seq.empty)))
 
     // Only the Catalyst resolution call f(node) is expected to throw FIELD_NOT_FOUND when the
     // field doesn't exist at this schema level. Other operations (extractor, traversal
@@ -552,7 +559,16 @@ case class UnresolvedTransformTree(node: Expression,
       f(node)
     } catch {
       case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
-        return CreateArray(Seq.empty)
+        // At the root of a typed repeat traversal, fall back to a typed empty array so that
+        // sibling column combination through StructProduct sees a consistent element type.
+        // Inner traversal nodes (parentType.nonEmpty) keep the untyped empty array — the
+        // surrounding Concat upcasts them against typed sibling arrays.
+        return (parentType, expectedElementType) match {
+          case (None, Some(elementType)) =>
+            Cast(CreateArray(Seq.empty), ArrayType(elementType))
+          case _ =>
+            CreateArray(Seq.empty)
+        }
     }
 
     if (newValue.resolved) {
@@ -560,12 +576,13 @@ case class UnresolvedTransformTree(node: Expression,
       // traversal.
       if (level > 0 || !parentType.contains(newValue.dataType))
         Concat(
-          Seq(extractor(node)) ++
+          Seq(safeExtractor(node)) ++
             traversals
               .map(t => UnresolvedTransformTree(t(node), extractor, traversals,
                 Some(newValue.dataType),
                 if (parentType.contains(newValue.dataType)) level - 1 else level,
-                errorOnDepthExhaustion
+                errorOnDepthExhaustion,
+                expectedElementType
               ))
         )
       else if (errorOnDepthExhaustion)
@@ -590,7 +607,8 @@ case class UnresolvedTransformTree(node: Expression,
   override def children: Seq[Expression] = node :: Nil
 
   override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
-    UnresolvedTransformTree(newChildren.head, extractor, traversals, parentType, level, errorOnDepthExhaustion)
+    UnresolvedTransformTree(newChildren.head, extractor, traversals, parentType, level,
+      errorOnDepthExhaustion, expectedElementType)
   }
 }
 

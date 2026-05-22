@@ -17,9 +17,18 @@
 
 package au.csiro.pathling.views;
 
+import java.util.Set;
+
 public class FhirViewExtraTest extends FhirViewTest {
 
   public FhirViewExtraTest() {
-    super("classpath:viewTests/*.json");
+    super(
+        "classpath:viewTests/*.json",
+        Set.of(),
+        // The forEach typed-empty fallback is not yet implemented; see issue #2625.
+        Set.of(
+            "deep nesting - forEach on a recursive path that exits the schema",
+            "deep nesting - forEach on a recursive path that exits the schema with sibling"
+                + " column"));
   }
 }

@@ -517,6 +517,54 @@ public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
   }
 
   @Test
+  void testTransformTreeTypedEmptyFallbackWhenFieldMissing() {
+    // Accessing a struct sub-field that doesn't exist raises FIELD_NOT_FOUND during Catalyst
+    // analysis. This mirrors the production scenario where a repeat traversal exits the encoded
+    // schema: ds.col("root") resolves, but .getField("items") creates an UnresolvedExtractValue
+    // that fails when Spark tries to find "items" in root's struct type.
+    final Metadata metadata = Metadata.empty();
+    final StructType rootStructType =
+        DataTypes.createStructType(
+            new StructField[] {new StructField("id", DataTypes.StringType, true, metadata)});
+    final Dataset<Row> ds =
+        spark.createDataFrame(
+            List.of(RowFactory.create(RowFactory.create("r1"))),
+            DataTypes.createStructType(
+                new StructField[] {new StructField("root", rootStructType, true, metadata)}));
+
+    final StructType elementType =
+        new StructType(
+            new StructField[] {new StructField("linkId", DataTypes.StringType, true, metadata)});
+
+    // With expectedElementType: root FIELD_NOT_FOUND emits Cast([], ArrayType(elementType)).
+    final Dataset<Row> typedResult =
+        ds.withColumn(
+            "result",
+            ValueFunctions.transformTree(
+                ds.col("root").getField("items"),
+                c -> c.getField("linkId"),
+                List.of(c -> unnest(c.getField("item"))),
+                2,
+                false,
+                elementType));
+    assertEquals(
+        DataTypes.createArrayType(elementType), typedResult.schema().fields()[1].dataType());
+
+    // Without expectedElementType: root FIELD_NOT_FOUND emits untyped CreateArray(Seq.empty).
+    final Dataset<Row> untypedResult =
+        ds.withColumn(
+            "result",
+            ValueFunctions.transformTree(
+                ds.col("root").getField("items"),
+                c -> c.getField("linkId"),
+                List.of(c -> unnest(c.getField("item"))),
+                2));
+    assertEquals(
+        DataTypes.createArrayType(DataTypes.NullType, false),
+        untypedResult.schema().fields()[1].dataType());
+  }
+
+  @Test
   void testNullIfMissingField() {
     final Metadata metadata = Metadata.empty();
 

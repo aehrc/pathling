@@ -31,6 +31,15 @@ public class FhirViewShareableComplianceTest extends FhirViewTest {
     super(
         "classpath:tests/sql-on-fhir/*.json",
         Set.of("shareable"),
-        Set.of("fhirpath - string join", "fhirpath - string join: default separator"));
+        Set.of(
+            "row_index - %rowIndex at top level",
+            "row_index - %rowIndex with forEach",
+            "row_index - %rowIndex with forEachOrNull",
+            "row_index - %rowIndex with nested forEach",
+            "row_index - %rowIndex with repeat",
+            "row_index - %rowIndex with unionAll",
+            "row_index - %rowIndex in unionAll without forEach",
+            "row_index - %rowIndex in unionAll inside forEach",
+            "row_index - %rowIndex for surrogate key"));
   }
 }

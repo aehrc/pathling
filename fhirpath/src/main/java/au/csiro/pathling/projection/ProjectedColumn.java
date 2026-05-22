@@ -17,10 +17,14 @@
 
 package au.csiro.pathling.projection;
 
+import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
+import java.util.Objects;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 
 /**
  * The result of evaluating a {@link RequestedColumn} as part of a {@link ProjectionClause}.
@@ -81,5 +85,55 @@ public record ProjectedColumn(
         .map(rawResult::try_cast)
         .orElse(rawResult)
         .alias(requestedColumn.name());
+  }
+
+  /**
+   * Derives the Spark SQL type for this column using only static metadata. This is the static
+   * analogue of {@link #getValue()}: it applies the same precedence order for type selection but
+   * inspects declared annotations rather than resolving the underlying column expression.
+   *
+   * <p>Precedence:
+   *
+   * <ol>
+   *   <li>Explicit {@code sqlType} annotation on the requested column.
+   *   <li>Declared FHIR {@code type} annotation mapped via {@link FhirPathType#forFhirType}.
+   *   <li>The resolved {@link FhirPathType} on the collection (requires {@link Materializable}).
+   * </ol>
+   *
+   * <p>When {@code collection()} is {@code true}, the element type is wrapped in {@link
+   * DataTypes#createArrayType}.
+   *
+   * @return The Spark {@link DataType} for this column.
+   * @throws UnsupportedOperationException If the collection is not {@link Materializable} and no
+   *     explicit type annotation is present, or if no type information is available at all.
+   */
+  @Nonnull
+  public DataType getSqlType() {
+    final DataType elementType =
+        requestedColumn
+            .sqlType()
+            .or(
+                () ->
+                    requestedColumn
+                        .type()
+                        .flatMap(FhirPathType::forFhirType)
+                        .map(FhirPathType::getSqlDataType))
+            .or(
+                () -> {
+                  if (!(collection instanceof Materializable)) {
+                    throw new UnsupportedOperationException(
+                        "Cannot obtain value for non-primitive collection of FHIR type: "
+                            + collection.getFhirType().map(Objects::toString).orElse("unknown"));
+                  }
+                  return collection.getType().map(FhirPathType::getSqlDataType);
+                })
+            .orElseThrow(
+                () ->
+                    new UnsupportedOperationException(
+                        "Cannot derive SQL type for column '"
+                            + requestedColumn.name()
+                            + "': no sqlType annotation, FHIR type annotation, or resolved"
+                            + " FhirPathType"));
+    return requestedColumn.collection() ? DataTypes.createArrayType(elementType) : elementType;
   }
 }
