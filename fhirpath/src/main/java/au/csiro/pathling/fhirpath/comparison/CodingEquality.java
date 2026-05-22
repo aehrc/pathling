@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
@@ -50,11 +51,17 @@ public class CodingEquality implements ElementWiseEquality {
   @Nonnull
   @Override
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
-    return when(left.isNull().or(right.isNull()), lit(null))
-        .otherwise(
-            EQUALITY_COLUMNS.stream()
-                .map(f -> left.getField(f).eqNullSafe(right.getField(f)))
-                .reduce(Column::and)
-                .orElseThrow(() -> new AssertionError("No fields to compare")));
+    return let(
+        left,
+        l ->
+            let(
+                right,
+                r ->
+                    when(l.isNull().or(r.isNull()), lit(null))
+                        .otherwise(
+                            EQUALITY_COLUMNS.stream()
+                                .map(f -> l.getField(f).eqNullSafe(r.getField(f)))
+                                .reduce(Column::and)
+                                .orElseThrow(() -> new AssertionError("No fields to compare")))));
   }
 }

@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
@@ -74,17 +75,30 @@ public class EqualityOperator extends SameTypeBinaryOperator {
     final ColumnRepresentation right = rightCollection.getColumn();
 
     final Column equalityResult =
-        when(left.isEmpty().getValue().or(right.isEmpty().getValue()), lit(null))
-            .when(
-                left.count()
-                    .getValue()
-                    .equalTo(lit(1))
-                    .and(right.count().getValue().equalTo(lit(1))),
-                // this works because we know both sides are singular (count == 1)
-                elementComparator.apply(left.singular().getValue(), right.singular().getValue()))
-            .otherwise(
-                // this works because we know that both sides is plural (count > 1)
-                arrayComparator.apply(left.plural().getValue(), right.plural().getValue()));
+        let(
+            left.getValue(),
+            lv ->
+                let(
+                    right.getValue(),
+                    rv -> {
+                      final ColumnRepresentation leftR = left.copyOf(lv);
+                      final ColumnRepresentation rightR = right.copyOf(rv);
+                      return when(
+                              leftR.isEmpty().getValue().or(rightR.isEmpty().getValue()), lit(null))
+                          .when(
+                              leftR
+                                  .count()
+                                  .getValue()
+                                  .equalTo(lit(1))
+                                  .and(rightR.count().getValue().equalTo(lit(1))),
+                              // this works because we know both sides are singular (count == 1)
+                              elementComparator.apply(
+                                  leftR.singular().getValue(), rightR.singular().getValue()))
+                          .otherwise(
+                              // this works because we know both sides are plural (count > 1)
+                              arrayComparator.apply(
+                                  leftR.plural().getValue(), rightR.plural().getValue()));
+                    }));
     return BooleanCollection.build(new DefaultRepresentation(equalityResult));
   }
 

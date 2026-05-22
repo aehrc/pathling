@@ -17,16 +17,17 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static au.csiro.pathling.utilities.Functions.maybeCast;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
-import static org.apache.spark.sql.functions.element_at;
 import static org.apache.spark.sql.functions.exists;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.raise_error;
 import static org.apache.spark.sql.functions.size;
+import static org.apache.spark.sql.functions.try_element_at;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
@@ -208,7 +209,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation toArray() {
-    return vectorize(UnaryOperator.identity(), c -> when(c.isNotNull(), array(c)));
+    return vectorize(UnaryOperator.identity(), c -> let(c, x -> when(x.isNotNull(), array(x))));
   }
 
   /**
@@ -241,12 +242,14 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation singular(@Nullable final String errorMessage) {
+    final String resolvedError = nonNull(errorMessage) ? errorMessage : DEF_NOT_SINGULAR_ERROR;
+    // Both size(x) and getAt(x, 0) reference the operand; let() ensures a nondeterministic
+    // operand (e.g. a traced column) fires exactly once per row rather than twice.
     return vectorize(
         c ->
-            when(c.isNull().or(size(c).leq(1)), getAt(c, 0))
-                .otherwise(
-                    raise_error(
-                        lit(nonNull(errorMessage) ? errorMessage : DEF_NOT_SINGULAR_ERROR))),
+            let(
+                c,
+                x -> when(size(x).gt(1), raise_error(lit(resolvedError))).otherwise(getAt(x, 0))),
         UnaryOperator.identity());
   }
 
@@ -280,9 +283,10 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation plural() {
-    return vectorize(
-        a -> when(a.isNotNull(), a).otherwise(array()),
-        c -> when(c.isNotNull(), array(c)).otherwise(array()));
+    // Array branch: coalesce maps null to an empty array. Scalar branch: filter on a one-element
+    // array drops the element when null, yielding either a singleton or an empty array.
+    // Each operand is referenced once, so nondeterministic operands fire exactly once per row.
+    return vectorize(a -> coalesce(a, array()), c -> functions.filter(array(c), Column::isNotNull));
   }
 
   /**
@@ -306,7 +310,7 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation filter(@Nonnull final UnaryOperator<Column> lambda) {
     return vectorize(
         c -> functions.filter(c, lambda::apply),
-        c -> when(c.isNotNull(), when(lambda.apply(c), c)));
+        c -> let(c, x -> when(x.isNotNull().and(lambda.apply(x)), x)));
   }
 
   /**
@@ -349,7 +353,8 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation normaliseNull() {
     return vectorize(
-        c -> when(c.isNull().or(size(c).equalTo(0)), null).otherwise(c), UnaryOperator.identity());
+        c -> let(c, x -> when(size(x).equalTo(0), lit(null)).otherwise(x)),
+        UnaryOperator.identity());
   }
 
   /**
@@ -372,27 +377,31 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation transform(final UnaryOperator<Column> lambda) {
     return vectorize(
-        c -> functions.transform(c, lambda::apply), c -> when(c.isNotNull(), lambda.apply(c)));
+        c -> functions.transform(c, lambda::apply),
+        c -> let(c, x -> when(x.isNotNull(), lambda.apply(x))));
   }
 
   /**
    * Aggregates the current {@link ColumnRepresentation} using a zero value and an aggregator
    * function.
    *
-   * @param zeroValue The zero value to use for aggregation
+   * <p>{@code zeroValue} MUST be the identity element of {@code aggregator} — i.e. {@code
+   * aggregator(zeroValue, x) == x} for all x. This identity property is used to simplify the scalar
+   * branch to {@code coalesce(c, zeroValue)}.
+   *
+   * @param zeroValue The identity element for {@code aggregator}
    * @param aggregator The aggregator function to use for aggregation
    * @return A new {@link ColumnRepresentation} that is aggregated
    */
   @Nonnull
   public ColumnRepresentation aggregate(
       @Nonnull final Object zeroValue, final BinaryOperator<Column> aggregator) {
-
+    // functions.aggregate(null_array, ...) returns null; coalesce maps that to the zero value,
+    // matching the original null-array contract with a single reference to the operand.
+    // The scalar branch reduces to coalesce(c, zero) since aggregator(zero, x) == x.
     return vectorize(
-        c ->
-            when(c.isNull(), zeroValue)
-                .otherwise(functions.aggregate(c, lit(zeroValue), aggregator::apply)),
-        c -> when(c.isNull(), zeroValue).otherwise(c));
-    // This is OK because: aggregator(zero, x) == x
+        c -> coalesce(functions.aggregate(c, lit(zeroValue), aggregator::apply), lit(zeroValue)),
+        c -> coalesce(c, lit(zeroValue)));
   }
 
   /**
@@ -412,11 +421,12 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} that is the last value
    */
   public ColumnRepresentation last() {
-    // we need to use `element_at()` here are `getItem()` does not support column arguments
-    // NOTE: `element_at()` is 1-indexed as opposed to `getItem()` which is 0-indexed
-    return vectorize(
-        c -> when(c.isNull().or(size(c).equalTo(0)), null).otherwise(element_at(c, size(c))),
-        UnaryOperator.identity());
+    // try_element_at is the ANSI-safe variant of element_at: it returns null instead of raising
+    // INVALID_ARRAY_INDEX for out-of-range indices, including any access against a null or empty
+    // array. Pathling runs Spark 4 with ANSI mode enabled (default), so the plain element_at
+    // would throw on those inputs. Negative indices count from the end, so -1 yields the last
+    // element of a non-empty array.
+    return vectorize(c -> try_element_at(c, lit(-1)), UnaryOperator.identity());
   }
 
   /**
@@ -426,8 +436,10 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation count() {
-    return vectorize(
-        c -> when(c.isNull(), 0).otherwise(size(c)), c -> when(c.isNull(), 0).otherwise(1));
+    // The operand appears once, so a nondeterministic operand fires exactly once per row. With
+    // spark.sql.legacy.sizeOfNull = false (the default since Spark 3.0), size(null) returns null,
+    // and coalesce maps null to zero.
+    return vectorize(c -> coalesce(size(c), lit(0)), c -> when(c.isNull(), 0).otherwise(1));
   }
 
   /**
@@ -437,7 +449,9 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation isEmpty() {
-    return vectorize(c -> when(c.isNotNull(), size(c).equalTo(0)).otherwise(true), Column::isNull);
+    // `size(null)` returns null when `spark.sql.legacy.sizeOfNull = false` (Spark 3.0+ default).
+    // `coalesce` maps that null to true so a null array reads as empty.
+    return vectorize(c -> coalesce(size(c).equalTo(0), lit(true)), Column::isNull);
   }
 
   /**
@@ -469,8 +483,7 @@ public abstract class ColumnRepresentation {
     return vectorize(
         c ->
             Column$.MODULE$.fn(
-                "array_join",
-                Predef.wrapRefArray(new Column[] {getValue(), separator.getValue()}).toSeq()),
+                "array_join", Predef.wrapRefArray(new Column[] {c, separator.getValue()}).toSeq()),
         UnaryOperator.identity());
   }
 
@@ -628,13 +641,16 @@ public abstract class ColumnRepresentation {
       @Nonnull final BinaryOperator<Column> comparator) {
     return vectorize(
         a ->
-            when(
-                element.getValue().isNotNull(),
-                coalesce(exists(a, e -> comparator.apply(e, element.getValue())), lit(false))),
+            let(
+                element.getValue(),
+                ev ->
+                    when(
+                        ev.isNotNull(),
+                        coalesce(exists(a, e -> comparator.apply(e, ev)), lit(false)))),
         c ->
-            when(
-                element.getValue().isNotNull(),
-                coalesce(comparator.apply(c, element.getValue()), lit(false))));
+            let(
+                element.getValue(),
+                ev -> when(ev.isNotNull(), coalesce(comparator.apply(c, ev), lit(false)))));
   }
 
   /**

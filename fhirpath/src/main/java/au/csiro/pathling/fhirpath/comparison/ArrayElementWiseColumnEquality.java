@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.exists;
 import static org.apache.spark.sql.functions.forall;
@@ -78,24 +79,18 @@ public class ArrayElementWiseColumnEquality implements ColumnEquality {
   @Nonnull
   private Column performArrayComparison(
       @Nonnull final Column left, @Nonnull final Column right, final boolean isNotEqual) {
-    // Zip the arrays and apply the element comparator to each pair
-    final Column elementComparisons =
-        zip_with(
-            left, right, isNotEqual ? elementComparator::notEqual : elementComparator::equalsTo);
-
-    // For equality: all elements must be equal (use forall)
-    // For inequality: any element can be unequal (use exists with negated comparison)
-    final Column arrayResult =
-        isNotEqual ? exists(elementComparisons, e -> e) : forall(elementComparisons, e -> e);
-
-    // If arrays have different sizes, they are not equal
-    final Column sizeComparison = size(left).equalTo(size(right));
-
-    return when(not(sizeComparison), lit(isNotEqual))
-        .otherwise(
-            // Handle the case where some elements cannot be compared (null results)
-            // For equality: null comparisons default to false (not equal)
-            // For inequality: null comparisons default to true (assume not equal)
-            coalesce(arrayResult, lit(isNotEqual)));
+    return let(
+        left,
+        right,
+        (l, r) -> {
+          final Column elementComparisons =
+              zip_with(
+                  l, r, isNotEqual ? elementComparator::notEqual : elementComparator::equalsTo);
+          final Column arrayResult =
+              isNotEqual ? exists(elementComparisons, e -> e) : forall(elementComparisons, e -> e);
+          final Column sizeComparison = size(l).equalTo(size(r));
+          return when(not(sizeComparison), lit(isNotEqual))
+              .otherwise(coalesce(arrayResult, lit(isNotEqual)));
+        });
   }
 }

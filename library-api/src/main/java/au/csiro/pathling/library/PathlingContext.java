@@ -109,6 +109,7 @@ public class PathlingContext {
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final QueryConfiguration queryConfiguration) {
+    requireLegacySizeOfNullDisabled(spark);
     this.spark = spark;
     this.fhirVersion = fhirEncoders.getFhirVersion();
     this.fhirEncoders = fhirEncoders;
@@ -117,6 +118,30 @@ public class PathlingContext {
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
     PathlingUdfConfigurer.registerUdfs(spark);
     gson = buildGson();
+  }
+
+  /**
+   * Verifies that {@code spark.sql.legacy.sizeOfNull} is disabled. Several FHIRPath cardinality
+   * helpers — notably {@code count()}, {@code isEmpty()}, and {@code toBoolean()} on array operands
+   * — depend on Spark's 3.0+ default of {@code size(null) = null}, which {@code coalesce} then maps
+   * to the appropriate empty-collection answer. Toggling the legacy flag back on returns {@code
+   * size(null) = -1}, silently breaking those helpers; we fail fast at context creation rather than
+   * producing wrong counts later.
+   *
+   * @param spark the Spark session to validate
+   * @throws IllegalStateException if the legacy flag is enabled
+   */
+  private static void requireLegacySizeOfNullDisabled(@Nonnull final SparkSession spark) {
+    final String value = spark.conf().get("spark.sql.legacy.sizeOfNull", "false");
+    if (Boolean.parseBoolean(value)) {
+      throw new IllegalStateException(
+          "Pathling requires `spark.sql.legacy.sizeOfNull` to be `false` (the Spark 3.0+ default). "
+              + "FHIRPath count() and isEmpty() rely on Spark's null-array semantics; with the "
+              + "legacy flag enabled, these helpers return incorrect results on null inputs. "
+              + "Either remove the override, or set "
+              + "`spark.conf.set(\"spark.sql.legacy.sizeOfNull\", \"false\")` before constructing "
+              + "the PathlingContext.");
+    }
   }
 
   @Nonnull

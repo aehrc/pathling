@@ -20,25 +20,29 @@ package au.csiro.pathling.sql;
 import static org.apache.spark.sql.functions.aggregate;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.element_at;
 import static org.apache.spark.sql.functions.exists;
 import static org.apache.spark.sql.functions.filter;
 import static org.apache.spark.sql.functions.ifnull;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.not;
+import static org.apache.spark.sql.functions.transform;
 import static org.apache.spark.sql.functions.when;
 
 import jakarta.annotation.Nonnull;
 import java.util.function.BinaryOperator;
+import java.util.function.UnaryOperator;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.classic.ColumnConversions$;
 import org.apache.spark.sql.functions;
 
 /**
  * Pathling-specific SQL functions that extend Spark SQL functionality.
  *
- * <p>This interface provides utility functions for working with Spark SQL columns in the context of
- * FHIR data processing. These functions handle common operations like pruning annotations, safely
- * concatenating maps, and collecting maps during aggregation.
+ * <p>Provides utilities for working with Spark SQL columns in the context of FHIR data processing,
+ * including FHIR-instant formatting, array union and deduplication with custom equality semantics,
+ * and let-binding for safe evaluation of non-deterministic column expressions.
  */
 @UtilityClass
 public class SqlFunctions {
@@ -69,17 +73,21 @@ public class SqlFunctions {
   @Nonnull
   public static Column arrayDistinctWithEquality(
       @Nonnull final Column arrayColumn, @Nonnull final BinaryOperator<Column> equalityComparator) {
-
-    final Column emptyTypedArray = filter(arrayColumn, x -> lit(false));
-
-    return aggregate(
+    return let(
         arrayColumn,
-        emptyTypedArray,
-        (acc, elem) ->
-            when(
-                    not(exists(acc, x -> ifnull(equalityComparator.apply(x, elem), lit(false)))),
-                    concat(acc, array(elem)))
-                .otherwise(acc));
+        ac -> {
+          final Column emptyTypedArray = filter(ac, x -> lit(false));
+          return aggregate(
+              ac,
+              emptyTypedArray,
+              (acc, elem) ->
+                  when(
+                          not(
+                              exists(
+                                  acc, x -> ifnull(equalityComparator.apply(x, elem), lit(false)))),
+                          concat(acc, array(elem)))
+                      .otherwise(acc));
+        });
   }
 
   /**
@@ -99,5 +107,78 @@ public class SqlFunctions {
 
     final Column combined = concat(leftArray, rightArray);
     return arrayDistinctWithEquality(combined, equalityComparator);
+  }
+
+  /**
+   * Evaluates {@code a} and {@code b} exactly once per row each and passes both results to {@code
+   * body}.
+   *
+   * <p>Convenience overload of {@link #let(Column, UnaryOperator)} for binary operations. Expands
+   * to {@code let(a, aa -> let(b, bb -> body.apply(aa, bb)))}, materialising each operand exactly
+   * once before the body runs.
+   *
+   * @param a the first operand to evaluate once per row
+   * @param b the second operand to evaluate once per row
+   * @param body the function that consumes both evaluated operands
+   * @return a column expression applying {@code body} to single evaluations of {@code a} and {@code
+   *     b}
+   */
+  @Nonnull
+  public static Column let(
+      @Nonnull final Column a,
+      @Nonnull final Column b,
+      @Nonnull final BinaryOperator<Column> body) {
+    return let(a, aa -> let(b, bb -> body.apply(aa, bb)));
+  }
+
+  /**
+   * Evaluates {@code value} exactly once per row and passes the result to {@code body}.
+   *
+   * <p>This matters for {@link org.apache.spark.sql.catalyst.expressions.Nondeterministic} operands
+   * such as {@link TraceExpression}: without materialisation, each reference to the same
+   * non-deterministic expression in a Spark tree evaluates independently, firing side effects
+   * multiple times.
+   *
+   * <p>For deterministic {@code value}, returns {@code body.apply(value)} directly, incurring no
+   * HOF overhead. For non-deterministic {@code value}, uses {@code
+   * element_at(transform(array(value), body), 1)} to materialise the operand once via {@code array}
+   * before the lambda runs.
+   *
+   * <p>The result is {@code Nondeterministic} if and only if {@code value} or the expression
+   * returned by {@code body} is.
+   *
+   * <p>The resulting expression has no logical-plan dependency and composes inside any relational
+   * context (select, filter, join, window). Unlike Spark Catalyst's {@code With} expression, it
+   * does not rewrite into a {@code Project} operator.
+   *
+   * <p><strong>Constraint.</strong> When {@code value} is non-deterministic, it MUST NOT contain a
+   * SQL aggregate or window expression; Spark's analyzer rejects these inside higher-order function
+   * arguments.
+   *
+   * @param value the operand to evaluate once per row
+   * @param body the lambda that consumes the evaluated operand
+   * @return a column expression applying {@code body} to a single evaluation of {@code value}
+   * @throws org.apache.spark.sql.AnalysisException if {@code value} is non-deterministic and
+   *     contains a SQL aggregate or window expression; Spark's analyser rejects these inside
+   *     higher-order function arguments
+   */
+  @Nonnull
+  public static Column let(@Nonnull final Column value, @Nonnull final UnaryOperator<Column> body) {
+    // Deterministic expressions need no materialisation: identical references in the tree always
+    // produce the same value, so single-fire is trivially satisfied. The HOF wrapper is reserved
+    // for non-deterministic operands (e.g. TraceExpression) that fire side effects on every
+    // tree reference.
+    //
+    // ColumnConversions$.MODULE$.expression() is used instead of ExpressionUtils.expression()
+    // because ExpressionUtils can return a surrogate expression (e.g. when the Column wraps a
+    // compound expression like concat or coalesce whose children include a Nondeterministic node)
+    // that reports deterministic() = true even though the full expression tree contains a
+    // non-deterministic sub-expression. ColumnConversions$.MODULE$.expression() always returns the
+    // real underlying Catalyst Expression, preserving the correct determinism semantics through
+    // the entire tree.
+    if (ColumnConversions$.MODULE$.expression(value).deterministic()) {
+      return body.apply(value);
+    }
+    return element_at(transform(array(value), body::apply), 1);
   }
 }

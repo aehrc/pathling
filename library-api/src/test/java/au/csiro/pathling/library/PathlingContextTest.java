@@ -823,4 +823,18 @@ public class PathlingContextTest {
 
     assertThrows(Exception.class, () -> pathling.fhirPathToColumn("InvalidResource", "gender"));
   }
+
+  @Test
+  void create_rejectsLegacySizeOfNullEnabled() {
+    spark.conf().set("spark.sql.legacy.sizeOfNull", "true");
+    try {
+      final IllegalStateException ex =
+          assertThrows(IllegalStateException.class, () -> PathlingContext.create(spark));
+      assertTrue(
+          ex.getMessage().contains("spark.sql.legacy.sizeOfNull"),
+          "Error message should name the offending configuration key");
+    } finally {
+      spark.conf().set("spark.sql.legacy.sizeOfNull", "false");
+    }
+  }
 }
