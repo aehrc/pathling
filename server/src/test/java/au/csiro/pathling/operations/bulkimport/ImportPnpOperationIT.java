@@ -18,14 +18,20 @@
 package au.csiro.pathling.operations.bulkimport;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.util.TestDataSetup;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -33,6 +39,8 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -49,9 +57,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
@@ -64,7 +75,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
 @ActiveProfiles({"integration-test"})
+@MockitoBean(types = JwtDecoder.class)
+@MockitoBean(types = OidcConfiguration.class)
 class ImportPnpOperationIT {
+
+  private static final String AUTH_TOKEN = "mock-token";
 
   private static WireMockServer wireMockServer;
 
@@ -81,6 +96,8 @@ class ImportPnpOperationIT {
   @Autowired private FhirContext fhirContext;
 
   @Autowired private PathlingContext pathlingContext;
+
+  @Autowired private JwtDecoder jwtDecoder;
 
   private IParser parser;
 
@@ -104,6 +121,10 @@ class ImportPnpOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
 
+    // Enable authentication since PNP credentials are configured.
+    registry.add("pathling.auth.enabled", () -> "true");
+    registry.add("pathling.auth.issuer", () -> "https://auth.example.com/fhir");
+
     // Configure PnP settings for testing with WireMock token endpoint.
     registry.add("pathling.import.pnp.clientId", () -> "test-client");
     registry.add("pathling.import.pnp.clientSecret", () -> "test-secret");
@@ -113,6 +134,9 @@ class ImportPnpOperationIT {
         () -> "http://localhost:" + wireMockServer.port() + "/oauth/token");
     registry.add(
         "pathling.import.pnp.downloadLocation", () -> pnpDownloadDir.toAbsolutePath().toString());
+    registry.add(
+        "pathling.import.pnp.allowableExportUrls",
+        () -> "http://localhost:" + wireMockServer.port() + "/fhir");
   }
 
   @BeforeEach
@@ -127,14 +151,44 @@ class ImportPnpOperationIT {
 
     // Reset WireMock stubs before each test.
     wireMockServer.resetAll();
+
+    // Configure the mock JWT decoder to accept our test token and return a JWT with the required
+    // authorities.
+    final Jwt jwt =
+        Jwt.withTokenValue(AUTH_TOKEN)
+            .header("alg", "none")
+            .claim("sub", "test-user")
+            .claim(
+                "authorities",
+                List.of(
+                    "pathling:import-pnp",
+                    "pathling:write",
+                    "pathling:write:Patient",
+                    "pathling:write:Observation"))
+            .issuedAt(Instant.now())
+            .expiresAt(Instant.now().plusSeconds(3600))
+            .build();
+    when(jwtDecoder.decode(any())).thenReturn(jwt);
   }
 
   @AfterEach
   void cleanup() throws IOException {
+    // Clear cached Delta table state before deleting files. Otherwise the next test sees a stale
+    // DeltaLog in memory that no longer matches the on-disk warehouse rebuilt from test fixtures,
+    // and Delta refuses the import with DELTA_PATH_EXISTS.
+    pathlingContext.getSpark().catalog().clearCache();
+    org.apache.spark.sql.delta.DeltaLog.clearCache();
     FileUtils.cleanDirectory(warehouseDir.toFile());
   }
 
-  /** Sets up WireMock stubs for a complete bulk export workflow. */
+  /**
+   * Sets up WireMock stubs for a complete bulk export workflow.
+   *
+   * <p>The kick-off stub uses a regex matcher that accepts any path ending in {@code $export}, so
+   * tests can supply distinct {@code exportUrl} base paths to differentiate themselves. This is
+   * required because {@code AsyncAspect} coalesces requests that share a cache key, and the cache
+   * key includes {@code exportUrl}: tests with identical signatures otherwise share one job.
+   */
   private void setupSuccessfulBulkExportStubs() {
     final String baseUrl = "http://localhost:" + wireMockServer.port();
 
@@ -155,9 +209,10 @@ class ImportPnpOperationIT {
                         """)));
 
     // Stub 2: Bulk export kick-off endpoint (GET for system-level export).
-    // Use urlPathEqualTo to match regardless of query parameters.
+    // Match any path ending in $export so individual tests can use distinct base paths to avoid
+    // sharing an async-job cache key (see helper Javadoc).
     wireMockServer.stubFor(
-        get(urlPathEqualTo("/fhir/$export"))
+        get(urlPathMatching(".*/\\$export"))
             .willReturn(
                 aResponse()
                     .withStatus(202)
@@ -234,6 +289,79 @@ class ImportPnpOperationIT {
     log.info("Set up successful bulk export stubs on WireMock server");
   }
 
+  /** Sets up WireMock stubs where the manifest references an off-host download URL. */
+  private void setupOffHostManifestStubs() {
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+
+    // Stub 1: OAuth token endpoint.
+    wireMockServer.stubFor(
+        post(urlEqualTo("/oauth/token"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                        {
+                          "access_token": "test-access-token",
+                          "token_type": "bearer",
+                          "expires_in": 3600
+                        }
+                        """)));
+
+    // Stub 2: Bulk export kick-off endpoint.
+    wireMockServer.stubFor(
+        get(urlPathEqualTo("/fhir/$export"))
+            .willReturn(
+                aResponse()
+                    .withStatus(202)
+                    .withHeader("Content-Location", baseUrl + "/fhir/$export-status/job456")));
+
+    // Stub 3: Export status endpoint - returns complete with off-host manifest.
+    // Use 127.0.0.1 instead of localhost to create a different origin while still hitting the
+    // same WireMock server.
+    final String manifest =
+        String.format(
+            """
+            {
+              "transactionTime": "2025-11-11T00:00:00Z",
+              "request": "%s/fhir/$export",
+              "requiresAccessToken": false,
+              "output": [
+                {
+                  "type": "Patient",
+                  "url": "http://127.0.0.1:%d/data/Patient-1.ndjson"
+                }
+              ],
+              "error": []
+            }
+            """,
+            baseUrl, wireMockServer.port());
+
+    wireMockServer.stubFor(
+        get(urlEqualTo("/fhir/$export-status/job456"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(manifest)));
+
+    // Stub 4: Patient NDJSON file accessible via 127.0.0.1 (different origin).
+    final String patientNdjson =
+        """
+        {"resourceType":"Patient","id":"patient1","name":[{"family":"Smith","given":["John"]}]}
+        """;
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/Patient-1.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(patientNdjson)));
+
+    log.info("Set up off-host manifest stubs on WireMock server");
+  }
+
   @Test
   void testMissingRespondAsyncHeaderReturnsError() {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
@@ -261,15 +389,12 @@ class ImportPnpOperationIT {
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
+        .header("Authorization", "Bearer " + AUTH_TOKEN)
         .bodyValue(requestBody)
         .exchange()
         .expectStatus()
         .is4xxClientError();
   }
-
-  // Note: Missing PnP configuration no longer causes an error. The operation now uses sensible
-  // defaults when no configuration is provided, enabling use against unauthenticated FHIR servers
-  // without requiring any explicit configuration.
 
   @Test
   void testMissingExportUrlReturnsError() {
@@ -295,6 +420,7 @@ class ImportPnpOperationIT {
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
         .header("Prefer", "respond-async")
+        .header("Authorization", "Bearer " + AUTH_TOKEN)
         .bodyValue(requestBody)
         .exchange()
         .expectStatus()
@@ -310,7 +436,11 @@ class ImportPnpOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     setupSuccessfulBulkExportStubs();
 
-    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
+    // Use a path unique to this test so the async cache key (which incorporates exportUrl) does
+    // not collide with sibling dynamic-mode tests, which would otherwise cause one test to
+    // inherit another's job result.
+    final String exportUrl =
+        "http://localhost:" + wireMockServer.port() + "/fhir/missing-input-source";
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
     final String requestBody =
         String.format(
@@ -338,6 +468,7 @@ class ImportPnpOperationIT {
             .header("Content-Type", "application/fhir+json")
             .header("Accept", "application/fhir+json")
             .header("Prefer", "respond-async")
+            .header("Authorization", "Bearer " + AUTH_TOKEN)
             .bodyValue(requestBody)
             .exchange()
             .expectStatus()
@@ -350,16 +481,18 @@ class ImportPnpOperationIT {
         result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
     assertThat(contentLocation).isNotNull().contains("$job");
 
-    // Poll the job status until completion.
+    // Poll the job status until completion. The budget accommodates serialisation behind earlier
+    // tests on the single-threaded async executor.
     await()
-        .atMost(30, TimeUnit.SECONDS)
-        .pollInterval(2, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
         .untilAsserted(
             () -> {
               webTestClient
                   .get()
                   .uri(contentLocation)
                   .header("Accept", "application/fhir+json")
+                  .header("Authorization", "Bearer " + AUTH_TOKEN)
                   .exchange()
                   .expectStatus()
                   .isOk();
@@ -373,8 +506,9 @@ class ImportPnpOperationIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     setupSuccessfulBulkExportStubs();
 
-    // Use base URL for fhir-bulk-java client.
-    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
+    // Use a path unique to this test so the async cache key (which incorporates exportUrl) does
+    // not collide with sibling dynamic-mode tests.
+    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir/valid-request";
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
     final String requestBody =
         String.format(
@@ -406,6 +540,7 @@ class ImportPnpOperationIT {
             .header("Content-Type", "application/fhir+json")
             .header("Accept", "application/fhir+json")
             .header("Prefer", "respond-async")
+            .header("Authorization", "Bearer " + AUTH_TOKEN)
             .bodyValue(requestBody)
             .exchange()
             .expectStatus()
@@ -423,9 +558,178 @@ class ImportPnpOperationIT {
 
     log.info("Import-pnp job created with Content-Location: {}", contentLocation);
 
-    // Poll the job status until completion (200 OK indicates job is done).
+    // Poll the job status until completion (200 OK indicates job is done). The budget
+    // accommodates serialisation behind earlier tests on the single-threaded async executor.
     await()
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () ->
+                webTestClient
+                    .get()
+                    .uri(contentLocation)
+                    .header("Accept", "application/fhir+json")
+                    .header("Authorization", "Bearer " + AUTH_TOKEN)
+                    .exchange()
+                    .expectStatus()
+                    .isOk());
+
+    log.info("Import-pnp job completed successfully");
+  }
+
+  /**
+   * Sets up WireMock stubs for a bulk export workflow where the manifest contains a poisoned type
+   * field with path traversal sequences.
+   */
+  private void setupPoisonedBulkExportStubs() {
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+
+    // Stub 1: OAuth token endpoint.
+    wireMockServer.stubFor(
+        post(urlEqualTo("/oauth/token"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                        {
+                          "access_token": "test-access-token",
+                          "token_type": "bearer",
+                          "expires_in": 3600
+                        }
+                        """)));
+
+    // Stub 2: Bulk export kick-off endpoint. Matches any path ending in $export so individual
+    // tests can use distinct base paths to avoid sharing an async-job cache key.
+    wireMockServer.stubFor(
+        get(urlPathMatching(".*/\\$export"))
+            .willReturn(
+                aResponse()
+                    .withStatus(202)
+                    .withHeader("Content-Location", baseUrl + "/fhir/$export-status/poisoned")));
+
+    // Stub 3: Export status endpoint - first call returns in-progress.
+    wireMockServer.stubFor(
+        get(urlEqualTo("/fhir/$export-status/poisoned"))
+            .inScenario("Poisoned Export Status")
+            .whenScenarioStateIs("Started")
+            .willReturn(aResponse().withStatus(202).withHeader("X-Progress", "in-progress"))
+            .willSetStateTo("In Progress"));
+
+    // Stub 4: Export status endpoint - subsequent calls return complete with poisoned manifest.
+    final String manifest =
+        String.format(
+            """
+            {
+              "transactionTime": "2025-11-11T00:00:00Z",
+              "request": "%s/fhir/$export",
+              "requiresAccessToken": false,
+              "output": [
+                {
+                  "type": "../escaped",
+                  "url": "%s/data/escaped.ndjson"
+                }
+              ],
+              "error": []
+            }
+            """,
+            baseUrl, baseUrl);
+
+    wireMockServer.stubFor(
+        get(urlEqualTo("/fhir/$export-status/poisoned"))
+            .inScenario("Poisoned Export Status")
+            .whenScenarioStateIs("In Progress")
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(manifest)));
+
+    // Stub 5: Escaped NDJSON file.
+    final String escapedNdjson =
+        """
+        {"resourceType":"Patient","id":"evil","name":[{"family":"Attacker"}]}
+        """;
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/escaped.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(escapedNdjson)));
+
+    log.info("Set up poisoned bulk export stubs on WireMock server");
+  }
+
+  /**
+   * Tests that a manifest with a poisoned type field containing path traversal sequences causes the
+   * $import-pnp job to fail with an error, and that no file can be retrieved via the
+   * /jobs/{jobId}/{filename} endpoint.
+   */
+  @Test
+  void testPoisonedManifestTypeFailsJobAndBlocksExfiltration() throws IOException {
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+    setupPoisonedBulkExportStubs();
+
+    // Unique path so the async cache key does not collide with sibling dynamic-mode tests.
+    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir/poisoned";
+    final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
+    final String requestBody =
+        String.format(
+            """
+            {
+              "resourceType": "Parameters",
+              "parameter": [
+                {
+                  "name": "exportUrl",
+                  "valueUrl": "%s"
+                },
+                {
+                  "name": "exportType",
+                  "valueCode": "dynamic"
+                }
+              ]
+            }
+            """,
+            exportUrl);
+
+    final var result =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .header("Authorization", "Bearer " + AUTH_TOKEN)
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists(HttpHeaders.CONTENT_LOCATION)
+            .returnResult(String.class);
+
+    final String contentLocation =
+        result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
+    assertThat(contentLocation).isNotNull().contains("$job");
+
+    // Extract the job ID from the Content-Location header.
+    final String jobId =
+        java.util.regex.Pattern.compile("id=([^&]+)")
+            .matcher(contentLocation)
+            .results()
+            .findFirst()
+            .map(m -> m.group(1))
+            .orElse(null);
+    assertThat(jobId).isNotNull();
+
+    // Poll the job status until it completes. The async framework surfaces a failed job as a
+    // 4xx response carrying an OperationOutcome whose diagnostics describe the failure cause.
+    // Allow extra time as preceding tests in the suite may leave the async thread pool busy
+    // with not-yet-drained Spark imports.
+    await()
+        .atMost(120, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
         .untilAsserted(
             () ->
@@ -433,11 +737,40 @@ class ImportPnpOperationIT {
                     .get()
                     .uri(contentLocation)
                     .header("Accept", "application/fhir+json")
+                    .header("Authorization", "Bearer " + AUTH_TOKEN)
                     .exchange()
                     .expectStatus()
-                    .isOk());
+                    .is4xxClientError()
+                    .expectBody()
+                    .jsonPath("$.issue[0].severity")
+                    .value(severity -> assertThat(severity).isIn("error", "fatal"))
+                    .jsonPath("$.issue[0].diagnostics")
+                    .value(
+                        diagnostics ->
+                            assertThat(diagnostics.toString())
+                                .contains("outside the download directory")));
 
-    log.info("Import-pnp job completed successfully");
+    // Verify that the exfiltration request returns 404.
+    webTestClient
+        .get()
+        .uri("http://localhost:" + port + "/jobs/" + jobId + "/escaped.0000.ndjson")
+        .header("Authorization", "Bearer " + AUTH_TOKEN)
+        .exchange()
+        .expectStatus()
+        .isNotFound();
+
+    // Verify no escaped files appear anywhere under the warehouse directory.
+    try (final var paths = java.nio.file.Files.walk(warehouseDir)) {
+      assertThat(
+              paths
+                  .filter(java.nio.file.Files::isRegularFile)
+                  .map(p -> p.getFileName().toString())
+                  .toList())
+          .as("no file matching the poisoned manifest's filename should appear in the warehouse")
+          .noneMatch(name -> name.contains("escaped"));
+    }
+
+    log.info("Poisoned manifest job failed as expected and exfiltration was blocked");
   }
 
   @Test
@@ -476,6 +809,7 @@ class ImportPnpOperationIT {
             .header("Content-Type", "application/fhir+json")
             .header("Accept", "application/fhir+json")
             .header("Prefer", "respond-async")
+            .header("Authorization", "Bearer " + AUTH_TOKEN)
             .bodyValue(requestBody)
             .exchange()
             .expectStatus()
@@ -501,8 +835,127 @@ class ImportPnpOperationIT {
                     .get()
                     .uri(contentLocation)
                     .header("Accept", "application/fhir+json")
+                    .header("Authorization", "Bearer " + AUTH_TOKEN)
                     .exchange()
                     .expectStatus()
                     .value(status -> assertThat(status).isIn(200, 202, 400, 500)));
+  }
+
+  /** Tests that a request with an exportUrl not in allowableExportUrls returns 400. */
+  @Test
+  void rejectsExportUrlNotInAllowableExportUrls() {
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+
+    final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
+    final String requestBody =
+        """
+        {
+          "resourceType": "Parameters",
+          "parameter": [
+            {
+              "name": "exportUrl",
+              "valueUrl": "https://evil.com/fhir/$export"
+            }
+          ]
+        }
+        """;
+
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .header("Prefer", "respond-async")
+        .header("Authorization", "Bearer " + AUTH_TOKEN)
+        .bodyValue(requestBody)
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectBody()
+        .jsonPath("$.issue[0].diagnostics")
+        .value(diagnostics -> assertThat(diagnostics.toString()).contains("exportUrl"));
+
+    // Verify that WireMock receives zero requests to the export endpoint.
+    wireMockServer.verify(exactly(0), getRequestedFor(urlPathEqualTo("/fhir/$export")));
+  }
+
+  /**
+   * Tests that when the export manifest contains a download URL on a different origin, the job
+   * fails.
+   */
+  @Test
+  void returnsErrorWhenManifestContainsOffHostDownloadUrl() {
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+    setupOffHostManifestStubs();
+
+    final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
+    final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
+    final String requestBody =
+        String.format(
+            """
+            {
+              "resourceType": "Parameters",
+              "parameter": [
+                {
+                  "name": "exportUrl",
+                  "valueUrl": "%s"
+                },
+                {
+                  "name": "exportType",
+                  "valueCode": "dynamic"
+                },
+                {
+                  "name": "saveMode",
+                  "valueCode": "overwrite"
+                }
+              ]
+            }
+            """,
+            exportUrl);
+
+    final var result =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .header("Authorization", "Bearer " + AUTH_TOKEN)
+            .bodyValue(requestBody)
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists(HttpHeaders.CONTENT_LOCATION)
+            .returnResult(String.class);
+
+    final String contentLocation =
+        result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
+    assertThat(contentLocation).isNotNull();
+
+    // Poll until the job fails with an error due to origin mismatch.
+    await()
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(2, TimeUnit.SECONDS)
+        .untilAsserted(
+            () -> {
+              final var response =
+                  webTestClient
+                      .get()
+                      .uri(contentLocation)
+                      .header("Accept", "application/fhir+json")
+                      .header("Authorization", "Bearer " + AUTH_TOKEN)
+                      .exchange()
+                      .returnResult(String.class);
+              final int status = response.getStatus().value();
+              assertThat(status).isIn(400, 500);
+              final String body =
+                  response.getResponseBodyContent() != null
+                      ? new String(response.getResponseBodyContent())
+                      : "";
+              assertThat(body).contains("Manifest download URL origin");
+            });
+
+    log.info("Off-host manifest URL correctly rejected");
   }
 }

@@ -1,3 +1,7 @@
 # Werkzeug safe_join() Windows device name DoS - not exploitable: app does not
 # serve static files, and runs on Linux.
 CVE-2026-27199
+
+# pytest insecure temp directory - not exploitable: dev-only dependency, not
+# shipped in the production Docker image.
+CVE-2025-71176

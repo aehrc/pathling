@@ -104,6 +104,11 @@ abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>>
         .flatMap(cd -> FhirDefinitionContext.build(cd, name));
   }
 
+  @Override
+  public boolean isFhirDefinition() {
+    return true;
+  }
+
   @Nonnull
   public Optional<FHIRDefinedType> getFhirType() {
     return getFhirTypeFromElementDefinition(elementDefinition);

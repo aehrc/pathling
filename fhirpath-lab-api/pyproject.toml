@@ -6,14 +6,14 @@
 
 [project]
 name = "fhirpath-lab-api"
-version = "0.2.0"
+version = "0.3.0"
 description = "A FHIRPath Lab server backed by the Pathling FHIRPath engine"
 requires-python = ">=3.9"
 dependencies = [
   "flask>=3.1,<4",
   "flask-cors>=6.0,<7",
   "gunicorn>=23,<26",
-  "pathling>=9.5.0,<10",
+  "pathling>=9.6.0,<10",
 ]
 
 [project.optional-dependencies]

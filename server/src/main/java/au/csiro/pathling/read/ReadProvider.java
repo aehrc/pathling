@@ -17,9 +17,13 @@
 
 package au.csiro.pathling.read;
 
+import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.security.OperationAccess;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Read;
@@ -43,6 +47,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ReadProvider implements IResourceProvider {
 
+  @Nonnull private final ServerConfiguration configuration;
+
   @Nonnull private final ReadExecutor readExecutor;
 
   @Nonnull private final Class<? extends IBaseResource> resourceClass;
@@ -52,14 +58,17 @@ public class ReadProvider implements IResourceProvider {
   /**
    * Constructs a new ReadProvider for a specific resource type.
    *
+   * @param configuration the server configuration
    * @param readExecutor the executor for performing read operations
    * @param fhirContext the FHIR context for resource definitions
    * @param resourceClass the class of the resource type this provider handles
    */
   public ReadProvider(
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final ReadExecutor readExecutor,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
+    this.configuration = configuration;
     this.readExecutor = readExecutor;
     this.resourceClass = resourceClass;
     this.resourceTypeCode = fhirContext.getResourceDefinition(resourceClass).getName();
@@ -82,6 +91,11 @@ public class ReadProvider implements IResourceProvider {
   @SuppressWarnings("UnusedReturnValue")
   public IBaseResource read(@Nullable @IdParam final IdType id) {
     checkUserInput(id != null && !id.isEmpty(), "ID must be supplied");
+
+    if (configuration.getAuth().isEnabled()) {
+      checkHasAuthority(
+          PathlingAuthority.resourceAccess(ResourceAccess.AccessType.READ, resourceTypeCode));
+    }
 
     final String resourceId = id.getIdPart();
     log.debug("Reading {} with ID: {}", resourceTypeCode, resourceId);

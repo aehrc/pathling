@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.dsl;
 
+import static au.csiro.pathling.test.dsl.TypeInfoExpectation.toTypeInfo;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toQuantity;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
@@ -741,6 +742,277 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
             "Smith",
             "name.where($this.is(FHIR.HumanName) and family = 'Smith')[1].family",
             "Filter names by type and property returns multiple matching items")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTypeFunction() {
+    final Patient patient = new Patient();
+    patient.setId("type-test");
+    patient.setActive(true);
+    patient.setBirthDateElement(new org.hl7.fhir.r4.model.DateType("1990-01-01"));
+    patient.setMaritalStatus(
+        new CodeableConcept()
+            .addCoding(
+                new Coding(
+                    "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "M", "Married")));
+    patient.addName(new HumanName().setFamily("Smith").addGiven("John").addGiven("David"));
+    patient.addContact(
+        new Patient.ContactComponent()
+            .setName(new HumanName().setFamily("Jones"))
+            .addRelationship(
+                new CodeableConcept()
+                    .addCoding(
+                        new Coding(
+                            "http://terminology.hl7.org/CodeSystem/v2-0131", "N", "Next-of-Kin"))));
+
+    return builder()
+        .withResource(patient)
+        // System primitive literals
+        .group("type() - System primitive literals")
+        .testEquals(
+            toTypeInfo("System.Integer(System.Any)"),
+            "1.type()",
+            "Integer literal type is System.Integer")
+        .testEquals(
+            toTypeInfo("System.Boolean(System.Any)"),
+            "true.type()",
+            "Boolean literal type is System.Boolean")
+        .testEquals(
+            toTypeInfo("System.String(System.Any)"),
+            "'hello'.type()",
+            "String literal type is System.String")
+        .testEquals(
+            toTypeInfo("System.Decimal(System.Any)"),
+            "3.14.type()",
+            "Decimal literal type is System.Decimal")
+        .testEquals(
+            toTypeInfo("System.Date(System.Any)"),
+            "@2024-01-01.type()",
+            "Date literal type is System.Date")
+        .testEquals(
+            toTypeInfo("System.DateTime(System.Any)"),
+            "@2024-01-01T10:00:00.type()",
+            "DateTime literal type is System.DateTime")
+        .testEquals(
+            toTypeInfo("System.Time(System.Any)"),
+            "@T10:00:00.type()",
+            "Time literal type is System.Time")
+        // System Quantity and Coding literals
+        .group("type() - System Quantity and Coding literals")
+        .testEquals(
+            toTypeInfo("System.Quantity(System.Any)"),
+            "(10 'mg').type()",
+            "Quantity literal type is System.Quantity")
+        .testEquals(
+            toTypeInfo("System.Coding(System.Any)"),
+            "(http://example.com|code).type()",
+            "Coding literal type is System.Coding")
+        // FHIR primitive elements
+        .group("type() - FHIR primitive elements")
+        .testEquals(
+            toTypeInfo("FHIR.boolean(FHIR.Element)"),
+            "Patient.active.type()",
+            "FHIR boolean element type is FHIR.boolean")
+        .testEquals(
+            toTypeInfo("FHIR.date(FHIR.Element)"),
+            "Patient.birthDate.type()",
+            "FHIR date element type is FHIR.date")
+        // FHIR complex type elements
+        .group("type() - FHIR complex type elements")
+        .testEquals(
+            toTypeInfo("FHIR.CodeableConcept(FHIR.Element)"),
+            "Patient.maritalStatus.type()",
+            "CodeableConcept element type is FHIR.CodeableConcept")
+        // FHIR backbone elements return generic BackboneElement type.
+        .group("type() - FHIR backbone elements")
+        .testEquals(
+            toTypeInfo("FHIR.BackboneElement(FHIR.Element)"),
+            "Patient.contact.first().type()",
+            "Backbone element type is FHIR.BackboneElement")
+        // FHIR resource types
+        .group("type() - FHIR resource types")
+        .testEquals(
+            toTypeInfo("FHIR.Patient(FHIR.Resource)"),
+            "Patient.type()",
+            "Patient resource type is FHIR.Patient")
+        // Empty collection
+        .group("type() - empty collection")
+        .testEmpty("{}.type()", "type() returns empty for empty collection")
+        // Nested type().type() returns System.Object
+        .group("type() - nested type() call")
+        .testEquals(
+            toTypeInfo("System.Object(System.Any)"),
+            "1.type().type()",
+            "Nested type() returns System.Object")
+        // ofType() followed by type()
+        .group("type() - ofType() followed by type()")
+        .testEquals(
+            "Patient",
+            "Patient.ofType(Patient).type().name",
+            "ofType() followed by type() returns correct name")
+        // FHIRPath operations produce System types
+        .group("type() - operations produce System types")
+        .testEquals(
+            toTypeInfo("System.Boolean(System.Any)"),
+            "Patient.active.not().type()",
+            "not() produces System.Boolean")
+        .testEquals(
+            toTypeInfo("System.String(System.Any)"),
+            "(Patient.name.first().given.first() + Patient.name.first().family).type()",
+            "String concatenation produces System.String")
+        // Multiple elements produce multiple TypeInfo structs
+        .group("type() - multiple elements")
+        .testEquals(
+            2, "('John' | 'Mary').type().count()", "type() returns one TypeInfo per element")
+        // FHIR plural collection produces one TypeInfo per element
+        .group("type() - FHIR plural collection")
+        .testEquals(
+            toTypeInfo("FHIR.string(FHIR.Element)"),
+            "Patient.name.given.type().first()",
+            "FHIR plural collection type() returns FHIR.string")
+        .testEquals(
+            2,
+            "Patient.name.given.type().count()",
+            "FHIR plural collection type() returns one TypeInfo per non-null element")
+        // where() preserves FHIR context
+        .group("type() - where() preserves FHIR context")
+        .testEquals(
+            toTypeInfo("FHIR.boolean(FHIR.Element)"),
+            "Patient.active.where($this).type()",
+            "where() preserves FHIR type context")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTypeFunctionOnChoiceFields() {
+    // Create an Observation with multiple components using different value types.
+    final Observation observation = new Observation();
+    observation.setId("type-choice-test");
+    observation.setStatus(Observation.ObservationStatus.FINAL);
+    observation.setCode(
+        new CodeableConcept()
+            .addCoding(new Coding("http://loinc.org", "85354-9", "Blood pressure panel")));
+
+    // Component 0: valueQuantity
+    final ObservationComponentComponent comp0 = new ObservationComponentComponent();
+    comp0.setCode(
+        new CodeableConcept().addCoding(new Coding("http://loinc.org", "8480-6", "Systolic")));
+    comp0.setValue(
+        new Quantity()
+            .setValue(new BigDecimal("120"))
+            .setUnit("mm[Hg]")
+            .setSystem("http://unitsofmeasure.org")
+            .setCode("mm[Hg]"));
+    observation.addComponent(comp0);
+
+    // Component 1: valueQuantity
+    final ObservationComponentComponent comp1 = new ObservationComponentComponent();
+    comp1.setCode(
+        new CodeableConcept().addCoding(new Coding("http://loinc.org", "8462-4", "Diastolic")));
+    comp1.setValue(
+        new Quantity()
+            .setValue(new BigDecimal("80"))
+            .setUnit("mm[Hg]")
+            .setSystem("http://unitsofmeasure.org")
+            .setCode("mm[Hg]"));
+    observation.addComponent(comp1);
+
+    // Component 2: valueString
+    final ObservationComponentComponent comp2 = new ObservationComponentComponent();
+    comp2.setCode(
+        new CodeableConcept()
+            .addCoding(new Coding("http://example.org", "assessment", "Assessment")));
+    comp2.setValue(new StringType("Normal reading"));
+    observation.addComponent(comp2);
+
+    // Component 3: valueCodeableConcept
+    final ObservationComponentComponent comp3 = new ObservationComponentComponent();
+    comp3.setCode(
+        new CodeableConcept().addCoding(new Coding("http://example.org", "position", "Position")));
+    comp3.setValue(
+        new CodeableConcept()
+            .addCoding(new Coding("http://snomed.info/sct", "33586001", "Sitting")));
+    observation.addComponent(comp3);
+
+    // Component 4: valueBoolean
+    final ObservationComponentComponent comp4 = new ObservationComponentComponent();
+    comp4.setCode(
+        new CodeableConcept().addCoding(new Coding("http://example.org", "verified", "Verified")));
+    comp4.setValue(new BooleanType(true));
+    observation.addComponent(comp4);
+
+    // Component 5: no value set
+    final ObservationComponentComponent comp5 = new ObservationComponentComponent();
+    comp5.setCode(
+        new CodeableConcept().addCoding(new Coding("http://example.org", "empty", "Empty")));
+    observation.addComponent(comp5);
+
+    return builder()
+        .withResource(observation)
+        // Singular choice elements - type() returns correct TypeInfo per type.
+        .group("type() - singular choice elements")
+        .testEquals(
+            toTypeInfo("FHIR.Quantity(FHIR.Element)"),
+            "component[0].value.type()",
+            "Quantity choice element type is FHIR.Quantity")
+        .testEquals(
+            toTypeInfo("FHIR.string(FHIR.Element)"),
+            "component[2].value.type()",
+            "String choice element type is FHIR.string")
+        .testEquals(
+            toTypeInfo("FHIR.CodeableConcept(FHIR.Element)"),
+            "component[3].value.type()",
+            "CodeableConcept choice element type is FHIR.CodeableConcept")
+        .testEquals(
+            toTypeInfo("FHIR.boolean(FHIR.Element)"),
+            "component[4].value.type()",
+            "Boolean choice element type is FHIR.boolean")
+        // Choice element with no value set returns null.
+        .group("type() - choice element with no value")
+        .testTrue(
+            "component[5].value.type().name.empty()",
+            "Choice element with no value returns empty type name")
+        // Plural choice collection - heterogeneous types.
+        .group("type() - plural choice collection")
+        .testEquals(
+            6,
+            "component.value.type().count()",
+            "type() returns one TypeInfo per component value including null")
+        .testEquals(
+            toTypeInfo("FHIR.Quantity(FHIR.Element)"),
+            "component.value.type().first()",
+            "First component type is FHIR.Quantity")
+        .testEquals(
+            toTypeInfo("FHIR.Quantity(FHIR.Element)"),
+            "component.value.type()[1]",
+            "Second component type is FHIR.Quantity")
+        .testEquals(
+            toTypeInfo("FHIR.string(FHIR.Element)"),
+            "component.value.type()[2]",
+            "Third component type is FHIR.string")
+        .testEquals(
+            toTypeInfo("FHIR.CodeableConcept(FHIR.Element)"),
+            "component.value.type()[3]",
+            "Fourth component type is FHIR.CodeableConcept")
+        .testEquals(
+            toTypeInfo("FHIR.boolean(FHIR.Element)"),
+            "component.value.type()[4]",
+            "Fifth component type is FHIR.boolean")
+        // Composition with other FHIRPath functions.
+        .group("type() - composition with FHIRPath functions")
+        .testEquals(
+            4,
+            "component.value.type().name.distinct().count()",
+            "Distinct type names count is 4 (Quantity, string, CodeableConcept, boolean)")
+        .testEquals(
+            2,
+            "component.where(value.type().name = 'Quantity').count()",
+            "where() filtering by type name finds Quantity components")
+        .testEquals(
+            1,
+            "component.where(value.type().name = 'string').count()",
+            "where() filtering by type name finds string components")
         .build();
   }
 }

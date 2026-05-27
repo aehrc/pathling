@@ -21,6 +21,8 @@ import {
   UnauthorizedError,
 } from "../types/errors";
 
+import type { ParametersParameter } from "fhir/r4";
+
 /**
  * Options for building HTTP headers.
  */
@@ -223,6 +225,45 @@ export function extractJobIdFromUrl(url: string): string {
   }
 
   throw new Error("Could not extract job ID from URL");
+}
+
+/**
+ * Options understood by {@link pushOutputParameters}.
+ */
+export interface OutputParameterOptions {
+  /** Output format requested via `_format`. */
+  format?: string;
+  /** Maximum row count requested via `_limit`. */
+  limit?: number;
+  /** CSV header toggle requested via `_header`. */
+  header?: boolean;
+}
+
+/**
+ * Pushes the standard SQL on FHIR output parameters (`_format`, `_limit`,
+ * `_header`) onto an existing Parameters parts array. Each entry is added
+ * only when the corresponding option is supplied.
+ *
+ * @param parameter - The Parameters parts array to mutate.
+ * @param options - The output options to encode.
+ *
+ * @example
+ * const parts: ParametersParameter[] = [];
+ * pushOutputParameters(parts, { format: "csv", limit: 100, header: true });
+ */
+export function pushOutputParameters(
+  parameter: ParametersParameter[],
+  options: OutputParameterOptions,
+): void {
+  if (options.format !== undefined) {
+    parameter.push({ name: "_format", valueString: options.format });
+  }
+  if (options.limit !== undefined) {
+    parameter.push({ name: "_limit", valueInteger: options.limit });
+  }
+  if (options.header !== undefined) {
+    parameter.push({ name: "_header", valueBoolean: options.header });
+  }
 }
 
 /**

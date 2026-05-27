@@ -22,6 +22,7 @@ import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.operations.bulkexport.ExportResult;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
@@ -39,15 +40,13 @@ import jakarta.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -96,7 +95,7 @@ public class BulkSubmitExecutor {
 
   @Nullable private final SparkSession sparkSession;
 
-  @Nonnull private final String databasePath;
+  @Nonnull private final JobDirectoryFileSystem jobDirectoryFileSystem;
 
   @Nonnull private final ObjectMapper objectMapper;
 
@@ -105,6 +104,8 @@ public class BulkSubmitExecutor {
   @Nonnull private final FhirContext fhirContext;
 
   @Nonnull private final BulkSubmitAuthProvider authProvider;
+
+  private final boolean allowInsecureUrls;
 
   /**
    * Creates a new BulkSubmitExecutor.
@@ -117,9 +118,12 @@ public class BulkSubmitExecutor {
    * @param jobRegistry The job registry for tracking async jobs (may be null if async is disabled).
    * @param sparkSession The Spark session for setting job groups (may be null if async is
    *     disabled).
-   * @param databasePath The path to the database storage location.
+   * @param jobDirectoryFileSystem The Hadoop-aware helper for accessing the per-job directory under
+   *     the warehouse.
    * @param fhirContext The FHIR context for serialising resources.
    * @param authProvider The authentication provider for OAuth2 token acquisition.
+   * @param allowInsecureUrls whether plain-http URLs are accepted; defaults to false so that
+   *     outgoing requests use TLS by default.
    */
   public BulkSubmitExecutor(
       @Nonnull final ImportExecutor importExecutor,
@@ -129,10 +133,10 @@ public class BulkSubmitExecutor {
       @Nonnull final BulkSubmitResultBuilder resultBuilder,
       @Nullable final JobRegistry jobRegistry,
       @Nullable final SparkSession sparkSession,
-      @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          final String databasePath,
+      @Nonnull final JobDirectoryFileSystem jobDirectoryFileSystem,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final BulkSubmitAuthProvider authProvider) {
+      @Nonnull final BulkSubmitAuthProvider authProvider,
+      @Value("${pathling.allowInsecureUrls:false}") final boolean allowInsecureUrls) {
     this.importExecutor = importExecutor;
     this.submissionRegistry = submissionRegistry;
     this.exportResultRegistry = exportResultRegistry;
@@ -140,11 +144,12 @@ public class BulkSubmitExecutor {
     this.resultBuilder = resultBuilder;
     this.jobRegistry = jobRegistry;
     this.sparkSession = sparkSession;
-    this.databasePath = databasePath;
+    this.jobDirectoryFileSystem = jobDirectoryFileSystem;
     this.objectMapper = new ObjectMapper();
     this.httpClient = HttpClient.newBuilder().connectTimeout(HTTP_TIMEOUT).build();
     this.fhirContext = fhirContext;
     this.authProvider = authProvider;
+    this.allowInsecureUrls = allowInsecureUrls;
   }
 
   /**
@@ -262,18 +267,21 @@ public class BulkSubmitExecutor {
     // Determine file access token based on manifest requirements.
     final String fileAccessToken = getFileAccessToken(manifest, accessToken, submission);
 
-    // Extract and validate file URLs.
+    // Extract file URLs.
     final Map<String, Collection<String>> fileUrls = extractUrlsFromManifest(manifest);
     if (fileUrls.isEmpty()) {
       throw new InvalidUserInputError("No files found in manifest");
     }
 
+    // Validate file URLs against allowableSources.
+    validateFileUrls(fileUrls);
+
     // Download files to persistent storage.
-    final Path downloadDir = createDownloadDirectory(submission.submissionId());
+    jobDirectoryFileSystem.ensureJobDirectory(submission.submissionId());
     final List<DownloadedFile> downloadedFiles =
         downloadFilesToPersistentStorage(
             fileUrls,
-            downloadDir,
+            submission.submissionId(),
             manifestJob.manifestJobId(),
             manifestJob.manifestUrl(),
             fileRequestHeaders,
@@ -680,6 +688,27 @@ public class BulkSubmitExecutor {
   }
 
   /**
+   * Validates that all file URLs match the configured allowableSources prefixes.
+   *
+   * @param fileUrls The map of resource type to collection of file URLs.
+   * @throws InvalidUserInputError If any URL does not match an allowed source prefix.
+   */
+  private void validateFileUrls(@Nonnull final Map<String, Collection<String>> fileUrls) {
+    final BulkSubmitConfiguration config = serverConfiguration.getBulkSubmit();
+    if (config == null) {
+      return;
+    }
+    for (final Collection<String> urls : fileUrls.values()) {
+      for (final String url : urls) {
+        if (!config.isSourceAllowed(url, allowInsecureUrls)) {
+          throw new InvalidUserInputError(
+              "File URL '%s' does not match any allowed source prefixes.".formatted(url));
+        }
+      }
+    }
+  }
+
+  /**
    * Extracts file URLs from the manifest, organised by resource type.
    *
    * @param manifest The parsed manifest JSON.
@@ -729,28 +758,12 @@ public class BulkSubmitExecutor {
   }
 
   /**
-   * Creates the persistent download directory for a submission. Files are stored in the same
-   * location as export results: {databasePath}/jobs/{submissionId}/.
-   *
-   * @param submissionId The submission ID.
-   * @return The path to the download directory.
-   * @throws IOException If the directory cannot be created.
-   */
-  @Nonnull
-  private Path createDownloadDirectory(@Nonnull final String submissionId) throws IOException {
-    final Path downloadDir = Path.of(URI.create(databasePath).getPath(), "jobs", submissionId);
-    Files.createDirectories(downloadDir);
-    log.info("Created download directory: {}", downloadDir);
-    return downloadDir;
-  }
-
-  /**
    * Downloads files to persistent storage and returns metadata about the downloaded files. Files
    * are named using the pattern {ResourceType}.{manifestJobId}-{index}.ndjson to comply with the
    * resourceNameWithQualifierMapper pattern used by FileSource.
    *
    * @param fileUrls Map of resource type to collection of URLs.
-   * @param downloadDir The directory to download files to.
+   * @param submissionId The submission ID identifying the per-job directory under the warehouse.
    * @param manifestJobId The manifest job ID (used in file naming).
    * @param manifestUrl The URL of the manifest from which these files are being downloaded.
    * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
@@ -761,7 +774,7 @@ public class BulkSubmitExecutor {
   @Nonnull
   private List<DownloadedFile> downloadFilesToPersistentStorage(
       @Nonnull final Map<String, Collection<String>> fileUrls,
-      @Nonnull final Path downloadDir,
+      @Nonnull final String submissionId,
       @Nonnull final String manifestJobId,
       @Nonnull final String manifestUrl,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
@@ -778,12 +791,13 @@ public class BulkSubmitExecutor {
         final int fileNum = fileCounter.incrementAndGet();
         // Use dot-separator format: {ResourceType}.{qualifier}.ndjson
         final String fileName = resourceType + "." + manifestJobId + "-" + fileNum + ".ndjson";
-        final Path localPath = downloadDir.resolve(fileName);
 
-        downloadFile(url, localPath, fileRequestHeaders, accessToken);
+        downloadFile(url, submissionId, fileName, fileRequestHeaders, accessToken);
 
-        downloadedFiles.add(
-            new DownloadedFile(resourceType, fileName, localPath.toUri().toString(), manifestUrl));
+        // The qualified Hadoop URI of the destination is what the downstream Spark importer reads.
+        final String localPath =
+            jobDirectoryFileSystem.resolveFile(submissionId, fileName).toUri().toString();
+        downloadedFiles.add(new DownloadedFile(resourceType, fileName, localPath, manifestUrl));
       }
     }
 
@@ -792,11 +806,12 @@ public class BulkSubmitExecutor {
 
   private void downloadFile(
       @Nonnull final String url,
-      @Nonnull final Path destPath,
+      @Nonnull final String submissionId,
+      @Nonnull final String fileName,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
       @Nullable final String accessToken)
       throws IOException {
-    log.debug("Downloading file from {} to {}", url, destPath);
+    log.debug("Downloading file from {} to {}/{}", url, submissionId, fileName);
 
     final HttpRequest.Builder requestBuilder =
         HttpRequest.newBuilder().uri(URI.create(url)).timeout(HTTP_TIMEOUT).GET();
@@ -822,11 +837,13 @@ public class BulkSubmitExecutor {
             "Failed to download file from " + url + ": HTTP " + response.statusCode());
       }
 
-      try (final InputStream body = response.body()) {
-        Files.copy(body, destPath, StandardCopyOption.REPLACE_EXISTING);
+      try (final InputStream body = response.body();
+          final OutputStream out =
+              jobDirectoryFileSystem.openForWrite(submissionId, fileName, true)) {
+        body.transferTo(out);
       }
 
-      log.debug("Downloaded file to {}", destPath);
+      log.debug("Downloaded file to {}/{}", submissionId, fileName);
     } catch (final InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IOException("File download was interrupted: " + url, e);
@@ -848,8 +865,8 @@ public class BulkSubmitExecutor {
       @Nonnull final String manifestJobId,
       @Nonnull final String errorMessage)
       throws IOException {
-    // Create the download directory if it doesn't exist.
-    final Path downloadDir = createDownloadDirectory(submissionId);
+    // Ensure the per-job directory exists.
+    jobDirectoryFileSystem.ensureJobDirectory(submissionId);
 
     // Build the OperationOutcome resource.
     final OperationOutcome outcome = new OperationOutcome();
@@ -864,13 +881,10 @@ public class BulkSubmitExecutor {
 
     // Write to NDJSON file (single line per resource).
     final String fileName = "OperationOutcome." + manifestJobId + "-error.ndjson";
-    final Path filePath = downloadDir.resolve(fileName);
-    try (final BufferedWriter writer =
-        Files.newBufferedWriter(
-            filePath,
-            StandardCharsets.UTF_8,
-            StandardOpenOption.CREATE,
-            StandardOpenOption.TRUNCATE_EXISTING)) {
+    try (final OutputStream out =
+            jobDirectoryFileSystem.openForWrite(submissionId, fileName, true);
+        final BufferedWriter writer =
+            new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
       writer.write(json);
       writer.newLine();
     }

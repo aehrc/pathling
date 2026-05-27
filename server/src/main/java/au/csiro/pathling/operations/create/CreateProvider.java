@@ -17,10 +17,14 @@
 
 package au.csiro.pathling.operations.create;
 
+import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.operations.update.UpdateExecutor;
 import au.csiro.pathling.security.OperationAccess;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Create;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
@@ -48,6 +52,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class CreateProvider implements IResourceProvider {
 
+  @Nonnull private final ServerConfiguration configuration;
+
   @Nonnull private final UpdateExecutor updateExecutor;
 
   @Nonnull private final Class<? extends IBaseResource> resourceClass;
@@ -57,14 +63,17 @@ public class CreateProvider implements IResourceProvider {
   /**
    * Constructs a new CreateProvider for a specific resource type.
    *
+   * @param configuration the server configuration
    * @param updateExecutor the executor for performing update operations
    * @param fhirContext the FHIR context for resource definitions
    * @param resourceClass the class of the resource type this provider handles
    */
   public CreateProvider(
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final UpdateExecutor updateExecutor,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
+    this.configuration = configuration;
     this.updateExecutor = updateExecutor;
     this.resourceClass = resourceClass;
     this.resourceTypeCode = fhirContext.getResourceDefinition(resourceClass).getName();
@@ -88,6 +97,11 @@ public class CreateProvider implements IResourceProvider {
   @SuppressWarnings("UnusedReturnValue")
   public MethodOutcome create(@Nullable @ResourceParam final IBaseResource resource) {
     checkUserInput(resource != null, "Resource must be supplied");
+
+    if (configuration.getAuth().isEnabled()) {
+      checkHasAuthority(
+          PathlingAuthority.resourceAccess(ResourceAccess.AccessType.WRITE, resourceTypeCode));
+    }
 
     // Always generate a new UUID, ignoring any client-provided ID.
     final String generatedId = UUID.randomUUID().toString();

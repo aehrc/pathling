@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.delete;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -36,6 +37,8 @@ public class DeleteProviderFactory {
 
   @Nonnull private final ApplicationContext applicationContext;
 
+  @Nonnull private final ServerConfiguration configuration;
+
   @Nonnull private final FhirContext fhirContext;
 
   @Nonnull private final DeleteExecutor deleteExecutor;
@@ -44,14 +47,17 @@ public class DeleteProviderFactory {
    * Constructs a new DeleteProviderFactory.
    *
    * @param applicationContext the Spring application context for bean creation
+   * @param configuration the server configuration
    * @param fhirContext the FHIR context for resource definitions
    * @param deleteExecutor the executor for performing delete operations
    */
   public DeleteProviderFactory(
       @Nonnull final ApplicationContext applicationContext,
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DeleteExecutor deleteExecutor) {
     this.applicationContext = applicationContext;
+    this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.deleteExecutor = deleteExecutor;
   }
@@ -68,7 +74,7 @@ public class DeleteProviderFactory {
         fhirContext.getResourceDefinition(resourceType.name()).getImplementingClass();
 
     return applicationContext.getBean(
-        DeleteProvider.class, deleteExecutor, fhirContext, resourceTypeClass);
+        DeleteProvider.class, configuration, deleteExecutor, fhirContext, resourceTypeClass);
   }
 
   /**
@@ -84,6 +90,6 @@ public class DeleteProviderFactory {
         fhirContext.getResourceDefinition(resourceTypeCode).getImplementingClass();
 
     return applicationContext.getBean(
-        DeleteProvider.class, deleteExecutor, fhirContext, resourceTypeClass);
+        DeleteProvider.class, configuration, deleteExecutor, fhirContext, resourceTypeClass);
   }
 }

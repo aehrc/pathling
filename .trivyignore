@@ -8,6 +8,16 @@ CVE-2025-55163
 CVE-2025-58057
 CVE-2025-58056
 CVE-2025-67735
+CVE-2026-33870
+CVE-2026-33871
+CVE-2026-42583
+CVE-2026-42579
+CVE-2026-42584
+CVE-2026-42587
+CVE-2026-41417
+CVE-2026-42580
+CVE-2026-42581
+CVE-2026-42585
 
 # The vulnerable version of protobuf-java is a transitive provided dependency, we do not bundle it into our distribution.
 CVE-2024-7254
@@ -34,6 +44,11 @@ CVE-2025-48924
 
 # Log4j is provided via Spark, not bundled in distribution.
 CVE-2025-68161
+CVE-2026-34477
+CVE-2026-34478
+CVE-2026-34479
+CVE-2026-34480
+CVE-2026-34481
 
 # Avro is provided via Spark, not bundled in library-runtime distribution.
 CVE-2025-33042
@@ -46,3 +61,15 @@ CVE-2025-67721
 
 # jackson-core async parser DoS — Pathling uses only synchronous parsing via HAPI FHIR.
 GHSA-72hv-8253-57qq
+
+# Apache Thrift TSSLTransportFactory certificate hostname validation flaw, no fixed version
+# available. libthrift is a transitive dependency via hapi-fhir-structures-r4 -> jena-shex ->
+# jena-arq. Pathling does not use Thrift's SSL transport, so the vulnerable code path is
+# unreachable.
+CVE-2026-43869
+
+# OpenTelemetry W3C Baggage propagation unbounded memory allocation — opentelemetry-api is a
+# transitive compile-scope dependency via hapi-fhir-base. In the Spark library context, no
+# HTTP request processing is performed and OTel propagators are not configured, so the
+# vulnerable Baggage parsing code path is never reached.
+CVE-2026-45292

@@ -16,54 +16,69 @@
  */
 
 /**
- * Page for executing SQL on FHIR ViewDefinitions.
+ * Page for executing the SQL on FHIR `$viewdefinition-run` and
+ * `$sqlquery-run` operations.
  *
  * @author John Grimes
  */
 
-import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
+import { Box, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
 import { useState } from "react";
 
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { SqlOnFhirForm } from "../components/sqlOnFhir/SqlOnFhirForm";
+import { SqlQueryCard } from "../components/sqlOnFhir/SqlQueryCard";
 import { ViewCard } from "../components/sqlOnFhir/ViewCard";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useSaveViewDefinition, useServerCapabilities } from "../hooks";
+import { useSaveSqlQueryLibrary, useSaveViewDefinition, useServerCapabilities } from "../hooks";
 
+import type { SqlOnFhirMode } from "../components/sqlOnFhir/SqlOnFhirForm";
 import type { ViewRunRequest } from "../hooks";
+import type { SqlQueryJob, SqlQueryRequest } from "../types/sqlQuery";
 import type { ViewJob } from "../types/viewJob";
 
+interface PageJob {
+  type: "view" | "sql-query";
+  /** Underlying job. */
+  job: ViewJob | SqlQueryJob;
+}
+
 /**
- * Page component for executing SQL on FHIR ViewDefinitions.
+ * Page component for executing SQL on FHIR operations.
  *
- * @returns The SQL on FHIR page component.
+ * @returns The SQL on FHIR page.
  */
 export function SqlOnFhir() {
   const { fhirBaseUrl } = config;
   const { isAuthenticated } = useAuth();
 
-  // Track all view query jobs.
-  const [queries, setQueries] = useState<ViewJob[]>([]);
+  const [mode, setMode] = useState<SqlOnFhirMode>("view-definition");
 
-  // Track error messages for display.
+  // Track all view query jobs and SQL query jobs as a single timeline so
+  // they can be sorted by createdAt regardless of source.
+  const [pageJobs, setPageJobs] = useState<PageJob[]>([]);
+
   const [, setError] = useState<string | null>(null);
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  // Mutation for saving a ViewDefinition to the server. 401 errors handled globally.
-  const { mutateAsync: saveViewDefinition, isPending: isSaving } = useSaveViewDefinition();
+  // Mutations: ViewDefinition save and SQL query Library save.
+  const { mutateAsync: saveViewDefinition, isPending: isSavingViewDefinition } =
+    useSaveViewDefinition();
+  const { mutateAsync: saveSqlQueryLibrary, isPending: isSavingSqlQueryLibrary } =
+    useSaveSqlQueryLibrary();
 
   /**
-   * Handles execution of a ViewDefinition query.
+   * Adds a ViewDefinition execution to the result column.
    *
    * @param request - The view run request configuration.
    */
-  const handleExecute = (request: ViewRunRequest) => {
-    const newQuery: ViewJob = {
+  const handleExecuteViewDefinition = (request: ViewRunRequest) => {
+    const newJob: ViewJob = {
       id: crypto.randomUUID(),
       mode: request.mode,
       viewDefinitionId: request.viewDefinitionId,
@@ -71,17 +86,33 @@ export function SqlOnFhir() {
       limit: request.limit,
       createdAt: new Date(),
     };
-    // Prepend new queries so most recent appears first.
-    setQueries((prev) => [newQuery, ...prev]);
+    setPageJobs((prev) => [{ type: "view", job: newJob }, ...prev]);
   };
 
   /**
-   * Handles closing/removing a query card.
+   * Adds a SQL query execution to the result column.
    *
-   * @param id - The ID of the query to close.
+   * @param request - The SQL query request.
    */
-  const handleCloseQuery = (id: string) => {
-    setQueries((prev) => prev.filter((query) => query.id !== id));
+  const handleExecuteSqlQuery = (request: SqlQueryRequest) => {
+    const sql = request.mode === "inline" ? extractSqlText(request) : "";
+    const newJob: SqlQueryJob = {
+      id: crypto.randomUUID(),
+      mode: request.mode,
+      request,
+      sql,
+      createdAt: new Date(),
+    };
+    setPageJobs((prev) => [{ type: "sql-query", job: newJob }, ...prev]);
+  };
+
+  /**
+   * Removes a result card from the column.
+   *
+   * @param id - The job ID of the card to remove.
+   */
+  const handleCloseJob = (id: string) => {
+    setPageJobs((prev) => prev.filter((entry) => entry.job.id !== id));
   };
 
   // Show loading state while checking server capabilities.
@@ -104,29 +135,74 @@ export function SqlOnFhir() {
 
   return (
     <>
-      <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-        <Box style={{ flex: 1 }}>
-          <SqlOnFhirForm
-            onExecute={handleExecute}
-            onSaveToServer={saveViewDefinition}
-            isExecuting={false}
-            isSaving={isSaving}
-          />
-        </Box>
+      <Flex direction="column" gap="4">
+        <Heading size="6">SQL on FHIR</Heading>
 
-        <Flex direction="column" gap="3" style={{ flex: 1, overflow: "hidden" }}>
-          {queries.map((job) => (
-            <ViewCard
-              key={job.id}
-              job={job}
-              onError={(message) => setError(message)}
-              onClose={() => handleCloseQuery(job.id)}
+        <Flex gap="6" direction={{ initial: "column", md: "row" }}>
+          <Box style={{ flex: 1 }}>
+            <SqlOnFhirForm
+              mode={mode}
+              onModeChange={setMode}
+              onExecuteViewDefinition={handleExecuteViewDefinition}
+              onSaveViewDefinition={saveViewDefinition}
+              onExecuteSqlQuery={handleExecuteSqlQuery}
+              onSaveSqlQueryLibrary={saveSqlQueryLibrary}
+              isViewDefinitionExecuting={false}
+              isViewDefinitionSaving={isSavingViewDefinition}
+              isSqlQueryExecuting={false}
+              isSqlQuerySaving={isSavingSqlQueryLibrary}
             />
-          ))}
+          </Box>
+
+          <Flex direction="column" gap="3" style={{ flex: 1, overflow: "hidden" }}>
+            {pageJobs.map((entry) =>
+              entry.type === "view" ? (
+                <ViewCard
+                  key={entry.job.id}
+                  job={entry.job as ViewJob}
+                  onError={(message) => setError(message)}
+                  onClose={() => handleCloseJob(entry.job.id)}
+                />
+              ) : (
+                <SqlQueryCard
+                  key={entry.job.id}
+                  job={entry.job as SqlQueryJob}
+                  onError={(message) => setError(message)}
+                  onClose={() => handleCloseJob(entry.job.id)}
+                />
+              ),
+            )}
+          </Flex>
         </Flex>
       </Flex>
 
       <SessionExpiredDialog />
     </>
   );
+}
+
+/**
+ * Extracts the plain SQL text from an inline `SqlQueryRequest`.
+ *
+ * Looks at the `sql-text` extension on `Library.content[0]` first, then
+ * falls back to decoding `Library.content[0].data`. Returns the empty
+ * string when neither is available.
+ *
+ * @param request - The SQL query request to inspect.
+ * @returns The plain SQL text, or an empty string if it cannot be
+ *   recovered.
+ */
+function extractSqlText(request: SqlQueryRequest): string {
+  if (request.mode !== "inline") {
+    return "";
+  }
+  const content = request.library.content?.[0];
+  if (!content) {
+    return "";
+  }
+  const ext = content.extension?.find((e) => e.url.endsWith("/sql-text"));
+  if (ext?.valueString) {
+    return ext.valueString;
+  }
+  return "";
 }

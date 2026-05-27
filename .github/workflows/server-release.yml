@@ -39,6 +39,7 @@ jobs:
           scan-ref: server
           trivyignore: server/.trivyignore
           sarif-output: trivy-results-server.sarif
+          effective-pom: "true"
 
       - name: Run UI security scan
         uses: ./.github/actions/trivy-scan

@@ -34,4 +34,14 @@ public interface NodeDefinition {
    */
   @Nonnull
   Optional<ChildDefinition> getChildElement(@Nonnull String name);
+
+  /**
+   * Returns whether this definition originates from a FHIR model (as opposed to a synthetic
+   * definition created for literals or internal use).
+   *
+   * @return {@code true} if this definition represents a FHIR model element or resource
+   */
+  default boolean isFhirDefinition() {
+    return false;
+  }
 }

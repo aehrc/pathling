@@ -37,6 +37,7 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.test.dsl.TypeInfoExpectation;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
@@ -56,6 +57,7 @@ import lombok.EqualsAndHashCode.Exclude;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
@@ -473,6 +475,20 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     // Handle single-item lists by unwrapping them to the contained value.
     final Object resultRepresentation =
         result instanceof final List<?> list && list.size() == 1 ? list.getFirst() : result;
+
+    // Handle TypeInfoExpectation directly by building a struct column.
+    if (resultRepresentation instanceof final TypeInfoExpectation typeInfo) {
+      return new DefaultRepresentation(typeInfo.toStructColumn());
+    }
+
+    // Handle lists of TypeInfoExpectation by building an array of struct columns.
+    if (resultRepresentation instanceof final List<?> list
+        && !list.isEmpty()
+        && list.getFirst() instanceof TypeInfoExpectation) {
+      final Column[] elements =
+          list.stream().map(e -> ((TypeInfoExpectation) e).toStructColumn()).toArray(Column[]::new);
+      return new DefaultRepresentation(functions.array(elements));
+    }
 
     // Convert the YAML representation to a FHIR element definition.
     final ChildDefinition resultDefinition =

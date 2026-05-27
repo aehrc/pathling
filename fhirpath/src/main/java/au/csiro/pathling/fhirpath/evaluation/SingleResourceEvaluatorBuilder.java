@@ -21,9 +21,11 @@ import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
+import au.csiro.pathling.sql.TraceCollector;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
+import java.util.Optional;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -72,6 +74,8 @@ public class SingleResourceEvaluatorBuilder {
   @Nonnull private Map<String, Collection> variables = Map.of();
 
   @Nonnull private FhirpathConfiguration configuration = FhirpathConfiguration.DEFAULT;
+
+  @Nonnull private Optional<TraceCollector> traceCollector = Optional.empty();
 
   /** Private constructor. Use factory methods to create instances. */
   private SingleResourceEvaluatorBuilder(
@@ -190,6 +194,21 @@ public class SingleResourceEvaluatorBuilder {
   }
 
   /**
+   * Sets the trace collector for capturing trace() output.
+   *
+   * <p>Default is empty (no collection, SLF4J logging only).
+   *
+   * @param traceCollector the trace collector
+   * @return this builder for method chaining
+   */
+  @Nonnull
+  public SingleResourceEvaluatorBuilder withTraceCollector(
+      @Nonnull final TraceCollector traceCollector) {
+    this.traceCollector = Optional.of(traceCollector);
+    return this;
+  }
+
+  /**
    * Builds the {@link SingleResourceEvaluator} with the configured options.
    *
    * @return a new SingleResourceEvaluator instance
@@ -198,6 +217,7 @@ public class SingleResourceEvaluatorBuilder {
   public SingleResourceEvaluator build() {
     final ResourceResolver resolver =
         new FhirResourceResolver(subjectResourceCode, fhirContext, crossResourceStrategy);
-    return new SingleResourceEvaluator(resolver, functionRegistry, variables, configuration);
+    return new SingleResourceEvaluator(
+        resolver, functionRegistry, variables, configuration, traceCollector);
   }
 }

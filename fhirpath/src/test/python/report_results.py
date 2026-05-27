@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-
-#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
-#  Organisation (CSIRO) ABN 41 687 119 230.
-# 
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-# 
-#      http://www.apache.org/licenses/LICENSE-2.0
-# 
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+#
+# Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+# Organisation (CSIRO) ABN 41 687 119 230.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 import xml.etree.ElementTree as ET
 
@@ -29,22 +30,27 @@ from results import TestResult, to_results
 def main():
     # Load and parse the Surefire XML report
     tree = ET.parse(
-        '../target/surefire-reports/TEST-au.csiro.pathling.fhirpath.yaml.YamlReferenceImplTest.xml')
+        "../target/surefire-reports/TEST-au.csiro.pathling.fhirpath.yaml.YamlReferenceImplTest.xml"
+    )
     test_results = list(to_results(tree))
     sorted_results = sorted(test_results, key=lambda x: x.tag)
     # group test_results by error_message using itrtools.groupby
     test_by_tag = dict(
-        (key, list(group)) for key, group in itertools.groupby(sorted_results, key=lambda x: x.tag))
+        (key, list(group))
+        for key, group in itertools.groupby(sorted_results, key=lambda x: x.tag)
+    )
 
     for key, group in test_by_tag.items():
         print(key)
         test_by_error = dict(
-            (key, list(group)) for key, group in itertools.groupby(group, key=lambda x: x.error))
+            (key, list(group))
+            for key, group in itertools.groupby(group, key=lambda x: x.error)
+        )
         for error, tests in test_by_error.items():
             print("\t" + error)
             for test in tests:
                 print(f"\t\t{test.expr} [{test.desc}]")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

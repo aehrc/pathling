@@ -21,15 +21,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.fhirpath.ListTraceCollector;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TraceResult;
+import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
+import au.csiro.pathling.test.helpers.SqlHelpers;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
@@ -331,6 +337,42 @@ class SingleInstanceEvaluatorTest {
     }
 
     @Test
+    void updatesParentSchemaForSanitisedNestedStructs() {
+      // The parent's StructField dataType for a nested struct must match the sanitised nested
+      // Row's schema, so that Row.json() positional mapping remains correct.
+      final StructType nestedSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("id", DataTypes.StringType, true),
+                DataTypes.createStructField("start", DataTypes.StringType, true),
+                DataTypes.createStructField("end", DataTypes.StringType, true),
+              });
+
+      final StructType outerSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("family", DataTypes.StringType, true),
+                DataTypes.createStructField("period", nestedSchema, true),
+              });
+
+      final Row nestedRow =
+          new GenericRowWithSchema(new Object[] {null, "2000", "2002"}, nestedSchema);
+      final Row outerRow = new GenericRowWithSchema(new Object[] {"Smith", nestedRow}, outerSchema);
+
+      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(outerRow);
+
+      // The parent's "period" field dataType should have 2 fields (id stripped as null).
+      final StructType periodType = (StructType) sanitised.schema().apply("period").dataType();
+      assertEquals(2, periodType.fields().length);
+      assertEquals("start", periodType.fields()[0].name());
+      assertEquals("end", periodType.fields()[1].name());
+
+      // The parent's dataType should match the nested Row's own schema.
+      final Row sanitisedNested = sanitised.getAs("period");
+      assertEquals(sanitisedNested.schema(), periodType);
+    }
+
+    @Test
     void preservesFieldsWithNonNullValues() {
       // All non-null fields should be kept, even if some are null.
       final StructType schema =
@@ -380,6 +422,38 @@ class SingleInstanceEvaluatorTest {
     }
 
     @Test
+    void jsonCorrectlyMapsNestedStructFieldsAfterNullStripping() {
+      // Nested struct with null fields should produce correct field-to-value mapping in JSON.
+      // Without the fix, Row.json() uses the parent's original dataType to interpret the nested
+      // row, causing positional misalignment when null fields have been stripped.
+      final StructType nestedSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("id", DataTypes.StringType, true),
+                DataTypes.createStructField("start", DataTypes.StringType, true),
+                DataTypes.createStructField("end", DataTypes.StringType, true),
+              });
+
+      final StructType outerSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("family", DataTypes.StringType, true),
+                DataTypes.createStructField("period", nestedSchema, true),
+              });
+
+      final Row nestedRow =
+          new GenericRowWithSchema(new Object[] {null, "2000", "2002"}, nestedSchema);
+      final Row outerRow = new GenericRowWithSchema(new Object[] {"Smith", nestedRow}, outerSchema);
+
+      final String json = SingleInstanceEvaluator.rowToJson(outerRow);
+
+      assertTrue(json.contains("\"start\":\"2000\""));
+      assertTrue(json.contains("\"end\":\"2002\""));
+      assertFalse(json.contains("\"id\""));
+      assertTrue(json.contains("\"family\":\"Smith\""));
+    }
+
+    @Test
     void jsonExcludesNullValuedFields() {
       // The JSON output should not contain fields with null values.
       final StructType schema =
@@ -399,6 +473,195 @@ class SingleInstanceEvaluatorTest {
       assertFalse(json.contains("\"comparator\""));
       assertTrue(json.contains("\"value\":\"100\""));
       assertTrue(json.contains("\"unit\":\"mg\""));
+    }
+  }
+
+  @Nested
+  class BuildTraceResultsTests {
+
+    @Test
+    void emptyCollectorReturnsEmptyList() {
+      // An empty collector should produce an empty trace result list.
+      final ListTraceCollector collector = new ListTraceCollector();
+      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
+      assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void singlePrimitiveEntry() {
+      // A single primitive entry should produce one TraceResult with one TypedValue.
+      final ListTraceCollector collector = new ListTraceCollector();
+      collector.add("lbl", "string", "hello");
+
+      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
+
+      assertEquals(1, results.size());
+      assertEquals("lbl", results.get(0).getLabel());
+      assertEquals(1, results.get(0).getValues().size());
+      assertEquals("string", results.get(0).getValues().get(0).getType());
+      assertEquals("hello", results.get(0).getValues().get(0).getValue());
+    }
+
+    @Test
+    void singleNullValueEntry() {
+      // A null value should produce a TypedValue with null.
+      final ListTraceCollector collector = new ListTraceCollector();
+      collector.add("lbl", "string", null);
+
+      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
+
+      assertEquals(1, results.size());
+      assertEquals(1, results.get(0).getValues().size());
+      assertNull(results.get(0).getValues().get(0).getValue());
+    }
+
+    @Test
+    void multipleEntriesSameLabelGrouped() {
+      // Entries with the same label should be grouped into one TraceResult.
+      final ListTraceCollector collector = new ListTraceCollector();
+      collector.add("x", "string", "a");
+      collector.add("x", "string", "b");
+
+      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
+
+      assertEquals(1, results.size());
+      assertEquals("x", results.get(0).getLabel());
+      assertEquals(2, results.get(0).getValues().size());
+      assertEquals("a", results.get(0).getValues().get(0).getValue());
+      assertEquals("b", results.get(0).getValues().get(1).getValue());
+    }
+
+    @Test
+    void differentLabelsProduceSeparateResults() {
+      // Entries with different labels should produce separate TraceResults.
+      final ListTraceCollector collector = new ListTraceCollector();
+      collector.add("a", "string", "v1");
+      collector.add("b", "boolean", true);
+
+      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
+
+      assertEquals(2, results.size());
+      assertEquals("a", results.get(0).getLabel());
+      assertEquals("b", results.get(1).getLabel());
+    }
+
+    @Test
+    void insertionOrderPreserved() {
+      // Results should appear in the order labels were first seen, not alphabetically.
+      final ListTraceCollector collector = new ListTraceCollector();
+      collector.add("c", "string", "1");
+      collector.add("a", "string", "2");
+      collector.add("b", "string", "3");
+
+      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
+
+      assertEquals(3, results.size());
+      assertEquals("c", results.get(0).getLabel());
+      assertEquals("a", results.get(1).getLabel());
+      assertEquals("b", results.get(2).getLabel());
+    }
+
+    @Test
+    void rowValueConvertedToJson() {
+      // A Row value should be converted to a JSON string.
+      final StructType schema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("value", DataTypes.StringType, true),
+                DataTypes.createStructField("code", DataTypes.StringType, true),
+              });
+      final Row row = new GenericRowWithSchema(new Object[] {"100", "mg"}, schema);
+
+      final ListTraceCollector collector = new ListTraceCollector();
+      collector.add("qty", "Quantity", row);
+
+      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
+
+      assertEquals(1, results.size());
+      final Object value = results.get(0).getValues().get(0).getValue();
+      assertInstanceOf(String.class, value);
+      final String json = (String) value;
+      assertTrue(json.contains("\"value\":\"100\""));
+      assertTrue(json.contains("\"code\":\"mg\""));
+    }
+
+    @Test
+    void rowValueWithSyntheticFieldsStripped() {
+      // Synthetic fields in Row values should be stripped in the JSON output.
+      final StructType schema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("value", DataTypes.StringType, true),
+                DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
+                DataTypes.createStructField("value_scale", DataTypes.IntegerType, true),
+              });
+      final Row row = new GenericRowWithSchema(new Object[] {"100", 1, 3}, schema);
+
+      final ListTraceCollector collector = new ListTraceCollector();
+      collector.add("qty", "Quantity", row);
+
+      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
+
+      final String json = (String) results.get(0).getValues().get(0).getValue();
+      assertFalse(json.contains("_fid"));
+      assertFalse(json.contains("value_scale"));
+      assertTrue(json.contains("\"value\":\"100\""));
+    }
+
+    @Test
+    void scalaSeqValueExpanded() {
+      // A Scala Seq value should be expanded into individual TypedValues.
+      final ListTraceCollector collector = new ListTraceCollector();
+      collector.add("items", "string", SqlHelpers.sql_array("a", "b", "c"));
+
+      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
+
+      assertEquals(1, results.size());
+      final List<TypedValue> values = results.get(0).getValues();
+      assertEquals(3, values.size());
+      assertEquals("a", values.get(0).getValue());
+      assertEquals("b", values.get(1).getValue());
+      assertEquals("c", values.get(2).getValue());
+    }
+
+    @Test
+    void scalaSeqWithRowElementsConvertedToJson() {
+      // A Scala Seq of Rows should produce JSON strings for each element.
+      final StructType schema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("code", DataTypes.StringType, true),
+              });
+      final Row row1 = new GenericRowWithSchema(new Object[] {"mg"}, schema);
+      final Row row2 = new GenericRowWithSchema(new Object[] {"kg"}, schema);
+
+      final ListTraceCollector collector = new ListTraceCollector();
+      collector.add("codes", "Coding", SqlHelpers.sql_array(row1, row2));
+
+      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
+
+      final List<TypedValue> values = results.get(0).getValues();
+      assertEquals(2, values.size());
+      assertInstanceOf(String.class, values.get(0).getValue());
+      assertTrue(((String) values.get(0).getValue()).contains("\"code\":\"mg\""));
+      assertTrue(((String) values.get(1).getValue()).contains("\"code\":\"kg\""));
+    }
+
+    @Test
+    void mixedLabelsAndTypes() {
+      // Multiple labels with different types should be grouped correctly.
+      final ListTraceCollector collector = new ListTraceCollector();
+      collector.add("name", "HumanName", "Smith");
+      collector.add("active", "boolean", true);
+      collector.add("name", "HumanName", "Jones");
+
+      final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
+
+      assertEquals(2, results.size());
+      assertEquals("name", results.get(0).getLabel());
+      assertEquals(2, results.get(0).getValues().size());
+      assertEquals("active", results.get(1).getLabel());
+      assertEquals(1, results.get(1).getValues().size());
     }
   }
 }

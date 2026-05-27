@@ -321,7 +321,10 @@ public class StringCollection extends Collection
   public @Nonnull Function<Numeric, Collection> getMathOperation(
       @Nonnull final Numeric.MathOperation operation) {
     if (operation == MathOperation.ADDITION) {
-      return numeric -> mapColumn(c -> functions.concat(c, numeric.getColumn().getValue()));
+      return numeric ->
+          StringCollection.build(
+              new DefaultRepresentation(
+                  functions.concat(getColumn().getValue(), numeric.getColumn().getValue())));
     } else {
       throw new UnsupportedFhirPathFeatureError("Operation not supported on String: " + operation);
     }

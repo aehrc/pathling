@@ -393,4 +393,27 @@ public class RepeatFunctionDslTest extends FhirPathDslTestBase {
             "repeat(item).where().linkId chains where and path after repeat")
         .build();
   }
+
+  /**
+   * Verifies that repeat($this) works correctly over Quantity literal collections produced by
+   * combine(). This was broken because Quantity literal structs contained VOID-typed fields which
+   * are incompatible with to_variant_object() used by variantTransformTree.
+   *
+   * @see <a href="https://github.com/aehrc/pathling/issues/2588">#2588</a>
+   */
+  @FhirPathTest
+  public Stream<DynamicTest> testRepeatQuantityLiterals() {
+    return builder()
+        .withSubject(sb -> sb)
+        .group("repeat($this) over combined Quantity literals (#2588)")
+        .testEquals(
+            2,
+            "(1 year).combine(12 months).repeat($this).count()",
+            "repeat($this) returns both indefinite calendar durations (non-comparable units)")
+        .testEquals(
+            1,
+            "(3 'min').combine(180 seconds).repeat($this).count()",
+            "repeat($this) deduplicates equivalent canonicalisable quantities (3 min = 180 s)")
+        .build();
+  }
 }

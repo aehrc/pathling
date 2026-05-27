@@ -22,3 +22,8 @@
  */
 
 export { formatDateTime } from "./formatDateTime";
+export { parseCsvResponse } from "./csv";
+export { decodeSql, encodeSql } from "./sqlBase64";
+export { flattenFhirParameters } from "./fhirParametersFlatten";
+export type { FlattenedFhirResult } from "./fhirParametersFlatten";
+export { streamToText, parseNdjsonResponse, extractColumns } from "./ndjson";

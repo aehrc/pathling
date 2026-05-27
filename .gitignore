@@ -48,3 +48,8 @@ server/client-tests
 
 *-local.yml
 *-local.properties
+lib/import/lib
+lib/js/lib
+
+# Generated effective POMs for Trivy scans.
+.trivy-effective/

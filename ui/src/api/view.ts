@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-import { buildHeaders, buildUrl, checkResponse } from "./utils";
+import {
+  buildHeaders,
+  buildUrl,
+  checkResponse,
+  pushOutputParameters,
+} from "./utils";
 
 import type { AuthOptions, ResourceType } from "./rest";
 import type { Parameters, ParametersParameter } from "fhir/r4";
@@ -136,17 +141,11 @@ export async function viewRun(
     },
   ];
 
-  if (options.format) {
-    parameter.push({ name: "_format", valueString: options.format });
-  }
-
-  if (options.limit !== undefined) {
-    parameter.push({ name: "_limit", valueInteger: options.limit });
-  }
-
-  if (options.header !== undefined) {
-    parameter.push({ name: "_header", valueBoolean: options.header });
-  }
+  pushOutputParameters(parameter, {
+    format: options.format,
+    limit: options.limit,
+    header: options.header,
+  });
 
   const body: Parameters = {
     resourceType: "Parameters",
@@ -278,13 +277,10 @@ export async function viewExportKickOff(
     parameter.push(viewParam);
   }
 
-  if (options.format) {
-    parameter.push({ name: "_format", valueString: options.format });
-  }
-
-  if (options.header !== undefined) {
-    parameter.push({ name: "_header", valueBoolean: options.header });
-  }
+  pushOutputParameters(parameter, {
+    format: options.format,
+    header: options.header,
+  });
 
   const body: Parameters = {
     resourceType: "Parameters",

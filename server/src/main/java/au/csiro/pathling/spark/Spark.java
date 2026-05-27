@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -102,6 +103,21 @@ public class Spark {
         });
 
     return spark;
+  }
+
+  /**
+   * Exposes the Hadoop {@link Configuration} carried by the running Spark session as a Spring bean.
+   * Beans that need to access the warehouse via the Hadoop {@link org.apache.hadoop.fs.FileSystem}
+   * API can inject this directly.
+   *
+   * @param sparkSession the running Spark session
+   * @return the Hadoop configuration associated with the Spark context
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  @Nonnull
+  public static Configuration hadoopConfiguration(@Nonnull final SparkSession sparkSession) {
+    return sparkSession.sparkContext().hadoopConfiguration();
   }
 
   private static void resolveThirdPartyConfiguration(

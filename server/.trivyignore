@@ -9,6 +9,13 @@ CVE-2025-58057
 CVE-2025-58056
 CVE-2025-67735
 
+# Netty epoll transport DoS via RST on half-closed TCP connection. Fixed only
+# in Netty 4.2.13.Final; the 4.1.x line has no patch. Pathling cannot move to
+# 4.2.x because Spark and Spring Boot's BOMs still pin the 4.1.x line. The
+# Linux epoll transport is used by Netty-based clients/servers in Spark
+# internals; Pathling does not expose Netty servers on its public HTTP path.
+CVE-2026-42577
+
 # The vulnerable version of protobuf-java is a transitive dependency provided via the Spark runtime.
 CVE-2024-7254
 
@@ -19,6 +26,8 @@ CVE-2022-46751
 CVE-2023-44981
 CVE-2024-23944
 CVE-2025-58457
+CVE-2026-24281
+CVE-2026-24308
 
 # Jersey Client is a transitive dependency provided via the Spark runtime.
 CVE-2025-12383
@@ -32,6 +41,11 @@ CVE-2025-48924
 
 # Log4j is a transitive dependency provided via the Spark runtime.
 CVE-2025-68161
+CVE-2026-34477
+CVE-2026-34478
+CVE-2026-34479
+CVE-2026-34480
+CVE-2026-34481
 
 # Avro is provided via the Spark runtime. Server overrides to patched version
 # 1.12.1 in server/pom.xml.
@@ -48,6 +62,11 @@ CVE-2025-66021
 # Pathling uses Spring Boot for web serving, not Vert.x static handlers.
 CVE-2026-1002
 
+# Vert.x SNI SslContext cache unbounded growth DoS - transitive via
+# spark-kubernetes. Pathling does not expose a Vert.x server, so the SNI
+# handling code path is unreachable.
+CVE-2026-6860
+
 # aircompressor Snappy/LZ4 decompressor buffer content leakage (fixed in 3.4).
 # Transitive via Spark 4.0.2 → ORC 2.1.4 → aircompressor 2.0.2.
 # $import with parquet format could trigger the vulnerability, but exploitation
@@ -56,3 +75,16 @@ CVE-2026-1002
 # data would be raw byte fragments, not coherent records. Risk is low.
 # See: https://github.com/aehrc/pathling/issues/2540
 CVE-2025-67721
+
+# Apache Thrift TSSLTransportFactory certificate hostname validation flaw, no
+# fixed version available. libthrift is a transitive dependency via
+# hapi-fhir-structures-r4 -> jena-shex -> jena-arq. Pathling does not use
+# Thrift's SSL transport (no TSSL/TSocket/Thrift client code anywhere in the
+# server), so the vulnerable code path is unreachable.
+CVE-2026-43869
+
+# OpenTelemetry W3C Baggage propagation unbounded memory allocation — opentelemetry-api is a
+# transitive dependency via hapi-fhir-base. The server does not configure the OTel SDK or
+# W3C Baggage propagators; the API jar is present only for HAPI FHIR instrumentation
+# annotations, so the vulnerable Baggage parsing code path is never reached.
+CVE-2026-45292

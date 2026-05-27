@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.bulkimport;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.UrlAllowlist;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
@@ -61,6 +62,8 @@ public class ImportExecutor {
 
   @Nonnull private final CacheableDatabase cacheableDatabase;
 
+  private final boolean allowInsecureUrls;
+
   /**
    * Creates a new ImportExecutor.
    *
@@ -69,6 +72,8 @@ public class ImportExecutor {
    * @param databasePath directory to where the data will be imported
    * @param serverConfiguration the server configuration including authentication settings
    * @param cacheableDatabase the cacheable database for cache invalidation
+   * @param allowInsecureUrls whether plain-http URLs are accepted; defaults to false so that
+   *     outgoing requests use TLS by default.
    */
   public ImportExecutor(
       @Nonnull final Optional<AccessRules> accessRules,
@@ -76,12 +81,14 @@ public class ImportExecutor {
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
           final String databasePath,
       final ServerConfiguration serverConfiguration,
-      @Nonnull final CacheableDatabase cacheableDatabase) {
+      @Nonnull final CacheableDatabase cacheableDatabase,
+      @Value("${pathling.allowInsecureUrls:false}") final boolean allowInsecureUrls) {
     this.accessRules = accessRules;
     this.pathlingContext = pathlingContext;
     this.databasePath = databasePath;
     this.serverConfiguration = serverConfiguration;
     this.cacheableDatabase = cacheableDatabase;
+    this.allowInsecureUrls = allowInsecureUrls;
   }
 
   /**
@@ -181,8 +188,7 @@ public class ImportExecutor {
     if (allowableSources.isEmpty()) {
       return;
     }
-    final boolean allowed = allowableSources.stream().anyMatch(url::startsWith);
-    if (!allowed) {
+    if (!UrlAllowlist.matches(allowableSources, url, allowInsecureUrls)) {
       throw new AccessDeniedError("URL: '" + url + "' is not an allowed source.");
     }
   }

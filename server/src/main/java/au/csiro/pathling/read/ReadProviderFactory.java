@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.read;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
@@ -33,6 +34,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReadProviderFactory {
 
+  @Nonnull private final ServerConfiguration configuration;
+
   @Nonnull private final FhirContext fhirContext;
 
   @Nonnull private final DataSource dataSource;
@@ -42,14 +45,17 @@ public class ReadProviderFactory {
   /**
    * Constructs a new ReadProviderFactory.
    *
+   * @param configuration the server configuration
    * @param fhirContext the FHIR context for resource definitions
    * @param dataSource the data source containing the resources to read
    * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
    */
   public ReadProviderFactory(
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
       @Nonnull final FhirEncoders fhirEncoders) {
+    this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.dataSource = dataSource;
     this.fhirEncoders = fhirEncoders;
@@ -67,7 +73,7 @@ public class ReadProviderFactory {
         fhirContext.getResourceDefinition(resourceType.name()).getImplementingClass();
 
     final ReadExecutor readExecutor = new ReadExecutor(dataSource, fhirEncoders);
-    return new ReadProvider(readExecutor, fhirContext, resourceTypeClass);
+    return new ReadProvider(configuration, readExecutor, fhirContext, resourceTypeClass);
   }
 
   /**
@@ -83,6 +89,6 @@ public class ReadProviderFactory {
         fhirContext.getResourceDefinition(resourceTypeCode).getImplementingClass();
 
     final ReadExecutor readExecutor = new ReadExecutor(dataSource, fhirEncoders);
-    return new ReadProvider(readExecutor, fhirContext, resourceTypeClass);
+    return new ReadProvider(configuration, readExecutor, fhirContext, resourceTypeClass);
   }
 }

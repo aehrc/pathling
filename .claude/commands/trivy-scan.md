@@ -1,29 +1,79 @@
 # Trivy security scan
 
-Run Trivy vulnerability scans scoped to the modules modified on the current
-branch, then analyse the results and provide actionable recommendations.
+Run Trivy vulnerability scans scoped to the requested module(s), then analyse
+the results and provide actionable recommendations.
 
-## Step 1: Determine modified modules
+## Step 1: Determine scan scope from user input
 
-Run `git diff --name-only main...HEAD` to get the list of files changed on the
-current branch. Map each changed file to one of the following scopes based on
-its top-level directory:
+The user passes the scan scope(s) as an argument or instruction. Accept one or
+more of the following values:
 
-| Changed directory                                                                                  | Scope            |
-| -------------------------------------------------------------------------------------------------- | ---------------- |
-| `server/`                                                                                          | server           |
-| `ui/`                                                                                              | ui               |
-| `utilities/`, `encoders/`, `terminology/`, `fhirpath/`, `library-api/`, `library-runtime/`, `lib/` | core-libraries   |
-| `site/`                                                                                            | site             |
-| `fhirpath-lab-api/`                                                                                | fhirpath-lab-api |
+| Scope              | Directories scanned                                                                                |
+| ------------------ | -------------------------------------------------------------------------------------------------- |
+| `server`           | `server/`                                                                                          |
+| `ui`               | `ui/`                                                                                              |
+| `core-libraries`   | `utilities/`, `encoders/`, `terminology/`, `fhirpath/`, `library-api/`, `library-runtime/`, `lib/` |
+| `site`             | `site/`                                                                                            |
+| `fhirpath-lab-api` | `fhirpath-lab-api/`                                                                                |
+| `all`              | All of the above                                                                                   |
 
-Files in other directories (e.g. `.github/`, `openspec/`, `benchmark/`,
-`test-data/`, `deployment/`) do not trigger any scan scope.
+If the user does not specify a scope, default to `all`.
 
-If no scopes are identified, inform the user that no scannable modules were
-modified and stop.
+If the user provides an invalid scope, inform them of the valid options and
+stop.
 
-## Step 2: Run Trivy for each scope
+## Step 2: Verify Trivy version matches CI
+
+Before scanning, confirm that the locally-installed Trivy version matches the
+version pinned in `.github/actions/trivy-scan/action.yml`. Trivy's pom parser
+has shown version-to-version differences in how `dependencyManagement` BOM
+import ordering is honoured, so a local result will not reliably match CI
+unless the versions are aligned.
+
+```bash
+local_version=$(trivy --version | awk '/^Version:/ {print "v"$2; exit}')
+ci_version=$(grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' .github/actions/trivy-scan/action.yml | head -1)
+echo "Local: $local_version  CI: $ci_version"
+[ "$local_version" = "$ci_version" ] || echo "MISMATCH"
+```
+
+If they differ, stop and tell the user. Suggest either upgrading the local
+binary (`brew upgrade trivy`) or bumping the pinned version in
+`.github/actions/trivy-scan/action.yml`, depending on which is older.
+
+## Step 3: Refresh the vulnerability database
+
+Before running any scans, force a refresh of the Trivy vulnerability database.
+Trivy normally only re-downloads the DB if the local copy is older than 24
+hours; running this command bypasses that check so scans always use the latest
+data.
+
+The DB image is ~100 MiB. Trivy's default download timeout (5 minutes) can
+expire on slow links. Set `TRIVY_TIMEOUT=15m` to give it room. After the
+download, verify the DB is current (less than 24 hours old) by reading
+`~/Library/Caches/trivy/db/metadata.json` (Linux:
+`~/.cache/trivy/db/metadata.json`). If the download fails or the DB is still
+stale, **stop and tell the user** rather than proceeding with stale data - a
+stale DB will silently miss recently-disclosed CVEs and produce results that
+disagree with CI.
+
+```bash
+TRIVY_TIMEOUT=15m trivy image --download-db-only
+
+# Verify freshness. The DB is regenerated daily; reject anything older than 24h.
+db_meta=~/Library/Caches/trivy/db/metadata.json
+[ "$(uname)" = "Linux" ] && db_meta=~/.cache/trivy/db/metadata.json
+updated_at=$(jq -r '.UpdatedAt' "$db_meta")
+age_hours=$(( ($(date -u +%s) - $(date -u -j -f "%Y-%m-%dT%H:%M:%S" "${updated_at%.*}" +%s 2>/dev/null || date -u -d "$updated_at" +%s)) / 3600 ))
+echo "DB UpdatedAt: $updated_at (age: ${age_hours}h)"
+[ "$age_hours" -lt 24 ] || { echo "STALE DB - aborting"; exit 1; }
+```
+
+Run this once per invocation, before the scans in Step 4. Pass
+`--skip-db-update` to the scan commands so Trivy reuses the freshly-downloaded
+DB instead of attempting a second (potentially slower) update mid-scan.
+
+## Step 4: Run Trivy for each scope
 
 Each scope has its own `.trivyignore` file. Run Trivy from within the scope's
 directory so that the local `.trivyignore` is picked up automatically.
@@ -46,22 +96,32 @@ Working directory: repository root.
 trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
   --skip-files "examples/**/*,**/target/**/*,sql-on-fhir/**/*,licenses/**/*" \
-  --skip-dirs "server,ui,site,fhirpath-lab-api,benchmark,test-data,deployment" \
-  --exit-code 0
+  --skip-dirs "server,ui,site,fhirpath-lab-api,benchmark,test-data,deployment,.idea" \
+  --skip-db-update --exit-code 0
 ```
 
 ### Server scope
 
-Scans the `server` directory. The `server/.trivyignore` contains suppressions
-for Spark runtime transitive dependencies and server-specific libraries.
+The server scope scans a Maven effective POM rather than `server/pom.xml`
+directly. This avoids Trivy pom-parser bugs (aquasecurity/trivy issues #8049,
+#8036, #5748) where BOM imports and property overrides are resolved
+inconsistently between environments. Generating an effective POM flattens all
+`dependencyManagement` BOM imports and resolves all `${...}` properties to
+concrete versions, giving Trivy unambiguous input. The CI workflow does the
+same via the `effective-pom: "true"` input on the `trivy-scan` action.
 
-Working directory: `server/`.
+The `server/.trivyignore` contains suppressions for Spark runtime transitive
+dependencies and server-specific libraries.
+
+Working directory: repository root.
 
 ```bash
-cd server && trivy repo . \
+mkdir -p .trivy-effective/server
+mvn --batch-mode --quiet -f server/pom.xml \
+  help:effective-pom -Doutput="$PWD/.trivy-effective/server/pom.xml"
+TRIVY_IGNOREFILE="$PWD/server/.trivyignore" trivy repo .trivy-effective/server \
   --severity MEDIUM,HIGH,CRITICAL \
-  --skip-files "**/target/**/*" \
-  --exit-code 0
+  --skip-db-update --exit-code 0
 ```
 
 ### UI scope
@@ -74,7 +134,8 @@ Working directory: `ui/`.
 ```bash
 cd ui && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
-  --exit-code 0
+  --skip-dirs ".idea" \
+  --skip-db-update --exit-code 0
 ```
 
 ### Site scope
@@ -88,7 +149,8 @@ Working directory: `site/`.
 cd site && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
   --skip-files "**/target/**/*" \
-  --exit-code 0
+  --skip-dirs ".idea" \
+  --skip-db-update --exit-code 0
 ```
 
 ### FHIRPath Lab API scope
@@ -101,14 +163,15 @@ Working directory: `fhirpath-lab-api/`.
 ```bash
 cd fhirpath-lab-api && trivy repo . \
   --severity MEDIUM,HIGH,CRITICAL \
-  --exit-code 0
+  --skip-dirs ".idea" \
+  --skip-db-update --exit-code 0
 ```
 
 Run scans for different scopes in parallel where possible. Use a timeout of
 5 minutes per scan. If Trivy is not installed, inform the user and suggest
 `brew install trivy`.
 
-## Step 3: Analyse results and provide recommendations
+## Step 5: Analyse results and provide recommendations
 
 For each vulnerability reported by Trivy, perform a contextual impact
 assessment before recommending an action. This means reading the relevant parts
@@ -143,9 +206,24 @@ For each vulnerability:
 4. **Recommend an action**:
     - **Exploitable with fix available**: Recommend upgrading to the fixed
       version. Identify the specific `pom.xml`, `package.json`, or other
-      dependency file that needs updating. If it is a transitive dependency,
-      identify the direct dependency that pulls it in and whether a version
-      override or exclusion is appropriate.
+      dependency file that needs updating.
+
+        If the vulnerable package is a **transitive dependency**, always check
+        first whether a newer version of the **direct dependency** that brings
+        it in ships a fixed transitive. Use `mvn dependency:tree` (or the
+        equivalent for the ecosystem) to identify the direct dependency, then
+        inspect the upstream POM / package manifest of newer releases to see
+        which transitive version they bundle.
+
+        **Prefer upgrading the direct dependency over pinning the transitive
+        version.** Rationale: a direct upgrade inherits any other fixes and
+        compatibility work the upstream maintainers have done, whereas pinning
+        a transitive version risks diverging from what the direct dependency
+        was tested against. Only pin the transitive version when no suitable
+        direct-dependency upgrade exists (e.g. upstream hasn't released a
+        version that bundles a patched transitive), and record the reason in a
+        comment adjacent to the override.
+
     - **Exploitable with no fix available**: Recommend tracking for future
       remediation. Suggest a workaround if one exists.
     - **Not exploitable or not applicable**: Recommend adding to the

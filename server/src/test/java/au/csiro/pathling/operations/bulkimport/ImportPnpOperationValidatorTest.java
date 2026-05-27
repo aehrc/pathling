@@ -22,24 +22,36 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
+import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.ImportConfiguration;
+import au.csiro.pathling.config.PnpConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.MockUtil;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import java.time.Instant;
+import java.util.List;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UrlType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * Tests for ImportPnpOperationValidator.
@@ -50,22 +62,92 @@ import org.springframework.context.annotation.Import;
 @Import(ImportPnpOperationValidatorTest.TestConfig.class)
 class ImportPnpOperationValidatorTest {
 
+  // Default permissive allowlist for the test fixture. Enumerates each host that downstream
+  // tests use as an exportUrl so they can reach the SSRF check (rather than failing earlier
+  // at the allowlist check). Specific tests override this when they want to assert allowlist
+  // behaviour itself.
+  private static final List<String> TEST_ALLOWABLE_EXPORT_URLS =
+      List.of(
+          "https://example.com/",
+          "https://example.org/",
+          "https://nonexistent.invalid/",
+          "http://127.0.0.1/",
+          "http://10.0.0.1/",
+          "http://169.254.169.254/",
+          "http://0.0.0.0/",
+          "http://0.1.2.3/",
+          "http://100.64.0.1/",
+          "http://224.0.0.1/",
+          "http://255.255.255.255/",
+          "http://[fd00::1]/",
+          "http://[ff02::1]/",
+          "http://[::ffff:127.0.0.1]/",
+          "http://[::ffff:169.254.169.254]/");
+
   @TestConfiguration
   static class TestConfig {
 
     @Bean
-    public ImportPnpOperationValidator importPnpOperationValidator() {
-      return new ImportPnpOperationValidator();
+    @Primary
+    public ServerConfiguration serverConfiguration() {
+      final ServerConfiguration config = new ServerConfiguration();
+      final AuthorizationConfiguration auth = new AuthorizationConfiguration();
+      auth.setEnabled(false);
+      config.setAuth(auth);
+      final ImportConfiguration importConfig = new ImportConfiguration();
+      importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+      final PnpConfiguration pnpConfig = new PnpConfiguration();
+      pnpConfig.setAllowableExportUrls(TEST_ALLOWABLE_EXPORT_URLS);
+      importConfig.setPnp(pnpConfig);
+      config.setImport(importConfig);
+      return config;
+    }
+
+    @Bean
+    public ImportPnpOperationValidator importPnpOperationValidator(
+        final ServerConfiguration serverConfiguration) {
+      return new ImportPnpOperationValidator(serverConfiguration, false, true);
     }
   }
 
   @Autowired private ImportPnpOperationValidator validator;
+
+  @Autowired private ServerConfiguration serverConfiguration;
 
   private RequestDetails mockRequest;
 
   @BeforeEach
   void setUp() {
     mockRequest = MockUtil.mockRequest("application/fhir+json", "respond-async", false);
+    resetServerConfiguration();
+  }
+
+  /** Clears the security context after each test to avoid leaking authentication state. */
+  @AfterEach
+  void tearDown() {
+    SecurityContextHolder.clearContext();
+  }
+
+  /** Sets an authenticated principal in the security context for the duration of a test. */
+  private void setAuthenticatedPrincipal() {
+    final TestingAuthenticationToken authentication =
+        new TestingAuthenticationToken(
+            "test-user", "test-credentials", List.of(new SimpleGrantedAuthority("ROLE_USER")));
+    authentication.setAuthenticated(true);
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+  }
+
+  /** Resets the server configuration to the default test state. */
+  private void resetServerConfiguration() {
+    final AuthorizationConfiguration auth = new AuthorizationConfiguration();
+    auth.setEnabled(false);
+    serverConfiguration.setAuth(auth);
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setAllowableExportUrls(TEST_ALLOWABLE_EXPORT_URLS);
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
   }
 
   // ========================================
@@ -111,7 +193,7 @@ class ImportPnpOperationValidatorTest {
         validator.validateParametersRequest(mockRequest, params);
 
     assertThat(result.result().exportType()).isEqualTo("dynamic"); // Default.
-    assertThat(result.result().saveMode()).isEqualTo(SaveMode.OVERWRITE); // Default.
+    assertThat(result.result().saveMode()).isEqualTo(SaveMode.MERGE); // Default.
     assertThat(result.result().importFormat()).isEqualTo(ImportFormat.NDJSON); // Default.
   }
 
@@ -541,27 +623,257 @@ class ImportPnpOperationValidatorTest {
   // ========================================
 
   /**
-   * Tests that validation passes without requiring any PnP configuration. This enables the
-   * operation to be used against unauthenticated FHIR servers without explicit configuration.
+   * Tests that validation fails when no PnP configuration is present, because the operation
+   * requires the export URL allowlist to be configured before it can be used.
    */
   @Test
-  void validatesWithoutPnpConfiguration() {
+  void rejectsWhenPnpConfigurationAbsent() {
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    serverConfiguration.setImport(importConfig);
+
     final Parameters params = new Parameters();
     params
         .addParameter()
         .setName("exportUrl")
         .setValue(new UrlType("https://public-fhir-server.org/$export"));
 
-    // Should succeed without any PnP configuration required.
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("No trusted export URLs are configured");
+  }
+
+  // ========================================
+  // SSRF / Internal URL validation
+  // ========================================
+
+  /**
+   * Tests that an exportUrl pointing to a loopback address is rejected when internal URLs are
+   * disallowed.
+   */
+  @Test
+  void rejectsLoopbackExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://127.0.0.1/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to a private IP address is rejected when internal URLs are
+   * disallowed.
+   */
+  @Test
+  void rejectsPrivateIpExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://10.0.0.1/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to a link-local address is rejected when internal URLs are
+   * disallowed.
+   */
+  @Test
+  void rejectsLinkLocalExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://169.254.169.254/latest/meta-data/"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /** Tests that a public exportUrl is accepted regardless of the allowInternalUrls setting. */
+  @Test
+  void acceptsPublicExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
     assertThatNoException()
-        .isThrownBy(
-            () -> {
-              final PreAsyncValidationResult<ImportPnpRequest> result =
-                  validator.validateParametersRequest(mockRequest, params);
-              assertThat(result.result()).isNotNull();
-              assertThat(result.result().exportUrl())
-                  .isEqualTo("https://public-fhir-server.org/$export");
-            });
+        .isThrownBy(() -> validator.validateParametersRequest(mockRequest, params));
+  }
+
+  /**
+   * Tests that an exportUrl pointing to an IPv6 unique-local address (RFC 4193, fc00::/7) is
+   * rejected. Java's InetAddress.isSiteLocalAddress() does not cover this range, so it requires an
+   * explicit check.
+   */
+  @Test
+  void rejectsIpv6UniqueLocalExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://[fd00::1]/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /** Tests that an exportUrl pointing to the IPv4 unspecified address (0.0.0.0) is rejected. */
+  @Test
+  void rejectsAnyLocalExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://0.0.0.0/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to a "this network" address (RFC 1122, 0.0.0.0/8) is rejected.
+   * Java's isAnyLocalAddress() only matches 0.0.0.0 exactly, so the broader range needs an explicit
+   * check.
+   */
+  @Test
+  void rejectsThisNetworkRangeExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://0.1.2.3/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to a CGNAT shared address (RFC 6598, 100.64.0.0/10) is
+   * rejected. CGNAT space can reach cloud-metadata services in some VPC configurations.
+   */
+  @Test
+  void rejectsCgnatExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://100.64.0.1/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /** Tests that an exportUrl pointing to an IPv4 multicast address (224.0.0.0/4) is rejected. */
+  @Test
+  void rejectsIpv4MulticastExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://224.0.0.1/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to an IPv4 reserved Class E address (240.0.0.0/4) is rejected.
+   * This range also includes the limited broadcast 255.255.255.255.
+   */
+  @Test
+  void rejectsClassEReservedExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://255.255.255.255/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to an IPv4-mapped IPv6 loopback (::ffff:127.0.0.1) is
+   * rejected. The address must be unwrapped to its IPv4 form before classification, since Java's
+   * predicates on the wrapped form behave inconsistently across JVMs.
+   */
+  @Test
+  void rejectsIpv4MappedLoopbackExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://[::ffff:127.0.0.1]/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to an IPv4-mapped IPv6 link-local address
+   * (::ffff:169.254.169.254) is rejected. This is the AWS instance metadata address in its
+   * v4-mapped form.
+   */
+  @Test
+  void rejectsIpv4MappedLinkLocalExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://[::ffff:169.254.169.254]/latest/meta-data/"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /** Tests that an exportUrl pointing to an IPv6 multicast address (ff00::/8) is rejected. */
+  @Test
+  void rejectsIpv6MulticastExportUrlWhenInternalUrlsDisallowed() {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("exportUrl").setValue(new UrlType("http://[ff02::1]/fhir"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("internal address");
+  }
+
+  /**
+   * Tests that an exportUrl whose host cannot be resolved is rejected. The validator must fail
+   * closed rather than allowing the request through, since the host might resolve later in the
+   * executor under split-horizon DNS or transient resolver failure.
+   */
+  @Test
+  void rejectsUnresolvableExportUrlHostWhenInternalUrlsDisallowed() {
+    // Use a TLD reserved for documentation/testing per RFC 6761 to ensure the lookup fails
+    // deterministically without contacting the public DNS.
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://nonexistent.invalid/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("could not be resolved");
+  }
+
+  /**
+   * Tests that an exportUrl pointing to a loopback address is accepted when internal URLs are
+   * explicitly allowed.
+   */
+  @Test
+  void acceptsLoopbackExportUrlWhenInternalUrlsAllowed() {
+    final ImportPnpOperationValidator permissiveValidator =
+        new ImportPnpOperationValidator(serverConfiguration, true, true);
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("http://127.0.0.1/fhir/$export"));
+
+    assertThatNoException()
+        .isThrownBy(() -> permissiveValidator.validateParametersRequest(mockRequest, params));
   }
 
   /** Tests that all export parameters are extracted together correctly. */
@@ -601,5 +913,229 @@ class ImportPnpOperationValidatorTest {
     assertThat(request.elements()).containsExactly("id");
     assertThat(request.typeFilters()).containsExactly("Patient?active=true");
     assertThat(request.includeAssociatedData()).containsExactly("LatestProvenanceResources");
+  }
+
+  // ========================================
+  // Export URL Whitelist Tests
+  // ========================================
+
+  /** Tests that an exportUrl not matching any configured prefix is rejected. */
+  @Test
+  void rejectsExportUrlNotInAllowableExportUrls() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://evil.com/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("exportUrl not in allowableExportUrls");
+  }
+
+  /** Tests that an exportUrl matching a configured prefix is accepted. */
+  @Test
+  void acceptsExportUrlMatchingConfiguredPrefix() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.com/fhir/$export"));
+
+    assertThatNoException()
+        .isThrownBy(() -> validator.validateParametersRequest(mockRequest, params));
+  }
+
+  /**
+   * Tests that when allowableExportUrls is empty the request is rejected, regardless of whether PNP
+   * credentials are configured. The allowlist is mandatory to prevent the operation being used as
+   * an SSRF or warehouse-poisoning vector.
+   */
+  @Test
+  void rejectsExportUrlWhenAllowableExportUrlsEmpty() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("No trusted export URLs are configured");
+  }
+
+  // ========================================
+  // Save Mode Default Tests
+  // ========================================
+
+  /** Tests that the default saveMode is MERGE when omitted. */
+  @Test
+  void defaultsSaveModeToMerge() {
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.org/fhir/$export"));
+
+    final PreAsyncValidationResult<ImportPnpRequest> result =
+        validator.validateParametersRequest(mockRequest, params);
+
+    assertThat(result.result().saveMode()).isEqualTo(SaveMode.MERGE);
+  }
+
+  // ========================================
+  // Authentication Interlock Tests
+  // ========================================
+
+  /**
+   * Tests that when PNP credentials are configured and auth is disabled, the request is rejected.
+   */
+  @Test
+  void rejectsImportPnpWhenAuthDisabledAndPnpCredentialsPresent() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setClientId("test-client");
+    pnpConfig.setClientSecret("test-secret");
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+    serverConfiguration.getAuth().setEnabled(false);
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.com/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("Authentication is required");
+  }
+
+  /**
+   * Tests that when PNP credentials are configured and auth is enabled and the request carries an
+   * authenticated principal, the request is accepted.
+   */
+  @Test
+  void acceptsImportPnpWhenAuthEnabledAndPnpCredentialsPresent() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setClientId("test-client");
+    pnpConfig.setClientSecret("test-secret");
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+    serverConfiguration.getAuth().setEnabled(true);
+    setAuthenticatedPrincipal();
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.com/fhir/$export"));
+
+    assertThatNoException()
+        .isThrownBy(() -> validator.validateParametersRequest(mockRequest, params));
+  }
+
+  /**
+   * Tests that when PNP credentials are configured and auth is enabled, but the security context
+   * has no authentication, the request is rejected. This guards against a misconfigured filter
+   * chain that allows unauthenticated requests through despite the configuration flag being set.
+   */
+  @Test
+  void rejectsImportPnpWhenAuthEnabledButNoAuthenticatedPrincipal() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setClientId("test-client");
+    pnpConfig.setClientSecret("test-secret");
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+    serverConfiguration.getAuth().setEnabled(true);
+    SecurityContextHolder.clearContext();
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.com/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("authenticated request is required");
+  }
+
+  /**
+   * Tests that when PNP credentials are configured and auth is enabled, an anonymous principal is
+   * treated as unauthenticated and rejected.
+   */
+  @Test
+  void rejectsImportPnpWhenAuthenticationIsAnonymous() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setClientId("test-client");
+    pnpConfig.setClientSecret("test-secret");
+    pnpConfig.setAllowableExportUrls(List.of("https://example.com/fhir"));
+    final ImportConfiguration importConfig = new ImportConfiguration();
+    importConfig.setAllowableSources(List.of("s3://test-bucket/"));
+    importConfig.setPnp(pnpConfig);
+    serverConfiguration.setImport(importConfig);
+    serverConfiguration.getAuth().setEnabled(true);
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new AnonymousAuthenticationToken(
+                "key", "anonymousUser", List.of(new SimpleGrantedAuthority("ROLE_ANONYMOUS"))));
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.com/fhir/$export"));
+
+    assertThatCode(() -> validator.validateParametersRequest(mockRequest, params))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("authenticated request is required");
+  }
+
+  /**
+   * Tests that when no PNP credentials are configured, the runtime principal check does not run,
+   * even if the security context is empty. The interlock only applies when credentials are present.
+   */
+  @Test
+  void skipsAuthenticationCheckWhenNoPnpCredentialsConfigured() {
+    serverConfiguration.getAuth().setEnabled(true);
+    SecurityContextHolder.clearContext();
+
+    final Parameters params = new Parameters();
+    params
+        .addParameter()
+        .setName("exportUrl")
+        .setValue(new UrlType("https://example.com/fhir/$export"));
+
+    assertThatNoException()
+        .isThrownBy(() -> validator.validateParametersRequest(mockRequest, params));
   }
 }

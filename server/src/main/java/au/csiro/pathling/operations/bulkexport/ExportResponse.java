@@ -179,6 +179,10 @@ public class ExportResponse implements OperationResponse<Parameters> {
       final String jobUuid = parts[0];
       final String file = parts[1];
 
+      if (file.contains("/") || file.contains("\\") || file.contains("..")) {
+        throw new InternalErrorException("Invalid file name in export result: " + file);
+      }
+
       return new URIBuilder(baseUrl + "$result")
           .addParameter("job", jobUuid)
           .addParameter("file", file)

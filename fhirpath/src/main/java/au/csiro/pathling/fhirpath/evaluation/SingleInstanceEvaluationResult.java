@@ -32,16 +32,22 @@ public class SingleInstanceEvaluationResult {
 
   @Nonnull private final String expectedReturnType;
 
+  @Nonnull private final List<TraceResult> traces;
+
   /**
    * Creates a new SingleInstanceEvaluationResult.
    *
    * @param results the typed result values from the evaluation
    * @param expectedReturnType the statically inferred return type of the expression
+   * @param traces the trace entries collected during evaluation
    */
   public SingleInstanceEvaluationResult(
-      @Nonnull final List<TypedValue> results, @Nonnull final String expectedReturnType) {
+      @Nonnull final List<TypedValue> results,
+      @Nonnull final String expectedReturnType,
+      @Nonnull final List<TraceResult> traces) {
     this.results = results;
     this.expectedReturnType = expectedReturnType;
+    this.traces = traces;
   }
 
   /**
@@ -62,6 +68,16 @@ public class SingleInstanceEvaluationResult {
   @Nonnull
   public String getExpectedReturnType() {
     return expectedReturnType;
+  }
+
+  /**
+   * Gets the trace entries collected during evaluation.
+   *
+   * @return the list of trace results, or an empty list if no trace() calls were present
+   */
+  @Nonnull
+  public List<TraceResult> getTraces() {
+    return traces;
   }
 
   /**
@@ -104,6 +120,49 @@ public class SingleInstanceEvaluationResult {
     @Nullable
     public Object getValue() {
       return value;
+    }
+  }
+
+  /**
+   * Represents a trace output from a {@code trace()} call during evaluation.
+   *
+   * @author John Grimes
+   */
+  public static class TraceResult {
+
+    @Nonnull private final String label;
+
+    @Nonnull private final List<TypedValue> values;
+
+    /**
+     * Creates a new TraceResult.
+     *
+     * @param label the trace label (the name argument to trace())
+     * @param values the traced values as typed values
+     */
+    public TraceResult(@Nonnull final String label, @Nonnull final List<TypedValue> values) {
+      this.label = label;
+      this.values = values;
+    }
+
+    /**
+     * Gets the trace label.
+     *
+     * @return the label
+     */
+    @Nonnull
+    public String getLabel() {
+      return label;
+    }
+
+    /**
+     * Gets the traced values.
+     *
+     * @return the list of typed values
+     */
+    @Nonnull
+    public List<TypedValue> getValues() {
+      return values;
     }
   }
 }

@@ -142,7 +142,7 @@ public class ImportOperationValidator {
     final SaveMode saveMode =
         manifest.saveMode() != null && !manifest.saveMode().isBlank()
             ? SaveMode.fromCode(manifest.saveMode())
-            : SaveMode.OVERWRITE; // Default to OVERWRITE.
+            : SaveMode.MERGE; // Default to MERGE.
 
     final ImportRequest importRequest =
         new ImportRequest(requestDetails.getCompleteUrl(), input, saveMode, importFormat);
@@ -194,7 +194,7 @@ public class ImportOperationValidator {
             CodeType.class,
             code -> SaveMode.fromCode(code.getCode()),
             true,
-            Optional.of(SaveMode.OVERWRITE), // Default to OVERWRITE.
+            Optional.of(SaveMode.MERGE), // Default to MERGE.
             false,
             Optional.of(new InvalidUserInputError("Unknown saveMode.")))
         .orElseThrow();

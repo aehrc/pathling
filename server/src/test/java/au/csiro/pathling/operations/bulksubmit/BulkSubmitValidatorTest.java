@@ -55,12 +55,12 @@ class BulkSubmitValidatorTest {
         List.of(
             new SubmitterConfiguration(
                 SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null)));
-    bulkSubmitConfig.setAllowableSources(List.of("https://"));
+    bulkSubmitConfig.setAllowableSources(List.of("https://example.org/"));
 
     serverConfiguration = new ServerConfiguration();
     serverConfiguration.setBulkSubmit(bulkSubmitConfig);
 
-    validator = new BulkSubmitValidator(serverConfiguration);
+    validator = new BulkSubmitValidator(serverConfiguration, true);
   }
 
   @Test
@@ -272,19 +272,20 @@ class BulkSubmitValidatorTest {
 
   @Test
   void extractsOauthMetadataUrl() {
-    // Validate that oauthMetadataUrl is extracted correctly.
+    // Validate that oauthMetadataUrl is extracted correctly. Use a host that matches the
+    // default test allowlist so the request reaches the extraction step.
     final Parameters params = minimalInProgressParams();
     params
         .addParameter()
         .setName("oauthMetadataUrl")
-        .setValue(new StringType("https://auth.example.org/.well-known/smart-configuration"));
+        .setValue(new StringType("https://example.org/.well-known/smart-configuration"));
 
     final RequestDetails mockRequest =
         MockUtil.mockRequest("application/fhir+json", "respond-async", false);
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.oauthMetadataUrl())
-        .isEqualTo("https://auth.example.org/.well-known/smart-configuration");
+        .isEqualTo("https://example.org/.well-known/smart-configuration");
   }
 
   @Test
@@ -297,6 +298,56 @@ class BulkSubmitValidatorTest {
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.oauthMetadataUrl()).isNull();
+  }
+
+  @Test
+  void invalidOauthMetadataUrlPrefix() {
+    // Validate that oauthMetadataUrl is rejected when it does not match allowableSources.
+    final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
+    config.setAllowedSubmitters(
+        List.of(
+            new SubmitterConfiguration(
+                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null)));
+    config.setAllowableSources(List.of("https://allowed.org/"));
+    serverConfiguration.setBulkSubmit(config);
+
+    final Parameters params = minimalInProgressParams();
+    params
+        .addParameter()
+        .setName("oauthMetadataUrl")
+        .setValue(new StringType("https://attacker.com/.well-known/smart-configuration"));
+
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
+
+    assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("does not match any allowed source prefixes");
+  }
+
+  @Test
+  void validOauthMetadataUrlPrefix() {
+    // Validate that oauthMetadataUrl is accepted when it matches allowableSources.
+    final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
+    config.setAllowedSubmitters(
+        List.of(
+            new SubmitterConfiguration(
+                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null)));
+    config.setAllowableSources(List.of("https://allowed.org/"));
+    serverConfiguration.setBulkSubmit(config);
+
+    final Parameters params = minimalInProgressParams();
+    params
+        .addParameter()
+        .setName("oauthMetadataUrl")
+        .setValue(new StringType("https://allowed.org/.well-known/smart-configuration"));
+
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+    assertThat(result.oauthMetadataUrl())
+        .isEqualTo("https://allowed.org/.well-known/smart-configuration");
   }
 
   @Test

@@ -71,7 +71,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @TestPropertySource(
     properties = {
       "pathling.async.enabled=true",
-      "pathling.bulk-submit.allowable-sources[0]=http://localhost",
       // Configure submitter with OAuth credentials for symmetric (client_secret) auth.
       "pathling.bulk-submit.allowed-submitters[0].system=http://example.org/submitters",
       "pathling.bulk-submit.allowed-submitters[0].value=oauth-submitter",
@@ -118,6 +117,11 @@ class BulkSubmitOAuthIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
     registry.add("pathling.bulk-submit.staging-directory", stagingDir::toString);
+    // The allowable source must include the WireMock port. Bare "http://localhost" (port 80)
+    // no longer matches "http://localhost:{port}" under the URI-aware UrlAllowlist matching.
+    registry.add(
+        "pathling.bulk-submit.allowable-sources[0]",
+        () -> "http://localhost:" + wireMockServer.port());
   }
 
   @BeforeEach
@@ -496,6 +500,59 @@ class BulkSubmitOAuthIT {
             .withHeader("Authorization", equalTo("Bearer " + TEST_ACCESS_TOKEN)));
 
     log.info("OAuth with explicit metadata URL verified successfully");
+  }
+
+  @Test
+  void testOAuthWithDisallowedMetadataUrl() {
+    // This test verifies that when oauthMetadataUrl is provided but does not match
+    // allowableSources, the request is rejected with a 4xx error and no outbound
+    // requests are made to the attacker-supplied URL.
+
+    final String submissionId = UUID.randomUUID().toString();
+    final String manifestUrl = "http://localhost:" + wireMockServer.port() + "/manifest.json";
+    final String fhirBaseUrl = "http://localhost:" + wireMockServer.port();
+    final String oauthMetadataUrl = "http://attacker.example.com/.well-known/smart-configuration";
+    final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
+
+    final String requestBody =
+        """
+        {
+          "resourceType": "Parameters",
+          "parameter": [
+            {
+              "name": "submitter",
+              "valueIdentifier": {
+                "system": "%s",
+                "value": "%s"
+              }
+            },
+            {"name": "submissionId", "valueString": "%s"},
+            {"name": "submissionStatus", "valueCoding": {"code": "in-progress"}},
+            {"name": "manifestUrl", "valueString": "%s"},
+            {"name": "fhirBaseUrl", "valueString": "%s"},
+            {"name": "oauthMetadataUrl", "valueString": "%s"}
+          ]
+        }
+        """
+            .formatted(
+                SUBMITTER_SYSTEM,
+                SUBMITTER_VALUE,
+                submissionId,
+                manifestUrl,
+                fhirBaseUrl,
+                oauthMetadataUrl);
+
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(requestBody)
+        .exchange()
+        .expectStatus()
+        .is4xxClientError();
+
+    log.info("Disallowed oauthMetadataUrl correctly rejected");
   }
 
   @Test

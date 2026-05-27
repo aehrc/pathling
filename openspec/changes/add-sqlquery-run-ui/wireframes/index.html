@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireframes - $sqlquery-run UI</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f0f0f0;
+    color: #333;
+    line-height: 1.5;
+    padding: 2rem;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; color: #444; margin-bottom: 0.4rem; }
+  .lede { color: #777; font-size: 0.95rem; margin-bottom: 1.5rem; }
+  ul { list-style: none; }
+  li {
+    background: #fff;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    margin-bottom: 0.6rem;
+    padding: 1rem 1.2rem;
+  }
+  li a { color: #444; font-weight: 600; text-decoration: none; }
+  li a:hover { text-decoration: underline; }
+  li p { color: #777; font-size: 0.85rem; margin-top: 0.25rem; }
+  small { color: #999; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>$sqlquery-run UI wireframes</h1>
+    <p class="lede">Lo-fi wireframes for the new "SQL query" mode of the SQL on FHIR page in the Pathling admin UI.</p>
+    <ul>
+      <li>
+        <a href="./sql-query-inline.html">1. SQL query, inline (Provide Library tab)</a>
+        <p>Authoring a SQLQuery Library inline: SQL text, related ViewDefinitions, declared parameters, runtime values and output options.</p>
+      </li>
+      <li>
+        <a href="./sql-query-stored.html">2. SQL query, stored (Select Library tab)</a>
+        <p>Selecting a stored SQLQuery Library, previewing its SQL and binding runtime parameter values.</p>
+      </li>
+      <li>
+        <a href="./result-card-tabular.html">3. Result card (tabular)</a>
+        <p>Successful query rendered as a Table with format badge, row count and download.</p>
+      </li>
+      <li>
+        <a href="./result-card-error.html">4. Result card (error)</a>
+        <p>Server-side validation error surfaced in a red Callout next to the offending SQL.</p>
+      </li>
+    </ul>
+    <small>Lo-fi monochrome - layout and information density only, not visual design.</small>
+  </div>
+</body>
+</html>

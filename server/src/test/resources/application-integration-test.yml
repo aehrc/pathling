@@ -1,15 +1,19 @@
 pathling:
+  # Integration tests use WireMock on http://localhost, so allow plain-http
+  # outgoing URLs in this profile. Production deployments leave this at the
+  # secure default (false).
+  allowInsecureUrls: true
   storage:
     databaseName: delta
   import:
     allowableSources:
       - file://
       - http://localhost
-      - https://
+      - https://example.org
     pnp:
-      clientId: test-client
-      clientSecret: test-secret
-      scope: system/*.read
+      # Integration tests use WireMock on localhost; allow internal URLs so the
+      # request reaches the executor where the relevant code paths are tested.
+      allowInternalUrls: true
 spring:
   main:
     banner-mode: off
