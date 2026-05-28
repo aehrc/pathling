@@ -59,13 +59,36 @@ public class TestDataSetup {
     return Path.of("src/test/resources/test-data/bulk/fhir/delta").toAbsolutePath();
   }
 
+  /**
+   * Copies the read-only Delta test data into a temporary warehouse directory. When no specific
+   * resource types are requested, only the Delta table directories (those ending in {@code
+   * .parquet}) are copied; stray files and non-table subdirectories left behind by other tests
+   * (such as bulk-export job output) are deliberately skipped so they cannot pollute the warehouse
+   * under test. The destination database directory is cleaned before copying, so the method is safe
+   * to call repeatedly against a directory that already contains data.
+   *
+   * @param tempDir the temporary warehouse directory to copy into
+   * @param resourceTypes optional specific resource types to copy; if omitted, all tables are
+   *     copied
+   */
   public static void copyTestDataToTempDir(
       @Nonnull final Path tempDir, @Nullable final String... resourceTypes) {
     try {
       final Path deltaPath = Path.of("src/test/resources/test-data/bulk/fhir/delta");
       if (resourceTypes == null || resourceTypes.length == 0) {
-        final File deltaTestData = deltaPath.toFile();
-        FileUtils.copyDirectoryToDirectory(deltaTestData, tempDir.toFile());
+        // Recreate the "delta" database directory under the destination, copying only the Delta
+        // table directories so that any pollution alongside them is not carried into the warehouse.
+        final File destDeltaDir = tempDir.resolve(deltaPath.getFileName()).toFile();
+        FileUtils.deleteDirectory(destDeltaDir);
+        final File[] tables =
+            deltaPath
+                .toFile()
+                .listFiles(file -> file.isDirectory() && file.getName().endsWith(".parquet"));
+        if (tables != null) {
+          for (final File table : tables) {
+            FileUtils.copyDirectoryToDirectory(table, destDeltaDir);
+          }
+        }
       } else {
         for (final String resourceType : resourceTypes) {
           final File deltaSpecificTestResourceData =

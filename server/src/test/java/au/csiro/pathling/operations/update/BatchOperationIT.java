@@ -19,7 +19,6 @@ package au.csiro.pathling.operations.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import au.csiro.pathling.util.TestDataSetup;
 import java.io.IOException;
 import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
@@ -56,12 +55,13 @@ class BatchOperationIT {
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
   }
 
   @BeforeEach
   void setup() {
+    // Set up the warehouse once per test. The matching @AfterEach empties it, so each test runs
+    // against a clean copy of the test data.
     webTestClient =
         webTestClient
             .mutate()
@@ -77,7 +77,6 @@ class BatchOperationIT {
 
   @Test
   void testBatchUpdateSinglePatient() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
     final String requestBody =
@@ -133,7 +132,10 @@ class BatchOperationIT {
 
   @Test
   void testBatchUpdateMultiplePatients() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+    // Seed a patient before the batch runs, so we can confirm the batch update merges into the
+    // existing table rather than replacing it.
+    final String preExistingPatientId = "pre-existing-patient";
+    seedPatient(preExistingPatientId, "PreExisting");
 
     final String uri = "http://localhost:" + port + "/fhir";
     final String requestBody =
@@ -189,12 +191,69 @@ class BatchOperationIT {
         .jsonPath("$.entry[1].response.status")
         .isEqualTo("200");
 
+    // Both updated patients are retrievable afterwards.
+    assertPatientFamily("batch-patient-1", "Family1");
+    assertPatientFamily("batch-patient-2", "Family2");
+
+    // The patient seeded before the batch is still present, confirming the merge preserved the
+    // existing rows rather than overwriting the table.
+    assertPatientFamily(preExistingPatientId, "PreExisting");
+
     log.info("Batch update multiple patients completed successfully");
+  }
+
+  /**
+   * Asserts that a patient with the given ID can be read back from the server and has the expected
+   * family name.
+   *
+   * @param id the patient ID to read
+   * @param expectedFamily the expected family name
+   */
+  private void assertPatientFamily(final String id, final String expectedFamily) {
+    webTestClient
+        .get()
+        .uri("http://localhost:" + port + "/fhir/Patient/" + id)
+        .header("Accept", "application/fhir+json")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.id")
+        .isEqualTo(id)
+        .jsonPath("$.name[0].family")
+        .isEqualTo(expectedFamily);
+  }
+
+  /**
+   * Creates a patient with the given ID and family name via a PUT, so it exists before a subsequent
+   * operation runs.
+   *
+   * @param id the patient ID to create
+   * @param family the family name to set
+   */
+  private void seedPatient(final String id, final String family) {
+    final String body =
+        """
+        {
+          "resourceType": "Patient",
+          "id": "%s",
+          "name": [{"family": "%s"}]
+        }
+        """
+            .formatted(id, family);
+    webTestClient
+        .put()
+        .uri("http://localhost:" + port + "/fhir/Patient/" + id)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(body)
+        .exchange()
+        .expectStatus()
+        .isOk();
   }
 
   @Test
   void testBatchUpdateMixedResourceTypes() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
     final String requestBody =
@@ -258,7 +317,6 @@ class BatchOperationIT {
 
   @Test
   void testBatchCreateGeneratesUuid() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
     final String requestBody =
@@ -307,7 +365,6 @@ class BatchOperationIT {
 
   @Test
   void testBatchWithUnsupportedMethodReturnsError() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
     final String requestBody =
@@ -349,7 +406,6 @@ class BatchOperationIT {
 
   @Test
   void testBatchWithInvalidUrlFormatReturnsError() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
     final String requestBody =
@@ -391,7 +447,6 @@ class BatchOperationIT {
 
   @Test
   void testBatchWithMismatchedResourceTypeReturnsError() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
     final String requestBody =
@@ -433,7 +488,6 @@ class BatchOperationIT {
 
   @Test
   void testBatchWithEmptyBundleReturnsEmptyResponse() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
     final String requestBody =
