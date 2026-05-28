@@ -31,7 +31,6 @@ import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.text.ParseException;
 import java.util.Optional;
-import org.apache.jena.reasoner.rulesys.Rule.ParserException;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.TimeType;
@@ -97,7 +96,6 @@ public class TimeCollection extends Collection
    *
    * @param literal The FHIRPath representation of the literal
    * @return A new instance of {@link TimeCollection}
-   * @throws ParserException if the literal is malformed
    * @throws ParseException if the literal cannot be parsed to a valid time
    */
   @Nonnull
