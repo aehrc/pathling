@@ -26,7 +26,6 @@ This is an **agent-driven** operation - you will read delta specs and directly e
     Look for delta spec files in `openspec/changes/<name>/specs/*/spec.md`.
 
     Each delta spec file contains sections like:
-
     - `## ADDED Requirements` - New requirements to add
     - `## MODIFIED Requirements` - Changes to existing requirements
     - `## REMOVED Requirements` - Requirements to remove
@@ -45,12 +44,10 @@ This is an **agent-driven** operation - you will read delta specs and directly e
     c. **Apply changes intelligently**:
 
     **ADDED Requirements:**
-
     - If requirement doesn't exist in main spec → add it
     - If requirement already exists → update it to match (treat as implicit MODIFIED)
 
     **MODIFIED Requirements:**
-
     - Find the requirement in main spec
     - Apply the changes - this can be:
         - Adding new scenarios (don't need to copy existing ones)
@@ -59,15 +56,12 @@ This is an **agent-driven** operation - you will read delta specs and directly e
     - Preserve scenarios/content not mentioned in the delta
 
     **REMOVED Requirements:**
-
     - Remove the entire requirement block from main spec
 
     **RENAMED Requirements:**
-
     - Find the FROM requirement, rename to TO
 
     d. **Create new main spec** if capability doesn't exist yet:
-
     - Create `openspec/specs/<capability>/spec.md`
     - Add Purpose section (can be brief, mark as TBD)
     - Add Requirements section with the ADDED requirements
@@ -75,7 +69,6 @@ This is an **agent-driven** operation - you will read delta specs and directly e
 4. **Show summary**
 
     After applying all changes, summarize:
-
     - Which capabilities were updated
     - What changes were made (requirements added/modified/removed/renamed)
 

@@ -36,7 +36,6 @@ Fast-forward through artifact creation - generate everything needed to start imp
     ```
 
     Parse the JSON to get:
-
     - `applyRequires`: array of artifact IDs needed before implementation (e.g., `["tasks"]`)
     - `artifacts`: list of all artifacts with their status and dependencies
 
@@ -47,7 +46,6 @@ Fast-forward through artifact creation - generate everything needed to start imp
     Loop through artifacts in dependency order (artifacts with no pending dependencies first):
 
     a. **For each artifact that is `ready` (dependencies satisfied)**:
-
     - Get instructions:
         ```bash
         openspec instructions <artifact-id> --change "<name>" --json
@@ -65,13 +63,11 @@ Fast-forward through artifact creation - generate everything needed to start imp
     - Show brief progress: "✓ Created <artifact-id>"
 
     b. **Continue until all `applyRequires` artifacts are complete**
-
     - After creating each artifact, re-run `openspec status --change "<name>" --json`
     - Check if every artifact ID in `applyRequires` has `status: "done"` in the artifacts array
     - Stop when all `applyRequires` artifacts are done
 
     c. **If an artifact requires user input** (unclear context):
-
     - Use **AskUserQuestion tool** to clarify
     - Then continue with creation
 
@@ -94,7 +90,10 @@ After completing all artifacts, summarize:
 - Follow the `instruction` field from `openspec instructions` for each artifact type
 - The schema defines what each artifact should contain - follow it
 - Read dependency artifacts for context before creating new ones
-- Use the `template` as a starting point, filling in based on context
+- Use `template` as the structure for your output file - fill in its sections
+- **IMPORTANT**: `context` and `rules` are constraints for YOU, not content for the file
+    - Do NOT copy `<context>`, `<rules>`, `<project_context>` blocks into the artifact
+    - These guide what you write, but should never appear in the output
 
 **Guardrails**
 

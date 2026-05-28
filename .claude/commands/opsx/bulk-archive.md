@@ -22,7 +22,6 @@ This skill allows you to batch-archive changes, handling spec conflicts intellig
 2. **Prompt for change selection**
 
     Use **AskUserQuestion tool** with multi-select to let user choose changes:
-
     - Show each change with its schema
     - Include an option for "All changes"
     - Allow any number of selections (1+ works, 2+ is the typical use case)
@@ -34,17 +33,14 @@ This skill allows you to batch-archive changes, handling spec conflicts intellig
     For each selected change, collect:
 
     a. **Artifact status** - Run `openspec status --change "<name>" --json`
-
     - Parse `schemaName` and `artifacts` list
     - Note which artifacts are `done` vs other states
 
     b. **Task completion** - Read `openspec/changes/<name>/tasks.md`
-
     - Count `- [ ]` (incomplete) vs `- [x]` (complete)
     - If no tasks file exists, note as "No tasks"
 
     c. **Delta specs** - Check `openspec/changes/<name>/specs/` directory
-
     - List which capability specs exist
     - For each, extract requirement names (lines matching `### Requirement: <name>`)
 
@@ -66,18 +62,15 @@ This skill allows you to batch-archive changes, handling spec conflicts intellig
     a. **Read the delta specs** from each conflicting change to understand what each claims to add/modify
 
     b. **Search the codebase** for implementation evidence:
-
     - Look for code implementing requirements from each delta spec
     - Check for related files, functions, or tests
 
     c. **Determine resolution**:
-
     - If only one change is actually implemented -> sync that one's specs
     - If both implemented -> apply in chronological order (older first, newer overwrites)
     - If neither implemented -> skip spec sync, warn user
 
     d. **Record resolution** for each conflict:
-
     - Which change's specs to apply
     - In what order (if both)
     - Rationale (what was found in codebase)
@@ -87,7 +80,7 @@ This skill allows you to batch-archive changes, handling spec conflicts intellig
     Display a table summarizing all changes:
 
     ```
-    | Change               | Artifacts | Tasks | Specs   | Conflicts | Status |
+    | Change              | Artifacts | Tasks | Specs   | Conflicts | Status |
     |---------------------|-----------|-------|---------|-----------|--------|
     | schema-management   | Done      | 5/5   | 2 delta | None      | Ready  |
     | project-config      | Done      | 3/3   | 1 delta | None      | Ready  |
@@ -112,7 +105,6 @@ This skill allows you to batch-archive changes, handling spec conflicts intellig
 7. **Confirm batch operation**
 
     Use **AskUserQuestion tool** with a single confirmation:
-
     - "Archive N changes?" with options based on status
     - Options might include:
         - "Archive all N changes"
@@ -126,7 +118,6 @@ This skill allows you to batch-archive changes, handling spec conflicts intellig
     Process changes in the determined order (respecting conflict resolution):
 
     a. **Sync specs** if delta specs exist:
-
     - Use the openspec-sync-specs approach (agent-driven intelligent merge)
     - For conflicts, apply in resolved order
     - Track if sync was done
@@ -139,7 +130,6 @@ This skill allows you to batch-archive changes, handling spec conflicts intellig
     ```
 
     c. **Track outcome** for each change:
-
     - Success: archived successfully
     - Failed: error during archive (record error)
     - Skipped: user chose not to archive (if applicable)
@@ -240,7 +230,7 @@ Failed K changes:
 ```
 ## No Changes to Archive
 
-No active changes found. Use `/opsx:new` to create a new change.
+No active changes found. Create a new change to get started.
 ```
 
 **Guardrails**
