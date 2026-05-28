@@ -110,7 +110,7 @@ public class SingleResourceEvaluator {
     final Map<String, Collection> newVariables = new HashMap<>(variables);
     newVariables.put(name, value);
     return new SingleResourceEvaluator(
-        resourceResolver, functionRegistry, newVariables, configuration);
+        resourceResolver, functionRegistry, newVariables, configuration, traceCollector);
   }
 
   /**
