@@ -187,6 +187,8 @@ Accept: application/vnd.apache.parquet
 
 The file extension in the manifest URLs reflects the requested output format.
 
+The `file` parameter is validated to ensure that the requested path stays within the job's output directory. Requests that attempt directory traversal using `..`, absolute paths, or path separators are rejected with a 404 response.
+
 ## Python example[​](#python-example "Direct link to Python example")
 
 The following Python script demonstrates the complete export workflow.

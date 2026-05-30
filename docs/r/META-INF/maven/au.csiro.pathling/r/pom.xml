@@ -26,7 +26,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>9.6.0</version>
+    <version>9.7.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>r</artifactId>
@@ -223,6 +223,8 @@
                 <argument>Sys.setenv(CXX11="clang++", CXX11STD="-std=c++11", CXXFLAGS="-std=c++11")</argument>
                 <argument>-e</argument>
                 <argument>install.packages("devtools", type="source")</argument>
+                <argument>-e</argument>
+                <argument>install.packages("remotes", type="source")</argument>
                 <argument>-e</argument>
                 <argument>devtools::install_dev_deps(type="source")</argument>
                 <argument>-e</argument>

@@ -69,7 +69,7 @@ Send a request with `Content-Type: application/json` containing a JSON manifest:
 | `input`       | 1..\*       | An array of input file specifications.                                          |
 | `input.type`  | 1..1        | The FHIR resource type contained in the file.                                   |
 | `input.url`   | 1..1        | The URL where the source file can be retrieved.                                 |
-| `saveMode`    | 0..1        | The import mode. See [Import modes](#import-modes). Defaults to `overwrite`.    |
+| `saveMode`    | 0..1        | The import mode. See [Import modes](#import-modes). Defaults to `merge`.        |
 
 ### FHIR Parameters format[​](#fhir-parameters-format "Direct link to FHIR Parameters format")
 
@@ -127,23 +127,23 @@ Send a request with `Content-Type: application/fhir+json` containing a FHIR Para
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
-| Name                 | Cardinality | Type   | Description                                                                  |
-| -------------------- | ----------- | ------ | ---------------------------------------------------------------------------- |
-| `inputFormat`        | 0..1        | Coding | The format of the source files. Defaults to `application/fhir+ndjson`.       |
-| `saveMode`           | 0..1        | Coding | The import mode. See [Import modes](#import-modes). Defaults to `overwrite`. |
-| `input`              | 1..\*       | -      | Contains parts describing each input file.                                   |
-| `input.resourceType` | 1..1        | Coding | The FHIR resource type contained in the file.                                |
-| `input.url`          | 1..1        | url    | The URL where the source file can be retrieved.                              |
+| Name                 | Cardinality | Type   | Description                                                              |
+| -------------------- | ----------- | ------ | ------------------------------------------------------------------------ |
+| `inputFormat`        | 0..1        | Coding | The format of the source files. Defaults to `application/fhir+ndjson`.   |
+| `saveMode`           | 0..1        | Coding | The import mode. See [Import modes](#import-modes). Defaults to `merge`. |
+| `input`              | 1..\*       | -      | Contains parts describing each input file.                               |
+| `input.resourceType` | 1..1        | Coding | The FHIR resource type contained in the file.                            |
+| `input.url`          | 1..1        | url    | The URL where the source file can be retrieved.                          |
 
 ## Import modes[​](#import-modes "Direct link to Import modes")
 
-| Mode        | Description                                                                                                                                                    |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `overwrite` | All existing resources of the specified type are deleted and replaced with the contents of the source file. This is the default.                               |
-| `merge`     | Existing resources are matched with resources in the source file based on their ID. Existing resources are updated and new resources are added as appropriate. |
-| `append`    | Resources in the source file are added without modifying any existing resources.                                                                               |
-| `ignore`    | If the resource type already exists, the source file is ignored. Otherwise, the resources are added.                                                           |
-| `error`     | If the resource type already exists, an error is raised. Otherwise, the resources are added.                                                                   |
+| Mode        | Description                                                                                                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `merge`     | Existing resources are matched with resources in the source file based on their ID. Existing resources are updated and new resources are added as appropriate. This is the default. |
+| `overwrite` | All existing resources of the specified type are deleted and replaced with the contents of the source file.                                                                         |
+| `append`    | Resources in the source file are added without modifying any existing resources.                                                                                                    |
+| `ignore`    | If the resource type already exists, the source file is ignored. Otherwise, the resources are added.                                                                                |
+| `error`     | If the resource type already exists, an error is raised. Otherwise, the resources are added.                                                                                        |
 
 ## Response[​](#response "Direct link to Response")
 
