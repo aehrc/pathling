@@ -25,20 +25,29 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.config.AsyncConfiguration;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.http.HttpServletResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import org.apache.spark.sql.SparkSession;
+import org.apache.hadoop.conf.Configuration;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -57,6 +66,8 @@ class JobProviderTest {
   private MockHttpServletRequest request;
   private MockHttpServletResponse response;
 
+  @TempDir Path tempDir;
+
   @BeforeEach
   void setUp() {
     jobRegistry = new JobRegistry();
@@ -70,8 +81,9 @@ class JobProviderTest {
     when(asyncConfig.getCacheMaxAge()).thenReturn(60);
     when(config.getAsync()).thenReturn(asyncConfig);
 
-    final SparkSession spark = mock(SparkSession.class);
-    jobProvider = new JobProvider(config, jobRegistry, spark, "/tmp/test");
+    final JobDirectoryFileSystem jobDirectoryFileSystem =
+        new JobDirectoryFileSystem(tempDir.toUri(), new Configuration());
+    jobProvider = new JobProvider(config, jobRegistry, jobDirectoryFileSystem);
     request = new MockHttpServletRequest();
     request.setMethod("GET");
     // Set the servlet path to match the FHIR server mount point.
@@ -278,5 +290,65 @@ class JobProviderTest {
     assertThatThrownBy(() -> jobProvider.job(JOB_ID, request, response))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("Nested error message");
+  }
+
+  @Test
+  void deleteJobFilesRemovesDirectoryFromJobDirectoryFileSystem() throws Exception {
+    // Happy path: deleteJobFiles removes the per-job directory and its contents from the warehouse
+    // file system.
+    final Path jobsDir = tempDir.resolve("jobs").resolve(JOB_ID);
+    Files.createDirectories(jobsDir);
+    Files.writeString(jobsDir.resolve("output.ndjson"), "{}");
+    assertThat(Files.exists(jobsDir)).isTrue();
+
+    jobProvider.deleteJobFiles(JOB_ID);
+
+    assertThat(Files.exists(jobsDir)).isFalse();
+  }
+
+  @Test
+  void deleteJobFilesResolvesFileSystemFromWarehouseUriNotHadoopDefault() throws Exception {
+    // Regression test for issue #2612. The Hadoop default file system is deliberately configured
+    // with a different scheme than the warehouse. The previous implementation resolved the default
+    // file system and then operated on a warehouse path, failing with "Wrong FS" whenever the
+    // warehouse used a non-default scheme such as s3a://. The fix resolves the file system from the
+    // warehouse URI, so deletion succeeds regardless of the configured default.
+    final Configuration hadoopConfig = new Configuration();
+    hadoopConfig.set("fs.defaultFS", "hdfs://nonexistent-host:8020");
+    final JobDirectoryFileSystem jobDirectoryFileSystem =
+        new JobDirectoryFileSystem(tempDir.toUri(), hadoopConfig);
+    final ServerConfiguration config = mock(ServerConfiguration.class);
+    final JobProvider provider = new JobProvider(config, jobRegistry, jobDirectoryFileSystem);
+
+    final Path jobsDir = tempDir.resolve("jobs").resolve(JOB_ID);
+    Files.createDirectories(jobsDir);
+    Files.writeString(jobsDir.resolve("output.ndjson"), "{}");
+    assertThat(Files.exists(jobsDir)).isTrue();
+
+    provider.deleteJobFiles(JOB_ID);
+
+    assertThat(Files.exists(jobsDir)).isFalse();
+  }
+
+  @Test
+  void deleteJobFilesSucceedsWhenDirectoryDoesNotExist() throws Exception {
+    // Deleting a non-existent job directory should not throw; the underlying delete returns false
+    // and is logged as a warning. Capture the JobProvider log to assert the warning is emitted.
+    final Logger logger = (Logger) LoggerFactory.getLogger(JobProvider.class);
+    final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.addAppender(appender);
+    try {
+      jobProvider.deleteJobFiles(JOB_ID);
+    } finally {
+      logger.detachAppender(appender);
+    }
+
+    assertThat(appender.list)
+        .anySatisfy(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.WARN);
+              assertThat(event.getFormattedMessage()).contains("Failed to delete dir");
+            });
   }
 }
