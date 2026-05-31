@@ -29,6 +29,10 @@ import au.csiro.pathling.io.JobDirectoryFileSystem;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.http.HttpServletResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,6 +47,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -328,7 +333,22 @@ class JobProviderTest {
   @Test
   void deleteJobFilesSucceedsWhenDirectoryDoesNotExist() throws Exception {
     // Deleting a non-existent job directory should not throw; the underlying delete returns false
-    // and is logged as a warning.
-    jobProvider.deleteJobFiles(JOB_ID);
+    // and is logged as a warning. Capture the JobProvider log to assert the warning is emitted.
+    final Logger logger = (Logger) LoggerFactory.getLogger(JobProvider.class);
+    final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.addAppender(appender);
+    try {
+      jobProvider.deleteJobFiles(JOB_ID);
+    } finally {
+      logger.detachAppender(appender);
+    }
+
+    assertThat(appender.list)
+        .anySatisfy(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.WARN);
+              assertThat(event.getFormattedMessage()).contains("Failed to delete dir");
+            });
   }
 }
