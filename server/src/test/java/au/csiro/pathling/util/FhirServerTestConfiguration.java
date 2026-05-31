@@ -48,6 +48,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
  * @author Felix Naumann
+ * @author John Grimes
  */
 @TestConfiguration
 @EnableConfigurationProperties
