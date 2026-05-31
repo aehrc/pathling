@@ -289,15 +289,38 @@ class JobProviderTest {
 
   @Test
   void deleteJobFilesRemovesDirectoryFromJobDirectoryFileSystem() throws Exception {
-    // Regression test for issue #2612: deleteJobFiles must resolve the file system from the
-    // warehouse URI rather than the Hadoop default file system, otherwise non-local schemes such
-    // as s3a:// fail with "Wrong FS".
+    // Happy path: deleteJobFiles removes the per-job directory and its contents from the warehouse
+    // file system.
     final Path jobsDir = tempDir.resolve("jobs").resolve(JOB_ID);
     Files.createDirectories(jobsDir);
     Files.writeString(jobsDir.resolve("output.ndjson"), "{}");
     assertThat(Files.exists(jobsDir)).isTrue();
 
     jobProvider.deleteJobFiles(JOB_ID);
+
+    assertThat(Files.exists(jobsDir)).isFalse();
+  }
+
+  @Test
+  void deleteJobFilesResolvesFileSystemFromWarehouseUriNotHadoopDefault() throws Exception {
+    // Regression test for issue #2612. The Hadoop default file system is deliberately configured
+    // with a different scheme than the warehouse. The previous implementation resolved the default
+    // file system and then operated on a warehouse path, failing with "Wrong FS" whenever the
+    // warehouse used a non-default scheme such as s3a://. The fix resolves the file system from the
+    // warehouse URI, so deletion succeeds regardless of the configured default.
+    final Configuration hadoopConfig = new Configuration();
+    hadoopConfig.set("fs.defaultFS", "hdfs://nonexistent-host:8020");
+    final JobDirectoryFileSystem jobDirectoryFileSystem =
+        new JobDirectoryFileSystem(tempDir.toUri(), hadoopConfig);
+    final ServerConfiguration config = mock(ServerConfiguration.class);
+    final JobProvider provider = new JobProvider(config, jobRegistry, jobDirectoryFileSystem);
+
+    final Path jobsDir = tempDir.resolve("jobs").resolve(JOB_ID);
+    Files.createDirectories(jobsDir);
+    Files.writeString(jobsDir.resolve("output.ndjson"), "{}");
+    assertThat(Files.exists(jobsDir)).isTrue();
+
+    provider.deleteJobFiles(JOB_ID);
 
     assertThat(Files.exists(jobsDir)).isFalse();
   }
