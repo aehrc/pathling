@@ -26,7 +26,7 @@
   <parent>
     <artifactId>pathling</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>9.7.0</version>
+    <version>9.7.1-SNAPSHOT</version>
   </parent>
   <artifactId>terminology</artifactId>
   <packaging>jar</packaging>
