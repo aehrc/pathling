@@ -26,7 +26,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>9.7.1-SNAPSHOT</version>
+    <version>9.7.1</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>site</artifactId>
