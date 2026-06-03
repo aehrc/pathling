@@ -75,29 +75,21 @@ functionality for use by applications and implements:
 
 - **SQL on FHIR**:
   [Run](https://pathling.csiro.au/docs/server/operations/view-run) view
-  definitions to
-  preview tabular projections of FHIR data,
+  definitions to preview tabular projections of FHIR data,
   then [export](https://pathling.csiro.au/docs/server/operations/view-export) to
   NDJSON, CSV, or Parquet
-- **Bulk Data Access
-  **: [Export data](https://pathling.csiro.au/docs/server/operations/export) at
-  system,
-  patient, or group level using the FHIR Bulk Data Access specification
-- **Bulk Import
-  **: [Import data](https://pathling.csiro.au/docs/server/operations/import)
-  from NDJSON,
-  Parquet, or Delta Lake sources,
+- **Bulk Data Access**: [Export data](https://pathling.csiro.au/docs/server/operations/export) at
+  system, patient, or group level using the FHIR Bulk Data Access specification
+- **Bulk Import**: [Import data](https://pathling.csiro.au/docs/server/operations/import)
+  from NDJSON, Parquet, or Delta Lake sources,
   or [sync with another FHIR server](https://pathling.csiro.au/docs/server/deployment/synchronization)
   that supports bulk export
-- **[Bulk Submit](https://pathling.csiro.au/docs/server/operations/bulk-submit)
-  **: An experimental
+- **[Bulk Submit](https://pathling.csiro.au/docs/server/operations/bulk-submit)**: An experimental
   implementation of the new Bulk Submit proposal
-- **[FHIRPath Search](https://pathling.csiro.au/docs/server/operations/search)
-  **: Query resources using
+- **[FHIRPath Search](https://pathling.csiro.au/docs/server/operations/search)**: Query resources using
   FHIRPath expressions
 - **[CRUD Operations](https://pathling.csiro.au/docs/server/operations/crud)**:
-  Create, read, update, and
-  delete resources
+  Create, read, update, and delete resources
 
 The server is distributed as a Docker image. It
 supports [authentication](https://pathling.csiro.au/docs/server/authorization)
