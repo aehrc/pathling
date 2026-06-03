@@ -61,6 +61,16 @@ jobs:
           spark: "true"
           sonar-cache: "true"
 
+      # A pre-release must be cut from a SNAPSHOT version, never a release version.
+      - name: Validate core version is a snapshot version
+        run: |
+          VERSION=$(mvn --batch-mode --quiet help:evaluate -Dexpression=project.version -DforceStdout)
+          echo "Core version: ${VERSION}"
+          if [[ "$VERSION" != *-SNAPSHOT ]]; then
+            echo "::error::Core version ${VERSION} is not a SNAPSHOT version, but a SNAPSHOT version is required."
+            exit 1
+          fi
+
       - name: Install GPG key
         env:
           GPG_KEY: ${{ secrets.GPG_KEY }}

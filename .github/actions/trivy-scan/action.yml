@@ -52,12 +52,14 @@ runs:
       id: effective-pom
       if: inputs.effective-pom == 'true'
       shell: bash
+      env:
+        SCAN_REF: ${{ inputs.scan-ref }}
       run: |
         set -euo pipefail
-        out_dir="${RUNNER_TEMP}/trivy-effective-pom/${{ inputs.scan-ref }}"
+        out_dir="${RUNNER_TEMP}/trivy-effective-pom/${SCAN_REF}"
         mkdir -p "${out_dir}"
         mvn --batch-mode --quiet \
-          -f "${{ inputs.scan-ref }}/pom.xml" \
+          -f "${SCAN_REF}/pom.xml" \
           help:effective-pom \
           -Doutput="${out_dir}/pom.xml"
         echo "scan-ref=${out_dir}" >> "$GITHUB_OUTPUT"
