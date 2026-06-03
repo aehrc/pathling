@@ -35,10 +35,12 @@ runs:
         key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
         restore-keys: r-packages-${{ runner.os }}-
 
-    # TinyTeX and libcurl are required for building the R package documentation.
-    - name: Install TinyTeX and libcurl
+    # TinyTeX provides the LaTeX toolchain required for building the R package
+    # documentation.
+    - name: Set up TinyTeX
+      uses: r-lib/actions/setup-tinytex@v2
+
+    # libcurl is required for building the R package documentation.
+    - name: Install libcurl
       shell: bash
-      run: |
-        wget --max-redirect=0 -qO- "https://tinytex.yihui.org/install-bin-unix.sh" | sh
-        echo "$HOME/bin" >> $GITHUB_PATH
-        sudo apt-get install -y libcurl4-openssl-dev
+      run: sudo apt-get install -y libcurl4-openssl-dev
