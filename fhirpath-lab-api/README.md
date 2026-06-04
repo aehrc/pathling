@@ -105,7 +105,7 @@ Response (FHIR Parameters):
         {
             "name": "parameters",
             "part": [
-                { "name": "evaluator", "valueString": "Pathling 9.3.1 (R4)" },
+                { "name": "evaluator", "valueString": "Pathling 9.7.1 (R4)" },
                 { "name": "expression", "valueString": "name.family" },
                 { "name": "expectedReturnType", "valueString": "string" }
             ]
