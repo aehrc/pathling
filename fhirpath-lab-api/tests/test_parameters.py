@@ -269,7 +269,7 @@ def test_build_response_with_traces():
         },
     ]
     response = build_response_parameters(
-        evaluator_string="Pathling 9.6.0 (R4)",
+        evaluator_string="Pathling 9.7.1 (R4)",
         expression="name.given.trace('myLabel')",
         resource={"resourceType": "Patient", "id": "example"},
         expected_return_type="string",
@@ -295,7 +295,7 @@ def test_build_response_with_traces():
 def test_build_response_with_empty_traces():
     """No trace parts appear when the traces list is empty."""
     response = build_response_parameters(
-        evaluator_string="Pathling 9.6.0 (R4)",
+        evaluator_string="Pathling 9.7.1 (R4)",
         expression="active",
         resource={"resourceType": "Patient", "id": "example"},
         expected_return_type="boolean",
@@ -319,7 +319,7 @@ def test_build_response_with_complex_trace_values():
         },
     ]
     response = build_response_parameters(
-        evaluator_string="Pathling 9.6.0 (R4)",
+        evaluator_string="Pathling 9.7.1 (R4)",
         expression="name.trace('names')",
         resource={"resourceType": "Patient", "id": "example"},
         expected_return_type="HumanName",
@@ -346,7 +346,7 @@ def test_build_response_with_complex_trace_values():
 def test_build_response_grouped_empty():
     """A zero-element grouped response emits only the parameters part."""
     response = build_grouped_response_parameters(
-        evaluator_string="Pathling 9.6.0 (R4)",
+        evaluator_string="Pathling 9.7.1 (R4)",
         expression="given.first()",
         resource={"resourceType": "Patient", "id": "example"},
         expected_return_type="",
@@ -361,7 +361,7 @@ def test_build_response_grouped_empty():
 def test_build_response_grouped_single_group():
     """A single-group grouped response emits one labelled result part."""
     response = build_grouped_response_parameters(
-        evaluator_string="Pathling 9.6.0 (R4)",
+        evaluator_string="Pathling 9.7.1 (R4)",
         expression="given.first()",
         resource={"resourceType": "Patient", "id": "example"},
         expected_return_type="string",
@@ -394,7 +394,7 @@ def test_build_response_grouped_multiple_groups():
         ),
     ]
     response = build_grouped_response_parameters(
-        evaluator_string="Pathling 9.6.0 (R4)",
+        evaluator_string="Pathling 9.7.1 (R4)",
         expression="given.first().trace('trc')",
         resource={"resourceType": "Patient", "id": "example"},
         expected_return_type="string",
@@ -435,7 +435,7 @@ def test_build_response_grouped_complex_trace_value():
         ),
     ]
     response = build_grouped_response_parameters(
-        evaluator_string="Pathling 9.6.0 (R4)",
+        evaluator_string="Pathling 9.7.1 (R4)",
         expression="trace('trc')",
         resource={"resourceType": "Patient", "id": "example"},
         expected_return_type="HumanName",
@@ -455,7 +455,7 @@ def test_build_response_grouped_complex_trace_value():
 def test_build_response_grouped_preserves_metadata():
     """The parameters metadata part is present and correct in grouped responses."""
     response = build_grouped_response_parameters(
-        evaluator_string="Pathling 9.6.0 (R4)",
+        evaluator_string="Pathling 9.7.1 (R4)",
         expression="given.first()",
         resource={"resourceType": "Patient", "id": "example"},
         expected_return_type="string",
@@ -468,7 +468,7 @@ def test_build_response_grouped_preserves_metadata():
     params_part = response["parameter"][0]
     assert params_part["name"] == "parameters"
     names = {p["name"]: p for p in params_part["part"]}
-    assert names["evaluator"]["valueString"] == "Pathling 9.6.0 (R4)"
+    assert names["evaluator"]["valueString"] == "Pathling 9.7.1 (R4)"
     assert names["expression"]["valueString"] == "given.first()"
     assert names["context"]["valueString"] == "name"
     assert names["expectedReturnType"]["valueString"] == "string"
@@ -478,7 +478,7 @@ def test_build_response_grouped_empty_group_still_emitted():
     """A group with no results and no traces still produces a labelled result
     part with an empty part list, preserving index continuity."""
     response = build_grouped_response_parameters(
-        evaluator_string="Pathling 9.6.0 (R4)",
+        evaluator_string="Pathling 9.7.1 (R4)",
         expression="given.first()",
         resource={"resourceType": "Patient", "id": "example"},
         expected_return_type="string",

@@ -164,7 +164,7 @@ patient with two names:
         {
             "name": "parameters",
             "part": [
-                { "name": "evaluator", "valueString": "Pathling 9.6.0 (R4)" },
+                { "name": "evaluator", "valueString": "Pathling 9.7.1 (R4)" },
                 { "name": "expression", "valueString": "given.first()" },
                 { "name": "context", "valueString": "name" },
                 { "name": "expectedReturnType", "valueString": "string" }
