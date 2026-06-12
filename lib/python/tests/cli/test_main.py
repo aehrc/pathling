@@ -38,6 +38,8 @@ ALL_COMMANDS = [
     "display",
     "property-of",
     "designation",
+    "run",
+    "console",
 ]
 
 
@@ -74,17 +76,19 @@ def test_help_mentions_config_file(runner):
 # ========== Deferred imports ==========
 
 
-def test_importing_main_does_not_import_pyspark():
-    """Importing pathling.cli.main must not import pyspark.
+def test_importing_main_does_not_import_heavy_modules():
+    """Importing pathling.cli.main must import neither pyspark nor IPython.
 
     This is checked in a fresh subprocess because the test process has already
-    imported pyspark via the shared Spark fixture.
+    imported the heavy modules via the shared fixtures.
     """
     code = (
         "import sys\n"
         "import pathling.cli.main\n"
         "assert 'pyspark' not in sys.modules, "
         "'pyspark was imported by pathling.cli.main'\n"
+        "assert 'IPython' not in sys.modules, "
+        "'IPython was imported by pathling.cli.main'\n"
         "print('ok')\n"
     )
     result = subprocess.run(

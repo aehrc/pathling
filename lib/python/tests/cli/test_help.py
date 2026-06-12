@@ -30,8 +30,8 @@ from pathling.cli.main import cli
 COMMAND_NAMES = sorted(cli.commands.keys())
 
 
-def test_all_eleven_commands_registered():
-    """The eleven commands from the contract are all registered."""
+def test_all_commands_registered():
+    """The commands from the contracts are all registered."""
     assert COMMAND_NAMES == sorted(
         [
             "convert",
@@ -45,6 +45,8 @@ def test_all_eleven_commands_registered():
             "display",
             "property-of",
             "designation",
+            "run",
+            "console",
         ]
     )
 
@@ -58,6 +60,28 @@ def test_command_help_has_example(runner, command_name):
     assert "example" in result.output.lower()
     # The example always invokes the tool by name.
     assert "pathling" in result.output
+
+
+def test_run_help_mentions_sources_and_arguments(runner):
+    """`run --help` documents the code sources and argument passing."""
+    result = runner.invoke(cli, ["run", "--help"])
+
+    assert result.exit_code == 0
+    assert "SCRIPT" in result.output
+    assert "-c" in result.output
+    assert "spark" in result.output
+    assert "pathling" in result.output
+    assert "sys.argv" in result.output
+
+
+def test_console_help_mentions_variables(runner):
+    """`console --help` documents the in-scope variables and how to exit."""
+    result = runner.invoke(cli, ["console", "--help"])
+
+    assert result.exit_code == 0
+    assert "spark" in result.output
+    assert "pathling" in result.output
+    assert "exit" in result.output.lower()
 
 
 def test_root_help_describes_config_file(runner):

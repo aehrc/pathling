@@ -34,9 +34,11 @@ import click
 from rich.console import Console
 
 from pathling._version import __version__
+from pathling.cli import console as console_module
 from pathling.cli import convert as convert_module
 from pathling.cli import export as export_module
 from pathling.cli import fhirpath as fhirpath_module
+from pathling.cli import run as run_module
 from pathling.cli import terminology as terminology_module
 from pathling.cli import view as view_module
 from pathling.cli.config import CliConfig, resolve_config
@@ -143,8 +145,9 @@ def cli(
     """Pathling: a command line interface for FHIR analytics.
 
     Run a SQL on FHIR view, evaluate FHIRPath, convert FHIR data between
-    formats, bulk export from a FHIR server, or run terminology operations
-    over a dataset of codes. Configuration may be set with global flags or a
+    formats, bulk export from a FHIR server, run terminology operations
+    over a dataset of codes, or script and explore interactively with the
+    run and console commands. Configuration may be set with global flags or a
     TOML config file at $XDG_CONFIG_HOME/pathling/config.toml (flags take
     precedence).
     """
@@ -168,6 +171,10 @@ cli.add_command(convert_module.convert)
 cli.add_command(view_module.view)
 cli.add_command(fhirpath_module.fhirpath)
 cli.add_command(export_module.export)
+
+# Register the scripting commands.
+cli.add_command(run_module.run)
+cli.add_command(console_module.console)
 
 # Register the terminology commands.
 for _terminology_command in terminology_module.TERMINOLOGY_COMMANDS:

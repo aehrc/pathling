@@ -22,8 +22,9 @@ pip install pathling
 
 The package ships a `pathling` console script that surfaces the library's
 functionality - data conversion, SQL on FHIR views, FHIRPath evaluation, bulk
-export, and terminology operations - through scriptable commands. It requires a
-supported Java runtime, as does the library itself.
+export, terminology operations, Python scripting (`run`), and an interactive
+console (`console`) - through scriptable commands. It requires a supported
+Java runtime, as does the library itself.
 
 The easiest way to run it is with [uv](https://docs.astral.sh/uv/):
 
@@ -42,6 +43,16 @@ view:
 ```bash
 pathling convert data/ --to parquet -o warehouse/
 pathling view data/ --view patients.json --format csv
+```
+
+The `run` and `console` commands execute Python code (a script, stdin, or
+`-c CODE`) or open an interactive IPython session, with `spark` and `pathling`
+variables already configured and in scope:
+
+```bash
+pathling run my_script.py
+pathling run -c "print(spark.version)"
+pathling console
 ```
 
 See the [command line interface documentation](https://pathling.csiro.au/docs/libraries/cli)

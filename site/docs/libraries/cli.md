@@ -1,6 +1,6 @@
 ---
 sidebar_position: 7
-description: The Pathling command line interface surfaces the Python library's functionality - data conversion, SQL on FHIR views, FHIRPath evaluation, bulk export, and terminology operations - through scriptable commands.
+description: The Pathling command line interface surfaces the Python library's functionality - data conversion, SQL on FHIR views, FHIRPath evaluation, bulk export, terminology operations, Python scripting, and an interactive console - through scriptable commands.
 ---
 
 # Command line interface
@@ -140,6 +140,57 @@ SMART backend services authentication is configured with `--client-id`,
 `--client-secret`. Secret values accept a literal, a `@/path/to/file` reference,
 or fall back to the `PATHLING_PRIVATE_KEY_JWK` / `PATHLING_CLIENT_SECRET`
 environment variables so that they need not appear in shell history.
+
+### run
+
+Execute Python code with the Pathling environment ready. The code runs with
+two variables already in scope: `spark` (the Spark session) and `pathling`
+(the configured Pathling context), built with the same configuration
+resolution as every other command.
+
+```bash
+# Run a script file.
+pathling run my_script.py
+
+# Run an inline one-liner.
+pathling run -c "print(spark.version)"
+
+# Pipe a script through stdin.
+cat job.py | pathling run -
+
+# Pass arguments through to the script.
+pathling run etl.py --input data.ndjson out/
+```
+
+The code source is exactly one of a script path, `-` (standard input), or
+`-c CODE`; supplying both a script and `-c`, or neither, is a usage error
+(exit code 2), reported before the Spark session is started.
+
+Execution follows Python interpreter semantics: the module runs as
+`__main__`; for file scripts `__file__` is set and the script's directory is
+prepended to `sys.path`; trailing arguments arrive in `sys.argv` with
+`sys.argv[0]` being the script path, `-c`, or `-` as the interpreter would
+set it. Dash-prefixed arguments pass through to the script rather than being
+parsed by the CLI.
+
+The exit code is `0` on success and `1` for an uncaught exception or syntax
+error, with a standard Python traceback (no CLI frames) printed to standard
+error. `sys.exit(n)` exits with `n` and no traceback. The script's stdout
+passes through unmodified.
+
+### console
+
+Open an interactive [IPython](https://ipython.org/) console with the same
+`spark` and `pathling` variables in scope.
+
+```bash
+pathling console
+```
+
+After the startup progress indicator, a banner identifies the Pathling
+version and the variables in scope. Errors evaluated at the prompt show
+normal tracebacks without ending the session; leave with `exit` or Ctrl-D
+(exit code 0).
 
 ### Terminology commands
 
