@@ -1,0 +1,184 @@
+---
+sidebar_position: 7
+description: The Pathling command line interface surfaces the Python library's functionality - data conversion, SQL on FHIR views, FHIRPath evaluation, bulk export, and terminology operations - through scriptable commands.
+---
+
+# Command line interface
+
+The `pathling` command line interface surfaces the functionality of the
+Pathling Python library through concise, scriptable commands. It is shipped as
+a console script within the `pathling` Python package, so its version always
+matches the library version.
+
+Each invocation starts a fresh Spark session. The cold start (typically 10-30
+seconds) is communicated through a progress indicator on standard error. Data
+is written to standard output, while progress, status, and errors are written
+to standard error, so that piped output stays clean.
+
+## Installation
+
+The CLI is part of the `pathling` package and requires a supported Java runtime
+to be present (as already required by the underlying PySpark dependency). The
+CLI reports the absence of Java clearly but does not install it.
+
+The simplest way to run it is with [uv](https://docs.astral.sh/uv/):
+
+```bash
+# Run without installing.
+uvx pathling --version
+
+# Or install the tool so that `pathling` is on your PATH.
+uv tool install pathling
+pathling --help
+```
+
+## Global options
+
+The following options are accepted before any command and may also be supplied
+through a configuration file.
+
+| Option                                                                      | Config key           | Default                                 |
+| --------------------------------------------------------------------------- | -------------------- | --------------------------------------- |
+| `--tx-server`                                                               | `tx-server`          | the library default terminology server  |
+| `--tx-client-id`, `--tx-client-secret`, `--tx-token-endpoint`, `--tx-scope` | `[terminology-auth]` | none                                    |
+| `--fhir-version`                                                            | `fhir-version`       | `R4`                                    |
+| `--config PATH`                                                             | -                    | `$XDG_CONFIG_HOME/pathling/config.toml` |
+| `--verbose`                                                                 | -                    | off                                     |
+
+Values are resolved with the precedence flag > config file > built-in default.
+The `--verbose` flag re-enables Spark and JVM logging and prints full stack
+traces on error.
+
+Exit codes are `0` for success, `1` for a runtime failure, and `2` for a usage
+error.
+
+## Data source inputs
+
+Commands that read FHIR data take a positional `SOURCE` path. The format is
+auto-detected from the path contents (ndjson, FHIR Bundles, Parquet, or Delta)
+and can be set explicitly with `--from ndjson|bundles|parquet|delta`. If the
+format cannot be determined, the error lists what was found and shows how to
+specify `--from`.
+
+## Output options
+
+Tabular results (from `view`, `fhirpath`, and the terminology commands) render
+as a human-readable table by default.
+
+| Option        | Behaviour                                                                      |
+| ------------- | ------------------------------------------------------------------------------ |
+| `--format`    | `table` (default), `csv`, `json`, `ndjson`; with `-o` also `parquet`, `delta`. |
+| `-o PATH`     | Write to a file instead of stdout; the format is inferred from the extension.  |
+| `--limit N`   | Row cap for stdout table output (default 1000).                                |
+| `--overwrite` | Allow replacing an existing output path.                                       |
+
+For scripted use, prefer `--format csv`, `--format json`, or `--format ndjson`,
+which stream the full result.
+
+## Commands
+
+### convert
+
+Convert FHIR data between formats.
+
+```bash
+pathling convert data/ --to parquet -o warehouse/
+pathling convert bundles/ --from bundles --to ndjson -o out/
+```
+
+The `--mode overwrite|error|append|merge` option controls the save mode for
+Parquet and Delta output (`merge` is valid for Delta only). A summary of the
+resource types and row counts written is printed at the end.
+
+### view
+
+Run a SQL on FHIR ViewDefinition against a data source.
+
+```bash
+pathling view data/ --view patients.json
+pathling view data/ --view patients.json --format csv
+pathling view data/ --view-json '{"resource":"Patient", ...}' -o results.parquet
+```
+
+The view is supplied as a file (`--view`) or inline JSON (`--view-json`). A
+`--filter` FHIR search expression restricts the resources processed.
+
+### fhirpath
+
+Evaluate a FHIRPath expression.
+
+```bash
+# Data source mode: one row per resource with its id and result.
+pathling fhirpath data/ -t Patient -e 'name.family'
+
+# Single resource mode: the typed result values.
+pathling fhirpath patient.json -e 'name.given.first()'
+```
+
+In data source mode, `-t/--type` selects the subject resource type and
+`--filter` restricts the resources processed. In single resource mode (when
+`SOURCE` is a single FHIR resource JSON file), `--context` and repeatable
+`--var name=value` options are supported.
+
+### export
+
+Bulk export data from a FHIR server.
+
+```bash
+pathling export https://server/fhir -o out/ --type Patient
+pathling export https://server/fhir -o out/ --group 123
+```
+
+A system-level export runs by default; `--group ID` and repeatable
+`--patient REF` select group-level and patient-level exports (the two are
+mutually exclusive). The export supports `--type`, `--elements`, `--since`,
+`--type-filter`, `--include-associated-data`, `--timeout`, and
+`--max-downloads`.
+
+SMART backend services authentication is configured with `--client-id`,
+`--token-endpoint`, `--scope`, and exactly one of `--private-key-jwk` or
+`--client-secret`. Secret values accept a literal, a `@/path/to/file` reference,
+or fall back to the `PATHLING_PRIVATE_KEY_JWK` / `PATHLING_CLIENT_SECRET`
+environment variables so that they need not appear in shell history.
+
+### Terminology commands
+
+The `member-of`, `translate`, `subsumes`, `subsumed-by`, `display`,
+`property-of`, and `designation` commands read a tabular dataset (CSV or
+Parquet), build codings from a `--code-column` plus either a fixed `--system`
+URI or a `--system-column`, and append the operation's result column(s).
+
+```bash
+pathling member-of codes.csv --code-column code \
+  --system http://snomed.info/sct \
+  --value-set 'http://snomed.info/sct?fhir_vs=refset/...'
+
+pathling translate codes.csv --code-column code \
+  --system http://snomed.info/sct --concept-map '<uri>'
+```
+
+The default result column names (`member_of`, `translated_system` and
+`translated_code`, `subsumes`, `subsumed_by`, `display`, `property`,
+`designation`) can be overridden with `--result-column`.
+
+## Configuration file
+
+Defaults for the global options can be set in a TOML file at
+`${XDG_CONFIG_HOME:-~/.config}/pathling/config.toml`:
+
+```toml
+tx-server = "https://tx.example.org/fhir"
+fhir-version = "R4"
+
+[terminology-auth]
+client-id = "my-client"
+client-secret = "..."
+token-endpoint = "https://auth.example.org/token"
+
+[bulk-auth]
+client-id = "bulk-client"
+token-endpoint = "https://auth.example.org/token"
+```
+
+Command-line flags always take precedence over the config file. Unknown keys
+produce a warning that names the key and lists the valid keys.

@@ -38,10 +38,16 @@ classifiers = [
 dependencies = [
     "pyspark>=4.0.0,<4.1.0",
     "deprecated>=1.2.13",
+    "click>=8.1.7",
+    "rich>=13.7.0",
+    "tomli>=2.0.1; python_version < \"3.11\"",
 ]
 
 [project.urls]
 Homepage = "https://github.com/aehrc/pathling"
+
+[project.scripts]
+pathling = "pathling.cli.main:cli"
 
 [dependency-groups]
 dev = [

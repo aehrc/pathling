@@ -1,5 +1,4 @@
-Python API for Pathling
-=======================
+# Python API for Pathling
 
 This is the Python API for [Pathling](https://pathling.csiro.au). It provides a
 set of tools that aid the use of FHIR terminology services and FHIR data within
@@ -16,8 +15,37 @@ Prerequisites:
 To install, run this command:
 
 ```bash
-pip install pathling  
+pip install pathling
 ```
+
+## Command line interface
+
+The package ships a `pathling` console script that surfaces the library's
+functionality - data conversion, SQL on FHIR views, FHIRPath evaluation, bulk
+export, and terminology operations - through scriptable commands. It requires a
+supported Java runtime, as does the library itself.
+
+The easiest way to run it is with [uv](https://docs.astral.sh/uv/):
+
+```bash
+# Run without installing.
+uvx pathling --version
+
+# Or install it as a tool.
+uv tool install pathling
+pathling --help
+```
+
+For example, to convert a directory of NDJSON to Parquet, or run a SQL on FHIR
+view:
+
+```bash
+pathling convert data/ --to parquet -o warehouse/
+pathling view data/ --view patients.json --format csv
+```
+
+See the [command line interface documentation](https://pathling.csiro.au/docs/libraries/cli)
+for the full list of commands and options.
 
 ## Encoders
 
@@ -109,7 +137,7 @@ display(result)
 The result of this query would look something like this:
 
 | patient_id | street                     | use  | city       | zip   |
-|------------|----------------------------|------|------------|-------|
+| ---------- | -------------------------- | ---- | ---------- | ----- |
 | 1          | 398 Kautzer Walk Suite 62  | home | Barnstable | 02675 |
 | 1          | 186 Nitzsche Forge         | work | Revere     | 02151 |
 | 2          | 1087 Quitzon Club          | home | Plymouth   | NULL  |
@@ -152,7 +180,7 @@ result.select('CODE', 'DESCRIPTION', 'VIRAL_INFECTION').show()
 Results in:
 
 | CODE      | DESCRIPTION               | VIRAL_INFECTION |
-|-----------|---------------------------|-----------------|
+| --------- | ------------------------- | --------------- |
 | 65363002  | Otitis media              | false           |
 | 16114001  | Fracture of ankle         | false           |
 | 444814009 | Viral sinusitis           | true            |
@@ -177,7 +205,7 @@ result.select('CODE', 'DESCRIPTION', 'READ_CODE').show()
 Results in:
 
 | CODE      | DESCRIPTION               | READ_CODE |
-|-----------|---------------------------|-----------|
+| --------- | ------------------------- | --------- |
 | 65363002  | Otitis media              | X00ik     |
 | 16114001  | Fracture of ankle         | S34..     |
 | 444814009 | Viral sinusitis           | XUjp0     |
@@ -213,7 +241,7 @@ result.select('CODE', 'DESCRIPTION', 'IS_ENT').show()
 Results in:
 
 | CODE      | DESCRIPTION       | IS_ENT |
-|-----------|-------------------|--------|
+| --------- | ----------------- | ------ |
 | 65363002  | Otitis media      | true   |
 | 16114001  | Fracture of ankle | false  |
 | 444814009 | Viral sinusitis   | true   |
@@ -245,7 +273,7 @@ with_displays = exploded_parents.withColumn(
 Results in:
 
 | CODE      | DESCRIPTION       | PARENT    | PARENT_DISPLAY                          |
-|-----------|-------------------|-----------|-----------------------------------------|
+| --------- | ----------------- | --------- | --------------------------------------- |
 | 65363002  | Otitis media      | 43275000  | Otitis                                  |
 | 65363002  | Otitis media      | 68996008  | Disorder of middle ear                  |
 | 16114001  | Fracture of ankle | 125603006 | Injury of ankle                         |
@@ -279,7 +307,7 @@ exploded_synonyms = synonyms.selectExpr(
 Results in:
 
 | CODE      | DESCRIPTION                          | SYNONYM                                    |
-|-----------|--------------------------------------|--------------------------------------------|
+| --------- | ------------------------------------ | ------------------------------------------ |
 | 65363002  | Otitis media                         | OM - Otitis media                          |
 | 16114001  | Fracture of ankle                    | Ankle fracture                             |
 | 16114001  | Fracture of ankle                    | Fracture of distal end of tibia and fibula |
@@ -322,8 +350,8 @@ Maven package. Once the cluster is restarted, the libraries should be available
 for import and use within all notebooks.
 
 By default, Databricks uses Java 8 within its clusters, while Pathling requires
-Java 21. To enable Java 21 support within your cluster, navigate to __Advanced
-Options > Spark > Environment Variables__ and add the following:
+Java 21. To enable Java 21 support within your cluster, navigate to **Advanced
+Options > Spark > Environment Variables** and add the following:
 
 ```bash
 JNAME=zulu21-ca-amd64

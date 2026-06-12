@@ -15,44 +15,91 @@
 # limitations under the License.
 #
 
-from .coding import Coding
-from .context import PathlingContext, StorageType
-from .core import Expression, VariableExpression
-from .datasource import DataSource, DataSources
-from .fhir import MimeType, Version
-from .functions import to_coding, to_ecl_value_set, to_snomed_coding
-from .udfs import (
-    Equivalence,
-    PropertyType,
-    designation,
-    display,
-    member_of,
-    property_of,
-    subsumed_by,
-    subsumes,
-    translate,
-)
+"""Python API for Pathling.
 
-__all__ = [
-    "PathlingContext",
-    "StorageType",
-    "MimeType",
-    "Version",
-    "Coding",
-    "member_of",
-    "translate",
-    "subsumes",
-    "subsumed_by",
-    "property_of",
-    "display",
-    "designation",
-    "PropertyType",
-    "Equivalence",
-    "to_coding",
-    "to_snomed_coding",
-    "to_ecl_value_set",
-    "Expression",
-    "VariableExpression",
-    "DataSources",
-    "DataSource",
-]
+Public names are exposed lazily (PEP 562) so that importing the ``pathling``
+package itself does not pull in PySpark and the JVM-backed submodules. The
+heavy imports happen only when a public name is first accessed, which keeps the
+command line interface's ``--help`` and ``--version`` paths fast.
+
+Author: John Grimes.
+"""
+
+# The TYPE_CHECKING imports below exist only so that type checkers and IDEs can
+# resolve the lazily-exported public names; they are intentionally unused at
+# runtime, so unused-import checks are disabled for this re-export shim.
+# ruff: noqa: F401
+
+import importlib
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .coding import Coding
+    from .context import PathlingContext, StorageType
+    from .core import Expression, VariableExpression
+    from .datasource import DataSource, DataSources
+    from .fhir import MimeType, Version
+    from .functions import to_coding, to_ecl_value_set, to_snomed_coding
+    from .udfs import (
+        Equivalence,
+        PropertyType,
+        designation,
+        display,
+        member_of,
+        property_of,
+        subsumed_by,
+        subsumes,
+        translate,
+    )
+
+# Maps each lazily-exported public name to the submodule that defines it.
+_LAZY_EXPORTS = {
+    "Coding": "pathling.coding",
+    "PathlingContext": "pathling.context",
+    "StorageType": "pathling.context",
+    "Expression": "pathling.core",
+    "VariableExpression": "pathling.core",
+    "DataSource": "pathling.datasource",
+    "DataSources": "pathling.datasource",
+    "MimeType": "pathling.fhir",
+    "Version": "pathling.fhir",
+    "to_coding": "pathling.functions",
+    "to_snomed_coding": "pathling.functions",
+    "to_ecl_value_set": "pathling.functions",
+    "member_of": "pathling.udfs",
+    "translate": "pathling.udfs",
+    "subsumes": "pathling.udfs",
+    "subsumed_by": "pathling.udfs",
+    "property_of": "pathling.udfs",
+    "display": "pathling.udfs",
+    "designation": "pathling.udfs",
+    "PropertyType": "pathling.udfs",
+    "Equivalence": "pathling.udfs",
+}
+
+__all__ = list(_LAZY_EXPORTS)
+
+
+def __getattr__(name: str) -> Any:
+    """Resolves a public name by importing its submodule on first access.
+
+    :param name: the attribute being accessed on the ``pathling`` package.
+    :return: the resolved attribute value.
+    :raises AttributeError: if the name is not a known public export.
+    """
+    module_name = _LAZY_EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module = importlib.import_module(module_name)
+    value = getattr(module, name)
+    # Cache on the package so subsequent lookups bypass this hook.
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list:
+    """Returns the public names of the package for introspection.
+
+    :return: the sorted list of public export names.
+    """
+    return sorted(__all__)
