@@ -33,7 +33,7 @@ from pathling.cli import session
 from pathling.cli.errors import EXIT_USAGE, CliError
 from pathling.cli.io import FROM_CHOICES, read_source, resolve_source
 from pathling.cli.render import (
-    OutputFormat,
+    output_options,
     progress_status,
     resolve_output,
     write_output,
@@ -101,26 +101,7 @@ def _load_view(view_path, view_json) -> tuple:
 @click.option(
     "--filter", "filter_expr", help="FHIR search expression to restrict rows."
 )
-@click.option(
-    "--format",
-    "output_format",
-    type=click.Choice(
-        [
-            OutputFormat.TABLE,
-            OutputFormat.CSV,
-            OutputFormat.JSON,
-            OutputFormat.NDJSON,
-            OutputFormat.PARQUET,
-            OutputFormat.DELTA,
-        ]
-    ),
-    help="Output format (default: table; inferred from -o extension).",
-)
-@click.option("-o", "--output", "output", help="Write results to this path.")
-@click.option(
-    "--limit", default=1000, show_default=True, help="Row cap for table output."
-)
-@click.option("--overwrite", is_flag=True, help="Replace an existing output path.")
+@output_options
 @click.pass_obj
 def view(
     obj,

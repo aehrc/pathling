@@ -34,6 +34,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Sequence
 
+import click
 from rich.console import Console
 from rich.table import Table
 
@@ -65,6 +66,53 @@ FILE_FORMATS = (
 
 # Formats that require ``-o`` because they cannot render to stdout.
 PATH_REQUIRED_FORMATS = (OutputFormat.PARQUET, OutputFormat.DELTA)
+
+# The complete set of output formats accepted by the ``--format`` option, shared
+# by every command that produces tabular output.
+OUTPUT_FORMAT_CHOICE = click.Choice(
+    [
+        OutputFormat.TABLE,
+        OutputFormat.CSV,
+        OutputFormat.JSON,
+        OutputFormat.NDJSON,
+        OutputFormat.PARQUET,
+        OutputFormat.DELTA,
+    ]
+)
+
+
+def output_options(func):
+    """Applies the shared ``--format``/``-o``/``--limit``/``--overwrite`` options.
+
+    These four options form the common output surface of every command that
+    emits a result DataFrame, and are resolved together by
+    :func:`resolve_output` and consumed by :func:`write_output`.
+
+    :param func: the command callback to decorate.
+    :return: the decorated callback.
+    """
+    options = [
+        click.option(
+            "--format",
+            "output_format",
+            type=OUTPUT_FORMAT_CHOICE,
+            help="Output format (default: table; inferred from -o extension).",
+        ),
+        click.option("-o", "--output", "output", help="Write results to this path."),
+        click.option(
+            "--limit",
+            default=DEFAULT_LIMIT,
+            show_default=True,
+            help="Row cap for table output.",
+        ),
+        click.option(
+            "--overwrite", is_flag=True, help="Replace an existing output path."
+        ),
+    ]
+    for option in reversed(options):
+        func = option(func)
+    return func
+
 
 # Maps file extensions to output formats for inference.
 _EXTENSION_FORMATS = {

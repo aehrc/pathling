@@ -58,6 +58,36 @@ def _convert_typed_values(jtyped_values) -> list:
     return results
 
 
+def _build_spark_session(extra_configs: Optional[dict] = None) -> SparkSession:
+    """Builds a Spark session configured with the Pathling and Delta packages.
+
+    This is the single source of truth for the package coordinates, Delta SQL
+    extension, and Delta catalog configuration that Pathling requires. Callers
+    that need to bring their own session (for example to set driver JVM options
+    before launch) supply those via ``extra_configs`` rather than re-declaring
+    the package configuration.
+
+    :param extra_configs: optional additional Spark configuration entries to set
+           on the builder before the session is created.
+    :return: a configured :class:`SparkSession`.
+    """
+    builder = (
+        SparkSession.builder.config(
+            "spark.jars.packages",
+            f"au.csiro.pathling:library-runtime:{__java_version__},"
+            f"io.delta:delta-spark_{__scala_version__}:{__delta_version__},",
+        )
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+        .config(
+            "spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+        )
+    )
+    for key, value in (extra_configs or {}).items():
+        builder = builder.config(key, value)
+    return builder.getOrCreate()
+
+
 class StorageType:
     MEMORY: str = "memory"
     DISK: str = "disk"
@@ -214,30 +244,15 @@ class PathlingContext:
         """
 
         def _new_spark_session():
-            spark_builder = (
-                SparkSession.builder.config(
-                    "spark.jars.packages",
-                    f"au.csiro.pathling:library-runtime:{__java_version__},"
-                    f"io.delta:delta-spark_{__scala_version__}:{__delta_version__},",
-                )
-                .config(
-                    "spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension"
-                )
-                .config(
-                    "spark.sql.catalog.spark_catalog",
-                    "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-                )
-            )
-
-            # Add remote debugging configuration if enabled
+            extra_configs = {}
+            # Add remote debugging configuration if enabled.
             if enable_remote_debugging:
                 suspend_option = "y" if debug_suspend else "n"
-                debug_options = f"-agentlib:jdwp=transport=dt_socket,server=y,suspend={suspend_option},address={debug_port}"
-                spark_builder = spark_builder.config(
-                    "spark.driver.extraJavaOptions", debug_options
+                extra_configs["spark.driver.extraJavaOptions"] = (
+                    f"-agentlib:jdwp=transport=dt_socket,server=y,"
+                    f"suspend={suspend_option},address={debug_port}"
                 )
-
-            return spark_builder.getOrCreate()
+            return _build_spark_session(extra_configs)
 
         spark = spark or SparkSession.getActiveSession() or _new_spark_session()
         jvm = spark._jvm

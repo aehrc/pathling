@@ -67,16 +67,14 @@ def _write_quiet_log4j2() -> str:
 def _build_quiet_spark(config: CliConfig):
     """Builds a Spark session with logging suppressed before JVM launch.
 
+    The Pathling and Delta package configuration is shared with
+    :func:`pathling.context._build_spark_session`; this function only adds the
+    CLI-specific quiet-logging options on top.
+
     :param config: the resolved CLI configuration.
     :return: a configured :class:`SparkSession`.
     """
-    from pyspark.sql import SparkSession
-
-    from pathling._version import (
-        __delta_version__,
-        __java_version__,
-        __scala_version__,
-    )
+    from pathling.context import _build_spark_session
 
     # Pin Spark's Python workers to the interpreter running the CLI. Without
     # this, Spark launches workers using whatever ``python3`` is first on the
@@ -84,25 +82,14 @@ def _build_quiet_spark(config: CliConfig):
     # PYTHON_VERSION_MISMATCH error on any operation that uses Python workers.
     os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
 
-    builder = (
-        SparkSession.builder.config(
-            "spark.jars.packages",
-            f"au.csiro.pathling:library-runtime:{__java_version__},"
-            f"io.delta:delta-spark_{__scala_version__}:{__delta_version__},",
-        )
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config(
-            "spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-        )
-    )
+    extra_configs = {}
     if not config.verbose:
         log4j2_path = _write_quiet_log4j2()
-        builder = builder.config(
-            "spark.driver.extraJavaOptions",
-            f"-Dlog4j2.configurationFile=file:{log4j2_path}",
-        ).config("spark.ui.showConsoleProgress", "false")
-    return builder.getOrCreate()
+        extra_configs["spark.driver.extraJavaOptions"] = (
+            f"-Dlog4j2.configurationFile=file:{log4j2_path}"
+        )
+        extra_configs["spark.ui.showConsoleProgress"] = "false"
+    return _build_spark_session(extra_configs)
 
 
 def _create_pathling_context(config: CliConfig):

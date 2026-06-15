@@ -37,22 +37,10 @@ from pathling.cli.errors import (
     unwrap_java_exception,
 )
 from pathling.cli.render import (
-    OutputFormat,
+    output_options,
     progress_status,
     resolve_output,
     write_output,
-)
-
-# The output formats the terminology commands support.
-_FORMAT_CHOICE = click.Choice(
-    [
-        OutputFormat.TABLE,
-        OutputFormat.CSV,
-        OutputFormat.JSON,
-        OutputFormat.NDJSON,
-        OutputFormat.PARQUET,
-        OutputFormat.DELTA,
-    ]
 )
 
 
@@ -62,6 +50,7 @@ def _common_options(func):
     :param func: the command callback to decorate.
     :return: the decorated callback.
     """
+    func = output_options(func)
     options = [
         click.argument("dataset"),
         click.option(
@@ -76,16 +65,6 @@ def _common_options(func):
         ),
         click.option(
             "--result-column", "result_column", help="Override the result column name."
-        ),
-        click.option(
-            "--format", "output_format", type=_FORMAT_CHOICE, help="Output format."
-        ),
-        click.option("-o", "--output", "output", help="Write results to this path."),
-        click.option(
-            "--limit", default=1000, show_default=True, help="Row cap for table output."
-        ),
-        click.option(
-            "--overwrite", is_flag=True, help="Replace an existing output path."
         ),
     ]
     for option in reversed(options):
