@@ -61,7 +61,7 @@ def _common_options(func):
             "--system-column", "system_column", help="Per-row system column name."
         ),
         click.option(
-            "--coding-version", "coding_version", help="Optional coding version."
+            "--system-version", "system_version", help="Optional code system version."
         ),
         click.option(
             "--result-column", "result_column", help="Override the result column name."
@@ -120,7 +120,7 @@ def _coding_column(code_column, system, system_column, version):
     :param code_column: the code column name.
     :param system: a fixed system URI, or None.
     :param system_column: a per-row system column name, or None.
-    :param version: an optional coding version.
+    :param version: an optional code system version.
     :return: a Spark Column containing a Coding struct.
     :raises CliError: when the system source is missing or ambiguous.
     """
@@ -230,7 +230,7 @@ def member_of(
     code_column,
     system,
     system_column,
-    coding_version,
+    system_version,
     result_column,
     output_format,
     output,
@@ -252,7 +252,7 @@ def member_of(
         from pathling import udfs
 
         _validate_columns(df, [code_column, system_column], dataset)
-        coding = _coding_column(code_column, system, system_column, coding_version)
+        coding = _coding_column(code_column, system, system_column, system_version)
         return df.withColumn(name, udfs.member_of(coding, value_set))
 
     _execute(
@@ -286,7 +286,7 @@ def translate(
     code_column,
     system,
     system_column,
-    coding_version,
+    system_version,
     result_column,
     output_format,
     output,
@@ -314,7 +314,7 @@ def translate(
         from pathling import udfs
 
         _validate_columns(df, [code_column, system_column], dataset)
-        coding = _coding_column(code_column, system, system_column, coding_version)
+        coding = _coding_column(code_column, system, system_column, system_version)
         translation = udfs.translate(
             coding,
             concept_map,
@@ -378,7 +378,7 @@ def _run_subsumption(
     code_column,
     system,
     system_column,
-    coding_version,
+    system_version,
     result_column,
     output_format,
     output,
@@ -398,7 +398,7 @@ def _run_subsumption(
     :param code_column: the left code column.
     :param system: the left fixed system URI, or None.
     :param system_column: the left per-row system column, or None.
-    :param coding_version: the optional coding version.
+    :param system_version: the optional code system version.
     :param result_column: the result column override, or None.
     :param output_format: the output format, or None.
     :param output: the output path, or None.
@@ -419,9 +419,9 @@ def _run_subsumption(
             [code_column, system_column, other_code_column, other_system_column],
             dataset,
         )
-        left = _coding_column(code_column, system, system_column, coding_version)
+        left = _coding_column(code_column, system, system_column, system_version)
         right = _coding_column(
-            other_code_column, other_system, other_system_column, coding_version
+            other_code_column, other_system, other_system_column, system_version
         )
         return df.withColumn(name, getattr(udfs, operation)(left, right))
 
@@ -449,7 +449,7 @@ def subsumes(
     code_column,
     system,
     system_column,
-    coding_version,
+    system_version,
     result_column,
     output_format,
     output,
@@ -475,7 +475,7 @@ def subsumes(
         code_column,
         system,
         system_column,
-        coding_version,
+        system_version,
         result_column,
         output_format,
         output,
@@ -498,7 +498,7 @@ def subsumed_by(
     code_column,
     system,
     system_column,
-    coding_version,
+    system_version,
     result_column,
     output_format,
     output,
@@ -524,7 +524,7 @@ def subsumed_by(
         code_column,
         system,
         system_column,
-        coding_version,
+        system_version,
         result_column,
         output_format,
         output,
@@ -550,7 +550,7 @@ def display(
     code_column,
     system,
     system_column,
-    coding_version,
+    system_version,
     result_column,
     output_format,
     output,
@@ -571,7 +571,7 @@ def display(
         from pathling import udfs
 
         _validate_columns(df, [code_column, system_column], dataset)
-        coding = _coding_column(code_column, system, system_column, coding_version)
+        coding = _coding_column(code_column, system, system_column, system_version)
         return df.withColumn(name, udfs.display(coding, accept_language))
 
     _execute(
@@ -609,7 +609,7 @@ def property_of(
     code_column,
     system,
     system_column,
-    coding_version,
+    system_version,
     result_column,
     output_format,
     output,
@@ -633,7 +633,7 @@ def property_of(
         from pathling import udfs
 
         _validate_columns(df, [code_column, system_column], dataset)
-        coding = _coding_column(code_column, system, system_column, coding_version)
+        coding = _coding_column(code_column, system, system_column, system_version)
         return df.withColumn(
             name,
             udfs.property_of(coding, property_code, property_type, accept_language),
@@ -667,7 +667,7 @@ def designation(
     code_column,
     system,
     system_column,
-    coding_version,
+    system_version,
     result_column,
     output_format,
     output,
@@ -691,7 +691,7 @@ def designation(
         from pathling.coding import Coding
 
         _validate_columns(df, [code_column, system_column], dataset)
-        coding = _coding_column(code_column, system, system_column, coding_version)
+        coding = _coding_column(code_column, system, system_column, system_version)
         use_coding = None
         if use:
             if "|" not in use:
