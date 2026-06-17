@@ -57,14 +57,6 @@ class OutputFormat:
     DELTA = "delta"
 
 
-# Formats that may be written to a file with ``-o``.
-FILE_FORMATS = (
-    OutputFormat.CSV,
-    OutputFormat.NDJSON,
-    OutputFormat.PARQUET,
-    OutputFormat.DELTA,
-)
-
 # Formats that require ``-o`` because they cannot render to stdout.
 PATH_REQUIRED_FORMATS = (OutputFormat.PARQUET, OutputFormat.DELTA)
 
