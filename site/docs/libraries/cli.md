@@ -42,6 +42,7 @@ through a configuration file.
 | `--tx-server`                                                               | `tx-server`          | the library default terminology server  |
 | `--tx-client-id`, `--tx-client-secret`, `--tx-token-endpoint`, `--tx-scope` | `[terminology-auth]` | none                                    |
 | `--fhir-version`                                                            | `fhir-version`       | `R4`                                    |
+| `--spark-conf KEY=VALUE`                                                    | `[spark]`            | none                                    |
 | `--config PATH`                                                             | -                    | `$XDG_CONFIG_HOME/pathling/config.toml` |
 | `--verbose`                                                                 | -                    | off                                     |
 
@@ -229,10 +230,72 @@ token-endpoint = "https://auth.example.org/token"
 [bulk-auth]
 client-id = "bulk-client"
 token-endpoint = "https://auth.example.org/token"
+
+[spark]
+"spark.sql.shuffle.partitions" = 16
+"spark.executor.memory" = "4g"
 ```
 
 Command-line flags always take precedence over the config file. Unknown keys
 produce a warning that names the key and lists the valid keys.
+
+### Spark configuration
+
+The `[spark]` table sets arbitrary [Apache Spark](https://spark.apache.org/)
+properties on the session that every data command builds. Use it to tune the
+engine - for example to raise executor memory, change the shuffle partition
+count, or add a cloud storage connector - or pass one or more
+`--spark-conf KEY=VALUE` flags for a single invocation. The flag is repeatable
+and overrides the `[spark]` value for the same key; when the same key is given
+more than once on the command line, the last occurrence wins. Because the value
+is split on the first `=` only, a value may itself contain `=` (for example
+`--spark-conf spark.driver.extraJavaOptions=-Dfoo=bar`).
+
+```toml
+[spark]
+"spark.sql.shuffle.partitions" = 16
+"spark.sql.adaptive.enabled" = true
+"spark.executor.memory" = "4g"
+"spark.jars.packages" = "org.apache.hadoop:hadoop-aws:3.4.1"
+"spark.hadoop.fs.s3a.secret.key" = "@/run/secrets/s3-key"
+```
+
+The resolved settings are merged with Pathling's own required Spark defaults
+rather than replacing them, so Pathling keeps working while your tuning takes
+effect. The full precedence, highest first, is:
+
+1. A `--spark-conf` flag value.
+2. The `[spark]` table value in the chosen config file.
+3. The CLI's quiet-mode logging settings (applied only when not `--verbose`, and
+   only for keys you did not set).
+4. Pathling's managed defaults (always present for the managed keys below).
+
+**Keys and values.** Every key must begin with `spark.`; any other key is an
+error that names the offending key and aborts before a Spark session starts.
+Values may be strings, integers, floats, or booleans, and are coerced to the
+strings Spark expects (booleans become `true`/`false`). TOML arrays and tables
+are not accepted; list-valued properties use Spark's native comma-separated
+string. A string value may be a `@/path/to/file` secret reference, read exactly
+as authentication secrets are.
+
+**Managed keys.** Three keys are owned by Pathling and merged item by item so
+the library is never broken:
+
+- `spark.jars.packages` - your coordinates are unioned with Pathling's managed
+  coordinates (the library runtime and Delta Lake) and deduplicated. Supplying a
+  managed coordinate at a different version is allowed and applies your version,
+  but prints a warning naming the coordinate, since a non-default version may not
+  be supported.
+- `spark.sql.extensions` - your extension class names are unioned with
+  Pathling's, and the Delta extension always remains present.
+- `spark.sql.catalog.spark_catalog` - this is locked to Pathling's Delta
+  catalog. Setting it to that value is a no-op; setting it to anything else is an
+  error.
+
+**Quiet-mode logging.** By default the CLI suppresses Spark and JVM logging by
+setting `spark.driver.extraJavaOptions`. If you set that key yourself, your value
+replaces the CLI's, so Spark logging is no longer suppressed. To keep both, run
+with `--verbose`, or include the quiet log4j2 option in the value you supply.
 
 ### Project-local configuration
 

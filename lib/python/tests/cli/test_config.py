@@ -30,6 +30,7 @@ import pytest
 from pathling.cli.config import (
     DEFAULT_FHIR_VERSION,
     DEFAULT_TX_SERVER,
+    CliConfig,
     default_config_path,
     load_config_file,
     resolve_config,
@@ -37,6 +38,7 @@ from pathling.cli.config import (
     resolve_secret,
 )
 from pathling.cli.errors import CliError
+from pathling.cli.sparkconf import parse_spark_conf_flags
 
 
 def _write_config(tmp_path: Path, contents: str) -> Path:
@@ -509,3 +511,110 @@ def test_unreadable_config_file_errors(tmp_path):
     finally:
         # Restore permissions so the temp file can be cleaned up.
         os.chmod(path, 0o644)
+
+
+# ========== Spark configuration: field and valid key (Foundational) ==========
+
+
+def test_cliconfig_has_empty_spark_conf_by_default():
+    """CliConfig exposes a spark_conf field defaulting to an empty dict."""
+    config = CliConfig()
+
+    assert config.spark_conf == {}
+    # Each instance must get its own dict, never a shared mutable default.
+    other = CliConfig()
+    config.spark_conf["spark.x"] = "1"
+    assert other.spark_conf == {}
+
+
+def test_spark_table_is_a_valid_top_level_key(tmp_path):
+    """A [spark] table produces no unknown-key warning (spark is valid)."""
+    path = _write_config(tmp_path, '[spark]\n"spark.sql.shuffle.partitions" = 16\n')
+    warnings = []
+
+    load_config_file(path, on_warning=warnings.append)
+
+    assert not any(
+        "spark" in message and "unknown" in message.lower() for message in warnings
+    )
+
+
+# ========== Spark configuration: [spark] table resolution (US1) ==========
+
+
+def test_spark_table_resolved_into_spark_conf(tmp_path):
+    """A [spark] table is coerced and stored on CliConfig.spark_conf."""
+    path = _write_config(
+        tmp_path,
+        "[spark]\n"
+        '"spark.sql.shuffle.partitions" = 16\n'
+        '"spark.sql.adaptive.enabled" = true\n',
+    )
+
+    config = resolve_config(config_path=path)
+
+    # Plain keys pass through the merge as coerced strings.
+    assert config.spark_conf["spark.sql.shuffle.partitions"] == "16"
+    assert config.spark_conf["spark.sql.adaptive.enabled"] == "true"
+
+
+def test_spark_table_resolves_file_secret(tmp_path):
+    """A @file value in the [spark] table is resolved from the file."""
+    secret_file = tmp_path / "s3-key"
+    secret_file.write_text("the-key\n", encoding="utf-8")
+    path = _write_config(
+        tmp_path,
+        f'[spark]\n"spark.hadoop.fs.s3a.secret.key" = "@{secret_file}"\n',
+    )
+
+    config = resolve_config(config_path=path)
+
+    assert config.spark_conf["spark.hadoop.fs.s3a.secret.key"] == "the-key"
+
+
+def test_spark_table_invalid_key_is_usage_error(tmp_path):
+    """A non-spark. key in the [spark] table aborts with exit code 2."""
+    path = _write_config(tmp_path, '[spark]\n"executor.memory" = "4g"\n')
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(config_path=path)
+
+    assert exc_info.value.exit_code == 2
+    assert "executor.memory" in exc_info.value.message
+
+
+# ========== Spark configuration: --spark-conf flag precedence (US2) ==========
+
+
+def test_spark_flag_overrides_file_value(tmp_path):
+    """A --spark-conf flag value overrides the [spark] table for the same key."""
+    path = _write_config(tmp_path, '[spark]\n"spark.executor.memory" = "2g"\n')
+    flags = parse_spark_conf_flags(["spark.executor.memory=4g"])
+
+    config = resolve_config(config_path=path, spark_conf_flags=flags)
+
+    assert config.spark_conf["spark.executor.memory"] == "4g"
+
+
+def test_spark_flag_repeated_last_wins(tmp_path):
+    """A repeated flag for the same key resolves to the last occurrence."""
+    flags = parse_spark_conf_flags(
+        ["spark.executor.memory=2g", "spark.executor.memory=4g"]
+    )
+
+    config = resolve_config(
+        config_path=tmp_path / "missing.toml", spark_conf_flags=flags
+    )
+
+    assert config.spark_conf["spark.executor.memory"] == "4g"
+
+
+def test_spark_flag_non_spark_key_is_error(tmp_path):
+    """A non-spark. key supplied via flag aborts with a CliError."""
+    flags = {"executor.memory": "4g"}
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(config_path=tmp_path / "missing.toml", spark_conf_flags=flags)
+
+    assert exc_info.value.exit_code == 2
+    assert "executor.memory" in exc_info.value.message

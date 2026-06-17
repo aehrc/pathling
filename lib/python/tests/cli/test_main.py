@@ -73,6 +73,14 @@ def test_help_mentions_config_file(runner):
     assert "config" in result.output.lower()
 
 
+def test_help_lists_spark_conf_option(runner):
+    """The root group exposes a repeatable --spark-conf option in its help."""
+    result = runner.invoke(cli, ["--help"])
+
+    assert result.exit_code == 0
+    assert "--spark-conf" in result.output
+
+
 # ========== Deferred imports ==========
 
 

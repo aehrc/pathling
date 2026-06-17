@@ -89,6 +89,11 @@ def _build_quiet_spark(config: CliConfig):
             f"-Dlog4j2.configurationFile=file:{log4j2_path}"
         )
         extra_configs["spark.ui.showConsoleProgress"] = "false"
+    # Overlay the user-supplied Spark configuration last so that a user value
+    # wins over the CLI's quiet-logging options for the same key (FR-012). A
+    # user-set spark.driver.extraJavaOptions therefore replaces the quiet
+    # log4j2 option, leaving Spark logging at its defaults.
+    extra_configs.update(config.spark_conf)
     return _build_spark_session(extra_configs)
 
 

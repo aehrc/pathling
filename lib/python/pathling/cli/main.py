@@ -44,6 +44,7 @@ from pathling.cli import view as view_module
 from pathling.cli.config import CliConfig, resolve_config
 from pathling.cli.errors import EXIT_RUNTIME, CliError, friendly_message
 from pathling.cli.render import stderr_console
+from pathling.cli.sparkconf import parse_spark_conf_flags
 
 
 @dataclass
@@ -119,6 +120,14 @@ class PathlingCli(click.Group):
     "--fhir-version", help="FHIR version (config key: fhir-version; default R4)."
 )
 @click.option(
+    "--spark-conf",
+    "spark_conf",
+    metavar="KEY=VALUE",
+    multiple=True,
+    help="Set a Spark configuration property "
+    "(repeatable; overrides the [spark] config table).",
+)
+@click.option(
     "--config",
     "config_path",
     type=click.Path(path_type=Path),
@@ -139,6 +148,7 @@ def cli(
     tx_token_endpoint,
     tx_scope,
     fhir_version,
+    spark_conf,
     config_path,
     verbose,
 ):
@@ -159,6 +169,7 @@ def cli(
         tx_token_endpoint=tx_token_endpoint,
         tx_scope=tx_scope,
         fhir_version=fhir_version,
+        spark_conf_flags=parse_spark_conf_flags(spark_conf),
         verbose=verbose,
         config_path=config_path,
         on_warning=lambda message: console.print(message, style="yellow"),

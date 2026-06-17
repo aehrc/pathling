@@ -32,7 +32,7 @@ Author: John Grimes.
 
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -53,7 +53,7 @@ PROJECT_CONFIG_FILENAME = "pathling.toml"
 
 # Valid top-level keys in the config file.
 VALID_CONFIG_KEYS = frozenset(
-    {"tx-server", "fhir-version", "terminology-auth", "bulk-auth"}
+    {"tx-server", "fhir-version", "terminology-auth", "bulk-auth", "spark"}
 )
 
 # Valid keys within the [terminology-auth] and [bulk-auth] tables.
@@ -125,6 +125,8 @@ class CliConfig:
     :param fhir_version: the FHIR version code.
     :param verbose: whether verbose logging and stack traces are enabled.
     :param config_path: the path the config file was read from, or None.
+    :param spark_conf: the resolved, validated, and merged Spark configuration
+           map to apply when a session is built; empty when nothing is set.
     """
 
     tx_server: str = DEFAULT_TX_SERVER
@@ -132,6 +134,7 @@ class CliConfig:
     fhir_version: str = DEFAULT_FHIR_VERSION
     verbose: bool = False
     config_path: Optional[Path] = None
+    spark_conf: dict = field(default_factory=dict)
 
 
 def _load_toml(path: Path) -> dict:
@@ -395,6 +398,7 @@ def resolve_config(
     tx_token_endpoint: Optional[str] = None,
     tx_scope: Optional[str] = None,
     fhir_version: Optional[str] = None,
+    spark_conf_flags: Optional[dict] = None,
     verbose: bool = False,
     config_path: Optional[Path] = None,
     cwd: Optional[Path] = None,
@@ -416,12 +420,16 @@ def resolve_config(
     :param tx_token_endpoint: the ``--tx-token-endpoint`` flag value, or None.
     :param tx_scope: the ``--tx-scope`` flag value, or None.
     :param fhir_version: the ``--fhir-version`` flag value, or None.
+    :param spark_conf_flags: the parsed ``--spark-conf`` flag map, or None; flag
+           values override the ``[spark]`` table for the same key.
     :param verbose: the ``--verbose`` flag value.
     :param config_path: an explicit config file path, or None for discovery.
     :param cwd: the directory searched for a project-local ``pathling.toml``;
            defaults to the current working directory.
     :param env: the environment mapping for secret resolution.
-    :param on_warning: an optional warning callback passed to the file loader.
+    :param on_warning: an optional warning callback passed to the file loader and
+           used to surface the managed Spark-package version-override warning;
+           defaults to writing to stderr so warnings appear even in quiet mode.
     :param on_notice: an optional callback invoked with a one-line notice when a
            project-local ``pathling.toml`` is discovered and used.
     :return: the resolved :class:`CliConfig`.
@@ -467,10 +475,23 @@ def resolve_config(
         env,
     )
 
+    # Resolve the [spark] table (combined with any --spark-conf flags, flag
+    # wins) into the effective Spark configuration, merged with Pathling's
+    # managed defaults. Any invalid key or value aborts here, before a Spark
+    # session is started; the managed-version-override warning is surfaced even
+    # in quiet mode.
+    from pathling.cli.sparkconf import merge_spark_conf, resolve_spark_conf
+
+    spark_warn = on_warning or (lambda message: print(message, file=sys.stderr))
+    spark_table = file_data.get("spark") or {}
+    resolved_spark = resolve_spark_conf(spark_table, spark_conf_flags, env)
+    spark_conf = merge_spark_conf(resolved_spark, on_warning=spark_warn)
+
     return CliConfig(
         tx_server=resolved_tx_server,
         tx_auth=tx_auth,
         fhir_version=resolved_fhir_version,
         verbose=verbose,
         config_path=path if path.exists() else None,
+        spark_conf=spark_conf,
     )

@@ -15,6 +15,11 @@
 # limitations under the License.
 #
 
+"""Pathling context and Spark session construction for the Python API.
+
+Author: John Grimes.
+"""
+
 # noinspection PyPackageRequirements
 
 from typing import TYPE_CHECKING, Optional, Sequence
@@ -22,11 +27,7 @@ from typing import TYPE_CHECKING, Optional, Sequence
 from py4j.java_gateway import JavaObject
 from pyspark.sql import Column, DataFrame, SparkSession
 
-from pathling._version import (
-    __delta_version__,
-    __java_version__,
-    __scala_version__,
-)
+from pathling._spark_defaults import managed_spark_defaults
 from pathling.fhir import MimeType
 
 if TYPE_CHECKING:
@@ -61,28 +62,23 @@ def _convert_typed_values(jtyped_values) -> list:
 def _build_spark_session(extra_configs: Optional[dict] = None) -> SparkSession:
     """Builds a Spark session configured with the Pathling and Delta packages.
 
-    This is the single source of truth for the package coordinates, Delta SQL
-    extension, and Delta catalog configuration that Pathling requires. Callers
-    that need to bring their own session (for example to set driver JVM options
-    before launch) supply those via ``extra_configs`` rather than re-declaring
-    the package configuration.
+    The managed package coordinates, Delta SQL extension, and Delta catalog are
+    sourced from :func:`pathling._spark_defaults.managed_spark_defaults`, the
+    single source of truth shared with the CLI merge logic. Callers that need to
+    bring their own session (for example to set driver JVM options before launch)
+    supply those via ``extra_configs`` rather than re-declaring the package
+    configuration; a caller entry overrides the matching default for that key.
 
     :param extra_configs: optional additional Spark configuration entries to set
            on the builder before the session is created.
     :return: a configured :class:`SparkSession`.
     """
-    builder = (
-        SparkSession.builder.config(
-            "spark.jars.packages",
-            f"au.csiro.pathling:library-runtime:{__java_version__},"
-            f"io.delta:delta-spark_{__scala_version__}:{__delta_version__},",
-        )
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config(
-            "spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-        )
-    )
+    builder = SparkSession.builder
+    # Apply Pathling's managed defaults first, then any caller-supplied entries,
+    # so that a caller value (for example a quiet-logging option) overrides the
+    # corresponding default for the same key.
+    for key, value in managed_spark_defaults().items():
+        builder = builder.config(key, value)
     for key, value in (extra_configs or {}).items():
         builder = builder.config(key, value)
     return builder.getOrCreate()
