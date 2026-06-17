@@ -139,7 +139,7 @@ def _load_toml(path: Path) -> dict:
 
     :param path: the path to the TOML file.
     :return: the parsed contents as a dict.
-    :raises CliError: if the file cannot be parsed as TOML.
+    :raises CliError: if the file cannot be read or parsed as TOML.
     """
     # Prefer the standard library on Python 3.11+, fall back to tomli.
     try:
@@ -156,6 +156,13 @@ def _load_toml(path: Path) -> dict:
         raise CliError(
             f"Could not parse the config file at {path}: {exc}. "
             "Check that it is valid TOML."
+        ) from exc
+    except OSError as exc:
+        # A directory or an unreadable file surfaces a clear, file-naming error
+        # rather than a raw OSError or a silent fallback to another config file.
+        raise CliError(
+            f"Could not read the config file at {path}: {exc}. "
+            "Check that it is a readable file."
         ) from exc
 
 

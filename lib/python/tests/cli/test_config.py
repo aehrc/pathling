@@ -22,6 +22,7 @@ These tests exercise the pure configuration logic without starting Spark.
 Author: John Grimes.
 """
 
+import os
 from pathlib import Path
 
 import pytest
@@ -470,3 +471,41 @@ def test_no_notice_for_user_none_and_explicit_origins(tmp_path, monkeypatch):
     explicit_notices = []
     resolve_config(config_path=explicit, cwd=project, on_notice=explicit_notices.append)
     assert explicit_notices == []
+
+
+# ========== Config file read errors ==========
+
+
+def test_project_config_that_is_a_directory_errors(tmp_path, monkeypatch):
+    """A project pathling.toml that is a directory raises a clear CliError
+    naming it, rather than silently falling back to the user-level file."""
+    # A user-level file exists, so a silent fallback would be observable.
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text('tx-server = "https://user.example/fhir"\n', encoding="utf-8")
+    project = tmp_path / "project"
+    project.mkdir()
+    # Create the project config path as a directory rather than a file.
+    (project / "pathling.toml").mkdir()
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(cwd=project)
+
+    assert str(project / "pathling.toml") in exc_info.value.message
+
+
+def test_unreadable_config_file_errors(tmp_path):
+    """An unreadable config file raises a clear CliError naming it."""
+    path = _write_config(tmp_path, 'tx-server = "https://a/fhir"\n')
+    os.chmod(path, 0o000)
+    # Skip when the file remains readable (for example when running as root).
+    if os.access(path, os.R_OK):
+        os.chmod(path, 0o644)
+        pytest.skip("cannot make the file unreadable as the current user")
+
+    try:
+        with pytest.raises(CliError) as exc_info:
+            resolve_config(config_path=path)
+        assert str(path) in exc_info.value.message
+    finally:
+        # Restore permissions so the temp file can be cleaned up.
+        os.chmod(path, 0o644)
