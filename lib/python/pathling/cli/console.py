@@ -58,6 +58,10 @@ def console(obj):
     session) and pathling (the configured Pathling context). Exit with
     'exit' or Ctrl-D.
 
+    \b
+    See the Pathling Python API reference:
+    https://pathling.csiro.au/docs/python/pathling.html
+
     Examples:
 
         pathling console

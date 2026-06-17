@@ -103,6 +103,10 @@ def fhirpath(
 ):
     """Evaluate a FHIRPath expression against FHIR data.
 
+    \b
+    See the FHIRPath documentation:
+    https://pathling.csiro.au/docs/fhirpath
+
     Examples:
 
         pathling fhirpath data/ -t Patient -e 'name.family'

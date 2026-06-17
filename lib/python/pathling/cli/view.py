@@ -118,6 +118,10 @@ def view(
 ):
     """Run a SQL on FHIR ViewDefinition against a data source.
 
+    \b
+    See the ViewDefinition specification:
+    https://sql-on-fhir.org/ig/StructureDefinition-ViewDefinition.html
+
     Examples:
 
         pathling view data/ --view patients.json

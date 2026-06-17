@@ -84,6 +84,23 @@ def test_console_help_mentions_variables(runner):
     assert "exit" in result.output.lower()
 
 
+@pytest.mark.parametrize(
+    ("command_name", "url"),
+    [
+        ("run", "https://pathling.csiro.au/docs/python/pathling.html"),
+        ("console", "https://pathling.csiro.au/docs/python/pathling.html"),
+        ("view", "https://sql-on-fhir.org/ig/StructureDefinition-ViewDefinition.html"),
+        ("fhirpath", "https://pathling.csiro.au/docs/fhirpath"),
+    ],
+)
+def test_help_links_to_reference_docs(runner, command_name, url):
+    """Each command's help points to its relevant reference documentation."""
+    result = runner.invoke(cli, [command_name, "--help"])
+
+    assert result.exit_code == 0
+    assert url in result.output
+
+
 def test_root_help_describes_config_file(runner):
     """The root help describes the config file location and the --config flag."""
     result = runner.invoke(cli, ["--help"])

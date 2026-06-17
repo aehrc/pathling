@@ -238,6 +238,10 @@ def run(ctx, script, code, args):
     passed to the code as sys.argv, following Python interpreter
     conventions.
 
+    \b
+    See the Pathling Python API reference:
+    https://pathling.csiro.au/docs/python/pathling.html
+
     Examples:
 
         pathling run script.py input.ndjson out/
