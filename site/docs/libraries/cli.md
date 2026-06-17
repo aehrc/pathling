@@ -66,15 +66,21 @@ specify `--from`.
 Tabular results (from `view`, `fhirpath`, and the terminology commands) render
 as a human-readable table by default.
 
-| Option        | Behaviour                                                                      |
-| ------------- | ------------------------------------------------------------------------------ |
-| `--format`    | `table` (default), `csv`, `json`, `ndjson`; with `-o` also `parquet`, `delta`. |
-| `-o PATH`     | Write to a file instead of stdout; the format is inferred from the extension.  |
-| `--limit N`   | Row cap for stdout table output (default 1000).                                |
-| `--overwrite` | Allow replacing an existing output path.                                       |
+| Option                           | Behaviour                                                                                                              |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `--format`                       | `table` (default), `csv`, `ndjson`; with `-o` also `parquet`, `delta`.                                                 |
+| `-o PATH`                        | Write to a file instead of stdout; the format is inferred from the extension (`.csv`, `.ndjson`/`.jsonl`, `.parquet`). |
+| `--limit N`                      | Row cap for stdout table output (default 1000).                                                                        |
+| `--overwrite`                    | Allow replacing an existing output path.                                                                               |
+| `--departition/--no-departition` | Write file output as a single file (default) or as a Spark directory of part files. No effect on Delta.                |
 
-For scripted use, prefer `--format csv`, `--format json`, or `--format ndjson`,
-which stream the full result.
+File output is produced by Spark's distributed writers, so results larger than
+driver memory can be written. By default the output is departitioned to a
+single file at the path given; pass `--no-departition` to keep Spark's native
+directory of part files. Delta output is always written as a table directory.
+
+For scripted use, prefer `--format csv` or `--format ndjson`, which stream the
+full result.
 
 ## Commands
 

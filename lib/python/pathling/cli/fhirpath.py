@@ -99,6 +99,7 @@ def fhirpath(
     output,
     limit,
     overwrite,
+    departition,
 ):
     """Evaluate a FHIRPath expression against FHIR data.
 
@@ -112,7 +113,7 @@ def fhirpath(
     console = obj.console
 
     spec = resolve_source(source, from_format, allow_resource=True)
-    output_spec = resolve_output(output, output_format, limit, overwrite)
+    output_spec = resolve_output(output, output_format, limit, overwrite, departition)
     parsed_variables = _parse_variables(variables)
 
     # --context and --var only apply to single-resource evaluation; reject them

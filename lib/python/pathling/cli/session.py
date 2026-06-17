@@ -83,10 +83,11 @@ def _build_quiet_spark(config: CliConfig):
     os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
 
     extra_configs = {
-        # Enable Arrow-based columnar transfer so that materialising query
-        # results on the driver (see render._write_file, and toPandas in the
-        # interactive console) collects via Arrow record batches rather than
-        # pickling rows one at a time. Set before the user overlay below so an
+        # Enable Arrow-based columnar transfer so that any ``toPandas`` call in
+        # the interactive console collects via Arrow record batches rather than
+        # pickling rows one at a time. File output no longer collects to the
+        # driver - Spark writes it directly - so this setting now serves only
+        # the interactive console. Set before the user overlay below so an
         # explicit --spark-conf value still wins.
         "spark.sql.execution.arrow.pyspark.enabled": "true",
     }

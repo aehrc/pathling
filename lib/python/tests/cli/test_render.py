@@ -33,9 +33,10 @@ from pathling.cli.render import (
     OutputFormat,
     check_overwrite,
     infer_format_from_extension,
+    output_options,
     render_csv,
-    render_json,
     render_ndjson,
+    render_rows,
     render_table,
     resolve_output,
 )
@@ -84,20 +85,6 @@ def test_csv_has_header_and_rows():
     assert parsed[2] == ["2", ""]
 
 
-# ========== JSON ==========
-
-
-def test_json_is_array_of_objects():
-    """JSON output is a valid array of column-keyed objects."""
-    output = render_json(COLUMNS, ROWS)
-
-    parsed = json.loads(output)
-    assert parsed == [
-        {"id": "1", "family": "Smith"},
-        {"id": "2", "family": None},
-    ]
-
-
 # ========== NDJSON ==========
 
 
@@ -110,6 +97,40 @@ def test_ndjson_is_one_object_per_line():
     assert json.loads(lines[0]) == {"id": "1", "family": "Smith"}
 
 
+# ========== JSON-array format removal (T015) ==========
+
+
+def test_format_json_is_not_an_accepted_choice():
+    """The removed json format is rejected as an invalid --format choice."""
+    import click
+    from click.testing import CliRunner
+
+    @click.command()
+    @output_options
+    def cmd(**kwargs):
+        pass
+
+    result = CliRunner().invoke(cmd, ["--format", "json", "-o", "out.txt"])
+
+    assert result.exit_code != 0
+    assert "is not one of" in result.output
+
+
+def test_json_output_path_errors_with_ndjson_suggestion():
+    """A .json output path raises a usage error pointing at NDJSON."""
+    with pytest.raises(CliError) as exc_info:
+        resolve_output("out.json", None)
+
+    assert exc_info.value.exit_code == 2
+    assert "ndjson" in exc_info.value.message.lower()
+
+
+def test_json_is_not_a_stdout_format():
+    """The json format can no longer be rendered to stdout."""
+    with pytest.raises(CliError):
+        render_rows(COLUMNS, ROWS, "json")
+
+
 # ========== Format inference ==========
 
 
@@ -118,8 +139,10 @@ def test_infer_format_from_extension():
     from pathlib import Path
 
     assert infer_format_from_extension(Path("out.csv")) == OutputFormat.CSV
-    assert infer_format_from_extension(Path("out.json")) == OutputFormat.JSON
+    # The json-array format is removed, so a .json extension is not inferred.
+    assert infer_format_from_extension(Path("out.json")) is None
     assert infer_format_from_extension(Path("out.ndjson")) == OutputFormat.NDJSON
+    assert infer_format_from_extension(Path("out.jsonl")) == OutputFormat.NDJSON
     assert infer_format_from_extension(Path("out.parquet")) == OutputFormat.PARQUET
     assert infer_format_from_extension(Path("out.unknown")) is None
 
@@ -165,6 +188,38 @@ def test_unknown_extension_without_format_is_error():
         resolve_output("out.weird", None)
 
     assert exc_info.value.exit_code == 2
+
+
+# ========== Departition resolution ==========
+
+
+def test_resolve_output_departition_defaults_true():
+    """Departitioning is on by default in the resolved spec."""
+    spec = resolve_output("out.csv", None)
+
+    assert spec.departition is True
+
+
+def test_resolve_output_no_departition_resolves_false():
+    """--no-departition resolves to a spec with departitioning disabled."""
+    spec = resolve_output("out.csv", None, departition=False)
+
+    assert spec.departition is False
+
+
+def test_departition_flag_appears_in_command_help():
+    """The --departition/--no-departition flag is offered in command help."""
+    import click
+    from click.testing import CliRunner
+
+    @click.command()
+    @output_options
+    def cmd(**kwargs):
+        pass
+
+    result = CliRunner().invoke(cmd, ["--help"])
+
+    assert "--no-departition" in result.output
 
 
 # ========== Overwrite handling ==========

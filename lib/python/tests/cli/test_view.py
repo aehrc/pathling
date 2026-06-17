@@ -84,16 +84,14 @@ def test_view_csv(runner, patched_context, ndjson_source, view_file):
     assert len(rows) == PATIENT_COUNT + 1
 
 
-def test_view_json(runner, patched_context, ndjson_source, view_file):
-    """JSON output is an array of records with the view's columns."""
+def test_view_format_json_rejected(runner, patched_context, ndjson_source, view_file):
+    """The removed json format is rejected as an invalid --format choice."""
     result = runner.invoke(
         cli, ["view", ndjson_source, "--view", str(view_file), "--format", "json"]
     )
 
-    assert result.exit_code == 0, result.stderr
-    records = json.loads(result.stdout)
-    assert len(records) == PATIENT_COUNT
-    assert "family_name" in records[0]
+    assert result.exit_code != 0
+    assert "is not one of" in result.stderr
 
 
 def test_view_ndjson(runner, patched_context, ndjson_source, view_file):
@@ -112,7 +110,7 @@ def test_view_ndjson(runner, patched_context, ndjson_source, view_file):
 
 
 def test_view_to_csv_file(runner, patched_context, ndjson_source, view_file, tmp_path):
-    """Writing to a CSV file reports the row count on stderr."""
+    """Writing to a CSV file confirms the format and path, without a row count."""
     out = tmp_path / "results.csv"
 
     result = runner.invoke(
@@ -120,8 +118,10 @@ def test_view_to_csv_file(runner, patched_context, ndjson_source, view_file, tmp
     )
 
     assert result.exit_code == 0, result.stderr
-    assert out.exists()
-    assert str(PATIENT_COUNT) in result.stderr
+    assert out.is_file()
+    assert "Wrote csv output to" in result.stderr
+    # The row count is intentionally not reported (FR-012).
+    assert "rows" not in result.stderr
 
 
 def test_view_to_parquet_file(
@@ -141,12 +141,12 @@ def test_view_to_parquet_file(
 
 @pytest.mark.parametrize(
     "filename,fmt",
-    [("results.json", None), ("results.ndjson", None), ("results.delta", "delta")],
+    [("results.ndjson", None), ("results.delta", "delta")],
 )
 def test_view_to_other_file_formats(
     runner, patched_context, ndjson_source, view_file, tmp_path, filename, fmt
 ):
-    """Writing to JSON, NDJSON, and Delta file outputs all succeed."""
+    """Writing to NDJSON and Delta file outputs both succeed."""
     out = tmp_path / filename
     args = ["view", ndjson_source, "--view", str(view_file), "-o", str(out)]
     if fmt:
@@ -156,6 +156,21 @@ def test_view_to_other_file_formats(
 
     assert result.exit_code == 0, result.stderr
     assert out.exists()
+
+
+def test_view_json_output_path_rejected(
+    runner, patched_context, ndjson_source, view_file, tmp_path
+):
+    """A .json output path is rejected with a usage error suggesting NDJSON."""
+    out = tmp_path / "results.json"
+
+    result = runner.invoke(
+        cli, ["view", ndjson_source, "--view", str(view_file), "-o", str(out)]
+    )
+
+    assert result.exit_code == 2
+    assert "ndjson" in result.stderr.lower()
+    assert not out.exists()
 
 
 # ========== Inline view ==========

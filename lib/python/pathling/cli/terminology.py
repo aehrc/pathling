@@ -165,7 +165,16 @@ def _validate_coding_source(dataset, system, system_column):
 
 
 def _execute(
-    obj, dataset, system, system_column, output_format, output, limit, overwrite, build
+    obj,
+    dataset,
+    system,
+    system_column,
+    output_format,
+    output,
+    limit,
+    overwrite,
+    departition,
+    build,
 ):
     """Runs a terminology operation and emits the augmented dataset.
 
@@ -177,6 +186,7 @@ def _execute(
     :param output: the ``-o`` path, or None.
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
+    :param departition: whether file output is departitioned to a single file.
     :param build: a callback ``(pc, df) -> result_df`` performing the operation.
     :raises CliError: for validation and unreachable-server failures.
     """
@@ -185,7 +195,7 @@ def _execute(
 
     # Validate cheap inputs before paying the Spark cold start.
     _validate_coding_source(dataset, system, system_column)
-    output_spec = resolve_output(output, output_format, limit, overwrite)
+    output_spec = resolve_output(output, output_format, limit, overwrite, departition)
     pc = session.create_context(config, console)
     df = _read_dataset(pc, dataset)
 
@@ -226,6 +236,7 @@ def member_of(
     output,
     limit,
     overwrite,
+    departition,
     value_set,
 ):
     """Test codes for membership of a value set.
@@ -253,6 +264,7 @@ def member_of(
         output,
         limit,
         overwrite,
+        departition,
         build,
     )
 
@@ -280,6 +292,7 @@ def translate(
     output,
     limit,
     overwrite,
+    departition,
     concept_map,
     reverse,
     equivalences,
@@ -324,6 +337,7 @@ def translate(
         output,
         limit,
         overwrite,
+        departition,
         build,
     )
 
@@ -370,6 +384,7 @@ def _run_subsumption(
     output,
     limit,
     overwrite,
+    departition,
     other_code_column,
     other_system,
     other_system_column,
@@ -389,6 +404,7 @@ def _run_subsumption(
     :param output: the output path, or None.
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
+    :param departition: whether file output is departitioned to a single file.
     :param other_code_column: the right code column.
     :param other_system: the right fixed system URI, or None.
     :param other_system_column: the right per-row system column, or None.
@@ -418,6 +434,7 @@ def _run_subsumption(
         output,
         limit,
         overwrite,
+        departition,
         build,
     )
 
@@ -438,6 +455,7 @@ def subsumes(
     output,
     limit,
     overwrite,
+    departition,
     other_code_column,
     other_system,
     other_system_column,
@@ -463,6 +481,7 @@ def subsumes(
         output,
         limit,
         overwrite,
+        departition,
         other_code_column,
         other_system,
         other_system_column,
@@ -485,6 +504,7 @@ def subsumed_by(
     output,
     limit,
     overwrite,
+    departition,
     other_code_column,
     other_system,
     other_system_column,
@@ -510,6 +530,7 @@ def subsumed_by(
         output,
         limit,
         overwrite,
+        departition,
         other_code_column,
         other_system,
         other_system_column,
@@ -535,6 +556,7 @@ def display(
     output,
     limit,
     overwrite,
+    departition,
     accept_language,
 ):
     """Look up display names for codes.
@@ -561,6 +583,7 @@ def display(
         output,
         limit,
         overwrite,
+        departition,
         build,
     )
 
@@ -592,6 +615,7 @@ def property_of(
     output,
     limit,
     overwrite,
+    departition,
     property_code,
     property_type,
     accept_language,
@@ -624,6 +648,7 @@ def property_of(
         output,
         limit,
         overwrite,
+        departition,
         build,
     )
 
@@ -648,6 +673,7 @@ def designation(
     output,
     limit,
     overwrite,
+    departition,
     use,
     language,
 ):
@@ -686,6 +712,7 @@ def designation(
         output,
         limit,
         overwrite,
+        departition,
         build,
     )
 

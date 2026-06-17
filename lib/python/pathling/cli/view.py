@@ -114,6 +114,7 @@ def view(
     output,
     limit,
     overwrite,
+    departition,
 ):
     """Run a SQL on FHIR ViewDefinition against a data source.
 
@@ -130,7 +131,7 @@ def view(
 
     spec = resolve_source(source, from_format)
     view_text, resource_type = _load_view(view_path, view_json)
-    output_spec = resolve_output(output, output_format, limit, overwrite)
+    output_spec = resolve_output(output, output_format, limit, overwrite, departition)
 
     pc = session.create_context(config, console)
     data_source = read_source(pc, spec)

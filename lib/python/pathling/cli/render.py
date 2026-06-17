@@ -17,11 +17,12 @@
 
 """Output rendering and progress reporting for the command line interface.
 
-Tabular results render to a human-readable table by default, with CSV, JSON,
-and NDJSON alternatives for piping, and file output (including Parquet and
-Delta) via ``-o``. Data is written to stdout; progress, status, and the
-row-count confirmation for file output go to stderr so that piped output stays
-clean.
+Tabular results render to a human-readable table by default, with CSV and
+NDJSON alternatives for piping, and file output (CSV, NDJSON, Parquet, and
+Delta) via ``-o``. File output is produced by Spark's native writers and, by
+default, departitioned to a single file at the requested path. Data is written
+to stdout; progress, status, and the write confirmation go to stderr so that
+piped output stays clean.
 
 Author: John Grimes.
 """
@@ -29,6 +30,7 @@ Author: John Grimes.
 import csv
 import io
 import json
+import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -38,6 +40,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from pathling.cli.departition import departition, remove_path
 from pathling.cli.errors import EXIT_USAGE, CliError
 
 # The default cap on rows collected for stdout table rendering.
@@ -49,7 +52,6 @@ class OutputFormat:
 
     TABLE = "table"
     CSV = "csv"
-    JSON = "json"
     NDJSON = "ndjson"
     PARQUET = "parquet"
     DELTA = "delta"
@@ -58,7 +60,6 @@ class OutputFormat:
 # Formats that may be written to a file with ``-o``.
 FILE_FORMATS = (
     OutputFormat.CSV,
-    OutputFormat.JSON,
     OutputFormat.NDJSON,
     OutputFormat.PARQUET,
     OutputFormat.DELTA,
@@ -67,13 +68,21 @@ FILE_FORMATS = (
 # Formats that require ``-o`` because they cannot render to stdout.
 PATH_REQUIRED_FORMATS = (OutputFormat.PARQUET, OutputFormat.DELTA)
 
+# Maps each departitioned file format to the extension Spark gives its part
+# files, used to select the single data file from the temporary output
+# directory.
+_PART_EXTENSIONS = {
+    OutputFormat.CSV: "csv",
+    OutputFormat.NDJSON: "json",
+    OutputFormat.PARQUET: "parquet",
+}
+
 # The complete set of output formats accepted by the ``--format`` option, shared
 # by every command that produces tabular output.
 OUTPUT_FORMAT_CHOICE = click.Choice(
     [
         OutputFormat.TABLE,
         OutputFormat.CSV,
-        OutputFormat.JSON,
         OutputFormat.NDJSON,
         OutputFormat.PARQUET,
         OutputFormat.DELTA,
@@ -82,11 +91,12 @@ OUTPUT_FORMAT_CHOICE = click.Choice(
 
 
 def output_options(func):
-    """Applies the shared ``--format``/``-o``/``--limit``/``--overwrite`` options.
+    """Applies the shared output options to a command callback.
 
-    These four options form the common output surface of every command that
-    emits a result DataFrame, and are resolved together by
-    :func:`resolve_output` and consumed by :func:`write_output`.
+    These options form the common output surface of every command that emits a
+    result DataFrame - ``--format``, ``-o``/``--output``, ``--limit``,
+    ``--overwrite``, and ``--departition/--no-departition`` - and are resolved
+    together by :func:`resolve_output` and consumed by :func:`write_output`.
 
     :param func: the command callback to decorate.
     :return: the decorated callback.
@@ -108,6 +118,14 @@ def output_options(func):
         click.option(
             "--overwrite", is_flag=True, help="Replace an existing output path."
         ),
+        click.option(
+            "--departition/--no-departition",
+            "departition",
+            default=True,
+            show_default=True,
+            help="Write file output as a single file (or a Spark directory of "
+            "part files).",
+        ),
     ]
     for option in reversed(options):
         func = option(func)
@@ -117,7 +135,6 @@ def output_options(func):
 # Maps file extensions to output formats for inference.
 _EXTENSION_FORMATS = {
     ".csv": OutputFormat.CSV,
-    ".json": OutputFormat.JSON,
     ".ndjson": OutputFormat.NDJSON,
     ".jsonl": OutputFormat.NDJSON,
     ".parquet": OutputFormat.PARQUET,
@@ -132,12 +149,15 @@ class OutputSpec:
     :param format: one of the :class:`OutputFormat` values.
     :param limit: the row cap for stdout table rendering.
     :param overwrite: whether an existing output path may be replaced.
+    :param departition: whether file output is departitioned to a single file
+           (the default) rather than left as a Spark directory of part files.
     """
 
     path: Optional[Path]
     format: str
     limit: int = DEFAULT_LIMIT
     overwrite: bool = False
+    departition: bool = True
 
 
 def infer_format_from_extension(path: Path) -> Optional[str]:
@@ -154,6 +174,7 @@ def resolve_output(
     format_flag: Optional[str],
     limit: int = DEFAULT_LIMIT,
     overwrite: bool = False,
+    departition: bool = True,
 ) -> OutputSpec:
     """Resolves and validates output options.
 
@@ -161,6 +182,7 @@ def resolve_output(
     :param format_flag: the ``--format`` value, or None to default/infer.
     :param limit: the stdout table row cap.
     :param overwrite: whether replacing an existing output path is allowed.
+    :param departition: whether file output is departitioned to a single file.
     :return: the resolved :class:`OutputSpec`.
     :raises CliError: when the combination of options is invalid.
     """
@@ -169,11 +191,19 @@ def resolve_output(
     if format_flag is not None:
         fmt = format_flag
     elif path is not None:
+        if path.suffix.lower() == ".json":
+            # The JSON-array format has been removed; point the user at NDJSON
+            # rather than silently treating a .json file as newline-delimited.
+            raise CliError(
+                "The JSON-array output format has been removed. Use --format "
+                "ndjson, or a .ndjson filename, for newline-delimited JSON.",
+                exit_code=EXIT_USAGE,
+            )
         inferred = infer_format_from_extension(path)
         if inferred is None:
             raise CliError(
                 f"Could not infer an output format from '{path}'. "
-                "Use --format csv|json|ndjson|parquet|delta.",
+                "Use --format csv|ndjson|parquet|delta.",
                 exit_code=EXIT_USAGE,
             )
         fmt = inferred
@@ -183,7 +213,7 @@ def resolve_output(
     if fmt == OutputFormat.TABLE and path is not None:
         raise CliError(
             "The table format cannot be written to a file. Use --format "
-            "csv|json|ndjson|parquet|delta with -o, or drop -o for a table.",
+            "csv|ndjson|parquet|delta with -o, or drop -o for a table.",
             exit_code=EXIT_USAGE,
         )
     if fmt in PATH_REQUIRED_FORMATS and path is None:
@@ -192,7 +222,13 @@ def resolve_output(
             exit_code=EXIT_USAGE,
         )
 
-    return OutputSpec(path=path, format=fmt, limit=limit, overwrite=overwrite)
+    return OutputSpec(
+        path=path,
+        format=fmt,
+        limit=limit,
+        overwrite=overwrite,
+        departition=departition,
+    )
 
 
 def check_overwrite(path: Path, overwrite: bool) -> None:
@@ -262,16 +298,6 @@ def _records(columns: Sequence[str], rows: Sequence[Sequence]) -> List[dict]:
     return [dict(zip(columns, row)) for row in rows]
 
 
-def render_json(columns: Sequence[str], rows: Sequence[Sequence]) -> str:
-    """Renders rows as a JSON array of objects.
-
-    :param columns: the column names.
-    :param rows: the row values.
-    :return: the JSON text.
-    """
-    return json.dumps(_records(columns, rows), default=str, indent=2)
-
-
 def render_ndjson(columns: Sequence[str], rows: Sequence[Sequence]) -> str:
     """Renders rows as newline-delimited JSON objects.
 
@@ -289,7 +315,7 @@ def render_rows(columns: Sequence[str], rows: Sequence[Sequence], fmt: str) -> s
 
     :param columns: the column names.
     :param rows: the row values.
-    :param fmt: one of table, csv, json, or ndjson.
+    :param fmt: one of table, csv, or ndjson.
     :return: the rendered text.
     :raises CliError: when the format cannot render to stdout.
     """
@@ -297,8 +323,6 @@ def render_rows(columns: Sequence[str], rows: Sequence[Sequence], fmt: str) -> s
         return render_table(columns, rows)
     if fmt == OutputFormat.CSV:
         return render_csv(columns, rows)
-    if fmt == OutputFormat.JSON:
-        return render_json(columns, rows)
     if fmt == OutputFormat.NDJSON:
         return render_ndjson(columns, rows)
     raise CliError(
@@ -340,9 +364,9 @@ def write_output(df, spec: OutputSpec, console: Console) -> None:
     """Writes a result DataFrame to stdout or a file per the output spec.
 
     For stdout, the table format is capped at ``spec.limit`` rows; other
-    formats stream the full result. File output is written as a single file for
-    CSV/JSON/NDJSON/Parquet (Parquet via Arrow to preserve column types) and as
-    a Delta table directory for Delta.
+    formats stream the full result. File output is produced by Spark's native
+    writers (see :func:`_write_file`) and confirmed with a single stderr line
+    naming the format and path.
 
     :param df: the result Spark DataFrame.
     :param spec: the resolved output specification.
@@ -363,47 +387,78 @@ def write_output(df, spec: OutputSpec, console: Console) -> None:
         return
 
     check_overwrite(spec.path, spec.overwrite)
-    count = _write_file(df, spec)
-    console.print(f"Wrote {count} rows to {spec.path}.")
+    _write_file(df, spec)
+    console.print(f"Wrote {spec.format} output to {spec.path}.")
 
 
-def _write_file(df, spec: OutputSpec) -> int:
-    """Writes a result DataFrame to a file in the resolved format.
+def _write_file(df, spec: OutputSpec) -> None:
+    """Writes a result DataFrame to a file using Spark's native writers.
 
-    Parquet is collected to an Arrow table and written directly, which
-    preserves column types faithfully (in particular nested struct and array
-    columns, which a pandas round-trip degrades to anonymous lists, and
-    nullable integers, which pandas coerces to floating point). CSV, JSON, and
-    NDJSON are collected via pandas and written with its text serialisers. In
-    every case the output is a single file rather than a directory of Spark
-    part files, and the row count is taken from the materialised result to
-    avoid a second query execution (which would re-run terminology UDFs against
-    the server).
+    CSV, NDJSON, and Parquet are written by Spark rather than collected onto
+    the driver, so a result larger than driver memory can be written. By
+    default the output is departitioned to a single file: the frame is
+    repartitioned to one partition, written to a uniquely named temporary
+    directory beside the target (on the same filesystem, so the final move is a
+    rename), and the single data part file is moved to the target path before
+    the temporary directory is removed. Delta is always written as a Spark
+    table directory and is never departitioned.
+
+    No row count is reported: a Spark write returns none, and obtaining one
+    would require collecting the result or re-executing the query (re-running
+    terminology UDFs against the server).
 
     :param df: the result Spark DataFrame.
     :param spec: the resolved output specification with a non-None path.
-    :return: the number of rows written.
+    :raises CliError: when departitioning finds more than one data part file.
     """
     path = spec.path
+    spark = df.sparkSession
+
     if spec.format == OutputFormat.DELTA:
         writer = df.write.format("delta")
         if spec.overwrite:
             writer = writer.mode("overwrite")
         writer.save(str(path))
-        return df.count()
+        return
 
-    if spec.format == OutputFormat.PARQUET:
-        import pyarrow.parquet as pq
+    # Replace any existing target up front when overwriting, so a directory
+    # write or a departition move into place finds a clear path (Delta handles
+    # its own overwrite above).
+    if spec.overwrite:
+        remove_path(spark, path)
 
-        table = df.toArrow()
-        pq.write_table(table, str(path))
-        return table.num_rows
+    if not spec.departition:
+        # Leave Spark's native directory of part files at the target, written
+        # with full parallelism (no repartition to a single partition).
+        _write_spark_directory(df, spec.format, path)
+        return
 
-    pdf = df.toPandas()
-    if spec.format == OutputFormat.CSV:
-        pdf.to_csv(path, index=False)
-    elif spec.format == OutputFormat.JSON:
-        pdf.to_json(path, orient="records", indent=2)
-    elif spec.format == OutputFormat.NDJSON:
-        pdf.to_json(path, orient="records", lines=True)
-    return len(pdf)
+    part_extension = _PART_EXTENSIONS[spec.format]
+    # A uniquely named, hidden sibling of the target keeps the temporary output
+    # on the same filesystem so departitioning moves rather than copies.
+    temp_dir = path.parent / f".{path.name}.departition-{uuid.uuid4().hex}"
+    try:
+        _write_spark_directory(df.repartition(1), spec.format, temp_dir)
+        departition(spark, temp_dir, path, part_extension)
+    finally:
+        # Always remove the temporary directory, including on a write failure.
+        remove_path(spark, temp_dir)
+
+
+def _write_spark_directory(frame, fmt: str, target_dir) -> None:
+    """Writes a frame to a Spark directory of part files in the given format.
+
+    :param frame: the Spark DataFrame to write (already repartitioned as
+           required by the caller).
+    :param fmt: the file format - CSV, NDJSON, or Parquet.
+    :param target_dir: the directory Spark writes its part files into.
+    """
+    writer = frame.write.mode("overwrite")
+    if fmt == OutputFormat.CSV:
+        writer.option("header", "true").csv(str(target_dir))
+    elif fmt == OutputFormat.NDJSON:
+        # Retain null-valued fields so every record carries the same keys,
+        # matching the prior driver-side behaviour.
+        writer.option("ignoreNullFields", "false").json(str(target_dir))
+    else:
+        writer.parquet(str(target_dir))
