@@ -173,6 +173,18 @@ cat job.py | pathling run -
 pathling run etl.py --input data.ndjson out/
 ```
 
+For example, a script that projects a tabular view of patients and then
+summarises it with Spark SQL:
+
+```python
+patients = pathling.read.ndjson("data").view(
+    "Patient",
+    select=[{"column": [{"path": "gender", "name": "gender"}]}],
+)
+patients.createOrReplaceTempView("patient")
+spark.sql("SELECT gender, count(*) AS count FROM patient GROUP BY gender").show()
+```
+
 The code source is exactly one of a script path, `-` (standard input), or
 `-c CODE`; supplying both a script and `-c`, or neither, is a usage error
 (exit code 2), reported before the Spark session is started.

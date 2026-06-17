@@ -242,13 +242,17 @@ def run(ctx, script, code, args):
     See the Pathling Python API reference:
     https://pathling.csiro.au/docs/python/pathling.html
 
-    Examples:
+    Example - project a tabular view of patients, then summarise it with
+    SQL. Save this as summary.py and run "pathling run summary.py":
 
-        pathling run script.py input.ndjson out/
-
-        pathling run -c "print(spark.version)"
-
-        cat job.py | pathling run -
+    \b
+        patients = pathling.read.ndjson("data").view(
+            "Patient",
+            select=[{"column": [{"path": "gender", "name": "gender"}]}],
+        )
+        patients.createOrReplaceTempView("patient")
+        spark.sql("SELECT gender, count(*) AS count "
+                  "FROM patient GROUP BY gender").show()
     """
     source, program_args = _resolve_source(ctx, script, code, args)
 
