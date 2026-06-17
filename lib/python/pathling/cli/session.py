@@ -82,7 +82,14 @@ def _build_quiet_spark(config: CliConfig):
     # PYTHON_VERSION_MISMATCH error on any operation that uses Python workers.
     os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
 
-    extra_configs = {}
+    extra_configs = {
+        # Enable Arrow-based columnar transfer so that materialising query
+        # results on the driver (see render._write_file, and toPandas in the
+        # interactive console) collects via Arrow record batches rather than
+        # pickling rows one at a time. Set before the user overlay below so an
+        # explicit --spark-conf value still wins.
+        "spark.sql.execution.arrow.pyspark.enabled": "true",
+    }
     if not config.verbose:
         log4j2_path = _write_quiet_log4j2()
         extra_configs["spark.driver.extraJavaOptions"] = (

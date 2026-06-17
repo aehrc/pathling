@@ -341,7 +341,8 @@ def write_output(df, spec: OutputSpec, console: Console) -> None:
 
     For stdout, the table format is capped at ``spec.limit`` rows; other
     formats stream the full result. File output is written as a single file for
-    CSV/JSON/NDJSON/Parquet and as a Delta table directory for Delta.
+    CSV/JSON/NDJSON/Parquet (Parquet via Arrow to preserve column types) and as
+    a Delta table directory for Delta.
 
     :param df: the result Spark DataFrame.
     :param spec: the resolved output specification.
@@ -369,6 +370,16 @@ def write_output(df, spec: OutputSpec, console: Console) -> None:
 def _write_file(df, spec: OutputSpec) -> int:
     """Writes a result DataFrame to a file in the resolved format.
 
+    Parquet is collected to an Arrow table and written directly, which
+    preserves column types faithfully (in particular nested struct and array
+    columns, which a pandas round-trip degrades to anonymous lists, and
+    nullable integers, which pandas coerces to floating point). CSV, JSON, and
+    NDJSON are collected via pandas and written with its text serialisers. In
+    every case the output is a single file rather than a directory of Spark
+    part files, and the row count is taken from the materialised result to
+    avoid a second query execution (which would re-run terminology UDFs against
+    the server).
+
     :param df: the result Spark DataFrame.
     :param spec: the resolved output specification with a non-None path.
     :return: the number of rows written.
@@ -381,10 +392,13 @@ def _write_file(df, spec: OutputSpec) -> int:
         writer.save(str(path))
         return df.count()
 
-    # Single-file formats are materialised on the driver via pandas so the
-    # output is a single file rather than a directory of Spark part files. The
-    # row count is taken from the materialised frame to avoid a second query
-    # execution (which would re-run terminology UDFs against the server).
+    if spec.format == OutputFormat.PARQUET:
+        import pyarrow.parquet as pq
+
+        table = df.toArrow()
+        pq.write_table(table, str(path))
+        return table.num_rows
+
     pdf = df.toPandas()
     if spec.format == OutputFormat.CSV:
         pdf.to_csv(path, index=False)
@@ -392,6 +406,4 @@ def _write_file(df, spec: OutputSpec) -> int:
         pdf.to_json(path, orient="records", indent=2)
     elif spec.format == OutputFormat.NDJSON:
         pdf.to_json(path, orient="records", lines=True)
-    elif spec.format == OutputFormat.PARQUET:
-        pdf.to_parquet(path, index=False)
     return len(pdf)

@@ -93,8 +93,33 @@ def test_build_quiet_spark_empty_conf_keeps_quiet_defaults(monkeypatch):
 
     assert captured["spark.ui.showConsoleProgress"] == "false"
     assert "log4j2.configurationFile" in captured["spark.driver.extraJavaOptions"]
-    # Only the two quiet-logging options are present.
+    # Only the two quiet-logging options and the Arrow transfer option are
+    # present.
     assert set(captured) == {
         "spark.driver.extraJavaOptions",
         "spark.ui.showConsoleProgress",
+        "spark.sql.execution.arrow.pyspark.enabled",
     }
+
+
+def test_build_quiet_spark_enables_arrow_transfer(monkeypatch):
+    """Arrow-based columnar transfer is enabled on the CLI session."""
+    captured = _capture_build(monkeypatch)
+    config = CliConfig(verbose=True, spark_conf={})
+
+    _build_quiet_spark(config)
+
+    assert captured["spark.sql.execution.arrow.pyspark.enabled"] == "true"
+
+
+def test_build_quiet_spark_user_can_disable_arrow(monkeypatch):
+    """A user --spark-conf value overrides the Arrow transfer default."""
+    captured = _capture_build(monkeypatch)
+    config = CliConfig(
+        verbose=True,
+        spark_conf={"spark.sql.execution.arrow.pyspark.enabled": "false"},
+    )
+
+    _build_quiet_spark(config)
+
+    assert captured["spark.sql.execution.arrow.pyspark.enabled"] == "false"
