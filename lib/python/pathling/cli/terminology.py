@@ -114,27 +114,51 @@ def _validate_columns(df, required, dataset):
         )
 
 
-def _coding_column(code_column, system, system_column, version):
-    """Builds a Coding struct column from a code column and a system source.
+def _coding_column(code_column, system, system_column, version, *, code=None):
+    """Builds a Coding struct column from a code source and a system source.
 
-    :param code_column: the code column name.
+    :param code_column: the per-row code column name, used when ``code`` is None.
     :param system: a fixed system URI, or None.
     :param system_column: a per-row system column name, or None.
     :param version: an optional code system version.
+    :param code: a fixed literal code applied to every row, or None to read the
+           code per row from ``code_column``. This mirrors the fixed-versus-column
+           handling of the system part.
     :return: a Spark Column containing a Coding struct.
     :raises CliError: when the system source is missing or ambiguous.
     """
     from pyspark.sql.functions import col, lit, struct
 
     system_col = lit(system) if system else col(system_column)
+    code_col = lit(code) if code is not None else col(code_column)
     return struct(
         lit(None).alias("id"),
         system_col.alias("system"),
         lit(version).alias("version"),
-        col(code_column).alias("code"),
+        code_col.alias("code"),
         lit(None).alias("display"),
         lit(None).alias("userSelected"),
     )
+
+
+def _require_exactly_one(first, first_name, second, second_name, neither_message):
+    """Validates that exactly one of a pair of options is provided.
+
+    :param first: the first option's value, falsey when the option is absent.
+    :param first_name: the first option's flag name, used in the error message.
+    :param second: the second option's value, falsey when the option is absent.
+    :param second_name: the second option's flag name, used in the error message.
+    :param neither_message: the error message to raise when neither is provided;
+           it should name both options so the user knows the valid choices.
+    :raises CliError: with EXIT_USAGE when both or neither option is provided.
+    """
+    if first and second:
+        raise CliError(
+            f"{first_name} and {second_name} are mutually exclusive. Provide one.",
+            exit_code=EXIT_USAGE,
+        )
+    if not first and not second:
+        raise CliError(neither_message, exit_code=EXIT_USAGE)
 
 
 def _validate_coding_source(dataset, system, system_column):
@@ -151,17 +175,13 @@ def _validate_coding_source(dataset, system, system_column):
             f"Dataset does not exist: {dataset}. Check the path.",
             exit_code=EXIT_USAGE,
         )
-    if system and system_column:
-        raise CliError(
-            "--system and --system-column are mutually exclusive. Provide one.",
-            exit_code=EXIT_USAGE,
-        )
-    if not system and not system_column:
-        raise CliError(
-            "A code system is required. Provide --system <uri> or "
-            "--system-column <name>.",
-            exit_code=EXIT_USAGE,
-        )
+    _require_exactly_one(
+        system,
+        "--system",
+        system_column,
+        "--system-column",
+        "A code system is required. Provide --system <uri> or --system-column <name>.",
+    )
 
 
 def _execute(
@@ -353,9 +373,13 @@ def _second_coding_options(func):
     """
     options = [
         click.option(
+            "--other-code",
+            "other_code",
+            help="Fixed target code applied to every row.",
+        ),
+        click.option(
             "--other-code-column",
             "other_code_column",
-            required=True,
             help="Second code column.",
         ),
         click.option("--other-system", "other_system", help="Second fixed system URI."),
@@ -385,6 +409,7 @@ def _run_subsumption(
     limit,
     overwrite,
     departition,
+    other_code,
     other_code_column,
     other_system,
     other_system_column,
@@ -404,11 +429,32 @@ def _run_subsumption(
     :param output: the output path, or None.
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
-    :param departition: whether file output is departitioned to a single file.
-    :param other_code_column: the right code column.
+    :param other_code: a fixed target code applied to every row, or None.
+    :param other_code_column: the right code column, or None when a fixed target
+           code is supplied.
     :param other_system: the right fixed system URI, or None.
     :param other_system_column: the right per-row system column, or None.
+    :raises CliError: when the target code or system options are absent or
+            mutually exclusive.
     """
+    # Validate the target options before paying the Spark cold start.
+    _require_exactly_one(
+        other_code,
+        "--other-code",
+        other_code_column,
+        "--other-code-column",
+        "A target code is required. Provide --other-code <code> or "
+        "--other-code-column <name>.",
+    )
+    _require_exactly_one(
+        other_system,
+        "--other-system",
+        other_system_column,
+        "--other-system-column",
+        "A target system is required. Provide --other-system <uri> or "
+        "--other-system-column <name>.",
+    )
+
     name = result_column or default_name
 
     def build(pc, df):
@@ -421,7 +467,11 @@ def _run_subsumption(
         )
         left = _coding_column(code_column, system, system_column, system_version)
         right = _coding_column(
-            other_code_column, other_system, other_system_column, system_version
+            other_code_column,
+            other_system,
+            other_system_column,
+            system_version,
+            code=other_code,
         )
         return df.withColumn(name, getattr(udfs, operation)(left, right))
 
@@ -456,16 +506,23 @@ def subsumes(
     limit,
     overwrite,
     departition,
+    other_code,
     other_code_column,
     other_system,
     other_system_column,
 ):
-    """Test subsumption between two code columns.
+    """Test subsumption against another code column or a fixed target coding.
 
-    Example:
+    Compare a column of codes against either a second code column or a single
+    fixed target coding supplied with ``--other-code``.
+
+    Examples:
 
         pathling subsumes codes.csv --code-column a --system http://snomed.info/sct \\
             --other-code-column b --other-system http://snomed.info/sct
+
+        pathling subsumes codes.csv --code-column code --system http://snomed.info/sct \\
+            --other-code 73211009 --other-system http://snomed.info/sct
     """
     _run_subsumption(
         obj,
@@ -482,6 +539,7 @@ def subsumes(
         limit,
         overwrite,
         departition,
+        other_code,
         other_code_column,
         other_system,
         other_system_column,
@@ -505,16 +563,23 @@ def subsumed_by(
     limit,
     overwrite,
     departition,
+    other_code,
     other_code_column,
     other_system,
     other_system_column,
 ):
-    """Test reverse subsumption between two code columns.
+    """Test reverse subsumption against another code column or a fixed target.
 
-    Example:
+    Compare a column of codes against either a second code column or a single
+    fixed target coding supplied with ``--other-code``.
+
+    Examples:
 
         pathling subsumed-by codes.csv --code-column a --system http://snomed.info/sct \\
             --other-code-column b --other-system http://snomed.info/sct
+
+        pathling subsumed-by codes.csv --code-column code --system http://snomed.info/sct \\
+            --other-code 73211009 --other-system http://snomed.info/sct
     """
     _run_subsumption(
         obj,
@@ -531,6 +596,7 @@ def subsumed_by(
         limit,
         overwrite,
         departition,
+        other_code,
         other_code_column,
         other_system,
         other_system_column,

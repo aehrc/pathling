@@ -235,6 +235,34 @@ The default result column names (`member_of`, `translated_system` and
 `translated_code`, `subsumes`, `subsumed_by`, `display`, `property`,
 `designation`) can be overridden with `--result-column`.
 
+#### Subsumption against a fixed target coding
+
+The `subsumes` and `subsumed-by` commands test each row's coding against a
+target coding. The target code can come from a second column
+(`--other-code-column`) or be a single fixed value applied to every row
+(`--other-code`); exactly one of the two must be given. This lets you test a
+column of codes against one known concept without first adding a constant
+column to the data. The target system is supplied with `--other-system` (a
+fixed URI) or `--other-system-column` (a per-row column), and `--system-version`
+applies to both codings.
+
+```bash
+# Fixed target coding: is each code subsumed by Diabetes mellitus?
+pathling subsumed-by codes.csv --code-column code \
+  --system http://snomed.info/sct \
+  --other-code 73211009 --other-system http://snomed.info/sct
+
+# Two-column comparison: does each code in column a subsume the code in column b?
+pathling subsumes pairs.csv --code-column a \
+  --system http://snomed.info/sct \
+  --other-code-column b --other-system http://snomed.info/sct
+```
+
+Invalid combinations - supplying both or neither of `--other-code` /
+`--other-code-column`, or both or neither of `--other-system` /
+`--other-system-column` - are reported as usage errors before any Spark session
+starts.
+
 ## Configuration file
 
 Defaults for the global options can be set in a TOML file at

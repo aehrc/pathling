@@ -61,6 +61,31 @@ def _stdout_rows(result):
     return list(csv.reader(io.StringIO(result.stdout)))
 
 
+# ========== _coding_column ==========
+
+
+def test_coding_column_uses_fixed_code_literal(pathling_ctx):
+    """_coding_column applies a fixed literal code to every row when code= is set."""
+    from pathling.cli.terminology import _coding_column
+
+    df = pathling_ctx.spark.createDataFrame([("a",), ("b",)], ["code_col"])
+    coding = _coding_column("code_col", SNOMED, None, None, code="FIXED")
+    codes = [row[0] for row in df.select(coding.getField("code")).collect()]
+    # The per-row code column is ignored in favour of the fixed literal.
+    assert codes == ["FIXED", "FIXED"]
+
+
+def test_coding_column_uses_code_column_when_no_fixed_code(pathling_ctx):
+    """_coding_column reads the per-row code column when no fixed code is given."""
+    from pathling.cli.terminology import _coding_column
+
+    df = pathling_ctx.spark.createDataFrame([("a",), ("b",)], ["code_col"])
+    coding = _coding_column("code_col", SNOMED, None, None)
+    codes = [row[0] for row in df.select(coding.getField("code")).collect()]
+    # With no fixed code, each row's code is taken from the column.
+    assert codes == ["a", "b"]
+
+
 # ========== member-of ==========
 
 
@@ -308,6 +333,243 @@ def test_subsumed_by(runner, patched_context, tmp_path):
 
     assert result.exit_code == 0, result.stderr
     assert _stdout_rows(result)[1][2] == "True"
+
+
+def test_subsumes_with_fixed_other_code(runner, patched_context, tmp_path):
+    """subsumes accepts a fixed target code applied to every row."""
+    # A single code column, no target column in the data.
+    dataset = _write_csv(tmp_path / "codes.csv", ["code"], [["107963000"]])
+
+    result = runner.invoke(
+        cli,
+        [
+            "subsumes",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--other-code",
+            "63816008",
+            "--other-system",
+            SNOMED,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = _stdout_rows(result)
+    assert rows[0] == ["code", "subsumes"]
+    # 107963000 subsumes the fixed target 63816008.
+    assert rows[1][1] == "True"
+
+
+def test_subsumed_by_with_fixed_other_code(runner, patched_context, tmp_path):
+    """subsumed-by accepts a fixed target code applied to every row."""
+    dataset = _write_csv(tmp_path / "codes.csv", ["code"], [["63816008"]])
+
+    result = runner.invoke(
+        cli,
+        [
+            "subsumed-by",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--other-code",
+            "107963000",
+            "--other-system",
+            SNOMED,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = _stdout_rows(result)
+    assert rows[0] == ["code", "subsumed_by"]
+    # 63816008 is subsumed by the fixed target 107963000.
+    assert rows[1][1] == "True"
+
+
+def test_subsumes_fixed_other_code_result_column_override(
+    runner, patched_context, tmp_path
+):
+    """--result-column renames the output column when a fixed target code is used."""
+    dataset = _write_csv(tmp_path / "codes.csv", ["code"], [["107963000"]])
+
+    result = runner.invoke(
+        cli,
+        [
+            "subsumes",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--other-code",
+            "63816008",
+            "--other-system",
+            SNOMED,
+            "--result-column",
+            "is_ancestor",
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = _stdout_rows(result)
+    assert rows[0] == ["code", "is_ancestor"]
+    assert rows[1][1] == "True"
+
+
+# ========== subsumes / subsumed-by target validation ==========
+
+
+def test_other_code_and_other_code_column_mutually_exclusive(
+    runner, patched_context, tmp_path
+):
+    """Supplying both --other-code and --other-code-column is a usage error."""
+    dataset = _write_csv(tmp_path / "pairs.csv", ["code", "b"], [["107963000", "x"]])
+
+    result = runner.invoke(
+        cli,
+        [
+            "subsumes",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--other-code",
+            "63816008",
+            "--other-code-column",
+            "b",
+            "--other-system",
+            SNOMED,
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "mutually exclusive" in result.stderr.lower()
+
+
+def test_no_other_code_is_usage_error(runner, patched_context, tmp_path):
+    """Omitting both --other-code and --other-code-column is a usage error."""
+    dataset = _write_csv(tmp_path / "codes.csv", ["code"], [["107963000"]])
+
+    result = runner.invoke(
+        cli,
+        [
+            "subsumes",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--other-system",
+            SNOMED,
+        ],
+    )
+
+    assert result.exit_code == 2
+    message = result.stderr.lower()
+    assert "target code is required" in message
+    # The message names both valid options.
+    assert "--other-code" in result.stderr
+    assert "--other-code-column" in result.stderr
+
+
+def test_other_system_and_other_system_column_mutually_exclusive(
+    runner, patched_context, tmp_path
+):
+    """Supplying both --other-system and --other-system-column is a usage error."""
+    dataset = _write_csv(
+        tmp_path / "codes.csv", ["code", "sys"], [["107963000", SNOMED]]
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "subsumes",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--other-code",
+            "63816008",
+            "--other-system",
+            SNOMED,
+            "--other-system-column",
+            "sys",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "mutually exclusive" in result.stderr.lower()
+
+
+def test_no_other_system_is_usage_error(runner, patched_context, tmp_path):
+    """Omitting both --other-system and --other-system-column is a usage error."""
+    dataset = _write_csv(tmp_path / "codes.csv", ["code"], [["107963000"]])
+
+    result = runner.invoke(
+        cli,
+        [
+            "subsumes",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--other-code",
+            "63816008",
+        ],
+    )
+
+    assert result.exit_code == 2
+    message = result.stderr.lower()
+    assert "target system is required" in message
+    # The message names both valid options.
+    assert "--other-system" in result.stderr
+    assert "--other-system-column" in result.stderr
+
+
+def test_target_validation_runs_before_context_creation(runner, monkeypatch, tmp_path):
+    """Invalid target options fail before any Spark session is created.
+
+    A spy replaces the context factory and fails if invoked, proving the
+    target-side validation runs ahead of the Spark cold start (SC-002).
+    """
+    created = []
+
+    def spy(config, console=None):
+        created.append(True)
+        raise AssertionError("context must not be created on a usage error")
+
+    monkeypatch.setattr("pathling.cli.session.create_context", spy)
+    dataset = _write_csv(tmp_path / "codes.csv", ["code"], [["107963000"]])
+
+    result = runner.invoke(
+        cli,
+        [
+            "subsumes",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--other-system",
+            SNOMED,
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert created == []
 
 
 # ========== display / property-of / designation ==========
