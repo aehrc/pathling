@@ -233,3 +233,34 @@ token-endpoint = "https://auth.example.org/token"
 
 Command-line flags always take precedence over the config file. Unknown keys
 produce a warning that names the key and lists the valid keys.
+
+### Project-local configuration
+
+The CLI also looks for a file named `pathling.toml` in the current working
+directory. When present, it is used in place of the user-level config file -
+not merged with it. This lets a project carry its own settings (for example a
+particular terminology server) without editing your personal config or passing
+`--config` on every command.
+
+Exactly one config file is ever read, chosen by this precedence (highest
+first):
+
+1. The path given to `--config`.
+2. A `pathling.toml` in the current working directory.
+3. The user-level `config.toml`.
+4. None, in which case built-in defaults apply.
+
+Because files are never merged, any key the chosen file omits falls back to its
+built-in default rather than to a value from another file. Discovery is limited
+to the current working directory; the CLI does not search parent directories.
+
+When a `pathling.toml` is discovered and used, the CLI prints a one-line notice
+on standard error naming the file (and the user-level file it overrides, when
+one exists), so the active configuration is never a surprise:
+
+```text
+Using project config /path/to/pathling.toml (overrides ~/.config/pathling/config.toml).
+```
+
+Passing an explicit `--config` skips project-local discovery, and no such notice
+is printed.

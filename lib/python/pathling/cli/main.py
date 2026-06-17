@@ -162,6 +162,7 @@ def cli(
         verbose=verbose,
         config_path=config_path,
         on_warning=lambda message: console.print(message, style="yellow"),
+        on_notice=lambda message: console.print(message, style="dim"),
     )
     ctx.obj = CliContext(config=config, console=console)
 

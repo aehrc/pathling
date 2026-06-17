@@ -17,11 +17,15 @@
 
 """Configuration resolution for the Pathling command line interface.
 
-Configuration is resolved with the precedence flag > config file > built-in
-default. The config file is TOML located at
-``${XDG_CONFIG_HOME:-~/.config}/pathling/config.toml`` unless overridden with
-``--config``. Secret values for authentication may be supplied as a literal, a
-``@/path/to/file`` reference, or via an environment variable.
+A single config file is selected by the precedence explicit ``--config`` >
+project-local ``pathling.toml`` (in the current working directory) > user-level
+``${XDG_CONFIG_HOME:-~/.config}/pathling/config.toml`` > none. Files are never
+merged: keys absent from the chosen file fall back to built-in defaults, never
+to another file. The chosen file's values then resolve with the precedence flag
+> config file > built-in default. When a project-local file is discovered, a
+one-line notice naming it is emitted via the ``on_notice`` callback. Secret
+values for authentication may be supplied as a literal, a ``@/path/to/file``
+reference, or via an environment variable.
 
 Author: John Grimes.
 """
@@ -41,6 +45,11 @@ DEFAULT_FHIR_VERSION = "R4"
 
 # The FHIR versions the CLI accepts.
 SUPPORTED_FHIR_VERSIONS = ("R4",)
+
+# The name of the project-local config file discovered in the current working
+# directory, deliberately distinct from the user-level ``config.toml`` so the
+# two are never confused.
+PROJECT_CONFIG_FILENAME = "pathling.toml"
 
 # Valid top-level keys in the config file.
 VALID_CONFIG_KEYS = frozenset(
@@ -344,6 +353,34 @@ def resolve_bulk_auth(
     )
 
 
+def resolve_config_source(
+    config_path: Optional[Path],
+    cwd: Path,
+) -> tuple[Optional[Path], str]:
+    """Selects the single config file to load and reports where it came from.
+
+    Exactly one file is chosen, by the precedence explicit ``--config`` >
+    project-local ``pathling.toml`` in ``cwd`` > user-level config file > none.
+    Values are never merged across files.
+
+    :param config_path: an explicit ``--config`` path, or None.
+    :param cwd: the directory searched for a project-local ``pathling.toml``.
+    :return: a tuple of the chosen path and an origin tag, one of
+             ``"explicit"``, ``"project"``, ``"user"``, or ``"none"``. The
+             ``"none"`` case returns the (non-existent) user-level path so the
+             existing "missing file yields defaults" behaviour is preserved.
+    """
+    if config_path is not None:
+        return config_path, "explicit"
+    project_path = cwd / PROJECT_CONFIG_FILENAME
+    if project_path.exists():
+        return project_path, "project"
+    user_path = default_config_path()
+    if user_path.exists():
+        return user_path, "user"
+    return user_path, "none"
+
+
 def resolve_config(
     tx_server: Optional[str] = None,
     tx_client_id: Optional[str] = None,
@@ -353,12 +390,18 @@ def resolve_config(
     fhir_version: Optional[str] = None,
     verbose: bool = False,
     config_path: Optional[Path] = None,
+    cwd: Optional[Path] = None,
     env: Optional[dict] = None,
     on_warning: Optional[Callable[[str], None]] = None,
+    on_notice: Optional[Callable[[str], None]] = None,
 ) -> CliConfig:
     """Resolves global configuration from flags, the config file, and defaults.
 
-    Precedence is always flag > config file > built-in default.
+    A single config file is selected by the precedence explicit ``--config`` >
+    project-local ``pathling.toml`` (in ``cwd``) > user-level config file >
+    none, then its values flow through the precedence flag > config file >
+    built-in default. Files are never merged: keys absent from the chosen file
+    fall back to built-in defaults, never to another file.
 
     :param tx_server: the ``--tx-server`` flag value, or None.
     :param tx_client_id: the ``--tx-client-id`` flag value, or None.
@@ -367,14 +410,32 @@ def resolve_config(
     :param tx_scope: the ``--tx-scope`` flag value, or None.
     :param fhir_version: the ``--fhir-version`` flag value, or None.
     :param verbose: the ``--verbose`` flag value.
-    :param config_path: an explicit config file path, or None for the default.
+    :param config_path: an explicit config file path, or None for discovery.
+    :param cwd: the directory searched for a project-local ``pathling.toml``;
+           defaults to the current working directory.
     :param env: the environment mapping for secret resolution.
     :param on_warning: an optional warning callback passed to the file loader.
+    :param on_notice: an optional callback invoked with a one-line notice when a
+           project-local ``pathling.toml`` is discovered and used.
     :return: the resolved :class:`CliConfig`.
     :raises CliError: if the resolved FHIR version is unsupported.
     """
-    path = config_path or default_config_path()
+    # Exactly one file is loaded; there is no merge across config files, so any
+    # key absent from the chosen file falls back to a built-in default rather
+    # than to another file.
+    search_cwd = cwd if cwd is not None else Path.cwd()
+    path, origin = resolve_config_source(config_path, search_cwd)
     file_data = load_config_file(path, on_warning)
+
+    # Surface a project-local override so the active configuration is never a
+    # silent surprise (only when discovered, not for explicit or user-level
+    # files).
+    if origin == "project" and on_notice is not None:
+        user_path = default_config_path()
+        if user_path.exists():
+            on_notice(f"Using project config {path} (overrides {user_path}).")
+        else:
+            on_notice(f"Using project config {path}.")
 
     resolved_tx_server = tx_server or file_data.get("tx-server") or DEFAULT_TX_SERVER
     resolved_fhir_version = (

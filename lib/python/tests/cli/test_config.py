@@ -32,6 +32,7 @@ from pathling.cli.config import (
     default_config_path,
     load_config_file,
     resolve_config,
+    resolve_config_source,
     resolve_secret,
 )
 from pathling.cli.errors import CliError
@@ -42,6 +43,28 @@ def _write_config(tmp_path: Path, contents: str) -> Path:
     path = tmp_path / "config.toml"
     path.write_text(contents, encoding="utf-8")
     return path
+
+
+def _write_named(directory: Path, name: str, contents: str) -> Path:
+    """Writes a named config file into a directory and returns its path."""
+    path = directory / name
+    path.write_text(contents, encoding="utf-8")
+    return path
+
+
+def _user_config(monkeypatch, tmp_path: Path) -> Path:
+    """Isolates user-level config discovery and returns the user config path.
+
+    Points ``XDG_CONFIG_HOME`` at a directory under ``tmp_path`` so that
+    ``default_config_path()`` never resolves to the real user file. The parent
+    directory is created; the file itself is not, so callers control whether a
+    user-level config exists by writing to the returned path.
+    """
+    xdg = tmp_path / "xdg"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg))
+    user_path = xdg / "pathling" / "config.toml"
+    user_path.parent.mkdir(parents=True, exist_ok=True)
+    return user_path
 
 
 # ========== Defaults ==========
@@ -210,3 +233,240 @@ def test_resolve_secret_from_env():
 def test_resolve_secret_none_without_env():
     """A None value with no env var yields None."""
     assert resolve_secret(None, "MISSING", env={}) is None
+
+
+# ========== Project-local config: override (US1) ==========
+
+
+def test_project_config_overrides_user_config(tmp_path, monkeypatch):
+    """A project-local pathling.toml overrides the user-level config value."""
+    # Arrange: a user-level config sets server A, a project file sets server B.
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text('tx-server = "https://user.example/fhir"\n', encoding="utf-8")
+    project = tmp_path / "project"
+    project.mkdir()
+    project_file = _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+
+    # Act.
+    config = resolve_config(cwd=project)
+
+    # Assert: the project value wins and the chosen path is the project file.
+    assert config.tx_server == "https://project.example/fhir"
+    assert config.config_path == project_file
+
+
+def test_user_config_used_when_no_project_file(tmp_path, monkeypatch):
+    """With no project pathling.toml, the user-level config is used."""
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text('tx-server = "https://user.example/fhir"\n', encoding="utf-8")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    config = resolve_config(cwd=empty)
+
+    assert config.tx_server == "https://user.example/fhir"
+    assert config.config_path == user_path
+
+
+def test_flag_overrides_project_config(tmp_path, monkeypatch):
+    """A --tx-server flag overrides a project-local pathling.toml value."""
+    _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+
+    config = resolve_config(tx_server="https://flag.example/fhir", cwd=project)
+
+    assert config.tx_server == "https://flag.example/fhir"
+
+
+def test_explicit_config_ignores_project_file(tmp_path, monkeypatch):
+    """An explicit config_path is used and the project pathling.toml ignored."""
+    _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+    explicit = _write_named(
+        project, "explicit.toml", 'tx-server = "https://explicit.example/fhir"\n'
+    )
+
+    config = resolve_config(config_path=explicit, cwd=project)
+
+    assert config.tx_server == "https://explicit.example/fhir"
+    assert config.config_path == explicit
+
+
+def test_resolve_config_source_origins(tmp_path, monkeypatch):
+    """resolve_config_source returns the right path and origin per precedence."""
+    user_path = _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    # Explicit wins regardless of any project or user file.
+    explicit = tmp_path / "explicit.toml"
+    assert resolve_config_source(explicit, project) == (explicit, "explicit")
+
+    # The project-local file is chosen when present and no explicit path is given.
+    project_file = _write_named(project, "pathling.toml", "")
+    assert resolve_config_source(None, project) == (project_file, "project")
+
+    # The user-level file is chosen when it exists and no project file is present.
+    user_path.write_text("", encoding="utf-8")
+    assert resolve_config_source(None, empty) == (user_path, "user")
+
+    # Origin "none" returns the (missing) user path so defaults apply.
+    user_path.unlink()
+    assert resolve_config_source(None, empty) == (user_path, "none")
+
+
+def test_project_config_parse_error_names_file(tmp_path, monkeypatch):
+    """A malformed project pathling.toml raises CliError naming that file."""
+    _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    bad = _write_named(project, "pathling.toml", "this is not = = valid toml\n")
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(cwd=project)
+
+    assert str(bad) in exc_info.value.message
+
+
+def test_project_config_unknown_key_warns_naming_file(tmp_path, monkeypatch):
+    """An unknown key in the project file warns, naming that file."""
+    _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    bad = _write_named(project, "pathling.toml", 'unknown-key = "x"\n')
+    warnings = []
+
+    resolve_config(cwd=project, on_warning=warnings.append)
+
+    assert any("unknown-key" in message and str(bad) in message for message in warnings)
+
+
+# ========== Project-local config: no merge (US2) ==========
+
+
+def test_omitted_project_key_falls_back_to_default_not_user(tmp_path, monkeypatch):
+    """A key omitted from the project file resolves to the built-in default,
+    never to the user-level value (FR-003, no silent merge).
+
+    The terminology server is used as the distinguishing key because its
+    built-in default differs from a value the user can set. The FHIR version
+    cannot demonstrate this on its own, as the only supported version equals
+    its default.
+    """
+    # Arrange: the user-level file sets tx-server (server A) and fhir-version.
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text(
+        'tx-server = "https://user.example/fhir"\nfhir-version = "R4"\n',
+        encoding="utf-8",
+    )
+    project = tmp_path / "project"
+    project.mkdir()
+    # The project file sets only fhir-version, deliberately omitting tx-server.
+    _write_named(project, "pathling.toml", 'fhir-version = "R4"\n')
+
+    config = resolve_config(cwd=project)
+
+    # The omitted tx-server falls back to the default, not the user value A.
+    assert config.tx_server == DEFAULT_TX_SERVER
+    assert config.fhir_version == DEFAULT_FHIR_VERSION
+
+
+def test_user_auth_table_does_not_leak_into_project(tmp_path, monkeypatch):
+    """A user-level [terminology-auth] table does not apply when the project
+    file defines no auth table."""
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text(
+        "[terminology-auth]\n"
+        'client-id = "user-client"\n'
+        'token-endpoint = "https://user-auth/token"\n',
+        encoding="utf-8",
+    )
+    project = tmp_path / "project"
+    project.mkdir()
+    _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+
+    config = resolve_config(cwd=project)
+
+    assert config.tx_auth is None
+
+
+# ========== Project-local config: notice (US3) ==========
+
+
+def test_notice_for_project_file_with_user_file(tmp_path, monkeypatch):
+    """A discovered project file emits one notice naming it and the overridden
+    user-level file."""
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text('tx-server = "https://user.example/fhir"\n', encoding="utf-8")
+    project = tmp_path / "project"
+    project.mkdir()
+    project_file = _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+    notices = []
+
+    resolve_config(cwd=project, on_notice=notices.append)
+
+    assert notices == [f"Using project config {project_file} (overrides {user_path})."]
+
+
+def test_notice_omits_overrides_without_user_file(tmp_path, monkeypatch):
+    """The notice omits the overrides clause when no user-level file exists."""
+    # Isolate XDG but write no user-level file.
+    _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    project_file = _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+    notices = []
+
+    resolve_config(cwd=project, on_notice=notices.append)
+
+    assert notices == [f"Using project config {project_file}."]
+
+
+def test_no_notice_for_user_none_and_explicit_origins(tmp_path, monkeypatch):
+    """No notice is emitted for the user, none, and explicit origins."""
+    user_path = _user_config(monkeypatch, tmp_path)
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    # User origin: a user-level file exists, no project file present.
+    user_path.write_text('tx-server = "https://user.example/fhir"\n', encoding="utf-8")
+    user_notices = []
+    resolve_config(cwd=empty, on_notice=user_notices.append)
+    assert user_notices == []
+
+    # None origin: neither a user-level nor a project file exists.
+    user_path.unlink()
+    none_notices = []
+    resolve_config(cwd=empty, on_notice=none_notices.append)
+    assert none_notices == []
+
+    # Explicit origin: an explicit path is given, the project file is ignored.
+    project = tmp_path / "project"
+    project.mkdir()
+    explicit = _write_named(
+        project, "explicit.toml", 'tx-server = "https://explicit.example/fhir"\n'
+    )
+    _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+    explicit_notices = []
+    resolve_config(config_path=explicit, cwd=project, on_notice=explicit_notices.append)
+    assert explicit_notices == []
