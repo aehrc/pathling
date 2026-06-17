@@ -44,7 +44,7 @@ from pathling.cli.departition import departition, remove_path
 from pathling.cli.errors import EXIT_USAGE, CliError
 
 # The default cap on rows collected for stdout table rendering.
-DEFAULT_LIMIT = 1000
+DEFAULT_LIMIT = 50
 
 
 class OutputFormat:

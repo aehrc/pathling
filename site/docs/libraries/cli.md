@@ -70,7 +70,7 @@ as a human-readable table by default.
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `--format`                       | `table` (default), `csv`, `ndjson`; with `-o` also `parquet`, `delta`.                                                 |
 | `-o PATH`                        | Write to a file instead of stdout; the format is inferred from the extension (`.csv`, `.ndjson`/`.jsonl`, `.parquet`). |
-| `--limit N`                      | Row cap for stdout table output (default 1000).                                                                        |
+| `--limit N`                      | Row cap for stdout table output (default 50).                                                                          |
 | `--overwrite`                    | Allow replacing an existing output path.                                                                               |
 | `--departition/--no-departition` | Write file output as a single file (default) or as a Spark directory of part files. No effect on Delta.                |
 
