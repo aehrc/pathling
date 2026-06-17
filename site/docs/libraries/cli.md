@@ -121,6 +121,10 @@ In data source mode, `-t/--type` selects the subject resource type and
 `SOURCE` is a single FHIR resource JSON file), `--context` and repeatable
 `--var name=value` options are supported.
 
+Both modes name the result column `result`: data source mode pairs it with each
+resource's `id` (one row per resource), while single resource mode pairs it with
+each result item's `type` (one row per result item).
+
 ### export
 
 Bulk export data from a FHIR server.

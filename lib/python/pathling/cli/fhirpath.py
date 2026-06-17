@@ -18,9 +18,9 @@
 """The ``pathling fhirpath`` command.
 
 Evaluates a FHIRPath expression against either a whole data source (one row of
-``id`` and ``result`` per resource) or a single FHIR resource JSON file (the
-typed result values). Supports context expressions, named variables, and a FHIR
-search ``--filter`` in data source mode.
+``id`` and ``result`` per resource) or a single FHIR resource JSON file (one
+``type`` and ``result`` row per result item). Supports context expressions,
+named variables, and a FHIR search ``--filter`` in data source mode.
 
 Author: John Grimes.
 """
@@ -230,11 +230,12 @@ def _run_single_resource(
             for item in result["results"]
         ]
         # An explicit schema is required so that an empty result still has the
-        # expected columns rather than failing schema inference.
+        # expected columns rather than failing schema inference. The payload
+        # column is named "result" to match data source mode.
         schema = StructType(
             [
                 StructField("type", StringType(), True),
-                StructField("value", StringType(), True),
+                StructField("result", StringType(), True),
             ]
         )
         result_df = pc.spark.createDataFrame(rows, schema)

@@ -123,9 +123,11 @@ def test_single_resource_mode(runner, patched_context, patient_file):
 
     assert result.exit_code == 0, result.stderr
     rows = list(csv.reader(io.StringIO(result.stdout)))
-    assert rows[0] == ["type", "value"]
-    values = [row[1] for row in rows[1:]]
-    assert "John" in values
+    # The payload column is named "result" in both modes; single-resource mode
+    # pairs it with the result item "type" rather than a resource "id".
+    assert rows[0] == ["type", "result"]
+    results = [row[1] for row in rows[1:]]
+    assert "John" in results
 
 
 def test_single_resource_context_and_vars(runner, patched_context, patient_file):
