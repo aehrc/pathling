@@ -208,6 +208,19 @@ class DefaultRepresentationTest {
   }
 
   @Test
+  void testToBoolean() {
+    // A non-empty collection reads as true; null and empty collections read as empty (NULL). This
+    // must hold regardless of spark.sql.ansi.enabled, which alters size(null).
+    new ColumnAsserts()
+        .assertNull(nullValue().toBoolean())
+        .assertEquals(true, valueOf(17).toBoolean())
+        .assertNull(nullArray().toBoolean())
+        .assertNull(emptyArray().toBoolean())
+        .assertEquals(true, arrayOf(1, 2).toBoolean())
+        .check();
+  }
+
+  @Test
   void testMax() {
     new ColumnAsserts()
         .assertNull(nullValue().max())

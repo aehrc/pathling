@@ -452,10 +452,13 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation count() {
-    // The operand appears once, so a nondeterministic operand fires exactly once per row. With
-    // spark.sql.legacy.sizeOfNull = false (the default since Spark 3.0), size(null) returns null,
-    // and coalesce maps null to zero.
-    return vectorize(c -> coalesce(size(c), lit(0)), c -> when(c.isNull(), 0).otherwise(1));
+    // size(null) returns -1 under ANSI-off and null under ANSI-on (Spark resolves
+    // legacy.sizeOfNull as LEGACY_SIZE_OF_NULL && !ansiEnabled), so the null array is guarded
+    // explicitly to yield zero identically under both settings. let() binds the operand once so a
+    // nondeterministic operand (e.g. a traced column) fires exactly once per row.
+    return vectorize(
+        c -> let(c, x -> when(x.isNull(), lit(0)).otherwise(size(x))),
+        c -> when(c.isNull(), 0).otherwise(1));
   }
 
   /**
@@ -465,9 +468,11 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation isEmpty() {
-    // `size(null)` returns null when `spark.sql.legacy.sizeOfNull = false` (Spark 3.0+ default).
-    // `coalesce` maps that null to true so a null array reads as empty.
-    return vectorize(c -> coalesce(size(c).equalTo(0), lit(true)), Column::isNull);
+    // size(null) returns -1 under ANSI-off and null under ANSI-on, so the null array is guarded
+    // explicitly to read as empty identically under both settings. let() binds the operand once.
+    return vectorize(
+        c -> let(c, x -> when(x.isNull(), lit(true)).otherwise(size(x).equalTo(0))),
+        Column::isNull);
   }
 
   /**
@@ -478,8 +483,12 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation toBoolean() {
+    // A null array must read as empty (NULL), not true. Because size(null) returns -1 under
+    // ANSI-off (rather than null), the null array is guarded explicitly so a non-empty array
+    // yields true and an empty or null array yields NULL identically under both settings.
     return vectorize(
-        a -> when(size(a).notEqual(0), lit(true)), s -> when(s.isNotNull(), lit(true)));
+        a -> let(a, x -> when(x.isNotNull().and(size(x).notEqual(0)), lit(true))),
+        s -> when(s.isNotNull(), lit(true)));
   }
 
   /**
@@ -630,6 +639,27 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation elementCast(@Nonnull final DataType dataType) {
     return vectorize(a -> a.cast(DataTypes.createArrayType(dataType)), s -> s.cast(dataType));
+  }
+
+  /**
+   * Safely casts (elementwise) the current {@link ColumnRepresentation} to a different data type,
+   * yielding NULL rather than raising an error when a value is non-conforming or out of range. This
+   * is the lenient counterpart of {@link #elementCast}, built on Spark's {@code try_cast}, and its
+   * result does not depend on the session-wide {@code spark.sql.ansi.enabled} setting.
+   *
+   * <p>The array branch applies {@code try_cast} to each element individually (via {@code
+   * transform}) rather than casting the array as a whole. This is deliberate: a whole-array {@code
+   * try_cast} would null the entire collection when any one element fails under ANSI-on, while
+   * yielding per-element NULLs under ANSI-off - diverging across settings. Casting per element
+   * yields the same per-element NULLs under both settings, preserving result parity.
+   *
+   * @param dataType the data type to cast to
+   * @return a new {@link ColumnRepresentation} where each value is either the cast value or NULL
+   */
+  @Nonnull
+  public ColumnRepresentation elementTryCast(@Nonnull final DataType dataType) {
+    return vectorize(
+        a -> functions.transform(a, e -> e.try_cast(dataType)), s -> s.try_cast(dataType));
   }
 
   /**
