@@ -383,20 +383,21 @@
       </dependency>
       <!-- Override org.hl7.fhir.core transitive versions bundled by HAPI FHIR.
            HAPI FHIR 8.10.0 bundles 6.9.4.1, which is still behind the patched
-           6.9.7 that addresses CVE-2026-33180 (credential leak on HTTP
-           redirect), CVE-2026-34359 (URL prefix matching credential leak), and
-           CVE-2026-45367 (ReDoS via matches()/replaceMatches()). Keep these
-           overrides until a HAPI release bundles org.hl7.fhir.* >= 6.9.7
-           natively. -->
+           6.9.10. Version 6.9.7 addressed CVE-2026-33180 (credential leak on
+           HTTP redirect), CVE-2026-34359 (URL prefix matching credential leak),
+           and CVE-2026-45367 (ReDoS via matches()/replaceMatches()); 6.9.10
+           adds the fix for CVE-2026-55471 (XXE in XsltUtilities.saxonTransform
+           via an unhardened Saxon TransformerFactory). Keep these overrides
+           until a HAPI release bundles org.hl7.fhir.* >= 6.9.10 natively. -->
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>org.hl7.fhir.r4</artifactId>
-        <version>6.9.7</version>
+        <version>6.9.10</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>org.hl7.fhir.utilities</artifactId>
-        <version>6.9.7</version>
+        <version>6.9.10</version>
       </dependency>
       <!-- Woodstox is used by HAPI for XML processing -->
       <dependency>
