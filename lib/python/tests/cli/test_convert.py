@@ -23,14 +23,78 @@ Spark fixture, exercising format conversions, save modes, and error paths.
 Author: John Grimes.
 """
 
+import io as _io
 import os
 import shutil
+from contextlib import contextmanager
+from pathlib import Path
 
 from pytest import fixture
+from rich.console import Console
 
 from pathling.cli.main import cli
 
 PATIENT_COUNT = 9
+
+
+class _FakeSink:
+    """A no-op write sink capturing nothing; the write path is exercised
+    elsewhere."""
+
+    def ndjson(self, target, save_mode=None):
+        pass
+
+    def parquet(self, target, save_mode=None):
+        pass
+
+    def delta(self, target, save_mode=None):
+        pass
+
+
+class _FakeDataSource:
+    """A stand-in data source for convert without Spark.
+
+    ``read`` raises so any per-type ``count()`` in the summary is caught.
+    """
+
+    def __init__(self, resource_types):
+        self._resource_types = resource_types
+        self.write = _FakeSink()
+
+    def resource_types(self):
+        return self._resource_types
+
+    def read(self, resource_type):
+        raise AssertionError("the summary must not read per-type counts")
+
+
+class _FakeReader:
+    """Records the resource types passed to ``bundles``."""
+
+    def __init__(self, resource_types):
+        self._resource_types = resource_types
+        self.bundles_types = None
+
+    def bundles(self, path, types):
+        self.bundles_types = types
+        return _FakeDataSource(self._resource_types)
+
+
+class _FakePc:
+    """A minimal context exposing a recording ``read`` reader."""
+
+    def __init__(self, resource_types):
+        self.read = _FakeReader(resource_types)
+
+
+def _bundles_dir(tmp_path):
+    """Creates a minimal directory of FHIR Bundle JSON for convert tests."""
+    bundles = tmp_path / "bundles"
+    bundles.mkdir()
+    (bundles / "b.json").write_text(
+        '{"resourceType":"Bundle","type":"collection","entry":[]}', encoding="utf-8"
+    )
+    return bundles
 
 
 @fixture(scope="module")
@@ -70,9 +134,128 @@ def test_ndjson_to_parquet_with_summary(
     # A Patient parquet table is written under the output directory.
     written = sorted(entry.name for entry in out.iterdir())
     assert any(name.startswith("Patient") for name in written), written
-    # The summary names the resource types and counts (on stderr).
+    # The summary names the resource types written, but no longer triggers a
+    # per-type row count (FR-013). The output path is also reported, but is not
+    # asserted here as Rich wraps the long temp path across lines in the narrow
+    # test console; the path is covered by test_summary_does_not_count_per_type.
     assert "Patient" in result.stderr
-    assert str(PATIENT_COUNT) in result.stderr
+    assert "Condition" in result.stderr
+
+
+# ========== Summary, --type, and discovery (US5, no Spark) ==========
+
+
+def test_summary_does_not_count_per_type():
+    """The conversion summary lists resource types without a per-type count.
+
+    The fake data source raises from ``read`` so any ``read().count()`` in the
+    summary would fail the test (FR-013).
+    """
+    from pathling.cli.convert import _print_summary
+
+    buffer = _io.StringIO()
+    console = Console(file=buffer, width=200, highlight=False)
+
+    _print_summary(console, _FakeDataSource(["Condition", "Patient"]), Path("/out"))
+
+    rendered = buffer.getvalue()
+    assert "Patient" in rendered
+    assert "Condition" in rendered
+    assert "/out" in rendered
+
+
+def test_convert_type_passes_through_and_skips_discovery(runner, monkeypatch, tmp_path):
+    """`--type` is used directly and skips driver-side discovery (FR-015)."""
+    import pathling.cli.io as io_module
+
+    discovery_calls = []
+    monkeypatch.setattr(
+        io_module,
+        "discover_bundle_resource_types",
+        lambda path: discovery_calls.append(path) or ["unused"],
+    )
+    pc = _FakePc(["Patient", "Condition"])
+    monkeypatch.setattr(
+        "pathling.cli.session.create_context", lambda config, console=None: pc
+    )
+
+    bundles = _bundles_dir(tmp_path)
+    out = tmp_path / "out"
+
+    result = runner.invoke(
+        cli,
+        [
+            "convert",
+            str(bundles),
+            "--from",
+            "bundles",
+            "--to",
+            "ndjson",
+            "-o",
+            str(out),
+            "--type",
+            "Patient",
+            "--type",
+            "Condition",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert discovery_calls == []
+    assert pc.read.bundles_types == ["Patient", "Condition"]
+
+
+def test_convert_discovery_runs_under_spinner(runner, monkeypatch, tmp_path):
+    """Without `--type`, bundle discovery runs under the progress spinner rather
+    than silently before it (FR-016)."""
+    import pathling.cli.convert as convert_module
+    import pathling.cli.io as io_module
+
+    active = []
+    snapshot = {}
+
+    @contextmanager
+    def fake_progress(console, message, verbose):
+        active.append(message)
+        try:
+            yield
+        finally:
+            active.pop()
+
+    monkeypatch.setattr(convert_module, "progress_status", fake_progress)
+
+    def fake_discover(path):
+        # Record the active spinner messages at the moment discovery runs.
+        snapshot["active"] = list(active)
+        return ["Patient"]
+
+    monkeypatch.setattr(io_module, "discover_bundle_resource_types", fake_discover)
+
+    pc = _FakePc(["Patient"])
+    monkeypatch.setattr(
+        "pathling.cli.session.create_context", lambda config, console=None: pc
+    )
+
+    bundles = _bundles_dir(tmp_path)
+    out = tmp_path / "out"
+
+    result = runner.invoke(
+        cli,
+        [
+            "convert",
+            str(bundles),
+            "--from",
+            "bundles",
+            "--to",
+            "ndjson",
+            "-o",
+            str(out),
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    # Discovery ran while at least one progress spinner was active.
+    assert snapshot["active"]
 
 
 # ========== Round trip ==========

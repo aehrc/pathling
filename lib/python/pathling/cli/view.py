@@ -138,7 +138,9 @@ def view(
     output_spec = resolve_output(output, output_format, limit, overwrite, departition)
 
     pc = session.create_context(config, console)
-    data_source = read_source(pc, spec)
+    # The view already knows its single subject resource type, so pass it to the
+    # Bundles reader to avoid a redundant driver-side discovery pass (FR-015).
+    data_source = read_source(pc, spec, types=[resource_type])
 
     if filter_expr:
         resources = data_source.read(resource_type)

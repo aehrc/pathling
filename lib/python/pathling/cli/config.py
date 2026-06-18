@@ -127,6 +127,10 @@ class CliConfig:
     :param config_path: the path the config file was read from, or None.
     :param spark_conf: the resolved, validated, and merged Spark configuration
            map to apply when a session is built; empty when nothing is set.
+    :param bulk_auth_table: the parsed ``[bulk-auth]`` table from the chosen
+           config file, or None when absent. Carried so ``export`` resolves bulk
+           credentials from the already-loaded config rather than re-reading a
+           file.
     """
 
     tx_server: str = DEFAULT_TX_SERVER
@@ -135,6 +139,7 @@ class CliConfig:
     verbose: bool = False
     config_path: Optional[Path] = None
     spark_conf: dict = field(default_factory=dict)
+    bulk_auth_table: Optional[dict] = None
 
 
 def _load_toml(path: Path) -> dict:
@@ -315,14 +320,11 @@ def resolve_bulk_auth(
     :param token_endpoint: the ``--token-endpoint`` flag value, or None.
     :param scope: the ``--scope`` flag value, or None.
     :param env: the environment mapping for secret resolution.
-    :return: a populated :class:`BulkAuth`, or None when no client ID is set.
+    :return: a populated :class:`BulkAuth`, or None when no auth input is given.
     :raises CliError: when the auth configuration is incomplete or ambiguous.
     """
     table = file_bulk_auth or {}
     resolved_client_id = client_id or table.get("client-id")
-    if not resolved_client_id:
-        return None
-
     resolved_token_endpoint = token_endpoint or table.get("token-endpoint")
     resolved_scope = scope or table.get("scope")
     resolved_secret = resolve_secret(
@@ -335,6 +337,26 @@ def resolve_bulk_auth(
     )
 
     from pathling.cli.errors import EXIT_USAGE, CliError
+
+    # With no auth input at all, the export runs unauthenticated, which is valid.
+    if not any(
+        [
+            resolved_client_id,
+            resolved_token_endpoint,
+            resolved_scope,
+            resolved_secret,
+            resolved_jwk,
+        ]
+    ):
+        return None
+    # Any other auth input without a client ID is an error rather than a silent
+    # fall-through to an unauthenticated export (FR-004).
+    if not resolved_client_id:
+        raise CliError(
+            "Bulk export authentication requires a client ID. Add --client-id, "
+            "or set client-id in the [bulk-auth] config table.",
+            exit_code=EXIT_USAGE,
+        )
 
     if not resolved_token_endpoint:
         raise CliError(
@@ -440,6 +462,17 @@ def resolve_config(
     # than to another file.
     search_cwd = cwd if cwd is not None else Path.cwd()
     path, origin = resolve_config_source(config_path, search_cwd)
+
+    # An explicit --config path must exist; failing fast avoids silently falling
+    # back to another config file's credentials (FR-002).
+    if origin == "explicit" and not path.exists():
+        from pathling.cli.errors import EXIT_USAGE, CliError
+
+        raise CliError(
+            f"Config file does not exist: {path}. Check the --config path.",
+            exit_code=EXIT_USAGE,
+        )
+
     file_data = load_config_file(path, on_warning)
 
     # Surface a project-local override so the active configuration is never a
@@ -475,6 +508,17 @@ def resolve_config(
         env,
     )
 
+    # Some terminology auth input was supplied but it is insufficient to
+    # authenticate (a client ID and a token endpoint are both required); tell the
+    # user rather than silently disabling it (FR-005).
+    if tx_auth is not None and not tx_auth.enabled:
+        notify = on_warning or (lambda message: print(message, file=sys.stderr))
+        notify(
+            "Terminology authentication is incomplete and will be disabled: a "
+            "client ID and a token endpoint are both required. Provide "
+            "--tx-client-id and --tx-token-endpoint."
+        )
+
     # Resolve the [spark] table (combined with any --spark-conf flags, flag
     # wins) into the effective Spark configuration, merged with Pathling's
     # managed defaults. Any invalid key or value aborts here, before a Spark
@@ -494,4 +538,5 @@ def resolve_config(
         verbose=verbose,
         config_path=path if path.exists() else None,
         spark_conf=spark_conf,
+        bulk_auth_table=file_data.get("bulk-auth"),
     )

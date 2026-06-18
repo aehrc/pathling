@@ -26,11 +26,20 @@ Author: John Grimes.
 """
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
 from pathling.cli.errors import EXIT_USAGE, CliError
+
+# The number of leading characters of a candidate file inspected during format
+# detection. A FHIR resource names its ``resourceType`` near the start of the
+# object, so this is enough to recognise a Bundle without parsing the whole file.
+_DETECTION_PREFIX_CHARS = 4096
+
+# Matches a FHIR Bundle's ``resourceType`` declaration within the leading prefix.
+_BUNDLE_JSON_MARKER = re.compile(r'"resourceType"\s*:\s*"Bundle"')
 
 
 class SourceFormat:
@@ -68,18 +77,20 @@ class SourceSpec:
 def _looks_like_bundle(path: Path) -> bool:
     """Determines whether a JSON or XML file appears to contain a FHIR Bundle.
 
+    Only a leading prefix of the file is read; a full parse is unnecessary to
+    recognise a Bundle and wasteful for large files (FR-014).
+
     :param path: the file to inspect.
-    :return: True when the file's first resource is a Bundle.
+    :return: True when the file's leading prefix declares a Bundle resource.
     """
     try:
-        if path.suffix == ".xml":
-            head = path.read_text(encoding="utf-8", errors="ignore")[:512]
-            return "<Bundle" in head
-        with open(path, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-        return isinstance(data, dict) and data.get("resourceType") == "Bundle"
-    except (OSError, ValueError):
+        with open(path, "r", encoding="utf-8", errors="ignore") as handle:
+            head = handle.read(_DETECTION_PREFIX_CHARS)
+    except OSError:
         return False
+    if path.suffix == ".xml":
+        return "<Bundle" in head
+    return _BUNDLE_JSON_MARKER.search(head) is not None
 
 
 def _describe_directory(path: Path) -> str:
@@ -223,11 +234,15 @@ def read_single_resource(path: Path) -> tuple:
     return resource_type, text
 
 
-def read_source(pc, spec: SourceSpec):
+def read_source(pc, spec: SourceSpec, types: Optional[List[str]] = None):
     """Reads a :class:`SourceSpec` into a Pathling ``DataSource``.
 
     :param pc: the :class:`PathlingContext` to read with.
     :param spec: the resolved source specification.
+    :param types: the resource types to read from a Bundles source. When
+           provided (non-empty), these are used directly and the driver-side
+           discovery pass is skipped; when None or empty, discovery enumerates
+           the types. Ignored for non-Bundles formats (FR-015).
     :return: a Pathling ``DataSource`` for the input.
     :raises CliError: when the format is not a data source format.
     """
@@ -235,8 +250,10 @@ def read_source(pc, spec: SourceSpec):
     if spec.format == SourceFormat.NDJSON:
         return pc.read.ndjson(path)
     if spec.format == SourceFormat.BUNDLES:
-        types = discover_bundle_resource_types(spec.path)
-        return pc.read.bundles(path, types)
+        resource_types = (
+            list(types) if types else discover_bundle_resource_types(spec.path)
+        )
+        return pc.read.bundles(path, resource_types)
     if spec.format == SourceFormat.PARQUET:
         return pc.read.parquet(path)
     if spec.format == SourceFormat.DELTA:

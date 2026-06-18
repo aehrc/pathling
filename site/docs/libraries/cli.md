@@ -91,11 +91,15 @@ Convert FHIR data between formats.
 ```bash
 pathling convert data/ --to parquet -o warehouse/
 pathling convert bundles/ --from bundles --to ndjson -o out/
+pathling convert bundles/ --from bundles --type Patient --type Condition --to ndjson -o out/
 ```
 
 The `--mode overwrite|error|append|merge` option controls the save mode for
-Parquet and Delta output (`merge` is valid for Delta only). A summary of the
-resource types and row counts written is printed at the end.
+Parquet and Delta output (`merge` is valid for Delta only). For a Bundles
+source, the repeatable `--type` option names the resource types to read; when
+given, those types are used directly and the driver-side discovery pass is
+skipped. A summary of the resource types written and the output location is
+printed at the end.
 
 ### view
 
@@ -376,4 +380,5 @@ Using project config /path/to/pathling.toml (overrides ~/.config/pathling/config
 ```
 
 Passing an explicit `--config` skips project-local discovery, and no such notice
-is printed.
+is printed. An explicit `--config` path must exist; a missing path is an error
+rather than a silent fall-back to another config file.

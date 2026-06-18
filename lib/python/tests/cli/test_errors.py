@@ -25,7 +25,9 @@ from pathling.cli.errors import (
     EXIT_SUCCESS,
     EXIT_USAGE,
     CliError,
+    _categorise,
     friendly_message,
+    is_auth_error,
     unwrap_java_exception,
 )
 
@@ -136,3 +138,55 @@ def test_verbose_includes_stack_trace():
 
     assert "Traceback" in verbose
     assert "Traceback" not in quiet
+
+
+# ========== Authentication error classification (US1) ==========
+
+
+def test_is_auth_error_true_for_auth_messages():
+    """Genuine authentication failures are classified as auth errors."""
+    auth_messages = [
+        "HTTP 401 Unauthorized",
+        "invalid_client",
+        # The real SMART backend-services setup failure surfaces this message.
+        "Failed to retrieve SMART configuration",
+        "Authentication failed: bad credential",
+    ]
+    for message in auth_messages:
+        assert is_auth_error(RuntimeError(message)), message
+
+
+def test_is_auth_error_false_for_non_auth_messages():
+    """Connection, timeout, and server-error failures are not auth errors."""
+    non_auth_messages = [
+        "Connection refused",
+        "Read timed out",
+        "HTTP 500 Internal Server Error",
+        "Server returned status 503 Service Unavailable",
+    ]
+    for message in non_auth_messages:
+        assert not is_auth_error(RuntimeError(message)), message
+
+
+# ========== Connection message and FHIRPath categorisation (US4) ==========
+
+
+def test_connection_error_with_server_url_uses_reach_phrasing():
+    """A connection error with a server URL produces the 'could not reach'
+    message naming the configured server (FR-011)."""
+    exc = RuntimeError("Connection refused")
+
+    message = friendly_message(exc, server_url="https://tx.example/fhir")
+
+    assert "Could not reach the server at https://tx.example/fhir" in message
+
+
+def test_bare_parse_error_not_categorised_as_fhirpath():
+    """A generic 'parse error' that is not a FHIRPath failure is not labelled as
+    a FHIRPath error (FR-012)."""
+    assert _categorise("JSON parse error at line 2") != "fhirpath"
+
+
+def test_genuine_fhirpath_error_still_categorised():
+    """A message naming FHIRPath is still categorised as a FHIRPath error."""
+    assert _categorise("FHIRPath parse error at position 3") == "fhirpath"

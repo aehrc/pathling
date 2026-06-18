@@ -19,16 +19,18 @@
 
 The Spark session is created only when a command actually needs it, behind a
 status spinner on stderr. Spark and JVM logging is suppressed by default by
-pointing the driver JVM at a generated log4j2 configuration before launch, and
+pointing the driver JVM at a packaged log4j2 configuration before launch, and
 lowering the log level once the context exists; ``--verbose`` leaves logging at
 its defaults.
 
 Author: John Grimes.
 """
 
+import atexit
 import os
 import sys
-import tempfile
+from contextlib import ExitStack
+from importlib.resources import as_file, files
 from typing import Optional
 
 from rich.console import Console
@@ -36,32 +38,33 @@ from rich.console import Console
 from pathling.cli.config import CliConfig
 from pathling.cli.render import progress_status, stderr_console
 
-# A log4j2 configuration that silences Spark and JVM logging. It is written to a
-# temporary file and supplied to the driver JVM before launch so that startup
-# noise, and task-failure stack traces, are suppressed (the CLI surfaces its own
-# concise error message instead). The level is raised again by ``--verbose``.
-_QUIET_LOG4J2 = """\
-rootLogger.level = off
-appender.console.type = Console
-appender.console.name = console
-appender.console.target = SYSTEM_ERR
-appender.console.layout.type = PatternLayout
-appender.console.layout.pattern = %d{HH:mm:ss} %p %c{1}: %m%n
-rootLogger.appenderRef.console.ref = console
-"""
+# The packaged log4j2 configuration that silences Spark and JVM logging. It is
+# supplied to the driver JVM before launch so that startup noise, and
+# task-failure stack traces, are suppressed (the CLI surfaces its own concise
+# error message instead). The level is raised again by ``--verbose``.
+_QUIET_LOG4J2_RESOURCE = "quiet-log4j2.properties"
+
+# Keeps the materialised packaged resource path valid for the process lifetime.
+# For a directory-installed wheel the resource is a real file and needs no
+# cleanup; for a zipped install it is a temporary extraction removed when the
+# stack closes at interpreter exit. Either way no per-run temporary file is left
+# behind, unlike the previous NamedTemporaryFile approach (FR-017).
+_RESOURCE_STACK = ExitStack()
+atexit.register(_RESOURCE_STACK.close)
 
 
-def _write_quiet_log4j2() -> str:
-    """Writes the quiet log4j2 configuration to a temporary file.
+def quiet_log4j2_path() -> str:
+    """Resolves a filesystem path to the packaged quiet log4j2 configuration.
 
-    :return: the path to the written configuration file.
+    The configuration ships as static package data, so no per-run temporary file
+    is created. The materialised path is kept valid for the process lifetime so
+    the driver JVM can read it during and after session start.
+
+    :return: the filesystem path to the quiet log4j2 properties file.
     """
-    handle = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".properties", prefix="pathling-cli-log4j2-", delete=False
-    )
-    handle.write(_QUIET_LOG4J2)
-    handle.close()
-    return handle.name
+    resource = files("pathling.cli").joinpath("resources", _QUIET_LOG4J2_RESOURCE)
+    path = _RESOURCE_STACK.enter_context(as_file(resource))
+    return str(path)
 
 
 def _build_quiet_spark(config: CliConfig):
@@ -92,7 +95,7 @@ def _build_quiet_spark(config: CliConfig):
         "spark.sql.execution.arrow.pyspark.enabled": "true",
     }
     if not config.verbose:
-        log4j2_path = _write_quiet_log4j2()
+        log4j2_path = quiet_log4j2_path()
         extra_configs["spark.driver.extraJavaOptions"] = (
             f"-Dlog4j2.configurationFile=file:{log4j2_path}"
         )

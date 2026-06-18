@@ -38,6 +38,25 @@ EXIT_RUNTIME = 1
 # Exit code for a usage error (the command was invoked incorrectly).
 EXIT_USAGE = 2
 
+# Signals that an unwrapped root message describes an authentication failure
+# rather than a connection, timeout, or server-side problem. The SMART
+# backend-services setup surfaces "Failed to retrieve SMART configuration" when
+# the token endpoint or credential is wrong, so that phrasing is included
+# alongside the standard OAuth2 rejection codes.
+_AUTH_PATTERN = re.compile(
+    r"\b401\b"
+    r"|\bunauthorized\b"
+    r"|invalid_client|invalid_grant|invalid_scope|unauthorized_client"
+    r"|smart configuration"
+    r"|smart auth"
+    r"|access[ _]token"
+    r"|token endpoint"
+    r"|authentication (?:failed|error)"
+    r"|failed to authenticate"
+    r"|credential",
+    re.IGNORECASE,
+)
+
 
 class CliError(Exception):
     """An error with a message that is safe to show the user directly.
@@ -93,7 +112,11 @@ def _categorise(root_message: str) -> Optional[str]:
         return "connection"
     if "unknownhost" in lowered or "unknown host" in lowered:
         return "connection"
-    if "fhirpath" in lowered or "parse error" in lowered:
+    if _AUTH_PATTERN.search(root_message):
+        return "auth"
+    # Require a FHIRPath-specific signal rather than the bare substring "parse
+    # error", which can appear in unrelated parse failures (FR-012).
+    if "fhirpath" in lowered:
         return "fhirpath"
     return None
 
@@ -105,6 +128,21 @@ def is_connection_error(exc: BaseException) -> bool:
     :return: True when the unwrapped message looks like a connection failure.
     """
     return _categorise(unwrap_java_exception(exc)) == "connection"
+
+
+def is_auth_error(exc: BaseException) -> bool:
+    """Determines whether an exception represents an authentication failure.
+
+    Used to decide whether an export failure should be reported as an
+    authentication problem; connection, timeout, and server-side errors that
+    happen to occur while authentication is configured must not be misdiagnosed
+    as bad credentials.
+
+    :param exc: the exception to classify.
+    :return: True when the unwrapped message looks like an authentication
+             failure.
+    """
+    return _categorise(unwrap_java_exception(exc)) == "auth"
 
 
 def friendly_message(

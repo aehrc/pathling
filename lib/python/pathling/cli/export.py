@@ -32,8 +32,13 @@ import click
 from rich.table import Table
 
 from pathling.cli import session
-from pathling.cli.config import default_config_path, load_config_file, resolve_bulk_auth
-from pathling.cli.errors import EXIT_USAGE, CliError, unwrap_java_exception
+from pathling.cli.config import resolve_bulk_auth
+from pathling.cli.errors import (
+    EXIT_USAGE,
+    CliError,
+    is_auth_error,
+    unwrap_java_exception,
+)
 from pathling.cli.render import check_overwrite, progress_status
 
 
@@ -180,9 +185,8 @@ def export(
     check_overwrite(output_path, overwrite)
     since_dt = _parse_since(since)
 
-    file_data = load_config_file(config.config_path or default_config_path())
     bulk_auth = resolve_bulk_auth(
-        file_data.get("bulk-auth"),
+        config.bulk_auth_table,
         client_id=client_id,
         client_secret=client_secret,
         private_key_jwk=private_key_jwk,
@@ -215,7 +219,11 @@ def export(
                 auth_config=auth_config,
             )
         except Exception as exc:  # noqa: BLE001 - re-raised as a friendly error.
-            if bulk_auth is not None:
+            # Only claim an authentication failure when the error genuinely looks
+            # like one; otherwise surface the unwrapped root cause so a server
+            # outage, timeout, or HTTP 500 is not misdiagnosed as bad
+            # credentials (FR-001).
+            if bulk_auth is not None and is_auth_error(exc):
                 raise CliError(
                     f"Authentication failed using {bulk_auth.mechanism} against "
                     f"{bulk_auth.token_endpoint}: {unwrap_java_exception(exc)}. "
@@ -227,7 +235,10 @@ def export(
 
 
 def _print_summary(console, data_source, output_path) -> None:
-    """Prints a summary of the files written and resource counts.
+    """Prints a summary of the resource types, file count, and output path.
+
+    Row counts are deliberately omitted: counting each type would trigger an
+    extra full Spark job purely to print a number (FR-013).
 
     :param console: the stderr console.
     :param data_source: the ndjson data source for the exported files.
@@ -235,13 +246,11 @@ def _print_summary(console, data_source, output_path) -> None:
     """
     table = Table(title="Export summary")
     table.add_column("Resource type")
-    table.add_column("Rows", justify="right")
-    total = 0
     for resource_type in sorted(data_source.resource_types()):
-        count = data_source.read(resource_type).count()
-        total += count
-        table.add_row(resource_type, str(count))
-
-    files = sorted(p.name for p in output_path.glob("*.ndjson"))
-    table.caption = f"{len(files)} files, {total} rows downloaded to {output_path}"
+        table.add_row(resource_type)
     console.print(table)
+
+    # Report the file count and output location on their own line so a long path
+    # is not wrapped awkwardly inside the table.
+    files = sorted(p.name for p in output_path.glob("*.ndjson"))
+    console.print(f"{len(files)} files downloaded to {output_path}")

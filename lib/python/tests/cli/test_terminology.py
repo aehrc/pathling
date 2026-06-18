@@ -69,7 +69,7 @@ def test_coding_column_uses_fixed_code_literal(pathling_ctx):
     from pathling.cli.terminology import _coding_column
 
     df = pathling_ctx.spark.createDataFrame([("a",), ("b",)], ["code_col"])
-    coding = _coding_column("code_col", SNOMED, None, None, code="FIXED")
+    coding = _coding_column(pathling_ctx, "code_col", SNOMED, None, None, code="FIXED")
     codes = [row[0] for row in df.select(coding.getField("code")).collect()]
     # The per-row code column is ignored in favour of the fixed literal.
     assert codes == ["FIXED", "FIXED"]
@@ -80,10 +80,34 @@ def test_coding_column_uses_code_column_when_no_fixed_code(pathling_ctx):
     from pathling.cli.terminology import _coding_column
 
     df = pathling_ctx.spark.createDataFrame([("a",), ("b",)], ["code_col"])
-    coding = _coding_column("code_col", SNOMED, None, None)
+    coding = _coding_column(pathling_ctx, "code_col", SNOMED, None, None)
     codes = [row[0] for row in df.select(coding.getField("code")).collect()]
     # With no fixed code, each row's code is taken from the column.
     assert codes == ["a", "b"]
+
+
+def test_coding_column_matches_library_schema(pathling_ctx):
+    """The CLI Coding column matches the library's Coding schema (field names and
+    order), so it cannot drift from the library definition (FR-018)."""
+    from pyspark.sql.functions import lit
+
+    from pathling.cli.terminology import _coding_column
+    from pathling.functions import to_coding
+
+    # A dataset with a "code" column so the per-row code reference resolves.
+    base = pathling_ctx.spark.createDataFrame([("368529001",)], ["code"])
+    cli_fields = (
+        base.select(_coding_column(pathling_ctx, "code", SNOMED, None, None).alias("c"))
+        .schema["c"]
+        .dataType.fieldNames()
+    )
+    library_fields = (
+        base.select(to_coding(lit("x"), SNOMED).alias("c"))
+        .schema["c"]
+        .dataType.fieldNames()
+    )
+
+    assert cli_fields == library_fields
 
 
 # ========== member-of ==========

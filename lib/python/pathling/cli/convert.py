@@ -71,12 +71,19 @@ MODE_CHOICES = ("overwrite", "error", "append", "merge")
     help="Save mode for parquet/delta output; 'merge' is delta only.",
 )
 @click.option(
+    "--type",
+    "types",
+    multiple=True,
+    help="Resource type to read from a Bundles source (repeatable). When given, "
+    "these types are used directly and driver-side discovery is skipped.",
+)
+@click.option(
     "--overwrite",
     is_flag=True,
     help="Replace an existing output path (equivalent to --mode overwrite).",
 )
 @click.pass_obj
-def convert(obj, source, from_format, to_format, output, mode, overwrite):
+def convert(obj, source, from_format, to_format, output, mode, types, overwrite):
     """Convert FHIR data between formats.
 
     Examples:
@@ -84,6 +91,8 @@ def convert(obj, source, from_format, to_format, output, mode, overwrite):
         pathling convert data/ --to parquet -o warehouse/
 
         pathling convert bundles/ --from bundles --to ndjson -o out/
+
+        pathling convert bundles/ --from bundles --type Patient --to ndjson -o out/
     """
     config = obj.config
     console = obj.console
@@ -104,7 +113,11 @@ def convert(obj, source, from_format, to_format, output, mode, overwrite):
         check_overwrite(output_path, overwrite=False)
 
     pc = session.create_context(config, console)
-    data_source = read_source(pc, spec)
+
+    # Read under the spinner so that bundle discovery (when it runs) is surfaced
+    # rather than happening silently before any feedback (FR-016).
+    with progress_status(console, "Reading source...", config.verbose):
+        data_source = read_source(pc, spec, types=list(types) or None)
 
     with progress_status(
         console, f"Writing {to_format} to {output_path}...", config.verbose
@@ -118,22 +131,24 @@ def convert(obj, source, from_format, to_format, output, mode, overwrite):
         else:
             sink.delta(target, save_mode=effective_mode)
 
-    _print_summary(console, data_source)
+    _print_summary(console, data_source, output_path)
 
 
-def _print_summary(console, data_source) -> None:
-    """Prints a table of the resource types written and their row counts.
+def _print_summary(console, data_source, output_path) -> None:
+    """Prints a table of the resource types written and the output location.
+
+    Row counts are deliberately omitted: counting each type would trigger an
+    extra full Spark job purely to print a number (FR-013).
 
     :param console: the stderr console to print the summary to.
     :param data_source: the data source that was written.
+    :param output_path: the output path the data was written to.
     """
     table = Table(title="Conversion summary")
     table.add_column("Resource type")
-    table.add_column("Rows", justify="right")
-    total = 0
     for resource_type in sorted(data_source.resource_types()):
-        count = data_source.read(resource_type).count()
-        total += count
-        table.add_row(resource_type, str(count))
-    table.caption = f"{total} rows total"
+        table.add_row(resource_type)
     console.print(table)
+    # Report the output location on its own line so a long path is not wrapped
+    # awkwardly inside the table.
+    console.print(f"Written to {output_path}")

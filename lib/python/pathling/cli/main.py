@@ -29,6 +29,7 @@ Author: John Grimes.
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 import click
 from rich.console import Console
@@ -79,6 +80,21 @@ def _verbose_from(ctx: click.Context) -> bool:
     return isinstance(ctx.obj, CliContext) and ctx.obj.config.verbose
 
 
+def _server_url_from(ctx: click.Context) -> Optional[str]:
+    """Returns the configured terminology server URL for the context, or None.
+
+    Threaded into the friendly error message so a connection failure from
+    convert/view/fhirpath names the server it could not reach (FR-011). The
+    terminology commands enrich their own connection errors, so this only
+    affects the generic ``Exception`` path used by the other commands.
+
+    :param ctx: the Click context.
+    :return: the configured terminology server URL, or None when no context is
+             present.
+    """
+    return ctx.obj.config.tx_server if isinstance(ctx.obj, CliContext) else None
+
+
 class PathlingCli(click.Group):
     """The root group with centralised error handling and exit codes."""
 
@@ -104,7 +120,11 @@ class PathlingCli(click.Group):
             _console_from(ctx).print(exc.message, style="red")
             sys.exit(exc.exit_code)
         except Exception as exc:  # noqa: BLE001 - the central runtime handler.
-            message = friendly_message(exc, verbose=_verbose_from(ctx))
+            message = friendly_message(
+                exc,
+                verbose=_verbose_from(ctx),
+                server_url=_server_url_from(ctx),
+            )
             _console_from(ctx).print(message, style="red")
             sys.exit(EXIT_RUNTIME)
 

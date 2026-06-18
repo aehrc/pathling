@@ -262,3 +262,69 @@ def test_view_empty_result_prints_zero_rows(
 
     assert result.exit_code == 0, result.stderr
     assert "0 rows" in result.stdout
+
+
+# ========== Bundles read uses the view resource type, no discovery (US5) ==========
+
+
+class _FakeResultDF:
+    """A minimal result frame for stdout table rendering without Spark."""
+
+    columns = ["id"]
+
+    def limit(self, _n):
+        return self
+
+    def collect(self):
+        return []
+
+
+class _FakeViewSource:
+    """A data source whose ``view`` returns a trivial result frame."""
+
+    def view(self, json=None):
+        return _FakeResultDF()
+
+
+def test_view_bundles_uses_view_resource_type(runner, monkeypatch, tmp_path):
+    """A view over a Bundles source reads using the ViewDefinition's resource
+    type and runs no driver-side discovery pass (FR-015)."""
+    import pathling.cli.io as io_module
+
+    discovery_calls = []
+    monkeypatch.setattr(
+        io_module,
+        "discover_bundle_resource_types",
+        lambda path: discovery_calls.append(path) or ["WRONG"],
+    )
+
+    captured = {}
+
+    class _Reader:
+        def bundles(self, path, types):
+            captured["types"] = types
+            return _FakeViewSource()
+
+    class _Pc:
+        read = _Reader()
+
+    monkeypatch.setattr(
+        "pathling.cli.session.create_context", lambda config, console=None: _Pc()
+    )
+
+    bundles = tmp_path / "bundles"
+    bundles.mkdir()
+    (bundles / "b.json").write_text(
+        '{"resourceType":"Bundle","entry":[]}', encoding="utf-8"
+    )
+    view_json = json.dumps(
+        {"resource": "Patient", "select": [{"column": [{"path": "id", "name": "id"}]}]}
+    )
+
+    result = runner.invoke(
+        cli, ["view", str(bundles), "--from", "bundles", "--view-json", view_json]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert discovery_calls == []
+    assert captured["types"] == ["Patient"]

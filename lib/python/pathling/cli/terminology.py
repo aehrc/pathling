@@ -104,6 +104,11 @@ def _validate_columns(df, required, dataset):
     :param dataset: the dataset path for the error message.
     :raises CliError: when any required column is missing.
     """
+    # This check is inherently late: validating a column name requires the
+    # dataset schema, which is only available after the Spark session has read
+    # the source. Cheaper inputs (the dataset path and the system options) are
+    # already validated before the Spark cold start; the column check is as early
+    # as it can be without a bespoke per-format schema pre-read (FR-019).
     missing = [name for name in required if name and name not in df.columns]
     if missing:
         available = ", ".join(df.columns)
@@ -114,9 +119,15 @@ def _validate_columns(df, required, dataset):
         )
 
 
-def _coding_column(code_column, system, system_column, version, *, code=None):
+def _coding_column(pc, code_column, system, system_column, version, *, code=None):
     """Builds a Coding struct column from a code source and a system source.
 
+    The struct's field names and order are derived from the library's own Coding
+    builder rather than hand-listed, so the CLI cannot drift from the library
+    Coding schema (FR-018). Fields other than the code, system, and version are
+    set to null, exactly as the library does for codings built from columns.
+
+    :param pc: the Pathling context, used to resolve the library Coding schema.
     :param code_column: the per-row code column name, used when ``code`` is None.
     :param system: a fixed system URI, or None.
     :param system_column: a per-row system column name, or None.
@@ -129,16 +140,23 @@ def _coding_column(code_column, system, system_column, version, *, code=None):
     """
     from pyspark.sql.functions import col, lit, struct
 
+    from pathling.functions import to_coding
+
+    # Resolve the canonical Coding field names and order from the library's own
+    # builder; analysing the schema does not trigger a Spark job.
+    reference = to_coding(lit(None), "")
+    field_names = (
+        pc.spark.range(1).select(reference.alias("c")).schema["c"].dataType.fieldNames()
+    )
+
     system_col = lit(system) if system else col(system_column)
     code_col = lit(code) if code is not None else col(code_column)
-    return struct(
-        lit(None).alias("id"),
-        system_col.alias("system"),
-        lit(version).alias("version"),
-        code_col.alias("code"),
-        lit(None).alias("display"),
-        lit(None).alias("userSelected"),
-    )
+    overrides = {
+        "system": system_col,
+        "version": lit(version),
+        "code": code_col,
+    }
+    return struct(*[overrides.get(name, lit(None)).alias(name) for name in field_names])
 
 
 def _require_exactly_one(first, first_name, second, second_name, neither_message):
@@ -272,7 +290,7 @@ def member_of(
         from pathling import udfs
 
         _validate_columns(df, [code_column, system_column], dataset)
-        coding = _coding_column(code_column, system, system_column, system_version)
+        coding = _coding_column(pc, code_column, system, system_column, system_version)
         return df.withColumn(name, udfs.member_of(coding, value_set))
 
     _execute(
@@ -334,7 +352,7 @@ def translate(
         from pathling import udfs
 
         _validate_columns(df, [code_column, system_column], dataset)
-        coding = _coding_column(code_column, system, system_column, system_version)
+        coding = _coding_column(pc, code_column, system, system_column, system_version)
         translation = udfs.translate(
             coding,
             concept_map,
@@ -465,8 +483,9 @@ def _run_subsumption(
             [code_column, system_column, other_code_column, other_system_column],
             dataset,
         )
-        left = _coding_column(code_column, system, system_column, system_version)
+        left = _coding_column(pc, code_column, system, system_column, system_version)
         right = _coding_column(
+            pc,
             other_code_column,
             other_system,
             other_system_column,
@@ -637,7 +656,7 @@ def display(
         from pathling import udfs
 
         _validate_columns(df, [code_column, system_column], dataset)
-        coding = _coding_column(code_column, system, system_column, system_version)
+        coding = _coding_column(pc, code_column, system, system_column, system_version)
         return df.withColumn(name, udfs.display(coding, accept_language))
 
     _execute(
@@ -699,7 +718,7 @@ def property_of(
         from pathling import udfs
 
         _validate_columns(df, [code_column, system_column], dataset)
-        coding = _coding_column(code_column, system, system_column, system_version)
+        coding = _coding_column(pc, code_column, system, system_column, system_version)
         return df.withColumn(
             name,
             udfs.property_of(coding, property_code, property_type, accept_language),
@@ -757,7 +776,7 @@ def designation(
         from pathling.coding import Coding
 
         _validate_columns(df, [code_column, system_column], dataset)
-        coding = _coding_column(code_column, system, system_column, system_version)
+        coding = _coding_column(pc, code_column, system, system_column, system_version)
         use_coding = None
         if use:
             if "|" not in use:

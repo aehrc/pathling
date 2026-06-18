@@ -23,14 +23,213 @@ the library test suite. Authentication resolution is unit tested without Spark.
 Author: John Grimes.
 """
 
+import io as _io
 import os
 
 import pytest
 from flask import Response, request
+from rich.console import Console
 
 from pathling.cli.config import resolve_bulk_auth
 from pathling.cli.errors import CliError
 from pathling.cli.main import cli
+
+
+class _FakeReadable:
+    """A stand-in dataset exposing the row ``count`` the summary may read."""
+
+    def count(self):
+        return 1
+
+
+class _FakeDataSource:
+    """A stand-in bulk data source for summary printing without Spark."""
+
+    def resource_types(self):
+        return ["Patient"]
+
+    def read(self, resource_type):
+        return _FakeReadable()
+
+
+class _FakeReader:
+    """A stand-in ``pc.read`` whose ``bulk`` delegates to a supplied callback."""
+
+    def __init__(self, on_bulk):
+        self._on_bulk = on_bulk
+
+    def bulk(self, **kwargs):
+        return self._on_bulk(kwargs)
+
+
+class _FakePc:
+    """A minimal stand-in :class:`PathlingContext` for the export command."""
+
+    def __init__(self, on_bulk):
+        self.read = _FakeReader(on_bulk)
+
+
+def _patch_bulk(monkeypatch, on_bulk):
+    """Routes ``export`` at a fake context whose ``read.bulk`` runs ``on_bulk``.
+
+    :param monkeypatch: the pytest monkeypatch fixture.
+    :param on_bulk: a callback ``(kwargs) -> data_source`` (may raise).
+    :return: the fake context.
+    """
+    pc = _FakePc(on_bulk)
+    monkeypatch.setattr(
+        "pathling.cli.session.create_context", lambda config, console=None: pc
+    )
+    return pc
+
+
+# ========== Failure classification (US1, no Spark) ==========
+
+
+def test_non_auth_failure_reports_root_cause(runner, monkeypatch, tmp_path):
+    """A non-auth failure under configured auth reports the root cause and does
+    not claim authentication failed (FR-001)."""
+
+    def boom(_kwargs):
+        raise RuntimeError("HTTP 500 Internal Server Error during download")
+
+    _patch_bulk(monkeypatch, boom)
+    out = tmp_path / "export"
+
+    result = runner.invoke(
+        cli,
+        [
+            "export",
+            "https://server/fhir",
+            "-o",
+            str(out),
+            "--client-id",
+            "c",
+            "--token-endpoint",
+            "https://auth/token",
+            "--client-secret",
+            "shh",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "500" in result.stderr
+    assert "authentication failed" not in result.stderr.lower()
+
+
+def test_auth_failure_reports_auth_message(runner, monkeypatch, tmp_path):
+    """A genuine auth failure names the mechanism and token endpoint (FR-001)."""
+
+    def boom(_kwargs):
+        # The real SMART backend-services setup failure surfaces this message.
+        raise RuntimeError("Failed to retrieve SMART configuration")
+
+    _patch_bulk(monkeypatch, boom)
+    out = tmp_path / "export"
+
+    result = runner.invoke(
+        cli,
+        [
+            "export",
+            "https://server/fhir",
+            "-o",
+            str(out),
+            "--client-id",
+            "c",
+            "--token-endpoint",
+            "https://auth/token",
+            "--client-secret",
+            "shh",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "authentication failed" in result.stderr.lower()
+    assert "https://auth/token" in result.stderr
+    assert "a client secret" in result.stderr
+
+
+def test_export_resolves_bulk_auth_from_resolved_config(runner, monkeypatch, tmp_path):
+    """Export resolves bulk auth from the resolved config's [bulk-auth] table,
+    not by re-reading a config file path (FR-003)."""
+    captured = {}
+
+    def spy_resolve(file_bulk_auth, **_kwargs):
+        captured["table"] = file_bulk_auth
+        return None
+
+    monkeypatch.setattr("pathling.cli.export.resolve_bulk_auth", spy_resolve)
+
+    # Export must resolve from the already-parsed config, never re-read a file.
+    def _fail_if_reread(*_args, **_kwargs):
+        raise AssertionError("export must not re-read a config file")
+
+    monkeypatch.setattr(
+        "pathling.cli.export.load_config_file", _fail_if_reread, raising=False
+    )
+
+    def ok_bulk(kwargs):
+        captured["auth_config"] = kwargs.get("auth_config")
+        return _FakeDataSource()
+
+    _patch_bulk(monkeypatch, ok_bulk)
+
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(
+        "[bulk-auth]\n"
+        'client-id = "table-client"\n'
+        'token-endpoint = "https://auth/token"\n'
+        'client-secret = "shh"\n',
+        encoding="utf-8",
+    )
+    out = tmp_path / "export"
+
+    result = runner.invoke(
+        cli,
+        ["--config", str(config_file), "export", "https://server/fhir", "-o", str(out)],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    # The table passed to resolution is the resolved config's [bulk-auth] table.
+    assert captured["table"] == {
+        "client-id": "table-client",
+        "token-endpoint": "https://auth/token",
+        "client-secret": "shh",
+    }
+    # No auth was configured by the spy, so the export ran unauthenticated.
+    assert captured["auth_config"] is None
+
+
+class _SummaryFakeDataSource:
+    """A data source whose ``read`` raises, to catch any per-type count."""
+
+    def resource_types(self):
+        return ["Condition", "Patient"]
+
+    def read(self, resource_type):
+        raise AssertionError("the summary must not read per-type counts")
+
+
+def test_export_summary_reports_files_types_path_without_count(tmp_path):
+    """The export summary reports the file count, resource types, and output
+    path without a per-type row count (FR-013)."""
+    from pathling.cli.export import _print_summary
+
+    out = tmp_path / "export"
+    out.mkdir()
+    (out / "Patient.0000.ndjson").write_text("{}\n", encoding="utf-8")
+    (out / "Condition.0000.ndjson").write_text("{}\n", encoding="utf-8")
+
+    buffer = _io.StringIO()
+    console = Console(file=buffer, width=200, highlight=False)
+
+    _print_summary(console, _SummaryFakeDataSource(), out)
+
+    rendered = buffer.getvalue()
+    assert "Patient" in rendered
+    assert "Condition" in rendered
+    assert "2 files" in rendered
+    assert str(out) in rendered
 
 
 @pytest.fixture

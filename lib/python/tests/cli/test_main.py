@@ -107,3 +107,50 @@ def test_importing_main_does_not_import_heavy_modules():
 
     assert result.returncode == 0, result.stderr
     assert "ok" in result.stdout
+
+
+# ========== Central error handler threads the server URL (US4) ==========
+
+
+def test_central_handler_passes_tx_server_as_server_url(runner, monkeypatch, tmp_path):
+    """The central handler passes the configured tx_server to friendly_message
+    so connection failures from convert/view/fhirpath name the server (FR-011).
+    """
+    captured = {}
+
+    def fake_friendly(exc, verbose=False, server_url=None):
+        captured["server_url"] = server_url
+        return "rendered"
+
+    monkeypatch.setattr("pathling.cli.main.friendly_message", fake_friendly)
+
+    # Fail inside the command, past configuration resolution, with a generic
+    # exception so the central ``except Exception`` branch is exercised.
+    def boom(config, console=None):
+        raise RuntimeError("Connection refused")
+
+    monkeypatch.setattr("pathling.cli.session.create_context", boom)
+
+    source = tmp_path / "data"
+    source.mkdir()
+    (source / "Patient.ndjson").write_text(
+        '{"resourceType":"Patient"}\n', encoding="utf-8"
+    )
+    out = tmp_path / "out"
+
+    result = runner.invoke(
+        cli,
+        [
+            "--tx-server",
+            "https://tx.example/fhir",
+            "convert",
+            str(source),
+            "--to",
+            "ndjson",
+            "-o",
+            str(out),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert captured["server_url"] == "https://tx.example/fhir"

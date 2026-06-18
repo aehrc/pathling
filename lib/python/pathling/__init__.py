@@ -79,27 +79,49 @@ _LAZY_EXPORTS = {
 
 __all__ = list(_LAZY_EXPORTS)
 
+# The package submodules that may be accessed lazily after a bare
+# ``import pathling`` (e.g. ``pathling.udfs.member_of``). This curated allow-list
+# keeps the fallback safe - unknown names still raise ``AttributeError`` - and
+# restores the pre-shim behaviour where these submodules were importable as
+# package attributes, without importing PySpark on a bare ``import pathling``.
+_LAZY_SUBMODULES = (
+    "coding",
+    "context",
+    "core",
+    "datasource",
+    "fhir",
+    "functions",
+    "udfs",
+)
+
 
 def __getattr__(name: str) -> Any:
-    """Resolves a public name by importing its submodule on first access.
+    """Resolves a public name or submodule by importing it on first access.
 
     :param name: the attribute being accessed on the ``pathling`` package.
     :return: the resolved attribute value.
-    :raises AttributeError: if the name is not a known public export.
+    :raises AttributeError: if the name is neither a known public export nor a
+            known package submodule.
     """
     module_name = _LAZY_EXPORTS.get(name)
-    if module_name is None:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-    module = importlib.import_module(module_name)
-    value = getattr(module, name)
-    # Cache on the package so subsequent lookups bypass this hook.
-    globals()[name] = value
-    return value
+    if module_name is not None:
+        module = importlib.import_module(module_name)
+        value = getattr(module, name)
+        # Cache on the package so subsequent lookups bypass this hook.
+        globals()[name] = value
+        return value
+    if name in _LAZY_SUBMODULES:
+        submodule = importlib.import_module(f"{__name__}.{name}")
+        # Cache the submodule so subsequent lookups bypass this hook.
+        globals()[name] = submodule
+        return submodule
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def __dir__() -> list:
-    """Returns the public names of the package for introspection.
+    """Returns the public names and submodules of the package for introspection.
 
-    :return: the sorted list of public export names.
+    :return: the sorted list of public export names and lazily-available
+             submodule names.
     """
-    return sorted(__all__)
+    return sorted(set(__all__) | set(_LAZY_SUBMODULES))

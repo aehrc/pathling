@@ -73,6 +73,7 @@ pattern = '__version__="(?P<version>[^"]+)"'
 packages = ["pathling"]
 artifacts = [
     "target/dependency/*.jar",
+    "pathling/cli/resources/*.properties",
 ]
 
 [tool.hatch.build.targets.wheel.shared-data]

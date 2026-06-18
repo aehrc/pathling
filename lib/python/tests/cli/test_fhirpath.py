@@ -208,3 +208,99 @@ def test_context_rejected_in_data_source_mode(runner, patched_context, ndjson_so
 
     assert result.exit_code == 2
     assert "single-resource" in result.stderr.lower()
+
+
+# ========== Bundles read uses the -t/--type resource type, no discovery (US5) ==========
+
+
+class _FakeColumn:
+    """A column stand-in returning itself for the chained calls used here."""
+
+    def alias(self, _name):
+        return self
+
+    def cast(self, _type):
+        return self
+
+
+class _FakeResultDF:
+    """A minimal result frame for stdout table rendering without Spark."""
+
+    columns = ["id", "result"]
+
+    def limit(self, _n):
+        return self
+
+    def collect(self):
+        return []
+
+
+class _FakeResources:
+    """Stands in for the resources frame read for a resource type."""
+
+    def __getitem__(self, _key):
+        return _FakeColumn()
+
+    def select(self, *_cols):
+        return _FakeResultDF()
+
+
+class _FakeFhirpathSource:
+    """A data source whose ``read`` returns a fake resources frame."""
+
+    def read(self, _resource_type):
+        return _FakeResources()
+
+
+def test_fhirpath_bundles_uses_type_argument(runner, monkeypatch, tmp_path):
+    """fhirpath data-source mode over a Bundles source reads using the -t/--type
+    resource type and runs no discovery pass (FR-015)."""
+    import pathling.cli.io as io_module
+
+    discovery_calls = []
+    monkeypatch.setattr(
+        io_module,
+        "discover_bundle_resource_types",
+        lambda path: discovery_calls.append(path) or ["WRONG"],
+    )
+
+    captured = {}
+
+    class _Reader:
+        def bundles(self, path, types):
+            captured["types"] = types
+            return _FakeFhirpathSource()
+
+    class _Pc:
+        read = _Reader()
+
+        def fhirpath_to_column(self, _resource_type, _expression):
+            return _FakeColumn()
+
+    monkeypatch.setattr(
+        "pathling.cli.session.create_context", lambda config, console=None: _Pc()
+    )
+
+    bundles = tmp_path / "bundles"
+    bundles.mkdir()
+    (bundles / "b.json").write_text(
+        '{"resourceType":"Bundle","entry":[]}', encoding="utf-8"
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "fhirpath",
+            str(bundles),
+            "--from",
+            "bundles",
+            "-t",
+            "Patient",
+            "-e",
+            "name.family",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert discovery_calls == []
+    assert captured["types"] == ["Patient"]

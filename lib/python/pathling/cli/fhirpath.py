@@ -181,7 +181,9 @@ def _run_data_source(
             exit_code=EXIT_USAGE,
         )
 
-    data_source = read_source(pc, spec)
+    # The subject resource type is already known, so pass it to the Bundles
+    # reader to avoid a redundant driver-side discovery pass (FR-015).
+    data_source = read_source(pc, spec, types=[resource_type])
     resources = data_source.read(resource_type)
     if filter_expr:
         resources = resources.filter(pc.search_to_column(resource_type, filter_expr))

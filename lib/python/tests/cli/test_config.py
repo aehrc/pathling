@@ -33,6 +33,7 @@ from pathling.cli.config import (
     CliConfig,
     default_config_path,
     load_config_file,
+    resolve_bulk_auth,
     resolve_config,
     resolve_config_source,
     resolve_secret,
@@ -55,6 +56,21 @@ def _write_named(directory: Path, name: str, contents: str) -> Path:
     return path
 
 
+def _isolated_defaults(monkeypatch, tmp_path: Path) -> dict:
+    """Returns resolve_config kwargs that yield built-in defaults with no file.
+
+    Isolates user-level discovery (via XDG, writing no user file) and points the
+    project search at an empty directory, so configuration resolves to the
+    built-in defaults without an explicit ``--config`` path. This replaces the
+    former idiom of passing a non-existent ``--config`` path, which is now a
+    usage error (FR-002).
+    """
+    _user_config(monkeypatch, tmp_path)
+    empty = tmp_path / "empty-cwd"
+    empty.mkdir()
+    return {"cwd": empty}
+
+
 def _user_config(monkeypatch, tmp_path: Path) -> Path:
     """Isolates user-level config discovery and returns the user config path.
 
@@ -73,15 +89,127 @@ def _user_config(monkeypatch, tmp_path: Path) -> Path:
 # ========== Defaults ==========
 
 
-def test_defaults_when_no_flags_or_file(tmp_path):
+def test_defaults_when_no_flags_or_file(tmp_path, monkeypatch):
     """With no flags and no file, built-in defaults are used."""
-    config = resolve_config(config_path=tmp_path / "missing.toml")
+    config = resolve_config(**_isolated_defaults(monkeypatch, tmp_path))
 
     assert config.tx_server == DEFAULT_TX_SERVER
     assert config.fhir_version == DEFAULT_FHIR_VERSION
     assert config.tx_auth is None
     assert config.verbose is False
     assert config.config_path is None
+    assert config.bulk_auth_table is None
+
+
+# ========== Explicit config existence, bulk-auth table, partial tx auth (US1) ==========
+
+
+def test_explicit_missing_config_is_usage_error(tmp_path):
+    """An explicit --config path that does not exist is a usage error naming it.
+
+    The command must not silently fall back to another config file's
+    credentials (FR-002).
+    """
+    missing = tmp_path / "does-not-exist.toml"
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(config_path=missing)
+
+    assert exc_info.value.exit_code == 2
+    assert str(missing) in exc_info.value.message
+
+
+def test_cliconfig_carries_bulk_auth_table_and_loaded_path(tmp_path):
+    """CliConfig carries the parsed [bulk-auth] table and the file loaded.
+
+    This lets ``export`` resolve credentials from the already-resolved config
+    rather than re-reading a config file path (FR-003).
+    """
+    path = _write_config(
+        tmp_path,
+        "[bulk-auth]\n"
+        'client-id = "bulk-client"\n'
+        'token-endpoint = "https://auth/token"\n'
+        'client-secret = "shh"\n',
+    )
+
+    config = resolve_config(config_path=path)
+
+    assert config.config_path == path
+    assert config.bulk_auth_table == {
+        "client-id": "bulk-client",
+        "token-endpoint": "https://auth/token",
+        "client-secret": "shh",
+    }
+
+
+def test_bulk_auth_table_absent_is_none(tmp_path):
+    """A config file with no [bulk-auth] table yields a None bulk_auth_table."""
+    path = _write_config(tmp_path, 'tx-server = "https://a/fhir"\n')
+
+    config = resolve_config(config_path=path)
+
+    assert config.bulk_auth_table is None
+
+
+def test_resolve_bulk_auth_no_input_returns_none():
+    """With no auth input at all, resolution returns None (unauthenticated)."""
+    assert resolve_bulk_auth(None) is None
+    assert resolve_bulk_auth({}) is None
+
+
+def test_resolve_bulk_auth_input_without_client_id_errors():
+    """Auth input present but no client ID is a usage error, not a silent skip.
+
+    Covers both the flag path and the [bulk-auth] table path (FR-004).
+    """
+    with pytest.raises(CliError) as flag_error:
+        resolve_bulk_auth(
+            None, token_endpoint="https://auth/token", client_secret="shh"
+        )
+    assert flag_error.value.exit_code == 2
+    assert "client id" in flag_error.value.message.lower()
+
+    table = {"token-endpoint": "https://auth/token", "client-secret": "shh"}
+    with pytest.raises(CliError) as table_error:
+        resolve_bulk_auth(table)
+    assert table_error.value.exit_code == 2
+
+
+def test_partial_terminology_auth_warns(tmp_path):
+    """Partial terminology auth (insufficient to authenticate) warns the user.
+
+    Supplying only a client ID is not enough to authenticate (a token endpoint
+    is also required); the user is told rather than having it silently disabled
+    (FR-005).
+    """
+    path = _write_config(tmp_path, 'tx-server = "https://a/fhir"\n')
+    warnings = []
+
+    config = resolve_config(
+        tx_client_id="only-client", config_path=path, on_warning=warnings.append
+    )
+
+    # The auth is not enabled, and the user was warned about why.
+    assert config.tx_auth is not None and config.tx_auth.enabled is False
+    assert any(
+        "terminolog" in message.lower() and "auth" in message.lower()
+        for message in warnings
+    )
+
+
+def test_complete_terminology_auth_does_not_warn(tmp_path):
+    """A complete terminology auth configuration produces no partial-auth warning."""
+    path = _write_config(
+        tmp_path,
+        '[terminology-auth]\nclient-id = "c"\ntoken-endpoint = "https://auth/token"\n',
+    )
+    warnings = []
+
+    config = resolve_config(config_path=path, on_warning=warnings.append)
+
+    assert config.tx_auth.enabled is True
+    assert not any("incomplete" in message.lower() for message in warnings)
 
 
 # ========== Precedence ==========
@@ -113,10 +241,10 @@ def test_fhir_version_precedence(tmp_path):
     assert resolve_config(fhir_version="R4", config_path=path).fhir_version == "R4"
 
 
-def test_unsupported_fhir_version_is_usage_error(tmp_path):
+def test_unsupported_fhir_version_is_usage_error(tmp_path, monkeypatch):
     """An unsupported FHIR version is rejected as a usage error."""
     with pytest.raises(CliError) as exc_info:
-        resolve_config(fhir_version="R3", config_path=tmp_path / "missing.toml")
+        resolve_config(fhir_version="R3", **_isolated_defaults(monkeypatch, tmp_path))
 
     assert exc_info.value.exit_code == 2
     assert "R3" in exc_info.value.message
@@ -596,25 +724,27 @@ def test_spark_flag_overrides_file_value(tmp_path):
     assert config.spark_conf["spark.executor.memory"] == "4g"
 
 
-def test_spark_flag_repeated_last_wins(tmp_path):
+def test_spark_flag_repeated_last_wins(tmp_path, monkeypatch):
     """A repeated flag for the same key resolves to the last occurrence."""
     flags = parse_spark_conf_flags(
         ["spark.executor.memory=2g", "spark.executor.memory=4g"]
     )
 
     config = resolve_config(
-        config_path=tmp_path / "missing.toml", spark_conf_flags=flags
+        spark_conf_flags=flags, **_isolated_defaults(monkeypatch, tmp_path)
     )
 
     assert config.spark_conf["spark.executor.memory"] == "4g"
 
 
-def test_spark_flag_non_spark_key_is_error(tmp_path):
+def test_spark_flag_non_spark_key_is_error(tmp_path, monkeypatch):
     """A non-spark. key supplied via flag aborts with a CliError."""
     flags = {"executor.memory": "4g"}
 
     with pytest.raises(CliError) as exc_info:
-        resolve_config(config_path=tmp_path / "missing.toml", spark_conf_flags=flags)
+        resolve_config(
+            spark_conf_flags=flags, **_isolated_defaults(monkeypatch, tmp_path)
+        )
 
     assert exc_info.value.exit_code == 2
     assert "executor.memory" in exc_info.value.message
