@@ -915,7 +915,9 @@ public class Collection implements Equatable {
     } else if (convertibleTo(other)) {
       return other
           .getType()
-          .map(castType -> other.map(t -> this.getColumn().elementCast(castType.getSqlDataType())))
+          .map(
+              castType ->
+                  other.map(t -> this.getColumn().elementTryCast(castType.getSqlDataType())))
           .orElse(this);
     } else {
       throw new IllegalArgumentException("Cannot cast " + this + " to " + other);

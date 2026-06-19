@@ -55,13 +55,14 @@ public abstract class ExpressionsBothModesTest {
   /** Creates the shared Spark session. Subclasses should call this from their @BeforeAll method. */
   protected static void setUp() {
     spark =
-        SparkSession.builder()
-            .master("local[*]")
-            .appName("testing")
-            .config("spark.driver.bindAddress", "localhost")
-            .config("spark.driver.host", "localhost")
-            .config("spark.ui.enabled", "false")
-            .getOrCreate();
+        AnsiTestSupport.configureAnsiMode(
+            SparkSession.builder()
+                .master("local[*]")
+                .appName("testing")
+                .config("spark.driver.bindAddress", "localhost")
+                .config("spark.driver.host", "localhost")
+                .config("spark.ui.enabled", "false")
+                .getOrCreate());
   }
 
   @Test
