@@ -68,14 +68,13 @@ class VariantHelpersTest {
   @BeforeAll
   static void setUp() {
     spark =
-        AnsiTestSupport.configureAnsiMode(
-            SparkSession.builder()
-                .master("local[*]")
-                .appName("testing")
-                .config("spark.driver.bindAddress", "localhost")
-                .config("spark.driver.host", "localhost")
-                .config("spark.ui.enabled", "false")
-                .getOrCreate());
+        SparkSession.builder()
+            .master("local[*]")
+            .appName("testing")
+            .config("spark.driver.bindAddress", "localhost")
+            .config("spark.driver.host", "localhost")
+            .config("spark.ui.enabled", "false")
+            .getOrCreate();
   }
 
   private Dataset<Row> createDataset(final Row... rows) {

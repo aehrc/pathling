@@ -10,20 +10,6 @@ description: Instructions for configuring Apache Spark to use the Pathling libra
 Pathling is built and tested against **Apache Spark 4.0.x**. The Python library
 requires PySpark 4.0.x, and the R library requires sparklyr with Spark 4.0.x.
 
-## ANSI mode
-
-Pathling evaluates FHIRPath expressions and ViewDefinitions identically and
-correctly whether `spark.sql.ansi.enabled` is set to `true` or `false`. Spark 4
-enables ANSI mode by default, and Pathling works correctly on a stock session: a
-value that does not conform to a declared type, an out-of-range decimal, or a
-decimal arithmetic result that overflows yields an empty result for that value
-rather than aborting the query.
-
-Because the setting is session-wide, you may keep it disabled
-(`spark.sql.ansi.enabled=false`) to support portable, vendor-neutral transform
-SQL that relies on lenient casts, without affecting how Pathling behaves.
-Pathling neither sets nor requires any particular value for this flag.
-
 ## Session configuration
 
 When you create a `PathlingContext` within your Spark application, it will
