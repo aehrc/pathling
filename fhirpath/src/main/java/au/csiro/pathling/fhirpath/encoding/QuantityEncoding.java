@@ -107,9 +107,7 @@ public class QuantityEncoding {
   public Column toStruct() {
     return struct(
         id.as("id"),
-        // Safe cast so an out-of-range Quantity value yields NULL rather than raising under ANSI
-        // mode, independent of the session-wide setting.
-        value.try_cast(DecimalCustomCoder.decimalType()).as(VALUE_COLUMN),
+        value.cast(DecimalCustomCoder.decimalType()).as(VALUE_COLUMN),
         value_scale.as("value_scale"),
         comparator.as("comparator"),
         unit.as(UNIT_COLUMN),
@@ -292,9 +290,8 @@ public class QuantityEncoding {
                     nc.isNotNull(),
                     toStruct(
                         lit(null),
-                        // Safe cast to the canonical decimal type so an out-of-range value yields
-                        // NULL rather than raising under ANSI mode.
-                        nc.try_cast(DecimalCustomCoder.decimalType()),
+                        // Cast value to decimal type
+                        nc.cast(DecimalCustomCoder.decimalType()),
                         // We cannot encode the scale of the results of arithmetic operations.
                         lit(null),
                         lit(null),

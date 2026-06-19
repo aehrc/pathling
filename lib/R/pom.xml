@@ -227,15 +227,6 @@
                 <argument>install.packages("remotes", type="source")</argument>
                 <argument>-e</argument>
                 <argument>devtools::install_dev_deps(type="source")</argument>
-                <!-- Pin dbplyr to the last release before 2.6.0. dbplyr 2.6.0 is
-                     incompatible with sparklyr 1.9.4: its query-fields probe
-                     emits standard SQL (double-quoted identifiers) that the
-                     Spark parser rejects, breaking all tbl_spark operations.
-                     Run after install_dev_deps so the pin holds regardless of
-                     what the package cache restored. Remove once a sparklyr
-                     release supports dbplyr 2.6.0. -->
-                <argument>-e</argument>
-                <argument>remotes::install_version("dbplyr", version = "2.5.2", type = "source", upgrade = "never")</argument>
                 <argument>-e</argument>
                 <argument>installed.packages()[,c("Package","Version")]</argument>
                 <argument>-e</argument>

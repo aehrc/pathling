@@ -80,14 +80,13 @@ class ViewDefinitionEncodingTest {
   @BeforeAll
   static void setUp() {
     spark =
-        AnsiTestSupport.configureAnsiMode(
-            SparkSession.builder()
-                .master("local[*]")
-                .appName("ViewDefinitionEncodingTest")
-                .config("spark.driver.bindAddress", "localhost")
-                .config("spark.driver.host", "localhost")
-                .config("spark.ui.enabled", "false")
-                .getOrCreate());
+        SparkSession.builder()
+            .master("local[*]")
+            .appName("ViewDefinitionEncodingTest")
+            .config("spark.driver.bindAddress", "localhost")
+            .config("spark.driver.host", "localhost")
+            .config("spark.ui.enabled", "false")
+            .getOrCreate();
 
     // Create a FhirContext and register the custom ViewDefinition resource type.
     fhirContext = FhirContext.forR4();

@@ -117,14 +117,13 @@ class FhirEncodersTest {
   @BeforeAll
   static void setUp() {
     spark =
-        AnsiTestSupport.configureAnsiMode(
-            SparkSession.builder()
-                .master("local[*]")
-                .appName("testing")
-                .config("spark.driver.bindAddress", "localhost")
-                .config("spark.driver.host", "localhost")
-                .config("spark.ui.enabled", "false")
-                .getOrCreate());
+        SparkSession.builder()
+            .master("local[*]")
+            .appName("testing")
+            .config("spark.driver.bindAddress", "localhost")
+            .config("spark.driver.host", "localhost")
+            .config("spark.ui.enabled", "false")
+            .getOrCreate();
 
     patientDataset = spark.createDataset(List.of(patient), ENCODERS_L0.of(Patient.class));
     decodedPatient = patientDataset.head();

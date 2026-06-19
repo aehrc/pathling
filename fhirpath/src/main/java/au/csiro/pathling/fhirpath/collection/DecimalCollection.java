@@ -171,9 +171,8 @@ public class DecimalCollection extends Collection
    */
   @Nonnull
   public DecimalCollection normalizeDecimalType() {
-    // Route through the safe-cast helper so an out-of-range value yields NULL rather than raising
-    // under ANSI mode, independent of the session-wide setting.
-    final Column normalizedArray = getColumn().plural().elementTryCast(DECIMAL_TYPE).getValue();
+    final Column normalizedArray =
+        getColumn().plural().getValue().cast(DataTypes.createArrayType(DECIMAL_TYPE));
     return (DecimalCollection) copyWithColumn(normalizedArray);
   }
 
@@ -192,9 +191,7 @@ public class DecimalCollection extends Collection
 
       return switch (operation) {
         case ADDITION, SUBTRACTION, MULTIPLICATION, DIVISION, MODULUS -> {
-          // Safe cast so a result that overflows DECIMAL(32,6) yields NULL rather than raising
-          // under ANSI mode, independent of the session-wide setting.
-          result = result.try_cast(getDecimalType());
+          result = result.cast(getDecimalType());
           yield DecimalCollection.build(new DefaultRepresentation(result));
         }
       };
