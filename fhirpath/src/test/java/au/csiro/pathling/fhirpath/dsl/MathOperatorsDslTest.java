@@ -124,6 +124,23 @@ public class MathOperatorsDslTest extends FhirPathDslTestBase {
   }
 
   @FhirPathTest
+  public Stream<DynamicTest> testDivisionAndModuloByZeroYieldEmpty() {
+    // FHIRPath defines division and modulo by zero as an empty result. This is implemented with
+    // try_divide/try_mod, which are independent of spark.sql.ansi.enabled. The assertions run
+    // under the default ANSI-on harness to guard against a regression to the unsafe operators.
+    return builder()
+        .withSubject(sb -> sb.integer("int1", 5).decimal("dec1", 5.5))
+        .group("Division and modulo by zero")
+        .testEmpty("int1 / 0", "Integer division by zero variable and literal")
+        .testEmpty("5 / 0", "Integer division by zero literals")
+        .testEmpty("int1 mod 0", "Integer modulo by zero variable and literal")
+        .testEmpty("5 mod 0", "Integer modulo by zero literals")
+        .testEmpty("dec1 / 0.0", "Decimal division by zero variable and literal")
+        .testEmpty("dec1 mod 0.0", "Decimal modulo by zero variable and literal")
+        .build();
+  }
+
+  @FhirPathTest
   public Stream<DynamicTest> testMathWithEmptyArguments() {
     return builder()
         .withSubject(

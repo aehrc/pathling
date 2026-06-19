@@ -83,12 +83,17 @@ public interface Numeric {
 
   /** Represents a type of math operator. */
   enum MathOperation {
-    /** Addition operator. */
-    ADDITION("+", Column::plus),
-    /** Subtraction operator. */
-    SUBTRACTION("-", Column::minus),
-    /** Multiplication operator. */
-    MULTIPLICATION("*", Column::multiply),
+    /** Addition operator. Uses {@code try_add} so overflow yields NULL rather than raising. */
+    ADDITION("+", functions::try_add),
+    /**
+     * Subtraction operator. Uses {@code try_subtract} so overflow yields NULL rather than raising.
+     */
+    SUBTRACTION("-", functions::try_subtract),
+    /**
+     * Multiplication operator. Uses {@code try_multiply} so overflow yields NULL rather than
+     * raising.
+     */
+    MULTIPLICATION("*", functions::try_multiply),
     /** Division operator. */
     DIVISION("/", functions::try_divide),
     /** Modulus operator. */

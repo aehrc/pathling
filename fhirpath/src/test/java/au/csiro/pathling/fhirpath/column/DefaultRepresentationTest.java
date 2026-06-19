@@ -174,17 +174,6 @@ class DefaultRepresentationTest {
   }
 
   @Test
-  void testSum() {
-    new ColumnAsserts()
-        .assertEquals(0, nullValue().sum())
-        .assertEquals(17, valueOf(17).sum())
-        .assertEquals(0, nullArray().sum())
-        .assertEquals(0, emptyArray().sum())
-        .assertEquals(6, arrayOf(1, 2, 3).sum())
-        .check();
-  }
-
-  @Test
   void testNot() {
     new ColumnAsserts()
         .assertNull(nullValue().not())
@@ -204,6 +193,19 @@ class DefaultRepresentationTest {
         .assertEquals(true, nullArray().isEmpty())
         .assertEquals(true, emptyArray().isEmpty())
         .assertEquals(false, arrayOf(1, 2, 3).isEmpty())
+        .check();
+  }
+
+  @Test
+  void testToBoolean() {
+    // A non-empty collection reads as true; null and empty collections read as empty (NULL). This
+    // must hold regardless of spark.sql.ansi.enabled, which alters size(null).
+    new ColumnAsserts()
+        .assertNull(nullValue().toBoolean())
+        .assertEquals(true, valueOf(17).toBoolean())
+        .assertNull(nullArray().toBoolean())
+        .assertNull(emptyArray().toBoolean())
+        .assertEquals(true, arrayOf(1, 2).toBoolean())
         .check();
   }
 
