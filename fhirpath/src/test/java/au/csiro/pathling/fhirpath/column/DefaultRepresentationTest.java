@@ -174,17 +174,6 @@ class DefaultRepresentationTest {
   }
 
   @Test
-  void testSum() {
-    new ColumnAsserts()
-        .assertEquals(0, nullValue().sum())
-        .assertEquals(17, valueOf(17).sum())
-        .assertEquals(0, nullArray().sum())
-        .assertEquals(0, emptyArray().sum())
-        .assertEquals(6, arrayOf(1, 2, 3).sum())
-        .check();
-  }
-
-  @Test
   void testNot() {
     new ColumnAsserts()
         .assertNull(nullValue().not())

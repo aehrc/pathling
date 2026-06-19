@@ -452,10 +452,11 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation count() {
-    // size(null) returns -1 under ANSI-off and null under ANSI-on (Spark resolves
-    // legacy.sizeOfNull as LEGACY_SIZE_OF_NULL && !ansiEnabled), so the null array is guarded
-    // explicitly to yield zero identically under both settings. let() binds the operand once so a
-    // nondeterministic operand (e.g. a traced column) fires exactly once per row.
+    // size(null) resolves differently across both spark.sql.legacy.sizeOfNull and
+    // spark.sql.ansi.enabled (Spark uses LEGACY_SIZE_OF_NULL && !ansiEnabled): -1 when sizeOfNull
+    // is on and ANSI is off, null otherwise. Guarding the null array explicitly makes the result
+    // independent of both flags, yielding zero under every configuration. let() binds the operand
+    // once so a nondeterministic operand (e.g. a traced column) fires exactly once per row.
     return vectorize(
         c -> let(c, x -> when(x.isNull(), lit(0)).otherwise(size(x))),
         c -> when(c.isNull(), 0).otherwise(1));
@@ -468,8 +469,9 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation isEmpty() {
-    // size(null) returns -1 under ANSI-off and null under ANSI-on, so the null array is guarded
-    // explicitly to read as empty identically under both settings. let() binds the operand once.
+    // size(null) resolves differently across both spark.sql.legacy.sizeOfNull and
+    // spark.sql.ansi.enabled, so the null array is guarded explicitly to read as empty under every
+    // configuration. let() binds the operand once.
     return vectorize(
         c -> let(c, x -> when(x.isNull(), lit(true)).otherwise(size(x).equalTo(0))),
         Column::isNull);
@@ -483,9 +485,10 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation toBoolean() {
-    // A null array must read as empty (NULL), not true. Because size(null) returns -1 under
-    // ANSI-off (rather than null), the null array is guarded explicitly so a non-empty array
-    // yields true and an empty or null array yields NULL identically under both settings.
+    // A null array must read as empty (NULL), not true. Because size(null) resolves differently
+    // across both spark.sql.legacy.sizeOfNull and spark.sql.ansi.enabled, the null array is guarded
+    // explicitly so a non-empty array yields true and an empty or null array yields NULL under
+    // every configuration.
     return vectorize(
         a -> let(a, x -> when(x.isNotNull().and(size(x).notEqual(0)), lit(true))),
         s -> when(s.isNotNull(), lit(true)));
@@ -520,16 +523,6 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation not() {
     return transform(functions::not);
-  }
-
-  /**
-   * Sums the values in the current {@link ColumnRepresentation}.
-   *
-   * @return A new {@link ColumnRepresentation} that is the sum of values
-   */
-  @Nonnull
-  public ColumnRepresentation sum() {
-    return aggregate(0, Column::plus);
   }
 
   /**
