@@ -38,17 +38,23 @@ classifiers = [
 dependencies = [
     "pyspark>=4.0.0,<4.1.0",
     "deprecated>=1.2.13",
+    "click>=8.1.7",
+    "rich>=13.7.0",
+    "ipython>=8.18.1",
+    "tomli>=2.0.1; python_version < \"3.11\"",
 ]
 
 [project.urls]
 Homepage = "https://github.com/aehrc/pathling"
+
+[project.scripts]
+pathling = "pathling.cli.main:cli"
 
 [dependency-groups]
 dev = [
     "Sphinx>=1.6,<8",
     "sphinx-rtd-theme==1.2.2",
     "pytest==8.2.0",
-    "ipython==8.10.0",
     "wheel==0.46.3",
     "twine==6.2.0",
     "build==1.2.1",
@@ -67,6 +73,7 @@ pattern = '__version__="(?P<version>[^"]+)"'
 packages = ["pathling"]
 artifacts = [
     "target/dependency/*.jar",
+    "pathling/cli/resources/*.properties",
 ]
 
 [tool.hatch.build.targets.wheel.shared-data]

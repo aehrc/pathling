@@ -88,9 +88,39 @@ public class UnitTestDependencies {
                 "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
             .getOrCreate();
+    configureAnsiMode(spark);
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
     PathlingUdfConfigurer.registerUdfs(spark);
     return spark;
+  }
+
+  /**
+   * Reconciles the supported ANSI default with the optional ANSI-off verification run.
+   *
+   * <p>When the {@code pathling.test.ansiEnabled} system property is set to {@code false}, ANSI
+   * mode is disabled on the session so the suite can be run once under the lenient setting
+   * (FR-011). Otherwise the property is treated as unset: the flag is left at the Spark 4 default
+   * and the resolved value is asserted to be {@code true}, failing loudly so the supported default
+   * cannot regress unnoticed (FR-009).
+   *
+   * @param spark the session to configure
+   * @throws IllegalStateException if ANSI mode is expected to be enabled but is not
+   */
+  private static void configureAnsiMode(@Nonnull final SparkSession spark) {
+    final String ansiProperty = System.getProperty("pathling.test.ansiEnabled");
+    if ("false".equalsIgnoreCase(ansiProperty)) {
+      // Explicit ANSI-off verification run: relax the session-wide flag.
+      spark.conf().set("spark.sql.ansi.enabled", false);
+    } else {
+      // The supported default: leave the flag at Spark's default and assert it resolves to on.
+      final boolean ansiEnabled = Boolean.parseBoolean(spark.conf().get("spark.sql.ansi.enabled"));
+      if (!ansiEnabled) {
+        throw new IllegalStateException(
+            "Pathling tests expect spark.sql.ansi.enabled to resolve to true by default on Spark 4,"
+                + " but it resolved to false. Set -Dpathling.test.ansiEnabled=false to run the"
+                + " suite intentionally under ANSI-off; otherwise this default must not regress.");
+      }
+    }
   }
 
   @Bean

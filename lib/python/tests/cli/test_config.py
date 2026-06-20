@@ -1,0 +1,750 @@
+#
+# Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+# Organisation (CSIRO) ABN 41 687 119 230.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+"""Unit tests for configuration loading and precedence.
+
+These tests exercise the pure configuration logic without starting Spark.
+
+Author: John Grimes.
+"""
+
+import os
+from pathlib import Path
+
+import pytest
+
+from pathling.cli.config import (
+    DEFAULT_FHIR_VERSION,
+    DEFAULT_TX_SERVER,
+    CliConfig,
+    default_config_path,
+    load_config_file,
+    resolve_bulk_auth,
+    resolve_config,
+    resolve_config_source,
+    resolve_secret,
+)
+from pathling.cli.errors import CliError
+from pathling.cli.sparkconf import parse_spark_conf_flags
+
+
+def _write_config(tmp_path: Path, contents: str) -> Path:
+    """Writes a config file and returns its path."""
+    path = tmp_path / "config.toml"
+    path.write_text(contents, encoding="utf-8")
+    return path
+
+
+def _write_named(directory: Path, name: str, contents: str) -> Path:
+    """Writes a named config file into a directory and returns its path."""
+    path = directory / name
+    path.write_text(contents, encoding="utf-8")
+    return path
+
+
+def _isolated_defaults(monkeypatch, tmp_path: Path) -> dict:
+    """Returns resolve_config kwargs that yield built-in defaults with no file.
+
+    Isolates user-level discovery (via XDG, writing no user file) and points the
+    project search at an empty directory, so configuration resolves to the
+    built-in defaults without an explicit ``--config`` path. This replaces the
+    former idiom of passing a non-existent ``--config`` path, which is now a
+    usage error (FR-002).
+    """
+    _user_config(monkeypatch, tmp_path)
+    empty = tmp_path / "empty-cwd"
+    empty.mkdir()
+    return {"cwd": empty}
+
+
+def _user_config(monkeypatch, tmp_path: Path) -> Path:
+    """Isolates user-level config discovery and returns the user config path.
+
+    Points ``XDG_CONFIG_HOME`` at a directory under ``tmp_path`` so that
+    ``default_config_path()`` never resolves to the real user file. The parent
+    directory is created; the file itself is not, so callers control whether a
+    user-level config exists by writing to the returned path.
+    """
+    xdg = tmp_path / "xdg"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg))
+    user_path = xdg / "pathling" / "config.toml"
+    user_path.parent.mkdir(parents=True, exist_ok=True)
+    return user_path
+
+
+# ========== Defaults ==========
+
+
+def test_defaults_when_no_flags_or_file(tmp_path, monkeypatch):
+    """With no flags and no file, built-in defaults are used."""
+    config = resolve_config(**_isolated_defaults(monkeypatch, tmp_path))
+
+    assert config.tx_server == DEFAULT_TX_SERVER
+    assert config.fhir_version == DEFAULT_FHIR_VERSION
+    assert config.tx_auth is None
+    assert config.verbose is False
+    assert config.config_path is None
+    assert config.bulk_auth_table is None
+
+
+# ========== Explicit config existence, bulk-auth table, partial tx auth (US1) ==========
+
+
+def test_explicit_missing_config_is_usage_error(tmp_path):
+    """An explicit --config path that does not exist is a usage error naming it.
+
+    The command must not silently fall back to another config file's
+    credentials (FR-002).
+    """
+    missing = tmp_path / "does-not-exist.toml"
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(config_path=missing)
+
+    assert exc_info.value.exit_code == 2
+    assert str(missing) in exc_info.value.message
+
+
+def test_cliconfig_carries_bulk_auth_table_and_loaded_path(tmp_path):
+    """CliConfig carries the parsed [bulk-auth] table and the file loaded.
+
+    This lets ``export`` resolve credentials from the already-resolved config
+    rather than re-reading a config file path (FR-003).
+    """
+    path = _write_config(
+        tmp_path,
+        "[bulk-auth]\n"
+        'client-id = "bulk-client"\n'
+        'token-endpoint = "https://auth/token"\n'
+        'client-secret = "shh"\n',
+    )
+
+    config = resolve_config(config_path=path)
+
+    assert config.config_path == path
+    assert config.bulk_auth_table == {
+        "client-id": "bulk-client",
+        "token-endpoint": "https://auth/token",
+        "client-secret": "shh",
+    }
+
+
+def test_bulk_auth_table_absent_is_none(tmp_path):
+    """A config file with no [bulk-auth] table yields a None bulk_auth_table."""
+    path = _write_config(tmp_path, 'tx-server = "https://a/fhir"\n')
+
+    config = resolve_config(config_path=path)
+
+    assert config.bulk_auth_table is None
+
+
+def test_resolve_bulk_auth_no_input_returns_none():
+    """With no auth input at all, resolution returns None (unauthenticated)."""
+    assert resolve_bulk_auth(None) is None
+    assert resolve_bulk_auth({}) is None
+
+
+def test_resolve_bulk_auth_input_without_client_id_errors():
+    """Auth input present but no client ID is a usage error, not a silent skip.
+
+    Covers both the flag path and the [bulk-auth] table path (FR-004).
+    """
+    with pytest.raises(CliError) as flag_error:
+        resolve_bulk_auth(
+            None, token_endpoint="https://auth/token", client_secret="shh"
+        )
+    assert flag_error.value.exit_code == 2
+    assert "client id" in flag_error.value.message.lower()
+
+    table = {"token-endpoint": "https://auth/token", "client-secret": "shh"}
+    with pytest.raises(CliError) as table_error:
+        resolve_bulk_auth(table)
+    assert table_error.value.exit_code == 2
+
+
+def test_partial_terminology_auth_warns(tmp_path):
+    """Partial terminology auth (insufficient to authenticate) warns the user.
+
+    Supplying only a client ID is not enough to authenticate (a token endpoint
+    is also required); the user is told rather than having it silently disabled
+    (FR-005).
+    """
+    path = _write_config(tmp_path, 'tx-server = "https://a/fhir"\n')
+    warnings = []
+
+    config = resolve_config(
+        tx_client_id="only-client", config_path=path, on_warning=warnings.append
+    )
+
+    # The auth is not enabled, and the user was warned about why.
+    assert config.tx_auth is not None and config.tx_auth.enabled is False
+    assert any(
+        "terminolog" in message.lower() and "auth" in message.lower()
+        for message in warnings
+    )
+
+
+def test_complete_terminology_auth_does_not_warn(tmp_path):
+    """A complete terminology auth configuration produces no partial-auth warning."""
+    path = _write_config(
+        tmp_path,
+        '[terminology-auth]\nclient-id = "c"\ntoken-endpoint = "https://auth/token"\n',
+    )
+    warnings = []
+
+    config = resolve_config(config_path=path, on_warning=warnings.append)
+
+    assert config.tx_auth.enabled is True
+    assert not any("incomplete" in message.lower() for message in warnings)
+
+
+# ========== Precedence ==========
+
+
+def test_file_overrides_default(tmp_path):
+    """A value in the config file overrides the built-in default."""
+    path = _write_config(tmp_path, 'tx-server = "https://file.example/fhir"\n')
+
+    config = resolve_config(config_path=path)
+
+    assert config.tx_server == "https://file.example/fhir"
+    assert config.config_path == path
+
+
+def test_flag_overrides_file(tmp_path):
+    """A command-line flag overrides the config file."""
+    path = _write_config(tmp_path, 'tx-server = "https://file.example/fhir"\n')
+
+    config = resolve_config(tx_server="https://flag.example/fhir", config_path=path)
+
+    assert config.tx_server == "https://flag.example/fhir"
+
+
+def test_fhir_version_precedence(tmp_path):
+    """The FHIR version follows flag > file > default."""
+    path = _write_config(tmp_path, 'fhir-version = "R4"\n')
+    assert resolve_config(config_path=path).fhir_version == "R4"
+    assert resolve_config(fhir_version="R4", config_path=path).fhir_version == "R4"
+
+
+def test_unsupported_fhir_version_is_usage_error(tmp_path, monkeypatch):
+    """An unsupported FHIR version is rejected as a usage error."""
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(fhir_version="R3", **_isolated_defaults(monkeypatch, tmp_path))
+
+    assert exc_info.value.exit_code == 2
+    assert "R3" in exc_info.value.message
+
+
+# ========== XDG path resolution ==========
+
+
+def test_default_config_path_honours_xdg(monkeypatch):
+    """The default config path honours XDG_CONFIG_HOME when set."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", "/custom/xdg")
+
+    assert default_config_path() == Path("/custom/xdg/pathling/config.toml")
+
+
+def test_default_config_path_falls_back_to_home(monkeypatch):
+    """The default config path falls back to ~/.config when XDG is unset."""
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: Path("/home/tester")))
+
+    assert default_config_path() == Path("/home/tester/.config/pathling/config.toml")
+
+
+# ========== Unknown key warnings ==========
+
+
+def test_unknown_top_level_key_warns(tmp_path):
+    """An unknown top-level config key produces a warning naming the key."""
+    path = _write_config(tmp_path, 'unknown-key = "x"\ntx-server = "https://a/fhir"\n')
+    warnings = []
+
+    load_config_file(path, on_warning=warnings.append)
+
+    assert any("unknown-key" in message for message in warnings)
+    assert any("Valid keys" in message for message in warnings)
+
+
+def test_unknown_auth_key_warns(tmp_path):
+    """An unknown key within an auth table produces a qualified warning."""
+    path = _write_config(tmp_path, '[terminology-auth]\nbogus = 1\nclient-id = "abc"\n')
+    warnings = []
+
+    load_config_file(path, on_warning=warnings.append)
+
+    assert any("terminology-auth.bogus" in message for message in warnings)
+
+
+# ========== Terminology auth table ==========
+
+
+def test_terminology_auth_table(tmp_path):
+    """The [terminology-auth] table is resolved into TxAuth."""
+    path = _write_config(
+        tmp_path,
+        'tx-server = "https://tx/fhir"\n\n'
+        "[terminology-auth]\n"
+        'client-id = "my-client"\n'
+        'client-secret = "shh"\n'
+        'token-endpoint = "https://auth/token"\n'
+        'scope = "system/*.read"\n',
+    )
+
+    config = resolve_config(config_path=path)
+
+    assert config.tx_auth is not None
+    assert config.tx_auth.client_id == "my-client"
+    assert config.tx_auth.client_secret == "shh"
+    assert config.tx_auth.token_endpoint == "https://auth/token"
+    assert config.tx_auth.scope == "system/*.read"
+    assert config.tx_auth.enabled is True
+
+
+def test_auth_flag_overrides_file_secret(tmp_path):
+    """An auth flag overrides the corresponding config file value."""
+    path = _write_config(
+        tmp_path,
+        "[terminology-auth]\n"
+        'client-id = "file-client"\n'
+        'token-endpoint = "https://auth/token"\n',
+    )
+
+    config = resolve_config(tx_client_id="flag-client", config_path=path)
+
+    assert config.tx_auth.client_id == "flag-client"
+
+
+# ========== Secret resolution ==========
+
+
+def test_resolve_secret_literal():
+    """A literal secret is returned unchanged."""
+    assert resolve_secret("literal-secret") == "literal-secret"
+
+
+def test_resolve_secret_from_file(tmp_path):
+    """A @file reference reads and strips the file contents."""
+    secret_file = tmp_path / "secret.txt"
+    secret_file.write_text("  file-secret\n", encoding="utf-8")
+
+    assert resolve_secret(f"@{secret_file}") == "file-secret"
+
+
+def test_resolve_secret_missing_file_errors(tmp_path):
+    """A @file reference to a missing file is an error."""
+    with pytest.raises(CliError):
+        resolve_secret(f"@{tmp_path / 'nope.txt'}")
+
+
+def test_resolve_secret_from_env():
+    """A None value falls back to the named environment variable."""
+    assert (
+        resolve_secret(None, "MY_SECRET", env={"MY_SECRET": "env-secret"})
+        == "env-secret"
+    )
+
+
+def test_resolve_secret_none_without_env():
+    """A None value with no env var yields None."""
+    assert resolve_secret(None, "MISSING", env={}) is None
+
+
+# ========== Project-local config: override (US1) ==========
+
+
+def test_project_config_overrides_user_config(tmp_path, monkeypatch):
+    """A project-local pathling.toml overrides the user-level config value."""
+    # Arrange: a user-level config sets server A, a project file sets server B.
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text('tx-server = "https://user.example/fhir"\n', encoding="utf-8")
+    project = tmp_path / "project"
+    project.mkdir()
+    project_file = _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+
+    # Act.
+    config = resolve_config(cwd=project)
+
+    # Assert: the project value wins and the chosen path is the project file.
+    assert config.tx_server == "https://project.example/fhir"
+    assert config.config_path == project_file
+
+
+def test_user_config_used_when_no_project_file(tmp_path, monkeypatch):
+    """With no project pathling.toml, the user-level config is used."""
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text('tx-server = "https://user.example/fhir"\n', encoding="utf-8")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    config = resolve_config(cwd=empty)
+
+    assert config.tx_server == "https://user.example/fhir"
+    assert config.config_path == user_path
+
+
+def test_flag_overrides_project_config(tmp_path, monkeypatch):
+    """A --tx-server flag overrides a project-local pathling.toml value."""
+    _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+
+    config = resolve_config(tx_server="https://flag.example/fhir", cwd=project)
+
+    assert config.tx_server == "https://flag.example/fhir"
+
+
+def test_explicit_config_ignores_project_file(tmp_path, monkeypatch):
+    """An explicit config_path is used and the project pathling.toml ignored."""
+    _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+    explicit = _write_named(
+        project, "explicit.toml", 'tx-server = "https://explicit.example/fhir"\n'
+    )
+
+    config = resolve_config(config_path=explicit, cwd=project)
+
+    assert config.tx_server == "https://explicit.example/fhir"
+    assert config.config_path == explicit
+
+
+def test_resolve_config_source_origins(tmp_path, monkeypatch):
+    """resolve_config_source returns the right path and origin per precedence."""
+    user_path = _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    # Explicit wins regardless of any project or user file.
+    explicit = tmp_path / "explicit.toml"
+    assert resolve_config_source(explicit, project) == (explicit, "explicit")
+
+    # The project-local file is chosen when present and no explicit path is given.
+    project_file = _write_named(project, "pathling.toml", "")
+    assert resolve_config_source(None, project) == (project_file, "project")
+
+    # The user-level file is chosen when it exists and no project file is present.
+    user_path.write_text("", encoding="utf-8")
+    assert resolve_config_source(None, empty) == (user_path, "user")
+
+    # Origin "none" returns the (missing) user path so defaults apply.
+    user_path.unlink()
+    assert resolve_config_source(None, empty) == (user_path, "none")
+
+
+def test_project_config_parse_error_names_file(tmp_path, monkeypatch):
+    """A malformed project pathling.toml raises CliError naming that file."""
+    _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    bad = _write_named(project, "pathling.toml", "this is not = = valid toml\n")
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(cwd=project)
+
+    assert str(bad) in exc_info.value.message
+
+
+def test_project_config_unknown_key_warns_naming_file(tmp_path, monkeypatch):
+    """An unknown key in the project file warns, naming that file."""
+    _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    bad = _write_named(project, "pathling.toml", 'unknown-key = "x"\n')
+    warnings = []
+
+    resolve_config(cwd=project, on_warning=warnings.append)
+
+    assert any("unknown-key" in message and str(bad) in message for message in warnings)
+
+
+# ========== Project-local config: no merge (US2) ==========
+
+
+def test_omitted_project_key_falls_back_to_default_not_user(tmp_path, monkeypatch):
+    """A key omitted from the project file resolves to the built-in default,
+    never to the user-level value (FR-003, no silent merge).
+
+    The terminology server is used as the distinguishing key because its
+    built-in default differs from a value the user can set. The FHIR version
+    cannot demonstrate this on its own, as the only supported version equals
+    its default.
+    """
+    # Arrange: the user-level file sets tx-server (server A) and fhir-version.
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text(
+        'tx-server = "https://user.example/fhir"\nfhir-version = "R4"\n',
+        encoding="utf-8",
+    )
+    project = tmp_path / "project"
+    project.mkdir()
+    # The project file sets only fhir-version, deliberately omitting tx-server.
+    _write_named(project, "pathling.toml", 'fhir-version = "R4"\n')
+
+    config = resolve_config(cwd=project)
+
+    # The omitted tx-server falls back to the default, not the user value A.
+    assert config.tx_server == DEFAULT_TX_SERVER
+    assert config.fhir_version == DEFAULT_FHIR_VERSION
+
+
+def test_user_auth_table_does_not_leak_into_project(tmp_path, monkeypatch):
+    """A user-level [terminology-auth] table does not apply when the project
+    file defines no auth table."""
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text(
+        "[terminology-auth]\n"
+        'client-id = "user-client"\n'
+        'token-endpoint = "https://user-auth/token"\n',
+        encoding="utf-8",
+    )
+    project = tmp_path / "project"
+    project.mkdir()
+    _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+
+    config = resolve_config(cwd=project)
+
+    assert config.tx_auth is None
+
+
+# ========== Project-local config: notice (US3) ==========
+
+
+def test_notice_for_project_file_with_user_file(tmp_path, monkeypatch):
+    """A discovered project file emits one notice naming it and the overridden
+    user-level file."""
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text('tx-server = "https://user.example/fhir"\n', encoding="utf-8")
+    project = tmp_path / "project"
+    project.mkdir()
+    project_file = _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+    notices = []
+
+    resolve_config(cwd=project, on_notice=notices.append)
+
+    assert notices == [f"Using project config {project_file} (overrides {user_path})."]
+
+
+def test_notice_omits_overrides_without_user_file(tmp_path, monkeypatch):
+    """The notice omits the overrides clause when no user-level file exists."""
+    # Isolate XDG but write no user-level file.
+    _user_config(monkeypatch, tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    project_file = _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+    notices = []
+
+    resolve_config(cwd=project, on_notice=notices.append)
+
+    assert notices == [f"Using project config {project_file}."]
+
+
+def test_no_notice_for_user_none_and_explicit_origins(tmp_path, monkeypatch):
+    """No notice is emitted for the user, none, and explicit origins."""
+    user_path = _user_config(monkeypatch, tmp_path)
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    # User origin: a user-level file exists, no project file present.
+    user_path.write_text('tx-server = "https://user.example/fhir"\n', encoding="utf-8")
+    user_notices = []
+    resolve_config(cwd=empty, on_notice=user_notices.append)
+    assert user_notices == []
+
+    # None origin: neither a user-level nor a project file exists.
+    user_path.unlink()
+    none_notices = []
+    resolve_config(cwd=empty, on_notice=none_notices.append)
+    assert none_notices == []
+
+    # Explicit origin: an explicit path is given, the project file is ignored.
+    project = tmp_path / "project"
+    project.mkdir()
+    explicit = _write_named(
+        project, "explicit.toml", 'tx-server = "https://explicit.example/fhir"\n'
+    )
+    _write_named(
+        project, "pathling.toml", 'tx-server = "https://project.example/fhir"\n'
+    )
+    explicit_notices = []
+    resolve_config(config_path=explicit, cwd=project, on_notice=explicit_notices.append)
+    assert explicit_notices == []
+
+
+# ========== Config file read errors ==========
+
+
+def test_project_config_that_is_a_directory_errors(tmp_path, monkeypatch):
+    """A project pathling.toml that is a directory raises a clear CliError
+    naming it, rather than silently falling back to the user-level file."""
+    # A user-level file exists, so a silent fallback would be observable.
+    user_path = _user_config(monkeypatch, tmp_path)
+    user_path.write_text('tx-server = "https://user.example/fhir"\n', encoding="utf-8")
+    project = tmp_path / "project"
+    project.mkdir()
+    # Create the project config path as a directory rather than a file.
+    (project / "pathling.toml").mkdir()
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(cwd=project)
+
+    assert str(project / "pathling.toml") in exc_info.value.message
+
+
+def test_unreadable_config_file_errors(tmp_path):
+    """An unreadable config file raises a clear CliError naming it."""
+    path = _write_config(tmp_path, 'tx-server = "https://a/fhir"\n')
+    os.chmod(path, 0o000)
+    # Skip when the file remains readable (for example when running as root).
+    if os.access(path, os.R_OK):
+        os.chmod(path, 0o644)
+        pytest.skip("cannot make the file unreadable as the current user")
+
+    try:
+        with pytest.raises(CliError) as exc_info:
+            resolve_config(config_path=path)
+        assert str(path) in exc_info.value.message
+    finally:
+        # Restore permissions so the temp file can be cleaned up.
+        os.chmod(path, 0o644)
+
+
+# ========== Spark configuration: field and valid key (Foundational) ==========
+
+
+def test_cliconfig_has_empty_spark_conf_by_default():
+    """CliConfig exposes a spark_conf field defaulting to an empty dict."""
+    config = CliConfig()
+
+    assert config.spark_conf == {}
+    # Each instance must get its own dict, never a shared mutable default.
+    other = CliConfig()
+    config.spark_conf["spark.x"] = "1"
+    assert other.spark_conf == {}
+
+
+def test_spark_table_is_a_valid_top_level_key(tmp_path):
+    """A [spark] table produces no unknown-key warning (spark is valid)."""
+    path = _write_config(tmp_path, '[spark]\n"spark.sql.shuffle.partitions" = 16\n')
+    warnings = []
+
+    load_config_file(path, on_warning=warnings.append)
+
+    assert not any(
+        "spark" in message and "unknown" in message.lower() for message in warnings
+    )
+
+
+# ========== Spark configuration: [spark] table resolution (US1) ==========
+
+
+def test_spark_table_resolved_into_spark_conf(tmp_path):
+    """A [spark] table is coerced and stored on CliConfig.spark_conf."""
+    path = _write_config(
+        tmp_path,
+        "[spark]\n"
+        '"spark.sql.shuffle.partitions" = 16\n'
+        '"spark.sql.adaptive.enabled" = true\n',
+    )
+
+    config = resolve_config(config_path=path)
+
+    # Plain keys pass through the merge as coerced strings.
+    assert config.spark_conf["spark.sql.shuffle.partitions"] == "16"
+    assert config.spark_conf["spark.sql.adaptive.enabled"] == "true"
+
+
+def test_spark_table_resolves_file_secret(tmp_path):
+    """A @file value in the [spark] table is resolved from the file."""
+    secret_file = tmp_path / "s3-key"
+    secret_file.write_text("the-key\n", encoding="utf-8")
+    path = _write_config(
+        tmp_path,
+        f'[spark]\n"spark.hadoop.fs.s3a.secret.key" = "@{secret_file}"\n',
+    )
+
+    config = resolve_config(config_path=path)
+
+    assert config.spark_conf["spark.hadoop.fs.s3a.secret.key"] == "the-key"
+
+
+def test_spark_table_invalid_key_is_usage_error(tmp_path):
+    """A non-spark. key in the [spark] table aborts with exit code 2."""
+    path = _write_config(tmp_path, '[spark]\n"executor.memory" = "4g"\n')
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(config_path=path)
+
+    assert exc_info.value.exit_code == 2
+    assert "executor.memory" in exc_info.value.message
+
+
+# ========== Spark configuration: --spark-conf flag precedence (US2) ==========
+
+
+def test_spark_flag_overrides_file_value(tmp_path):
+    """A --spark-conf flag value overrides the [spark] table for the same key."""
+    path = _write_config(tmp_path, '[spark]\n"spark.executor.memory" = "2g"\n')
+    flags = parse_spark_conf_flags(["spark.executor.memory=4g"])
+
+    config = resolve_config(config_path=path, spark_conf_flags=flags)
+
+    assert config.spark_conf["spark.executor.memory"] == "4g"
+
+
+def test_spark_flag_repeated_last_wins(tmp_path, monkeypatch):
+    """A repeated flag for the same key resolves to the last occurrence."""
+    flags = parse_spark_conf_flags(
+        ["spark.executor.memory=2g", "spark.executor.memory=4g"]
+    )
+
+    config = resolve_config(
+        spark_conf_flags=flags, **_isolated_defaults(monkeypatch, tmp_path)
+    )
+
+    assert config.spark_conf["spark.executor.memory"] == "4g"
+
+
+def test_spark_flag_non_spark_key_is_error(tmp_path, monkeypatch):
+    """A non-spark. key supplied via flag aborts with a CliError."""
+    flags = {"executor.memory": "4g"}
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(
+            spark_conf_flags=flags, **_isolated_defaults(monkeypatch, tmp_path)
+        )
+
+    assert exc_info.value.exit_code == 2
+    assert "executor.memory" in exc_info.value.message

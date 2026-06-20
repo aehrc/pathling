@@ -23,3 +23,7 @@ The libraries are available for:
 All the different Pathling library implementations allow you to run queries
 locally (which is the default), or connect to a remote Spark cluster for
 processing of large datasets.
+
+The Python package also ships a [command line interface](cli.md) that surfaces
+this functionality through scriptable commands, installable and runnable with
+`uv tool` or `uvx`.
