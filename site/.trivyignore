@@ -4,23 +4,11 @@ CVE-2026-26996
 CVE-2026-27903
 CVE-2026-27904
 
-# dompurify XSS — shipped via mermaid but no user input in static site.
-CVE-2026-0540
-
 # serialize-javascript RCE — build-time webpack dependency, not deployed.
 GHSA-5c6j-r48x-rmvq
 
 # svgo XML entity expansion DoS — build-time SVG optimiser, only processes trusted source files.
 CVE-2026-29074
-
-# dompurify XSS variants — shipped via mermaid but no user input in static site.
-CVE-2026-41238
-CVE-2026-41239
-CVE-2026-41240
-GHSA-39q2-94rc-95cp
-GHSA-cj63-jhhr-wcxv
-GHSA-cjmm-f4jc-qw8r
-GHSA-h8r8-wccr-v5f2
 
 # follow-redirects header leak — webpack-dev-server transitive, dev-only.
 GHSA-r4q5-vmmm-2653
@@ -54,3 +42,28 @@ CVE-2026-44728
 # fast-uri normalize() percent-encoded authority delimiter issue — fast-uri is pulled in by
 # ajv, a build-time JSON schema validator used by Docusaurus tooling. Not deployed.
 CVE-2026-6322
+
+# shell-quote command injection — launch-editor transitive, webpack-dev-server
+# "open in editor" feature, dev server only, not deployed.
+CVE-2026-9277
+
+# ws DoS — webpack-bundle-analyzer transitive, build-time bundle analysis, not deployed.
+CVE-2026-48779
+
+# http-proxy-middleware host-header routing bypass — webpack-dev-server dev proxy, not deployed.
+CVE-2026-55602
+
+# joi RangeError on deeply nested input — Docusaurus build-time config schema validation
+# of trusted config, not deployed.
+CVE-2026-48038
+
+# js-yaml merge-key quadratic DoS — gray-matter frontmatter parsing at build time over
+# trusted source markdown, not deployed.
+CVE-2026-53550
+
+# launch-editor NTLMv2 hash disclosure (Windows UNC) — webpack-dev-server dev server only,
+# not deployed.
+CVE-2026-53632
+
+# webpack-dev-server HMR WebSocket interception — dev server only, not deployed.
+CVE-2026-9595
