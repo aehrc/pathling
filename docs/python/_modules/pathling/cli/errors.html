@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pathling.cli.errors &mdash; pathling  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pathling
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pathling.html">pathling package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pathling</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pathling.cli.errors</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pathling.cli.errors</h1><div class="highlight"><pre>
+<span></span><span class="c1">#</span>
+<span class="c1"># Copyright © 2018-2026 Commonwealth Scientific and Industrial Research</span>
+<span class="c1"># Organisation (CSIRO) ABN 41 687 119 230.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+
+<span class="sd">&quot;&quot;&quot;Error handling for the Pathling command line interface.</span>
+
+<span class="sd">JVM exceptions raised through Py4J carry verbose Java stack traces that are</span>
+<span class="sd">unhelpful at the command line. This module unwraps them to their root message</span>
+<span class="sd">and maps recognised categories onto concise, actionable guidance. Stack traces</span>
+<span class="sd">are shown only when the user passes ``--verbose``.</span>
+
+<span class="sd">Author: John Grimes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="c1"># Exit code for a successful invocation.</span>
+<span class="n">EXIT_SUCCESS</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="c1"># Exit code for a runtime failure (a command failed while executing).</span>
+<span class="n">EXIT_RUNTIME</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="c1"># Exit code for a usage error (the command was invoked incorrectly).</span>
+<span class="n">EXIT_USAGE</span> <span class="o">=</span> <span class="mi">2</span>
+
+<span class="c1"># Signals that an unwrapped root message describes an authentication failure</span>
+<span class="c1"># rather than a connection, timeout, or server-side problem. The SMART</span>
+<span class="c1"># backend-services setup surfaces &quot;Failed to retrieve SMART configuration&quot; when</span>
+<span class="c1"># the token endpoint or credential is wrong, so that phrasing is included</span>
+<span class="c1"># alongside the standard OAuth2 rejection codes.</span>
+<span class="n">_AUTH_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="sa">r</span><span class="s2">&quot;\b401\b&quot;</span>
+    <span class="sa">r</span><span class="s2">&quot;|\bunauthorized\b&quot;</span>
+    <span class="sa">r</span><span class="s2">&quot;|invalid_client|invalid_grant|invalid_scope|unauthorized_client&quot;</span>
+    <span class="sa">r</span><span class="s2">&quot;|smart configuration&quot;</span>
+    <span class="sa">r</span><span class="s2">&quot;|smart auth&quot;</span>
+    <span class="sa">r</span><span class="s2">&quot;|access[ _]token&quot;</span>
+    <span class="sa">r</span><span class="s2">&quot;|token endpoint&quot;</span>
+    <span class="sa">r</span><span class="s2">&quot;|authentication (?:failed|error)&quot;</span>
+    <span class="sa">r</span><span class="s2">&quot;|failed to authenticate&quot;</span>
+    <span class="sa">r</span><span class="s2">&quot;|credential&quot;</span><span class="p">,</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="CliError"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.errors.CliError">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">CliError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An error with a message that is safe to show the user directly.</span>
+
+<span class="sd">    :param message: the human-readable error message.</span>
+<span class="sd">    :param exit_code: the process exit code to use; defaults to a runtime</span>
+<span class="sd">           failure.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">exit_code</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">EXIT_RUNTIME</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exit_code</span> <span class="o">=</span> <span class="n">exit_code</span></div>
+
+
+<div class="viewcode-block" id="unwrap_java_exception"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.errors.unwrap_java_exception">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">unwrap_java_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extracts the most useful single-line message from an exception.</span>
+
+<span class="sd">    Py4J wraps Java exceptions, whose ``str`` representation includes the full</span>
+<span class="sd">    stack trace. This returns the leading message line, stripping the Java</span>
+<span class="sd">    exception class prefix where present.</span>
+
+<span class="sd">    :param exc: the exception to unwrap.</span>
+<span class="sd">    :return: a concise message describing the underlying problem.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">java_exception</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="s2">&quot;java_exception&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">java_exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">get_message</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">java_exception</span><span class="p">,</span> <span class="s2">&quot;getMessage&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">get_message</span><span class="p">()</span> <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">get_message</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">message</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">java_exception</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+
+    <span class="c1"># Take only the first non-empty line; Java traces span many lines.</span>
+    <span class="n">first_line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">message</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()),</span> <span class="n">message</span><span class="p">)</span>
+    <span class="c1"># Strip a leading fully-qualified Java exception class name, e.g.</span>
+    <span class="c1"># &quot;java.lang.IllegalArgumentException: actual message&quot;.</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^(?:[\w.$]+Exception|[\w.$]+Error):\s*(.*)$&quot;</span><span class="p">,</span> <span class="n">first_line</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">first_line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_categorise</span><span class="p">(</span><span class="n">root_message</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Classifies a root message into a known error category.</span>
+
+<span class="sd">    :param root_message: the unwrapped root message.</span>
+<span class="sd">    :return: a category key, or None when the message is not recognised.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">lowered</span> <span class="o">=</span> <span class="n">root_message</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="s2">&quot;connection refused&quot;</span> <span class="ow">in</span> <span class="n">lowered</span> <span class="ow">or</span> <span class="s2">&quot;failed to connect&quot;</span> <span class="ow">in</span> <span class="n">lowered</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;connection&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;unknownhost&quot;</span> <span class="ow">in</span> <span class="n">lowered</span> <span class="ow">or</span> <span class="s2">&quot;unknown host&quot;</span> <span class="ow">in</span> <span class="n">lowered</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;connection&quot;</span>
+    <span class="k">if</span> <span class="n">_AUTH_PATTERN</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">root_message</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;auth&quot;</span>
+    <span class="c1"># Require a FHIRPath-specific signal rather than the bare substring &quot;parse</span>
+    <span class="c1"># error&quot;, which can appear in unrelated parse failures (FR-012).</span>
+    <span class="k">if</span> <span class="s2">&quot;fhirpath&quot;</span> <span class="ow">in</span> <span class="n">lowered</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;fhirpath&quot;</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="is_connection_error"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.errors.is_connection_error">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">is_connection_error</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Determines whether an exception represents a server connection failure.</span>
+
+<span class="sd">    :param exc: the exception to classify.</span>
+<span class="sd">    :return: True when the unwrapped message looks like a connection failure.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_categorise</span><span class="p">(</span><span class="n">unwrap_java_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&quot;connection&quot;</span></div>
+
+
+<div class="viewcode-block" id="is_auth_error"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.errors.is_auth_error">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">is_auth_error</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Determines whether an exception represents an authentication failure.</span>
+
+<span class="sd">    Used to decide whether an export failure should be reported as an</span>
+<span class="sd">    authentication problem; connection, timeout, and server-side errors that</span>
+<span class="sd">    happen to occur while authentication is configured must not be misdiagnosed</span>
+<span class="sd">    as bad credentials.</span>
+
+<span class="sd">    :param exc: the exception to classify.</span>
+<span class="sd">    :return: True when the unwrapped message looks like an authentication</span>
+<span class="sd">             failure.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_categorise</span><span class="p">(</span><span class="n">unwrap_java_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&quot;auth&quot;</span></div>
+
+
+<div class="viewcode-block" id="friendly_message"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.errors.friendly_message">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">friendly_message</span><span class="p">(</span>
+    <span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">server_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds a friendly, actionable message for an unexpected exception.</span>
+
+<span class="sd">    :param exc: the exception to describe.</span>
+<span class="sd">    :param verbose: when True, append the full traceback.</span>
+<span class="sd">    :param server_url: a server URL to name in connection errors, or None.</span>
+<span class="sd">    :return: the message to present to the user.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">unwrap_java_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+    <span class="n">category</span> <span class="o">=</span> <span class="n">_categorise</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">category</span> <span class="o">==</span> <span class="s2">&quot;connection&quot;</span> <span class="ow">and</span> <span class="n">server_url</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Could not reach the server at </span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">. &quot;</span>
+            <span class="s2">&quot;Check the URL and your network connection.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">category</span> <span class="o">==</span> <span class="s2">&quot;fhirpath&quot;</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;The FHIRPath expression could not be evaluated: </span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">. &quot;</span>
+            <span class="s2">&quot;Check the expression syntax.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">root</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2"> Re-run with --verbose for the full stack trace.&quot;</span>
+
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="c1"># Use the three-argument form for Python 3.9 compatibility.</span>
+        <span class="n">trace</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exception</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">),</span> <span class="n">exc</span><span class="p">,</span> <span class="n">exc</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">))</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">message</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">trace</span>
+    <span class="k">return</span> <span class="n">message</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

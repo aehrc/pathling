@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pathling.cli package &mdash; pathling  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="pathling package" href="pathling.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            pathling
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="pathling.html">pathling package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="pathling.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">pathling.cli package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.config">pathling.cli.config module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.console">pathling.cli.console module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.convert">pathling.cli.convert module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.departition">pathling.cli.departition module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.errors">pathling.cli.errors module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.export">pathling.cli.export module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.fhirpath">pathling.cli.fhirpath module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.io">pathling.cli.io module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.main">pathling.cli.main module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.render">pathling.cli.render module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.run">pathling.cli.run module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.session">pathling.cli.session module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.sparkconf">pathling.cli.sparkconf module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.terminology">pathling.cli.terminology module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli.view">pathling.cli.view module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pathling.cli">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.bulk">pathling.bulk module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.coding">pathling.coding module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.context">pathling.context module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.core">pathling.core module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.datasink">pathling.datasink module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.datasource">pathling.datasource module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.fhir">pathling.fhir module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.functions">pathling.functions module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.spark">pathling.spark module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.udfs">pathling.udfs module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pathling</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="pathling.html">pathling package</a></li>
+      <li class="breadcrumb-item active">pathling.cli package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/pathling.cli.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pathling-cli-package">
+<h1>pathling.cli package<a class="headerlink" href="#pathling-cli-package" title="Permalink to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
+</section>
+<section id="module-pathling.cli.config">
+<span id="pathling-cli-config-module"></span><h2>pathling.cli.config module<a class="headerlink" href="#module-pathling.cli.config" title="Permalink to this heading"></a></h2>
+<p>Configuration resolution for the Pathling command line interface.</p>
+<p>A single config file is selected by the precedence explicit <code class="docutils literal notranslate"><span class="pre">--config</span></code> &gt;
+project-local <code class="docutils literal notranslate"><span class="pre">pathling.toml</span></code> (in the current working directory) &gt; user-level
+<code class="docutils literal notranslate"><span class="pre">${XDG_CONFIG_HOME:-~/.config}/pathling/config.toml</span></code> &gt; none. Files are never
+merged: keys absent from the chosen file fall back to built-in defaults, never
+to another file. The chosen file’s values then resolve with the precedence flag
+&gt; config file &gt; built-in default. When a project-local file is discovered, a
+one-line notice naming it is emitted via the <code class="docutils literal notranslate"><span class="pre">on_notice</span></code> callback. Secret
+values for authentication may be supplied as a literal, a <code class="docutils literal notranslate"><span class="pre">&#64;/path/to/file</span></code>
+reference, or via an environment variable.</p>
+<p>Author: John Grimes.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.cli.config.BulkAuth">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.config.</span></span><span class="sig-name descname"><span class="pre">BulkAuth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token_endpoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">private_key_jwk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_secret</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scope</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/config.html#BulkAuth"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.config.BulkAuth" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>SMART backend services authentication settings for bulk export.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client_id</strong> – the OAuth2 client identifier.</p></li>
+<li><p><strong>private_key_jwk</strong> – the resolved private key JWK, or None.</p></li>
+<li><p><strong>client_secret</strong> – the resolved client secret, or None.</p></li>
+<li><p><strong>token_endpoint</strong> – the OAuth2 token endpoint.</p></li>
+<li><p><strong>scope</strong> – an optional OAuth2 scope.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.BulkAuth.client_id">
+<span class="sig-name descname"><span class="pre">client_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pathling.cli.config.BulkAuth.client_id" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.BulkAuth.client_secret">
+<span class="sig-name descname"><span class="pre">client_secret</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.config.BulkAuth.client_secret" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pathling.cli.config.BulkAuth.mechanism">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mechanism</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pathling.cli.config.BulkAuth.mechanism" title="Permalink to this definition"></a></dt>
+<dd><p>A human-readable name for the credential mechanism in use.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a description of the credential type for error messages.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.BulkAuth.private_key_jwk">
+<span class="sig-name descname"><span class="pre">private_key_jwk</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.config.BulkAuth.private_key_jwk" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.BulkAuth.scope">
+<span class="sig-name descname"><span class="pre">scope</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.config.BulkAuth.scope" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.BulkAuth.token_endpoint">
+<span class="sig-name descname"><span class="pre">token_endpoint</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.config.BulkAuth.token_endpoint" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.cli.config.CliConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.config.</span></span><span class="sig-name descname"><span class="pre">CliConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tx_server:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'https://tx.ontoserver.csiro.au/fhir'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tx_auth:</span> <span class="pre">~pathling.cli.config.TxAuth</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhir_version:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'R4'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_path:</span> <span class="pre">~pathlib.Path</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spark_conf:</span> <span class="pre">dict</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bulk_auth_table:</span> <span class="pre">dict</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/config.html#CliConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.config.CliConfig" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Resolved global configuration for a single invocation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tx_server</strong> – the terminology server URL.</p></li>
+<li><p><strong>tx_auth</strong> – terminology authentication settings, or None.</p></li>
+<li><p><strong>fhir_version</strong> – the FHIR version code.</p></li>
+<li><p><strong>verbose</strong> – whether verbose logging and stack traces are enabled.</p></li>
+<li><p><strong>config_path</strong> – the path the config file was read from, or None.</p></li>
+<li><p><strong>spark_conf</strong> – the resolved, validated, and merged Spark configuration
+map to apply when a session is built; empty when nothing is set.</p></li>
+<li><p><strong>bulk_auth_table</strong> – the parsed <code class="docutils literal notranslate"><span class="pre">[bulk-auth]</span></code> table from the chosen
+config file, or None when absent. Carried so <code class="docutils literal notranslate"><span class="pre">export</span></code> resolves bulk
+credentials from the already-loaded config rather than re-reading a
+file.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.CliConfig.bulk_auth_table">
+<span class="sig-name descname"><span class="pre">bulk_auth_table</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.config.CliConfig.bulk_auth_table" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.CliConfig.config_path">
+<span class="sig-name descname"><span class="pre">config_path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.config.CliConfig.config_path" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.CliConfig.fhir_version">
+<span class="sig-name descname"><span class="pre">fhir_version</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'R4'</span></em><a class="headerlink" href="#pathling.cli.config.CliConfig.fhir_version" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.CliConfig.spark_conf">
+<span class="sig-name descname"><span class="pre">spark_conf</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#pathling.cli.config.CliConfig.spark_conf" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.CliConfig.tx_auth">
+<span class="sig-name descname"><span class="pre">tx_auth</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#pathling.cli.config.TxAuth" title="pathling.cli.config.TxAuth"><span class="pre">TxAuth</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.config.CliConfig.tx_auth" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.CliConfig.tx_server">
+<span class="sig-name descname"><span class="pre">tx_server</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'https://tx.ontoserver.csiro.au/fhir'</span></em><a class="headerlink" href="#pathling.cli.config.CliConfig.tx_server" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.CliConfig.verbose">
+<span class="sig-name descname"><span class="pre">verbose</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#pathling.cli.config.CliConfig.verbose" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.cli.config.TxAuth">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.config.</span></span><span class="sig-name descname"><span class="pre">TxAuth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_secret</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token_endpoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scope</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/config.html#TxAuth"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.config.TxAuth" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Terminology server authentication settings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client_id</strong> – the OAuth2 client identifier.</p></li>
+<li><p><strong>client_secret</strong> – the resolved client secret, or None.</p></li>
+<li><p><strong>token_endpoint</strong> – the OAuth2 token endpoint.</p></li>
+<li><p><strong>scope</strong> – an optional OAuth2 scope.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.TxAuth.client_id">
+<span class="sig-name descname"><span class="pre">client_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.config.TxAuth.client_id" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.TxAuth.client_secret">
+<span class="sig-name descname"><span class="pre">client_secret</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.config.TxAuth.client_secret" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pathling.cli.config.TxAuth.enabled">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">enabled</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#pathling.cli.config.TxAuth.enabled" title="Permalink to this definition"></a></dt>
+<dd><p>Whether enough has been supplied to attempt authentication.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True when a client identifier and token endpoint are present.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.TxAuth.scope">
+<span class="sig-name descname"><span class="pre">scope</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.config.TxAuth.scope" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.config.TxAuth.token_endpoint">
+<span class="sig-name descname"><span class="pre">token_endpoint</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.config.TxAuth.token_endpoint" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.config.default_config_path">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.config.</span></span><span class="sig-name descname"><span class="pre">default_config_path</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Path</span></span></span><a class="reference internal" href="_modules/pathling/cli/config.html#default_config_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.config.default_config_path" title="Permalink to this definition"></a></dt>
+<dd><p>Computes the default config file path, honouring <code class="docutils literal notranslate"><span class="pre">XDG_CONFIG_HOME</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the path to the default config file location.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.config.load_config_file">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.config.</span></span><span class="sig-name descname"><span class="pre">load_config_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_warning</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/pathling/cli/config.html#load_config_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.config.load_config_file" title="Permalink to this definition"></a></dt>
+<dd><p>Loads a config file, warning about unknown keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – the config file path.</p></li>
+<li><p><strong>on_warning</strong> – an optional callback invoked with each warning message;
+defaults to writing to stderr.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the parsed config as a dict, or an empty dict when the file is
+absent.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.config.resolve_bulk_auth">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.config.</span></span><span class="sig-name descname"><span class="pre">resolve_bulk_auth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_bulk_auth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_secret</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">private_key_jwk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token_endpoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scope</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pathling.cli.config.BulkAuth" title="pathling.cli.config.BulkAuth"><span class="pre">BulkAuth</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/pathling/cli/config.html#resolve_bulk_auth"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.config.resolve_bulk_auth" title="Permalink to this definition"></a></dt>
+<dd><p>Resolves bulk export authentication from flags and the config file.</p>
+<p>Authentication is considered configured only when a client identifier is
+present. Secret values are resolved as a literal, a <code class="docutils literal notranslate"><span class="pre">&#64;file</span></code> reference, or
+the <code class="docutils literal notranslate"><span class="pre">PATHLING_CLIENT_SECRET</span></code> / <code class="docutils literal notranslate"><span class="pre">PATHLING_PRIVATE_KEY_JWK</span></code> environment
+variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_bulk_auth</strong> – the parsed <code class="docutils literal notranslate"><span class="pre">[bulk-auth]</span></code> table, or None.</p></li>
+<li><p><strong>client_id</strong> – the <code class="docutils literal notranslate"><span class="pre">--client-id</span></code> flag value, or None.</p></li>
+<li><p><strong>client_secret</strong> – the <code class="docutils literal notranslate"><span class="pre">--client-secret</span></code> flag value, or None.</p></li>
+<li><p><strong>private_key_jwk</strong> – the <code class="docutils literal notranslate"><span class="pre">--private-key-jwk</span></code> flag value, or None.</p></li>
+<li><p><strong>token_endpoint</strong> – the <code class="docutils literal notranslate"><span class="pre">--token-endpoint</span></code> flag value, or None.</p></li>
+<li><p><strong>scope</strong> – the <code class="docutils literal notranslate"><span class="pre">--scope</span></code> flag value, or None.</p></li>
+<li><p><strong>env</strong> – the environment mapping for secret resolution.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a populated <a class="reference internal" href="#pathling.cli.config.BulkAuth" title="pathling.cli.config.BulkAuth"><code class="xref py py-class docutils literal notranslate"><span class="pre">BulkAuth</span></code></a>, or None when no auth input is given.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – when the auth configuration is incomplete or ambiguous.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.config.resolve_config">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.config.</span></span><span class="sig-name descname"><span class="pre">resolve_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tx_server</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tx_client_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tx_client_secret</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tx_token_endpoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tx_scope</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhir_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spark_conf_flags</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cwd</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_warning</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_notice</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pathling.cli.config.CliConfig" title="pathling.cli.config.CliConfig"><span class="pre">CliConfig</span></a></span></span><a class="reference internal" href="_modules/pathling/cli/config.html#resolve_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.config.resolve_config" title="Permalink to this definition"></a></dt>
+<dd><p>Resolves global configuration from flags, the config file, and defaults.</p>
+<p>A single config file is selected by the precedence explicit <code class="docutils literal notranslate"><span class="pre">--config</span></code> &gt;
+project-local <code class="docutils literal notranslate"><span class="pre">pathling.toml</span></code> (in <code class="docutils literal notranslate"><span class="pre">cwd</span></code>) &gt; user-level config file &gt;
+none, then its values flow through the precedence flag &gt; config file &gt;
+built-in default. Files are never merged: keys absent from the chosen file
+fall back to built-in defaults, never to another file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tx_server</strong> – the <code class="docutils literal notranslate"><span class="pre">--tx-server</span></code> flag value, or None.</p></li>
+<li><p><strong>tx_client_id</strong> – the <code class="docutils literal notranslate"><span class="pre">--tx-client-id</span></code> flag value, or None.</p></li>
+<li><p><strong>tx_client_secret</strong> – the <code class="docutils literal notranslate"><span class="pre">--tx-client-secret</span></code> flag value, or None.</p></li>
+<li><p><strong>tx_token_endpoint</strong> – the <code class="docutils literal notranslate"><span class="pre">--tx-token-endpoint</span></code> flag value, or None.</p></li>
+<li><p><strong>tx_scope</strong> – the <code class="docutils literal notranslate"><span class="pre">--tx-scope</span></code> flag value, or None.</p></li>
+<li><p><strong>fhir_version</strong> – the <code class="docutils literal notranslate"><span class="pre">--fhir-version</span></code> flag value, or None.</p></li>
+<li><p><strong>spark_conf_flags</strong> – the parsed <code class="docutils literal notranslate"><span class="pre">--spark-conf</span></code> flag map, or None; flag
+values override the <code class="docutils literal notranslate"><span class="pre">[spark]</span></code> table for the same key.</p></li>
+<li><p><strong>verbose</strong> – the <code class="docutils literal notranslate"><span class="pre">--verbose</span></code> flag value.</p></li>
+<li><p><strong>config_path</strong> – an explicit config file path, or None for discovery.</p></li>
+<li><p><strong>cwd</strong> – the directory searched for a project-local <code class="docutils literal notranslate"><span class="pre">pathling.toml</span></code>;
+defaults to the current working directory.</p></li>
+<li><p><strong>env</strong> – the environment mapping for secret resolution.</p></li>
+<li><p><strong>on_warning</strong> – an optional warning callback passed to the file loader and
+used to surface the managed Spark-package version-override warning;
+defaults to writing to stderr so warnings appear even in quiet mode.</p></li>
+<li><p><strong>on_notice</strong> – an optional callback invoked with a one-line notice when a
+project-local <code class="docutils literal notranslate"><span class="pre">pathling.toml</span></code> is discovered and used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the resolved <a class="reference internal" href="#pathling.cli.config.CliConfig" title="pathling.cli.config.CliConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">CliConfig</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – if the resolved FHIR version is unsupported.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.config.resolve_config_source">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.config.</span></span><span class="sig-name descname"><span class="pre">resolve_config_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cwd</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">pathlib.Path</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/pathling/cli/config.html#resolve_config_source"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.config.resolve_config_source" title="Permalink to this definition"></a></dt>
+<dd><p>Selects the single config file to load and reports where it came from.</p>
+<p>Exactly one file is chosen, by the precedence explicit <code class="docutils literal notranslate"><span class="pre">--config</span></code> &gt;
+project-local <code class="docutils literal notranslate"><span class="pre">pathling.toml</span></code> in <code class="docutils literal notranslate"><span class="pre">cwd</span></code> &gt; user-level config file &gt; none.
+Values are never merged across files.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config_path</strong> – an explicit <code class="docutils literal notranslate"><span class="pre">--config</span></code> path, or None.</p></li>
+<li><p><strong>cwd</strong> – the directory searched for a project-local <code class="docutils literal notranslate"><span class="pre">pathling.toml</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a tuple of the chosen path and an origin tag, one of
+<code class="docutils literal notranslate"><span class="pre">&quot;explicit&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;project&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;user&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code>. The
+<code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code> case returns the (non-existent) user-level path so the
+existing “missing file yields defaults” behaviour is preserved.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.config.resolve_secret">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.config.</span></span><span class="sig-name descname"><span class="pre">resolve_secret</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env_var</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/pathling/cli/config.html#resolve_secret"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.config.resolve_secret" title="Permalink to this definition"></a></dt>
+<dd><p>Resolves a secret value from a literal, a <code class="docutils literal notranslate"><span class="pre">&#64;file</span></code> reference, or an
+environment variable.</p>
+<p>A value beginning with <code class="docutils literal notranslate"><span class="pre">&#64;</span></code> is treated as a path to a file whose stripped
+contents are returned. When <code class="docutils literal notranslate"><span class="pre">value</span></code> is None and <code class="docutils literal notranslate"><span class="pre">env_var</span></code> is given, the
+environment variable is consulted.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> – the literal value, <code class="docutils literal notranslate"><span class="pre">&#64;path</span></code> reference, or None.</p></li>
+<li><p><strong>env_var</strong> – the name of a fallback environment variable, or None.</p></li>
+<li><p><strong>env</strong> – the environment mapping to read from; defaults to <code class="docutils literal notranslate"><span class="pre">os.environ</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the resolved secret, or None when nothing is available.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – if a <code class="docutils literal notranslate"><span class="pre">&#64;file</span></code> reference cannot be read.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-pathling.cli.console">
+<span id="pathling-cli-console-module"></span><h2>pathling.cli.console module<a class="headerlink" href="#module-pathling.cli.console" title="Permalink to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">pathling</span> <span class="pre">console</span></code> command.</p>
+<p>Opens an interactive IPython session with <code class="docutils literal notranslate"><span class="pre">spark</span></code> (the Spark session) and
+<code class="docutils literal notranslate"><span class="pre">pathling</span></code> (the configured Pathling context) bound in the user namespace,
+after a banner identifying the version and the variables in scope. IPython is
+imported inside the command body so that <code class="docutils literal notranslate"><span class="pre">--help</span></code> stays fast.</p>
+<p>Author: John Grimes.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.console.build_banner">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.console.</span></span><span class="sig-name descname"><span class="pre">build_banner</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/cli/console.html#build_banner"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.console.build_banner" title="Permalink to this definition"></a></dt>
+<dd><p>Builds the banner shown before the console’s first prompt.</p>
+<p>The banner identifies the Pathling and Python versions, lists the
+variables in scope, and explains how to exit.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the banner text.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-pathling.cli.convert">
+<span id="pathling-cli-convert-module"></span><h2>pathling.cli.convert module<a class="headerlink" href="#module-pathling.cli.convert" title="Permalink to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">pathling</span> <span class="pre">convert</span></code> command.</p>
+<p>Reads any supported FHIR data source and writes ndjson, Parquet, or Delta to an
+output path, with save-mode control and a summary of the resource types and row
+counts written.</p>
+<p>Author: John Grimes.</p>
+</section>
+<section id="module-pathling.cli.departition">
+<span id="pathling-cli-departition-module"></span><h2>pathling.cli.departition module<a class="headerlink" href="#module-pathling.cli.departition" title="Permalink to this heading"></a></h2>
+<p>Departitioning of Spark directory output into a single file.</p>
+<p>Spark’s distributed writers produce a directory of part files rather than a
+single file. To restore the single-file experience expected from the command
+line, this module moves the single data part file out of that directory to the
+exact path the user requested and removes the directory. The operation runs
+over the Hadoop <code class="docutils literal notranslate"><span class="pre">FileSystem</span></code> associated with the target path, so it works
+uniformly for local, S3, HDFS, and other Hadoop-compatible destinations,
+keeping the move on a single filesystem.</p>
+<p>Author: John Grimes.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.departition.departition">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.departition.</span></span><span class="sig-name descname"><span class="pre">departition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spark</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">part_extension</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/pathling/cli/departition.html#departition"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.departition.departition" title="Permalink to this definition"></a></dt>
+<dd><p>Moves the single data part file from a Spark output directory to a path.</p>
+<p>Lists <code class="docutils literal notranslate"><span class="pre">source_dir</span></code> over the Hadoop <code class="docutils literal notranslate"><span class="pre">FileSystem</span></code> of <code class="docutils literal notranslate"><span class="pre">target_path</span></code>,
+selects the data part files (those ending in <code class="docutils literal notranslate"><span class="pre">part_extension</span></code>, ignoring
+Spark markers such as <code class="docutils literal notranslate"><span class="pre">_SUCCESS</span></code> and <code class="docutils literal notranslate"><span class="pre">.crc</span></code> checksums), and:</p>
+<ul class="simple">
+<li><p>with exactly one data file, moves it to <code class="docutils literal notranslate"><span class="pre">target_path</span></code>;</p></li>
+<li><p>with no data files (an empty result), creates an empty <code class="docutils literal notranslate"><span class="pre">target_path</span></code>;</p></li>
+<li><p>with more than one data file, raises an error rather than choosing one.</p></li>
+</ul>
+<p>The source directory is always removed afterwards.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>spark</strong> – the Spark session, used to reach the JVM gateway and Hadoop
+configuration.</p></li>
+<li><p><strong>source_dir</strong> – the Spark output directory to departition.</p></li>
+<li><p><strong>target_path</strong> – the destination path for the single data file.</p></li>
+<li><p><strong>part_extension</strong> – the part-file extension to select, without a leading
+dot (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;csv&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;json&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;parquet&quot;</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – when the source directory contains more than one data
+file.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.departition.remove_path">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.departition.</span></span><span class="sig-name descname"><span class="pre">remove_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spark</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/pathling/cli/departition.html#remove_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.departition.remove_path" title="Permalink to this definition"></a></dt>
+<dd><p>Removes a file or directory over its Hadoop <code class="docutils literal notranslate"><span class="pre">FileSystem</span></code>, if it exists.</p>
+<p>Used to clear an existing target before an overwrite and to clean up the
+temporary departition directory. The operation is idempotent: a path that
+does not exist is left untouched.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>spark</strong> – the Spark session, used to reach the JVM gateway and Hadoop
+configuration.</p></li>
+<li><p><strong>path</strong> – the path to remove.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-pathling.cli.errors">
+<span id="pathling-cli-errors-module"></span><h2>pathling.cli.errors module<a class="headerlink" href="#module-pathling.cli.errors" title="Permalink to this heading"></a></h2>
+<p>Error handling for the Pathling command line interface.</p>
+<p>JVM exceptions raised through Py4J carry verbose Java stack traces that are
+unhelpful at the command line. This module unwraps them to their root message
+and maps recognised categories onto concise, actionable guidance. Stack traces
+are shown only when the user passes <code class="docutils literal notranslate"><span class="pre">--verbose</span></code>.</p>
+<p>Author: John Grimes.</p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="pathling.cli.errors.CliError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.errors.</span></span><span class="sig-name descname"><span class="pre">CliError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exit_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/errors.html#CliError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.errors.CliError" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>An error with a message that is safe to show the user directly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>message</strong> – the human-readable error message.</p></li>
+<li><p><strong>exit_code</strong> – the process exit code to use; defaults to a runtime
+failure.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.errors.friendly_message">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.errors.</span></span><span class="sig-name descname"><span class="pre">friendly_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BaseException</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">server_url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/cli/errors.html#friendly_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.errors.friendly_message" title="Permalink to this definition"></a></dt>
+<dd><p>Builds a friendly, actionable message for an unexpected exception.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>exc</strong> – the exception to describe.</p></li>
+<li><p><strong>verbose</strong> – when True, append the full traceback.</p></li>
+<li><p><strong>server_url</strong> – a server URL to name in connection errors, or None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the message to present to the user.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.errors.is_auth_error">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.errors.</span></span><span class="sig-name descname"><span class="pre">is_auth_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BaseException</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/pathling/cli/errors.html#is_auth_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.errors.is_auth_error" title="Permalink to this definition"></a></dt>
+<dd><p>Determines whether an exception represents an authentication failure.</p>
+<p>Used to decide whether an export failure should be reported as an
+authentication problem; connection, timeout, and server-side errors that
+happen to occur while authentication is configured must not be misdiagnosed
+as bad credentials.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>exc</strong> – the exception to classify.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True when the unwrapped message looks like an authentication
+failure.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.errors.is_connection_error">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.errors.</span></span><span class="sig-name descname"><span class="pre">is_connection_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BaseException</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/pathling/cli/errors.html#is_connection_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.errors.is_connection_error" title="Permalink to this definition"></a></dt>
+<dd><p>Determines whether an exception represents a server connection failure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>exc</strong> – the exception to classify.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True when the unwrapped message looks like a connection failure.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.errors.unwrap_java_exception">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.errors.</span></span><span class="sig-name descname"><span class="pre">unwrap_java_exception</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BaseException</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/cli/errors.html#unwrap_java_exception"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.errors.unwrap_java_exception" title="Permalink to this definition"></a></dt>
+<dd><p>Extracts the most useful single-line message from an exception.</p>
+<p>Py4J wraps Java exceptions, whose <code class="docutils literal notranslate"><span class="pre">str</span></code> representation includes the full
+stack trace. This returns the leading message line, stripping the Java
+exception class prefix where present.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>exc</strong> – the exception to unwrap.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a concise message describing the underlying problem.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-pathling.cli.export">
+<span id="pathling-cli-export-module"></span><h2>pathling.cli.export module<a class="headerlink" href="#module-pathling.cli.export" title="Permalink to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">pathling</span> <span class="pre">export</span></code> command.</p>
+<p>Performs a FHIR Bulk Data export (system, group, or patient level) with the
+library’s filters and SMART backend services authentication, downloading
+ndjson to the output directory and reporting a summary of files and resource
+counts.</p>
+<p>Author: John Grimes.</p>
+</section>
+<section id="module-pathling.cli.fhirpath">
+<span id="pathling-cli-fhirpath-module"></span><h2>pathling.cli.fhirpath module<a class="headerlink" href="#module-pathling.cli.fhirpath" title="Permalink to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">pathling</span> <span class="pre">fhirpath</span></code> command.</p>
+<p>Evaluates a FHIRPath expression against either a whole data source (one row of
+<code class="docutils literal notranslate"><span class="pre">id</span></code> and <code class="docutils literal notranslate"><span class="pre">result</span></code> per resource) or a single FHIR resource JSON file (one
+<code class="docutils literal notranslate"><span class="pre">type</span></code> and <code class="docutils literal notranslate"><span class="pre">result</span></code> row per result item). Supports context expressions,
+named variables, and a FHIR search <code class="docutils literal notranslate"><span class="pre">--filter</span></code> in data source mode.</p>
+<p>Author: John Grimes.</p>
+</section>
+<section id="module-pathling.cli.io">
+<span id="pathling-cli-io-module"></span><h2>pathling.cli.io module<a class="headerlink" href="#module-pathling.cli.io" title="Permalink to this heading"></a></h2>
+<p>Data source detection and reading for the Pathling command line interface.</p>
+<p>Format is auto-detected from the contents of the input path, with an explicit
+<code class="docutils literal notranslate"><span class="pre">--from</span></code> override. Detection and validation run before any Spark session is
+started so that obvious mistakes (a missing or empty path, an ambiguous
+directory) fail quickly with an actionable message.</p>
+<p>Author: John Grimes.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.cli.io.SourceFormat">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.io.</span></span><span class="sig-name descname"><span class="pre">SourceFormat</span></span><a class="reference internal" href="_modules/pathling/cli/io.html#SourceFormat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.io.SourceFormat" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>The recognised data source formats.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.io.SourceFormat.BUNDLES">
+<span class="sig-name descname"><span class="pre">BUNDLES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'bundles'</span></em><a class="headerlink" href="#pathling.cli.io.SourceFormat.BUNDLES" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.io.SourceFormat.DELTA">
+<span class="sig-name descname"><span class="pre">DELTA</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'delta'</span></em><a class="headerlink" href="#pathling.cli.io.SourceFormat.DELTA" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.io.SourceFormat.NDJSON">
+<span class="sig-name descname"><span class="pre">NDJSON</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ndjson'</span></em><a class="headerlink" href="#pathling.cli.io.SourceFormat.NDJSON" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.io.SourceFormat.PARQUET">
+<span class="sig-name descname"><span class="pre">PARQUET</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'parquet'</span></em><a class="headerlink" href="#pathling.cli.io.SourceFormat.PARQUET" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.io.SourceFormat.RESOURCE">
+<span class="sig-name descname"><span class="pre">RESOURCE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'resource'</span></em><a class="headerlink" href="#pathling.cli.io.SourceFormat.RESOURCE" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.cli.io.SourceSpec">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.io.</span></span><span class="sig-name descname"><span class="pre">SourceSpec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/io.html#SourceSpec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.io.SourceSpec" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A resolved data source input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – the input path; verified to exist.</p></li>
+<li><p><strong>format</strong> – one of the <a class="reference internal" href="#pathling.cli.io.SourceFormat" title="pathling.cli.io.SourceFormat"><code class="xref py py-class docutils literal notranslate"><span class="pre">SourceFormat</span></code></a> values.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.io.SourceSpec.format">
+<span class="sig-name descname"><span class="pre">format</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pathling.cli.io.SourceSpec.format" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.io.SourceSpec.path">
+<span class="sig-name descname"><span class="pre">path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Path</span></em><a class="headerlink" href="#pathling.cli.io.SourceSpec.path" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.io.detect_format">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.io.</span></span><span class="sig-name descname"><span class="pre">detect_format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_resource</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/cli/io.html#detect_format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.io.detect_format" title="Permalink to this definition"></a></dt>
+<dd><p>Auto-detects the format of a data source path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – the input path.</p></li>
+<li><p><strong>allow_resource</strong> – when True, a single JSON file is treated as a single
+FHIR resource rather than rejected.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the detected <a class="reference internal" href="#pathling.cli.io.SourceFormat" title="pathling.cli.io.SourceFormat"><code class="xref py py-class docutils literal notranslate"><span class="pre">SourceFormat</span></code></a> value.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – when the path is missing or empty, or the format cannot
+be determined unambiguously.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.io.discover_bundle_resource_types">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.io.</span></span><span class="sig-name descname"><span class="pre">discover_bundle_resource_types</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/pathling/cli/io.html#discover_bundle_resource_types"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.io.discover_bundle_resource_types" title="Permalink to this definition"></a></dt>
+<dd><p>Discovers the distinct resource types contained in a directory of
+FHIR Bundles.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> – the directory of bundle JSON files.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a sorted list of distinct resource type codes found in the bundle
+entries.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – when no resource types can be found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.io.read_single_resource">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.io.</span></span><span class="sig-name descname"><span class="pre">read_single_resource</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="reference internal" href="_modules/pathling/cli/io.html#read_single_resource"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.io.read_single_resource" title="Permalink to this definition"></a></dt>
+<dd><p>Reads a single FHIR resource JSON file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> – the path to the resource file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a tuple of (resource_type, resource_json_string).</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – when the file cannot be read or has no resource type.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.io.read_source">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.io.</span></span><span class="sig-name descname"><span class="pre">read_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pathling.cli.io.SourceSpec" title="pathling.cli.io.SourceSpec"><span class="pre">SourceSpec</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">types</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/io.html#read_source"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.io.read_source" title="Permalink to this definition"></a></dt>
+<dd><p>Reads a <a class="reference internal" href="#pathling.cli.io.SourceSpec" title="pathling.cli.io.SourceSpec"><code class="xref py py-class docutils literal notranslate"><span class="pre">SourceSpec</span></code></a> into a Pathling <code class="docutils literal notranslate"><span class="pre">DataSource</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pc</strong> – the <code class="xref py py-class docutils literal notranslate"><span class="pre">PathlingContext</span></code> to read with.</p></li>
+<li><p><strong>spec</strong> – the resolved source specification.</p></li>
+<li><p><strong>types</strong> – the resource types to read from a Bundles source. When
+provided (non-empty), these are used directly and the driver-side
+discovery pass is skipped; when None or empty, discovery enumerates
+the types. Ignored for non-Bundles formats (FR-015).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a Pathling <code class="docutils literal notranslate"><span class="pre">DataSource</span></code> for the input.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – when the format is not a data source format.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.io.resolve_source">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.io.</span></span><span class="sig-name descname"><span class="pre">resolve_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_resource</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pathling.cli.io.SourceSpec" title="pathling.cli.io.SourceSpec"><span class="pre">SourceSpec</span></a></span></span><a class="reference internal" href="_modules/pathling/cli/io.html#resolve_source"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.io.resolve_source" title="Permalink to this definition"></a></dt>
+<dd><p>Resolves a source path and format, validating before Spark startup.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path_str</strong> – the positional source path.</p></li>
+<li><p><strong>from_format</strong> – an explicit <code class="docutils literal notranslate"><span class="pre">--from</span></code> override, or None to auto-detect.</p></li>
+<li><p><strong>allow_resource</strong> – whether a single resource JSON file is permitted.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the resolved <a class="reference internal" href="#pathling.cli.io.SourceSpec" title="pathling.cli.io.SourceSpec"><code class="xref py py-class docutils literal notranslate"><span class="pre">SourceSpec</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – when the path is invalid or the format cannot be resolved.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-pathling.cli.main">
+<span id="pathling-cli-main-module"></span><h2>pathling.cli.main module<a class="headerlink" href="#module-pathling.cli.main" title="Permalink to this heading"></a></h2>
+<p>The root command group for the Pathling command line interface.</p>
+<p>This module defines the global options, resolves configuration, registers every
+subcommand, and installs a single central error handler that turns exceptions
+(including unwrapped JVM exceptions) into concise messages with appropriate exit
+codes. Heavy imports (PySpark, the JVM-backed library) are deferred to command
+execution so that <code class="docutils literal notranslate"><span class="pre">--help</span></code> and <code class="docutils literal notranslate"><span class="pre">--version</span></code> stay fast.</p>
+<p>Author: John Grimes.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.cli.main.CliContext">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.main.</span></span><span class="sig-name descname"><span class="pre">CliContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pathling.cli.config.CliConfig" title="pathling.cli.config.CliConfig"><span class="pre">CliConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">console</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Console</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/main.html#CliContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.main.CliContext" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>The object carried on the Click context for every command.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – the resolved global configuration.</p></li>
+<li><p><strong>console</strong> – the stderr console for progress and error output.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.main.CliContext.config">
+<span class="sig-name descname"><span class="pre">config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#pathling.cli.config.CliConfig" title="pathling.cli.config.CliConfig"><span class="pre">CliConfig</span></a></em><a class="headerlink" href="#pathling.cli.main.CliContext.config" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.main.CliContext.console">
+<span class="sig-name descname"><span class="pre">console</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Console</span></em><a class="headerlink" href="#pathling.cli.main.CliContext.console" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.cli.main.PathlingCli">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.main.</span></span><span class="sig-name descname"><span class="pre">PathlingCli</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commands</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MutableMapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Command</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Command</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">attrs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/main.html#PathlingCli"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.main.PathlingCli" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Group</span></code></p>
+<p>The root group with centralised error handling and exit codes.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.cli.main.PathlingCli.invoke">
+<span class="sig-name descname"><span class="pre">invoke</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/main.html#PathlingCli.invoke"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.main.PathlingCli.invoke" title="Permalink to this definition"></a></dt>
+<dd><p>Invokes a command, mapping errors to friendly messages and codes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ctx</strong> – the Click context.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the command’s return value on success.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-pathling.cli.render">
+<span id="pathling-cli-render-module"></span><h2>pathling.cli.render module<a class="headerlink" href="#module-pathling.cli.render" title="Permalink to this heading"></a></h2>
+<p>Output rendering and progress reporting for the command line interface.</p>
+<p>Tabular results render to a human-readable table by default, with CSV and
+NDJSON alternatives for piping, and file output (CSV, NDJSON, Parquet, and
+Delta) via <code class="docutils literal notranslate"><span class="pre">-o</span></code>. File output is produced by Spark’s native writers and, by
+default, departitioned to a single file at the requested path. Data is written
+to stdout; progress, status, and the write confirmation go to stderr so that
+piped output stays clean.</p>
+<p>Author: John Grimes.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputFormat">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">OutputFormat</span></span><a class="reference internal" href="_modules/pathling/cli/render.html#OutputFormat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.OutputFormat" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>The recognised output formats.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputFormat.CSV">
+<span class="sig-name descname"><span class="pre">CSV</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'csv'</span></em><a class="headerlink" href="#pathling.cli.render.OutputFormat.CSV" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputFormat.DELTA">
+<span class="sig-name descname"><span class="pre">DELTA</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'delta'</span></em><a class="headerlink" href="#pathling.cli.render.OutputFormat.DELTA" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputFormat.NDJSON">
+<span class="sig-name descname"><span class="pre">NDJSON</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ndjson'</span></em><a class="headerlink" href="#pathling.cli.render.OutputFormat.NDJSON" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputFormat.PARQUET">
+<span class="sig-name descname"><span class="pre">PARQUET</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'parquet'</span></em><a class="headerlink" href="#pathling.cli.render.OutputFormat.PARQUET" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputFormat.TABLE">
+<span class="sig-name descname"><span class="pre">TABLE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'table'</span></em><a class="headerlink" href="#pathling.cli.render.OutputFormat.TABLE" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputSpec">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">OutputSpec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">departition</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/render.html#OutputSpec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.OutputSpec" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Describes where and how results leave the CLI.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – the output path, or None to write to stdout.</p></li>
+<li><p><strong>format</strong> – one of the <a class="reference internal" href="#pathling.cli.render.OutputFormat" title="pathling.cli.render.OutputFormat"><code class="xref py py-class docutils literal notranslate"><span class="pre">OutputFormat</span></code></a> values.</p></li>
+<li><p><strong>limit</strong> – the row cap for stdout table rendering.</p></li>
+<li><p><strong>overwrite</strong> – whether an existing output path may be replaced.</p></li>
+<li><p><strong>departition</strong> – whether file output is departitioned to a single file
+(the default) rather than left as a Spark directory of part files.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputSpec.departition">
+<span class="sig-name descname"><span class="pre">departition</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></em><a class="headerlink" href="#pathling.cli.render.OutputSpec.departition" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputSpec.format">
+<span class="sig-name descname"><span class="pre">format</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pathling.cli.render.OutputSpec.format" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputSpec.limit">
+<span class="sig-name descname"><span class="pre">limit</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">50</span></em><a class="headerlink" href="#pathling.cli.render.OutputSpec.limit" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputSpec.overwrite">
+<span class="sig-name descname"><span class="pre">overwrite</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#pathling.cli.render.OutputSpec.overwrite" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.render.OutputSpec.path">
+<span class="sig-name descname"><span class="pre">path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.render.OutputSpec.path" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.render.check_overwrite">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">check_overwrite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/pathling/cli/render.html#check_overwrite"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.check_overwrite" title="Permalink to this definition"></a></dt>
+<dd><p>Fails when an output path already exists and overwrite was not requested.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – the output path to check.</p></li>
+<li><p><strong>overwrite</strong> – whether overwriting is permitted.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – when the path exists and overwrite is False.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.render.infer_format_from_extension">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">infer_format_from_extension</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/pathling/cli/render.html#infer_format_from_extension"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.infer_format_from_extension" title="Permalink to this definition"></a></dt>
+<dd><p>Infers an output format from a file extension.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> – the output path.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the inferred format, or None when the extension is unrecognised.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.render.output_options">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">output_options</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/render.html#output_options"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.output_options" title="Permalink to this definition"></a></dt>
+<dd><p>Applies the shared output options to a command callback.</p>
+<p>These options form the common output surface of every command that emits a
+result DataFrame - <code class="docutils literal notranslate"><span class="pre">--format</span></code>, <code class="docutils literal notranslate"><span class="pre">-o</span></code>/<code class="docutils literal notranslate"><span class="pre">--output</span></code>, <code class="docutils literal notranslate"><span class="pre">--limit</span></code>,
+<code class="docutils literal notranslate"><span class="pre">--overwrite</span></code>, and <code class="docutils literal notranslate"><span class="pre">--departition/--no-departition</span></code> - and are resolved
+together by <a class="reference internal" href="#pathling.cli.render.resolve_output" title="pathling.cli.render.resolve_output"><code class="xref py py-func docutils literal notranslate"><span class="pre">resolve_output()</span></code></a> and consumed by <a class="reference internal" href="#pathling.cli.render.write_output" title="pathling.cli.render.write_output"><code class="xref py py-func docutils literal notranslate"><span class="pre">write_output()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>func</strong> – the command callback to decorate.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the decorated callback.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.render.progress_status">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">progress_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">console</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Console</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/render.html#progress_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.progress_status" title="Permalink to this definition"></a></dt>
+<dd><p>Shows a status spinner on stderr for a long-running stage.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>console</strong> – the stderr console.</p></li>
+<li><p><strong>message</strong> – the status message to display.</p></li>
+<li><p><strong>verbose</strong> – when True, print a plain line instead of a spinner so that
+it does not interfere with verbose log output.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.render.render_csv">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">render_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/cli/render.html#render_csv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.render_csv" title="Permalink to this definition"></a></dt>
+<dd><p>Renders rows as CSV with a header line.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>columns</strong> – the column names.</p></li>
+<li><p><strong>rows</strong> – the row values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the CSV text.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.render.render_ndjson">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">render_ndjson</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/cli/render.html#render_ndjson"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.render_ndjson" title="Permalink to this definition"></a></dt>
+<dd><p>Renders rows as newline-delimited JSON objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>columns</strong> – the column names.</p></li>
+<li><p><strong>rows</strong> – the row values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the NDJSON text.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.render.render_rows">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">render_rows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/cli/render.html#render_rows"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.render_rows" title="Permalink to this definition"></a></dt>
+<dd><p>Renders rows in the requested stdout format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>columns</strong> – the column names.</p></li>
+<li><p><strong>rows</strong> – the row values.</p></li>
+<li><p><strong>fmt</strong> – one of table, csv, or ndjson.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the rendered text.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – when the format cannot render to stdout.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.render.render_table">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">render_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/cli/render.html#render_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.render_table" title="Permalink to this definition"></a></dt>
+<dd><p>Renders rows as a human-readable table with a row-count caption.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>columns</strong> – the column names.</p></li>
+<li><p><strong>rows</strong> – the row values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the rendered table as a string.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.render.resolve_output">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">resolve_output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format_flag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">departition</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pathling.cli.render.OutputSpec" title="pathling.cli.render.OutputSpec"><span class="pre">OutputSpec</span></a></span></span><a class="reference internal" href="_modules/pathling/cli/render.html#resolve_output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.resolve_output" title="Permalink to this definition"></a></dt>
+<dd><p>Resolves and validates output options.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_path</strong> – the <code class="docutils literal notranslate"><span class="pre">-o</span></code> path, or None for stdout.</p></li>
+<li><p><strong>format_flag</strong> – the <code class="docutils literal notranslate"><span class="pre">--format</span></code> value, or None to default/infer.</p></li>
+<li><p><strong>limit</strong> – the stdout table row cap.</p></li>
+<li><p><strong>overwrite</strong> – whether replacing an existing output path is allowed.</p></li>
+<li><p><strong>departition</strong> – whether file output is departitioned to a single file.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the resolved <a class="reference internal" href="#pathling.cli.render.OutputSpec" title="pathling.cli.render.OutputSpec"><code class="xref py py-class docutils literal notranslate"><span class="pre">OutputSpec</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – when the combination of options is invalid.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.render.stderr_console">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">stderr_console</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Console</span></span></span><a class="reference internal" href="_modules/pathling/cli/render.html#stderr_console"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.stderr_console" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a Rich console that writes to stderr.</p>
+<p>Markup and highlighting are disabled so that arbitrary message text - error
+messages, file paths, and JVM error codes that may contain square brackets -
+is printed verbatim and never misinterpreted as Rich markup (which would
+otherwise raise a <code class="docutils literal notranslate"><span class="pre">MarkupError</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a console bound to stderr for progress and status messages.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.render.write_output">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.render.</span></span><span class="sig-name descname"><span class="pre">write_output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pathling.cli.render.OutputSpec" title="pathling.cli.render.OutputSpec"><span class="pre">OutputSpec</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">console</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Console</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/pathling/cli/render.html#write_output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.render.write_output" title="Permalink to this definition"></a></dt>
+<dd><p>Writes a result DataFrame to stdout or a file per the output spec.</p>
+<p>For stdout, the table format is capped at <code class="docutils literal notranslate"><span class="pre">spec.limit</span></code> rows; other
+formats stream the full result. File output is produced by Spark’s native
+writers (see <code class="xref py py-func docutils literal notranslate"><span class="pre">_write_file()</span></code>) and confirmed with a single stderr line
+naming the format and path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – the result Spark DataFrame.</p></li>
+<li><p><strong>spec</strong> – the resolved output specification.</p></li>
+<li><p><strong>console</strong> – the stderr console for the confirmation message.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – when the output path exists without <code class="docutils literal notranslate"><span class="pre">--overwrite</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-pathling.cli.run">
+<span id="pathling-cli-run-module"></span><h2>pathling.cli.run module<a class="headerlink" href="#module-pathling.cli.run" title="Permalink to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">pathling</span> <span class="pre">run</span></code> command.</p>
+<p>Executes user-supplied Python code - from a script file, standard input, or an
+inline <code class="docutils literal notranslate"><span class="pre">-c</span></code> option - with <code class="docutils literal notranslate"><span class="pre">spark</span></code> (the Spark session) and <code class="docutils literal notranslate"><span class="pre">pathling</span></code> (the
+configured Pathling context) bound in the code’s global scope, reproducing
+Python interpreter script semantics (<code class="docutils literal notranslate"><span class="pre">sys.argv</span></code>, <code class="docutils literal notranslate"><span class="pre">__main__</span></code>, <code class="docutils literal notranslate"><span class="pre">__file__</span></code>,
+<code class="docutils literal notranslate"><span class="pre">sys.path</span></code>, traceback fidelity, and <code class="docutils literal notranslate"><span class="pre">SystemExit</span></code> propagation).</p>
+<p>Author: John Grimes.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.cli.run.CodeSource">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.run.</span></span><span class="sig-name descname"><span class="pre">CodeSource</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">argv0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_entry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_attr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/run.html#CodeSource"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.run.CodeSource" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A resolved source of program text for execution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>text</strong> – the program source code.</p></li>
+<li><p><strong>filename</strong> – the filename to compile under, which appears in
+tracebacks and syntax errors (the script path, <code class="docutils literal notranslate"><span class="pre">&lt;stdin&gt;</span></code>, or
+<code class="docutils literal notranslate"><span class="pre">&lt;string&gt;</span></code>).</p></li>
+<li><p><strong>argv0</strong> – the value for <code class="docutils literal notranslate"><span class="pre">sys.argv[0]</span></code>, following Python interpreter
+conventions (the script path, <code class="docutils literal notranslate"><span class="pre">-</span></code>, or <code class="docutils literal notranslate"><span class="pre">-c</span></code>).</p></li>
+<li><p><strong>path_entry</strong> – the entry to prepend to <code class="docutils literal notranslate"><span class="pre">sys.path</span></code> (the script’s
+directory for files, <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> for stdin and inline code).</p></li>
+<li><p><strong>file_attr</strong> – the value for <code class="docutils literal notranslate"><span class="pre">__file__</span></code> in the program’s globals, or
+None to leave it unset (stdin and inline code).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.run.CodeSource.argv0">
+<span class="sig-name descname"><span class="pre">argv0</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pathling.cli.run.CodeSource.argv0" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.run.CodeSource.file_attr">
+<span class="sig-name descname"><span class="pre">file_attr</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pathling.cli.run.CodeSource.file_attr" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.run.CodeSource.filename">
+<span class="sig-name descname"><span class="pre">filename</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pathling.cli.run.CodeSource.filename" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.run.CodeSource.path_entry">
+<span class="sig-name descname"><span class="pre">path_entry</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pathling.cli.run.CodeSource.path_entry" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.cli.run.CodeSource.text">
+<span class="sig-name descname"><span class="pre">text</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pathling.cli.run.CodeSource.text" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.cli.run.RunCommand">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.cli.run.</span></span><span class="sig-name descname"><span class="pre">RunCommand</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context_settings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MutableMapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">callback</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Parameter</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">help</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epilog</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">short_help</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options_metavar</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'[OPTIONS]'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_help_option</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_args_is_help</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deprecated</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/run.html#RunCommand"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.run.RunCommand" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></p>
+<p>A command that records its raw argument list before parsing.</p>
+<p>The raw arguments are needed to distinguish <code class="docutils literal notranslate"><span class="pre">run</span> <span class="pre">script.py</span> <span class="pre">-c</span> <span class="pre">CODE</span></code>
+(a usage error: two code sources) from <code class="docutils literal notranslate"><span class="pre">run</span> <span class="pre">-c</span> <span class="pre">CODE</span> <span class="pre">a</span> <span class="pre">b</span></code> (inline code
+with trailing arguments), which parse to the same option values.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.cli.run.RunCommand.parse_args">
+<span class="sig-name descname"><span class="pre">parse_args</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/run.html#RunCommand.parse_args"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.run.RunCommand.parse_args" title="Permalink to this definition"></a></dt>
+<dd><p>Stores the raw arguments on the context, then parses as normal.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – the Click context.</p></li>
+<li><p><strong>args</strong> – the raw argument list for this command.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the remaining arguments after parsing.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-pathling.cli.session">
+<span id="pathling-cli-session-module"></span><h2>pathling.cli.session module<a class="headerlink" href="#module-pathling.cli.session" title="Permalink to this heading"></a></h2>
+<p>Lazy Spark session and Pathling context creation for the CLI.</p>
+<p>The Spark session is created only when a command actually needs it, behind a
+status spinner on stderr. Spark and JVM logging is suppressed by default by
+pointing the driver JVM at a packaged log4j2 configuration before launch, and
+lowering the log level once the context exists; <code class="docutils literal notranslate"><span class="pre">--verbose</span></code> leaves logging at
+its defaults.</p>
+<p>Author: John Grimes.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.session.create_context">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.session.</span></span><span class="sig-name descname"><span class="pre">create_context</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pathling.cli.config.CliConfig" title="pathling.cli.config.CliConfig"><span class="pre">CliConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">console</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Console</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/cli/session.html#create_context"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.session.create_context" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a <code class="xref py py-class docutils literal notranslate"><span class="pre">PathlingContext</span></code> configured from the CLI settings.</p>
+<p>In the default (non-verbose) mode the JVM launcher’s startup banner and Ivy
+dependency-resolution report - which Spark prints to file descriptor 2
+before any log configuration can take effect in local mode - are swallowed
+by redirecting that descriptor for the duration of session creation, while
+the status spinner is routed to a preserved copy of the real stderr so that
+progress remains visible.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – the resolved CLI configuration.</p></li>
+<li><p><strong>console</strong> – the stderr console for the status spinner; created when
+None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a configured <code class="xref py py-class docutils literal notranslate"><span class="pre">PathlingContext</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.session.quiet_log4j2_path">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.session.</span></span><span class="sig-name descname"><span class="pre">quiet_log4j2_path</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/cli/session.html#quiet_log4j2_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.session.quiet_log4j2_path" title="Permalink to this definition"></a></dt>
+<dd><p>Resolves a filesystem path to the packaged quiet log4j2 configuration.</p>
+<p>The configuration ships as static package data, so no per-run temporary file
+is created. The materialised path is kept valid for the process lifetime so
+the driver JVM can read it during and after session start.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the filesystem path to the quiet log4j2 properties file.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-pathling.cli.sparkconf">
+<span id="pathling-cli-sparkconf-module"></span><h2>pathling.cli.sparkconf module<a class="headerlink" href="#module-pathling.cli.sparkconf" title="Permalink to this heading"></a></h2>
+<p>Parsing, validation, coercion, and merge for user-supplied Spark settings.</p>
+<p>This module holds the pure logic that turns <code class="docutils literal notranslate"><span class="pre">[spark]</span></code> config-table entries and
+<code class="docutils literal notranslate"><span class="pre">--spark-conf</span> <span class="pre">KEY=VALUE</span></code> flags into the effective Spark configuration applied
+when a session is built. Keys must begin with <code class="docutils literal notranslate"><span class="pre">spark.</span></code>; scalar values are
+coerced to the string form Spark expects; values support the existing
+<code class="docutils literal notranslate"><span class="pre">&#64;file</span></code>/environment secret resolution. The three managed keys
+(<code class="docutils literal notranslate"><span class="pre">spark.jars.packages</span></code>, <code class="docutils literal notranslate"><span class="pre">spark.sql.extensions</span></code>,
+<code class="docutils literal notranslate"><span class="pre">spark.sql.catalog.spark_catalog</span></code>) are merged with item-level protection
+against Pathling’s managed defaults so the library keeps working while user
+additions take effect. None of this requires PySpark, so it runs before any
+Spark session starts.</p>
+<p>Author: John Grimes.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.sparkconf.merge_spark_conf">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.sparkconf.</span></span><span class="sig-name descname"><span class="pre">merge_spark_conf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_warning</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/pathling/cli/sparkconf.html#merge_spark_conf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.sparkconf.merge_spark_conf" title="Permalink to this definition"></a></dt>
+<dd><p>Merges the user Spark map with Pathling’s managed defaults.</p>
+<p>Plain keys pass through unchanged. The managed list keys
+(<code class="docutils literal notranslate"><span class="pre">spark.jars.packages</span></code>, <code class="docutils literal notranslate"><span class="pre">spark.sql.extensions</span></code>) are unioned with the
+managed defaults and deduplicated. <code class="docutils literal notranslate"><span class="pre">spark.sql.catalog.spark_catalog</span></code> is
+dropped when it equals the managed Delta catalog and is an error otherwise.
+Only keys the user actually set appear in the result; keys they did not touch
+are left to the session builder’s managed defaults.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user_map</strong> – the validated, coerced, and resolved user Spark map.</p></li>
+<li><p><strong>on_warning</strong> – a callback for the managed-version-override warning, or
+None to suppress it.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the effective Spark configuration to apply on top of the defaults.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – if the session catalog is set to a non-Delta value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.sparkconf.parse_spark_conf_flags">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.sparkconf.</span></span><span class="sig-name descname"><span class="pre">parse_spark_conf_flags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">flags</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/pathling/cli/sparkconf.html#parse_spark_conf_flags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.sparkconf.parse_spark_conf_flags" title="Permalink to this definition"></a></dt>
+<dd><p>Parses repeatable <code class="docutils literal notranslate"><span class="pre">--spark-conf</span> <span class="pre">KEY=VALUE</span></code> flags into a mapping.</p>
+<p>Each flag is split on the first <code class="docutils literal notranslate"><span class="pre">=</span></code> only, so a value may itself contain
+<code class="docutils literal notranslate"><span class="pre">=</span></code> (for example a JVM option). When the same key appears more than once,
+the last occurrence wins.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>flags</strong> – an iterable of raw <code class="docutils literal notranslate"><span class="pre">KEY=VALUE</span></code> flag strings.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a mapping of key to value, with later duplicates overriding earlier.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – if a flag is not of the form <code class="docutils literal notranslate"><span class="pre">KEY=VALUE</span></code> (exit code 2).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.sparkconf.resolve_spark_conf">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.sparkconf.</span></span><span class="sig-name descname"><span class="pre">resolve_spark_conf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flag_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/pathling/cli/sparkconf.html#resolve_spark_conf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.sparkconf.resolve_spark_conf" title="Permalink to this definition"></a></dt>
+<dd><p>Combines, validates, coerces, and secret-resolves the user Spark map.</p>
+<p>The flag map overrides the file table per key. Each entry’s key and value
+are then validated and coerced, and string values are passed through the
+existing secret resolver so a <code class="docutils literal notranslate"><span class="pre">&#64;file</span></code> reference is read from disk.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_table</strong> – the parsed <code class="docutils literal notranslate"><span class="pre">[spark]</span></code> table, or None.</p></li>
+<li><p><strong>flag_map</strong> – the parsed <code class="docutils literal notranslate"><span class="pre">--spark-conf</span></code> flag map, or None.</p></li>
+<li><p><strong>env</strong> – the environment mapping for secret resolution.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the validated, coerced, and resolved user Spark map.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – if a key or value is invalid, or a <code class="docutils literal notranslate"><span class="pre">&#64;file</span></code> reference
+cannot be read.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.cli.sparkconf.validate_and_coerce">
+<span class="sig-prename descclassname"><span class="pre">pathling.cli.sparkconf.</span></span><span class="sig-name descname"><span class="pre">validate_and_coerce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/cli/sparkconf.html#validate_and_coerce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.cli.sparkconf.validate_and_coerce" title="Permalink to this definition"></a></dt>
+<dd><p>Validates a Spark configuration key and coerces its value to a string.</p>
+<p>The key must begin with <code class="docutils literal notranslate"><span class="pre">spark.</span></code>. Scalar values (string, integer, float,
+boolean) are coerced to the string form Spark expects, with booleans
+rendered as <code class="docutils literal notranslate"><span class="pre">true</span></code>/<code class="docutils literal notranslate"><span class="pre">false</span></code>. Any other value type (a TOML array or table)
+is rejected.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> – the Spark configuration key.</p></li>
+<li><p><strong>value</strong> – the raw value from the config table or a flag.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the value coerced to a string.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pathling.cli.errors.CliError" title="pathling.cli.errors.CliError"><strong>CliError</strong></a> – if the key is not prefixed <code class="docutils literal notranslate"><span class="pre">spark.</span></code> or the value is not
+a scalar (exit code 2).</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-pathling.cli.terminology">
+<span id="pathling-cli-terminology-module"></span><h2>pathling.cli.terminology module<a class="headerlink" href="#module-pathling.cli.terminology" title="Permalink to this heading"></a></h2>
+<p>The Pathling terminology commands.</p>
+<p>Each command reads a tabular dataset (CSV or Parquet), builds codings from a
+named code column plus either a fixed system URI or a per-row system column,
+calls the corresponding library terminology function, appends the result
+column(s), and emits the augmented dataset per the shared output options.</p>
+<p>Author: John Grimes.</p>
+</section>
+<section id="module-pathling.cli.view">
+<span id="pathling-cli-view-module"></span><h2>pathling.cli.view module<a class="headerlink" href="#module-pathling.cli.view" title="Permalink to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">pathling</span> <span class="pre">view</span></code> command.</p>
+<p>Executes a SQL on FHIR ViewDefinition (a JSON file or inline string) against a
+data source and emits the tabular result in the requested format, optionally
+restricting the resources processed with a FHIR search <code class="docutils literal notranslate"><span class="pre">--filter</span></code>.</p>
+<p>Author: John Grimes.</p>
+</section>
+<section id="module-pathling.cli">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pathling.cli" title="Permalink to this heading"></a></h2>
+<p>Command line interface for Pathling.</p>
+<p>This subpackage exposes the Pathling Python library through a flat, verb-based
+command tree installed as the <code class="docutils literal notranslate"><span class="pre">pathling</span></code> console script. Modules are kept
+free of eager PySpark imports so that <code class="docutils literal notranslate"><span class="pre">--help</span></code> and <code class="docutils literal notranslate"><span class="pre">--version</span></code> remain fast;
+the Spark session is created lazily by <a class="reference internal" href="#module-pathling.cli.session" title="pathling.cli.session"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pathling.cli.session</span></code></a> only when a
+command needs it.</p>
+<p>Author: John Grimes.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pathling.html" class="btn btn-neutral float-left" title="pathling package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

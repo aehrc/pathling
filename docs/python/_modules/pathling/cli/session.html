@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pathling.cli.session &mdash; pathling  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pathling
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pathling.html">pathling package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pathling</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pathling.cli.session</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pathling.cli.session</h1><div class="highlight"><pre>
+<span></span><span class="c1">#</span>
+<span class="c1"># Copyright © 2018-2026 Commonwealth Scientific and Industrial Research</span>
+<span class="c1"># Organisation (CSIRO) ABN 41 687 119 230.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+
+<span class="sd">&quot;&quot;&quot;Lazy Spark session and Pathling context creation for the CLI.</span>
+
+<span class="sd">The Spark session is created only when a command actually needs it, behind a</span>
+<span class="sd">status spinner on stderr. Spark and JVM logging is suppressed by default by</span>
+<span class="sd">pointing the driver JVM at a packaged log4j2 configuration before launch, and</span>
+<span class="sd">lowering the log level once the context exists; ``--verbose`` leaves logging at</span>
+<span class="sd">its defaults.</span>
+
+<span class="sd">Author: John Grimes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">atexit</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExitStack</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">importlib.resources</span><span class="w"> </span><span class="kn">import</span> <span class="n">as_file</span><span class="p">,</span> <span class="n">files</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">rich.console</span><span class="w"> </span><span class="kn">import</span> <span class="n">Console</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">CliConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.render</span><span class="w"> </span><span class="kn">import</span> <span class="n">progress_status</span><span class="p">,</span> <span class="n">stderr_console</span>
+
+<span class="c1"># The packaged log4j2 configuration that silences Spark and JVM logging. It is</span>
+<span class="c1"># supplied to the driver JVM before launch so that startup noise, and</span>
+<span class="c1"># task-failure stack traces, are suppressed (the CLI surfaces its own concise</span>
+<span class="c1"># error message instead). The level is raised again by ``--verbose``.</span>
+<span class="n">_QUIET_LOG4J2_RESOURCE</span> <span class="o">=</span> <span class="s2">&quot;quiet-log4j2.properties&quot;</span>
+
+<span class="c1"># Keeps the materialised packaged resource path valid for the process lifetime.</span>
+<span class="c1"># For a directory-installed wheel the resource is a real file and needs no</span>
+<span class="c1"># cleanup; for a zipped install it is a temporary extraction removed when the</span>
+<span class="c1"># stack closes at interpreter exit. Either way no per-run temporary file is left</span>
+<span class="c1"># behind, unlike the previous NamedTemporaryFile approach (FR-017).</span>
+<span class="n">_RESOURCE_STACK</span> <span class="o">=</span> <span class="n">ExitStack</span><span class="p">()</span>
+<span class="n">atexit</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">_RESOURCE_STACK</span><span class="o">.</span><span class="n">close</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="quiet_log4j2_path"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.session.quiet_log4j2_path">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">quiet_log4j2_path</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves a filesystem path to the packaged quiet log4j2 configuration.</span>
+
+<span class="sd">    The configuration ships as static package data, so no per-run temporary file</span>
+<span class="sd">    is created. The materialised path is kept valid for the process lifetime so</span>
+<span class="sd">    the driver JVM can read it during and after session start.</span>
+
+<span class="sd">    :return: the filesystem path to the quiet log4j2 properties file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">resource</span> <span class="o">=</span> <span class="n">files</span><span class="p">(</span><span class="s2">&quot;pathling.cli&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;resources&quot;</span><span class="p">,</span> <span class="n">_QUIET_LOG4J2_RESOURCE</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">_RESOURCE_STACK</span><span class="o">.</span><span class="n">enter_context</span><span class="p">(</span><span class="n">as_file</span><span class="p">(</span><span class="n">resource</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_quiet_spark</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">CliConfig</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds a Spark session with logging suppressed before JVM launch.</span>
+
+<span class="sd">    The Pathling and Delta package configuration is shared with</span>
+<span class="sd">    :func:`pathling.context._build_spark_session`; this function only adds the</span>
+<span class="sd">    CLI-specific quiet-logging options on top.</span>
+
+<span class="sd">    :param config: the resolved CLI configuration.</span>
+<span class="sd">    :return: a configured :class:`SparkSession`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">_build_spark_session</span>
+
+    <span class="c1"># Pin Spark&#39;s Python workers to the interpreter running the CLI. Without</span>
+    <span class="c1"># this, Spark launches workers using whatever ``python3`` is first on the</span>
+    <span class="c1"># PATH, which may be a different minor version from the driver and causes a</span>
+    <span class="c1"># PYTHON_VERSION_MISMATCH error on any operation that uses Python workers.</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;PYSPARK_PYTHON&quot;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">)</span>
+
+    <span class="n">extra_configs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="c1"># Enable Arrow-based columnar transfer so that any ``toPandas`` call in</span>
+        <span class="c1"># the interactive console collects via Arrow record batches rather than</span>
+        <span class="c1"># pickling rows one at a time. File output no longer collects to the</span>
+        <span class="c1"># driver - Spark writes it directly - so this setting now serves only</span>
+        <span class="c1"># the interactive console. Set before the user overlay below so an</span>
+        <span class="c1"># explicit --spark-conf value still wins.</span>
+        <span class="s2">&quot;spark.sql.execution.arrow.pyspark.enabled&quot;</span><span class="p">:</span> <span class="s2">&quot;true&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+        <span class="n">log4j2_path</span> <span class="o">=</span> <span class="n">quiet_log4j2_path</span><span class="p">()</span>
+        <span class="n">extra_configs</span><span class="p">[</span><span class="s2">&quot;spark.driver.extraJavaOptions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;-Dlog4j2.configurationFile=file:</span><span class="si">{</span><span class="n">log4j2_path</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">extra_configs</span><span class="p">[</span><span class="s2">&quot;spark.ui.showConsoleProgress&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;false&quot;</span>
+    <span class="c1"># Overlay the user-supplied Spark configuration last so that a user value</span>
+    <span class="c1"># wins over the CLI&#39;s quiet-logging options for the same key (FR-012). A</span>
+    <span class="c1"># user-set spark.driver.extraJavaOptions therefore replaces the quiet</span>
+    <span class="c1"># log4j2 option, leaving Spark logging at its defaults.</span>
+    <span class="n">extra_configs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">spark_conf</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_build_spark_session</span><span class="p">(</span><span class="n">extra_configs</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_create_pathling_context</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">CliConfig</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds the Spark session and Pathling context from the configuration.</span>
+
+<span class="sd">    :param config: the resolved CLI configuration.</span>
+<span class="sd">    :return: a configured :class:`PathlingContext`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathling</span><span class="w"> </span><span class="kn">import</span> <span class="n">PathlingContext</span>
+
+    <span class="n">spark</span> <span class="o">=</span> <span class="n">_build_quiet_spark</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+        <span class="c1"># In local mode the driver JVM is launched before builder-level Java</span>
+        <span class="c1"># options apply, so log suppression relies on lowering the level here.</span>
+        <span class="c1"># OFF (rather than ERROR) also hides task-failure stack traces, which</span>
+        <span class="c1"># the CLI surfaces as its own concise message.</span>
+        <span class="n">spark</span><span class="o">.</span><span class="n">sparkContext</span><span class="o">.</span><span class="n">setLogLevel</span><span class="p">(</span><span class="s2">&quot;OFF&quot;</span><span class="p">)</span>
+
+    <span class="n">auth</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_auth</span>
+    <span class="k">return</span> <span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="n">spark</span><span class="p">,</span>
+        <span class="n">terminology_server_url</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">tx_server</span><span class="p">,</span>
+        <span class="n">enable_auth</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">auth</span> <span class="ow">and</span> <span class="n">auth</span><span class="o">.</span><span class="n">enabled</span><span class="p">),</span>
+        <span class="n">token_endpoint</span><span class="o">=</span><span class="n">auth</span><span class="o">.</span><span class="n">token_endpoint</span> <span class="k">if</span> <span class="n">auth</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">client_id</span><span class="o">=</span><span class="n">auth</span><span class="o">.</span><span class="n">client_id</span> <span class="k">if</span> <span class="n">auth</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">client_secret</span><span class="o">=</span><span class="n">auth</span><span class="o">.</span><span class="n">client_secret</span> <span class="k">if</span> <span class="n">auth</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">scope</span><span class="o">=</span><span class="n">auth</span><span class="o">.</span><span class="n">scope</span> <span class="k">if</span> <span class="n">auth</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="create_context"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.session.create_context">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">create_context</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">CliConfig</span><span class="p">,</span> <span class="n">console</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Console</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a :class:`PathlingContext` configured from the CLI settings.</span>
+
+<span class="sd">    In the default (non-verbose) mode the JVM launcher&#39;s startup banner and Ivy</span>
+<span class="sd">    dependency-resolution report - which Spark prints to file descriptor 2</span>
+<span class="sd">    before any log configuration can take effect in local mode - are swallowed</span>
+<span class="sd">    by redirecting that descriptor for the duration of session creation, while</span>
+<span class="sd">    the status spinner is routed to a preserved copy of the real stderr so that</span>
+<span class="sd">    progress remains visible.</span>
+
+<span class="sd">    :param config: the resolved CLI configuration.</span>
+<span class="sd">    :param console: the stderr console for the status spinner; created when</span>
+<span class="sd">           None.</span>
+<span class="sd">    :return: a configured :class:`PathlingContext`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">console</span> <span class="o">=</span> <span class="n">console</span> <span class="ow">or</span> <span class="n">stderr_console</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">progress_status</span><span class="p">(</span><span class="n">console</span><span class="p">,</span> <span class="s2">&quot;Starting Spark session...&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">_create_pathling_context</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+
+    <span class="c1"># Preserve the real stderr for the spinner, then point fd 2 at /dev/null so</span>
+    <span class="c1"># the launcher&#39;s banner is discarded during session creation.</span>
+    <span class="n">saved_fd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">dup</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">devnull_fd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">devnull</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">O_WRONLY</span><span class="p">)</span>
+    <span class="n">spinner_stream</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">fdopen</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">dup</span><span class="p">(</span><span class="n">saved_fd</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
+    <span class="n">spinner_console</span> <span class="o">=</span> <span class="n">Console</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="n">spinner_stream</span><span class="p">,</span> <span class="n">markup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">highlight</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">dup2</span><span class="p">(</span><span class="n">devnull_fd</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">progress_status</span><span class="p">(</span><span class="n">spinner_console</span><span class="p">,</span> <span class="s2">&quot;Starting Spark session...&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">_create_pathling_context</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">dup2</span><span class="p">(</span><span class="n">saved_fd</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">saved_fd</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">devnull_fd</span><span class="p">)</span>
+        <span class="n">spinner_stream</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,6 +1,14 @@
 pathling package
 ================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   pathling.cli
+
 Submodules
 ----------
 

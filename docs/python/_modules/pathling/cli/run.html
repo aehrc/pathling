@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pathling.cli.run &mdash; pathling  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pathling
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pathling.html">pathling package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pathling</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pathling.cli.run</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pathling.cli.run</h1><div class="highlight"><pre>
+<span></span><span class="c1">#</span>
+<span class="c1"># Copyright © 2018-2026 Commonwealth Scientific and Industrial Research</span>
+<span class="c1"># Organisation (CSIRO) ABN 41 687 119 230.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+
+<span class="sd">&quot;&quot;&quot;The ``pathling run`` command.</span>
+
+<span class="sd">Executes user-supplied Python code - from a script file, standard input, or an</span>
+<span class="sd">inline ``-c`` option - with ``spark`` (the Spark session) and ``pathling`` (the</span>
+<span class="sd">configured Pathling context) bound in the code&#39;s global scope, reproducing</span>
+<span class="sd">Python interpreter script semantics (``sys.argv``, ``__main__``, ``__file__``,</span>
+<span class="sd">``sys.path``, traceback fidelity, and ``SystemExit`` propagation).</span>
+
+<span class="sd">Author: John Grimes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">session</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_RUNTIME</span>
+
+<span class="c1"># The context key under which the raw command arguments are recorded.</span>
+<span class="n">_RAW_ARGS_KEY</span> <span class="o">=</span> <span class="s2">&quot;pathling.run.raw_args&quot;</span>
+
+
+<div class="viewcode-block" id="CodeSource"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.run.CodeSource">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CodeSource</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A resolved source of program text for execution.</span>
+
+<span class="sd">    :param text: the program source code.</span>
+<span class="sd">    :param filename: the filename to compile under, which appears in</span>
+<span class="sd">           tracebacks and syntax errors (the script path, ``&lt;stdin&gt;``, or</span>
+<span class="sd">           ``&lt;string&gt;``).</span>
+<span class="sd">    :param argv0: the value for ``sys.argv[0]``, following Python interpreter</span>
+<span class="sd">           conventions (the script path, ``-``, or ``-c``).</span>
+<span class="sd">    :param path_entry: the entry to prepend to ``sys.path`` (the script&#39;s</span>
+<span class="sd">           directory for files, ``&quot;&quot;`` for stdin and inline code).</span>
+<span class="sd">    :param file_attr: the value for ``__file__`` in the program&#39;s globals, or</span>
+<span class="sd">           None to leave it unset (stdin and inline code).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">argv0</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">path_entry</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">file_attr</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="RunCommand"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.run.RunCommand">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">RunCommand</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">Command</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A command that records its raw argument list before parsing.</span>
+
+<span class="sd">    The raw arguments are needed to distinguish ``run script.py -c CODE``</span>
+<span class="sd">    (a usage error: two code sources) from ``run -c CODE a b`` (inline code</span>
+<span class="sd">    with trailing arguments), which parse to the same option values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="RunCommand.parse_args"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.run.RunCommand.parse_args">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Stores the raw arguments on the context, then parses as normal.</span>
+
+<span class="sd">        :param ctx: the Click context.</span>
+<span class="sd">        :param args: the raw argument list for this command.</span>
+<span class="sd">        :return: the remaining arguments after parsing.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="n">_RAW_ARGS_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span></div></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_positional_precedes_code_flag</span><span class="p">(</span><span class="n">raw_args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Determines whether a positional argument appears before ``-c``.</span>
+
+<span class="sd">    A positional (a script path or ``-``) before the inline-code flag means</span>
+<span class="sd">    the user supplied two code sources, which is a usage error. A positional</span>
+<span class="sd">    after the flag is simply an argument to the inline program.</span>
+
+<span class="sd">    :param raw_args: the raw argument list as typed on the command line.</span>
+<span class="sd">    :return: True when a script positional precedes the ``-c`` flag.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">raw_args</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">token</span> <span class="o">==</span> <span class="s2">&quot;-c&quot;</span> <span class="ow">or</span> <span class="n">token</span> <span class="o">==</span> <span class="s2">&quot;--code&quot;</span> <span class="ow">or</span> <span class="n">token</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;--code=&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">token</span> <span class="o">==</span> <span class="s2">&quot;--&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">token</span> <span class="o">==</span> <span class="s2">&quot;-&quot;</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_source</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">CodeSource</span><span class="p">,</span> <span class="nb">list</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validates the code-source rules and reads the program text.</span>
+
+<span class="sd">    Exactly one source is required: a script path, ``-`` (stdin), or</span>
+<span class="sd">    ``-c CODE``. All validation happens here, before the Spark session is</span>
+<span class="sd">    started.</span>
+
+<span class="sd">    :param ctx: the Click context.</span>
+<span class="sd">    :param script: the script positional, or None.</span>
+<span class="sd">    :param code: the ``-c`` option value, or None.</span>
+<span class="sd">    :param args: the trailing arguments tuple.</span>
+<span class="sd">    :return: the resolved :class:`CodeSource` and the program&#39;s argument list</span>
+<span class="sd">             (``sys.argv[1:]``).</span>
+<span class="sd">    :raises click.UsageError: when the code-source rules are violated or the</span>
+<span class="sd">            script file cannot be read.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">code</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">_positional_precedes_code_flag</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">_RAW_ARGS_KEY</span><span class="p">,</span> <span class="p">[])):</span>
+            <span class="k">raise</span> <span class="n">click</span><span class="o">.</span><span class="n">UsageError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot use both a script and -c; supply exactly one code source.&quot;</span>
+            <span class="p">)</span>
+        <span class="c1"># Any positional that Click captured belongs to the program&#39;s argv.</span>
+        <span class="n">trailing</span> <span class="o">=</span> <span class="p">([</span><span class="n">script</span><span class="p">]</span> <span class="k">if</span> <span class="n">script</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">CodeSource</span><span class="p">(</span>
+                <span class="n">text</span><span class="o">=</span><span class="n">code</span><span class="p">,</span>
+                <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;&lt;string&gt;&quot;</span><span class="p">,</span>
+                <span class="n">argv0</span><span class="o">=</span><span class="s2">&quot;-c&quot;</span><span class="p">,</span>
+                <span class="n">path_entry</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="n">file_attr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">trailing</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">script</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">click</span><span class="o">.</span><span class="n">UsageError</span><span class="p">(</span>
+            <span class="s2">&quot;Supply a code source: a script path, &#39;-&#39; for stdin, or -c CODE.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">script</span> <span class="o">==</span> <span class="s2">&quot;-&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">CodeSource</span><span class="p">(</span>
+                <span class="n">text</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
+                <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;&lt;stdin&gt;&quot;</span><span class="p">,</span>
+                <span class="n">argv0</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">,</span>
+                <span class="n">path_entry</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="n">file_attr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">handle</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">click</span><span class="o">.</span><span class="n">UsageError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot read script &#39;</span><span class="si">{</span><span class="n">script</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">CodeSource</span><span class="p">(</span>
+            <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+            <span class="n">filename</span><span class="o">=</span><span class="n">script</span><span class="p">,</span>
+            <span class="n">argv0</span><span class="o">=</span><span class="n">script</span><span class="p">,</span>
+            <span class="n">path_entry</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">script</span><span class="p">)),</span>
+            <span class="n">file_attr</span><span class="o">=</span><span class="n">script</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_execute</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">CodeSource</span><span class="p">,</span> <span class="n">program_args</span><span class="p">,</span> <span class="n">namespace</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compiles and executes the program with interpreter semantics.</span>
+
+<span class="sd">    ``sys.argv`` and ``sys.path`` are set for the duration of execution and</span>
+<span class="sd">    restored afterwards. Uncaught exceptions print a standard traceback with</span>
+<span class="sd">    the CLI&#39;s own frames removed and exit 1; ``SystemExit`` propagates</span>
+<span class="sd">    untouched so its status becomes the process exit code.</span>
+
+<span class="sd">    :param source: the resolved code source.</span>
+<span class="sd">    :param program_args: the program&#39;s arguments (``sys.argv[1:]``).</span>
+<span class="sd">    :param namespace: the extra globals to bind (``spark`` and ``pathling``).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">code_object</span> <span class="o">=</span> <span class="nb">compile</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;exec&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">SyntaxError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="c1"># Pass no traceback: the interpreter prints only the error excerpt and</span>
+        <span class="c1"># the SyntaxError line for a syntax error, with no traceback header or</span>
+        <span class="c1"># frames.</span>
+        <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">),</span> <span class="n">exc</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+        <span class="c1"># Flush explicitly: the stream may be block-buffered (for example the</span>
+        <span class="c1"># capture stream used by Click&#39;s test runner) and the process exits</span>
+        <span class="c1"># immediately after.</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">EXIT_RUNTIME</span><span class="p">)</span>
+
+    <span class="n">program_globals</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;__name__&quot;</span><span class="p">:</span> <span class="s2">&quot;__main__&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">namespace</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">source</span><span class="o">.</span><span class="n">file_attr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">program_globals</span><span class="p">[</span><span class="s2">&quot;__file__&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">file_attr</span>
+
+    <span class="n">saved_argv</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span>
+    <span class="n">saved_path</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">argv</span> <span class="o">=</span> <span class="p">[</span><span class="n">source</span><span class="o">.</span><span class="n">argv0</span><span class="p">]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">program_args</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">path_entry</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">exec</span><span class="p">(</span><span class="n">code_object</span><span class="p">,</span> <span class="n">program_globals</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="c1"># Drop the CLI&#39;s own frame (this function&#39;s exec call) so the</span>
+        <span class="c1"># traceback starts at the user&#39;s code, exactly as the interpreter</span>
+        <span class="c1"># would print it.</span>
+        <span class="n">tb</span> <span class="o">=</span> <span class="n">exc</span><span class="o">.</span><span class="n">__traceback__</span><span class="o">.</span><span class="n">tb_next</span> <span class="k">if</span> <span class="n">exc</span><span class="o">.</span><span class="n">__traceback__</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">),</span> <span class="n">exc</span><span class="p">,</span> <span class="n">tb</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+        <span class="c1"># See the flush comment in the syntax-error path above.</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">EXIT_RUNTIME</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">argv</span> <span class="o">=</span> <span class="n">saved_argv</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">saved_path</span>
+
+
+<span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;run&quot;</span><span class="p">,</span>
+    <span class="bp">cls</span><span class="o">=</span><span class="n">RunCommand</span><span class="p">,</span>
+    <span class="n">context_settings</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;ignore_unknown_options&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;script&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;-c&quot;</span><span class="p">,</span> <span class="s2">&quot;--code&quot;</span><span class="p">,</span> <span class="s2">&quot;code&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Inline Python code to execute.&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;args&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">UNPROCESSED</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_context</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run Python code with the Pathling environment ready.</span>
+
+<span class="sd">    Executes a script file (or &#39;-&#39; for standard input, or inline code via</span>
+<span class="sd">    -c) with two variables already in scope: spark (the Spark session) and</span>
+<span class="sd">    pathling (the configured Pathling context). Trailing arguments are</span>
+<span class="sd">    passed to the code as sys.argv, following Python interpreter</span>
+<span class="sd">    conventions.</span>
+
+<span class="sd">    \b</span>
+<span class="sd">    See the Pathling Python API reference:</span>
+<span class="sd">    https://pathling.csiro.au/docs/python/pathling.html</span>
+
+<span class="sd">    Example - project a tabular view of patients, then summarise it with</span>
+<span class="sd">    SQL. Save this as summary.py and run &quot;pathling run summary.py&quot;:</span>
+
+<span class="sd">    \b</span>
+<span class="sd">        patients = pathling.read.ndjson(&quot;data&quot;).view(</span>
+<span class="sd">            &quot;Patient&quot;,</span>
+<span class="sd">            select=[{&quot;column&quot;: [{&quot;path&quot;: &quot;gender&quot;, &quot;name&quot;: &quot;gender&quot;}]}],</span>
+<span class="sd">        )</span>
+<span class="sd">        patients.createOrReplaceTempView(&quot;patient&quot;)</span>
+<span class="sd">        spark.sql(&quot;SELECT gender, count(*) AS count &quot;</span>
+<span class="sd">                  &quot;FROM patient GROUP BY gender&quot;).show()</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">source</span><span class="p">,</span> <span class="n">program_args</span> <span class="o">=</span> <span class="n">_resolve_source</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span>
+    <span class="n">pc</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">create_context</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">obj</span><span class="o">.</span><span class="n">console</span><span class="p">)</span>
+    <span class="n">namespace</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;spark&quot;</span><span class="p">:</span> <span class="n">pc</span><span class="o">.</span><span class="n">spark</span><span class="p">,</span> <span class="s2">&quot;pathling&quot;</span><span class="p">:</span> <span class="n">pc</span><span class="p">}</span>
+
+    <span class="n">_execute</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">program_args</span><span class="p">,</span> <span class="n">namespace</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

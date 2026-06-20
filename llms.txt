@@ -28,6 +28,7 @@ Pathling implements FHIRPath functionality to aid in querying and constructing v
 Pathling provides a set of libraries that provide assistance with using FHIR and terminology services from Apache Spark applications and data science workflows.
 
 - [Libraries](/docs/libraries.md): Pathling provides a set of libraries that provide assistance with using FHIR and terminology services from Apache Spark applications and data science workflows.
+- [Command line interface](/docs/libraries/cli.md): The Pathling command line interface surfaces the Python library's functionality - data conversion, SQL on FHIR views, FHIRPath evaluation, bulk export, terminology operations, Python scripting, and an interactive console - through scriptable commands.
 - [Adding display terms to codes](/docs/libraries/examples/display-terms.md): Tutorial demonstrating how to add human-readable display terms to medical codes using Pathling's terminology functions.
 - [FHIR server synchronisation](/docs/libraries/examples/fhir-server-sync.md): Examples of synchronising your analytic data store with a FHIR server.
 - [Grouping and analysing SNOMED CT data](/docs/libraries/examples/grouping-snomed.md): Tutorial demonstrating how to group and analyse SNOMED CT data using Python with the Pathling library and a terminology server.

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pathling.cli.console &mdash; pathling  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pathling
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pathling.html">pathling package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pathling</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pathling.cli.console</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pathling.cli.console</h1><div class="highlight"><pre>
+<span></span><span class="c1">#</span>
+<span class="c1"># Copyright © 2018-2026 Commonwealth Scientific and Industrial Research</span>
+<span class="c1"># Organisation (CSIRO) ABN 41 687 119 230.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+
+<span class="sd">&quot;&quot;&quot;The ``pathling console`` command.</span>
+
+<span class="sd">Opens an interactive IPython session with ``spark`` (the Spark session) and</span>
+<span class="sd">``pathling`` (the configured Pathling context) bound in the user namespace,</span>
+<span class="sd">after a banner identifying the version and the variables in scope. IPython is</span>
+<span class="sd">imported inside the command body so that ``--help`` stays fast.</span>
+
+<span class="sd">Author: John Grimes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling._version</span><span class="w"> </span><span class="kn">import</span> <span class="n">__version__</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">session</span>
+
+
+<div class="viewcode-block" id="build_banner"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.console.build_banner">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">build_banner</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds the banner shown before the console&#39;s first prompt.</span>
+
+<span class="sd">    The banner identifies the Pathling and Python versions, lists the</span>
+<span class="sd">    variables in scope, and explains how to exit.</span>
+
+<span class="sd">    :return: the banner text.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Pathling console (version </span><span class="si">{</span><span class="n">__version__</span><span class="si">}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;Python </span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">python_version</span><span class="p">()</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Variables in scope: spark (SparkSession), pathling (PathlingContext)</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Type exit or press Ctrl-D to leave.</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="p">)</span></div>
+
+
+<span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;console&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">console</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Open an interactive console with the Pathling environment ready.</span>
+
+<span class="sd">    Starts an IPython session with two variables in scope: spark (the Spark</span>
+<span class="sd">    session) and pathling (the configured Pathling context). Exit with</span>
+<span class="sd">    &#39;exit&#39; or Ctrl-D.</span>
+
+<span class="sd">    \b</span>
+<span class="sd">    See the Pathling Python API reference:</span>
+<span class="sd">    https://pathling.csiro.au/docs/python/pathling.html</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">        pathling console</span>
+
+<span class="sd">        pathling --tx-server https://tx.example.org/fhir console</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pc</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">create_context</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">obj</span><span class="o">.</span><span class="n">console</span><span class="p">)</span>
+
+    <span class="kn">import</span><span class="w"> </span><span class="nn">IPython</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">traitlets.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">Config</span>
+
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Config</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">TerminalInteractiveShell</span><span class="o">.</span><span class="n">banner1</span> <span class="o">=</span> <span class="n">build_banner</span><span class="p">()</span>
+    <span class="n">IPython</span><span class="o">.</span><span class="n">start_ipython</span><span class="p">(</span>
+        <span class="n">argv</span><span class="o">=</span><span class="p">[],</span>
+        <span class="n">user_ns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;spark&quot;</span><span class="p">:</span> <span class="n">pc</span><span class="o">.</span><span class="n">spark</span><span class="p">,</span> <span class="s2">&quot;pathling&quot;</span><span class="p">:</span> <span class="n">pc</span><span class="p">},</span>
+        <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

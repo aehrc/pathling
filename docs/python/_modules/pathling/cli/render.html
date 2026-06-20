@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pathling.cli.render &mdash; pathling  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pathling
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pathling.html">pathling package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pathling</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pathling.cli.render</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pathling.cli.render</h1><div class="highlight"><pre>
+<span></span><span class="c1">#</span>
+<span class="c1"># Copyright © 2018-2026 Commonwealth Scientific and Industrial Research</span>
+<span class="c1"># Organisation (CSIRO) ABN 41 687 119 230.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+
+<span class="sd">&quot;&quot;&quot;Output rendering and progress reporting for the command line interface.</span>
+
+<span class="sd">Tabular results render to a human-readable table by default, with CSV and</span>
+<span class="sd">NDJSON alternatives for piping, and file output (CSV, NDJSON, Parquet, and</span>
+<span class="sd">Delta) via ``-o``. File output is produced by Spark&#39;s native writers and, by</span>
+<span class="sd">default, departitioned to a single file at the requested path. Data is written</span>
+<span class="sd">to stdout; progress, status, and the write confirmation go to stderr so that</span>
+<span class="sd">piped output stays clean.</span>
+
+<span class="sd">Author: John Grimes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rich.console</span><span class="w"> </span><span class="kn">import</span> <span class="n">Console</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rich.table</span><span class="w"> </span><span class="kn">import</span> <span class="n">Table</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.departition</span><span class="w"> </span><span class="kn">import</span> <span class="n">departition</span><span class="p">,</span> <span class="n">remove_path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_USAGE</span><span class="p">,</span> <span class="n">CliError</span>
+
+<span class="c1"># The default cap on rows collected for stdout table rendering.</span>
+<span class="n">DEFAULT_LIMIT</span> <span class="o">=</span> <span class="mi">50</span>
+
+
+<div class="viewcode-block" id="OutputFormat"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.OutputFormat">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">OutputFormat</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The recognised output formats.&quot;&quot;&quot;</span>
+
+    <span class="n">TABLE</span> <span class="o">=</span> <span class="s2">&quot;table&quot;</span>
+    <span class="n">CSV</span> <span class="o">=</span> <span class="s2">&quot;csv&quot;</span>
+    <span class="n">NDJSON</span> <span class="o">=</span> <span class="s2">&quot;ndjson&quot;</span>
+    <span class="n">PARQUET</span> <span class="o">=</span> <span class="s2">&quot;parquet&quot;</span>
+    <span class="n">DELTA</span> <span class="o">=</span> <span class="s2">&quot;delta&quot;</span></div>
+
+
+<span class="c1"># Formats that require ``-o`` because they cannot render to stdout.</span>
+<span class="n">PATH_REQUIRED_FORMATS</span> <span class="o">=</span> <span class="p">(</span><span class="n">OutputFormat</span><span class="o">.</span><span class="n">PARQUET</span><span class="p">,</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">DELTA</span><span class="p">)</span>
+
+<span class="c1"># Maps each departitioned file format to the extension Spark gives its part</span>
+<span class="c1"># files, used to select the single data file from the temporary output</span>
+<span class="c1"># directory.</span>
+<span class="n">_PART_EXTENSIONS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">OutputFormat</span><span class="o">.</span><span class="n">CSV</span><span class="p">:</span> <span class="s2">&quot;csv&quot;</span><span class="p">,</span>
+    <span class="n">OutputFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">:</span> <span class="s2">&quot;json&quot;</span><span class="p">,</span>
+    <span class="n">OutputFormat</span><span class="o">.</span><span class="n">PARQUET</span><span class="p">:</span> <span class="s2">&quot;parquet&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># The complete set of output formats accepted by the ``--format`` option, shared</span>
+<span class="c1"># by every command that produces tabular output.</span>
+<span class="n">OUTPUT_FORMAT_CHOICE</span> <span class="o">=</span> <span class="n">click</span><span class="o">.</span><span class="n">Choice</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="n">OutputFormat</span><span class="o">.</span><span class="n">TABLE</span><span class="p">,</span>
+        <span class="n">OutputFormat</span><span class="o">.</span><span class="n">CSV</span><span class="p">,</span>
+        <span class="n">OutputFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">,</span>
+        <span class="n">OutputFormat</span><span class="o">.</span><span class="n">PARQUET</span><span class="p">,</span>
+        <span class="n">OutputFormat</span><span class="o">.</span><span class="n">DELTA</span><span class="p">,</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="output_options"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.output_options">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">output_options</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Applies the shared output options to a command callback.</span>
+
+<span class="sd">    These options form the common output surface of every command that emits a</span>
+<span class="sd">    result DataFrame - ``--format``, ``-o``/``--output``, ``--limit``,</span>
+<span class="sd">    ``--overwrite``, and ``--departition/--no-departition`` - and are resolved</span>
+<span class="sd">    together by :func:`resolve_output` and consumed by :func:`write_output`.</span>
+
+<span class="sd">    :param func: the command callback to decorate.</span>
+<span class="sd">    :return: the decorated callback.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+            <span class="s2">&quot;--format&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;output_format&quot;</span><span class="p">,</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">OUTPUT_FORMAT_CHOICE</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Output format (default: table; inferred from -o extension).&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;--output&quot;</span><span class="p">,</span> <span class="s2">&quot;output&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Write results to this path.&quot;</span><span class="p">),</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+            <span class="s2">&quot;--limit&quot;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_LIMIT</span><span class="p">,</span>
+            <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Row cap for table output.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+            <span class="s2">&quot;--overwrite&quot;</span><span class="p">,</span> <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Replace an existing output path.&quot;</span>
+        <span class="p">),</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+            <span class="s2">&quot;--departition/--no-departition&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;departition&quot;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Write file output as a single file (or a Spark directory of &quot;</span>
+            <span class="s2">&quot;part files).&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">]</span>
+    <span class="k">for</span> <span class="n">option</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">options</span><span class="p">):</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">option</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">func</span></div>
+
+
+<span class="c1"># Maps file extensions to output formats for inference.</span>
+<span class="n">_EXTENSION_FORMATS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;.csv&quot;</span><span class="p">:</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">CSV</span><span class="p">,</span>
+    <span class="s2">&quot;.ndjson&quot;</span><span class="p">:</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">,</span>
+    <span class="s2">&quot;.jsonl&quot;</span><span class="p">:</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">,</span>
+    <span class="s2">&quot;.parquet&quot;</span><span class="p">:</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">PARQUET</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="OutputSpec"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.OutputSpec">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">OutputSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Describes where and how results leave the CLI.</span>
+
+<span class="sd">    :param path: the output path, or None to write to stdout.</span>
+<span class="sd">    :param format: one of the :class:`OutputFormat` values.</span>
+<span class="sd">    :param limit: the row cap for stdout table rendering.</span>
+<span class="sd">    :param overwrite: whether an existing output path may be replaced.</span>
+<span class="sd">    :param departition: whether file output is departitioned to a single file</span>
+<span class="sd">           (the default) rather than left as a Spark directory of part files.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span>
+    <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_LIMIT</span>
+    <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">departition</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="infer_format_from_extension"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.infer_format_from_extension">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">infer_format_from_extension</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Infers an output format from a file extension.</span>
+
+<span class="sd">    :param path: the output path.</span>
+<span class="sd">    :return: the inferred format, or None when the extension is unrecognised.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_EXTENSION_FORMATS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="resolve_output"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.resolve_output">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">resolve_output</span><span class="p">(</span>
+    <span class="n">output_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">format_flag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_LIMIT</span><span class="p">,</span>
+    <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">departition</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OutputSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves and validates output options.</span>
+
+<span class="sd">    :param output_path: the ``-o`` path, or None for stdout.</span>
+<span class="sd">    :param format_flag: the ``--format`` value, or None to default/infer.</span>
+<span class="sd">    :param limit: the stdout table row cap.</span>
+<span class="sd">    :param overwrite: whether replacing an existing output path is allowed.</span>
+<span class="sd">    :param departition: whether file output is departitioned to a single file.</span>
+<span class="sd">    :return: the resolved :class:`OutputSpec`.</span>
+<span class="sd">    :raises CliError: when the combination of options is invalid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">output_path</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">format_flag</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">fmt</span> <span class="o">=</span> <span class="n">format_flag</span>
+    <span class="k">elif</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.json&quot;</span><span class="p">:</span>
+            <span class="c1"># The JSON-array format has been removed; point the user at NDJSON</span>
+            <span class="c1"># rather than silently treating a .json file as newline-delimited.</span>
+            <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+                <span class="s2">&quot;The JSON-array output format has been removed. Use --format &quot;</span>
+                <span class="s2">&quot;ndjson, or a .ndjson filename, for newline-delimited JSON.&quot;</span><span class="p">,</span>
+                <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="n">inferred</span> <span class="o">=</span> <span class="n">infer_format_from_extension</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">inferred</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Could not infer an output format from &#39;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
+                <span class="s2">&quot;Use --format csv|ndjson|parquet|delta.&quot;</span><span class="p">,</span>
+                <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="n">fmt</span> <span class="o">=</span> <span class="n">inferred</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fmt</span> <span class="o">=</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">TABLE</span>
+
+    <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">TABLE</span> <span class="ow">and</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="s2">&quot;The table format cannot be written to a file. Use --format &quot;</span>
+            <span class="s2">&quot;csv|ndjson|parquet|delta with -o, or drop -o for a table.&quot;</span><span class="p">,</span>
+            <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="n">PATH_REQUIRED_FORMATS</span> <span class="ow">and</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;The </span><span class="si">{</span><span class="n">fmt</span><span class="si">}</span><span class="s2"> format requires an output path. Add -o &lt;path&gt;.&quot;</span><span class="p">,</span>
+            <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">OutputSpec</span><span class="p">(</span>
+        <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
+        <span class="nb">format</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span>
+        <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
+        <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">,</span>
+        <span class="n">departition</span><span class="o">=</span><span class="n">departition</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="check_overwrite"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.check_overwrite">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_overwrite</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fails when an output path already exists and overwrite was not requested.</span>
+
+<span class="sd">    :param path: the output path to check.</span>
+<span class="sd">    :param overwrite: whether overwriting is permitted.</span>
+<span class="sd">    :raises CliError: when the path exists and overwrite is False.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">overwrite</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Output path already exists: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">. Pass --overwrite to replace it.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_cell</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Formats a value as a table cell string.</span>
+
+<span class="sd">    :param value: the cell value.</span>
+<span class="sd">    :return: an empty string for None, otherwise the string form.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="render_table"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.render_table">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">render_table</span><span class="p">(</span><span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Renders rows as a human-readable table with a row-count caption.</span>
+
+<span class="sd">    :param columns: the column names.</span>
+<span class="sd">    :param rows: the row values.</span>
+<span class="sd">    :return: the rendered table as a string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">caption</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="si">}</span><span class="s2"> rows&quot;</span><span class="p">,</span> <span class="n">caption_justify</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+        <span class="n">table</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">column</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+        <span class="n">table</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">_cell</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">row</span><span class="p">])</span>
+    <span class="n">buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
+    <span class="c1"># Disable markup and highlighting so that data values containing square</span>
+    <span class="c1"># brackets (e.g. Spark error codes or array-like strings) render verbatim</span>
+    <span class="c1"># rather than being interpreted as Rich markup.</span>
+    <span class="n">Console</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="n">buffer</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span> <span class="n">markup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">highlight</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="render_csv"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.render_csv">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">render_csv</span><span class="p">(</span><span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Renders rows as CSV with a header line.</span>
+
+<span class="sd">    :param columns: the column names.</span>
+<span class="sd">    :param rows: the row values.</span>
+<span class="sd">    :return: the CSV text.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">lineterminator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">columns</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">value</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">row</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_records</span><span class="p">(</span><span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds a list of column-keyed dicts from rows.</span>
+
+<span class="sd">    :param columns: the column names.</span>
+<span class="sd">    :param rows: the row values.</span>
+<span class="sd">    :return: a list of record dicts preserving column order.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">row</span><span class="p">))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="render_ndjson"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.render_ndjson">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">render_ndjson</span><span class="p">(</span><span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Renders rows as newline-delimited JSON objects.</span>
+
+<span class="sd">    :param columns: the column names.</span>
+<span class="sd">    :param rows: the row values.</span>
+<span class="sd">    :return: the NDJSON text.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">_records</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">rows</span><span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="render_rows"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.render_rows">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">render_rows</span><span class="p">(</span><span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">],</span> <span class="n">fmt</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Renders rows in the requested stdout format.</span>
+
+<span class="sd">    :param columns: the column names.</span>
+<span class="sd">    :param rows: the row values.</span>
+<span class="sd">    :param fmt: one of table, csv, or ndjson.</span>
+<span class="sd">    :return: the rendered text.</span>
+<span class="sd">    :raises CliError: when the format cannot render to stdout.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">TABLE</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">render_table</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">rows</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">CSV</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">render_csv</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">rows</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">render_ndjson</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">rows</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;The </span><span class="si">{</span><span class="n">fmt</span><span class="si">}</span><span class="s2"> format cannot be rendered to stdout.&quot;</span><span class="p">,</span> <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="stderr_console"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.stderr_console">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">stderr_console</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Console</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a Rich console that writes to stderr.</span>
+
+<span class="sd">    Markup and highlighting are disabled so that arbitrary message text - error</span>
+<span class="sd">    messages, file paths, and JVM error codes that may contain square brackets -</span>
+<span class="sd">    is printed verbatim and never misinterpreted as Rich markup (which would</span>
+<span class="sd">    otherwise raise a ``MarkupError``).</span>
+
+<span class="sd">    :return: a console bound to stderr for progress and status messages.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Console</span><span class="p">(</span><span class="n">stderr</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">markup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">highlight</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="progress_status"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.progress_status">[docs]</a><span class="nd">@contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">progress_status</span><span class="p">(</span><span class="n">console</span><span class="p">:</span> <span class="n">Console</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Shows a status spinner on stderr for a long-running stage.</span>
+
+<span class="sd">    :param console: the stderr console.</span>
+<span class="sd">    :param message: the status message to display.</span>
+<span class="sd">    :param verbose: when True, print a plain line instead of a spinner so that</span>
+<span class="sd">           it does not interfere with verbose log output.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">yield</span>
+        <span class="k">return</span>
+    <span class="k">with</span> <span class="n">console</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">message</span><span class="p">):</span>
+        <span class="k">yield</span></div>
+
+
+<div class="viewcode-block" id="write_output"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.write_output">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">write_output</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">OutputSpec</span><span class="p">,</span> <span class="n">console</span><span class="p">:</span> <span class="n">Console</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Writes a result DataFrame to stdout or a file per the output spec.</span>
+
+<span class="sd">    For stdout, the table format is capped at ``spec.limit`` rows; other</span>
+<span class="sd">    formats stream the full result. File output is produced by Spark&#39;s native</span>
+<span class="sd">    writers (see :func:`_write_file`) and confirmed with a single stderr line</span>
+<span class="sd">    naming the format and path.</span>
+
+<span class="sd">    :param df: the result Spark DataFrame.</span>
+<span class="sd">    :param spec: the resolved output specification.</span>
+<span class="sd">    :param console: the stderr console for the confirmation message.</span>
+<span class="sd">    :raises CliError: when the output path exists without ``--overwrite``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">TABLE</span><span class="p">:</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">limit</span><span class="p">)</span><span class="o">.</span><span class="n">collect</span><span class="p">()]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">collect</span><span class="p">()]</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">render_rows</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="p">)</span>
+        <span class="c1"># Strip any trailing newline so print&#39;s own newline does not introduce</span>
+        <span class="c1"># a spurious blank line (which would parse as an empty CSV row).</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">))</span>
+        <span class="k">return</span>
+
+    <span class="n">check_overwrite</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">overwrite</span><span class="p">)</span>
+    <span class="n">_write_file</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">spec</span><span class="p">)</span>
+    <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Wrote </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="si">}</span><span class="s2"> output to </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_write_file</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">OutputSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Writes a result DataFrame to a file using Spark&#39;s native writers.</span>
+
+<span class="sd">    CSV, NDJSON, and Parquet are written by Spark rather than collected onto</span>
+<span class="sd">    the driver, so a result larger than driver memory can be written. By</span>
+<span class="sd">    default the output is departitioned to a single file: the frame is</span>
+<span class="sd">    repartitioned to one partition, written to a uniquely named temporary</span>
+<span class="sd">    directory beside the target (on the same filesystem, so the final move is a</span>
+<span class="sd">    rename), and the single data part file is moved to the target path before</span>
+<span class="sd">    the temporary directory is removed. Delta is always written as a Spark</span>
+<span class="sd">    table directory and is never departitioned.</span>
+
+<span class="sd">    No row count is reported: a Spark write returns none, and obtaining one</span>
+<span class="sd">    would require collecting the result or re-executing the query (re-running</span>
+<span class="sd">    terminology UDFs against the server).</span>
+
+<span class="sd">    :param df: the result Spark DataFrame.</span>
+<span class="sd">    :param spec: the resolved output specification with a non-None path.</span>
+<span class="sd">    :raises CliError: when departitioning finds more than one data part file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">path</span>
+    <span class="n">spark</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sparkSession</span>
+
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">DELTA</span><span class="p">:</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;delta&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">overwrite</span><span class="p">:</span>
+            <span class="n">writer</span> <span class="o">=</span> <span class="n">writer</span><span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="s2">&quot;overwrite&quot;</span><span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="k">return</span>
+
+    <span class="c1"># Replace any existing target up front when overwriting, so a directory</span>
+    <span class="c1"># write or a departition move into place finds a clear path (Delta handles</span>
+    <span class="c1"># its own overwrite above).</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">overwrite</span><span class="p">:</span>
+        <span class="n">remove_path</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">spec</span><span class="o">.</span><span class="n">departition</span><span class="p">:</span>
+        <span class="c1"># Leave Spark&#39;s native directory of part files at the target, written</span>
+        <span class="c1"># with full parallelism (no repartition to a single partition).</span>
+        <span class="n">_write_spark_directory</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="n">part_extension</span> <span class="o">=</span> <span class="n">_PART_EXTENSIONS</span><span class="p">[</span><span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="p">]</span>
+    <span class="c1"># A uniquely named, hidden sibling of the target keeps the temporary output</span>
+    <span class="c1"># on the same filesystem so departitioning moves rather than copies.</span>
+    <span class="n">temp_dir</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;.</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.departition-</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">_write_spark_directory</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="p">,</span> <span class="n">temp_dir</span><span class="p">)</span>
+        <span class="n">departition</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">temp_dir</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">part_extension</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="c1"># Always remove the temporary directory, including on a write failure.</span>
+        <span class="n">remove_path</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">temp_dir</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_write_spark_directory</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">fmt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target_dir</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Writes a frame to a Spark directory of part files in the given format.</span>
+
+<span class="sd">    :param frame: the Spark DataFrame to write (already repartitioned as</span>
+<span class="sd">           required by the caller).</span>
+<span class="sd">    :param fmt: the file format - CSV, NDJSON, or Parquet.</span>
+<span class="sd">    :param target_dir: the directory Spark writes its part files into.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="s2">&quot;overwrite&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">CSV</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;header&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">csv</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">target_dir</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">fmt</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">:</span>
+        <span class="c1"># Retain null-valued fields so every record carries the same keys,</span>
+        <span class="c1"># matching the prior driver-side behaviour.</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;ignoreNullFields&quot;</span><span class="p">,</span> <span class="s2">&quot;false&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">target_dir</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">target_dir</span><span class="p">))</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

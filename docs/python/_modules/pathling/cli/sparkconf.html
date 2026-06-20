@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pathling.cli.sparkconf &mdash; pathling  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pathling
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pathling.html">pathling package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pathling</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pathling.cli.sparkconf</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pathling.cli.sparkconf</h1><div class="highlight"><pre>
+<span></span><span class="c1">#</span>
+<span class="c1"># Copyright © 2018-2026 Commonwealth Scientific and Industrial Research</span>
+<span class="c1"># Organisation (CSIRO) ABN 41 687 119 230.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+
+<span class="sd">&quot;&quot;&quot;Parsing, validation, coercion, and merge for user-supplied Spark settings.</span>
+
+<span class="sd">This module holds the pure logic that turns ``[spark]`` config-table entries and</span>
+<span class="sd">``--spark-conf KEY=VALUE`` flags into the effective Spark configuration applied</span>
+<span class="sd">when a session is built. Keys must begin with ``spark.``; scalar values are</span>
+<span class="sd">coerced to the string form Spark expects; values support the existing</span>
+<span class="sd">``@file``/environment secret resolution. The three managed keys</span>
+<span class="sd">(``spark.jars.packages``, ``spark.sql.extensions``,</span>
+<span class="sd">``spark.sql.catalog.spark_catalog``) are merged with item-level protection</span>
+<span class="sd">against Pathling&#39;s managed defaults so the library keeps working while user</span>
+<span class="sd">additions take effect. None of this requires PySpark, so it runs before any</span>
+<span class="sd">Spark session starts.</span>
+
+<span class="sd">Author: John Grimes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling._spark_defaults</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CATALOG_KEY</span><span class="p">,</span>
+    <span class="n">EXTENSIONS_KEY</span><span class="p">,</span>
+    <span class="n">MANAGED_COORDINATES</span><span class="p">,</span>
+    <span class="n">PACKAGES_KEY</span><span class="p">,</span>
+    <span class="n">managed_spark_defaults</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_USAGE</span><span class="p">,</span> <span class="n">CliError</span>
+
+
+<div class="viewcode-block" id="parse_spark_conf_flags"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.sparkconf.parse_spark_conf_flags">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parse_spark_conf_flags</span><span class="p">(</span><span class="n">flags</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parses repeatable ``--spark-conf KEY=VALUE`` flags into a mapping.</span>
+
+<span class="sd">    Each flag is split on the first ``=`` only, so a value may itself contain</span>
+<span class="sd">    ``=`` (for example a JVM option). When the same key appears more than once,</span>
+<span class="sd">    the last occurrence wins.</span>
+
+<span class="sd">    :param flags: an iterable of raw ``KEY=VALUE`` flag strings.</span>
+<span class="sd">    :return: a mapping of key to value, with later duplicates overriding earlier.</span>
+<span class="sd">    :raises CliError: if a flag is not of the form ``KEY=VALUE`` (exit code 2).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">flag</span> <span class="ow">in</span> <span class="n">flags</span> <span class="ow">or</span> <span class="p">():</span>
+        <span class="k">if</span> <span class="s2">&quot;=&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">flag</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid --spark-conf value &#39;</span><span class="si">{</span><span class="n">flag</span><span class="si">}</span><span class="s2">&#39;. Expected the form KEY=VALUE.&quot;</span><span class="p">,</span>
+                <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">flag</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="validate_and_coerce"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.sparkconf.validate_and_coerce">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">validate_and_coerce</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validates a Spark configuration key and coerces its value to a string.</span>
+
+<span class="sd">    The key must begin with ``spark.``. Scalar values (string, integer, float,</span>
+<span class="sd">    boolean) are coerced to the string form Spark expects, with booleans</span>
+<span class="sd">    rendered as ``true``/``false``. Any other value type (a TOML array or table)</span>
+<span class="sd">    is rejected.</span>
+
+<span class="sd">    :param key: the Spark configuration key.</span>
+<span class="sd">    :param value: the raw value from the config table or a flag.</span>
+<span class="sd">    :return: the value coerced to a string.</span>
+<span class="sd">    :raises CliError: if the key is not prefixed ``spark.`` or the value is not</span>
+<span class="sd">            a scalar (exit code 2).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;spark.&quot;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Invalid Spark configuration key &#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
+            <span class="s2">&quot;Spark configuration keys must begin with &#39;spark.&#39;.&quot;</span><span class="p">,</span>
+            <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="c1"># ``bool`` is a subclass of ``int``, so it must be checked first to render</span>
+    <span class="c1"># as ``true``/``false`` rather than ``1``/``0``.</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="n">value</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Invalid value for Spark configuration key &#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
+        <span class="s2">&quot;Only scalar values (string, integer, float, boolean) are allowed.&quot;</span><span class="p">,</span>
+        <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="resolve_spark_conf"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.sparkconf.resolve_spark_conf">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">resolve_spark_conf</span><span class="p">(</span>
+    <span class="n">file_table</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span>
+    <span class="n">flag_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span>
+    <span class="n">env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Combines, validates, coerces, and secret-resolves the user Spark map.</span>
+
+<span class="sd">    The flag map overrides the file table per key. Each entry&#39;s key and value</span>
+<span class="sd">    are then validated and coerced, and string values are passed through the</span>
+<span class="sd">    existing secret resolver so a ``@file`` reference is read from disk.</span>
+
+<span class="sd">    :param file_table: the parsed ``[spark]`` table, or None.</span>
+<span class="sd">    :param flag_map: the parsed ``--spark-conf`` flag map, or None.</span>
+<span class="sd">    :param env: the environment mapping for secret resolution.</span>
+<span class="sd">    :return: the validated, coerced, and resolved user Spark map.</span>
+<span class="sd">    :raises CliError: if a key or value is invalid, or a ``@file`` reference</span>
+<span class="sd">            cannot be read.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># The secret resolver is imported lazily to avoid a circular import with the</span>
+    <span class="c1"># config module, which depends on this module.</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_secret</span>
+
+    <span class="n">combined</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">combined</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">file_table</span> <span class="ow">or</span> <span class="p">{})</span>
+    <span class="c1"># Flag values win over the file table for the same key.</span>
+    <span class="n">combined</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">flag_map</span> <span class="ow">or</span> <span class="p">{})</span>
+
+    <span class="n">resolved</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">raw</span> <span class="ow">in</span> <span class="n">combined</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">coerced</span> <span class="o">=</span> <span class="n">validate_and_coerce</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">raw</span><span class="p">)</span>
+        <span class="n">resolved</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">resolve_secret</span><span class="p">(</span><span class="n">coerced</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">env</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resolved</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_split_list</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Splits a comma-separated Spark list value, dropping empty entries.</span>
+
+<span class="sd">    :param value: a comma-separated string such as a packages or extensions list.</span>
+<span class="sd">    :return: the non-empty, stripped items in order.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_group_artifact</span><span class="p">(</span><span class="n">coordinate</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the ``group:artifact`` identity of a Maven coordinate.</span>
+
+<span class="sd">    :param coordinate: a ``group:artifact:version`` Maven coordinate.</span>
+<span class="sd">    :return: the ``group:artifact`` prefix used to detect a version override.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;:&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">coordinate</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)[:</span><span class="mi">2</span><span class="p">])</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_merge_packages</span><span class="p">(</span>
+    <span class="n">user_value</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">on_warning</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Unions user package coordinates with the managed defaults.</span>
+
+<span class="sd">    Managed coordinates appear first. A user coordinate whose ``group:artifact``</span>
+<span class="sd">    is new is appended. A user coordinate that matches a managed</span>
+<span class="sd">    ``group:artifact`` at a different version replaces the managed entry and, for</span>
+<span class="sd">    a Pathling-managed coordinate, emits a single warning naming it.</span>
+
+<span class="sd">    :param user_value: the user&#39;s comma-separated ``spark.jars.packages`` value.</span>
+<span class="sd">    :param on_warning: a callback for the managed-version-override warning, or</span>
+<span class="sd">           None to suppress it.</span>
+<span class="sd">    :return: the merged, deduplicated comma-separated packages string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># Map each ``group:artifact`` to its index in ``result`` for deduplication.</span>
+    <span class="n">index_of</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">coordinate</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">identity</span> <span class="o">=</span> <span class="n">_group_artifact</span><span class="p">(</span><span class="n">coordinate</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">identity</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">index_of</span><span class="p">:</span>
+            <span class="n">index_of</span><span class="p">[</span><span class="n">identity</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coordinate</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">existing</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="n">index_of</span><span class="p">[</span><span class="n">identity</span><span class="p">]]</span>
+        <span class="k">if</span> <span class="n">existing</span> <span class="o">==</span> <span class="n">coordinate</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="c1"># A different version of an already-present coordinate: the user wins.</span>
+        <span class="n">result</span><span class="p">[</span><span class="n">index_of</span><span class="p">[</span><span class="n">identity</span><span class="p">]]</span> <span class="o">=</span> <span class="n">coordinate</span>
+        <span class="k">if</span> <span class="n">identity</span> <span class="ow">in</span> <span class="n">MANAGED_COORDINATES</span> <span class="ow">and</span> <span class="n">on_warning</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">on_warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;The Spark configuration overrides the managed package &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">identity</span><span class="si">}</span><span class="s2">&#39; with &#39;</span><span class="si">{</span><span class="n">coordinate</span><span class="si">}</span><span class="s2">&#39;. This non-default version &quot;</span>
+                <span class="s2">&quot;may not be supported.&quot;</span>
+            <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">coordinate</span> <span class="ow">in</span> <span class="n">_split_list</span><span class="p">(</span><span class="n">managed_spark_defaults</span><span class="p">()[</span><span class="n">PACKAGES_KEY</span><span class="p">]):</span>
+        <span class="n">add</span><span class="p">(</span><span class="n">coordinate</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">coordinate</span> <span class="ow">in</span> <span class="n">_split_list</span><span class="p">(</span><span class="n">user_value</span><span class="p">):</span>
+        <span class="n">add</span><span class="p">(</span><span class="n">coordinate</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_merge_extensions</span><span class="p">(</span><span class="n">user_value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Unions user SQL extension classes with the managed defaults.</span>
+
+<span class="sd">    The Delta extension (listed in the managed defaults) is always retained and</span>
+<span class="sd">    appears first; user extensions are appended, deduplicated.</span>
+
+<span class="sd">    :param user_value: the user&#39;s comma-separated ``spark.sql.extensions`` value.</span>
+<span class="sd">    :return: the merged, deduplicated comma-separated extensions string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">managed</span> <span class="o">=</span> <span class="n">_split_list</span><span class="p">(</span><span class="n">managed_spark_defaults</span><span class="p">()[</span><span class="n">EXTENSIONS_KEY</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">extension</span> <span class="ow">in</span> <span class="n">managed</span> <span class="o">+</span> <span class="n">_split_list</span><span class="p">(</span><span class="n">user_value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">extension</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">extension</span><span class="p">)</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extension</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_merge_catalog</span><span class="p">(</span><span class="n">user_value</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validates the session catalog against the managed Delta catalog.</span>
+
+<span class="sd">    :param user_value: the user&#39;s ``spark.sql.catalog.spark_catalog`` value.</span>
+<span class="sd">    :param key: the configuration key, for the error message.</span>
+<span class="sd">    :return: None when the value equals the managed Delta catalog (a no-op the</span>
+<span class="sd">             builder already applies); the function never returns another value.</span>
+<span class="sd">    :raises CliError: if the value differs from the managed Delta catalog (exit</span>
+<span class="sd">            code 2).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">managed</span> <span class="o">=</span> <span class="n">managed_spark_defaults</span><span class="p">()[</span><span class="n">CATALOG_KEY</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">user_value</span> <span class="o">==</span> <span class="n">managed</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;The Spark configuration key &#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39; is managed by Pathling and must be &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">managed</span><span class="si">}</span><span class="s2">&#39;. Remove it or set it to the Delta catalog.&quot;</span><span class="p">,</span>
+        <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="merge_spark_conf"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.sparkconf.merge_spark_conf">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">merge_spark_conf</span><span class="p">(</span>
+    <span class="n">user_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">on_warning</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Merges the user Spark map with Pathling&#39;s managed defaults.</span>
+
+<span class="sd">    Plain keys pass through unchanged. The managed list keys</span>
+<span class="sd">    (``spark.jars.packages``, ``spark.sql.extensions``) are unioned with the</span>
+<span class="sd">    managed defaults and deduplicated. ``spark.sql.catalog.spark_catalog`` is</span>
+<span class="sd">    dropped when it equals the managed Delta catalog and is an error otherwise.</span>
+<span class="sd">    Only keys the user actually set appear in the result; keys they did not touch</span>
+<span class="sd">    are left to the session builder&#39;s managed defaults.</span>
+
+<span class="sd">    :param user_map: the validated, coerced, and resolved user Spark map.</span>
+<span class="sd">    :param on_warning: a callback for the managed-version-override warning, or</span>
+<span class="sd">           None to suppress it.</span>
+<span class="sd">    :return: the effective Spark configuration to apply on top of the defaults.</span>
+<span class="sd">    :raises CliError: if the session catalog is set to a non-Delta value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">user_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="n">PACKAGES_KEY</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_merge_packages</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">on_warning</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="n">EXTENSIONS_KEY</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_merge_extensions</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="n">CATALOG_KEY</span><span class="p">:</span>
+            <span class="n">merged</span> <span class="o">=</span> <span class="n">_merge_catalog</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">merged</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">merged</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

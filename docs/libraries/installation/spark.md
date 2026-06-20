@@ -4,6 +4,12 @@
 
 Pathling is built and tested against **Apache Spark 4.0.x**. The Python library requires PySpark 4.0.x, and the R library requires sparklyr with Spark 4.0.x.
 
+## ANSI mode[​](#ansi-mode "Direct link to ANSI mode")
+
+Pathling evaluates FHIRPath expressions and ViewDefinitions identically and correctly whether `spark.sql.ansi.enabled` is set to `true` or `false`. Spark 4 enables ANSI mode by default, and Pathling works correctly on a stock session: a value that does not conform to a declared type, an out-of-range decimal, or a decimal arithmetic result that overflows yields an empty result for that value rather than aborting the query.
+
+Because the setting is session-wide, you may keep it disabled (`spark.sql.ansi.enabled=false`) to support portable, vendor-neutral transform SQL that relies on lenient casts, without affecting how Pathling behaves. Pathling neither sets nor requires any particular value for this flag.
+
 ## Session configuration[​](#session-configuration "Direct link to Session configuration")
 
 When you create a `PathlingContext` within your Spark application, it will detect the presence of an existing `SparkSession` and use it. If there is no existing session, it will create one for you with some sensible default configuration. You can override this default configuration by passing a `SparkSession` object to the `PathlingContext` constructor.
@@ -26,7 +32,7 @@ from pyspark.sql import SparkSession
 spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
-        "au.csiro.pathling:library-runtime:9.7.1," +
+        "au.csiro.pathling:library-runtime:9.8.0," +
         "io.delta:delta-spark_2.13:4.0.0"
     )
     .config(
@@ -60,7 +66,7 @@ pc <- pathling_connect(sc)
 import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder
-        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:9.7.1," +
+        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:9.8.0," +
                 "io.delta:delta-spark_2.13:4.0.0")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
@@ -79,7 +85,7 @@ class MyApp {
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
                 .config("spark.jars.packages",
-                        "au.csiro.pathling:library-runtime:9.7.1," +
+                        "au.csiro.pathling:library-runtime:9.8.0," +
                                 "io.delta:delta-spark_2.13:4.0.0")
                 .config("spark.sql.extensions",
                         "io.delta.sql.DeltaSparkSessionExtension")

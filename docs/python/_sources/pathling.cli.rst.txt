@@ -1,0 +1,133 @@
+pathling.cli package
+====================
+
+Submodules
+----------
+
+pathling.cli.config module
+--------------------------
+
+.. automodule:: pathling.cli.config
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.console module
+---------------------------
+
+.. automodule:: pathling.cli.console
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.convert module
+---------------------------
+
+.. automodule:: pathling.cli.convert
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.departition module
+-------------------------------
+
+.. automodule:: pathling.cli.departition
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.errors module
+--------------------------
+
+.. automodule:: pathling.cli.errors
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.export module
+--------------------------
+
+.. automodule:: pathling.cli.export
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.fhirpath module
+----------------------------
+
+.. automodule:: pathling.cli.fhirpath
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.io module
+----------------------
+
+.. automodule:: pathling.cli.io
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.main module
+------------------------
+
+.. automodule:: pathling.cli.main
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.render module
+--------------------------
+
+.. automodule:: pathling.cli.render
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.run module
+-----------------------
+
+.. automodule:: pathling.cli.run
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.session module
+---------------------------
+
+.. automodule:: pathling.cli.session
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.sparkconf module
+-----------------------------
+
+.. automodule:: pathling.cli.sparkconf
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.terminology module
+-------------------------------
+
+.. automodule:: pathling.cli.terminology
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.cli.view module
+------------------------
+
+.. automodule:: pathling.cli.view
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: pathling.cli
+   :members:
+   :undoc-members:
+   :show-inheritance:

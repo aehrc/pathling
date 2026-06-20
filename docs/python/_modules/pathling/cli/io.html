@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pathling.cli.io &mdash; pathling  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pathling
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pathling.html">pathling package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pathling</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pathling.cli.io</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pathling.cli.io</h1><div class="highlight"><pre>
+<span></span><span class="c1">#</span>
+<span class="c1"># Copyright © 2018-2026 Commonwealth Scientific and Industrial Research</span>
+<span class="c1"># Organisation (CSIRO) ABN 41 687 119 230.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+
+<span class="sd">&quot;&quot;&quot;Data source detection and reading for the Pathling command line interface.</span>
+
+<span class="sd">Format is auto-detected from the contents of the input path, with an explicit</span>
+<span class="sd">``--from`` override. Detection and validation run before any Spark session is</span>
+<span class="sd">started so that obvious mistakes (a missing or empty path, an ambiguous</span>
+<span class="sd">directory) fail quickly with an actionable message.</span>
+
+<span class="sd">Author: John Grimes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_USAGE</span><span class="p">,</span> <span class="n">CliError</span>
+
+<span class="c1"># The number of leading characters of a candidate file inspected during format</span>
+<span class="c1"># detection. A FHIR resource names its ``resourceType`` near the start of the</span>
+<span class="c1"># object, so this is enough to recognise a Bundle without parsing the whole file.</span>
+<span class="n">_DETECTION_PREFIX_CHARS</span> <span class="o">=</span> <span class="mi">4096</span>
+
+<span class="c1"># Matches a FHIR Bundle&#39;s ``resourceType`` declaration within the leading prefix.</span>
+<span class="n">_BUNDLE_JSON_MARKER</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&quot;resourceType&quot;\s*:\s*&quot;Bundle&quot;&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="SourceFormat"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.io.SourceFormat">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">SourceFormat</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The recognised data source formats.&quot;&quot;&quot;</span>
+
+    <span class="n">NDJSON</span> <span class="o">=</span> <span class="s2">&quot;ndjson&quot;</span>
+    <span class="n">BUNDLES</span> <span class="o">=</span> <span class="s2">&quot;bundles&quot;</span>
+    <span class="n">PARQUET</span> <span class="o">=</span> <span class="s2">&quot;parquet&quot;</span>
+    <span class="n">DELTA</span> <span class="o">=</span> <span class="s2">&quot;delta&quot;</span>
+    <span class="c1"># A single FHIR resource JSON file, used only by the ``fhirpath`` command.</span>
+    <span class="n">RESOURCE</span> <span class="o">=</span> <span class="s2">&quot;resource&quot;</span></div>
+
+
+<span class="c1"># The formats that may be supplied via ``--from`` (RESOURCE is auto-only).</span>
+<span class="n">FROM_CHOICES</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">SourceFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">,</span>
+    <span class="n">SourceFormat</span><span class="o">.</span><span class="n">BUNDLES</span><span class="p">,</span>
+    <span class="n">SourceFormat</span><span class="o">.</span><span class="n">PARQUET</span><span class="p">,</span>
+    <span class="n">SourceFormat</span><span class="o">.</span><span class="n">DELTA</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="SourceSpec"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.io.SourceSpec">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SourceSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A resolved data source input.</span>
+
+<span class="sd">    :param path: the input path; verified to exist.</span>
+<span class="sd">    :param format: one of the :class:`SourceFormat` values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">path</span><span class="p">:</span> <span class="n">Path</span>
+    <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_looks_like_bundle</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Determines whether a JSON or XML file appears to contain a FHIR Bundle.</span>
+
+<span class="sd">    Only a leading prefix of the file is read; a full parse is unnecessary to</span>
+<span class="sd">    recognise a Bundle and wasteful for large files (FR-014).</span>
+
+<span class="sd">    :param path: the file to inspect.</span>
+<span class="sd">    :return: True when the file&#39;s leading prefix declares a Bundle resource.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+            <span class="n">head</span> <span class="o">=</span> <span class="n">handle</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">_DETECTION_PREFIX_CHARS</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;.xml&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;&lt;Bundle&quot;</span> <span class="ow">in</span> <span class="n">head</span>
+    <span class="k">return</span> <span class="n">_BUNDLE_JSON_MARKER</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">head</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_describe_directory</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Summarises the contents of a directory for an error message.</span>
+
+<span class="sd">    :param path: the directory to describe.</span>
+<span class="sd">    :return: a comma-separated list of the entry names, capped for brevity.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">path</span><span class="o">.</span><span class="n">iterdir</span><span class="p">())</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="n">names</span><span class="p">[:</span><span class="mi">10</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;...&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="k">if</span> <span class="n">names</span> <span class="k">else</span> <span class="s2">&quot;(empty)&quot;</span>
+
+
+<div class="viewcode-block" id="detect_format"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.io.detect_format">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">detect_format</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">allow_resource</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Auto-detects the format of a data source path.</span>
+
+<span class="sd">    :param path: the input path.</span>
+<span class="sd">    :param allow_resource: when True, a single JSON file is treated as a single</span>
+<span class="sd">           FHIR resource rather than rejected.</span>
+<span class="sd">    :return: the detected :class:`SourceFormat` value.</span>
+<span class="sd">    :raises CliError: when the path is missing or empty, or the format cannot</span>
+<span class="sd">            be determined unambiguously.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Input path does not exist: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">. &quot;</span>
+            <span class="s2">&quot;Check the path relative to your working directory.&quot;</span><span class="p">,</span>
+            <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">allow_resource</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;.json&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">SourceFormat</span><span class="o">.</span><span class="n">RESOURCE</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Input path is a file: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">. Data source commands expect a &quot;</span>
+            <span class="s2">&quot;directory of FHIR data; pass a directory or specify --from.&quot;</span><span class="p">,</span>
+            <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">entries</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">iterdir</span><span class="p">())</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">entries</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Input directory is empty: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">,</span> <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">)</span>
+
+    <span class="n">parquet_tables</span> <span class="o">=</span> <span class="p">[</span><span class="n">entry</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.parquet&quot;</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">parquet_tables</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">((</span><span class="n">table</span> <span class="o">/</span> <span class="s2">&quot;_delta_log&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">for</span> <span class="n">table</span> <span class="ow">in</span> <span class="n">parquet_tables</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">SourceFormat</span><span class="o">.</span><span class="n">DELTA</span>
+        <span class="k">return</span> <span class="n">SourceFormat</span><span class="o">.</span><span class="n">PARQUET</span>
+
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;.ndjson&quot;</span><span class="p">,</span> <span class="s2">&quot;.jsonl&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">SourceFormat</span><span class="o">.</span><span class="n">NDJSON</span>
+
+    <span class="n">json_xml</span> <span class="o">=</span> <span class="p">[</span><span class="n">entry</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;.json&quot;</span><span class="p">,</span> <span class="s2">&quot;.xml&quot;</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">json_xml</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">_looks_like_bundle</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">json_xml</span><span class="p">)[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">return</span> <span class="n">SourceFormat</span><span class="o">.</span><span class="n">BUNDLES</span>
+
+    <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Could not determine the format of </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">. Found: &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_describe_directory</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="si">}</span><span class="s2">. &quot;</span>
+        <span class="s2">&quot;Specify the format with --from ndjson|bundles|parquet|delta.&quot;</span><span class="p">,</span>
+        <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="resolve_source"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.io.resolve_source">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">resolve_source</span><span class="p">(</span>
+    <span class="n">path_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">from_format</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">allow_resource</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SourceSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves a source path and format, validating before Spark startup.</span>
+
+<span class="sd">    :param path_str: the positional source path.</span>
+<span class="sd">    :param from_format: an explicit ``--from`` override, or None to auto-detect.</span>
+<span class="sd">    :param allow_resource: whether a single resource JSON file is permitted.</span>
+<span class="sd">    :return: the resolved :class:`SourceSpec`.</span>
+<span class="sd">    :raises CliError: when the path is invalid or the format cannot be resolved.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path_str</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">from_format</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Input path does not exist: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="s2">&quot;Check the path relative to your working directory.&quot;</span><span class="p">,</span>
+                <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">SourceSpec</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="n">from_format</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">SourceSpec</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="n">detect_format</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">allow_resource</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="discover_bundle_resource_types"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.io.discover_bundle_resource_types">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">discover_bundle_resource_types</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Discovers the distinct resource types contained in a directory of</span>
+<span class="sd">    FHIR Bundles.</span>
+
+<span class="sd">    :param path: the directory of bundle JSON files.</span>
+<span class="sd">    :return: a sorted list of distinct resource type codes found in the bundle</span>
+<span class="sd">             entries.</span>
+<span class="sd">    :raises CliError: when no resource types can be found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">types</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
+        <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">suffix</span> <span class="o">!=</span> <span class="s2">&quot;.json&quot;</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">for</span> <span class="n">bundle_entry</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entry&quot;</span><span class="p">,</span> <span class="p">[])</span> <span class="ow">or</span> <span class="p">[]:</span>
+            <span class="n">resource</span> <span class="o">=</span> <span class="n">bundle_entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;resource&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+            <span class="n">resource_type</span> <span class="o">=</span> <span class="n">resource</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;resourceType&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">resource_type</span><span class="p">:</span>
+                <span class="n">types</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">resource_type</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">types</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;No FHIR resources were found in the bundles at </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">. &quot;</span>
+            <span class="s2">&quot;Check that the directory contains FHIR Bundle JSON files.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">types</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="read_single_resource"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.io.read_single_resource">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">read_single_resource</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reads a single FHIR resource JSON file.</span>
+
+<span class="sd">    :param path: the path to the resource file.</span>
+<span class="sd">    :return: a tuple of (resource_type, resource_json_string).</span>
+<span class="sd">    :raises CliError: when the file cannot be read or has no resource type.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not read the FHIR resource at </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+    <span class="n">resource_type</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;resourceType&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">resource_type</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;The file </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> does not contain a &#39;resourceType&#39; and is not a &quot;</span>
+            <span class="s2">&quot;FHIR resource.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">resource_type</span><span class="p">,</span> <span class="n">text</span></div>
+
+
+<div class="viewcode-block" id="read_source"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.io.read_source">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">read_source</span><span class="p">(</span><span class="n">pc</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SourceSpec</span><span class="p">,</span> <span class="n">types</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reads a :class:`SourceSpec` into a Pathling ``DataSource``.</span>
+
+<span class="sd">    :param pc: the :class:`PathlingContext` to read with.</span>
+<span class="sd">    :param spec: the resolved source specification.</span>
+<span class="sd">    :param types: the resource types to read from a Bundles source. When</span>
+<span class="sd">           provided (non-empty), these are used directly and the driver-side</span>
+<span class="sd">           discovery pass is skipped; when None or empty, discovery enumerates</span>
+<span class="sd">           the types. Ignored for non-Bundles formats (FR-015).</span>
+<span class="sd">    :return: a Pathling ``DataSource`` for the input.</span>
+<span class="sd">    :raises CliError: when the format is not a data source format.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="n">SourceFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">ndjson</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="n">SourceFormat</span><span class="o">.</span><span class="n">BUNDLES</span><span class="p">:</span>
+        <span class="n">resource_types</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="nb">list</span><span class="p">(</span><span class="n">types</span><span class="p">)</span> <span class="k">if</span> <span class="n">types</span> <span class="k">else</span> <span class="n">discover_bundle_resource_types</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">bundles</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">resource_types</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="n">SourceFormat</span><span class="o">.</span><span class="n">PARQUET</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="n">SourceFormat</span><span class="o">.</span><span class="n">DELTA</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">delta</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Cannot read &#39;</span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="si">}</span><span class="s2">&#39; as a data source.&quot;</span><span class="p">,</span> <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span>
+    <span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

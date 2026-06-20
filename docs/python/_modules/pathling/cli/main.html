@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pathling.cli.main &mdash; pathling  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pathling
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pathling.html">pathling package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pathling</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pathling.cli.main</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pathling.cli.main</h1><div class="highlight"><pre>
+<span></span><span class="c1">#</span>
+<span class="c1"># Copyright © 2018-2026 Commonwealth Scientific and Industrial Research</span>
+<span class="c1"># Organisation (CSIRO) ABN 41 687 119 230.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+
+<span class="sd">&quot;&quot;&quot;The root command group for the Pathling command line interface.</span>
+
+<span class="sd">This module defines the global options, resolves configuration, registers every</span>
+<span class="sd">subcommand, and installs a single central error handler that turns exceptions</span>
+<span class="sd">(including unwrapped JVM exceptions) into concise messages with appropriate exit</span>
+<span class="sd">codes. Heavy imports (PySpark, the JVM-backed library) are deferred to command</span>
+<span class="sd">execution so that ``--help`` and ``--version`` stay fast.</span>
+
+<span class="sd">Author: John Grimes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rich.console</span><span class="w"> </span><span class="kn">import</span> <span class="n">Console</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling._version</span><span class="w"> </span><span class="kn">import</span> <span class="n">__version__</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">console</span> <span class="k">as</span> <span class="n">console_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">convert</span> <span class="k">as</span> <span class="n">convert_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">export</span> <span class="k">as</span> <span class="n">export_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">fhirpath</span> <span class="k">as</span> <span class="n">fhirpath_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">run</span> <span class="k">as</span> <span class="n">run_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">terminology</span> <span class="k">as</span> <span class="n">terminology_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">view</span> <span class="k">as</span> <span class="n">view_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">CliConfig</span><span class="p">,</span> <span class="n">resolve_config</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_RUNTIME</span><span class="p">,</span> <span class="n">CliError</span><span class="p">,</span> <span class="n">friendly_message</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.render</span><span class="w"> </span><span class="kn">import</span> <span class="n">stderr_console</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.sparkconf</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_spark_conf_flags</span>
+
+
+<div class="viewcode-block" id="CliContext"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.main.CliContext">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CliContext</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The object carried on the Click context for every command.</span>
+
+<span class="sd">    :param config: the resolved global configuration.</span>
+<span class="sd">    :param console: the stderr console for progress and error output.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">config</span><span class="p">:</span> <span class="n">CliConfig</span>
+    <span class="n">console</span><span class="p">:</span> <span class="n">Console</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_console_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Console</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the stderr console from the context, or a fresh one.</span>
+
+<span class="sd">    :param ctx: the Click context.</span>
+<span class="sd">    :return: a console for writing error output.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="n">CliContext</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">console</span>
+    <span class="k">return</span> <span class="n">stderr_console</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_verbose_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns whether verbose mode is active for the context.</span>
+
+<span class="sd">    :param ctx: the Click context.</span>
+<span class="sd">    :return: True when verbose output was requested.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="n">CliContext</span><span class="p">)</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">verbose</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_server_url_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the configured terminology server URL for the context, or None.</span>
+
+<span class="sd">    Threaded into the friendly error message so a connection failure from</span>
+<span class="sd">    convert/view/fhirpath names the server it could not reach (FR-011). The</span>
+<span class="sd">    terminology commands enrich their own connection errors, so this only</span>
+<span class="sd">    affects the generic ``Exception`` path used by the other commands.</span>
+
+<span class="sd">    :param ctx: the Click context.</span>
+<span class="sd">    :return: the configured terminology server URL, or None when no context is</span>
+<span class="sd">             present.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">tx_server</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="n">CliContext</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="PathlingCli"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.main.PathlingCli">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">PathlingCli</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">Group</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The root group with centralised error handling and exit codes.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="PathlingCli.invoke"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.main.PathlingCli.invoke">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">invoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Invokes a command, mapping errors to friendly messages and codes.</span>
+
+<span class="sd">        :param ctx: the Click context.</span>
+<span class="sd">        :return: the command&#39;s return value on success.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">click</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">Exit</span><span class="p">:</span>
+            <span class="c1"># Normal exits from eager options such as --help and --version</span>
+            <span class="c1"># carry their own exit code; let them propagate untouched.</span>
+            <span class="k">raise</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">KeyboardInterrupt</span><span class="p">,</span> <span class="n">click</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">Abort</span><span class="p">):</span>
+            <span class="n">_console_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Aborted.&quot;</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;yellow&quot;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">EXIT_RUNTIME</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">click</span><span class="o">.</span><span class="n">ClickException</span><span class="p">:</span>
+            <span class="c1"># Let Click render usage errors (exit code 2) itself.</span>
+            <span class="k">raise</span>
+        <span class="k">except</span> <span class="n">CliError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">_console_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">exit_code</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - the central runtime handler.</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">friendly_message</span><span class="p">(</span>
+                <span class="n">exc</span><span class="p">,</span>
+                <span class="n">verbose</span><span class="o">=</span><span class="n">_verbose_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">),</span>
+                <span class="n">server_url</span><span class="o">=</span><span class="n">_server_url_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">_console_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">EXIT_RUNTIME</span><span class="p">)</span></div></div>
+
+
+<span class="nd">@click</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="bp">cls</span><span class="o">=</span><span class="n">PathlingCli</span><span class="p">,</span> <span class="n">context_settings</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;help_option_names&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;-h&quot;</span><span class="p">,</span> <span class="s2">&quot;--help&quot;</span><span class="p">]})</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">version_option</span><span class="p">(</span><span class="n">version</span><span class="o">=</span><span class="n">__version__</span><span class="p">,</span> <span class="n">prog_name</span><span class="o">=</span><span class="s2">&quot;pathling&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--tx-server&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Terminology server URL (config key: tx-server).&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--tx-client-id&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Terminology auth client ID.&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--tx-client-secret&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Terminology auth client secret.&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--tx-token-endpoint&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Terminology auth token endpoint.&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--tx-scope&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Terminology auth scope.&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--fhir-version&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;FHIR version (config key: fhir-version; default R4).&quot;</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--spark-conf&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;spark_conf&quot;</span><span class="p">,</span>
+    <span class="n">metavar</span><span class="o">=</span><span class="s2">&quot;KEY=VALUE&quot;</span><span class="p">,</span>
+    <span class="n">multiple</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Set a Spark configuration property &quot;</span>
+    <span class="s2">&quot;(repeatable; overrides the [spark] config table).&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--config&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;config_path&quot;</span><span class="p">,</span>
+    <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">path_type</span><span class="o">=</span><span class="n">Path</span><span class="p">),</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the TOML config file &quot;</span>
+    <span class="s2">&quot;(default: $XDG_CONFIG_HOME/pathling/config.toml).&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
+    <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Enable Spark/JVM logging and full stack traces on error.&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_context</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">cli</span><span class="p">(</span>
+    <span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
+    <span class="n">tx_server</span><span class="p">,</span>
+    <span class="n">tx_client_id</span><span class="p">,</span>
+    <span class="n">tx_client_secret</span><span class="p">,</span>
+    <span class="n">tx_token_endpoint</span><span class="p">,</span>
+    <span class="n">tx_scope</span><span class="p">,</span>
+    <span class="n">fhir_version</span><span class="p">,</span>
+    <span class="n">spark_conf</span><span class="p">,</span>
+    <span class="n">config_path</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pathling: a command line interface for FHIR analytics.</span>
+
+<span class="sd">    Run a SQL on FHIR view, evaluate FHIRPath, convert FHIR data between</span>
+<span class="sd">    formats, bulk export from a FHIR server, run terminology operations</span>
+<span class="sd">    over a dataset of codes, or script and explore interactively with the</span>
+<span class="sd">    run and console commands. Configuration may be set with global flags or a</span>
+<span class="sd">    TOML config file at $XDG_CONFIG_HOME/pathling/config.toml (flags take</span>
+<span class="sd">    precedence).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">console</span> <span class="o">=</span> <span class="n">stderr_console</span><span class="p">()</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">resolve_config</span><span class="p">(</span>
+        <span class="n">tx_server</span><span class="o">=</span><span class="n">tx_server</span><span class="p">,</span>
+        <span class="n">tx_client_id</span><span class="o">=</span><span class="n">tx_client_id</span><span class="p">,</span>
+        <span class="n">tx_client_secret</span><span class="o">=</span><span class="n">tx_client_secret</span><span class="p">,</span>
+        <span class="n">tx_token_endpoint</span><span class="o">=</span><span class="n">tx_token_endpoint</span><span class="p">,</span>
+        <span class="n">tx_scope</span><span class="o">=</span><span class="n">tx_scope</span><span class="p">,</span>
+        <span class="n">fhir_version</span><span class="o">=</span><span class="n">fhir_version</span><span class="p">,</span>
+        <span class="n">spark_conf_flags</span><span class="o">=</span><span class="n">parse_spark_conf_flags</span><span class="p">(</span><span class="n">spark_conf</span><span class="p">),</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+        <span class="n">config_path</span><span class="o">=</span><span class="n">config_path</span><span class="p">,</span>
+        <span class="n">on_warning</span><span class="o">=</span><span class="k">lambda</span> <span class="n">message</span><span class="p">:</span> <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;yellow&quot;</span><span class="p">),</span>
+        <span class="n">on_notice</span><span class="o">=</span><span class="k">lambda</span> <span class="n">message</span><span class="p">:</span> <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;dim&quot;</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">CliContext</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span> <span class="n">console</span><span class="o">=</span><span class="n">console</span><span class="p">)</span>
+
+
+<span class="c1"># Register the data commands.</span>
+<span class="n">cli</span><span class="o">.</span><span class="n">add_command</span><span class="p">(</span><span class="n">convert_module</span><span class="o">.</span><span class="n">convert</span><span class="p">)</span>
+<span class="n">cli</span><span class="o">.</span><span class="n">add_command</span><span class="p">(</span><span class="n">view_module</span><span class="o">.</span><span class="n">view</span><span class="p">)</span>
+<span class="n">cli</span><span class="o">.</span><span class="n">add_command</span><span class="p">(</span><span class="n">fhirpath_module</span><span class="o">.</span><span class="n">fhirpath</span><span class="p">)</span>
+<span class="n">cli</span><span class="o">.</span><span class="n">add_command</span><span class="p">(</span><span class="n">export_module</span><span class="o">.</span><span class="n">export</span><span class="p">)</span>
+
+<span class="c1"># Register the scripting commands.</span>
+<span class="n">cli</span><span class="o">.</span><span class="n">add_command</span><span class="p">(</span><span class="n">run_module</span><span class="o">.</span><span class="n">run</span><span class="p">)</span>
+<span class="n">cli</span><span class="o">.</span><span class="n">add_command</span><span class="p">(</span><span class="n">console_module</span><span class="o">.</span><span class="n">console</span><span class="p">)</span>
+
+<span class="c1"># Register the terminology commands.</span>
+<span class="k">for</span> <span class="n">_terminology_command</span> <span class="ow">in</span> <span class="n">terminology_module</span><span class="o">.</span><span class="n">TERMINOLOGY_COMMANDS</span><span class="p">:</span>
+    <span class="n">cli</span><span class="o">.</span><span class="n">add_command</span><span class="p">(</span><span class="n">_terminology_command</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">cli</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

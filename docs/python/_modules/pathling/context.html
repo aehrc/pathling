@@ -86,6 +86,11 @@
 <span class="c1"># limitations under the License.</span>
 <span class="c1">#</span>
 
+<span class="sd">&quot;&quot;&quot;Pathling context and Spark session construction for the Python API.</span>
+
+<span class="sd">Author: John Grimes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
 <span class="c1"># noinspection PyPackageRequirements</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span>
@@ -93,11 +98,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">py4j.java_gateway</span><span class="w"> </span><span class="kn">import</span> <span class="n">JavaObject</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">SparkSession</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathling._version</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">__delta_version__</span><span class="p">,</span>
-    <span class="n">__java_version__</span><span class="p">,</span>
-    <span class="n">__scala_version__</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling._spark_defaults</span><span class="w"> </span><span class="kn">import</span> <span class="n">managed_spark_defaults</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.fhir</span><span class="w"> </span><span class="kn">import</span> <span class="n">MimeType</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
@@ -127,6 +128,31 @@
             <span class="n">value</span> <span class="o">=</span> <span class="n">_convert_java_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
         <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">jtyped_value</span><span class="o">.</span><span class="n">getType</span><span class="p">(),</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
     <span class="k">return</span> <span class="n">results</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_spark_session</span><span class="p">(</span><span class="n">extra_configs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SparkSession</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds a Spark session configured with the Pathling and Delta packages.</span>
+
+<span class="sd">    The managed package coordinates, Delta SQL extension, and Delta catalog are</span>
+<span class="sd">    sourced from :func:`pathling._spark_defaults.managed_spark_defaults`, the</span>
+<span class="sd">    single source of truth shared with the CLI merge logic. Callers that need to</span>
+<span class="sd">    bring their own session (for example to set driver JVM options before launch)</span>
+<span class="sd">    supply those via ``extra_configs`` rather than re-declaring the package</span>
+<span class="sd">    configuration; a caller entry overrides the matching default for that key.</span>
+
+<span class="sd">    :param extra_configs: optional additional Spark configuration entries to set</span>
+<span class="sd">           on the builder before the session is created.</span>
+<span class="sd">    :return: a configured :class:`SparkSession`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">SparkSession</span><span class="o">.</span><span class="n">builder</span>
+    <span class="c1"># Apply Pathling&#39;s managed defaults first, then any caller-supplied entries,</span>
+    <span class="c1"># so that a caller value (for example a quiet-logging option) overrides the</span>
+    <span class="c1"># corresponding default for the same key.</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">managed_spark_defaults</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span><span class="n">extra_configs</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">builder</span><span class="o">.</span><span class="n">getOrCreate</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="StorageType"><a class="viewcode-back" href="../../pathling.html#pathling.context.StorageType">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">StorageType</span><span class="p">:</span>
@@ -285,30 +311,15 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">_new_spark_session</span><span class="p">():</span>
-            <span class="n">spark_builder</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">SparkSession</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">config</span><span class="p">(</span>
-                    <span class="s2">&quot;spark.jars.packages&quot;</span><span class="p">,</span>
-                    <span class="sa">f</span><span class="s2">&quot;au.csiro.pathling:library-runtime:</span><span class="si">{</span><span class="n">__java_version__</span><span class="si">}</span><span class="s2">,&quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;io.delta:delta-spark_</span><span class="si">{</span><span class="n">__scala_version__</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">__delta_version__</span><span class="si">}</span><span class="s2">,&quot;</span><span class="p">,</span>
-                <span class="p">)</span>
-                <span class="o">.</span><span class="n">config</span><span class="p">(</span>
-                    <span class="s2">&quot;spark.sql.extensions&quot;</span><span class="p">,</span> <span class="s2">&quot;io.delta.sql.DeltaSparkSessionExtension&quot;</span>
-                <span class="p">)</span>
-                <span class="o">.</span><span class="n">config</span><span class="p">(</span>
-                    <span class="s2">&quot;spark.sql.catalog.spark_catalog&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;org.apache.spark.sql.delta.catalog.DeltaCatalog&quot;</span><span class="p">,</span>
-                <span class="p">)</span>
-            <span class="p">)</span>
-
-            <span class="c1"># Add remote debugging configuration if enabled</span>
+            <span class="n">extra_configs</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="c1"># Add remote debugging configuration if enabled.</span>
             <span class="k">if</span> <span class="n">enable_remote_debugging</span><span class="p">:</span>
                 <span class="n">suspend_option</span> <span class="o">=</span> <span class="s2">&quot;y&quot;</span> <span class="k">if</span> <span class="n">debug_suspend</span> <span class="k">else</span> <span class="s2">&quot;n&quot;</span>
-                <span class="n">debug_options</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;-agentlib:jdwp=transport=dt_socket,server=y,suspend=</span><span class="si">{</span><span class="n">suspend_option</span><span class="si">}</span><span class="s2">,address=</span><span class="si">{</span><span class="n">debug_port</span><span class="si">}</span><span class="s2">&quot;</span>
-                <span class="n">spark_builder</span> <span class="o">=</span> <span class="n">spark_builder</span><span class="o">.</span><span class="n">config</span><span class="p">(</span>
-                    <span class="s2">&quot;spark.driver.extraJavaOptions&quot;</span><span class="p">,</span> <span class="n">debug_options</span>
+                <span class="n">extra_configs</span><span class="p">[</span><span class="s2">&quot;spark.driver.extraJavaOptions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;-agentlib:jdwp=transport=dt_socket,server=y,&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;suspend=</span><span class="si">{</span><span class="n">suspend_option</span><span class="si">}</span><span class="s2">,address=</span><span class="si">{</span><span class="n">debug_port</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="p">)</span>
-
-            <span class="k">return</span> <span class="n">spark_builder</span><span class="o">.</span><span class="n">getOrCreate</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">_build_spark_session</span><span class="p">(</span><span class="n">extra_configs</span><span class="p">)</span>
 
         <span class="n">spark</span> <span class="o">=</span> <span class="n">spark</span> <span class="ow">or</span> <span class="n">SparkSession</span><span class="o">.</span><span class="n">getActiveSession</span><span class="p">()</span> <span class="ow">or</span> <span class="n">_new_spark_session</span><span class="p">()</span>
         <span class="n">jvm</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">_jvm</span>
