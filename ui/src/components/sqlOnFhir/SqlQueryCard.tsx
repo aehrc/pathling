@@ -34,17 +34,27 @@ import {
   Card,
   Code,
   Flex,
+  Separator,
   Spinner,
   Table,
   Text,
 } from "@radix-ui/themes";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
+import { ExportControls } from "./ExportControls";
+import { SqlQueryExportCardWrapper } from "./SqlQueryExportCardWrapper";
 import { useSqlQueryRun } from "../../hooks";
 import { OperationOutcomeError } from "../../types/errors";
 import { formatDateTime } from "../../utils";
 
-import type { SqlQueryJob, SqlQueryResult } from "../../types/sqlQuery";
+import type { SqlQueryExportFormat, SqlQueryJob, SqlQueryResult } from "../../types/sqlQuery";
+
+/** An in-progress or completed export spawned from this result card. */
+interface SqlQueryExportEntry {
+  id: string;
+  format: SqlQueryExportFormat;
+  createdAt: Date;
+}
 
 interface SqlQueryCardProps {
   /** The SQL query job describing the request. */
@@ -66,11 +76,18 @@ interface SqlQueryCardProps {
  */
 export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardProps>) {
   const { execute, status, result, error } = useSqlQueryRun();
+  const [exports, setExports] = useState<SqlQueryExportEntry[]>([]);
 
   const isRunning = status === "pending";
   const isComplete = status === "success";
   const isError = status === "error";
   const canClose = isComplete || isError;
+
+  // The export affordance appears once a run has returned data: rows for a tabular result, or a
+  // file for a non-previewable binary (Parquet) result.
+  const hasRows =
+    result !== undefined &&
+    (result.kind === "binary" || (result.kind === "tabular" && result.rows.length > 0));
 
   // Mount-time execution: kick off the request once when the card lands
   // in idle state. Using the status as the trigger plays nicely with React
@@ -87,6 +104,27 @@ export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardPro
       onError(error.message);
     }
   }, [error, onError]);
+
+  /**
+   * Starts an export of this query's result in the chosen format, reusing the run's query source.
+   *
+   * @param format - The chosen export format.
+   */
+  function handleExport(format: SqlQueryExportFormat) {
+    setExports((current) => [
+      ...current,
+      { id: crypto.randomUUID(), format, createdAt: new Date() },
+    ]);
+  }
+
+  /**
+   * Removes an export card.
+   *
+   * @param id - The id of the export to remove.
+   */
+  function handleCloseExport(id: string) {
+    setExports((current) => current.filter((entry) => entry.id !== id));
+  }
 
   return (
     <Card>
@@ -134,6 +172,30 @@ export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardPro
         {isError && error && <SqlQueryErrorBody sql={job.sql} error={error} />}
 
         {isComplete && result && <SqlQueryResultBody result={result} sql={job.sql} />}
+
+        {isComplete && hasRows && (
+          <>
+            <Separator size="4" />
+            <Flex direction="column" gap="2">
+              <Flex align="center" justify="between" wrap="wrap" gap="2">
+                <Text size="2" weight="medium">
+                  Export full result set
+                </Text>
+                <ExportControls onExport={handleExport} />
+              </Flex>
+              {exports.map((entry) => (
+                <SqlQueryExportCardWrapper
+                  key={entry.id}
+                  source={job.request}
+                  format={entry.format}
+                  createdAt={entry.createdAt}
+                  onClose={() => handleCloseExport(entry.id)}
+                  onError={onError}
+                />
+              ))}
+            </Flex>
+          </>
+        )}
       </Flex>
     </Card>
   );
@@ -157,8 +219,8 @@ function SqlQueryResultBody({ result, sql }: Readonly<SqlQueryResultBodyProps>) 
   if (result.kind === "binary") {
     return (
       <Text size="2" color="gray">
-        Binary results cannot be previewed. Download will be supported by a future SQL query export
-        operation.
+        Parquet results cannot be previewed. Use the Export control below to download the full
+        result set.
       </Text>
     );
   }

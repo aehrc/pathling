@@ -272,6 +272,27 @@ class ConformanceProviderTest {
   }
 
   @Test
+  void sqlQueryExportDeclaresSpecCanonical() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+    assertThat(systemOperationDefinition(capabilityStatement, "sqlquery-export"))
+        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$sqlquery-export");
+  }
+
+  @Test
+  void sqlQueryExportNotDeclaredWhenDisabled() {
+    final ConformanceProvider provider =
+        createProviderWithDisabledOperations(ops -> ops.setSqlQueryExportEnabled(false));
+    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
+
+    final Set<String> operationNames =
+        capabilityStatement.getRest().getFirst().getOperation().stream()
+            .map(CapabilityStatementRestResourceOperationComponent::getName)
+            .collect(Collectors.toSet());
+    assertThat(operationNames).doesNotContain("sqlquery-export");
+  }
+
+  @Test
   void authoredSqlOnFhirOperationDefinitionsNoLongerServed() {
     for (final String name :
         List.of("run", "viewdefinition-run", "viewdefinition-export", "sqlquery-run")) {

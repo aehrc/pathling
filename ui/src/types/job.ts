@@ -29,6 +29,7 @@ import type {
 import type { ExportRequest, ExportManifest } from "./export";
 import type { ImportRequest, ImportManifest } from "./import";
 import type { ImportPnpRequest } from "./importPnp";
+import type { SqlQueryExportFormat, SqlQueryExportManifest } from "./sqlQuery";
 import type { ViewExportRequest, ViewExportManifest } from "./viewExport";
 
 export type JobType =
@@ -36,7 +37,8 @@ export type JobType =
   | "import"
   | "import-pnp"
   | "bulk-submit"
-  | "view-export";
+  | "view-export"
+  | "sqlquery-export";
 
 export type JobStatus =
   | "pending"
@@ -87,9 +89,16 @@ export interface ViewExportJob extends BaseJob {
   manifest: ViewExportManifest | null;
 }
 
+export interface SqlQueryExportJob extends BaseJob {
+  type: "sqlquery-export";
+  request: { format: SqlQueryExportFormat };
+  manifest: SqlQueryExportManifest | null;
+}
+
 export type Job =
   | ExportJob
   | ImportJob
   | ImportPnpJob
   | BulkSubmitJob
-  | ViewExportJob;
+  | ViewExportJob
+  | SqlQueryExportJob;

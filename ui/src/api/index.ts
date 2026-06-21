@@ -64,6 +64,8 @@ export type { ViewDefinition } from "./view";
 export {
   sqlQueryRun,
   listSqlQueryLibraries,
+  sqlQueryExportKickOff,
+  sqlQueryExportDownload,
   SQL_QUERY_LIBRARY_TYPE_SYSTEM,
   SQL_QUERY_LIBRARY_TYPE_FILTER,
   SQL_QUERY_LIBRARY_PROFILE,
@@ -72,4 +74,7 @@ export type {
   SqlQueryRunOptions,
   SqlQueryRunStoredOptions,
   SqlQueryRunInlineOptions,
+  SqlQueryExportKickOffOptions,
+  SqlQueryExportResult,
+  SqlQueryExportDownloadOptions,
 } from "./sqlQuery";

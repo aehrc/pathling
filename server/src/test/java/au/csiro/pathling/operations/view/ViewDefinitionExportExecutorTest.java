@@ -25,6 +25,8 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
+import au.csiro.pathling.operations.export.ExportDataSourceBuilder;
+import au.csiro.pathling.operations.export.ExportFileWriter;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.CustomObjectDataSource;
@@ -339,19 +341,51 @@ class ViewDefinitionExportExecutorTest {
   }
 
   // -------------------------------------------------------------------------
+  // Patient compartment filtering (shared ExportDataSourceBuilder)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void patientCompartmentFilterScopesAndHandlesFhirPathPaths() {
+    // The data source mixes Patient (filtered by id) with Observation, whose compartment membership
+    // is defined by a FHIRPath expression (subject.where(resolve() is Patient)). The shared builder
+    // must filter both correctly without failing on the FHIRPath path.
+    final Patient p1 = createPatient("p1", "Smith");
+    final Patient p2 = createPatient("p2", "Jones");
+    final var obs = createObservation("o1", "p1");
+    executor = createExecutor(p1, p2, obs);
+
+    final FhirView view = createSimplePatientView();
+    final ViewInput viewInput = new ViewInput("patients", view);
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput),
+            null,
+            ViewExportFormat.NDJSON,
+            true,
+            java.util.Set.of("p1"),
+            null);
+
+    // Must not throw on the Observation FHIRPath compartment path, and must produce one output.
+    final List<ViewExportOutput> outputs = executor.execute(request, UUID.randomUUID().toString());
+    assertThat(outputs).hasSize(1);
+    assertThat(outputs.get(0).fileUrls()).isNotEmpty();
+  }
+
+  // -------------------------------------------------------------------------
   // Helper methods
   // -------------------------------------------------------------------------
 
   private ViewDefinitionExportExecutor createExecutor(final IBaseResource... resources) {
     final QueryableDataSource dataSource =
         new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(resources));
+    final ExportFileWriter fileWriter =
+        new ExportFileWriter(sparkSession, "file://" + uniqueTempDir.toAbsolutePath());
+    final ExportDataSourceBuilder dataSourceBuilder =
+        new ExportDataSourceBuilder(patientCompartmentService);
     return new ViewDefinitionExportExecutor(
-        dataSource,
-        fhirContext,
-        sparkSession,
-        "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration,
-        patientCompartmentService);
+        dataSource, fhirContext, serverConfiguration, dataSourceBuilder, fileWriter);
   }
 
   private Patient createPatient(final String id, final String familyName) {
@@ -359,6 +393,15 @@ class ViewDefinitionExportExecutorTest {
     patient.setId(id);
     patient.addName().setFamily(familyName);
     return patient;
+  }
+
+  private org.hl7.fhir.r4.model.Observation createObservation(
+      final String id, final String patientId) {
+    final org.hl7.fhir.r4.model.Observation observation = new org.hl7.fhir.r4.model.Observation();
+    observation.setId(id);
+    observation.setStatus(org.hl7.fhir.r4.model.Observation.ObservationStatus.FINAL);
+    observation.setSubject(new org.hl7.fhir.r4.model.Reference("Patient/" + patientId));
+    return observation;
   }
 
   private FhirView createSimplePatientView() {

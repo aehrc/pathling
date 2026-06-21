@@ -74,7 +74,8 @@ public class ViewResolver {
   }
 
   /**
-   * Resolves each view reference to a parsed {@link FhirView}, preserving label order.
+   * Resolves each view reference to a parsed {@link FhirView}, reading every view from server
+   * storage. Equivalent to {@link #resolve(List, Map)} with no request-supplied views.
    *
    * @param references the references declared by the SQLQuery Library, keyed by table label
    * @return a map from label to resolved FhirView
@@ -82,10 +83,39 @@ public class ViewResolver {
    */
   @Nonnull
   public Map<String, FhirView> resolve(@Nonnull final List<ViewArtifactReference> references) {
+    return resolve(references, Map.of());
+  }
+
+  /**
+   * Resolves each view reference to a parsed {@link FhirView}, preserving label order. A
+   * request-supplied view is used in preference to server storage when it matches the reference (by
+   * the ViewDefinition id extracted from the reference); otherwise the view is read from server
+   * storage, exactly as {@code $sqlquery-run} does. Request-supplied views are assumed already
+   * parsed and, for stored references, authorisation-checked by the caller.
+   *
+   * @param references the references declared by the SQLQuery Library, keyed by table label
+   * @param suppliedViews request-supplied views keyed by the ViewDefinition id (or canonical url's
+   *     final segment) they satisfy; may be empty
+   * @return a map from label to resolved FhirView
+   * @throws InvalidRequestException if a reference cannot be resolved or parsed
+   */
+  @Nonnull
+  public Map<String, FhirView> resolve(
+      @Nonnull final List<ViewArtifactReference> references,
+      @Nonnull final Map<String, FhirView> suppliedViews) {
     final Map<String, FhirView> resolved = new LinkedHashMap<>();
 
     for (final ViewArtifactReference ref : references) {
       final String viewDefinitionId = extractViewDefinitionId(ref.getCanonicalUrl());
+
+      // Prefer a request-supplied view that satisfies this reference, falling back to server
+      // storage when none is supplied.
+      final FhirView suppliedView = suppliedViews.get(viewDefinitionId);
+      if (suppliedView != null) {
+        resolved.put(ref.getLabel(), suppliedView);
+        continue;
+      }
+
       final IBaseResource viewResource;
       try {
         viewResource = readExecutor.read("ViewDefinition", viewDefinitionId);
