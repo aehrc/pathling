@@ -107,6 +107,7 @@ public class ConformanceProvider
   private static final String VIEWDEFINITION_RUN_OPERATION = "viewdefinition-run";
   private static final String VIEWDEFINITION_EXPORT_OPERATION = "viewdefinition-export";
   private static final String SQLQUERY_RUN_OPERATION = "sqlquery-run";
+  private static final String SQLQUERY_EXPORT_OPERATION = "sqlquery-export";
 
   /**
    * The spec canonical OperationDefinition URLs for the SQL on FHIR operations. The server declares
@@ -121,6 +122,9 @@ public class ConformanceProvider
 
   private static final String SOF_SQLQUERY_RUN_CANONICAL =
       "http://sql-on-fhir.org/OperationDefinition/$sqlquery-run";
+
+  private static final String SOF_SQLQUERY_EXPORT_CANONICAL =
+      "http://sql-on-fhir.org/OperationDefinition/$sqlquery-export";
 
   /**
    * Base system-level operations whose Pathling-authored OperationDefinition resources are served.
@@ -532,6 +536,14 @@ public class ConformanceProvider
     // Add SQL query run operation, declaring the SQL on FHIR spec canonical.
     addOperationIfEnabled(
         operations, SQLQUERY_RUN_OPERATION, ops.isSqlQueryRunEnabled(), SOF_SQLQUERY_RUN_CANONICAL);
+
+    // Add SQL query export operation, declaring the SQL on FHIR spec canonical. The referenced
+    // OperationDefinition declares the system, type, and instance scopes.
+    addOperationIfEnabled(
+        operations,
+        SQLQUERY_EXPORT_OPERATION,
+        ops.isSqlQueryExportEnabled(),
+        SOF_SQLQUERY_EXPORT_CANONICAL);
 
     // Add bulk submit operations if configured and enabled.
     if (configuration.getBulkSubmit() != null && ops.isBulkSubmitEnabled()) {

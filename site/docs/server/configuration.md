@@ -163,6 +163,9 @@ error response and is excluded from the CapabilityStatement.
   ViewDefinition resources.
 - `pathling.operations.viewDefinitionExportEnabled` - (default: `true`) Enables
   the [$viewdefinition-export](./operations/view-export) operation.
+- `pathling.operations.sqlQueryExportEnabled` - (default: `true`) Enables the
+  system, type, and instance-level
+  [$sqlquery-export](./operations/sql-export) operation.
 - `pathling.operations.bulkSubmitEnabled` - (default: `true`) Enables the
   [$bulk-submit](./operations/bulk-submit) operation.
 

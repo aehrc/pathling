@@ -227,3 +227,37 @@ export interface SaveSqlQueryLibraryResult {
   id: string;
   title: string;
 }
+
+/**
+ * Output formats accepted by the asynchronous `$sqlquery-export` operation.
+ *
+ * Narrower than {@link SqlQueryOutputFormat}: the export operation supports only the file-friendly
+ * formats, mirroring `$viewdefinition-export`.
+ */
+export type SqlQueryExportFormat = "ndjson" | "csv" | "parquet";
+
+/**
+ * A `$sqlquery-export` request, reusing the same query source (stored or inline) as the
+ * synchronous run, plus the chosen export format and CSV header flag.
+ */
+export type SqlQueryExportRequest =
+  | {
+      mode: "stored";
+      /** ID of a stored Library conforming to the SQLQuery profile. */
+      libraryId: string;
+      format: SqlQueryExportFormat;
+      header?: boolean;
+    }
+  | {
+      mode: "inline";
+      /** Inline Library to send as the `query.queryResource` part. */
+      library: SqlQueryLibrary;
+      format: SqlQueryExportFormat;
+      header?: boolean;
+    };
+
+/**
+ * The `$sqlquery-export` completion manifest, a FHIR Parameters resource describing the export
+ * outputs. Shares the SQL on FHIR manifest shape with the view export manifest.
+ */
+export type SqlQueryExportManifest = import("fhir/r4").Parameters;
