@@ -164,6 +164,13 @@ class SqlQueryOutputFormatTest {
   }
 
   @Test
+  void fromStringStrictAcceptsMediaTypeWithParameters() {
+    // A supported media type carrying parameters is treated as that format, not rejected.
+    assertThat(SqlQueryOutputFormat.fromStringStrict("text/csv;charset=utf-8"))
+        .isEqualTo(SqlQueryOutputFormat.CSV);
+  }
+
+  @Test
   void fromStringStrictRejectsUnknownNamingValue() {
     // An explicit unsupported format is rejected with the unsupported value named.
     assertThatThrownBy(() -> SqlQueryOutputFormat.fromStringStrict("xml"))
