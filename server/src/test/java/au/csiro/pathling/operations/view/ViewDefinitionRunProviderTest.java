@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
+import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import ca.uhn.fhir.context.FhirContext;
@@ -58,7 +59,8 @@ import org.springframework.mock.web.MockHttpServletResponse;
   FhirServerTestConfiguration.class,
   PatientCompartmentService.class,
   GroupMemberService.class,
-  ViewExecutionHelper.class
+  ViewExecutionHelper.class,
+  ReadExecutor.class
 })
 @SpringBootUnitTest
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
@@ -104,6 +106,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         formatParam,
         null,
         null,
@@ -111,6 +114,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails(null),
         response);
 
@@ -126,6 +130,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "text/csv",
         null,
         null,
@@ -133,6 +138,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails(null),
         response);
 
@@ -152,6 +158,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "text/csv",
         new BooleanType(false),
         null,
@@ -159,6 +166,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails(null),
         response);
 
@@ -182,7 +190,9 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         null,
+        null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails(null),
         response);
 
@@ -214,6 +224,8 @@ class ViewDefinitionRunProviderTest {
                     null,
                     null,
                     null,
+                    null,
+                    null,
                     mockRequestDetails(null),
                     response))
         .isInstanceOf(Exception.class);
@@ -227,6 +239,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "application/x-ndjson",
         null,
         null,
@@ -234,6 +247,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails(null),
         response);
 
@@ -260,6 +274,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "application/x-ndjson",
         null,
         new IntegerType(2),
@@ -267,6 +282,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         patients,
+        null,
         mockRequestDetails(null),
         response);
 
@@ -287,6 +303,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "application/x-ndjson",
         null,
         null,
@@ -294,6 +311,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         patients,
+        null,
         mockRequestDetails(null),
         response);
 
@@ -314,6 +332,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "application/x-ndjson",
         null,
         null,
@@ -321,6 +340,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails(null),
         response);
 
@@ -338,6 +358,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "application/x-ndjson",
         null,
         null,
@@ -345,6 +366,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         patients,
+        null,
         mockRequestDetails(null),
         response);
 
@@ -366,6 +388,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "application/x-ndjson",
         null,
         null,
@@ -373,6 +396,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         resources,
+        null,
         mockRequestDetails(null),
         response);
 
@@ -399,7 +423,9 @@ class ViewDefinitionRunProviderTest {
                     null,
                     null,
                     null,
+                    null,
                     invalidResources,
+                    null,
                     requestDetails,
                     response))
         .isInstanceOf(InvalidRequestException.class)
@@ -415,6 +441,141 @@ class ViewDefinitionRunProviderTest {
   // integration tests with a full Delta Lake setup.
 
   // -------------------------------------------------------------------------
+  // Unsupported request rejection tests (US1)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void rejectsUnsupportedFormatNamingValue() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final String inlinePatient = createPatientJson("test-1", "Smith");
+
+    assertThatThrownBy(
+            () ->
+                provider.run(
+                    viewResource,
+                    null,
+                    "parquet",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    List.of(inlinePatient),
+                    null,
+                    mockRequestDetails(null),
+                    response))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("parquet");
+  }
+
+  @Test
+  void rejectsSourceParameterWhenSupplied() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+    final String inlinePatient = createPatientJson("test-1", "Smith");
+
+    assertThatThrownBy(
+            () ->
+                provider.run(
+                    viewResource,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    List.of(inlinePatient),
+                    "s3://bucket/data",
+                    mockRequestDetails(null),
+                    response))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("source");
+  }
+
+  // -------------------------------------------------------------------------
+  // View selection tests (US4): viewResource / viewReference exclusivity and presence
+  // -------------------------------------------------------------------------
+
+  @Test
+  void rejectsBothViewResourceAndViewReference() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+
+    assertThatThrownBy(
+            () ->
+                provider.run(
+                    viewResource,
+                    new Reference("ViewDefinition/some-view"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    mockRequestDetails(null),
+                    response))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("viewResource")
+        .hasMessageContaining("viewReference");
+  }
+
+  @Test
+  void rejectsNeitherViewResourceNorViewReference() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+
+    assertThatThrownBy(
+            () ->
+                provider.run(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    mockRequestDetails(null),
+                    response))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("viewResource")
+        .hasMessageContaining("viewReference");
+  }
+
+  // -------------------------------------------------------------------------
+  // Patient cardinality tests (US5)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void rejectsMoreThanOnePatient() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
+
+    assertThatThrownBy(
+            () ->
+                provider.run(
+                    viewResource,
+                    null,
+                    null,
+                    null,
+                    null,
+                    List.of(new Reference("Patient/1"), new Reference("Patient/2")),
+                    null,
+                    null,
+                    null,
+                    null,
+                    mockRequestDetails(null),
+                    response))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("patient");
+  }
+
+  // -------------------------------------------------------------------------
   // Error handling tests
   // -------------------------------------------------------------------------
 
@@ -427,7 +588,18 @@ class ViewDefinitionRunProviderTest {
     assertThatThrownBy(
             () ->
                 provider.run(
-                    viewResource, null, null, null, null, null, null, null, requestDetails, null))
+                    viewResource,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    requestDetails,
+                    null))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("HTTP response is required");
   }
@@ -450,7 +622,9 @@ class ViewDefinitionRunProviderTest {
                     null,
                     null,
                     null,
+                    null,
                     List.of(inlinePatient),
+                    null,
                     mockRequestDetails(null),
                     response))
         .isInstanceOf(InvalidRequestException.class)
@@ -470,6 +644,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "application/x-ndjson",
         null,
         null,
@@ -477,6 +652,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails(null),
         response);
 
@@ -503,6 +679,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "application/x-ndjson",
         null,
         null,
@@ -510,6 +687,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(patientJson),
+        null,
         mockRequestDetails(null),
         response);
 
@@ -530,6 +708,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "text/csv",
         null,
         null,
@@ -537,6 +716,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails(null),
         response);
 
@@ -588,6 +768,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "json",
         null,
         null,
@@ -595,6 +776,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails(null),
         response);
 
@@ -619,6 +801,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "json",
         null,
         null,
@@ -626,6 +809,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         patients,
+        null,
         mockRequestDetails(null),
         response);
 
@@ -645,6 +829,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "ndjson",
         null,
         null,
@@ -652,6 +837,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails(null),
         ndjsonResponse);
 
@@ -663,6 +849,7 @@ class ViewDefinitionRunProviderTest {
     final MockHttpServletResponse jsonResponse = new MockHttpServletResponse();
     provider.run(
         viewResource,
+        null,
         "json",
         null,
         null,
@@ -670,6 +857,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails(null),
         jsonResponse);
 
@@ -695,6 +883,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "json",
         null,
         new IntegerType(2),
@@ -702,6 +891,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         patients,
+        null,
         mockRequestDetails(null),
         response);
 
@@ -724,6 +914,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         null, // No _format parameter.
         null,
         null,
@@ -731,6 +922,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails("text/csv"),
         response);
 
@@ -746,6 +938,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "ndjson", // Explicit _format parameter.
         null,
         null,
@@ -753,6 +946,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails("text/csv"), // Different Accept header.
         response);
 
@@ -775,7 +969,9 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         null,
+        null,
         List.of(inlinePatient),
+        null,
         mockRequestDetails("*/*"),
         response);
 
@@ -796,6 +992,7 @@ class ViewDefinitionRunProviderTest {
 
     provider.run(
         viewResource,
+        null,
         "application/x-ndjson",
         null,
         null,
@@ -803,6 +1000,7 @@ class ViewDefinitionRunProviderTest {
         null,
         null,
         List.of(matchingPatient, nonMatchingPatient),
+        null,
         mockRequestDetails(null),
         response);
 

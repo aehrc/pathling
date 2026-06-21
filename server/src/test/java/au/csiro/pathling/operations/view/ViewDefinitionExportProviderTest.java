@@ -222,7 +222,7 @@ class ViewDefinitionExportProviderTest {
     AsyncJobContext.setCurrentJob(job);
 
     final Parameters result =
-        provider.export(null, null, null, null, null, null, null, null, requestDetails);
+        provider.export(null, null, null, null, null, null, null, null, null, requestDetails);
 
     assertNotNull(result);
     verify(exportResultRegistry).put(eq("job-1"), any(ExportResult.class));
@@ -251,7 +251,7 @@ class ViewDefinitionExportProviderTest {
     AsyncJobContext.setCurrentJob(job);
 
     final Parameters result =
-        provider.export(null, null, null, null, null, null, null, null, requestDetails);
+        provider.export(null, null, null, null, null, null, null, null, null, requestDetails);
 
     assertNull(result);
   }
@@ -263,6 +263,7 @@ class ViewDefinitionExportProviderTest {
 
     assertThrows(
         InvalidRequestException.class,
-        () -> provider.export(null, null, null, null, null, null, null, null, requestDetails));
+        () ->
+            provider.export(null, null, null, null, null, null, null, null, null, requestDetails));
   }
 }

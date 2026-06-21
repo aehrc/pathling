@@ -144,6 +144,7 @@ public class ViewDefinitionExportProvider
    * @param patientIds patient IDs to filter by
    * @param groupIds group IDs to filter by
    * @param since filter resources modified after this timestamp
+   * @param source the unsupported external data source parameter, rejected when supplied
    * @param requestDetails the request details
    * @return the parameters result containing the export manifest, or null if cancelled
    */
@@ -161,6 +162,7 @@ public class ViewDefinitionExportProvider
       @Nullable @OperationParam(name = "patient") final List<String> patientIds,
       @Nullable @OperationParam(name = "group") final List<IdType> groupIds,
       @Nullable @OperationParam(name = "_since") final InstantType since,
+      @Nullable @OperationParam(name = "source") final String source,
       @Nonnull final ServletRequestDetails requestDetails) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -185,7 +187,8 @@ public class ViewDefinitionExportProvider
                             includeHeader,
                             patientIds,
                             groupIds,
-                            since
+                            since,
+                            source
                           });
                   final String operationCacheKey =
                       computeCacheKeyComponent(
@@ -245,6 +248,17 @@ public class ViewDefinitionExportProvider
       @Nonnull final ServletRequestDetails servletRequestDetails, @Nonnull final Object[] params)
       throws InvalidRequestException {
 
+    // Reject the unsupported source parameter synchronously at kick-off, before any other work.
+    final String source = (String) params[8];
+    if (source != null && !source.isBlank()) {
+      throw new InvalidRequestException(
+          "The 'source' parameter (external data source) is not supported by this server.");
+    }
+
+    // Parse the explicit _format strictly, so an unsupported value is rejected at kick-off
+    // regardless of the view parameters.
+    final ViewExportFormat exportFormat = ViewExportFormat.fromString((String) params[3]);
+
     // Extract view parameters from the raw Parameters resource, since HAPI's automatic extraction
     // does not handle nested part arrays containing resources correctly.
     final List<ViewInput> views = extractViewInputsFromRequest(servletRequestDetails);
@@ -264,7 +278,6 @@ public class ViewDefinitionExportProvider
 
     // Other parameters are extracted correctly by HAPI.
     final String clientTrackingId = (String) params[2];
-    final String format = (String) params[3];
     final BooleanType includeHeader = (BooleanType) params[4];
 
     @SuppressWarnings("unchecked")
@@ -289,7 +302,7 @@ public class ViewDefinitionExportProvider
             servletRequestDetails.getFhirServerBase(),
             views,
             clientTrackingId,
-            ViewExportFormat.fromString(format),
+            exportFormat,
             header,
             allPatientIds,
             since);

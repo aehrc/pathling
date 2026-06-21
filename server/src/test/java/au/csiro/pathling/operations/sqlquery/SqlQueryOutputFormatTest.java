@@ -18,7 +18,9 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -126,6 +128,47 @@ class SqlQueryOutputFormatTest {
   void fromAcceptHeaderHandlesParametersOtherThanQ() {
     assertThat(SqlQueryOutputFormat.fromAcceptHeader("text/csv;charset=utf-8"))
         .isEqualTo(SqlQueryOutputFormat.CSV);
+  }
+
+  // ---------------------------------------------------------------------------
+  // fromStringStrict parsing tests (used for the explicit _format parameter)
+  // ---------------------------------------------------------------------------
+
+  @ParameterizedTest(name = "fromStringStrict(\"{0}\") returns {1}")
+  @CsvSource({
+    "ndjson, NDJSON",
+    "csv, CSV",
+    "json, JSON",
+    "parquet, PARQUET",
+    "fhir, FHIR",
+    "application/x-ndjson, NDJSON",
+    "text/csv, CSV",
+    "application/json, JSON",
+    "application/vnd.apache.parquet, PARQUET",
+    "application/fhir+json, FHIR"
+  })
+  void fromStringStrictAcceptsEverySupportedCodeAndMediaType(
+      final String input, final SqlQueryOutputFormat expected) {
+    assertThat(SqlQueryOutputFormat.fromStringStrict(input)).isEqualTo(expected);
+  }
+
+  @Test
+  void fromStringStrictDefaultsToNdjsonForNull() {
+    assertThat(SqlQueryOutputFormat.fromStringStrict(null)).isEqualTo(SqlQueryOutputFormat.NDJSON);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"", "   "})
+  void fromStringStrictDefaultsToNdjsonForBlank(final String input) {
+    assertThat(SqlQueryOutputFormat.fromStringStrict(input)).isEqualTo(SqlQueryOutputFormat.NDJSON);
+  }
+
+  @Test
+  void fromStringStrictRejectsUnknownNamingValue() {
+    // An explicit unsupported format is rejected with the unsupported value named.
+    assertThatThrownBy(() -> SqlQueryOutputFormat.fromStringStrict("xml"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("xml");
   }
 
   @Test

@@ -274,6 +274,35 @@ class SqlQueryRequestParserTest {
         .hasMessageContaining("more than once");
   }
 
+  // ---------------------------------------------------------------------------
+  // Output-format selection: strict for explicit _format, lenient for Accept.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void rejectsUnsupportedExplicitFormatNamingValue() {
+    // An explicit _format that is not supported is rejected with the value named.
+    final Library library = libraryWithSql("SELECT 1");
+    assertThatThrownBy(() -> parser.parse(library, "xml", null, null, null, null))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("xml");
+  }
+
+  @Test
+  void honoursSupportedExplicitFormat() {
+    final Library library = libraryWithSql("SELECT 1");
+    final SqlQueryRequest request = parser.parse(library, "csv", null, null, null, null);
+    assertThat(request.getOutputFormat()).isEqualTo(SqlQueryOutputFormat.CSV);
+  }
+
+  @Test
+  void fallsBackToNdjsonWhenAcceptHeaderDoesNotMatch() {
+    // An Accept header that matches no supported media type is not rejected; it defaults to NDJSON.
+    final Library library = libraryWithSql("SELECT 1");
+    final SqlQueryRequest request =
+        parser.parse(library, null, "application/xml", null, null, null);
+    assertThat(request.getOutputFormat()).isEqualTo(SqlQueryOutputFormat.NDJSON);
+  }
+
   /** Builds a minimal SQLQuery-typed Library carrying the given SQL. */
   private static Library libraryWithSql(final String sql) {
     final Library library = new Library();
