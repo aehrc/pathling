@@ -540,17 +540,15 @@ test.describe("SQL on FHIR page", () => {
             body: JSON.stringify({
               resourceType: "Parameters",
               parameter: [
-                {
-                  name: "transactionTime",
-                  valueInstant: "2025-01-01T00:00:00Z",
-                },
-                { name: "requiresAccessToken", valueBoolean: false },
+                { name: "exportId", valueString: "test-job" },
+                { name: "status", valueCode: "completed" },
+                { name: "_format", valueCode: "ndjson" },
                 {
                   name: "output",
                   part: [
                     { name: "name", valueString: "patient_demographics" },
                     {
-                      name: "url",
+                      name: "location",
                       valueUri:
                         "http://localhost:3000/fhir/$result?job=test-job-123&file=patient_demographics.ndjson",
                     },
@@ -620,18 +618,16 @@ test.describe("SQL on FHIR page", () => {
             body: JSON.stringify({
               resourceType: "Parameters",
               parameter: [
-                {
-                  name: "transactionTime",
-                  valueInstant: "2025-01-01T00:00:00Z",
-                },
-                { name: "requiresAccessToken", valueBoolean: false },
+                { name: "exportId", valueString: "test-job" },
+                { name: "status", valueCode: "completed" },
+                { name: "_format", valueCode: "ndjson" },
                 // Files intentionally in non-alphabetical order.
                 {
                   name: "output",
                   part: [
                     { name: "name", valueString: "zebra_view" },
                     {
-                      name: "url",
+                      name: "location",
                       valueUri:
                         "http://localhost:3000/fhir/$result?job=test-job-456&file=zebra_view.ndjson",
                     },
@@ -642,7 +638,7 @@ test.describe("SQL on FHIR page", () => {
                   part: [
                     { name: "name", valueString: "alpha_view" },
                     {
-                      name: "url",
+                      name: "location",
                       valueUri:
                         "http://localhost:3000/fhir/$result?job=test-job-456&file=alpha_view.ndjson",
                     },
@@ -653,7 +649,7 @@ test.describe("SQL on FHIR page", () => {
                   part: [
                     { name: "name", valueString: "middle_view" },
                     {
-                      name: "url",
+                      name: "location",
                       valueUri:
                         "http://localhost:3000/fhir/$result?job=test-job-456&file=middle_view.ndjson",
                     },
@@ -846,17 +842,15 @@ test.describe("SQL on FHIR page", () => {
             body: JSON.stringify({
               resourceType: "Parameters",
               parameter: [
-                {
-                  name: "transactionTime",
-                  valueInstant: "2025-01-01T00:00:00Z",
-                },
-                { name: "requiresAccessToken", valueBoolean: false },
+                { name: "exportId", valueString: "test-job" },
+                { name: "status", valueCode: "completed" },
+                { name: "_format", valueCode: "ndjson" },
                 {
                   name: "output",
                   part: [
                     { name: "name", valueString: "patient_demographics" },
                     {
-                      name: "url",
+                      name: "location",
                       valueUri:
                         "http://localhost:3000/fhir/$result?file=patient_demographics.ndjson",
                     },
