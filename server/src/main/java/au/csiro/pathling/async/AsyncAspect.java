@@ -141,10 +141,11 @@ public class AsyncAspect {
       final Job<?> job =
           processRequestAsynchronously(joinPoint, requestDetails, result, spark, asyncSupported);
 
-      if (asyncSupported.redirectOnComplete()) {
-        // For SQL on FHIR async operations, the kick-off body is a Parameters acknowledgement
-        // (status=accepted, exportId) returned with a 202 status, rather than an OperationOutcome.
-        // The Content-Location header is already set by processRequestAsynchronously.
+      if (asyncSupported.pattern() == AsyncPattern.STANDARD_ASYNC_PATTERN) {
+        // Under the HL7 Asynchronous Interaction Request Pattern, the kick-off body is a Parameters
+        // acknowledgement (status=accepted, exportId) returned with a 202 status, rather than an
+        // OperationOutcome. The Content-Location header is already set by
+        // processRequestAsynchronously.
         final HttpServletResponse response = requestDetails.getServletResponse();
         if (response != null) {
           response.setStatus(Constants.STATUS_HTTP_202_ACCEPTED);
@@ -235,7 +236,7 @@ public class AsyncAspect {
               final Optional<String> ownerId = getCurrentUserId(authentication);
               final Job<IBaseResource> newJob = new Job<>(jobId, operation, result, ownerId);
               newJob.setPreAsyncValidationResult(preAsyncValidationResult.result());
-              newJob.setRedirectOnComplete(asyncSupported.redirectOnComplete());
+              newJob.setPattern(asyncSupported.pattern());
               return newJob;
             });
     final HttpServletResponse response = requestDetails.getServletResponse();
