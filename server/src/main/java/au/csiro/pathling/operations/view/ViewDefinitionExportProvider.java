@@ -47,6 +47,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -64,6 +65,7 @@ import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Reference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -98,6 +100,8 @@ public class ViewDefinitionExportProvider
 
   @Nonnull private final GroupMemberService groupMemberService;
 
+  @Nonnull private final ViewExecutionHelper viewExecutionHelper;
+
   @Nonnull private final Gson gson;
 
   /**
@@ -111,7 +115,10 @@ public class ViewDefinitionExportProvider
    * @param fhirContext the FHIR context
    * @param deltaLake the queryable data source
    * @param groupMemberService the group member service
+   * @param viewExecutionHelper the helper used to resolve a view.viewReference to a stored
+   *     ViewDefinition via the shared read path
    */
+  @SuppressWarnings("java:S107")
   @Autowired
   public ViewDefinitionExportProvider(
       @Nonnull final ViewDefinitionExportExecutor executor,
@@ -121,7 +128,8 @@ public class ViewDefinitionExportProvider
       @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final QueryableDataSource deltaLake,
-      @Nonnull final GroupMemberService groupMemberService) {
+      @Nonnull final GroupMemberService groupMemberService,
+      @Nonnull final ViewExecutionHelper viewExecutionHelper) {
     this.executor = executor;
     this.jobRegistry = jobRegistry;
     this.requestTagFactory = requestTagFactory;
@@ -130,6 +138,7 @@ public class ViewDefinitionExportProvider
     this.fhirContext = fhirContext;
     this.deltaLake = deltaLake;
     this.groupMemberService = groupMemberService;
+    this.viewExecutionHelper = viewExecutionHelper;
     this.gson = ViewDefinitionGson.create();
   }
 
@@ -234,10 +243,13 @@ public class ViewDefinitionExportProvider
 
     final ViewDefinitionExportResponse response =
         new ViewDefinitionExportResponse(
-            exportRequest.originalRequest(),
             exportRequest.serverBaseUrl(),
             outputs,
-            serverConfiguration.getAuth().isEnabled());
+            ownJob.getId(),
+            exportRequest.clientTrackingId(),
+            exportRequest.format().getCode(),
+            ownJob.getStartTime(),
+            Instant.now());
 
     return response.toOutput();
   }
@@ -366,21 +378,27 @@ public class ViewDefinitionExportProvider
       if ("view".equals(param.getName())) {
         String viewName = null;
         IBaseResource viewResource = null;
+        Reference viewReference = null;
 
-        // Extract name and viewResource from the nested parts.
+        // Extract name, viewResource, and viewReference from the nested parts.
         for (final Parameters.ParametersParameterComponent part : param.getPart()) {
           if ("name".equals(part.getName()) && part.getValue() != null) {
             viewName = part.getValue().primitiveValue();
           } else if ("viewResource".equals(part.getName()) && part.getResource() != null) {
             viewResource = part.getResource();
+          } else if ("viewReference".equals(part.getName())
+              && part.getValue() instanceof final Reference reference) {
+            viewReference = reference;
           }
         }
 
-        if (viewResource != null) {
-          final FhirView fhirView = parseViewDefinition(viewResource, viewIndex);
-          views.add(new ViewInput(viewName, fhirView));
-          viewIndex++;
-        }
+        // Each view part must supply exactly one of viewResource or viewReference; resolveViewInput
+        // enforces the exclusivity (400), presence (400), and reference resolution (404).
+        final IBaseResource resolved =
+            viewExecutionHelper.resolveViewInput(viewResource, viewReference);
+        final FhirView fhirView = parseViewDefinition(resolved, viewIndex);
+        views.add(new ViewInput(viewName, fhirView));
+        viewIndex++;
       }
     }
 

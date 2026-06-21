@@ -20,51 +20,80 @@ package au.csiro.pathling.operations.view;
 import au.csiro.pathling.OperationResponse;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.net.URISyntaxException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import lombok.Getter;
 import org.apache.http.client.utils.URIBuilder;
-import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 
 /**
- * Represents the response from a ViewDefinition export operation, containing the export manifest.
+ * Represents the completion manifest returned at the result URL of a {@code $viewdefinition-export}
+ * operation. The manifest follows the SQL on FHIR shape: a required {@code exportId} and {@code
+ * status}, the echoed {@code clientTrackingId} and {@code _format}, the export timing fields, and
+ * one {@code output} per exported view with a {@code name} and one or more {@code location}
+ * download URLs.
  *
  * @author John Grimes
  */
 @Getter
 public class ViewDefinitionExportResponse implements OperationResponse<Parameters> {
 
-  @Nonnull private final String kickOffRequestUrl;
-
   @Nonnull private final String serverBaseUrl;
 
   @Nonnull private final List<ViewExportOutput> outputs;
 
-  /** Whether an access token is required to retrieve results. */
-  private final boolean requiresAccessToken;
+  /** The server-assigned export job identifier. */
+  @Nonnull private final String exportId;
+
+  /** The client-supplied tracking identifier, echoed only when present. */
+  @Nullable private final String clientTrackingId;
+
+  /** The effective output format code (e.g. {@code ndjson}). */
+  @Nonnull private final String format;
+
+  /** The time the export job was created (kick-off time). */
+  @Nonnull private final Instant exportStartTime;
+
+  /** The time the manifest was built on completion. */
+  @Nonnull private final Instant exportEndTime;
 
   /**
    * Creates a new ViewDefinitionExportResponse.
    *
-   * @param kickOffRequestUrl the original export request URL (used in the manifest)
    * @param serverBaseUrl the FHIR server base URL (used for constructing result URLs)
    * @param outputs the list of view export outputs
-   * @param requiresAccessToken whether access token is required to retrieve results
+   * @param exportId the server-assigned export job identifier
+   * @param clientTrackingId the client-supplied tracking identifier, or null if none was supplied
+   * @param format the effective output format code
+   * @param exportStartTime the export job creation (kick-off) time
+   * @param exportEndTime the time the manifest is built on completion
    */
+  @SuppressWarnings("java:S107")
   public ViewDefinitionExportResponse(
-      @Nonnull final String kickOffRequestUrl,
       @Nonnull final String serverBaseUrl,
       @Nonnull final List<ViewExportOutput> outputs,
-      final boolean requiresAccessToken) {
-    this.kickOffRequestUrl = kickOffRequestUrl;
+      @Nonnull final String exportId,
+      @Nullable final String clientTrackingId,
+      @Nonnull final String format,
+      @Nonnull final Instant exportStartTime,
+      @Nonnull final Instant exportEndTime) {
     this.serverBaseUrl = serverBaseUrl;
     this.outputs = outputs;
-    this.requiresAccessToken = requiresAccessToken;
+    this.exportId = exportId;
+    this.clientTrackingId = clientTrackingId;
+    this.format = format;
+    this.exportStartTime = exportStartTime;
+    this.exportEndTime = exportEndTime;
   }
 
   @Nonnull
@@ -76,27 +105,44 @@ public class ViewDefinitionExportResponse implements OperationResponse<Parameter
     final String normalizedBaseUrl =
         serverBaseUrl.endsWith("/") ? serverBaseUrl : serverBaseUrl + "/";
 
-    // Add transactionTime parameter.
-    parameters.addParameter().setName("transactionTime").setValue(InstantType.now());
+    parameters.addParameter().setName("exportId").setValue(new StringType(exportId));
+    parameters.addParameter().setName("status").setValue(new CodeType("completed"));
 
-    // Add request parameter.
-    parameters.addParameter().setName("request").setValue(new UriType(kickOffRequestUrl));
+    // Echo the client tracking id only when one was supplied at kick-off.
+    if (clientTrackingId != null && !clientTrackingId.isBlank()) {
+      parameters
+          .addParameter()
+          .setName("clientTrackingId")
+          .setValue(new StringType(clientTrackingId));
+    }
 
-    // Add requiresAccessToken parameter.
+    parameters.addParameter().setName("_format").setValue(new CodeType(format));
+
     parameters
         .addParameter()
-        .setName("requiresAccessToken")
-        .setValue(new BooleanType(requiresAccessToken));
+        .setName("exportStartTime")
+        .setValue(new InstantType(Date.from(exportStartTime)));
+    parameters
+        .addParameter()
+        .setName("exportEndTime")
+        .setValue(new InstantType(Date.from(exportEndTime)));
 
-    // Add output parameters.
+    // Whole seconds between start and end, never negative.
+    final long durationSeconds =
+        Math.max(0L, Duration.between(exportStartTime, exportEndTime).toSeconds());
+    parameters
+        .addParameter()
+        .setName("exportDuration")
+        .setValue(new IntegerType((int) durationSeconds));
+
+    // One output per view, with a name and one or more location parts.
     for (final ViewExportOutput output : outputs) {
+      final ParametersParameterComponent outputParam = parameters.addParameter().setName("output");
+      outputParam.addPart().setName("name").setValue(new StringType(output.name()));
       for (final String fileUrl : output.fileUrls()) {
-        final ParametersParameterComponent outputParam =
-            parameters.addParameter().setName("output");
-        outputParam.addPart().setName("name").setValue(new StringType(output.name()));
         outputParam
             .addPart()
-            .setName("url")
+            .setName("location")
             .setValue(new UriType(buildResultUrl(normalizedBaseUrl, fileUrl)));
       }
     }

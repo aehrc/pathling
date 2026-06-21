@@ -127,8 +127,302 @@ class ViewDefinitionExportProviderIT {
   }
 
   // -------------------------------------------------------------------------
+  // Kick-off acknowledgement body (US10)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void kickOffBodyIsParametersAcknowledgement() {
+    final byte[] body =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$viewdefinition-export")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .header("Prefer", "respond-async")
+            .bodyValue(createExportParametersWithNestedView())
+            .exchange()
+            .expectStatus()
+            .isAccepted()
+            .expectHeader()
+            .exists("Content-Location")
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+
+    final Map<String, Object> manifest = parseParameters(body);
+    assertThat(manifest.get("resourceType")).isEqualTo("Parameters");
+    assertThat(findParamValue(manifest, "status", "valueCode")).isEqualTo("accepted");
+    assertThat(findParamValue(manifest, "exportId", "valueString")).isNotNull();
+  }
+
+  // -------------------------------------------------------------------------
+  // Synchronous kick-off rejections (US1, US8)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void unsupportedFormatRejectedAtKickOff() {
+    final Map<String, Object> parameters = parametersWithNestedView();
+    addSimpleParameter(parameters, "_format", "valueString", "json");
+
+    final byte[] body =
+        kickOff(gson.toJson(parameters))
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    assertThat(new String(body, java.nio.charset.StandardCharsets.UTF_8)).contains("json");
+  }
+
+  @Test
+  void sourceRejectedAtKickOff() {
+    final Map<String, Object> parameters = parametersWithNestedView();
+    addSimpleParameter(parameters, "source", "valueString", "s3://bucket/data");
+
+    final byte[] body =
+        kickOff(gson.toJson(parameters))
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    assertThat(new String(body, java.nio.charset.StandardCharsets.UTF_8)).contains("source");
+  }
+
+  @Test
+  void viewPartWithBothResourceAndReferenceRejectedAtKickOff() {
+    final Map<String, Object> viewPart = viewPartWithResource();
+    @SuppressWarnings("unchecked")
+    final List<Map<String, Object>> parts = (List<Map<String, Object>>) viewPart.get("part");
+    parts.add(referencePart("viewReference", "ViewDefinition/some-view"));
+
+    final Map<String, Object> parameters = parametersWith(viewPart);
+    kickOff(gson.toJson(parameters)).expectStatus().isBadRequest();
+  }
+
+  @Test
+  void viewPartWithNeitherResourceNorReferenceRejectedAtKickOff() {
+    final Map<String, Object> viewPart = new LinkedHashMap<>();
+    viewPart.put("name", "view");
+    viewPart.put("part", new ArrayList<>(List.of(simplePart("name", "valueString", "empty"))));
+
+    final Map<String, Object> parameters = parametersWith(viewPart);
+    kickOff(gson.toJson(parameters)).expectStatus().isBadRequest();
+  }
+
+  @Test
+  void unresolvedViewReferenceRejectedAtKickOffWith404() {
+    final Map<String, Object> viewPart = new LinkedHashMap<>();
+    viewPart.put("name", "view");
+    viewPart.put(
+        "part",
+        new ArrayList<>(List.of(referencePart("viewReference", "ViewDefinition/does-not-exist"))));
+
+    final Map<String, Object> parameters = parametersWith(viewPart);
+    kickOff(gson.toJson(parameters)).expectStatus().isNotFound();
+  }
+
+  // -------------------------------------------------------------------------
+  // Completion manifest shape (US9)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void completionManifestHasSpecShape() throws InterruptedException {
+    final Map<String, Object> parameters = parametersWithNestedView();
+    addSimpleParameter(parameters, "clientTrackingId", "valueString", "tracking-xyz");
+
+    final Map<String, Object> manifest = exportToCompletion(gson.toJson(parameters));
+
+    assertThat(findParamValue(manifest, "exportId", "valueString")).isNotNull();
+    assertThat(findParamValue(manifest, "status", "valueCode")).isEqualTo("completed");
+    assertThat(findParamValue(manifest, "clientTrackingId", "valueString"))
+        .isEqualTo("tracking-xyz");
+    assertThat(findParamValue(manifest, "_format", "valueCode")).isEqualTo("ndjson");
+    assertThat(findParamValue(manifest, "exportStartTime", "valueInstant")).isNotNull();
+    assertThat(findParamValue(manifest, "exportEndTime", "valueInstant")).isNotNull();
+    assertThat(findParam(manifest, "exportDuration")).isNotNull();
+
+    // Each output has a name and one or more location parts; no url part and no Bulk Data fields.
+    final Map<String, Object> output = findParam(manifest, "output");
+    assertThat(output).isNotNull();
+    assertThat(findPartValue(output, "name", "valueString")).isNotNull();
+    assertThat(findPartValue(output, "location", "valueUri")).contains("$result");
+    assertThat(findPart(output, "url")).isNull();
+
+    assertThat(findParam(manifest, "transactionTime")).isNull();
+    assertThat(findParam(manifest, "request")).isNull();
+    assertThat(findParam(manifest, "requiresAccessToken")).isNull();
+  }
+
+  @Test
+  void completionManifestOmitsClientTrackingIdWhenAbsent() throws InterruptedException {
+    final Map<String, Object> manifest = exportToCompletion(createExportParametersWithNestedView());
+    assertThat(findParam(manifest, "clientTrackingId")).isNull();
+  }
+
+  // -------------------------------------------------------------------------
   // Helper methods
   // -------------------------------------------------------------------------
+
+  /** Posts a kick-off request with the async preference and returns the response spec. */
+  @Nonnull
+  private WebTestClient.ResponseSpec kickOff(@Nonnull final String parametersJson) {
+    return webTestClient
+        .post()
+        .uri("http://localhost:" + port + "/fhir/$viewdefinition-export")
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .header("Prefer", "respond-async")
+        .bodyValue(parametersJson)
+        .exchange();
+  }
+
+  /** Runs an export to completion and returns the parsed result manifest. */
+  @Nonnull
+  private Map<String, Object> exportToCompletion(@Nonnull final String parametersJson)
+      throws InterruptedException {
+    final String contentLocation =
+        kickOff(parametersJson)
+            .expectStatus()
+            .isAccepted()
+            .returnResult(String.class)
+            .getResponseHeaders()
+            .getFirst("Content-Location");
+    assertThat(contentLocation).isNotNull();
+
+    String resultLocation = null;
+    for (int attempt = 0; attempt < 60 && resultLocation == null; attempt++) {
+      final var poll =
+          webTestClient
+              .get()
+              .uri(contentLocation)
+              .header("Accept", "application/fhir+json")
+              .exchange()
+              .returnResult(String.class);
+      final HttpStatus status = (HttpStatus) poll.getStatus();
+      if (status == HttpStatus.SEE_OTHER) {
+        resultLocation = poll.getResponseHeaders().getFirst("Location");
+      } else if (status == HttpStatus.ACCEPTED) {
+        Thread.sleep(500);
+      } else {
+        throw new AssertionError("Unexpected poll status: " + status);
+      }
+    }
+    assertThat(resultLocation).as("Expected a 303 result location within the timeout").isNotNull();
+
+    final byte[] body =
+        webTestClient
+            .get()
+            .uri(resultLocation)
+            .header("Accept", "application/fhir+json")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    return parseParameters(body);
+  }
+
+  @Nonnull
+  private Map<String, Object> parametersWithNestedView() {
+    return parametersWith(viewPartWithResource());
+  }
+
+  @Nonnull
+  private Map<String, Object> viewPartWithResource() {
+    final Map<String, Object> viewParam = new LinkedHashMap<>();
+    viewParam.put("name", "view");
+    final List<Map<String, Object>> parts = new ArrayList<>();
+    final Map<String, Object> viewResourcePart = new LinkedHashMap<>();
+    viewResourcePart.put("name", "viewResource");
+    viewResourcePart.put("resource", createSimplePatientViewDefinition());
+    parts.add(viewResourcePart);
+    viewParam.put("part", parts);
+    return viewParam;
+  }
+
+  @Nonnull
+  private Map<String, Object> parametersWith(@Nonnull final Map<String, Object> viewParam) {
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    parameters.put("parameter", new ArrayList<>(List.of(viewParam)));
+    return parameters;
+  }
+
+  @SuppressWarnings("unchecked")
+  private void addSimpleParameter(
+      @Nonnull final Map<String, Object> parameters,
+      @Nonnull final String name,
+      @Nonnull final String valueKey,
+      @Nonnull final String value) {
+    ((List<Map<String, Object>>) parameters.get("parameter"))
+        .add(simplePart(name, valueKey, value));
+  }
+
+  @Nonnull
+  private Map<String, Object> simplePart(
+      @Nonnull final String name, @Nonnull final String valueKey, @Nonnull final String value) {
+    final Map<String, Object> part = new LinkedHashMap<>();
+    part.put("name", name);
+    part.put(valueKey, value);
+    return part;
+  }
+
+  @Nonnull
+  private Map<String, Object> referencePart(
+      @Nonnull final String name, @Nonnull final String reference) {
+    final Map<String, Object> part = new LinkedHashMap<>();
+    part.put("name", name);
+    part.put("valueReference", Map.of("reference", reference));
+    return part;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nonnull
+  private Map<String, Object> parseParameters(@Nonnull final byte[] body) {
+    return gson.fromJson(new String(body, java.nio.charset.StandardCharsets.UTF_8), Map.class);
+  }
+
+  @SuppressWarnings("unchecked")
+  @jakarta.annotation.Nullable
+  private static Map<String, Object> findParam(
+      @Nonnull final Map<String, Object> parameters, @Nonnull final String name) {
+    final List<Map<String, Object>> list = (List<Map<String, Object>>) parameters.get("parameter");
+    if (list == null) {
+      return null;
+    }
+    return list.stream().filter(p -> name.equals(p.get("name"))).findFirst().orElse(null);
+  }
+
+  @jakarta.annotation.Nullable
+  private static String findParamValue(
+      @Nonnull final Map<String, Object> parameters,
+      @Nonnull final String name,
+      @Nonnull final String valueKey) {
+    final Map<String, Object> param = findParam(parameters, name);
+    return param == null ? null : (String) param.get(valueKey);
+  }
+
+  @SuppressWarnings("unchecked")
+  @jakarta.annotation.Nullable
+  private static Map<String, Object> findPart(
+      @Nonnull final Map<String, Object> param, @Nonnull final String partName) {
+    final List<Map<String, Object>> parts = (List<Map<String, Object>>) param.get("part");
+    if (parts == null) {
+      return null;
+    }
+    return parts.stream().filter(p -> partName.equals(p.get("name"))).findFirst().orElse(null);
+  }
+
+  @jakarta.annotation.Nullable
+  private static String findPartValue(
+      @Nonnull final Map<String, Object> param,
+      @Nonnull final String partName,
+      @Nonnull final String valueKey) {
+    final Map<String, Object> part = findPart(param, partName);
+    return part == null ? null : (String) part.get(valueKey);
+  }
 
   /**
    * Creates a Parameters JSON with nested view structure matching what the UI sends.
