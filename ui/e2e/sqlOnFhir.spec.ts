@@ -462,6 +462,46 @@ test.describe("SQL on FHIR page", () => {
       // Verify error message is displayed.
       await expect(page.getByText(/View run failed/)).toBeVisible();
     });
+
+    test("displays the 422 message for an invalid custom view definition", async ({
+      page,
+    }) => {
+      // An invalid custom ViewDefinition now returns 422; the OperationOutcome message must be
+      // surfaced clearly rather than as a generic failure (US3).
+      const errorOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [
+          {
+            severity: "error",
+            diagnostics: "Invalid ViewDefinition: bad path",
+          },
+        ],
+      };
+
+      await mockMetadata(page);
+      await mockViewDefinitions(page);
+      await mockViewRun(page, { status: 422, body: errorOutcome });
+
+      await page.goto("/admin/sql-on-fhir");
+
+      // Switch to the custom JSON tab and provide a view definition.
+      await page.getByRole("tab", { name: "Provide JSON" }).click();
+      const jsonInput = page.locator("textarea").last();
+      await jsonInput.fill(
+        JSON.stringify({
+          resourceType: "ViewDefinition",
+          name: "Invalid View",
+          resource: "Patient",
+          status: "active",
+          select: [{ column: [{ path: "bad.path", name: "x" }] }],
+        }),
+      );
+
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // The OperationOutcome diagnostics are shown clearly.
+      await expect(page.getByText(/Invalid ViewDefinition/)).toBeVisible();
+    });
   });
 
   test.describe("Export", () => {
