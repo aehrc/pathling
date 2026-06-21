@@ -26,18 +26,39 @@ type-level forms accept the Library inline or by reference.
 
 ## Parameters
 
-| Name             | Cardinality | Type       | Description                                                                                                                                                  |
-| ---------------- | ----------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `queryResource`  | 0..1        | Resource   | An inline Library resource conforming to the SQLQuery profile. Mutually exclusive with `queryReference`.                                                     |
-| `queryReference` | 0..1        | Reference  | A relative literal (`Library/[id]`) or canonical (`[url]` or `[url]\|[version]`) reference to a stored Library. Resolves against the server's Library store. |
-| `_format`        | 0..1        | code       | Output format. Accepts `ndjson` (default), `csv`, `json`, `parquet`, or `fhir`.                                                                              |
-| `header`         | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                                                                                    |
-| `_limit`         | 0..1        | integer    | Maximum number of rows to return. Always clamped to the server-configured `maxRows` ceiling.                                                                 |
-| `parameters`     | 0..1        | Parameters | Runtime parameter bindings. Each entry's name must match a `Library.parameter` declaration, and its `value[x]` must match the declared FHIR type.            |
+| Name             | Cardinality | Type       | Description                                                                                                                                                    |
+| ---------------- | ----------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `queryResource`  | 0..1        | Resource   | An inline Library resource conforming to the SQLQuery profile. Mutually exclusive with `queryReference`.                                                       |
+| `queryReference` | 0..1        | Reference  | A relative literal (`Library/[id]`) or canonical (`[url]` or `[url]\|[version]`) reference to a stored Library. Resolves against the server's Library store.   |
+| `_format`        | 0..1        | code       | Output format. Accepts `ndjson` (default), `csv`, `json`, `parquet`, or `fhir` (or the corresponding media type). An unsupported explicit value returns `400`. |
+| `header`         | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                                                                                      |
+| `_limit`         | 0..1        | integer    | Maximum number of rows to return. Always clamped to the server-configured `maxRows` ceiling.                                                                   |
+| `parameters`     | 0..1        | Parameters | Runtime parameter bindings. Each entry's name must match a `Library.parameter` declaration, and its `value[x]` must match the declared FHIR type.              |
 
 Exactly one of `queryResource` and `queryReference` must be supplied to the
 system and type-level forms. The instance-level form ignores both and uses the
 Library identified in the URL.
+
+The `source` parameter (an external data source) is not supported by this
+server; supplying it returns `400 Bad Request` with an OperationOutcome at every
+level, whether supplied in a POST `Parameters` body or as a GET query parameter.
+
+## Status codes
+
+| Status                      | Condition                                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `200 OK`                    | A supported format (explicit or defaulted) and successful execution.                                     |
+| `400 Bad Request`           | The unsupported `source` parameter, an unsupported explicit `_format`, or a malformed request/parameter. |
+| `422 Unprocessable Entity`  | `_format=fhir` where a result column has a type that cannot be represented as a FHIR value.              |
+| `500 Internal Server Error` | A genuine SQL execution or infrastructure fault.                                                         |
+
+When no `_format` is supplied, the format is negotiated from the `Accept` header,
+falling back to NDJSON when nothing matches.
+
+The operation declares the SQL on FHIR spec canonical
+`http://sql-on-fhir.org/OperationDefinition/$sqlquery-run` in the server
+[CapabilityStatement](https://hl7.org/fhir/R4/capabilitystatement.html); the
+server does not host a Pathling-authored OperationDefinition for it.
 
 ## The Library resource
 
@@ -200,6 +221,11 @@ When `_format` is `fhir`, the response is a FHIR Parameters resource
 (`application/fhir+json`) with one repeating `row` parameter per result row.
 Each column appears as a part with a typed `value[x]`, mapped from the SQL
 result schema.
+
+If a result column has a type that cannot be represented as a FHIR value (for
+example an array or struct), the server responds `422 Unprocessable Entity` with
+an OperationOutcome identifying the column. The same query in a flat format
+(`ndjson`, `csv`, `json`, or `parquet`) succeeds.
 
 ## SQL constraints
 

@@ -35,6 +35,8 @@ import org.springframework.stereotype.Component;
 /**
  * Orchestrates the {@code $sqlquery-run} operation by chaining the parser, view resolver, executor
  * and result streamer.
+ *
+ * @author John Grimes
  */
 @Component
 public class SqlQueryExecutionHelper {

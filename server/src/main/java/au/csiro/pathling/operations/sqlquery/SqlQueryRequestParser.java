@@ -46,6 +46,8 @@ import org.springframework.stereotype.Component;
  * Validates and normalises the raw HTTP inputs of a {@code $sqlquery-run} invocation into a {@link
  * SqlQueryRequest}. Has no Spark dependency; performs only structural FHIR-level validation and
  * parsing.
+ *
+ * @author John Grimes
  */
 @Slf4j
 @Component
