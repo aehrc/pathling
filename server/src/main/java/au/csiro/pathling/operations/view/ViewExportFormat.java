@@ -72,9 +72,11 @@ public enum ViewExportFormat {
     if (format == null || format.isBlank()) {
       return NDJSON;
     }
-    final String normalised = format.toLowerCase().trim();
+    // Strip any media-type parameters (e.g. "text/csv;charset=utf-8" -> "text/csv") so a supported
+    // media type carrying parameters is treated as that format.
+    final String base = format.split(";", 2)[0].trim().toLowerCase();
     return Arrays.stream(values())
-        .filter(f -> f.code.equals(normalised) || f.contentType.equals(normalised))
+        .filter(f -> f.code.equals(base) || f.contentType.equals(base))
         .findFirst()
         .orElseThrow(
             () ->

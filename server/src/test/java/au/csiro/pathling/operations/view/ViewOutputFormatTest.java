@@ -106,6 +106,13 @@ class ViewOutputFormatTest {
   }
 
   @Test
+  void fromStringStrictAcceptsMediaTypeWithParameters() {
+    // A supported media type carrying parameters is treated as that format, not rejected.
+    assertThat(ViewOutputFormat.fromStringStrict("text/csv;charset=utf-8"))
+        .isEqualTo(ViewOutputFormat.CSV);
+  }
+
+  @Test
   void fromStringStrictRejectsUnknownNamingValue() {
     // An explicit unsupported format is rejected with the unsupported value named.
     assertThatThrownBy(() -> ViewOutputFormat.fromStringStrict("parquet"))

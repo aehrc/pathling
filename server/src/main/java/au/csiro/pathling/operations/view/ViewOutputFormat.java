@@ -89,12 +89,16 @@ public enum ViewOutputFormat {
                         .formatted(format)));
   }
 
-  /** Matches a format string against the supported codes and content types. */
+  /**
+   * Matches a format string against the supported codes and content types. Any media-type
+   * parameters (e.g. {@code text/csv;charset=utf-8}) are stripped before matching, so a supported
+   * media type carrying parameters is treated as that format.
+   */
   @Nonnull
   private static Optional<ViewOutputFormat> matchFormat(@Nonnull final String format) {
-    final String normalised = format.toLowerCase().trim();
+    final String base = format.split(";", 2)[0].trim().toLowerCase();
     return Arrays.stream(values())
-        .filter(f -> f.code.equals(normalised) || f.contentType.equals(normalised))
+        .filter(f -> f.code.equals(base) || f.contentType.equals(base))
         .findFirst();
   }
 
