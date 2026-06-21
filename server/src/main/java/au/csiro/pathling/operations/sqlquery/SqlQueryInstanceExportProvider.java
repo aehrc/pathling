@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import au.csiro.pathling.async.AsyncPattern;
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.security.OperationAccess;
@@ -107,7 +108,7 @@ public class SqlQueryInstanceExportProvider
   @SuppressWarnings({"unused", "java:S107"})
   @Operation(name = "$sqlquery-export", idempotent = true)
   @OperationAccess("sqlquery-export")
-  @AsyncSupported(redirectOnComplete = true)
+  @AsyncSupported(pattern = AsyncPattern.STANDARD_ASYNC_PATTERN)
   @Nullable
   public Parameters exportType(
       @Nullable @OperationParam(name = "clientTrackingId") final String clientTrackingId,
@@ -138,7 +139,7 @@ public class SqlQueryInstanceExportProvider
   @SuppressWarnings({"unused", "java:S107"})
   @Operation(name = "$sqlquery-export", idempotent = true)
   @OperationAccess("sqlquery-export")
-  @AsyncSupported(redirectOnComplete = true)
+  @AsyncSupported(pattern = AsyncPattern.STANDARD_ASYNC_PATTERN)
   @Nullable
   public Parameters exportInstance(
       @IdParam final IdType libraryId,

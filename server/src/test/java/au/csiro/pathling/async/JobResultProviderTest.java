@@ -93,7 +93,7 @@ class JobResultProviderTest {
     final CompletableFuture<IBaseResource> future =
         CompletableFuture.completedFuture(expectedResult);
     final Job<IBaseResource> job = new Job<>(JOB_ID, "view-export", future, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     final IBaseResource result = jobResultProvider.jobResult(JOB_ID, request, response);
@@ -115,7 +115,7 @@ class JobResultProviderTest {
             new InvalidRequestException("Test validation error")));
 
     final Job<IBaseResource> job = new Job<>(JOB_ID, "view-export", future, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     // The error should be converted and thrown.
@@ -140,7 +140,7 @@ class JobResultProviderTest {
     // Attempting to get the result of an in-progress job should return 400 Bad Request.
     final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
     final Job<IBaseResource> job = new Job<>(JOB_ID, "view-export", future, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     assertThatThrownBy(() -> jobResultProvider.jobResult(JOB_ID, request, response))
@@ -155,7 +155,7 @@ class JobResultProviderTest {
     final CompletableFuture<IBaseResource> future =
         CompletableFuture.completedFuture(expectedResult);
     final Job<IBaseResource> job = new Job<>(JOB_ID, "view-export", future, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     // Set a response modification (like the Expires header from ViewDefinitionExportProvider).
     job.setResponseModification(
         httpServletResponse -> httpServletResponse.addHeader("Expires", "some-date"));
@@ -188,7 +188,7 @@ class JobResultProviderTest {
     // Job owned by "original-owner".
     final Job<IBaseResource> job =
         new Job<>(JOB_ID, "view-export", future, Optional.of("original-owner"));
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     assertThatThrownBy(() -> jobResultProvider.jobResult(JOB_ID, request, response))
@@ -217,7 +217,7 @@ class JobResultProviderTest {
         CompletableFuture.completedFuture(expectedResult);
     final Job<IBaseResource> job =
         new Job<>(JOB_ID, "view-export", future, Optional.of("job-owner-123"));
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     final IBaseResource result = jobResultProvider.jobResult(JOB_ID, request, response);
@@ -231,7 +231,7 @@ class JobResultProviderTest {
     final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
     future.cancel(false);
     final Job<IBaseResource> job = new Job<>(JOB_ID, "view-export", future, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     assertThatThrownBy(() -> jobResultProvider.jobResult(JOB_ID, request, response))
@@ -254,7 +254,7 @@ class JobResultProviderTest {
     }
 
     final Job<IBaseResource> job = new Job<>(JOB_ID, "view-export", mockFuture, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     assertThatThrownBy(() -> jobResultProvider.jobResult(JOB_ID, request, response))
@@ -269,7 +269,7 @@ class JobResultProviderTest {
     future.completeExceptionally(new InvalidRequestException("Direct error"));
 
     final Job<IBaseResource> job = new Job<>(JOB_ID, "view-export", future, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     assertThatThrownBy(() -> jobResultProvider.jobResult(JOB_ID, request, response))
@@ -287,7 +287,7 @@ class JobResultProviderTest {
             "Outer wrapper", new InvalidRequestException("Nested error message")));
 
     final Job<IBaseResource> job = new Job<>(JOB_ID, "view-export", future, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     assertThatThrownBy(() -> jobResultProvider.jobResult(JOB_ID, request, response))

@@ -79,10 +79,13 @@ public class Job<T> {
   @Setter private boolean markedAsDeleted;
 
   /**
-   * When true, completed jobs return 303 See Other with redirect to result endpoint, rather than
-   * returning the result inline. This follows the SQL on FHIR unify-async specification.
+   * The asynchronous wire contract this job follows. Under {@link
+   * AsyncPattern#STANDARD_ASYNC_PATTERN} (the HL7 Asynchronous Interaction Request Pattern, <a
+   * href="https://build.fhir.org/ig/HL7/api-incubator-ig/branches/simplified-async-interaction/async-interaction.html">spec</a>)
+   * a completed job returns 303 See Other with a redirect to the result endpoint, rather than
+   * returning the result inline. Defaults to {@link AsyncPattern#BULK_DATA} and is never null.
    */
-  @Setter private boolean redirectOnComplete;
+  @Setter private AsyncPattern pattern = AsyncPattern.BULK_DATA;
 
   /**
    * The last calculated progress percentage. When a job is at 100% that does not always indicate

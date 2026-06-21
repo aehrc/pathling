@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.view;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
 import au.csiro.pathling.async.AsyncJobContext;
+import au.csiro.pathling.async.AsyncPattern;
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
@@ -160,7 +161,7 @@ public class ViewDefinitionExportProvider
   @SuppressWarnings({"unused", "java:S107"})
   @Operation(name = "viewdefinition-export", idempotent = true)
   @OperationAccess("view-export")
-  @AsyncSupported(redirectOnComplete = true)
+  @AsyncSupported(pattern = AsyncPattern.STANDARD_ASYNC_PATTERN)
   @Nullable
   public Parameters export(
       @Nullable @OperationParam(name = "view.name") final List<String> viewNames,

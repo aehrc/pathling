@@ -529,7 +529,7 @@ class ViewDefinitionExportProviderIT {
   }
 
   // -------------------------------------------------------------------------
-  // 303 Redirect pattern tests (SQL on FHIR unify-async specification)
+  // 303 Redirect pattern tests (HL7 Asynchronous Interaction Request Pattern)
   // -------------------------------------------------------------------------
 
   /**
@@ -591,7 +591,7 @@ class ViewDefinitionExportProviderIT {
         Thread.sleep(500);
       } else if (status == HttpStatus.OK) {
         // Legacy behaviour without redirect - test passes but logs warning.
-        log.warn("Got 200 OK instead of 303. This indicates redirectOnComplete=false.");
+        log.warn("Got 200 OK instead of 303. This indicates the BULK_DATA pattern.");
         return;
       } else {
         throw new AssertionError("Unexpected status: " + status);
