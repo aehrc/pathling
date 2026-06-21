@@ -176,6 +176,11 @@ public class SqlValidator {
           "org.apache.spark.sql.catalyst.expressions.VariableReference",
           "org.apache.spark.sql.catalyst.expressions.AttributeReference",
           "org.apache.spark.sql.catalyst.expressions.BoundReference",
+          // Named and positional query parameters (e.g. ":name", "?"). These are leaf, unevaluable
+          // value placeholders bound at execution time via the parameterised SQL API, so they carry
+          // no code-execution risk.
+          "org.apache.spark.sql.catalyst.analysis.NamedParameter",
+          "org.apache.spark.sql.catalyst.analysis.PosParameter",
           // Arithmetic.
           "org.apache.spark.sql.catalyst.expressions.Add",
           "org.apache.spark.sql.catalyst.expressions.Subtract",
