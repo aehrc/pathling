@@ -30,6 +30,7 @@ import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Reference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -60,17 +61,21 @@ public class ViewDefinitionRunProvider {
   }
 
   /**
-   * Executes a ViewDefinition provided inline and returns the results in NDJSON or CSV format with
-   * chunked streaming. This is the system-level operation at /fhir/$viewdefinition-run.
+   * Executes a ViewDefinition supplied inline ({@code viewResource}) or by reference ({@code
+   * viewReference}) and returns the results in the negotiated format with chunked streaming. This
+   * is the system-level operation at /fhir/$viewdefinition-run.
    *
-   * @param viewResource the ViewDefinition resource
-   * @param format the output format (ndjson or csv), overrides Accept header if provided
+   * @param viewResource the inline ViewDefinition resource (mutually exclusive with viewReference)
+   * @param viewReference a reference to a stored ViewDefinition (mutually exclusive with
+   *     viewResource)
+   * @param format the output format (ndjson, csv, or json), overrides Accept header if provided
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
-   * @param patientIds patient IDs to filter by
-   * @param groupIds group IDs to filter by
+   * @param patient a single patient reference to filter by
+   * @param group group references to filter by
    * @param since filter by meta.lastUpdated >= value
    * @param inlineResources FHIR resources to use instead of the main data source
+   * @param source the unsupported external data source parameter, rejected when supplied
    * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
@@ -78,21 +83,30 @@ public class ViewDefinitionRunProvider {
   @Operation(name = "$viewdefinition-run", idempotent = true, manualResponse = true)
   @OperationAccess("view-run")
   public void run(
-      @Nonnull @OperationParam(name = "viewResource") final IBaseResource viewResource,
+      @Nullable @OperationParam(name = "viewResource") final IBaseResource viewResource,
+      @Nullable @OperationParam(name = "viewReference") final Reference viewReference,
       @Nullable @OperationParam(name = "_format") final String format,
       @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
       @Nullable @OperationParam(name = "_limit") final IntegerType limit,
-      @Nullable @OperationParam(name = "patient") final List<String> patientIds,
-      @Nullable @OperationParam(name = "group") final List<IdType> groupIds,
+      @Nullable @OperationParam(name = "patient", max = OperationParam.MAX_UNLIMITED)
+          final List<Reference> patient,
+      @Nullable @OperationParam(name = "group", max = OperationParam.MAX_UNLIMITED)
+          final List<Reference> group,
       @Nullable @OperationParam(name = "_since") final InstantType since,
       @Nullable @OperationParam(name = "resource") final List<String> inlineResources,
+      @Nullable @OperationParam(name = "source") final String source,
       @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
 
+    viewExecutionHelper.rejectSourceParameter(source);
+
+    final IBaseResource view = viewExecutionHelper.resolveViewInput(viewResource, viewReference);
+    final List<String> patientIds = viewExecutionHelper.toPatientIds(patient);
+    final List<IdType> groupIds = viewExecutionHelper.toGroupIds(group);
     final String acceptHeader = requestDetails.getServletRequest().getHeader("Accept");
 
     viewExecutionHelper.executeView(
-        viewResource,
+        view,
         format,
         acceptHeader,
         includeHeader,

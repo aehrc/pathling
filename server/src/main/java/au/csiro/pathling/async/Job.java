@@ -19,6 +19,7 @@ package au.csiro.pathling.async;
 
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
@@ -55,6 +56,12 @@ public class Job<T> {
 
   /** The identifier of the user who owns this job, if authenticated. */
   @Nonnull private final Optional<String> ownerId;
+
+  /**
+   * The time at which this job was created (kick-off time). Used to populate the SQL on FHIR export
+   * manifest's {@code exportStartTime} and to compute {@code exportDuration}.
+   */
+  @Nonnull private final Instant startTime;
 
   /** The total number of stages in this job, used to calculate progress percentage. */
   private int totalStages;
@@ -102,6 +109,7 @@ public class Job<T> {
     this.operation = operation;
     this.result = result;
     this.ownerId = ownerId;
+    this.startTime = Instant.now();
     this.responseModification = httpServletResponse -> {};
   }
 

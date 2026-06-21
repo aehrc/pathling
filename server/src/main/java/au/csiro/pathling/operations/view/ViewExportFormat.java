@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.view;
 
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Arrays;
@@ -55,10 +56,16 @@ public enum ViewExportFormat {
   }
 
   /**
-   * Parses a format string into a ViewExportFormat.
+   * Parses an explicit {@code _format} parameter value into a ViewExportFormat. A null or blank
+   * value maps to the default (NDJSON); a non-blank value that matches no supported code or media
+   * type is rejected.
    *
-   * @param format the format string to parse, or null for default
-   * @return the corresponding ViewExportFormat, defaulting to NDJSON
+   * <p>The export operation has a single explicit {@code _format} entry point and no lenient
+   * content-negotiation path, so this parser is strict.
+   *
+   * @param format the explicit {@code _format} value to parse, or null/blank for the default
+   * @return the corresponding ViewExportFormat
+   * @throws InvalidRequestException if the value is non-blank and not a supported format
    */
   @Nonnull
   public static ViewExportFormat fromString(@Nullable final String format) {
@@ -69,6 +76,10 @@ public enum ViewExportFormat {
     return Arrays.stream(values())
         .filter(f -> f.code.equals(normalised) || f.contentType.equals(normalised))
         .findFirst()
-        .orElse(NDJSON);
+        .orElseThrow(
+            () ->
+                new InvalidRequestException(
+                    "Unsupported _format value '%s'. Supported formats: ndjson, csv, parquet."
+                        .formatted(format)));
   }
 }

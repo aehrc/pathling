@@ -79,6 +79,22 @@ public class SqlQueryExecutionHelper {
   }
 
   /**
+   * Rejects the unsupported {@code source} parameter (external data source). Pathling does not
+   * implement external data sources, so a supplied {@code source} value is rejected rather than
+   * silently ignored. This shared guard backs the {@code source} rejection at the system, type, and
+   * instance levels, over both POST and GET.
+   *
+   * @param source the {@code source} parameter value, if supplied
+   * @throws InvalidRequestException if {@code source} is present and non-blank
+   */
+  public void rejectSourceParameter(@Nullable final String source) {
+    if (source != null && !source.isBlank()) {
+      throw new InvalidRequestException(
+          "The 'source' parameter (external data source) is not supported by this server.");
+    }
+  }
+
+  /**
    * Executes a {@code $sqlquery-run} request and streams results to the HTTP response. Exactly one
    * of {@code queryResource} and {@code queryReference} must be provided.
    *
