@@ -39,6 +39,7 @@ import org.springframework.stereotype.Component;
  * <p>This provides a system-level operation at {@code /fhir/$sqlquery-run} that accepts a SQLQuery
  * Library resource inline or by reference.
  *
+ * @author John Grimes
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-SQLQueryRun.html">SQLQueryRun</a>
  * @see SqlQueryInstanceRunProvider for type-level and instance-level operations

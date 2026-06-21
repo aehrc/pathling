@@ -49,6 +49,7 @@ import org.springframework.stereotype.Component;
  *       Library
  * </ul>
  *
+ * @author John Grimes
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-SQLQueryRun.html">SQLQueryRun</a>
  * @see SqlQueryRunProvider for system-level $sqlquery-run operation
