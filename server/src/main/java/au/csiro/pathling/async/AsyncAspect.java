@@ -24,6 +24,7 @@ import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.errors.DiagnosticContext;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
+import ca.uhn.fhir.rest.api.Constants;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
@@ -41,10 +42,13 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.StringType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -134,14 +138,28 @@ public class AsyncAspect {
         // PreAsyncValidation. Set some values to prevent NPEs.
         result = new PreAsyncValidationResult<>(new Object(), List.of());
       }
-      processRequestAsynchronously(joinPoint, requestDetails, result, spark, asyncSupported);
+      final Job<?> job =
+          processRequestAsynchronously(joinPoint, requestDetails, result, spark, asyncSupported);
+
+      if (asyncSupported.redirectOnComplete()) {
+        // For SQL on FHIR async operations, the kick-off body is a Parameters acknowledgement
+        // (status=accepted, exportId) returned with a 202 status, rather than an OperationOutcome.
+        // The Content-Location header is already set by processRequestAsynchronously.
+        final HttpServletResponse response = requestDetails.getServletResponse();
+        if (response != null) {
+          response.setStatus(Constants.STATUS_HTTP_202_ACCEPTED);
+        }
+        return buildAcceptedAcknowledgement(job.getId());
+      }
+
+      // FHIR Bulk Data operations keep the existing OperationOutcome kick-off body.
       throw new ProcessingNotCompletedException("Accepted", buildOperationOutcome(result));
     } else {
       return (IBaseResource) joinPoint.proceed();
     }
   }
 
-  private void processRequestAsynchronously(
+  private Job<?> processRequestAsynchronously(
       @Nonnull final ProceedingJoinPoint joinPoint,
       @Nonnull final ServletRequestDetails requestDetails,
       @Nonnull final PreAsyncValidationResult<?> preAsyncValidationResult,
@@ -229,6 +247,22 @@ public class AsyncAspect {
     final String asyncEtag =
         "W/\"~" + serverInstanceId.getId() + "." + hashJobId(job.getId()) + "\"";
     response.setHeader("ETag", asyncEtag);
+    return job;
+  }
+
+  /**
+   * Builds the SQL on FHIR kick-off acknowledgement: a {@code Parameters} resource carrying {@code
+   * status=accepted} and the {@code exportId}.
+   *
+   * @param jobId the server-assigned job identifier
+   * @return the acknowledgement Parameters resource
+   */
+  @Nonnull
+  private static Parameters buildAcceptedAcknowledgement(@Nonnull final String jobId) {
+    final Parameters parameters = new Parameters();
+    parameters.addParameter().setName("status").setValue(new CodeType("accepted"));
+    parameters.addParameter().setName("exportId").setValue(new StringType(jobId));
+    return parameters;
   }
 
   /**
