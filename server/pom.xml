@@ -847,12 +847,23 @@
                 </tags>
               </to>
               <container>
-                <jvmFlags>
-                  <jvmFlag>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</jvmFlag>
-                  <jvmFlag>--add-opens=java.base/java.net=ALL-UNNAMED</jvmFlag>
-                  <jvmFlag>--add-opens=java.base/sun.util.calendar=ALL-UNNAMED</jvmFlag>
-                </jvmFlags>
+                <!-- The dispatching entrypoint selects the server or executor role from the
+                     container's first argument. The Pathling JVM module options previously set
+                     here as jvmFlags now live in the entrypoint, since Jib ignores jvmFlags once
+                     an explicit entrypoint is configured. -->
+                <entrypoint>
+                  <command>/usr/bin/entrypoint.sh</command>
+                </entrypoint>
               </container>
+              <extraDirectories>
+                <paths>src/main/jib</paths>
+                <permissions>
+                  <permission>
+                    <file>/usr/bin/entrypoint.sh</file>
+                    <mode>755</mode>
+                  </permission>
+                </permissions>
+              </extraDirectories>
             </configuration>
             <executions>
               <execution>
@@ -868,6 +879,28 @@
                 <goals>
                   <goal>build</goal>
                 </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <!-- Verify the dual-role entrypoint's dispatch logic before the image is built.
+                 This runs without Docker, a network, or a cluster. -->
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>entrypoint-dispatch-test</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skipTests}</skip>
+                  <executable>bash</executable>
+                  <arguments>
+                    <argument>${project.basedir}/src/test/sh/entrypoint-test.sh</argument>
+                  </arguments>
+                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -938,12 +971,23 @@
                 <image>${pathling.fhirServerDockerRepo}:${project.version}</image>
               </to>
               <container>
-                <jvmFlags>
-                  <jvmFlag>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</jvmFlag>
-                  <jvmFlag>--add-opens=java.base/java.net=ALL-UNNAMED</jvmFlag>
-                  <jvmFlag>--add-opens=java.base/sun.util.calendar=ALL-UNNAMED</jvmFlag>
-                </jvmFlags>
+                <!-- The dispatching entrypoint selects the server or executor role from the
+                     container's first argument. The Pathling JVM module options previously set
+                     here as jvmFlags now live in the entrypoint, since Jib ignores jvmFlags once
+                     an explicit entrypoint is configured. -->
+                <entrypoint>
+                  <command>/usr/bin/entrypoint.sh</command>
+                </entrypoint>
               </container>
+              <extraDirectories>
+                <paths>src/main/jib</paths>
+                <permissions>
+                  <permission>
+                    <file>/usr/bin/entrypoint.sh</file>
+                    <mode>755</mode>
+                  </permission>
+                </permissions>
+              </extraDirectories>
             </configuration>
             <executions>
               <execution>
@@ -959,6 +1003,28 @@
                 <goals>
                   <goal>build</goal>
                 </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <!-- Verify the dual-role entrypoint's dispatch logic before the image is built.
+                 This runs without Docker, a network, or a cluster. -->
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>entrypoint-dispatch-test</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skipTests}</skip>
+                  <executable>bash</executable>
+                  <arguments>
+                    <argument>${project.basedir}/src/test/sh/entrypoint-test.sh</argument>
+                  </arguments>
+                </configuration>
               </execution>
             </executions>
           </plugin>
