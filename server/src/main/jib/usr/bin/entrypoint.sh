@@ -11,7 +11,7 @@
 # command override, so the role selection must live in the image entrypoint.
 #
 # Modified from the Spark Kubernetes Docker image entrypoint script:
-# https://github.com/apache/spark/blob/v4.0.0/resource-managers/kubernetes/docker/src/main/dockerfiles/spark/entrypoint.sh
+# https://github.com/apache/spark/blob/v4.0.2/resource-managers/kubernetes/docker/src/main/dockerfiles/spark/entrypoint.sh
 
 set -e
 
