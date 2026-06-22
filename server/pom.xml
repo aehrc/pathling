@@ -411,19 +411,20 @@
         <version>1.12.1</version>
       </dependency>
       <!-- Override HAPI's transitive org.hl7.fhir.* core libraries to fix
-           CVE-2026-33180, CVE-2026-34359 and CVE-2026-45367. HAPI 8.10.0
-           bundles 6.9.4.1, which is still behind the patched 6.9.7.
+           CVE-2026-33180, CVE-2026-34359, CVE-2026-45367 and CVE-2026-55471
+           (XXE in XsltUtilities.saxonTransform). HAPI 8.10.0 bundles 6.9.4.1,
+           which is still behind the patched 6.9.10.
            REMOVE THESE TWO OVERRIDES once pathling.hapiFhirVersion is bumped
-           to a HAPI release that bundles org.hl7.fhir.* >= 6.9.7 natively. -->
+           to a HAPI release that bundles org.hl7.fhir.* >= 6.9.10 natively. -->
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>org.hl7.fhir.r4</artifactId>
-        <version>6.9.7</version>
+        <version>6.9.10</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>org.hl7.fhir.utilities</artifactId>
-        <version>6.9.7</version>
+        <version>6.9.10</version>
       </dependency>
       <!-- Override Tomcat to fix CVE-2026-41293 (CRITICAL), CVE-2026-43512
            (CRITICAL), CVE-2026-41284 (HIGH), CVE-2026-42498 (HIGH), and
