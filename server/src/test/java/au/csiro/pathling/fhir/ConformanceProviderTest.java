@@ -289,7 +289,9 @@ class ConformanceProviderTest {
         capabilityStatement.getRest().getFirst().getOperation().stream()
             .map(CapabilityStatementRestResourceOperationComponent::getName)
             .collect(Collectors.toSet());
-    assertThat(operationNames).doesNotContain("sqlquery-export");
+    // The sibling sqlquery-run operation remains enabled, so the operation list is still populated;
+    // only sqlquery-export should have been dropped.
+    assertThat(operationNames).contains("sqlquery-run").doesNotContain("sqlquery-export");
   }
 
   @Test
