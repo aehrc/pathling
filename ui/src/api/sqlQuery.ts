@@ -318,7 +318,7 @@ export interface SqlQueryExportKickOffOptions extends AuthOptions {
 }
 
 /**
- * Result of a `$sqlquery-export` kick-off: the polling URL from the {@code Content-Location}
+ * Result of a `$sqlquery-export` kick-off: the polling URL from the `Content-Location`
  * header.
  */
 export interface SqlQueryExportResult {
