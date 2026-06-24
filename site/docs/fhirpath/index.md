@@ -157,9 +157,10 @@ current `name` element, matching `name.select(use | given)`.
 
 #### String functions
 
-| Function           | Description                          |
-| ------------------ | ------------------------------------ |
-| `join(separator?)` | Join strings with optional separator |
+| Function             | Description                                          |
+| -------------------- | ---------------------------------------------------- |
+| `join(separator?)`   | Join strings with optional separator                 |
+| `startsWith(prefix)` | Test whether the string starts with the given prefix |
 
 #### Type functions
 

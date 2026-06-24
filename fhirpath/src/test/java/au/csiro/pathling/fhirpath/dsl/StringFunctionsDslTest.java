@@ -24,7 +24,7 @@ import org.junit.jupiter.api.DynamicTest;
 
 /**
  * Tests for FHIRPath string functions as defined in supported.md: - join([separator: String]) :
- * String
+ * String - startsWith(prefix: String) : Boolean
  */
 public class StringFunctionsDslTest extends FhirPathDslTestBase {
 
@@ -76,6 +76,39 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
         .group("join() function error cases")
         .testError("integerArray.join()", "join() error non-string type")
         .testError("person.join(',')", "join() errors on non-collection types")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testStartsWith() {
+    return builder()
+        .withSubject(
+            sb ->
+                sb
+                    // Empty values
+                    .stringEmpty("emptyString")
+                    // Single values
+                    .string("singleString", "Hello, world!")
+                    // Arrays of strings
+                    .stringArray("stringArray", "one", "two", "three"))
+        .group("startsWith() function with single values")
+        .testTrue(
+            "singleString.startsWith('Hello')", "startsWith() returns true when prefix matches")
+        .testFalse(
+            "singleString.startsWith('world')",
+            "startsWith() returns false when prefix does not match")
+        .testTrue("singleString.startsWith('')", "startsWith() returns true for an empty prefix")
+        .testTrue(
+            "singleString.startsWith('Hello, world!')",
+            "startsWith() returns true when prefix equals the whole string")
+        .group("startsWith() function with empty values")
+        .testEmpty("emptyString.startsWith('Hello')", "startsWith() on empty input returns empty")
+        .testEmpty(
+            "singleString.startsWith({})", "startsWith() with empty prefix argument returns empty")
+        .group("startsWith() function error cases")
+        .testError(
+            "stringArray.startsWith('o')",
+            "startsWith() errors when input collection is not singular")
         .build();
   }
 }
