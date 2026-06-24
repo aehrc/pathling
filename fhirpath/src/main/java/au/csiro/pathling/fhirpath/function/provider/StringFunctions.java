@@ -118,4 +118,28 @@ public class StringFunctions {
         ColumnRepresentation.binaryOperator(
             input.asSingular().getColumn(), suffix.asSingular().getColumn(), Column::endsWith));
   }
+
+  /**
+   * The contains function returns true when the input string contains the given substring.
+   *
+   * <p>If substring is the empty string ({@code ''}), the result is {@code true}.
+   *
+   * <p>If the input collection or substring is empty, the result is empty.
+   *
+   * @param input The input string
+   * @param substring The substring to check for
+   * @return A {@link BooleanCollection} containing the result
+   * @see <a
+   *     href="https://build.fhir.org/ig/HL7/FHIRPath/en/#containssubstring--string--boolean">FHIRPath
+   *     Specification - contains</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.EXPERIMENTAL)
+  @Nonnull
+  public static BooleanCollection contains(
+      @Nonnull final StringCollection input, @Nonnull final StringCollection substring) {
+    return BooleanCollection.build(
+        ColumnRepresentation.binaryOperator(
+            input.asSingular().getColumn(), substring.asSingular().getColumn(), Column::contains));
+  }
 }
