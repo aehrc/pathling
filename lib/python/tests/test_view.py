@@ -131,3 +131,23 @@ def test_foreach_coding_with_sibling_text_topandas(ndjson_test_data_dir, pathlin
             "Anemia (disorder)",
         ),
     ]
+
+def test_view_with_string_functions(ndjson_test_data_dir, pathling_ctx):
+    data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
+    result = data_source.view(
+        resource="Patient",
+        select=[
+            {
+                "column": [
+                    {"path": "name.given.first().startsWith('Sey')", "name": "starts_with_sey"},
+                    {"path": "name.given.first().endsWith('r882')", "name": "ends_with_r882"},
+                    {"path": "name.family.first().contains('k43')", "name": "contains_k43"},
+                ]
+            }
+        ],
+    )
+    assert result.columns == list(ResultRow)
+    assert result.limit(2).collect() == [
+        ResultRow("true", "true", "true"),
+        ResultRow("false", "false", "false"),
+    ]
