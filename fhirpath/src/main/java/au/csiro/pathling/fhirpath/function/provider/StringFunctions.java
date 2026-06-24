@@ -94,4 +94,28 @@ public class StringFunctions {
         ColumnRepresentation.binaryOperator(
             input.asSingular().getColumn(), prefix.asSingular().getColumn(), Column::startsWith));
   }
+
+  /**
+   * The endsWith function returns true when the input string ends with the given suffix.
+   *
+   * <p>If suffix is the empty string ({@code ''}), the result is {@code true}.
+   *
+   * <p>If the input collection or suffix is empty, the result is empty.
+   *
+   * @param input The input string
+   * @param suffix The suffix to check for
+   * @return A {@link BooleanCollection} containing the result
+   * @see <a
+   *     href="https://build.fhir.org/ig/HL7/FHIRPath/en/#endswithsuffix--string--boolean">FHIRPath
+   *     Specification - endsWith</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.EXPERIMENTAL)
+  @Nonnull
+  public static BooleanCollection endsWith(
+      @Nonnull final StringCollection input, @Nonnull final StringCollection suffix) {
+    return BooleanCollection.build(
+        ColumnRepresentation.binaryOperator(
+            input.asSingular().getColumn(), suffix.asSingular().getColumn(), Column::endsWith));
+  }
 }

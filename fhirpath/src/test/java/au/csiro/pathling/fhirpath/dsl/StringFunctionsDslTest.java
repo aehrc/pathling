@@ -24,7 +24,7 @@ import org.junit.jupiter.api.DynamicTest;
 
 /**
  * Tests for FHIRPath string functions as defined in supported.md: - join([separator: String]) :
- * String - startsWith(prefix: String) : Boolean
+ * String - startsWith(prefix: String) : Boolean - endsWith(suffix: String) : Boolean
  */
 public class StringFunctionsDslTest extends FhirPathDslTestBase {
 
@@ -109,6 +109,36 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
         .testError(
             "stringArray.startsWith('o')",
             "startsWith() errors when input collection is not singular")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testEndsWith() {
+    return builder()
+        .withSubject(
+            sb ->
+                sb
+                    // Empty values
+                    .stringEmpty("emptyString")
+                    // Single values
+                    .string("singleString", "Hello, world!")
+                    // Arrays of strings
+                    .stringArray("stringArray", "one", "two", "three"))
+        .group("endsWith() function with single values")
+        .testTrue("singleString.endsWith('world!')", "endsWith() returns true when suffix matches")
+        .testFalse(
+            "singleString.endsWith('Hello')", "endsWith() returns false when suffix does not match")
+        .testTrue("singleString.endsWith('')", "endsWith() returns true for an empty suffix")
+        .testTrue(
+            "singleString.endsWith('Hello, world!')",
+            "endsWith() returns true when suffix equals the whole string")
+        .group("endsWith() function with empty values")
+        .testEmpty("emptyString.endsWith('world!')", "endsWith() on empty input returns empty")
+        .testEmpty(
+            "singleString.endsWith({})", "endsWith() with empty suffix argument returns empty")
+        .group("endsWith() function error cases")
+        .testError(
+            "stringArray.endsWith('o')", "endsWith() errors when input collection is not singular")
         .build();
   }
 }
