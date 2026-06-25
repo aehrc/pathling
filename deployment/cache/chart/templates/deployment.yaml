@@ -32,6 +32,8 @@ spec:
               value: {{ required "pathlingCache.pathlingHost is required" .Values.pathlingCache.pathlingHost | quote }}
             - name: PATHLING_PORT
               value: {{ required "pathlingCache.pathlingPort is required" .Values.pathlingCache.pathlingPort | quote }}
+            - name: PATHLING_FIRST_BYTE_TIMEOUT
+              value: {{ .Values.pathlingCache.firstByteTimeout | quote }}
           livenessProbe:
             tcpSocket:
               port: http

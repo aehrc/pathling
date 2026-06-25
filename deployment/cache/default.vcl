@@ -7,6 +7,10 @@ import std;
 backend default {
   .host = "${PATHLING_HOST}";
   .port = "${PATHLING_PORT}";
+  // Maximum time to wait for the first byte of the backend response. Raised
+  // above the Varnish default of 60s to accommodate long-running synchronous
+  // Pathling queries.
+  .first_byte_timeout = ${PATHLING_FIRST_BYTE_TIMEOUT};
 }
 
 sub vcl_recv {
