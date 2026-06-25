@@ -132,7 +132,9 @@ def test_foreach_coding_with_sibling_text_topandas(ndjson_test_data_dir, pathlin
         ),
     ]
 
+
 StringFunctionsRow = Row("starts_with_sey", "ends_with_r882", "contains_k43")
+
 
 def test_view_with_string_functions(ndjson_test_data_dir, pathling_ctx):
     data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
@@ -141,9 +143,18 @@ def test_view_with_string_functions(ndjson_test_data_dir, pathling_ctx):
         select=[
             {
                 "column": [
-                    {"path": "name.given.first().startsWith('Sey')", "name": "starts_with_sey"},
-                    {"path": "name.given.first().endsWith('r882')", "name": "ends_with_r882"},
-                    {"path": "name.family.first().contains('k43')", "name": "contains_k43"},
+                    {
+                        "path": "name.given.first().startsWith('Sey')",
+                        "name": "starts_with_sey",
+                    },
+                    {
+                        "path": "name.given.first().endsWith('r882')",
+                        "name": "ends_with_r882",
+                    },
+                    {
+                        "path": "name.family.first().contains('k43')",
+                        "name": "contains_k43",
+                    },
                 ]
             }
         ],
