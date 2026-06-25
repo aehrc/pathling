@@ -13,5 +13,5 @@ based upon the deployment:
   this above the Varnish default of `60s` to accommodate long-running
   synchronous Pathling queries.
 
-Copyright © 2065, Commonwealth Scientific and Industrial Research Organisation
+Copyright © 2025, Commonwealth Scientific and Industrial Research Organisation
 (CSIRO) ABN 41 687 119 230. Licensed under the Apache License, Version 2.0.
