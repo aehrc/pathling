@@ -132,6 +132,8 @@ def test_foreach_coding_with_sibling_text_topandas(ndjson_test_data_dir, pathlin
         ),
     ]
 
+StringFunctionsRow = Row("starts_with_sey", "ends_with_r882", "contains_k43")
+
 def test_view_with_string_functions(ndjson_test_data_dir, pathling_ctx):
     data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
     result = data_source.view(
@@ -146,8 +148,8 @@ def test_view_with_string_functions(ndjson_test_data_dir, pathling_ctx):
             }
         ],
     )
-    assert result.columns == list(ResultRow)
+    assert result.columns == list(StringFunctionsRow)
     assert result.limit(2).collect() == [
-        ResultRow("true", "true", "true"),
-        ResultRow("false", "false", "false"),
+        StringFunctionsRow(True, True, True),
+        StringFunctionsRow(False, False, False),
     ]
