@@ -144,7 +144,7 @@ class SqlQueryExportExecutorTest {
                 true,
                 null,
                 Map.of()),
-            Map.of());
+            new ResolvedDependencyGraph(List.of(), Map.of(), Map.of()));
 
     // query.name wins.
     assertThat(new QueryInput("explicit", "lib", prepared).getEffectiveName(0))
@@ -179,6 +179,9 @@ class SqlQueryExportExecutorTest {
             "SELECT id FROM patients", List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
     final SqlQueryRequest request =
         new SqlQueryRequest(parsedQuery, SqlQueryOutputFormat.NDJSON, true, null, Map.of());
-    return new QueryInput(name, null, new PreparedSqlQuery(request, Map.of()));
+    return new QueryInput(
+        name,
+        null,
+        new PreparedSqlQuery(request, new ResolvedDependencyGraph(List.of(), Map.of(), Map.of())));
   }
 }

@@ -233,7 +233,8 @@ public class SqlQueryExportSupport {
                         + ":"
                         + q.preparedQuery().getRequest().getParsedQuery().getSql()
                         + ":"
-                        + gson.toJson(q.preparedQuery().getResolvedViews())
+                        + gson.toJson(
+                            describeDependencyGraph(q.preparedQuery().getDependencyGraph()))
                         + ":"
                         + gson.toJson(q.preparedQuery().getRequest().getParameterBindings()))
             .collect(Collectors.joining(","));
@@ -254,6 +255,33 @@ public class SqlQueryExportSupport {
       key.append("|since=").append(request.since().getValueAsString());
     }
     return key.toString();
+  }
+
+  /**
+   * Renders a resolved dependency graph as a deterministic, serialisable description for the cache
+   * key, so two kick-offs whose composed queries differ deduplicate to distinct jobs. Captures the
+   * top-level label-to-node mapping and, for each node, its canonical key and (for a SQLView) its
+   * SQL and child label mapping.
+   */
+  @Nonnull
+  private static List<String> describeDependencyGraph(
+      @Nonnull final ResolvedDependencyGraph graph) {
+    final List<String> parts = new java.util.ArrayList<>();
+    parts.add("top=" + graph.getTopLevelKeysByLabel());
+    for (final ResolvedDependency node : graph.getOrderedNodes()) {
+      if (node instanceof final ResolvedSqlView sqlView) {
+        parts.add(
+            "view:"
+                + sqlView.getCanonicalKey()
+                + ":"
+                + sqlView.getSql()
+                + ":"
+                + sqlView.getChildKeysByLabel());
+      } else {
+        parts.add("vd:" + node.getCanonicalKey());
+      }
+    }
+    return parts;
   }
 
   /** Collects patient ids from both the {@code patient} and {@code group} parameters. */

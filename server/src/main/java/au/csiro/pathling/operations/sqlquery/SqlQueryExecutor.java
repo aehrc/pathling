@@ -20,13 +20,12 @@ package au.csiro.pathling.operations.sqlquery;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -35,9 +34,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Executes the SQL of a {@link SqlQueryRequest} against the configured Spark session, owning the
- * lifecycle of the request-scoped temporary views the query references. The only piece of the
- * pipeline that touches Spark.
+ * Executes the SQL of a {@link SqlQueryRequest} against the configured Spark session, materialising
+ * the request's resolved dependency graph as request-scoped temporary views and owning their
+ * lifecycle. The only piece of the pipeline that touches Spark.
+ *
+ * <p>Each node of the graph is materialised in topological order: a {@code ViewDefinition} leaf is
+ * executed as a view, and a {@code SQLView} node's SQL is rewritten against the temp views of its
+ * already-materialised children, validated, and run. The top-level SQL is then rewritten against
+ * its own direct dependencies' temp views and run. Every node's SQL is validated statically before
+ * execution and against its analysed plan during execution.
  */
 @Slf4j
 @Component
@@ -79,47 +84,66 @@ public class SqlQueryExecutor {
   }
 
   /**
-   * Validates and executes the SQL, registering the resolved views under request-scoped temp view
-   * names for the duration of the call. The {@code consumer} is invoked with the result dataset
-   * before the temp views are dropped, so streaming and other terminal operations can complete
-   * before cleanup.
+   * Runs the static, read-only SQL validation for every node of the graph and the top-level query,
+   * each against its own declared labels, without touching Spark. Used both at export kick-off and
+   * before execution so malformed or disallowed SQL is caught early.
+   *
+   * @param request the parsed request
+   * @param graph the resolved dependency graph
+   */
+  public void validateStatically(
+      @Nonnull final SqlQueryRequest request, @Nonnull final ResolvedDependencyGraph graph) {
+    for (final ResolvedDependency node : graph.getOrderedNodes()) {
+      if (node instanceof final ResolvedSqlView sqlView) {
+        sqlValidator.validate(sqlView.getSql(), sqlView.getChildKeysByLabel().keySet());
+      }
+    }
+    sqlValidator.validate(
+        request.getParsedQuery().getSql(), graph.getTopLevelKeysByLabel().keySet());
+  }
+
+  /**
+   * Validates and executes the query, materialising the resolved dependency graph under
+   * request-scoped temp view names for the duration of the call. The {@code consumer} is invoked
+   * with the result dataset before the temp views are dropped, so streaming and other terminal
+   * operations can complete before cleanup.
    *
    * @param request the parsed and validated request
-   * @param resolvedViews the views referenced by the SQL, keyed by table label
+   * @param graph the resolved dependency graph the SQL references
    * @param dataSource the data source backing FhirView execution
    * @param requestId the HAPI per-request id used to namespace temp view names
    * @param consumer terminal consumer of the result dataset
    */
   public void execute(
       @Nonnull final SqlQueryRequest request,
-      @Nonnull final Map<String, FhirView> resolvedViews,
+      @Nonnull final ResolvedDependencyGraph graph,
       @Nonnull final DataSource dataSource,
       @Nonnull final String requestId,
       @Nonnull final Consumer<Dataset<Row>> consumer) {
 
-    final Set<String> declaredLabels =
-        request.getParsedQuery().getViewReferences().stream()
-            .map(ViewArtifactReference::getLabel)
-            .collect(Collectors.toUnmodifiableSet());
-    sqlValidator.validate(request.getParsedQuery().getSql(), declaredLabels);
+    validateStatically(request, graph);
 
     final String jobGroupId = "sqlquery-" + requestId;
     sparkSession
         .sparkContext()
         .setJobGroup(jobGroupId, "$sqlquery-run " + requestId, /* interruptOnCancel= */ true);
 
-    Map<String, String> registeredViews = Map.of();
+    final Map<String, String> registeredByKey = new LinkedHashMap<>();
     final SqlQueryWatchdog.Watch watch = watchdog.start(jobGroupId);
     try {
-      registeredViews = viewRegistrationService.registerViews(resolvedViews, dataSource, requestId);
+      for (final ResolvedDependency node : graph.getOrderedNodes()) {
+        materialiseNode(node, dataSource, requestId, registeredByKey);
+      }
 
+      final Map<String, String> topLevelViews =
+          resolveLabelToViewName(graph.getTopLevelKeysByLabel(), registeredByKey);
       final String rewrittenSql =
-          viewRegistrationService.rewriteSql(request.getParsedQuery().getSql(), registeredViews);
+          viewRegistrationService.rewriteSql(request.getParsedQuery().getSql(), topLevelViews);
 
       Dataset<Row> result = runSql(rewrittenSql, request.getParameterBindings());
 
       sqlValidator.validateAnalyzed(
-          result.queryExecution().analyzed(), Set.copyOf(registeredViews.values()));
+          result.queryExecution().analyzed(), Set.copyOf(topLevelViews.values()));
 
       result = result.limit(effectiveLimit(request.getLimit(), requestId));
 
@@ -135,8 +159,62 @@ public class SqlQueryExecutor {
     } finally {
       watch.complete();
       sparkSession.sparkContext().clearJobGroup();
-      viewRegistrationService.dropViews(registeredViews.values());
+      viewRegistrationService.dropViews(registeredByKey.values());
     }
+  }
+
+  /**
+   * Materialises a single graph node as a request-scoped temp view, recording its name by canonical
+   * key. A {@code SQLView} node's analysed plan is validated against its own children's temp views
+   * before registration, so it cannot reach an unauthorised data source.
+   */
+  private void materialiseNode(
+      @Nonnull final ResolvedDependency node,
+      @Nonnull final DataSource dataSource,
+      @Nonnull final String requestId,
+      @Nonnull final Map<String, String> registeredByKey) {
+    final Dataset<Row> dataset;
+    if (node instanceof final ResolvedViewDefinition viewDefinition) {
+      dataset = viewRegistrationService.buildViewDefinition(viewDefinition.getView(), dataSource);
+    } else if (node instanceof final ResolvedSqlView sqlView) {
+      dataset = viewRegistrationService.buildSqlView(sqlView, registeredByKey);
+      final Set<String> childViewNames =
+          Set.copyOf(
+              resolveLabelToViewName(sqlView.getChildKeysByLabel(), registeredByKey).values());
+      sqlValidator.validateAnalyzed(dataset.queryExecution().analyzed(), childViewNames);
+    } else {
+      throw new InvalidRequestException(
+          "Unsupported dependency node type: " + node.getClass().getSimpleName());
+    }
+    final String tempViewName =
+        viewRegistrationService.registerDataset(node.getCanonicalKey(), dataset, requestId);
+    registeredByKey.put(node.getCanonicalKey(), tempViewName);
+    log.debug(
+        "Materialised temp view '{}' for dependency '{}'", tempViewName, node.getCanonicalKey());
+  }
+
+  /**
+   * Maps a node's local {@code label -> child canonical key} to {@code label -> temp view name},
+   * resolving each child key against the views materialised so far.
+   */
+  @Nonnull
+  private static Map<String, String> resolveLabelToViewName(
+      @Nonnull final Map<String, String> keysByLabel,
+      @Nonnull final Map<String, String> registeredByKey) {
+    final Map<String, String> labelToViewName = new LinkedHashMap<>();
+    for (final Map.Entry<String, String> entry : keysByLabel.entrySet()) {
+      final String viewName = registeredByKey.get(entry.getValue());
+      if (viewName == null) {
+        throw new IllegalStateException(
+            "Dependency '"
+                + entry.getValue()
+                + "' for label '"
+                + entry.getKey()
+                + "' was not materialised before it was referenced");
+      }
+      labelToViewName.put(entry.getKey(), viewName);
+    }
+    return labelToViewName;
   }
 
   /**

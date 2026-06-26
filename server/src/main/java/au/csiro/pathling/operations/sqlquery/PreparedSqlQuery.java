@@ -17,14 +17,12 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
-import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
-import java.util.Map;
 import lombok.Value;
 
 /**
- * A SQL query that has been parsed and had its ViewDefinition table sources resolved, ready for
- * static validation and execution by {@link SqlQueryPipeline}. Produced by {@link
+ * A SQL query that has been parsed and had its dependency graph resolved, ready for static
+ * validation and execution by {@link SqlQueryPipeline}. Produced by {@link
  * SqlQueryPipeline#prepare}; shared by the synchronous {@code $sqlquery-run} and the asynchronous
  * {@code $sqlquery-export} operations.
  */
@@ -34,6 +32,9 @@ public class PreparedSqlQuery {
   /** The validated, normalised request: parsed query, output format, header flag, bindings. */
   @Nonnull SqlQueryRequest request;
 
-  /** The resolved view table sources the SQL references, keyed by table label. */
-  @Nonnull Map<String, FhirView> resolvedViews;
+  /**
+   * The resolved dependency graph the top-level SQL references: the transitive set of
+   * ViewDefinition and SQLView nodes, topologically ordered for materialisation.
+   */
+  @Nonnull ResolvedDependencyGraph dependencyGraph;
 }

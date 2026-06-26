@@ -73,51 +73,6 @@ public class ViewRegistrationService {
   }
 
   /**
-   * Registers resolved ViewDefinitions as Spark temporary views, scoped by the request id so that
-   * concurrent executions cannot clobber one another in the session-global catalog.
-   *
-   * @param resolvedViews a map from label (table alias) to the parsed FhirView
-   * @param dataSource the data source to use for view execution
-   * @param requestId the per-request id used to namespace registered view names
-   * @return a map from original label to the actual temporary view name
-   */
-  @Nonnull
-  public Map<String, String> registerViews(
-      @Nonnull final Map<String, FhirView> resolvedViews,
-      @Nonnull final DataSource dataSource,
-      @Nonnull final String requestId) {
-
-    final Map<String, String> labelToViewName = new LinkedHashMap<>();
-
-    for (final Map.Entry<String, FhirView> entry : resolvedViews.entrySet()) {
-      final String label = entry.getKey();
-      final FhirView view = entry.getValue();
-
-      final FhirViewExecutor executor =
-          new FhirViewExecutor(fhirContext, dataSource, queryConfiguration);
-      final Dataset<Row> result;
-      try {
-        result = executor.buildQuery(view);
-      } catch (final Exception e) {
-        // Drop any views that were already registered before failing.
-        dropViews(labelToViewName.values());
-        throw new InvalidRequestException(
-            "Failed to execute ViewDefinition for label '" + label + "': " + e.getMessage());
-      }
-
-      final String tempViewName = registerDataset(label, result, requestId);
-      labelToViewName.put(label, tempViewName);
-      log.info(
-          "Registered temporary view '{}' for label '{}' (resource type '{}')",
-          tempViewName,
-          label,
-          view.getResource());
-    }
-
-    return labelToViewName;
-  }
-
-  /**
    * Registers an already-built dataset under a request-scoped temp view name derived from the given
    * identifier (a dependency's canonical key, or a bare label in the single-level tests) and
    * returns that name.
