@@ -95,6 +95,49 @@ class ViewRegistrationServiceTest {
     assertThat(dashes).isNotEqualTo(slashes);
   }
 
+  @Test
+  void resolveTempViewNameDerivesFromCanonicalKeyNotLabel() {
+    // The temp view name is keyed by the resolved resource's canonical key, so a key carrying a
+    // slash and dash (ViewDefinition/patient-view) is sanitised into a legal Spark identifier.
+    final String name =
+        ViewRegistrationService.resolveTempViewName("req1", "ViewDefinition/patient-view");
+    assertThat(name).startsWith("sqlquery_req1_").doesNotContain("/").doesNotContain("-");
+  }
+
+  @Test
+  void resolveTempViewNameGivesDistinctNamesToDistinctKeys() {
+    // Two nodes that happen to share a label but resolve to different resources are keyed by their
+    // distinct canonical keys, so their temp views never collide.
+    final String left = ViewRegistrationService.resolveTempViewName("req1", "ViewDefinition/a");
+    final String right = ViewRegistrationService.resolveTempViewName("req1", "ViewDefinition/b");
+    assertThat(left).isNotEqualTo(right);
+  }
+
+  // ---------------------------------------------------------------------------
+  // SQLView materialisation.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void buildSqlViewRewritesAgainstChildTempViewsBeforeRunning() {
+    // Materialise a child node under its canonical key, then build a SQLView whose SQL selects from
+    // a label that maps to that child. The SQL must be rewritten to the child's temp view name
+    // before running, so the SQLView observes the child's rows.
+    final Dataset<Row> childData = singleColumnDataset("value", List.of("x", "y"));
+    final String childKey = "ViewDefinition/child";
+    final String childViewName = service.registerDataset(childKey, childData, "req1");
+    try {
+      final ResolvedSqlView node =
+          new ResolvedSqlView("Library/parent", "SELECT value FROM t", Map.of("t", childKey));
+
+      final Dataset<Row> result = service.buildSqlView(node, Map.of(childKey, childViewName));
+
+      assertThat(result.collectAsList().stream().map(row -> row.getString(0)).toList())
+          .containsExactlyInAnyOrder("x", "y");
+    } finally {
+      service.dropViews(List.of(childViewName));
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // SQL rewriting.
   // ---------------------------------------------------------------------------

@@ -232,9 +232,9 @@ class SqlQueryExportFormatIT extends AbstractSqlQueryExportIT {
             List.of(
                 Map.of(
                     "system",
-                    SqlQueryLibraryParser.LIBRARY_TYPE_SYSTEM,
+                    SqlLibraryParser.LIBRARY_TYPE_SYSTEM,
                     "code",
-                    SqlQueryLibraryParser.LIBRARY_TYPE_CODE))));
+                    SqlLibraryParser.SQL_QUERY_TYPE_CODE))));
     final String sql = "SELECT nonexistent_column FROM patients";
     library.put(
         "content",

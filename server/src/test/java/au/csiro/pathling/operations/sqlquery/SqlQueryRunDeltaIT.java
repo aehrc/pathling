@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
-import static au.csiro.pathling.operations.sqlquery.SqlQueryLibraryParser.LIBRARY_TYPE_CODE;
-import static au.csiro.pathling.operations.sqlquery.SqlQueryLibraryParser.LIBRARY_TYPE_SYSTEM;
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM;
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_QUERY_TYPE_CODE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.util.TestDataSetup;
@@ -211,7 +211,7 @@ class SqlQueryRunDeltaIT {
     library.setStatus(PublicationStatus.ACTIVE);
     library.setType(
         new CodeableConcept()
-            .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode(LIBRARY_TYPE_CODE)));
+            .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode(SQL_QUERY_TYPE_CODE)));
     final Attachment content = new Attachment();
     content.setContentType("application/sql");
     content.setData(sql.getBytes(StandardCharsets.UTF_8));

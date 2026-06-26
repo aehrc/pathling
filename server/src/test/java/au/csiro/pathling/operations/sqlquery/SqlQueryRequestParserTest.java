@@ -57,7 +57,7 @@ class SqlQueryRequestParserTest {
 
   @BeforeEach
   void setUp() {
-    parser = new SqlQueryRequestParser(new SqlQueryLibraryParser());
+    parser = new SqlQueryRequestParser(new SqlLibraryParser());
   }
 
   // ---------------------------------------------------------------------------
