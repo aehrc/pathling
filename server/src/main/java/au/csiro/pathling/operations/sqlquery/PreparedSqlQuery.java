@@ -25,6 +25,8 @@ import lombok.Value;
  * validation and execution by {@link SqlQueryPipeline}. Produced by {@link
  * SqlQueryPipeline#prepare}; shared by the synchronous {@code $sqlquery-run} and the asynchronous
  * {@code $sqlquery-export} operations.
+ *
+ * @author John Grimes
  */
 @Value
 public class PreparedSqlQuery {

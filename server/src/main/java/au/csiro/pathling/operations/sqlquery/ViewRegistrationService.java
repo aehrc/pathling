@@ -38,8 +38,12 @@ import org.springframework.stereotype.Component;
 
 /**
  * Manages the lifecycle of Spark temporary views for SQL query execution. Each execution scopes its
- * views to the HAPI per-request id so that concurrent {@code $sqlquery-run} requests using the same
- * label cannot clobber one another in Spark's session-global temporary view catalog.
+ * views to the HAPI per-request id and keys them by the resolved dependency's canonical identity,
+ * so concurrent {@code $sqlquery-run} requests cannot clobber one another in Spark's session-global
+ * temporary view catalog, a shared node materialises once, and the same table label used in
+ * different nodes cannot collide.
+ *
+ * @author John Grimes
  */
 @Slf4j
 @Component

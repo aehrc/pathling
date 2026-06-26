@@ -24,6 +24,8 @@ import lombok.Value;
 /**
  * Represents a parsed SQL on FHIR Library resource ({@code SQLQuery} or {@code SQLView}) containing
  * the SQL text, dependency references, declared parameters, and the resolved library type code.
+ *
+ * @author John Grimes
  */
 @Value
 public class ParsedSqlQuery {

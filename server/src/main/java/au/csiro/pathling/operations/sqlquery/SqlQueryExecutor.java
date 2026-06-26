@@ -43,6 +43,8 @@ import org.springframework.stereotype.Component;
  * already-materialised children, validated, and run. The top-level SQL is then rewritten against
  * its own direct dependencies' temp views and run. Every node's SQL is validated statically before
  * execution and against its analysed plan during execution.
+ *
+ * @author John Grimes
  */
 @Slf4j
 @Component
