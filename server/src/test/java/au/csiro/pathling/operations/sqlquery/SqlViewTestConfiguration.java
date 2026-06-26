@@ -84,6 +84,15 @@ public class SqlViewTestConfiguration {
   /** The id of the other half of a mutually-referencing cycle. */
   public static final String CYCLE_B_ID = "cycle-b";
 
+  /** The id of the SQLView shared by both arms of a diamond. */
+  public static final String SHARED_PATIENTS_ID = "shared-patients";
+
+  /** The id of the left arm of a diamond, over {@link #SHARED_PATIENTS_ID}. */
+  public static final String LEFT_PATIENTS_ID = "left-patients";
+
+  /** The id of the right arm of a diamond, over {@link #SHARED_PATIENTS_ID}. */
+  public static final String RIGHT_PATIENTS_ID = "right-patients";
+
   @Primary
   @Bean
   @Nonnull
@@ -105,6 +114,19 @@ public class SqlViewTestConfiguration {
             Map.of("ap", "Library/" + ACTIVE_PATIENTS_ID)));
     resources.add(sqlView(CYCLE_A_ID, "SELECT * FROM b", Map.of("b", "Library/" + CYCLE_B_ID)));
     resources.add(sqlView(CYCLE_B_ID, "SELECT * FROM a", Map.of("a", "Library/" + CYCLE_A_ID)));
+    resources.add(
+        sqlView(
+            SHARED_PATIENTS_ID,
+            "SELECT id, family_name FROM patient_view",
+            Map.of("patient_view", "ViewDefinition/" + PATIENT_VIEW_ID)));
+    resources.add(
+        sqlView(
+            LEFT_PATIENTS_ID,
+            "SELECT id, family_name FROM sp",
+            Map.of("sp", "Library/" + SHARED_PATIENTS_ID)));
+    resources.add(
+        sqlView(
+            RIGHT_PATIENTS_ID, "SELECT id FROM sp", Map.of("sp", "Library/" + SHARED_PATIENTS_ID)));
     resources.add(patient("p1", "Smith"));
     resources.add(patient("p2", "Johnson"));
     resources.add(patient("p3", "Williams"));

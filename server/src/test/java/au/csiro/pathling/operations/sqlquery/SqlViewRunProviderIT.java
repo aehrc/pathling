@@ -145,6 +145,39 @@ class SqlViewRunProviderIT {
   }
 
   @Test
+  void runsSqlQueryOverADiamondOfSqlViews() {
+    // left and right both depend on the shared SQLView; the join returns one row per patient,
+    // confirming both arms observe the same shared materialisation.
+    final Library library = new Library();
+    library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(
+        new CodeableConcept()
+            .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode(SQL_QUERY_TYPE_CODE)));
+    final Attachment content = new Attachment();
+    content.setContentType("application/sql");
+    content.setData(
+        "SELECT l.id, l.family_name FROM l JOIN r ON l.id = r.id ORDER BY l.id"
+            .getBytes(StandardCharsets.UTF_8));
+    library.addContent(content);
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("l")
+            .setResource("Library/" + SqlViewTestConfiguration.LEFT_PATIENTS_ID));
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("r")
+            .setResource("Library/" + SqlViewTestConfiguration.RIGHT_PATIENTS_ID));
+
+    final String body = postOk(parametersJson(library));
+
+    final String[] lines = body.trim().split("\n");
+    assertThat(lines).hasSize(3);
+    assertThat(body).contains("Smith").contains("Johnson").contains("Williams");
+  }
+
+  @Test
   void returns400WhenReferencedSqlViewDoesNotExist() {
     final Library library =
         sqlQueryLibrary("SELECT id FROM missing", "missing", "Library/does-not-exist");
