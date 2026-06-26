@@ -17,10 +17,14 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.read.ReadExecutor;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
+import au.csiro.pathling.security.SecurityAspect;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import jakarta.annotation.Nonnull;
@@ -60,25 +64,32 @@ public class LibraryReferenceResolver {
 
   @Nonnull private final FhirEncoders fhirEncoders;
 
+  @Nonnull private final ServerConfiguration serverConfiguration;
+
   /**
    * Constructs a new LibraryReferenceResolver.
    *
    * @param readExecutor used for relative-reference reads
    * @param dataSource the data source used for canonical-reference search
    * @param fhirEncoders FHIR encoders used to decode the search result rows
+   * @param serverConfiguration the server configuration (used for the auth toggle)
    */
   @Autowired
   public LibraryReferenceResolver(
       @Nonnull final ReadExecutor readExecutor,
       @Nonnull final DataSource dataSource,
-      @Nonnull final FhirEncoders fhirEncoders) {
+      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final ServerConfiguration serverConfiguration) {
     this.readExecutor = readExecutor;
     this.dataSource = dataSource;
     this.fhirEncoders = fhirEncoders;
+    this.serverConfiguration = serverConfiguration;
   }
 
   /**
-   * Resolves the reference to a stored Library resource.
+   * Resolves the reference to a stored Library resource. As the Library is read from server
+   * storage, the metadata READ check on {@code Library} is enforced when authorisation is enabled,
+   * regardless of the operation that triggered the read.
    *
    * @param reference the reference to resolve; must carry a non-blank {@code reference} value
    * @return the resolved Library resource
@@ -91,6 +102,10 @@ public class LibraryReferenceResolver {
     if (ref == null || ref.isBlank()) {
       throw new InvalidRequestException(
           "queryReference must carry a non-blank Reference.reference value");
+    }
+
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(PathlingAuthority.resourceAccess(AccessType.READ, LIBRARY));
     }
 
     if (isCanonical(ref)) {

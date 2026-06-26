@@ -68,7 +68,7 @@ class LibraryReferenceResolverTest {
       readExecutor = mock(ReadExecutor.class);
       resolver =
           new LibraryReferenceResolver(
-              readExecutor, mock(DataSource.class), mock(FhirEncoders.class));
+              readExecutor, mock(DataSource.class), mock(FhirEncoders.class), authDisabledConfig());
     }
 
     @Test
@@ -140,7 +140,9 @@ class LibraryReferenceResolverTest {
     @BeforeEach
     void setUp() {
       dataSource = mock(DataSource.class);
-      resolver = new LibraryReferenceResolver(mock(ReadExecutor.class), dataSource, fhirEncoders);
+      resolver =
+          new LibraryReferenceResolver(
+              mock(ReadExecutor.class), dataSource, fhirEncoders, authDisabledConfig());
     }
 
     @Test
@@ -238,6 +240,17 @@ class LibraryReferenceResolverTest {
   // ---------------------------------------------------------------------------
   // Helpers shared across nested classes.
   // ---------------------------------------------------------------------------
+
+  /** Builds a server configuration with authorisation disabled, so no metadata READ is enforced. */
+  private static au.csiro.pathling.config.ServerConfiguration authDisabledConfig() {
+    final au.csiro.pathling.config.ServerConfiguration config =
+        new au.csiro.pathling.config.ServerConfiguration();
+    final au.csiro.pathling.config.AuthorizationConfiguration auth =
+        new au.csiro.pathling.config.AuthorizationConfiguration();
+    auth.setEnabled(false);
+    config.setAuth(auth);
+    return config;
+  }
 
   private static Library newLibrary(
       final String id, final String url, final String version, final PublicationStatus status) {

@@ -18,9 +18,7 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.security.PathlingAuthority;
-import au.csiro.pathling.security.ResourceAccess.AccessType;
-import au.csiro.pathling.security.SecurityAspect;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
@@ -64,8 +62,6 @@ public class SqlDependencyResolver {
   private static final String VIEW_DEFINITION_PREFIX = "ViewDefinition/";
 
   private static final String LIBRARY_PREFIX = "Library/";
-
-  private static final String LIBRARY = "Library";
 
   @Nonnull private final ViewResolver viewResolver;
 
@@ -202,12 +198,9 @@ public class SqlDependencyResolver {
       final int maxDepth,
       @Nonnull final Set<String> resolutionStack,
       @Nonnull final Map<String, ResolvedDependency> nodesByKey) {
+    // The Library is read from storage by LibraryReferenceResolver, which enforces the Library
+    // metadata READ check when authorisation is enabled.
     final Library library = readSqlViewLibrary(reference);
-
-    // The Library was read from storage: enforce the metadata READ check.
-    if (serverConfiguration.getAuth().isEnabled()) {
-      SecurityAspect.checkHasAuthority(PathlingAuthority.resourceAccess(AccessType.READ, LIBRARY));
-    }
 
     final String canonicalKey = libraryCanonicalKey(library, reference);
 
@@ -259,6 +252,10 @@ public class SqlDependencyResolver {
     final IBaseResource resource;
     try {
       resource = libraryReferenceResolver.resolve(new Reference(reference.getCanonicalUrl()));
+    } catch (final AccessDeniedError e) {
+      // An authorisation denial must surface as a 403, not be reshaped into an unresolvable-
+      // reference 400.
+      throw e;
     } catch (final RuntimeException e) {
       throw new InvalidRequestException(
           "Failed to resolve the dependency for label '"

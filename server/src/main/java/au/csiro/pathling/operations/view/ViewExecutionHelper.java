@@ -185,7 +185,10 @@ public class ViewExecutionHelper {
   }
 
   /**
-   * Reads a stored ViewDefinition by its logical id, mapping a missing resource to a 404.
+   * Reads a stored ViewDefinition by its logical id, mapping a missing resource to a 404. As the
+   * ViewDefinition is read from server storage, the metadata READ check on {@code ViewDefinition}
+   * is enforced when authorisation is enabled, layered on top of the per-projected-resource check
+   * applied later when the view is executed.
    *
    * @param id the logical id of the stored ViewDefinition
    * @return the stored ViewDefinition resource
@@ -193,6 +196,10 @@ public class ViewExecutionHelper {
    */
   @Nonnull
   public IBaseResource readStoredViewDefinition(@Nonnull final String id) {
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(
+          PathlingAuthority.resourceAccess(AccessType.READ, "ViewDefinition"));
+    }
     try {
       return readExecutor.read("ViewDefinition", id);
     } catch (final ResourceNotFoundError e) {
