@@ -52,6 +52,8 @@ import org.springframework.stereotype.Component;
  *   <li>Canonical references such as {@code https://example.org/Library/foo} or {@code
  *       https://example.org/Library/foo|1.2}, matched against {@code Library.url}.
  * </ul>
+ *
+ * @author John Grimes
  */
 @Component
 public class LibraryReferenceResolver {

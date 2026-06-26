@@ -70,6 +70,15 @@ or `view.viewResource`; supplying both, or neither, returns `400 Bad Request`. A
 supplied ViewDefinition that is well-formed but semantically invalid returns
 `422 Unprocessable Entity`.
 
+A `relatedArtifact` dependency may reference a SQLView as well as a
+ViewDefinition, and a SQLView may itself depend on further ViewDefinitions and
+SQLViews. A SQLView may also be the top-level resource of a `query` (or the
+bound Library at the instance level), running as a parameter-less query. The
+dependency-graph resolution, reference disambiguation, cycle and depth limits,
+and metadata-resource authorisation are identical to the synchronous operation;
+see [Composing SQLViews](./sql-run.md#composing-sqlviews). These structural
+rejections are returned synchronously at kick-off.
+
 The `source` parameter (an external data source) is not supported by this
 server; supplying it returns `400 Bad Request`. All of these rejections are
 returned synchronously at kick-off.

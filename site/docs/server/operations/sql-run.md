@@ -66,15 +66,19 @@ The `$sqlquery-run` operation expects a Library that conforms to the SQLQuery
 profile. The relevant elements are:
 
 - `type` - must include the coding `sql-query` from
-  `https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes`.
+  `https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes`. A
+  [SQLView](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-SQLView.html)
+  (`sql-view`) is also accepted as a top-level resource and runs as a
+  parameter-less query.
 - `content` - exactly one entry with `contentType` of `application/sql` and the
   SQL text Base64-encoded in `data`.
-- `relatedArtifact` - one entry per ViewDefinition the query references. The
-  `label` becomes the table name available to the SQL, and `resource` points to
-  the ViewDefinition (relative literal or canonical reference).
+- `relatedArtifact` - one entry per dependency the query references. The `label`
+  becomes the table name available to the SQL, and `resource` points to a
+  ViewDefinition or a SQLView (relative literal or canonical reference). See
+  [Composing SQLViews](#composing-sqlviews).
 - `parameter` - optional declarations of named runtime parameters. Each entry
   with `use` of `in` must have a `name` and `type`, and the type must be a
-  primitive FHIR type.
+  primitive FHIR type. A SQLView declares no parameters.
 
 Example Library:
 
@@ -273,6 +277,47 @@ time via the `parameters` input:
 Each binding's name must match a declaration on the Library, and its
 `value[x]` must match the declared FHIR type.
 
+## Composing SQLViews
+
+A `relatedArtifact` dependency may reference a
+[SQLView](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-SQLView.html)
+as well as a ViewDefinition. A SQLView is a reusable, named SQL query
+(a `Library` with `type` of `sql-view` and no parameters) that other queries
+build on as a virtual table. A SQLView may itself depend on ViewDefinitions and
+other SQLViews, forming a directed acyclic graph of virtual tables that the
+server resolves and executes. Each node's result is available to its referrer
+under the `label` of the `relatedArtifact` that points at it; labels are scoped
+to the node that declares them, so the same label may name different sources in
+different nodes.
+
+A SQLView may also be supplied directly as the top-level `queryResource`,
+`queryReference`, or instance-level Library; it then executes as a
+parameter-less query and returns its rows.
+
+### Reference resolution
+
+Each `relatedArtifact.resource` is resolved as follows:
+
+- `ViewDefinition/[id]` resolves a ViewDefinition by logical id.
+- `Library/[id]` resolves a SQLView Library by logical id.
+- A bare canonical (`[url]` or `[url]|[version]`) resolves a ViewDefinition
+  first, by the canonical's final path segment as id; if none exists, it falls
+  back to a SQLView Library matched by canonical `url`.
+
+An explicit relative type prefix is authoritative - the server does not fall
+back to the other type when a prefixed reference fails to resolve. A reference
+that resolves to neither, a `Library` that is a `sql-query` rather than a
+`sql-view`, a cycle (for example `A -> B -> A`), and a graph nested deeper than
+`pathling.sqlQuery.maxDependencyDepth` are each rejected with a `400` before any
+SQL executes, with a message identifying the cause.
+
+When authorisation is enabled, resolving a ViewDefinition from storage requires
+READ on `ViewDefinition`, and resolving a SQLView from storage requires READ on
+`Library`, in addition to the READ check on each projected resource type. A
+resource supplied inline in the request body is not read from storage and is not
+subject to the metadata check. See the
+[authorisation documentation](../authorization.md).
+
 ## Resource limits
 
 Two server-configured limits are always applied to a `$sqlquery-run`
@@ -283,6 +328,9 @@ invocation, regardless of any caller-supplied parameters:
 - `pathling.sqlQuery.timeoutSeconds` (default `60`) - the maximum wall-clock
   time, in seconds, that a query may run before its Spark job group is
   cancelled.
+- `pathling.sqlQuery.maxDependencyDepth` (default `10`) - the maximum nesting
+  depth of the SQLView dependency graph. A graph nested deeper is rejected with
+  a `400` before any Spark work.
 
 Long-running queries should use the asynchronous bulk submit path rather than
 the synchronous `$sqlquery-run` endpoint. See the
