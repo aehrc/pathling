@@ -303,6 +303,50 @@ class SqlQueryRequestParserTest {
     assertThat(request.getOutputFormat()).isEqualTo(SqlQueryOutputFormat.NDJSON);
   }
 
+  // ---------------------------------------------------------------------------
+  // Top-level SQLView (US3).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void acceptsTopLevelSqlViewLibrary() {
+    // A SQLView supplied as the top-level resource parses as a parameter-less query.
+    final Library library = SqlLibraryFixtures.sqlView("SELECT 1");
+
+    final SqlQueryRequest request = parser.parse(library, null, null, null, null, null);
+
+    assertThat(request.getParsedQuery().isView()).isTrue();
+    assertThat(request.getParameterBindings()).isEmpty();
+  }
+
+  @Test
+  void rejectsParametersSuppliedWithTopLevelSqlView() {
+    // A SQLView declares no parameter, so any supplied binding must be rejected.
+    final Library library = SqlLibraryFixtures.sqlView("SELECT 1");
+    final Parameters params = new Parameters();
+    params.addParameter().setName("min_age").setValue(new IntegerType(42));
+
+    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, params))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("min_age");
+  }
+
+  @Test
+  void rejectsTopLevelLibraryWithUnknownType() {
+    // A Library whose type is neither sql-query nor sql-view is rejected.
+    final Library library = new Library();
+    library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(
+        new CodeableConcept()
+            .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode("logic-library")));
+    library
+        .addContent()
+        .setContentType("application/sql")
+        .setData("SELECT 1".getBytes(StandardCharsets.UTF_8));
+
+    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, null))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
   /** Builds a minimal SQLQuery-typed Library carrying the given SQL. */
   private static Library libraryWithSql(final String sql) {
     final Library library = new Library();

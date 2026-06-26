@@ -178,6 +178,34 @@ class SqlViewRunProviderIT {
   }
 
   @Test
+  void runsStoredSqlViewAtInstanceLevel() {
+    // A stored SQLView supplied as the top-level resource of the instance-level operation executes
+    // as a parameter-less query and returns its rows.
+    final String body =
+        getOk(
+            "/fhir/Library/"
+                + SqlViewTestConfiguration.ACTIVE_PATIENTS_ID
+                + "/$sqlquery-run?_format=ndjson");
+
+    final String[] lines = body.trim().split("\n");
+    assertThat(lines).hasSize(3);
+    assertThat(body).contains("Smith").contains("Johnson").contains("Williams");
+  }
+
+  @Test
+  void runsSqlViewByQueryReferenceAtSystemLevel() {
+    // A SQLView supplied as a top-level queryReference at the system level executes and returns its
+    // rows.
+    final String body =
+        postOk(
+            queryReferenceParametersJson("Library/" + SqlViewTestConfiguration.ACTIVE_PATIENTS_ID));
+
+    final String[] lines = body.trim().split("\n");
+    assertThat(lines).hasSize(3);
+    assertThat(body).contains("Smith").contains("Johnson").contains("Williams");
+  }
+
+  @Test
   void returns400WhenReferencedSqlViewDoesNotExist() {
     final Library library =
         sqlQueryLibrary("SELECT id FROM missing", "missing", "Library/does-not-exist");
@@ -213,6 +241,42 @@ class SqlViewRunProviderIT {
             .returnResult();
     final byte[] payload = result.getResponseBodyContent();
     return payload == null ? "" : new String(payload, StandardCharsets.UTF_8);
+  }
+
+  @Nonnull
+  private String getOk(@Nonnull final String path) {
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .get()
+            .uri("http://localhost:" + port + path)
+            .header("Accept", SqlQueryOutputFormat.NDJSON.getContentType())
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .returnResult();
+    return new String(
+        Objects.requireNonNull(result.getResponseBodyContent()), StandardCharsets.UTF_8);
+  }
+
+  @Nonnull
+  private String queryReferenceParametersJson(@Nonnull final String reference) {
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    final List<Map<String, Object>> parameterList = new ArrayList<>();
+
+    final Map<String, Object> queryReferenceParam = new LinkedHashMap<>();
+    queryReferenceParam.put("name", "queryReference");
+    queryReferenceParam.put("valueReference", Map.of("reference", reference));
+    parameterList.add(queryReferenceParam);
+
+    final Map<String, Object> formatParam = new LinkedHashMap<>();
+    formatParam.put("name", "_format");
+    formatParam.put("valueString", SqlQueryOutputFormat.NDJSON.getCode());
+    parameterList.add(formatParam);
+
+    parameters.put("parameter", parameterList);
+    return GSON.toJson(parameters);
   }
 
   @Nonnull
