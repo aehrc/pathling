@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.sqlquery;
 
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,99 +35,123 @@ import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
 import org.springframework.stereotype.Component;
 
 /**
- * Parses a FHIR R4 Library resource conforming to the SQLQuery profile. Extracts the SQL text,
- * ViewDefinition dependencies, and parameter declarations, and enforces the profile invariants.
+ * Parses a FHIR R4 Library resource conforming to the SQL on FHIR {@code SQLQuery} or {@code
+ * SQLView} profile. Extracts the SQL text, dependency references, and (for {@code SQLQuery})
+ * parameter declarations, and enforces the profile invariants common to both.
  *
- * <p>The SQLQuery profile requires:
+ * <p>The two profiles are near-twins. Both require:
  *
  * <ul>
- *   <li>{@code Library.type} carrying a coding of {@code sql-query} from the SQL on FHIR library
- *       types code system.
+ *   <li>{@code Library.type} carrying a coding from the SQL on FHIR library types code system -
+ *       {@code sql-query} for a {@code SQLQuery}, {@code sql-view} for a {@code SQLView}.
  *   <li>A {@code content} entry with content type starting with {@code application/sql} containing
  *       Base64-encoded SQL text.
  *   <li>Each {@code relatedArtifact} of type {@code depends-on}, with a label matching {@code
- *       ^[A-Za-z][A-Za-z0-9_]*$} and a {@code resource} canonical URL pointing at the referenced
- *       ViewDefinition.
- *   <li>Each {@code parameter} declared with {@code use = in} and a name and type.
+ *       ^[A-Za-z][A-Za-z0-9_]*$} and a {@code resource} reference pointing at the referenced {@code
+ *       ViewDefinition} or {@code SQLView}.
  * </ul>
  *
+ * <p>They differ in only one rule: a {@code SQLQuery} may declare input {@code parameter}s (each
+ * {@code use = in}), whereas a {@code SQLView} SHALL NOT declare any parameter.
+ *
+ * @author John Grimes
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-SQLQuery.html">SQLQuery</a>
+ * @see <a
+ *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-SQLView.html">SQLView</a>
  */
 @Component
-public class SqlQueryLibraryParser {
+public class SqlLibraryParser {
 
   private static final String SQL_CONTENT_TYPE_PREFIX = "application/sql";
 
-  /** Code system identifying the SQLQuery Library profile. */
+  /** Code system identifying the SQL on FHIR Library profiles. */
   public static final String LIBRARY_TYPE_SYSTEM =
       "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes";
 
-  /** {@link #LIBRARY_TYPE_SYSTEM} code identifying a SQLQuery Library. */
-  public static final String LIBRARY_TYPE_CODE = "sql-query";
+  /** {@link #LIBRARY_TYPE_SYSTEM} code identifying a {@code SQLQuery} Library. */
+  public static final String SQL_QUERY_TYPE_CODE = "sql-query";
+
+  /** {@link #LIBRARY_TYPE_SYSTEM} code identifying a {@code SQLView} Library. */
+  public static final String SQL_VIEW_TYPE_CODE = "sql-view";
 
   private static final Pattern LABEL_PATTERN = Pattern.compile("^[A-Za-z]\\w*$");
 
   /**
-   * Parses a Library resource into a {@link ParsedSqlQuery}.
+   * Parses a Library resource into a {@link ParsedSqlQuery}, accepting either a {@code SQLQuery} or
+   * a {@code SQLView}.
    *
    * @param library the Library resource to parse
-   * @return the parsed SQL query containing SQL text, view references, and parameter declarations
-   * @throws InvalidRequestException if the Library does not conform to the SQLQuery profile
+   * @return the parsed query carrying SQL text, dependency references, parameter declarations, and
+   *     the resolved library type code
+   * @throws InvalidRequestException if the Library does not conform to either profile
    */
   @Nonnull
   public ParsedSqlQuery parse(@Nonnull final Library library) {
-    validateLibraryType(library);
-    final String sql = extractSql(library);
+    final String typeCode = resolveLibraryTypeCode(library);
+    final boolean isView = SQL_VIEW_TYPE_CODE.equals(typeCode);
+    final String sql = extractSql(library, typeCode);
     final List<ViewArtifactReference> viewReferences = extractViewReferences(library);
-    final List<SqlParameterDeclaration> parameters = extractParameters(library);
-    return new ParsedSqlQuery(sql, viewReferences, parameters);
+    final List<SqlParameterDeclaration> parameters = extractParameters(library, isView);
+    return new ParsedSqlQuery(sql, viewReferences, parameters, typeCode);
   }
 
   /**
-   * Verifies that the Library carries the SQLQuery profile's type coding. The check accepts any
-   * coding with the expected system and code, regardless of additional codings, so that authors can
-   * layer their own classifications without breaking conformance.
+   * Resolves the SQL on FHIR library type code carried by {@code Library.type}. The check accepts a
+   * coding with the expected system and either the {@code sql-query} or {@code sql-view} code,
+   * regardless of additional codings, so that authors can layer their own classifications without
+   * breaking conformance.
+   *
+   * @return the matched type code ({@code sql-query} or {@code sql-view})
+   * @throws InvalidRequestException if no recognised SQL on FHIR coding is present
    */
-  private void validateLibraryType(@Nonnull final Library library) {
+  @Nonnull
+  private String resolveLibraryTypeCode(@Nonnull final Library library) {
     final CodeableConcept type = library.getType();
     if (type == null || type.isEmpty()) {
       throw new InvalidRequestException(
-          "SQLQuery Library must declare Library.type with the SQLQuery coding ("
+          "SQL on FHIR Library must declare Library.type with a coding from "
               + LIBRARY_TYPE_SYSTEM
-              + "#"
-              + LIBRARY_TYPE_CODE
+              + " ("
+              + SQL_QUERY_TYPE_CODE
+              + " or "
+              + SQL_VIEW_TYPE_CODE
               + ")");
     }
     for (final Coding coding : type.getCoding()) {
-      if (LIBRARY_TYPE_SYSTEM.equals(coding.getSystem())
-          && LIBRARY_TYPE_CODE.equals(coding.getCode())) {
-        return;
+      if (LIBRARY_TYPE_SYSTEM.equals(coding.getSystem())) {
+        final String code = coding.getCode();
+        if (SQL_QUERY_TYPE_CODE.equals(code) || SQL_VIEW_TYPE_CODE.equals(code)) {
+          return code;
+        }
       }
     }
     throw new InvalidRequestException(
-        "SQLQuery Library.type must include a coding with system "
+        "SQL on FHIR Library.type must include a coding with system "
             + LIBRARY_TYPE_SYSTEM
             + " and code "
-            + LIBRARY_TYPE_CODE);
+            + SQL_QUERY_TYPE_CODE
+            + " or "
+            + SQL_VIEW_TYPE_CODE);
   }
 
   /**
    * Extracts the SQL text from the Library's content entries.
    *
    * @param library the Library resource
+   * @param typeCode the resolved library type code, used in the error message
    * @return the decoded SQL text
    * @throws InvalidRequestException if no SQL content is found or the content is invalid
    */
   @Nonnull
-  private String extractSql(@Nonnull final Library library) {
+  private String extractSql(@Nonnull final Library library, @Nonnull final String typeCode) {
     for (final Attachment attachment : library.getContent()) {
       final String contentType = attachment.getContentType();
       if (contentType != null && contentType.startsWith(SQL_CONTENT_TYPE_PREFIX)) {
         final byte[] data = attachment.getData();
         if (data == null || data.length == 0) {
           throw new InvalidRequestException(
-              "SQLQuery Library has an application/sql content entry with no data");
+              "SQL on FHIR Library has an application/sql content entry with no data");
         }
         // The data is Base64-encoded in the FHIR resource. HAPI decodes it automatically when
         // using getData(), so we can use it directly.
@@ -134,15 +159,17 @@ public class SqlQueryLibraryParser {
       }
     }
     throw new InvalidRequestException(
-        "SQLQuery Library must contain a content entry with content type application/sql");
+        "A "
+            + typeCode
+            + " Library must contain a content entry with content type application/sql");
   }
 
   /**
-   * Extracts ViewDefinition references from the Library's related artifacts, enforcing that each
-   * artifact is of type {@code depends-on} with a label matching the SQLQuery profile pattern.
+   * Extracts dependency references from the Library's related artifacts, enforcing that each
+   * artifact is of type {@code depends-on} with a label matching the SQL on FHIR profile pattern.
    *
    * @param library the Library resource
-   * @return the list of view artifact references
+   * @return the list of dependency references
    */
   @Nonnull
   private List<ViewArtifactReference> extractViewReferences(@Nonnull final Library library) {
@@ -150,7 +177,7 @@ public class SqlQueryLibraryParser {
     for (final RelatedArtifact artifact : library.getRelatedArtifact()) {
       if (artifact.getType() != RelatedArtifactType.DEPENDSON) {
         throw new InvalidRequestException(
-            "SQLQuery Library relatedArtifact must have type 'depends-on', but found '"
+            "SQL on FHIR Library relatedArtifact must have type 'depends-on', but found '"
                 + (artifact.getType() == null ? "null" : artifact.getType().toCode())
                 + "'");
       }
@@ -158,18 +185,18 @@ public class SqlQueryLibraryParser {
       final String resource = artifact.getResource();
       if (label == null || label.isBlank()) {
         throw new InvalidRequestException(
-            "Each relatedArtifact in the SQLQuery Library must have a label");
+            "Each relatedArtifact in the SQL on FHIR Library must have a label");
       }
       if (!LABEL_PATTERN.matcher(label).matches()) {
         throw new InvalidRequestException(
-            "SQLQuery Library relatedArtifact label '"
+            "SQL on FHIR Library relatedArtifact label '"
                 + label
                 + "' does not match the required pattern "
                 + LABEL_PATTERN.pattern());
       }
       if (resource == null || resource.isBlank()) {
         throw new InvalidRequestException(
-            "Each relatedArtifact in the SQLQuery Library must have a resource reference");
+            "Each relatedArtifact in the SQL on FHIR Library must have a resource reference");
       }
       references.add(new ViewArtifactReference(label, resource));
     }
@@ -177,14 +204,27 @@ public class SqlQueryLibraryParser {
   }
 
   /**
-   * Extracts parameter declarations from the Library's parameter entries, enforcing that each
-   * declaration is an input ({@code use = in}) and carries both a name and a type.
+   * Extracts parameter declarations from the Library's parameter entries. A {@code SQLView} SHALL
+   * NOT declare any parameter and is rejected if it does. For a {@code SQLQuery}, each declaration
+   * must be an input ({@code use = in}) and carry both a name and a type.
    *
    * @param library the Library resource
-   * @return the list of parameter declarations
+   * @param isView whether the Library is a {@code SQLView}
+   * @return the list of parameter declarations (always empty for a {@code SQLView})
+   * @throws InvalidRequestException if a {@code SQLView} declares any parameter, or a {@code
+   *     SQLQuery} parameter is malformed
    */
   @Nonnull
-  private List<SqlParameterDeclaration> extractParameters(@Nonnull final Library library) {
+  private List<SqlParameterDeclaration> extractParameters(
+      @Nonnull final Library library, final boolean isView) {
+    if (isView) {
+      if (!library.getParameter().isEmpty()) {
+        throw new InvalidRequestException(
+            "A " + SQL_VIEW_TYPE_CODE + " Library must not declare any parameter");
+      }
+      return List.of();
+    }
+
     final List<SqlParameterDeclaration> parameters = new ArrayList<>();
     for (final ParameterDefinition param : library.getParameter()) {
       final String name = param.getName();
@@ -208,5 +248,15 @@ public class SqlQueryLibraryParser {
       parameters.add(new SqlParameterDeclaration(name, type));
     }
     return parameters;
+  }
+
+  /**
+   * Indicates whether the given library type code denotes a {@code SQLView}.
+   *
+   * @param typeCode the SQL on FHIR library type code
+   * @return {@code true} if the code is {@code sql-view}
+   */
+  public static boolean isView(@Nullable final String typeCode) {
+    return SQL_VIEW_TYPE_CODE.equals(typeCode);
   }
 }

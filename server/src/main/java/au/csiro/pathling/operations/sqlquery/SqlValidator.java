@@ -317,9 +317,9 @@ public class SqlValidator {
   }
 
   /**
-   * Pattern that legitimate relation identifiers must match. Mirrors the {@code
-   * SqlQueryLibraryParser} label pattern so that anything Spark's parser produces as an
-   * UnresolvedRelation but which could not have been a declared label is rejected outright.
+   * Pattern that legitimate relation identifiers must match. Mirrors the {@code SqlLibraryParser}
+   * label pattern so that anything Spark's parser produces as an UnresolvedRelation but which could
+   * not have been a declared label is rejected outright.
    */
   private static final Pattern LABEL_PATTERN = Pattern.compile("^[A-Za-z]\\w*$");
 

@@ -138,7 +138,8 @@ class SqlQueryExportExecutorTest {
     final PreparedSqlQuery prepared =
         new PreparedSqlQuery(
             new SqlQueryRequest(
-                new ParsedSqlQuery("SELECT 1", List.of(), List.of()),
+                new ParsedSqlQuery(
+                    "SELECT 1", List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE),
                 SqlQueryOutputFormat.NDJSON,
                 true,
                 null,
@@ -174,7 +175,8 @@ class SqlQueryExportExecutorTest {
 
   private static QueryInput queryInput(final String name) {
     final ParsedSqlQuery parsedQuery =
-        new ParsedSqlQuery("SELECT id FROM patients", List.of(), List.of());
+        new ParsedSqlQuery(
+            "SELECT id FROM patients", List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
     final SqlQueryRequest request =
         new SqlQueryRequest(parsedQuery, SqlQueryOutputFormat.NDJSON, true, null, Map.of());
     return new QueryInput(name, null, new PreparedSqlQuery(request, Map.of()));

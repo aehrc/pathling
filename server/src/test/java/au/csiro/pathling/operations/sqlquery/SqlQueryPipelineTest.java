@@ -70,7 +70,8 @@ class SqlQueryPipelineTest {
         new ParsedSqlQuery(
             "SELECT id FROM patients",
             List.of(new ViewArtifactReference("patients", "ViewDefinition/patient-view")),
-            List.of());
+            List.of(),
+            SqlLibraryParser.SQL_QUERY_TYPE_CODE);
     request = new SqlQueryRequest(parsedQuery, SqlQueryOutputFormat.NDJSON, true, null, Map.of());
     final FhirView view = mock(FhirView.class);
     resolvedViews = Map.of("patients", view);

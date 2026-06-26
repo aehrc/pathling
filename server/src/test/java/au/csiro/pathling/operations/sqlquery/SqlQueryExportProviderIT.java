@@ -322,9 +322,9 @@ class SqlQueryExportProviderIT extends AbstractSqlQueryExportIT {
             List.of(
                 Map.of(
                     "system",
-                    SqlQueryLibraryParser.LIBRARY_TYPE_SYSTEM,
+                    SqlLibraryParser.LIBRARY_TYPE_SYSTEM,
                     "code",
-                    SqlQueryLibraryParser.LIBRARY_TYPE_CODE))));
+                    SqlLibraryParser.SQL_QUERY_TYPE_CODE))));
     final String sql = "SELECT id, family_name FROM patients ORDER BY id";
     library.put(
         "content",

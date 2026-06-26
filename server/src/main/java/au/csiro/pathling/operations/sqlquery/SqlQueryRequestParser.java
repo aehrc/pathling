@@ -61,7 +61,7 @@ public class SqlQueryRequestParser {
   private static final Set<String> INTEGER_LIKE_TYPES =
       Set.of("integer", "unsignedInt", "positiveInt");
 
-  @Nonnull private final SqlQueryLibraryParser libraryParser;
+  @Nonnull private final SqlLibraryParser libraryParser;
 
   /**
    * Constructs a new SqlQueryRequestParser.
@@ -69,7 +69,7 @@ public class SqlQueryRequestParser {
    * @param libraryParser parser for the SQLQuery Library profile
    */
   @Autowired
-  public SqlQueryRequestParser(@Nonnull final SqlQueryLibraryParser libraryParser) {
+  public SqlQueryRequestParser(@Nonnull final SqlLibraryParser libraryParser) {
     this.libraryParser = libraryParser;
   }
 
