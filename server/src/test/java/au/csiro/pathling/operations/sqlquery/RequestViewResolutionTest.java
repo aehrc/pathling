@@ -18,6 +18,8 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -32,7 +34,6 @@ import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
-import java.util.List;
 import java.util.Map;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.StringType;
@@ -69,16 +70,12 @@ class RequestViewResolutionTest {
             .build();
     final Map<String, FhirView> suppliedViews = Map.of("patient-bp", supplied);
 
-    final Map<String, FhirView> resolved =
-        resolver.resolve(
-            List.of(new ViewArtifactReference("patients", "ViewDefinition/patient-bp")),
-            suppliedViews);
+    final ResolvedViewDefinition resolved =
+        resolver.resolveViewDefinition(
+            new ViewArtifactReference("patients", "ViewDefinition/patient-bp"), suppliedViews);
 
-    assertThat(resolved.get("patients")).isSameAs(supplied);
-    verify(readExecutor, never())
-        .read(
-            org.mockito.ArgumentMatchers.eq("ViewDefinition"),
-            org.mockito.ArgumentMatchers.anyString());
+    assertThat(resolved.getView()).isSameAs(supplied);
+    verify(readExecutor, never()).read(eq("ViewDefinition"), anyString());
   }
 
   @Test
@@ -86,34 +83,12 @@ class RequestViewResolutionTest {
     when(readExecutor.read("ViewDefinition", "patient-bp"))
         .thenReturn(simpleViewDefinition("patient-bp", "Patient"));
 
-    final Map<String, FhirView> resolved =
-        resolver.resolve(
-            List.of(new ViewArtifactReference("patients", "ViewDefinition/patient-bp")), Map.of());
+    final ResolvedViewDefinition resolved =
+        resolver.resolveViewDefinition(
+            new ViewArtifactReference("patients", "ViewDefinition/patient-bp"), Map.of());
 
-    assertThat(resolved).containsOnlyKeys("patients");
+    assertThat(resolved.getView().getResource()).isEqualTo("Patient");
     verify(readExecutor).read("ViewDefinition", "patient-bp");
-  }
-
-  @Test
-  void mixesSuppliedAndStorageResolvedViews() {
-    final FhirView supplied =
-        FhirView.ofResource("Patient")
-            .select(FhirView.columns(FhirView.column("id", "id")))
-            .build();
-    when(readExecutor.read("ViewDefinition", "obs-view"))
-        .thenReturn(simpleViewDefinition("obs-view", "Observation"));
-
-    final Map<String, FhirView> resolved =
-        resolver.resolve(
-            List.of(
-                new ViewArtifactReference("patients", "ViewDefinition/patient-bp"),
-                new ViewArtifactReference("obs", "ViewDefinition/obs-view")),
-            Map.of("patient-bp", supplied));
-
-    assertThat(resolved.get("patients")).isSameAs(supplied);
-    assertThat(resolved.get("obs").getResource()).isEqualTo("Observation");
-    verify(readExecutor).read("ViewDefinition", "obs-view");
-    verify(readExecutor, never()).read("ViewDefinition", "patient-bp");
   }
 
   @Nonnull

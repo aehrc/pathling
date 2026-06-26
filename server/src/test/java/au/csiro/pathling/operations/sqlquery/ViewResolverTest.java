@@ -33,27 +33,26 @@ import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for {@link ViewResolver} covering id extraction, label-order preservation, and the
- * read-error and parse-error wrapping paths.
+ * Unit tests for {@link ViewResolver} covering id extraction, the canonical key it produces, and
+ * the resolve-versus-try semantics for stored and missing ViewDefinitions.
  */
 class ViewResolverTest {
 
   private ReadExecutor readExecutor;
-  private ServerConfiguration serverConfiguration;
   private ViewResolver resolver;
 
   @BeforeEach
   void setUp() {
     readExecutor = mock(ReadExecutor.class);
-    serverConfiguration = new ServerConfiguration();
+    final ServerConfiguration serverConfiguration = new ServerConfiguration();
     final AuthorizationConfiguration auth = new AuthorizationConfiguration();
     auth.setEnabled(false);
     serverConfiguration.setAuth(auth);
@@ -61,67 +60,73 @@ class ViewResolverTest {
   }
 
   @Test
-  void resolvesEmptyReferenceListToEmptyMap() {
-    final Map<String, FhirView> resolved = resolver.resolve(List.of());
+  void resolvesReferenceByBareId() {
+    when(readExecutor.read("ViewDefinition", "patient-view"))
+        .thenReturn(simpleViewDefinition("patient-view", "Patient"));
+
+    final ResolvedViewDefinition resolved =
+        resolver.resolveViewDefinition(
+            new ViewArtifactReference("patients", "patient-view"), Map.of());
+
+    assertThat(resolved.getCanonicalKey()).isEqualTo("ViewDefinition/patient-view");
+    assertThat(resolved.getView().getResource()).isEqualTo("Patient");
+  }
+
+  @Test
+  void extractsIdFromCanonicalUrlForTheKey() {
+    when(readExecutor.read("ViewDefinition", "obs-view"))
+        .thenReturn(simpleViewDefinition("obs-view", "Observation"));
+
+    final ResolvedViewDefinition resolved =
+        resolver.resolveViewDefinition(
+            new ViewArtifactReference("obs", "https://example.org/ViewDefinition/obs-view"),
+            Map.of());
+
+    assertThat(resolved.getCanonicalKey()).isEqualTo("ViewDefinition/obs-view");
+    assertThat(resolved.getView().getResource()).isEqualTo("Observation");
+  }
+
+  @Test
+  void resolveThrowsWhenViewDefinitionNotFound() {
+    when(readExecutor.read("ViewDefinition", "missing"))
+        .thenThrow(new ResourceNotFoundError("not there"));
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolveViewDefinition(
+                    new ViewArtifactReference("patients", "missing"), Map.of()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("patients")
+        .hasMessageContaining("missing");
+  }
+
+  @Test
+  void tryResolveReturnsEmptyWhenViewDefinitionNotFound() {
+    // The bare-canonical disambiguation relies on an empty result here to fall back to a SQLView.
+    when(readExecutor.read("ViewDefinition", "active-patients"))
+        .thenThrow(new ResourceNotFoundError("not there"));
+
+    final Optional<ResolvedViewDefinition> resolved =
+        resolver.tryResolveViewDefinition(
+            new ViewArtifactReference("ap", "active-patients"), Map.of());
+
     assertThat(resolved).isEmpty();
   }
 
   @Test
-  void resolvesSingleReferenceByBareId() {
-    when(readExecutor.read("ViewDefinition", "patient-view"))
-        .thenReturn(simpleViewDefinition("patient-view", "Patient"));
+  void prefersSuppliedViewOverStorage() {
+    final FhirView supplied =
+        FhirView.ofResource("Patient")
+            .select(FhirView.columns(FhirView.column("id", "id")))
+            .build();
 
-    final Map<String, FhirView> resolved =
-        resolver.resolve(List.of(new ViewArtifactReference("patients", "patient-view")));
+    final ResolvedViewDefinition resolved =
+        resolver.resolveViewDefinition(
+            new ViewArtifactReference("patients", "ViewDefinition/patient-bp"),
+            Map.of("patient-bp", supplied));
 
-    assertThat(resolved).containsOnlyKeys("patients");
-    assertThat(resolved.get("patients").getResource()).isEqualTo("Patient");
-  }
-
-  @Test
-  void extractsIdFromCanonicalUrl() {
-    when(readExecutor.read("ViewDefinition", "obs-view"))
-        .thenReturn(simpleViewDefinition("obs-view", "Observation"));
-
-    final Map<String, FhirView> resolved =
-        resolver.resolve(
-            List.of(
-                new ViewArtifactReference("obs", "https://example.org/ViewDefinition/obs-view")));
-
-    assertThat(resolved).containsOnlyKeys("obs");
-    assertThat(resolved.get("obs").getResource()).isEqualTo("Observation");
-  }
-
-  @Test
-  void preservesLabelOrderAcrossMultipleReferences() {
-    when(readExecutor.read("ViewDefinition", "a")).thenReturn(simpleViewDefinition("a", "Patient"));
-    when(readExecutor.read("ViewDefinition", "b"))
-        .thenReturn(simpleViewDefinition("b", "Observation"));
-    when(readExecutor.read("ViewDefinition", "c"))
-        .thenReturn(simpleViewDefinition("c", "Condition"));
-
-    final Map<String, FhirView> resolved =
-        resolver.resolve(
-            List.of(
-                new ViewArtifactReference("first", "a"),
-                new ViewArtifactReference("second", "b"),
-                new ViewArtifactReference("third", "c")));
-
-    assertThat(resolved.keySet()).containsExactly("first", "second", "third");
-  }
-
-  @Test
-  void wrapsReadExecutorFailureWithLabelAndReference() {
-    when(readExecutor.read("ViewDefinition", "missing"))
-        .thenThrow(new ResourceNotFoundError("not there"));
-
-    final List<ViewArtifactReference> refs =
-        List.of(new ViewArtifactReference("patients", "missing"));
-
-    assertThatThrownBy(() -> resolver.resolve(refs))
-        .isInstanceOf(InvalidRequestException.class)
-        .hasMessageContaining("patients")
-        .hasMessageContaining("missing");
+    assertThat(resolved.getView()).isSameAs(supplied);
+    assertThat(resolved.getCanonicalKey()).isEqualTo("ViewDefinition/patient-bp");
   }
 
   @Nonnull

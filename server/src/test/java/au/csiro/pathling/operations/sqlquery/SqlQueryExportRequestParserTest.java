@@ -78,7 +78,9 @@ class SqlQueryExportRequestParserTest {
     final SqlQueryRequest request =
         new SqlQueryRequest(parsedQuery, SqlQueryOutputFormat.NDJSON, true, null, Map.of());
     when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
-        .thenReturn(new PreparedSqlQuery(request, Map.of()));
+        .thenReturn(
+            new PreparedSqlQuery(
+                request, new ResolvedDependencyGraph(java.util.List.of(), Map.of(), Map.of())));
     when(libraryReferenceResolver.resolve(any())).thenReturn(new Library());
   }
 

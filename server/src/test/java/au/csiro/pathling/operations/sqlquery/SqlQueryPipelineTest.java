@@ -29,7 +29,6 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.views.FhirView;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.apache.spark.sql.Dataset;
@@ -39,31 +38,30 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for {@link SqlQueryPipeline}, verifying that it orchestrates parsing, view resolution,
- * static validation, and execution across its collaborators. The collaborators are mocked, so the
- * test exercises the pipeline's wiring rather than the Spark-backed execution itself.
+ * Unit tests for {@link SqlQueryPipeline}, verifying that it orchestrates parsing, dependency
+ * resolution, static validation, and execution across its collaborators. The collaborators are
+ * mocked, so the test exercises the pipeline's wiring rather than the Spark-backed execution
+ * itself.
  *
  * @author John Grimes
  */
 class SqlQueryPipelineTest {
 
   private SqlQueryRequestParser requestParser;
-  private ViewResolver viewResolver;
+  private SqlDependencyResolver dependencyResolver;
   private SqlQueryExecutor executor;
-  private SqlValidator sqlValidator;
   private SqlQueryPipeline pipeline;
 
   private Library library;
   private SqlQueryRequest request;
-  private Map<String, FhirView> resolvedViews;
+  private ResolvedDependencyGraph graph;
 
   @BeforeEach
   void setUp() {
     requestParser = mock(SqlQueryRequestParser.class);
-    viewResolver = mock(ViewResolver.class);
+    dependencyResolver = mock(SqlDependencyResolver.class);
     executor = mock(SqlQueryExecutor.class);
-    sqlValidator = mock(SqlValidator.class);
-    pipeline = new SqlQueryPipeline(requestParser, viewResolver, executor, sqlValidator);
+    pipeline = new SqlQueryPipeline(requestParser, dependencyResolver, executor);
 
     library = new Library();
     final ParsedSqlQuery parsedQuery =
@@ -73,40 +71,44 @@ class SqlQueryPipelineTest {
             List.of(),
             SqlLibraryParser.SQL_QUERY_TYPE_CODE);
     request = new SqlQueryRequest(parsedQuery, SqlQueryOutputFormat.NDJSON, true, null, Map.of());
-    final FhirView view = mock(FhirView.class);
-    resolvedViews = Map.of("patients", view);
+    final ResolvedViewDefinition leaf =
+        new ResolvedViewDefinition("ViewDefinition/patient-view", mock(FhirView.class));
+    graph =
+        new ResolvedDependencyGraph(
+            List.of(leaf),
+            Map.of("patients", "ViewDefinition/patient-view"),
+            Map.of("ViewDefinition/patient-view", leaf));
   }
 
   @Test
-  void prepareParsesAndResolvesViewsWithSuppliedViews() {
+  void prepareParsesAndResolvesDependencyGraphWithSuppliedViews() {
     final FhirView suppliedView = mock(FhirView.class);
     final Map<String, FhirView> supplied = Map.of("patient-view", suppliedView);
     when(requestParser.parse(eq(library), eq("ndjson"), any(), any(), any(), any()))
         .thenReturn(request);
-    when(viewResolver.resolve(request.getParsedQuery().getViewReferences(), supplied))
-        .thenReturn(resolvedViews);
+    when(dependencyResolver.resolve(request.getParsedQuery(), supplied)).thenReturn(graph);
 
     final PreparedSqlQuery prepared =
         pipeline.prepare(library, "ndjson", null, null, null, null, supplied);
 
     assertThat(prepared.getRequest()).isSameAs(request);
-    assertThat(prepared.getResolvedViews()).isEqualTo(resolvedViews);
+    assertThat(prepared.getDependencyGraph()).isSameAs(graph);
     verify(requestParser).parse(eq(library), eq("ndjson"), any(), any(), any(), any());
-    verify(viewResolver).resolve(request.getParsedQuery().getViewReferences(), supplied);
+    verify(dependencyResolver).resolve(request.getParsedQuery(), supplied);
   }
 
   @Test
-  void validateStaticallyValidatesSqlWithDeclaredLabels() {
-    final PreparedSqlQuery prepared = new PreparedSqlQuery(request, resolvedViews);
+  void validateStaticallyDelegatesToExecutor() {
+    final PreparedSqlQuery prepared = new PreparedSqlQuery(request, graph);
 
     pipeline.validateStatically(prepared);
 
-    verify(sqlValidator).validate("SELECT id FROM patients", Set.of("patients"));
+    verify(executor).validateStatically(request, graph);
   }
 
   @Test
   void executeDelegatesToExecutorAndPassesDatasetToConsumer() {
-    final PreparedSqlQuery prepared = new PreparedSqlQuery(request, resolvedViews);
+    final PreparedSqlQuery prepared = new PreparedSqlQuery(request, graph);
     final DataSource dataSource = mock(DataSource.class);
     @SuppressWarnings("unchecked")
     final Dataset<Row> dataset = mock(Dataset.class);
@@ -119,12 +121,12 @@ class SqlQueryPipelineTest {
               return null;
             })
         .when(executor)
-        .execute(eq(request), eq(resolvedViews), eq(dataSource), eq("req-1"), any());
+        .execute(eq(request), eq(graph), eq(dataSource), eq("req-1"), any());
 
     final AtomicReference<Dataset<Row>> received = new AtomicReference<>();
     pipeline.execute(prepared, dataSource, "req-1", received::set);
 
     assertThat(received.get()).isSameAs(dataset);
-    verify(executor).execute(eq(request), eq(resolvedViews), eq(dataSource), eq("req-1"), any());
+    verify(executor).execute(eq(request), eq(graph), eq(dataSource), eq("req-1"), any());
   }
 }

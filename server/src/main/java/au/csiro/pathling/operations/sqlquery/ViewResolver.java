@@ -18,6 +18,7 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
@@ -29,23 +30,32 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import jakarta.annotation.Nonnull;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Resolves the {@link ViewArtifactReference}s declared by a SQLQuery Library into parsed {@link
- * FhirView}s, performing the per-resource-type authorisation check along the way. Has no Spark
- * dependency; the FhirView is the parsed view configuration, not yet a {@code Dataset}.
+ * Resolves a single {@link ViewArtifactReference} that targets a {@code ViewDefinition} into a
+ * {@link ResolvedViewDefinition} leaf node, preferring a request-supplied view over server storage
+ * and performing the per-projected-resource-type authorisation check along the way. Has no Spark
+ * dependency; the {@link FhirView} is the parsed view configuration, not yet a {@code Dataset}.
+ *
+ * <p>Used by {@link SqlDependencyResolver} for the {@code ViewDefinition} leaves of a dependency
+ * graph, both for explicit {@code ViewDefinition/[id]} references and as the first attempt when
+ * disambiguating a bare canonical reference (which falls back to a {@code SQLView} when no {@code
+ * ViewDefinition} matches).
+ *
+ * @author John Grimes
  */
 // Bean name is set explicitly to avoid colliding with Spring MVC's DispatcherServlet, which
 // auto-discovers any bean named "viewResolver" and casts it to
 // org.springframework.web.servlet.ViewResolver.
 @Component("sqlQueryViewResolver")
 public class ViewResolver {
+
+  private static final String VIEW_DEFINITION = "ViewDefinition";
 
   @Nonnull private final ReadExecutor readExecutor;
 
@@ -74,72 +84,88 @@ public class ViewResolver {
   }
 
   /**
-   * Resolves each view reference to a parsed {@link FhirView}, reading every view from server
-   * storage. Equivalent to {@link #resolve(List, Map)} with no request-supplied views.
+   * Resolves a {@code ViewDefinition} reference into a {@link ResolvedViewDefinition}, throwing
+   * when no matching view is supplied or stored. Used for explicit {@code ViewDefinition/[id]}
+   * references, where the contract forbids falling back to another resource type.
    *
-   * @param references the references declared by the SQLQuery Library, keyed by table label
-   * @return a map from label to resolved FhirView
-   * @throws InvalidRequestException if a reference cannot be resolved or parsed
+   * @param reference the dependency reference to resolve
+   * @param suppliedViews request-supplied views keyed by the ViewDefinition id they satisfy
+   * @return the resolved leaf node
+   * @throws InvalidRequestException if the reference cannot be resolved or parsed
    */
   @Nonnull
-  public Map<String, FhirView> resolve(@Nonnull final List<ViewArtifactReference> references) {
-    return resolve(references, Map.of());
+  public ResolvedViewDefinition resolveViewDefinition(
+      @Nonnull final ViewArtifactReference reference,
+      @Nonnull final Map<String, FhirView> suppliedViews) {
+    return tryResolveViewDefinition(reference, suppliedViews)
+        .orElseThrow(
+            () ->
+                new InvalidRequestException(
+                    "Failed to resolve ViewDefinition for label '"
+                        + reference.getLabel()
+                        + "' with reference '"
+                        + reference.getCanonicalUrl()
+                        + "'"));
   }
 
   /**
-   * Resolves each view reference to a parsed {@link FhirView}, preserving label order. A
-   * request-supplied view is used in preference to server storage when it matches the reference (by
-   * the ViewDefinition id extracted from the reference); otherwise the view is read from server
-   * storage, exactly as {@code $sqlquery-run} does. Request-supplied views are assumed already
-   * parsed and, for stored references, authorisation-checked by the caller.
+   * Attempts to resolve a {@code ViewDefinition} reference into a {@link ResolvedViewDefinition},
+   * returning empty when no request-supplied view satisfies it and no stored ViewDefinition with
+   * the reference's id exists. Used as the first step of disambiguating a bare canonical reference,
+   * which falls back to a {@code SQLView} when this returns empty.
    *
-   * @param references the references declared by the SQLQuery Library, keyed by table label
-   * @param suppliedViews request-supplied views keyed by the ViewDefinition id (or canonical url's
-   *     final segment) they satisfy; may be empty
-   * @return a map from label to resolved FhirView
-   * @throws InvalidRequestException if a reference cannot be resolved or parsed
+   * <p>A request-supplied view is preferred over storage and carries its own authorisation as part
+   * of the request payload. A stored view is subject to the per-projected-resource-type READ check
+   * (and, when authorisation is enabled, the {@code ViewDefinition} metadata READ check).
+   *
+   * @param reference the dependency reference to resolve
+   * @param suppliedViews request-supplied views keyed by the ViewDefinition id they satisfy
+   * @return the resolved leaf node, or empty if no ViewDefinition matches
+   * @throws InvalidRequestException if a stored ViewDefinition exists but cannot be parsed
    */
   @Nonnull
-  public Map<String, FhirView> resolve(
-      @Nonnull final List<ViewArtifactReference> references,
+  public Optional<ResolvedViewDefinition> tryResolveViewDefinition(
+      @Nonnull final ViewArtifactReference reference,
       @Nonnull final Map<String, FhirView> suppliedViews) {
-    final Map<String, FhirView> resolved = new LinkedHashMap<>();
+    final String viewDefinitionId = extractViewDefinitionId(reference.getCanonicalUrl());
+    final String canonicalKey = VIEW_DEFINITION + "/" + viewDefinitionId;
 
-    for (final ViewArtifactReference ref : references) {
-      final String viewDefinitionId = extractViewDefinitionId(ref.getCanonicalUrl());
-
-      // Prefer a request-supplied view that satisfies this reference, falling back to server
-      // storage when none is supplied.
-      final FhirView suppliedView = suppliedViews.get(viewDefinitionId);
-      if (suppliedView != null) {
-        resolved.put(ref.getLabel(), suppliedView);
-        continue;
-      }
-
-      final IBaseResource viewResource;
-      try {
-        viewResource = readExecutor.read("ViewDefinition", viewDefinitionId);
-      } catch (final Exception e) {
-        throw new InvalidRequestException(
-            "Failed to resolve ViewDefinition for label '"
-                + ref.getLabel()
-                + "' with reference '"
-                + ref.getCanonicalUrl()
-                + "': "
-                + e.getMessage());
-      }
-
-      final FhirView view = parseViewDefinition(viewResource);
-
-      if (serverConfiguration.getAuth().isEnabled()) {
-        SecurityAspect.checkHasAuthority(
-            PathlingAuthority.resourceAccess(AccessType.READ, view.getResource()));
-      }
-
-      resolved.put(ref.getLabel(), view);
+    // Prefer a request-supplied view that satisfies this reference; it carries its own
+    // authorisation as the request payload and is not read from storage.
+    final FhirView suppliedView = suppliedViews.get(viewDefinitionId);
+    if (suppliedView != null) {
+      return Optional.of(new ResolvedViewDefinition(canonicalKey, suppliedView));
     }
 
-    return resolved;
+    final Optional<IBaseResource> stored = readViewDefinition(viewDefinitionId);
+    if (stored.isEmpty()) {
+      return Optional.empty();
+    }
+
+    // The ViewDefinition was read from storage: enforce the metadata READ check, then parse it and
+    // enforce the per-projected-resource READ check.
+    checkMetadataReadAuthority(VIEW_DEFINITION);
+    final FhirView view = parseViewDefinition(stored.get());
+    checkProjectedResourceReadAuthority(view);
+    return Optional.of(new ResolvedViewDefinition(canonicalKey, view));
+  }
+
+  /**
+   * Reads a stored ViewDefinition by its logical id, mapping a missing resource to an empty result
+   * so the caller can fall back to another resolution strategy.
+   */
+  @Nonnull
+  private Optional<IBaseResource> readViewDefinition(@Nonnull final String id) {
+    try {
+      return Optional.of(readExecutor.read(VIEW_DEFINITION, id));
+    } catch (final ResourceNotFoundError e) {
+      return Optional.empty();
+    } catch (final IllegalArgumentException e) {
+      if (e.getMessage() != null && e.getMessage().contains("No data found for resource type")) {
+        return Optional.empty();
+      }
+      throw e;
+    }
   }
 
   /**
@@ -163,6 +189,29 @@ public class ViewResolver {
       return gson.fromJson(viewJson, FhirView.class);
     } catch (final JsonSyntaxException e) {
       throw new InvalidRequestException("Invalid ViewDefinition: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Enforces the metadata READ check for a resource resolved from storage, when authorisation is
+   * enabled. Reading a {@code ViewDefinition} out of the server requires READ authority on the
+   * {@code ViewDefinition} type itself, independent of the data the view projects.
+   */
+  private void checkMetadataReadAuthority(@Nonnull final String resourceType) {
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(
+          PathlingAuthority.resourceAccess(AccessType.READ, resourceType));
+    }
+  }
+
+  /**
+   * Enforces the per-projected-resource-type READ check for a parsed view, when authorisation is
+   * enabled.
+   */
+  private void checkProjectedResourceReadAuthority(@Nonnull final FhirView view) {
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(
+          PathlingAuthority.resourceAccess(AccessType.READ, view.getResource()));
     }
   }
 }
