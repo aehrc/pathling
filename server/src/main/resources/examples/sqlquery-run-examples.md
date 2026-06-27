@@ -63,6 +63,7 @@ curl -s -X POST "http://localhost:8080/fhir/ViewDefinition" \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "ViewDefinition",
+    "url": "https://example.org/ViewDefinition/patients",
     "name": "patients",
     "resource": "Patient",
     "select": [
@@ -91,6 +92,7 @@ curl -s -X POST "http://localhost:8080/fhir/ViewDefinition" \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "ViewDefinition",
+    "url": "https://example.org/ViewDefinition/conditions",
     "name": "conditions",
     "resource": "Condition",
     "select": [
@@ -107,9 +109,14 @@ curl -s -X POST "http://localhost:8080/fhir/ViewDefinition" \
   }'
 ```
 
-Note the IDs returned in the responses. Replace `<PATIENT_VD_ID>` and
-`<CONDITION_VD_ID>` in the examples below with these values. You can also
-look them up:
+Note the IDs returned in the responses. The instance-level `$viewdefinition-run`
+examples below use those logical IDs, so replace `<PATIENT_VD_ID>` and
+`<CONDITION_VD_ID>` with them. The `$sqlquery-run` examples reference the views
+by their **canonical URL** instead, so replace `<PATIENT_VD_URL>` and
+`<CONDITION_VD_URL>` with the `url` values set above
+(`https://example.org/ViewDefinition/patients` and
+`https://example.org/ViewDefinition/conditions`). You can look up the stored
+resources, including their `url`, with:
 
 ```bash
 curl -s "http://localhost:8080/fhir/ViewDefinition?_count=10" \
@@ -202,8 +209,18 @@ curl -s -X POST "http://localhost:8080/fhir/\$viewdefinition-run" \
 
 The `$sqlquery-run` operation takes a Library resource conforming to the
 SQLQuery profile. The Library contains Base64-encoded SQL in its `content`,
-and references stored ViewDefinitions via `relatedArtifact`. The `label` on
-each artifact becomes the table name used in the SQL.
+and references stored ViewDefinitions (or SQLViews) via `relatedArtifact`. The
+`label` on each artifact becomes the table name used in the SQL.
+
+Each `relatedArtifact.resource` is the **canonical URL** of a ViewDefinition or
+SQLView (optionally suffixed with `|version`), matched against the referenced
+resource's `url` element - not its logical id. The placeholders
+`<PATIENT_VD_URL>` and `<CONDITION_VD_URL>` below stand for those canonical
+URLs. A ViewDefinition or SQLView must therefore carry a `url` to be
+referenceable; ViewDefinitions ingested before URL retention was added must be
+re-ingested so their `url` is stored. A reference that is not an absolute
+canonical URL is rejected with a 400, and one that matches no stored resource
+with a 404.
 
 ### Resolving the Library by reference
 
@@ -242,8 +259,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
 ```
 
 If no Library matches, the server responds with 404. If neither (or both) of
-`queryResource` and `queryReference` are supplied, the server responds with
-400.
+`queryResource` and `queryReference` are supplied, the server responds with 400.
 
 ### JOIN patients with conditions
 
@@ -276,8 +292,8 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
           \"data\": \"${SQL_B64}\"
         }],
         \"relatedArtifact\": [
-          {\"type\": \"depends-on\", \"label\": \"patients\", \"resource\": \"ViewDefinition/<PATIENT_VD_ID>\"},
-          {\"type\": \"depends-on\", \"label\": \"conditions\", \"resource\": \"ViewDefinition/<CONDITION_VD_ID>\"}
+          {\"type\": \"depends-on\", \"label\": \"patients\", \"resource\": \"<PATIENT_VD_URL>\"},
+          {\"type\": \"depends-on\", \"label\": \"conditions\", \"resource\": \"<CONDITION_VD_URL>\"}
         ]
       }
     }]
@@ -326,7 +342,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
           \"data\": \"${SQL_B64}\"
         }],
         \"relatedArtifact\": [
-          {\"type\": \"depends-on\", \"label\": \"conditions\", \"resource\": \"ViewDefinition/<CONDITION_VD_ID>\"}
+          {\"type\": \"depends-on\", \"label\": \"conditions\", \"resource\": \"<CONDITION_VD_URL>\"}
         ]
       }
     }]
@@ -374,8 +390,8 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
           \"data\": \"${SQL_B64}\"
         }],
         \"relatedArtifact\": [
-          {\"type\": \"depends-on\", \"label\": \"patients\", \"resource\": \"ViewDefinition/<PATIENT_VD_ID>\"},
-          {\"type\": \"depends-on\", \"label\": \"conditions\", \"resource\": \"ViewDefinition/<CONDITION_VD_ID>\"}
+          {\"type\": \"depends-on\", \"label\": \"patients\", \"resource\": \"<PATIENT_VD_URL>\"},
+          {\"type\": \"depends-on\", \"label\": \"conditions\", \"resource\": \"<CONDITION_VD_URL>\"}
         ]
       }
     }]
@@ -432,8 +448,8 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
           \"data\": \"${SQL_B64}\"
         }],
         \"relatedArtifact\": [
-          {\"type\": \"depends-on\", \"label\": \"patients\", \"resource\": \"ViewDefinition/<PATIENT_VD_ID>\"},
-          {\"type\": \"depends-on\", \"label\": \"conditions\", \"resource\": \"ViewDefinition/<CONDITION_VD_ID>\"}
+          {\"type\": \"depends-on\", \"label\": \"patients\", \"resource\": \"<PATIENT_VD_URL>\"},
+          {\"type\": \"depends-on\", \"label\": \"conditions\", \"resource\": \"<CONDITION_VD_URL>\"}
         ]
       }
     }]
@@ -462,7 +478,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run" \
           \"data\": \"${SQL_B64}\"
         }],
         \"relatedArtifact\": [
-          {\"type\": \"depends-on\", \"label\": \"patients\", \"resource\": \"ViewDefinition/<PATIENT_VD_ID>\"}
+          {\"type\": \"depends-on\", \"label\": \"patients\", \"resource\": \"<PATIENT_VD_URL>\"}
         ]
       }
     }]
@@ -490,7 +506,7 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=json" \
           \"data\": \"${SQL_B64}\"
         }],
         \"relatedArtifact\": [
-          {\"type\": \"depends-on\", \"label\": \"conditions\", \"resource\": \"ViewDefinition/<CONDITION_VD_ID>\"}
+          {\"type\": \"depends-on\", \"label\": \"conditions\", \"resource\": \"<CONDITION_VD_URL>\"}
         ]
       }
     }]

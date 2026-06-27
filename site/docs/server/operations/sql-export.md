@@ -61,12 +61,15 @@ Each `query` part must supply exactly one of `query.queryReference` or
 `404 Not Found`.
 
 A SQLQuery `Library` declares its table sources as `relatedArtifact` entries,
-each labelling a ViewDefinition the SQL references. The optional `view`
-parameter supplies those ViewDefinitions at request time, matched to the
-`relatedArtifact` entries by ViewDefinition id. A view the SQL references but no
-`view` part supplies is read from server storage, exactly as the synchronous
-operation does. Each `view` part must supply exactly one of `view.viewReference`
-or `view.viewResource`; supplying both, or neither, returns `400 Bad Request`. A
+each labelling a ViewDefinition or SQLView the SQL references by its canonical
+URL. The optional `view` parameter supplies those ViewDefinitions at request
+time, matched to the `relatedArtifact` entries by canonical URL; a supplied view
+is therefore preferred over storage when its `url` matches, and a supplied view
+that carries no `url` is rejected with `400 Bad Request` because it could never
+satisfy a canonical reference. A view the SQL references but no `view` part
+supplies is read from server storage, exactly as the synchronous operation does.
+Each `view` part must supply exactly one of `view.viewReference` or
+`view.viewResource`; supplying both, or neither, returns `400 Bad Request`. A
 supplied ViewDefinition that is well-formed but semantically invalid returns
 `422 Unprocessable Entity`.
 
