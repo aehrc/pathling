@@ -74,6 +74,14 @@ public class ViewDefinitionResource extends DomainResource {
   @Serial private static final long serialVersionUID = 1909997123685548098L;
 
   @Nullable
+  @Child(name = "url")
+  private UriType url;
+
+  @Nullable
+  @Child(name = "version")
+  private StringType version;
+
+  @Nullable
   @Getter
   @Child(name = "name")
   private StringType name;
@@ -99,6 +107,50 @@ public class ViewDefinitionResource extends DomainResource {
 
   @Child(name = "constant", max = Child.MAX_UNLIMITED)
   private List<ConstantComponent> constant;
+
+  @Nullable
+  public String getUrl() {
+    return url == null ? null : url.getValue();
+  }
+
+  @Nullable
+  public UriType getUrlElement() {
+    return url;
+  }
+
+  public boolean hasUrlElement() {
+    return url != null && !url.isEmpty();
+  }
+
+  public void setUrlElement(final UriType url) {
+    this.url = url;
+  }
+
+  public void setUrl(final String url) {
+    this.url = url == null ? null : new UriType(url);
+  }
+
+  @Nullable
+  public String getVersion() {
+    return version == null ? null : version.getValue();
+  }
+
+  @Nullable
+  public StringType getVersionElement() {
+    return version;
+  }
+
+  public boolean hasVersionElement() {
+    return version != null && !version.isEmpty();
+  }
+
+  public void setVersionElement(final StringType version) {
+    this.version = version;
+  }
+
+  public void setVersion(final String version) {
+    this.version = version == null ? null : new StringType(version);
+  }
 
   @Nullable
   public StringType getNameElement() {
@@ -187,6 +239,8 @@ public class ViewDefinitionResource extends DomainResource {
   public DomainResource copy() {
     final ViewDefinitionResource copy = new ViewDefinitionResource();
     copyValues(copy);
+    copy.url = url != null ? url.copy() : null;
+    copy.version = version != null ? version.copy() : null;
     copy.name = name != null ? name.copy() : null;
     if (fhirVersion != null) {
       copy.fhirVersion = new ArrayList<>();
@@ -233,6 +287,8 @@ public class ViewDefinitionResource extends DomainResource {
   @Override
   public boolean isEmpty() {
     return super.isEmpty()
+        && (url == null || url.isEmpty())
+        && (version == null || version.isEmpty())
         && (name == null || name.isEmpty())
         && (fhirVersion == null || fhirVersion.isEmpty())
         && (resource == null || resource.isEmpty())
