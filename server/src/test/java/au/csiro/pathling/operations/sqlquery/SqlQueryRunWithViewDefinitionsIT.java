@@ -79,10 +79,10 @@ class SqlQueryRunWithViewDefinitionsIT {
   private static final Gson GSON = new Gson();
 
   private static final String VIEW_REFERENCE =
-      "ViewDefinition/" + SqlQueryViewDefinitionTestConfiguration.PATIENT_VIEW_ID;
+      SqlQueryViewDefinitionTestConfiguration.PATIENT_VIEW_URL;
 
   private static final String OBSERVATION_VIEW_REFERENCE =
-      "ViewDefinition/" + SqlQueryViewDefinitionTestConfiguration.OBSERVATION_VIEW_ID;
+      SqlQueryViewDefinitionTestConfiguration.OBSERVATION_VIEW_URL;
 
   @LocalServerPort int port;
 
@@ -186,9 +186,12 @@ class SqlQueryRunWithViewDefinitionsIT {
   }
 
   @Test
-  void returns400WhenReferencedViewDefinitionDoesNotExist() {
+  void returnsErrorWhenReferencedViewDefinitionDoesNotExist() {
     final Library library =
-        sqlQueryLibrary("SELECT id FROM patients", "patients", "ViewDefinition/does-not-exist");
+        sqlQueryLibrary(
+            "SELECT id FROM patients",
+            "patients",
+            "https://pathling.csiro.au/test/ViewDefinition/does-not-exist");
 
     webTestClient
         .post()

@@ -18,6 +18,7 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.view.ViewExecutionHelper;
@@ -225,10 +226,11 @@ public class SqlQueryExportRequestParser {
   }
 
   /**
-   * Resolves the {@code view} parts into a map keyed by the ViewDefinition id they satisfy, parsing
+   * Resolves the {@code view} parts into a map keyed by the canonical url they satisfy, parsing
    * inline views, reading referenced views, applying the per-resource READ check to stored views,
    * and semantically validating each supplied view (a malformed view is a 400; a semantically
-   * invalid one a 422).
+   * invalid one a 422). A supplied view that carries no url is rejected with a 400, since it cannot
+   * satisfy a canonical dependency reference.
    */
   @Nonnull
   private Map<String, FhirView> resolveSuppliedViews(@Nonnull final Parameters parameters) {
@@ -253,6 +255,20 @@ public class SqlQueryExportRequestParser {
       final boolean inline = viewResource != null;
       final IBaseResource resolvedResource =
           viewExecutionHelper.resolveViewInput(viewResource, viewReference);
+
+      // A supplied view satisfies a dependency reference by its canonical url; one without a url
+      // can never match a canonical reference, so it is rejected up front rather than silently
+      // ignored, ahead of the heavier parse and semantic validation.
+      final String url =
+          resolvedResource instanceof final ViewDefinitionResource viewDefinition
+              ? viewDefinition.getUrl()
+              : null;
+      if (url == null || url.isBlank()) {
+        throw new InvalidRequestException(
+            "A supplied 'view' must carry a url to satisfy a canonical dependency reference, but"
+                + " the supplied view has none");
+      }
+
       final FhirView view = parseViewDefinition(resolvedResource);
 
       // A stored ViewDefinition is subject to the per-resource READ check; an inline view carries
@@ -264,10 +280,7 @@ public class SqlQueryExportRequestParser {
 
       validateViewSemantically(view);
 
-      final String matchKey = resolvedResource.getIdElement().getIdPart();
-      if (matchKey != null && !matchKey.isBlank()) {
-        resolved.put(matchKey, view);
-      }
+      resolved.put(url, view);
     }
     return resolved;
   }

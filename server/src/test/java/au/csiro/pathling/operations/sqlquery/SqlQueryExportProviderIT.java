@@ -344,16 +344,17 @@ class SqlQueryExportProviderIT extends AbstractSqlQueryExportIT {
                 "label",
                 "patients",
                 "resource",
-                "ViewDefinition/" + SqlQueryExportTestConfiguration.PATIENT_VIEW_ID)));
+                SqlQueryExportTestConfiguration.PATIENT_VIEW_URL)));
     return library;
   }
 
-  /** An inline Patient ViewDefinition whose id matches the inline query's relatedArtifact. */
+  /** An inline Patient ViewDefinition whose url matches the inline query's relatedArtifact. */
   @Nonnull
   private Map<String, Object> inlineViewDefinition() {
     final Map<String, Object> view = new LinkedHashMap<>();
     view.put("resourceType", "ViewDefinition");
     view.put("id", SqlQueryExportTestConfiguration.PATIENT_VIEW_ID);
+    view.put("url", SqlQueryExportTestConfiguration.PATIENT_VIEW_URL);
     view.put("name", "supplied_patient_view");
     view.put("resource", "Patient");
     view.put("status", "active");

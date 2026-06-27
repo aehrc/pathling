@@ -45,8 +45,75 @@ import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
  */
 public final class SqlLibraryFixtures {
 
+  /** Base canonical URL under which test ViewDefinitions and SQLViews are published. */
+  public static final String CANONICAL_BASE = "https://pathling.csiro.au/test/";
+
   private SqlLibraryFixtures() {
     // Utility class.
+  }
+
+  /**
+   * Builds the canonical URL for a test ViewDefinition with the given local name. The final segment
+   * is deliberately the local name so tests can give a ViewDefinition a logical id that differs
+   * from the URL's final segment.
+   *
+   * @param name the local name segment
+   * @return the canonical URL
+   */
+  @Nonnull
+  public static String viewDefinitionUrl(@Nonnull final String name) {
+    return CANONICAL_BASE + "ViewDefinition/" + name;
+  }
+
+  /**
+   * Builds the canonical URL for a test SQLView Library with the given local name.
+   *
+   * @param name the local name segment
+   * @return the canonical URL
+   */
+  @Nonnull
+  public static String sqlViewUrl(@Nonnull final String name) {
+    return CANONICAL_BASE + "Library/" + name;
+  }
+
+  /**
+   * Builds a {@code SQLView} Library that carries its own canonical {@code url} and a single {@code
+   * depends-on} dependency referenced by canonical URL.
+   *
+   * @param url the SQLView's canonical url, against which dependency references resolve it
+   * @param sql the SQL text to embed
+   * @param label the dependency table label
+   * @param resource the dependency resource reference (a canonical URL)
+   * @return a {@code SQLView} Library carrying a url and one dependency
+   */
+  @Nonnull
+  public static Library sqlViewWithUrl(
+      @Nonnull final String url,
+      @Nonnull final String sql,
+      @Nonnull final String label,
+      @Nonnull final String resource) {
+    final Library library = sqlView(sql, label, resource);
+    library.setUrl(url);
+    return library;
+  }
+
+  /**
+   * Builds a {@code SQLView} Library that carries its own canonical {@code url} and a set of {@code
+   * depends-on} dependencies referenced by canonical URL.
+   *
+   * @param url the SQLView's canonical url, against which dependency references resolve it
+   * @param sql the SQL text to embed
+   * @param dependenciesByLabel the dependencies keyed by table label, each value a canonical URL
+   * @return a {@code SQLView} Library carrying a url and the given dependencies
+   */
+  @Nonnull
+  public static Library sqlViewWithUrl(
+      @Nonnull final String url,
+      @Nonnull final String sql,
+      @Nonnull final Map<String, String> dependenciesByLabel) {
+    final Library library = sqlView(sql, dependenciesByLabel);
+    library.setUrl(url);
+    return library;
   }
 
   /**

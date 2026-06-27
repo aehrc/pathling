@@ -112,7 +112,7 @@ class SqlViewRunProviderIT {
         sqlQueryLibrary(
             "SELECT id, family_name FROM ap ORDER BY id",
             "ap",
-            "Library/" + SqlViewTestConfiguration.ACTIVE_PATIENTS_ID);
+            SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.ACTIVE_PATIENTS_ID));
 
     final String body = postOk(parametersJson(library));
 
@@ -135,7 +135,7 @@ class SqlViewRunProviderIT {
         sqlQueryLibrary(
             "SELECT id, family_name FROM rp ORDER BY id",
             "rp",
-            "Library/" + SqlViewTestConfiguration.REFINED_PATIENTS_ID);
+            SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.REFINED_PATIENTS_ID));
 
     final String body = postOk(parametersJson(library));
 
@@ -163,12 +163,14 @@ class SqlViewRunProviderIT {
         new RelatedArtifact()
             .setType(RelatedArtifactType.DEPENDSON)
             .setLabel("l")
-            .setResource("Library/" + SqlViewTestConfiguration.LEFT_PATIENTS_ID));
+            .setResource(
+                SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.LEFT_PATIENTS_ID)));
     library.addRelatedArtifact(
         new RelatedArtifact()
             .setType(RelatedArtifactType.DEPENDSON)
             .setLabel("r")
-            .setResource("Library/" + SqlViewTestConfiguration.RIGHT_PATIENTS_ID));
+            .setResource(
+                SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.RIGHT_PATIENTS_ID)));
 
     final String body = postOk(parametersJson(library));
 
@@ -206,9 +208,12 @@ class SqlViewRunProviderIT {
   }
 
   @Test
-  void returns400WhenReferencedSqlViewDoesNotExist() {
+  void returnsErrorWhenReferencedSqlViewDoesNotExist() {
     final Library library =
-        sqlQueryLibrary("SELECT id FROM missing", "missing", "Library/does-not-exist");
+        sqlQueryLibrary(
+            "SELECT id FROM missing",
+            "missing",
+            SqlViewTestConfiguration.libraryUrl("does-not-exist"));
 
     // The error names the failing label and reference so the client can act on it.
     final String body = postExpect4xx(parametersJson(library));
@@ -219,7 +224,10 @@ class SqlViewRunProviderIT {
   void rejectsCyclicSqlViewGraphWith400() {
     // cycle-a -> cycle-b -> cycle-a must be rejected before any SQL executes.
     final Library library =
-        sqlQueryLibrary("SELECT * FROM a", "a", "Library/" + SqlViewTestConfiguration.CYCLE_A_ID);
+        sqlQueryLibrary(
+            "SELECT * FROM a",
+            "a",
+            SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.CYCLE_A_ID));
 
     final String body = postExpect4xx(parametersJson(library));
     assertThat(body).containsIgnoringCase("cycl");

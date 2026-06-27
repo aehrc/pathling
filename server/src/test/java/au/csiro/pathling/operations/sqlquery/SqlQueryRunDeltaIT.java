@@ -128,10 +128,9 @@ class SqlQueryRunDeltaIT {
    */
   @Test
   void runsSqlAgainstDeltaBackedViewDefinition() {
-    final String viewId = createPatientViewDefinition();
+    final String viewUrl = createPatientViewDefinition();
     final Library library =
-        sqlQueryLibrary(
-            "SELECT id FROM patients ORDER BY id LIMIT 5", "patients", "ViewDefinition/" + viewId);
+        sqlQueryLibrary("SELECT id FROM patients ORDER BY id LIMIT 5", "patients", viewUrl);
 
     final String body =
         postOk(
@@ -149,10 +148,16 @@ class SqlQueryRunDeltaIT {
     }
   }
 
+  /**
+   * Creates a Patient ViewDefinition carrying a canonical url whose final segment differs from the
+   * server-assigned logical id, then returns that url so the dependency can be referenced by it.
+   */
   @Nonnull
   private String createPatientViewDefinition() {
+    final String viewUrl = "https://pathling.csiro.au/test/ViewDefinition/DeltaPatients";
     final Map<String, Object> view = new LinkedHashMap<>();
     view.put("resourceType", "ViewDefinition");
+    view.put("url", viewUrl);
     view.put("name", "patients");
     view.put("resource", "Patient");
     view.put("status", "active");
@@ -163,21 +168,15 @@ class SqlQueryRunDeltaIT {
     select.put("column", List.of(column));
     view.put("select", List.of(select));
 
-    final EntityExchangeResult<byte[]> result =
-        webTestClient
-            .post()
-            .uri("http://localhost:" + port + "/fhir/ViewDefinition")
-            .header("Content-Type", "application/fhir+json")
-            .bodyValue(GSON.toJson(view))
-            .exchange()
-            .expectStatus()
-            .isCreated()
-            .expectBody()
-            .returnResult();
-    final String location =
-        Objects.requireNonNull(result.getResponseHeaders().getFirst("Location"));
-    final String[] parts = location.split("/");
-    return parts[parts.length - 1];
+    webTestClient
+        .post()
+        .uri("http://localhost:" + port + "/fhir/ViewDefinition")
+        .header("Content-Type", "application/fhir+json")
+        .bodyValue(GSON.toJson(view))
+        .exchange()
+        .expectStatus()
+        .isCreated();
+    return viewUrl;
   }
 
   @Nonnull
