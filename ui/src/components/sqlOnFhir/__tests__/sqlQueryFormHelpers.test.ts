@@ -24,42 +24,8 @@ import {
   buildParameterTypes,
   canExecuteInlineForm,
   canSaveInlineForm,
-  decodeViewReferenceValue,
-  encodeViewReferenceValue,
   isRuntimeValueValid,
 } from "../sqlQueryFormHelpers";
-
-describe("encodeViewReferenceValue / decodeViewReferenceValue", () => {
-  // The codec round-trips a view-definition reference.
-  it("round-trips a view-definition reference", () => {
-    const value = encodeViewReferenceValue("view-definition", "vd-1");
-    expect(value).toBe("view-definition:vd-1");
-    expect(decodeViewReferenceValue(value)).toEqual({
-      referenceType: "view-definition",
-      referenceId: "vd-1",
-    });
-  });
-
-  // The codec round-trips a sql-view reference.
-  it("round-trips a sql-view reference", () => {
-    const value = encodeViewReferenceValue("sql-view", "lib-1");
-    expect(value).toBe("sql-view:lib-1");
-    expect(decodeViewReferenceValue(value)).toEqual({
-      referenceType: "sql-view",
-      referenceId: "lib-1",
-    });
-  });
-
-  // Splitting on the first colon keeps ids that themselves contain colons
-  // intact, so the two id namespaces never collide.
-  it("preserves ids that contain colons", () => {
-    const value = encodeViewReferenceValue("sql-view", "urn:uuid:abc:def");
-    expect(decodeViewReferenceValue(value)).toEqual({
-      referenceType: "sql-view",
-      referenceId: "urn:uuid:abc:def",
-    });
-  });
-});
 
 describe("buildInlineSqlQueryLibrary", () => {
   // The assembled Library carries the SQL on FHIR profile, the
@@ -73,8 +39,7 @@ describe("buildInlineSqlQueryLibrary", () => {
         {
           rowId: "r1",
           label: "patients",
-          referenceType: "view-definition",
-          referenceId: "vd-patients",
+          referenceUrl: "https://example.org/ViewDefinition/patients",
         },
       ],
       parameters: [{ rowId: "p1", name: "patient_id", type: "string" }],
@@ -98,7 +63,7 @@ describe("buildInlineSqlQueryLibrary", () => {
       {
         type: "depends-on",
         label: "patients",
-        resource: "ViewDefinition/vd-patients",
+        resource: "https://example.org/ViewDefinition/patients",
       },
     ]);
     expect(library.parameter).toEqual([
@@ -106,23 +71,24 @@ describe("buildInlineSqlQueryLibrary", () => {
     ]);
   });
 
-  // A view row backed by a SQLView emits a Library/<id> reference, while a
-  // ViewDefinition row emits ViewDefinition/<id>.
-  it("emits the correct reference prefix per source kind", () => {
+  // Each row emits its chosen source's canonical URL verbatim as the
+  // relatedArtifact.resource - regardless of whether the source is a
+  // ViewDefinition or a SQLView - so the saved query round-trips a source by
+  // URL.
+  it("emits each row's canonical url as the relatedArtifact resource", () => {
     const library = buildInlineSqlQueryLibrary({
       sql: "SELECT 1",
       tables: [
         {
           rowId: "r1",
           label: "patients",
-          referenceType: "view-definition",
-          referenceId: "patient-demographics",
+          referenceUrl:
+            "https://pathling.example/ViewDefinition/patient_demographics",
         },
         {
           rowId: "r2",
           label: "active",
-          referenceType: "sql-view",
-          referenceId: "active-patients",
+          referenceUrl: "https://pathling.example/Library/ObservationPeriod",
         },
       ],
       parameters: [],
@@ -132,12 +98,13 @@ describe("buildInlineSqlQueryLibrary", () => {
       {
         type: "depends-on",
         label: "patients",
-        resource: "ViewDefinition/patient-demographics",
+        resource:
+          "https://pathling.example/ViewDefinition/patient_demographics",
       },
       {
         type: "depends-on",
         label: "active",
-        resource: "Library/active-patients",
+        resource: "https://pathling.example/Library/ObservationPeriod",
       },
     ]);
   });
@@ -181,8 +148,7 @@ describe("canExecuteInlineForm", () => {
           {
             rowId: "r1",
             label: "patients",
-            referenceType: "view-definition",
-            referenceId: "vd1",
+            referenceUrl: "https://example.org/V",
           },
         ],
         parameters: [],
@@ -208,25 +174,19 @@ describe("canExecuteInlineForm", () => {
       canExecuteInlineForm({
         sql: "SELECT 1",
         tables: [
-          {
-            rowId: "r1",
-            label: "",
-            referenceType: "view-definition",
-            referenceId: "vd1",
-          },
+          { rowId: "r1", label: "", referenceUrl: "https://example.org/V" },
         ],
         parameters: [],
       }),
     ).toBe(false);
   });
 
-  // A view row with no source picked (no referenceType / referenceId) is
-  // incomplete.
+  // A view row with no source picked (no referenceUrl) is incomplete.
   it("returns false when a view row has no source selected", () => {
     expect(
       canExecuteInlineForm({
         sql: "SELECT 1",
-        tables: [{ rowId: "r1", label: "patients", referenceId: "" }],
+        tables: [{ rowId: "r1", label: "patients", referenceUrl: "" }],
         parameters: [],
       }),
     ).toBe(false);
@@ -241,8 +201,7 @@ describe("canExecuteInlineForm", () => {
           {
             rowId: "r1",
             label: "patients",
-            referenceType: "sql-view",
-            referenceId: "lib1",
+            referenceUrl: "https://example.org/Library/lib1",
           },
         ],
         parameters: [],
@@ -261,8 +220,7 @@ describe("canSaveInlineForm", () => {
           {
             rowId: "r1",
             label: "patients",
-            referenceType: "view-definition",
-            referenceId: "vd1",
+            referenceUrl: "https://example.org/V",
           },
         ],
         parameters: [],
@@ -279,8 +237,7 @@ describe("canSaveInlineForm", () => {
           {
             rowId: "r1",
             label: "patients",
-            referenceType: "view-definition",
-            referenceId: "vd1",
+            referenceUrl: "https://example.org/V",
           },
         ],
         parameters: [],

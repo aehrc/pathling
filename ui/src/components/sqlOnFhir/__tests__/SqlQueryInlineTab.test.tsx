@@ -18,9 +18,10 @@
 /**
  * Tests for the SqlQueryInlineTab component.
  *
- * Verifies the "Views" editor (renamed from "Tables"), the grouped source
- * selector offering ViewDefinitions and SQLViews, the discriminated row
- * update on selection, and the disabled "nothing to reference" state.
+ * Verifies the "Views" editor, the grouped source selector binding each source
+ * by its canonical URL, the row update on selection, the disabled state for
+ * URL-less sources, and the "source not found" surfacing of an unmatched stored
+ * reference.
  *
  * @author John Grimes
  */
@@ -31,10 +32,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "../../../test/testUtils";
 import { SqlQueryInlineTab } from "../SqlQueryInlineTab";
 
-import type { SqlQueryRelatedArtifact } from "../../../types/sqlQuery";
+import type { SourceOption, SqlQueryRelatedArtifact } from "../../../types/sqlQuery";
 
-const VIEW_DEFINITIONS = [{ id: "patient-demographics", name: "Patient Demographics" }];
-const SQL_VIEWS = [{ id: "active-patients", name: "Active patients" }];
+const PATIENT_DEMOGRAPHICS_URL = "https://example.org/ViewDefinition/patient_demographics";
+const ACTIVE_PATIENTS_URL = "https://example.org/Library/ActivePatients";
+
+const VIEW_DEFINITIONS: SourceOption[] = [
+  { id: "patient-demographics", name: "Patient Demographics", url: PATIENT_DEMOGRAPHICS_URL },
+  // A source with no canonical URL cannot be referenced.
+  { id: "draft-obs", name: "Draft lab observations", url: undefined },
+];
+const SQL_VIEWS: SourceOption[] = [
+  { id: "active-patients", name: "Active patients", url: ACTIVE_PATIENTS_URL },
+];
 
 /**
  * Renders the inline tab with sensible defaults and inert callbacks.
@@ -48,8 +58,8 @@ const SQL_VIEWS = [{ id: "active-patients", name: "Active patients" }];
 function renderTab(
   overrides: {
     tables?: SqlQueryRelatedArtifact[];
-    viewDefinitions?: Array<{ id: string; name: string }>;
-    sqlViews?: Array<{ id: string; name: string }>;
+    viewDefinitions?: SourceOption[];
+    sqlViews?: SourceOption[];
   } = {},
 ) {
   const user = userEvent.setup();
@@ -75,7 +85,7 @@ function renderTab(
 const EMPTY_ROW: SqlQueryRelatedArtifact = {
   rowId: "r1",
   label: "patients",
-  referenceId: "",
+  referenceUrl: "",
 };
 
 describe("SqlQueryInlineTab", () => {
@@ -108,8 +118,8 @@ describe("SqlQueryInlineTab", () => {
     expect(screen.getByRole("option", { name: "Active patients" })).toBeInTheDocument();
   });
 
-  // Selecting a ViewDefinition stamps the row with the view-definition kind.
-  it("updates the row with a view-definition reference", async () => {
+  // Selecting a ViewDefinition stamps the row with the source's canonical URL.
+  it("updates the row with the chosen ViewDefinition's url", async () => {
     const { user, onTablesChange } = renderTab({ tables: [EMPTY_ROW] });
 
     await user.click(screen.getByRole("combobox", { name: /source for view 1/i }));
@@ -118,14 +128,13 @@ describe("SqlQueryInlineTab", () => {
     expect(onTablesChange).toHaveBeenCalledWith([
       expect.objectContaining({
         rowId: "r1",
-        referenceType: "view-definition",
-        referenceId: "patient-demographics",
+        referenceUrl: PATIENT_DEMOGRAPHICS_URL,
       }),
     ]);
   });
 
-  // Selecting a SQLView stamps the row with the sql-view kind.
-  it("updates the row with a sql-view reference", async () => {
+  // Selecting a SQLView stamps the row with the SQLView's canonical URL.
+  it("updates the row with the chosen SQLView's url", async () => {
     const { user, onTablesChange } = renderTab({ tables: [EMPTY_ROW] });
 
     await user.click(screen.getByRole("combobox", { name: /source for view 1/i }));
@@ -134,10 +143,38 @@ describe("SqlQueryInlineTab", () => {
     expect(onTablesChange).toHaveBeenCalledWith([
       expect.objectContaining({
         rowId: "r1",
-        referenceType: "sql-view",
-        referenceId: "active-patients",
+        referenceUrl: ACTIVE_PATIENTS_URL,
       }),
     ]);
+  });
+
+  // A source with no canonical URL is rendered disabled with an explanation and
+  // cannot be selected, since it could never satisfy a canonical reference.
+  it("disables a URL-less source with an explanation and prevents selecting it", async () => {
+    const { user, onTablesChange } = renderTab({ tables: [EMPTY_ROW] });
+
+    await user.click(screen.getByRole("combobox", { name: /source for view 1/i }));
+
+    const draftOption = screen.getByRole("option", { name: /Draft lab observations/i });
+    expect(draftOption).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText(/No canonical URL/i)).toBeInTheDocument();
+
+    await user.click(draftOption);
+    expect(onTablesChange).not.toHaveBeenCalled();
+  });
+
+  // When editing a stored query, a saved URL that matches no known source is
+  // surfaced verbatim with a "source not found" note.
+  it("surfaces an unmatched stored reference verbatim", () => {
+    const unmatchedRow: SqlQueryRelatedArtifact = {
+      rowId: "r1",
+      label: "patients",
+      referenceUrl: "https://example.org/ViewDefinition/Gone",
+    };
+    renderTab({ tables: [unmatchedRow] });
+
+    expect(screen.getByText(/source not found/i)).toBeInTheDocument();
+    expect(screen.getByText("https://example.org/ViewDefinition/Gone")).toBeInTheDocument();
   });
 
   // With neither ViewDefinitions nor SQLViews, the selector is disabled and

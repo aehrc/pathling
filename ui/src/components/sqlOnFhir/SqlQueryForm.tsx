@@ -234,10 +234,12 @@ export function SqlQueryForm({
                 viewDefinitions={(viewDefinitions ?? []).map((vd) => ({
                   id: vd.id,
                   name: vd.name,
+                  url: vd.url,
                 }))}
                 sqlViews={(storedViews ?? []).map((view) => ({
                   id: view.id,
                   name: view.title,
+                  url: view.url,
                 }))}
                 disabled={disabled || isExecuting}
               />

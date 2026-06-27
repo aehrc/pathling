@@ -319,6 +319,60 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     ).toHaveAttribute("aria-selected", "true");
   });
 
+  test("saves the chosen source by its canonical URL", async ({ page }) => {
+    await mockMetadata(page);
+    await mockViewDefinitions(page);
+
+    // Capture the body POSTed to /Library so the persisted reference can be
+    // asserted to be the source's canonical URL.
+    let postedBody: string | null = null;
+    await page.route(/\/Library$/, async (route) => {
+      if (route.request().method() === "POST") {
+        postedBody = route.request().postData();
+        await route.fulfill({
+          status: 201,
+          contentType: "application/fhir+json",
+          body: JSON.stringify({
+            ...mockSqlQueryLibrary1,
+            id: "saved-library",
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/fhir+json",
+        body: JSON.stringify(mockSqlQueryLibraryBundle),
+      });
+    });
+
+    await page.goto("/admin/sql-on-fhir");
+    await selectSqlQueryMode(page);
+
+    await page.getByRole("tab", { name: /provide sql/i }).click();
+    await page.getByRole("textbox", { name: /library title/i }).fill("By URL");
+    await page.getByRole("textbox", { name: /^sql$/i }).fill("SELECT 1");
+    await page.getByRole("button", { name: /add view/i }).click();
+    await page
+      .getByRole("textbox", { name: /label for view 1/i })
+      .fill("patients");
+    await page.getByRole("combobox", { name: /source for view 1/i }).click();
+    await page.getByRole("option", { name: "Patient Demographics" }).click();
+
+    await page.getByRole("button", { name: /save to server/i }).click();
+
+    await expect(
+      page.getByRole("tab", { name: /select query/i }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(postedBody).not.toBeNull();
+    const saved = JSON.parse(postedBody as unknown as string) as {
+      relatedArtifact?: Array<{ resource?: string }>;
+    };
+    expect(saved.relatedArtifact?.[0]?.resource).toBe(
+      "https://pathling.example/ViewDefinition/PatientDemographics",
+    );
+  });
+
   test("renders a callout when the server returns 400", async ({ page }) => {
     await mockMetadata(page);
     await mockSqlQueryLibraries(page);
