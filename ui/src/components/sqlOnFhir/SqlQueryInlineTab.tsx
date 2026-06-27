@@ -77,7 +77,7 @@ function SourceSelectGroup({
             <Flex direction="column">
               <Text>{source.name}</Text>
               <Text size="1" color="gray">
-                No canonical URL — add a url to reference this view
+                No canonical URL - add a url to reference this view
               </Text>
             </Flex>
           </Select.Item>
