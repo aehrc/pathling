@@ -32,11 +32,13 @@ import {
 } from "../utils";
 
 import type {
+  SourceOption,
   SqlQueryBinaryResult,
   SqlQueryLibrary,
   SqlQueryLibrarySummary,
   SqlQueryOutputFormat,
   SqlQueryParameterType,
+  SqlQueryRelatedArtifact,
   SqlQueryResult,
   SqlQueryTabularResult,
 } from "../types/sqlQuery";
@@ -138,11 +140,66 @@ export function libraryToSummary(
   return {
     id,
     title,
+    url: library.url,
     sql,
     relatedArtifacts,
     parameters,
     resource: library as unknown as SqlQueryLibrary,
   };
+}
+
+/**
+ * Repopulates inline-form view rows from a stored query's dependency
+ * references. Each `relatedArtifact` is a canonical URL, carried verbatim as
+ * the row's `referenceUrl`; the picker later matches it back to a known source
+ * (see {@link findSourceByUrl}) or surfaces it as an unmatched URL.
+ *
+ * @param relatedArtifacts - The stored query's decoded dependency references.
+ * @returns The view rows, in reference order, keyed by deterministic row ids.
+ *
+ * @example
+ * storedReferencesToViewRows([
+ *   { label: "patients", reference: "https://example.org/Patients" },
+ * ]);
+ * // [{ rowId: "stored-row-0", label: "patients",
+ * //    referenceUrl: "https://example.org/Patients" }]
+ */
+export function storedReferencesToViewRows(
+  relatedArtifacts: Array<{ label: string; reference: string }>,
+): SqlQueryRelatedArtifact[] {
+  return relatedArtifacts.map((artifact, index) => ({
+    rowId: `stored-row-${index}`,
+    label: artifact.label,
+    referenceUrl: artifact.reference,
+  }));
+}
+
+/**
+ * Finds the source whose canonical URL matches the given reference URL.
+ *
+ * Used to repopulate the picker when editing a stored query: a matched source
+ * is shown selected by name, while an unmatched URL (no source carries it) is
+ * surfaced verbatim with a "source not found" note.
+ *
+ * @param sources - The known selectable sources.
+ * @param url - The canonical URL to match.
+ * @returns The matching source, or `undefined` when none carries that URL.
+ *
+ * @example
+ * findSourceByUrl(
+ *   [{ id: "vd1", name: "Patients", url: "https://example.org/Patients" }],
+ *   "https://example.org/Patients",
+ * );
+ * // { id: "vd1", name: "Patients", url: "https://example.org/Patients" }
+ */
+export function findSourceByUrl(
+  sources: SourceOption[],
+  url: string,
+): SourceOption | undefined {
+  if (!url) {
+    return undefined;
+  }
+  return sources.find((source) => source.url === url);
 }
 
 /**

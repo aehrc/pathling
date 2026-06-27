@@ -25,11 +25,12 @@
 import { PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { Box, Button, Flex, IconButton, Select, Text, TextArea, TextField } from "@radix-ui/themes";
 
+import { findSourceByUrl } from "../../hooks/sqlQueryHelpers";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
-import { decodeViewReferenceValue, encodeViewReferenceValue } from "./sqlQueryFormHelpers";
 
 import type {
+  SourceOption,
   SqlQueryParameterDeclaration,
   SqlQueryParameterType,
   SqlQueryRelatedArtifact,
@@ -45,9 +46,45 @@ const PARAMETER_TYPES: SqlQueryParameterType[] = [
   "dateTime",
 ];
 
-interface SourceOption {
-  id: string;
-  name: string;
+/**
+ * Renders a grouped list of selectable table sources for the source picker.
+ * A source is bound by its canonical URL; one without a URL is rendered
+ * disabled with an inline explanation, since it cannot satisfy a canonical
+ * dependency reference.
+ *
+ * @param props - The component props.
+ * @param props.label - The group heading (e.g. "View definitions").
+ * @param props.sources - The sources to list in this group.
+ * @returns The select group, or null when there are no sources.
+ */
+function SourceSelectGroup({
+  label,
+  sources,
+}: Readonly<{ label: string; sources: SourceOption[] }>) {
+  if (sources.length === 0) {
+    return null;
+  }
+  return (
+    <Select.Group>
+      <Select.Label>{label}</Select.Label>
+      {sources.map((source) =>
+        source.url ? (
+          <Select.Item key={source.id} value={source.url}>
+            {source.name}
+          </Select.Item>
+        ) : (
+          <Select.Item key={source.id} value={`no-url:${source.id}`} disabled>
+            <Flex direction="column">
+              <Text>{source.name}</Text>
+              <Text size="1" color="gray">
+                No canonical URL — add a url to reference this view
+              </Text>
+            </Flex>
+          </Select.Item>
+        ),
+      )}
+    </Select.Group>
+  );
 }
 
 interface SqlQueryInlineTabProps {
@@ -113,7 +150,7 @@ export function SqlQueryInlineTab({
       {
         rowId: crypto.randomUUID(),
         label: "",
-        referenceId: "",
+        referenceUrl: "",
       },
     ]);
   };
@@ -214,13 +251,11 @@ export function SqlQueryInlineTab({
                 )}
                 <Select.Root
                   value={
-                    table.referenceType && table.referenceId
-                      ? encodeViewReferenceValue(table.referenceType, table.referenceId)
+                    findSourceByUrl([...viewDefinitions, ...sqlViews], table.referenceUrl)
+                      ? table.referenceUrl
                       : undefined
                   }
-                  onValueChange={(value) =>
-                    handleUpdateTable(table.rowId, decodeViewReferenceValue(value))
-                  }
+                  onValueChange={(value) => handleUpdateTable(table.rowId, { referenceUrl: value })}
                   disabled={disabled || !hasSources}
                 >
                   <Select.Trigger
@@ -229,34 +264,17 @@ export function SqlQueryInlineTab({
                     aria-label={`Source for view ${index + 1}`}
                   />
                   <Select.Content>
-                    {viewDefinitions.length > 0 && (
-                      <Select.Group>
-                        <Select.Label>View definitions</Select.Label>
-                        {viewDefinitions.map((vd) => (
-                          <Select.Item
-                            key={vd.id}
-                            value={encodeViewReferenceValue("view-definition", vd.id)}
-                          >
-                            {vd.name}
-                          </Select.Item>
-                        ))}
-                      </Select.Group>
-                    )}
-                    {sqlViews.length > 0 && (
-                      <Select.Group>
-                        <Select.Label>SQL views</Select.Label>
-                        {sqlViews.map((sv) => (
-                          <Select.Item
-                            key={sv.id}
-                            value={encodeViewReferenceValue("sql-view", sv.id)}
-                          >
-                            {sv.name}
-                          </Select.Item>
-                        ))}
-                      </Select.Group>
-                    )}
+                    <SourceSelectGroup label="View definitions" sources={viewDefinitions} />
+                    <SourceSelectGroup label="SQL views" sources={sqlViews} />
                   </Select.Content>
                 </Select.Root>
+                {table.referenceUrl &&
+                  !findSourceByUrl([...viewDefinitions, ...sqlViews], table.referenceUrl) && (
+                    <Text size="1" color="amber" as="div" mt="1">
+                      Source not found:{" "}
+                      <code style={{ wordBreak: "break-all" }}>{table.referenceUrl}</code>
+                    </Text>
+                  )}
               </Box>
               <IconButton
                 size="2"

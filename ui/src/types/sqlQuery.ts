@@ -47,25 +47,34 @@ export type SqlQueryParameterType =
   | "dateTime";
 
 /**
- * The kind of stored source a view row references, deciding the reference
- * prefix emitted into `relatedArtifact.resource`.
+ * A selectable table source in the inline authoring form: a stored
+ * ViewDefinition or SQLView, listed by name and bound by its canonical URL.
  */
-export type SqlOnFhirReferenceType = "view-definition" | "sql-view";
+export interface SourceOption {
+  /** Logical id of the source (used only as a stable list key). */
+  id: string;
+  /** Human-readable name shown in the picker. */
+  name: string;
+  /**
+   * Canonical URL the dependency reference resolves against. A source with no
+   * URL cannot be referenced and is shown disabled in the picker.
+   */
+  url?: string;
+}
 
 /**
  * A `relatedArtifact` entry on a SQLQuery Library, expressed in form-state
- * terms. A row binds a SQL table label to a chosen stored source, which may
- * be a ViewDefinition (`ViewDefinition/<id>`) or a SQLView (`Library/<id>`).
+ * terms. A row binds a SQL table label to a chosen stored source by the
+ * source's canonical URL, which is emitted verbatim as
+ * `relatedArtifact.resource` on save.
  */
 export interface SqlQueryRelatedArtifact {
   /** Stable identifier for use as a React `key`. */
   rowId: string;
   /** Table name referenced by the SQL. */
   label: string;
-  /** The kind of the chosen source; `undefined` until a source is picked. */
-  referenceType?: SqlOnFhirReferenceType;
-  /** Logical id of the chosen ViewDefinition or SQLView; empty until picked. */
-  referenceId: string;
+  /** Canonical URL of the chosen source; empty until a source is picked. */
+  referenceUrl: string;
 }
 
 /**
@@ -98,6 +107,8 @@ export interface SqlQueryLibrarySummary {
   id: string;
   /** Human-readable title (`title` or `name`, falling back to the ID). */
   title: string;
+  /** Canonical URL (`Library.url`), used to reference this source by URL. */
+  url?: string;
   /** Decoded SQL text from `Library.content[0].data`. */
   sql: string;
   /** Related-artifact entries with label and ViewDefinition reference. */

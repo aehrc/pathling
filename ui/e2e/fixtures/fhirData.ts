@@ -269,6 +269,7 @@ export const mockExportManifest: Parameters = {
 export const mockViewDefinition1 = {
   resourceType: "ViewDefinition",
   id: "patient-demographics",
+  url: "https://pathling.example/ViewDefinition/PatientDemographics",
   name: "Patient Demographics",
   resource: "Patient",
   status: "active",
@@ -288,6 +289,7 @@ export const mockViewDefinition1 = {
 export const mockViewDefinition2 = {
   resourceType: "ViewDefinition",
   id: "observation-vitals",
+  url: "https://pathling.example/ViewDefinition/ObservationVitals",
   name: "Observation Vitals",
   resource: "Observation",
   status: "active",
@@ -381,7 +383,7 @@ export const mockSqlQueryLibrary1 = {
     {
       type: "depends-on",
       label: "patients",
-      resource: "ViewDefinition/patient-demographics",
+      resource: "https://pathling.example/ViewDefinition/PatientDemographics",
     },
   ],
   parameter: [{ name: "patient_id", use: "in", type: "string" }],
@@ -448,7 +450,7 @@ export const mockSqlViewLibrary1 = {
     {
       type: "depends-on",
       label: "patients",
-      resource: "ViewDefinition/patient-demographics",
+      resource: "https://pathling.example/ViewDefinition/PatientDemographics",
     },
   ],
 };
