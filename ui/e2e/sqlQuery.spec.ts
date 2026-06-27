@@ -271,14 +271,12 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     // Author the SQL.
     await page.getByRole("textbox", { name: /^sql$/i }).fill("SELECT 1");
 
-    // Add a table row and select the first ViewDefinition.
-    await page.getByRole("button", { name: /add table/i }).click();
+    // Add a view row and select the first ViewDefinition.
+    await page.getByRole("button", { name: /add view/i }).click();
     await page
-      .getByRole("textbox", { name: /label for table 1/i })
+      .getByRole("textbox", { name: /label for view 1/i })
       .fill("patients");
-    await page
-      .getByRole("combobox", { name: /view definition for table 1/i })
-      .click();
+    await page.getByRole("combobox", { name: /source for view 1/i }).click();
     await page.getByRole("option", { name: "Patient Demographics" }).click();
 
     // Use CSV output so the result rendering is deterministic.
@@ -306,13 +304,11 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       .getByRole("textbox", { name: /library title/i })
       .fill("Inline SQL query");
     await page.getByRole("textbox", { name: /^sql$/i }).fill("SELECT 1");
-    await page.getByRole("button", { name: /add table/i }).click();
+    await page.getByRole("button", { name: /add view/i }).click();
     await page
-      .getByRole("textbox", { name: /label for table 1/i })
+      .getByRole("textbox", { name: /label for view 1/i })
       .fill("patients");
-    await page
-      .getByRole("combobox", { name: /view definition for table 1/i })
-      .click();
+    await page.getByRole("combobox", { name: /source for view 1/i }).click();
     await page.getByRole("option", { name: "Patient Demographics" }).click();
 
     await page.getByRole("button", { name: /save to server/i }).click();
