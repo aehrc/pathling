@@ -55,6 +55,7 @@ import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.UriType;
 import org.json.JSONException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -127,12 +128,57 @@ class ViewDefinitionEncodingTest {
 
     // Verify top-level fields exist.
     assertTrue(schema.getFieldIndex("id").isDefined());
+    assertTrue(schema.getFieldIndex("url").isDefined());
+    assertTrue(schema.getFieldIndex("version").isDefined());
     assertTrue(schema.getFieldIndex("name").isDefined());
     assertTrue(schema.getFieldIndex("resource").isDefined());
     assertTrue(schema.getFieldIndex("status").isDefined());
     assertTrue(schema.getFieldIndex("select").isDefined());
     assertTrue(schema.getFieldIndex("where").isDefined());
     assertTrue(schema.getFieldIndex("constant").isDefined());
+  }
+
+  @Test
+  void testUrlAndVersionSurviveRoundTrip() {
+    // The url and version are required to match dependency references by canonical URL, so they
+    // must be retained through an encode/decode round-trip.
+    final ViewDefinitionResource original = createSimpleViewDefinition();
+    original.setUrlElement(new UriType("https://example.org/ViewDefinition/patients"));
+    original.setVersionElement(new org.hl7.fhir.r4.model.StringType("2.0"));
+
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
+
+    final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
+
+    assertTrue(original.equalsDeep(decoded));
+    assertEquals("https://example.org/ViewDefinition/patients", decoded.getUrl());
+    assertEquals("2.0", decoded.getVersion());
+  }
+
+  @Test
+  void testDecodeWithoutUrlAndVersionYieldsEmptyValues() {
+    // A ViewDefinition stored without a url or version (the pre-existing case) must decode cleanly
+    // with absent url and version, leaving it unmatchable by canonical URL.
+    final ViewDefinitionResource original = createSimpleViewDefinition();
+
+    final ExpressionEncoder<ViewDefinitionResource> encoder =
+        fhirEncodersL0.of(ViewDefinitionResource.class);
+    final ExpressionEncoder<ViewDefinitionResource> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
+
+    final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(original);
+    final ViewDefinitionResource decoded =
+        resolvedEncoder.createDeserializer().apply(serializedRow);
+
+    assertFalse(decoded.hasUrlElement());
+    assertFalse(decoded.hasVersionElement());
+    assertNull(decoded.getUrl());
+    assertNull(decoded.getVersion());
   }
 
   @Test
