@@ -29,7 +29,7 @@ import { PlayIcon, UploadIcon } from "@radix-ui/react-icons";
 import { Box, Button, Callout, Card, Flex, Heading, Tabs } from "@radix-ui/themes";
 import { useState } from "react";
 
-import { useSqlQueryLibraries, useViewDefinitions } from "../../hooks";
+import { useSqlQueryLibraries, useSqlViews, useViewDefinitions } from "../../hooks";
 import { FieldLabel } from "../FieldLabel";
 import {
   areRuntimeBindingsValid,
@@ -106,10 +106,15 @@ export function SqlQueryForm({
   const [saveError, setSaveError] = useState<Error | null>(null);
 
   const { data: storedLibraries, isLoading: isLoadingLibraries } = useSqlQueryLibraries();
+  const { data: storedViews, isLoading: isLoadingViews } = useSqlViews();
   const { data: viewDefinitions } = useViewDefinitions();
 
   // Derived: declared parameters surfaced through the runtime bindings panel.
-  const activeStoredLibrary = storedLibraries?.find((lib) => lib.id === selectedLibraryId);
+  // The selected source may be a SQLQuery or a SQLView, so locate it across
+  // both stored lists.
+  const activeStoredLibrary = [...(storedLibraries ?? []), ...(storedViews ?? [])].find(
+    (lib) => lib.id === selectedLibraryId,
+  );
   const declaredParameters: Array<{
     name: string;
     type: SqlQueryParameterType;
@@ -203,8 +208,9 @@ export function SqlQueryForm({
           <Box pt="4">
             <Tabs.Content value="stored">
               <SqlQueryStoredTab
-                libraries={storedLibraries}
-                isLoading={isLoadingLibraries}
+                queries={storedLibraries}
+                views={storedViews}
+                isLoading={isLoadingLibraries || isLoadingViews}
                 selectedId={selectedLibraryId}
                 onSelect={setSelectedLibraryId}
                 disabled={disabled || isExecuting}
