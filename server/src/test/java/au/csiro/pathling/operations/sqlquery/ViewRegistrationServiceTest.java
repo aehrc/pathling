@@ -105,6 +105,31 @@ class ViewRegistrationServiceTest {
   }
 
   @Test
+  void resolveTempViewNameDerivesFromCanonicalUrlKey() {
+    // The canonical key is now a full canonical URL (optionally url|version); the scheme, slashes,
+    // dots, and version pipe must all sanitise into a legal Spark identifier.
+    final String name =
+        ViewRegistrationService.resolveTempViewName(
+            "req1", "https://example.org/ViewDefinition/Patients|2");
+    assertThat(name)
+        .startsWith("sqlquery_req1_")
+        .doesNotContain("/")
+        .doesNotContain(":")
+        .doesNotContain(".")
+        .doesNotContain("|");
+  }
+
+  @Test
+  void resolveTempViewNameGivesDistinctNamesToDistinctCanonicalUrlKeys() {
+    // A bare-url key and a url|version key must not collapse to the same temp view name.
+    final String bare =
+        ViewRegistrationService.resolveTempViewName("req1", "https://example.org/V");
+    final String versioned =
+        ViewRegistrationService.resolveTempViewName("req1", "https://example.org/V|2");
+    assertThat(bare).isNotEqualTo(versioned);
+  }
+
+  @Test
   void resolveTempViewNameGivesDistinctNamesToDistinctKeys() {
     // Two nodes that happen to share a label but resolve to different resources are keyed by their
     // distinct canonical keys, so their temp views never collide.

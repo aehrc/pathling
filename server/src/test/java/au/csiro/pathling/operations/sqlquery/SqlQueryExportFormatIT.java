@@ -254,7 +254,7 @@ class SqlQueryExportFormatIT extends AbstractSqlQueryExportIT {
                 "label",
                 "patients",
                 "resource",
-                "ViewDefinition/" + SqlQueryExportTestConfiguration.PATIENT_VIEW_ID)));
+                SqlQueryExportTestConfiguration.PATIENT_VIEW_URL)));
     return library;
   }
 }

@@ -69,8 +69,33 @@ import org.springframework.context.annotation.Primary;
 @TestConfiguration
 public class SqlViewTestConfiguration {
 
+  /** Base canonical URL for test ViewDefinitions. */
+  private static final String VIEW_DEFINITION_BASE =
+      "https://pathling.csiro.au/test/ViewDefinition/";
+
+  /** Base canonical URL for test SQLView Libraries. */
+  private static final String LIBRARY_BASE = "https://pathling.csiro.au/test/Library/";
+
   /** The id of the pre-loaded Patient ViewDefinition. */
   public static final String PATIENT_VIEW_ID = "patient-view";
+
+  /**
+   * The canonical URL of the pre-loaded Patient ViewDefinition. The URL's final segment ({@code
+   * Patients}) differs from the logical id, so dependencies that resolve it by URL exercise the
+   * case the id-based resolution could not handle.
+   */
+  public static final String PATIENT_VIEW_URL = VIEW_DEFINITION_BASE + "Patients";
+
+  /**
+   * Returns the canonical URL of a stored SQLView Library given its local id.
+   *
+   * @param id the SQLView's logical id
+   * @return the SQLView's canonical url
+   */
+  @Nonnull
+  public static String libraryUrl(@Nonnull final String id) {
+    return LIBRARY_BASE + id;
+  }
 
   /** The id of the SQLView over the Patient ViewDefinition. */
   public static final String ACTIVE_PATIENTS_ID = "active-patients";
@@ -106,27 +131,27 @@ public class SqlViewTestConfiguration {
         sqlView(
             ACTIVE_PATIENTS_ID,
             "SELECT id, family_name FROM patient_view",
-            Map.of("patient_view", "ViewDefinition/" + PATIENT_VIEW_ID)));
+            Map.of("patient_view", PATIENT_VIEW_URL)));
     resources.add(
         sqlView(
             REFINED_PATIENTS_ID,
             "SELECT id, family_name FROM ap WHERE family_name <> 'Johnson'",
-            Map.of("ap", "Library/" + ACTIVE_PATIENTS_ID)));
-    resources.add(sqlView(CYCLE_A_ID, "SELECT * FROM b", Map.of("b", "Library/" + CYCLE_B_ID)));
-    resources.add(sqlView(CYCLE_B_ID, "SELECT * FROM a", Map.of("a", "Library/" + CYCLE_A_ID)));
+            Map.of("ap", libraryUrl(ACTIVE_PATIENTS_ID))));
+    resources.add(sqlView(CYCLE_A_ID, "SELECT * FROM b", Map.of("b", libraryUrl(CYCLE_B_ID))));
+    resources.add(sqlView(CYCLE_B_ID, "SELECT * FROM a", Map.of("a", libraryUrl(CYCLE_A_ID))));
     resources.add(
         sqlView(
             SHARED_PATIENTS_ID,
             "SELECT id, family_name FROM patient_view",
-            Map.of("patient_view", "ViewDefinition/" + PATIENT_VIEW_ID)));
+            Map.of("patient_view", PATIENT_VIEW_URL)));
     resources.add(
         sqlView(
             LEFT_PATIENTS_ID,
             "SELECT id, family_name FROM sp",
-            Map.of("sp", "Library/" + SHARED_PATIENTS_ID)));
+            Map.of("sp", libraryUrl(SHARED_PATIENTS_ID))));
     resources.add(
         sqlView(
-            RIGHT_PATIENTS_ID, "SELECT id FROM sp", Map.of("sp", "Library/" + SHARED_PATIENTS_ID)));
+            RIGHT_PATIENTS_ID, "SELECT id FROM sp", Map.of("sp", libraryUrl(SHARED_PATIENTS_ID))));
     resources.add(patient("p1", "Smith"));
     resources.add(patient("p2", "Johnson"));
     resources.add(patient("p3", "Williams"));
@@ -137,6 +162,7 @@ public class SqlViewTestConfiguration {
   private static ViewDefinitionResource patientView() {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     view.setId(PATIENT_VIEW_ID);
+    view.setUrl(PATIENT_VIEW_URL);
     view.setName(new StringType("patient_view"));
     view.setResource(new CodeType("Patient"));
     view.setStatus(new CodeType("active"));
@@ -158,7 +184,7 @@ public class SqlViewTestConfiguration {
       @Nonnull final Map<String, String> dependenciesByLabel) {
     final Library library = new Library();
     library.setId(id);
-    library.setUrl("https://pathling.csiro.au/test/Library/" + id);
+    library.setUrl(libraryUrl(id));
     library.setStatus(PublicationStatus.ACTIVE);
     library.setType(
         new CodeableConcept()

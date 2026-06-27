@@ -33,6 +33,8 @@ import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** Unit tests for {@link SqlLibraryParser} covering both the SQLQuery and SQLView profiles. */
 class SqlLibraryParserTest {
@@ -58,22 +60,22 @@ class SqlLibraryParserTest {
         new RelatedArtifact()
             .setType(RelatedArtifactType.DEPENDSON)
             .setLabel("patients")
-            .setResource("ViewDefinition/patient-view"));
+            .setResource("https://example.org/ViewDefinition/patient-view"));
     library.addRelatedArtifact(
         new RelatedArtifact()
             .setType(RelatedArtifactType.DEPENDSON)
             .setLabel("observations")
-            .setResource("ViewDefinition/obs-view"));
+            .setResource("https://example.org/ViewDefinition/obs-view"));
 
     final ParsedSqlQuery result = parser.parse(library);
 
     assertThat(result.getViewReferences()).hasSize(2);
     assertThat(result.getViewReferences().get(0).getLabel()).isEqualTo("patients");
     assertThat(result.getViewReferences().get(0).getCanonicalUrl())
-        .isEqualTo("ViewDefinition/patient-view");
+        .isEqualTo("https://example.org/ViewDefinition/patient-view");
     assertThat(result.getViewReferences().get(1).getLabel()).isEqualTo("observations");
     assertThat(result.getViewReferences().get(1).getCanonicalUrl())
-        .isEqualTo("ViewDefinition/obs-view");
+        .isEqualTo("https://example.org/ViewDefinition/obs-view");
   }
 
   @Test
@@ -112,8 +114,9 @@ class SqlLibraryParserTest {
   @Test
   void parsesSqlViewWithTypeCodeSqlAndDependencies() {
     final Library library = SqlLibraryFixtures.sqlView("SELECT * FROM patient_view");
-    SqlLibraryFixtures.addDependency(library, "patient_view", "ViewDefinition/patient-view");
-    SqlLibraryFixtures.addDependency(library, "base", "Library/base");
+    SqlLibraryFixtures.addDependency(
+        library, "patient_view", "https://example.org/ViewDefinition/patient-view");
+    SqlLibraryFixtures.addDependency(library, "base", "https://example.org/Library/base");
 
     final ParsedSqlQuery result = parser.parse(library);
 
@@ -123,8 +126,9 @@ class SqlLibraryParserTest {
     assertThat(result.getViewReferences()).hasSize(2);
     assertThat(result.getViewReferences().get(0).getLabel()).isEqualTo("patient_view");
     assertThat(result.getViewReferences().get(0).getCanonicalUrl())
-        .isEqualTo("ViewDefinition/patient-view");
-    assertThat(result.getViewReferences().get(1).getCanonicalUrl()).isEqualTo("Library/base");
+        .isEqualTo("https://example.org/ViewDefinition/patient-view");
+    assertThat(result.getViewReferences().get(1).getCanonicalUrl())
+        .isEqualTo("https://example.org/Library/base");
     assertThat(result.getDeclaredParameters()).isEmpty();
   }
 
@@ -347,11 +351,59 @@ class SqlLibraryParserTest {
         new RelatedArtifact()
             .setType(RelatedArtifactType.DEPENDSON)
             .setLabel("patients_2024")
-            .setResource("ViewDefinition/patient-view"));
+            .setResource("https://example.org/ViewDefinition/patient-view"));
 
     final ParsedSqlQuery result = parser.parse(library);
     assertThat(result.getViewReferences()).hasSize(1);
     assertThat(result.getViewReferences().get(0).getLabel()).isEqualTo("patients_2024");
+  }
+
+  // ---------------------------------------------------------------------------
+  // relatedArtifact.resource canonical-form invariant.
+  // ---------------------------------------------------------------------------
+
+  @ParameterizedTest(name = "rejects non-canonical resource ''{0}''")
+  @ValueSource(
+      strings = {
+        "ViewDefinition/abc",
+        "Library/abc",
+        "patient-view",
+        "https://example.org/V#section"
+      })
+  void rejectsNonCanonicalResourceReference(final String resource) {
+    final Library library = createMinimalLibrary("SELECT 1");
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("t")
+            .setResource(resource));
+
+    assertThatThrownBy(() -> parser.parse(library))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("relatedArtifact.resource")
+        .hasMessageContaining(resource)
+        .hasMessageContaining("canonical URL");
+  }
+
+  @ParameterizedTest(name = "accepts canonical resource ''{0}''")
+  @ValueSource(
+      strings = {
+        "https://example.org/ViewDefinition/patient-view",
+        "https://example.org/ViewDefinition/patient-view|2.0",
+        "http://example.org/Library/base",
+        "urn:uuid:53fefa32-fcbb-4ff8-8a92-55ee120877b7"
+      })
+  void acceptsCanonicalResourceReference(final String resource) {
+    final Library library = createMinimalLibrary("SELECT 1");
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("t")
+            .setResource(resource));
+
+    final ParsedSqlQuery result = parser.parse(library);
+    assertThat(result.getViewReferences()).hasSize(1);
+    assertThat(result.getViewReferences().get(0).getCanonicalUrl()).isEqualTo(resource);
   }
 
   // ---------------------------------------------------------------------------

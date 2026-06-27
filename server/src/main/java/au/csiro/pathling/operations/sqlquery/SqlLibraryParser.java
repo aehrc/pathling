@@ -198,6 +198,14 @@ public class SqlLibraryParser {
         throw new InvalidRequestException(
             "Each relatedArtifact in the SQL on FHIR Library must have a resource reference");
       }
+      if (!CanonicalReference.isCanonical(resource)) {
+        throw new InvalidRequestException(
+            "SQL on FHIR Library relatedArtifact.resource '"
+                + resource
+                + "' is not an absolute canonical URL; a canonical URL (http://, https:// or urn:,"
+                + " optionally suffixed with |version) is required to reference a ViewDefinition or"
+                + " SQLView");
+      }
       references.add(new ViewArtifactReference(label, resource));
     }
     return references;

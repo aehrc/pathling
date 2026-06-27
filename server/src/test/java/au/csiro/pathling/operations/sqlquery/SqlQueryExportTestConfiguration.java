@@ -69,8 +69,16 @@ public class SqlQueryExportTestConfiguration {
   /** Id of the stored Patient ViewDefinition referenced by the patient query. */
   public static final String PATIENT_VIEW_ID = "patient-bp";
 
+  /** Canonical URL of the stored Patient ViewDefinition (final segment differs from its id). */
+  public static final String PATIENT_VIEW_URL =
+      "https://pathling.csiro.au/test/ViewDefinition/PatientBp";
+
   /** Id of the stored Observation ViewDefinition referenced by the observation query. */
   public static final String OBSERVATION_VIEW_ID = "observation-weight";
+
+  /** Canonical URL of the stored Observation ViewDefinition. */
+  public static final String OBSERVATION_VIEW_URL =
+      "https://pathling.csiro.au/test/ViewDefinition/ObservationWeight";
 
   /** Id of the stored SQLQuery Library that selects patients. */
   public static final String PATIENT_QUERY_ID = "patient-bp-query";
@@ -103,14 +111,14 @@ public class SqlQueryExportTestConfiguration {
             "patient_bp_query",
             "SELECT id, family_name FROM patients ORDER BY id",
             "patients",
-            "ViewDefinition/" + PATIENT_VIEW_ID));
+            PATIENT_VIEW_URL));
     resources.add(
         sqlLibrary(
             OBSERVATION_QUERY_ID,
             "observation_weight_query",
             "SELECT id, subject, weight_kg FROM observations ORDER BY id",
             "observations",
-            "ViewDefinition/" + OBSERVATION_VIEW_ID));
+            OBSERVATION_VIEW_URL));
     resources.add(parameterisedPatientQuery());
     // p1 has an older meta.lastUpdated than p2/p3, so a `_since` filter can scope it out.
     resources.add(patient("p1", "Smith", P1_LAST_UPDATED));
@@ -128,6 +136,7 @@ public class SqlQueryExportTestConfiguration {
   private static ViewDefinitionResource patientView() {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     view.setId(PATIENT_VIEW_ID);
+    view.setUrl(PATIENT_VIEW_URL);
     view.setName(new StringType("patient_view"));
     view.setResource(new CodeType("Patient"));
     view.setStatus(new CodeType("active"));
@@ -142,6 +151,7 @@ public class SqlQueryExportTestConfiguration {
   private static ViewDefinitionResource observationView() {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     view.setId(OBSERVATION_VIEW_ID);
+    view.setUrl(OBSERVATION_VIEW_URL);
     view.setName(new StringType("observation_view"));
     view.setResource(new CodeType("Observation"));
     view.setStatus(new CodeType("active"));
@@ -162,7 +172,7 @@ public class SqlQueryExportTestConfiguration {
             "patient_by_family_query",
             "SELECT id, family_name FROM patients WHERE family_name = :familyName",
             "patients",
-            "ViewDefinition/" + PATIENT_VIEW_ID);
+            PATIENT_VIEW_URL);
     library.addParameter(
         new ParameterDefinition().setName("familyName").setUse(ParameterUse.IN).setType("string"));
     return library;
