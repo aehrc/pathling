@@ -415,6 +415,72 @@ export const mockEmptySqlQueryLibraryBundle: Bundle = {
   entry: [],
 };
 
+// ============================================================================
+// SQLView (sql-view) Library mocks
+// ============================================================================
+
+/**
+ * Mock SQLView Library for use in `$sqlquery-run` / `$sqlquery-export` tests.
+ *
+ * Carries Base64-encoded SQL ("SELECT 2"), references a single ViewDefinition
+ * as a dependency and declares no parameters (SQLViews are parameter-less).
+ */
+export const mockSqlViewLibrary1 = {
+  resourceType: "Library",
+  id: "view-active-patients",
+  status: "active",
+  title: "Active patients",
+  type: {
+    coding: [
+      {
+        system: "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
+        code: "sql-view",
+      },
+    ],
+  },
+  content: [
+    {
+      contentType: "application/sql",
+      data: "U0VMRUNUIDI=",
+    },
+  ],
+  relatedArtifact: [
+    {
+      type: "depends-on",
+      label: "patients",
+      resource: "ViewDefinition/patient-demographics",
+    },
+  ],
+};
+
+/**
+ * Mock Bundle containing SQLView Library search results.
+ */
+export const mockSqlViewLibraryBundle: Bundle = {
+  resourceType: "Bundle",
+  type: "searchset",
+  total: 1,
+  entry: [
+    {
+      resource: mockSqlViewLibrary1 as Bundle["entry"] extends (infer T)[]
+        ? T extends { resource?: infer R }
+          ? R
+          : never
+        : never,
+    },
+  ],
+};
+
+/**
+ * Mock empty SQLView Library Bundle for testing the empty-views state.
+ */
+export const mockEmptySqlViewLibraryBundle: Bundle = {
+  resourceType: "Bundle",
+  type: "searchset",
+  total: 0,
+  entry: [],
+};
+
 /**
  * Mock CSV body for `$sqlquery-run` results.
  */
