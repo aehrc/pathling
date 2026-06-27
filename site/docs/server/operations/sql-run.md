@@ -73,9 +73,9 @@ profile. The relevant elements are:
 - `content` - exactly one entry with `contentType` of `application/sql` and the
   SQL text Base64-encoded in `data`.
 - `relatedArtifact` - one entry per dependency the query references. The `label`
-  becomes the table name available to the SQL, and `resource` points to a
-  ViewDefinition or a SQLView (relative literal or canonical reference). See
-  [Composing SQLViews](#composing-sqlviews).
+  becomes the table name available to the SQL, and `resource` is the canonical
+  URL of a ViewDefinition or a SQLView, matched against that resource's `url`.
+  See [Composing SQLViews](#composing-sqlviews).
 - `parameter` - optional declarations of named runtime parameters. Each entry
   with `use` of `in` must have a `name` and `type`, and the type must be a
   primitive FHIR type. A SQLView declares no parameters.
@@ -104,7 +104,7 @@ Example Library:
         {
             "type": "depends-on",
             "label": "patients",
-            "resource": "ViewDefinition/patient-demographics"
+            "resource": "https://example.org/ViewDefinition/patient-demographics"
         }
     ]
 }
@@ -152,7 +152,7 @@ Accept: application/x-ndjson
                     {
                         "type": "depends-on",
                         "label": "patients",
-                        "resource": "ViewDefinition/patient-demographics"
+                        "resource": "https://example.org/ViewDefinition/patient-demographics"
                     }
                 ]
             }
@@ -296,20 +296,33 @@ parameter-less query and returns its rows.
 
 ### Reference resolution
 
-Each `relatedArtifact.resource` is resolved as follows:
+Each `relatedArtifact.resource` is an absolute **canonical URL** of a
+ViewDefinition or SQLView, resolved by matching the referenced resource's `url`
+element - never its logical id:
 
-- `ViewDefinition/[id]` resolves a ViewDefinition by logical id.
-- `Library/[id]` resolves a SQLView Library by logical id.
-- A bare canonical (`[url]` or `[url]|[version]`) resolves a ViewDefinition
-  first, by the canonical's final path segment as id; if none exists, it falls
-  back to a SQLView Library matched by canonical `url`.
+- The reference must be an absolute canonical URL (scheme `http://`, `https://`
+  or `urn:`), optionally suffixed with a single `|version`. A relative literal
+  form such as `ViewDefinition/abc`, a bare id, or a value carrying a fragment
+  is rejected with a `400` at parse time.
+- `[url]|[version]` selects the resource whose `url` and `version` match
+  exactly; a bare `[url]` selects the latest active match (preferring `active`
+  status, then the greatest version string).
+- ViewDefinitions are searched first, then SQLView Libraries. A canonical that
+  matches both a ViewDefinition and a SQLView is rejected as ambiguous (`400`);
+  one that matches neither is a not-found error (`404`). Both messages name the
+  failing label and reference.
 
-An explicit relative type prefix is authoritative - the server does not fall
-back to the other type when a prefixed reference fails to resolve. A reference
-that resolves to neither, a `Library` that is a `sql-query` rather than a
-`sql-view`, a cycle (for example `A -> B -> A`), and a graph nested deeper than
+A ViewDefinition or SQLView must therefore carry a `url` to be referenceable as
+a dependency. ViewDefinitions ingested before URL retention was added must be
+re-ingested so their `url` is stored.
+
+A `Library` that is a `sql-query` rather than a `sql-view`, a cycle (for example
+`A -> B -> A`), and a graph nested deeper than
 `pathling.sqlQuery.maxDependencyDepth` are each rejected with a `400` before any
-SQL executes, with a message identifying the cause.
+SQL executes, with a message identifying the cause. De-duplication, cycle
+detection, and depth enforcement are keyed on resolved canonical identity, so a
+bare-url and a `url|version` reference to the same stored resource materialise
+once.
 
 When authorisation is enabled, resolving a ViewDefinition from storage requires
 READ on `ViewDefinition`, and resolving a SQLView from storage requires READ on
@@ -443,8 +456,8 @@ def main():
     library = build_sql_query_library(
         sql,
         {
-            "patients": "ViewDefinition/patient-demographics",
-            "conditions": "ViewDefinition/conditions",
+            "patients": "https://example.org/ViewDefinition/patient-demographics",
+            "conditions": "https://example.org/ViewDefinition/conditions",
         },
     )
 
