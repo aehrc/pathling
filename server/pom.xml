@@ -56,6 +56,17 @@
     <pathling.awsSdkVersion>2.40.3</pathling.awsSdkVersion>
     <pathling.bulkExportVersion>1.0.4</pathling.bulkExportVersion>
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
+
+    <!-- The JVM module options required to run Pathling on Spark with Java 21.
+         These open the JDK internals that Spark accesses reflectively, most
+         notably sun.util.calendar, which Spark's date conversion reaches via a
+         method handle. They are referenced by the spring-boot:run goal and must
+         be kept in sync with the production entrypoint, which cannot reference
+         this property at runtime (see src/main/jib/usr/bin/entrypoint.sh). -->
+    <pathling.runtime.jvmModuleOpts>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED</pathling.runtime.jvmModuleOpts>
+    <!-- The test harness needs every runtime option plus additional opens for
+         the mocking and serialisation frameworks exercised during testing. -->
+    <pathling.test.jvmModuleOpts>${pathling.runtime.jvmModuleOpts} --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED</pathling.test.jvmModuleOpts>
   </properties>
 
   <repositories>
@@ -585,7 +596,9 @@
         <artifactId>spring-boot-maven-plugin</artifactId>
         <version>${pathling.springBootVersion}</version>
         <configuration>
-          <jvmArguments>--add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED</jvmArguments>
+          <!-- Run with the shared runtime module options so that a local
+               spring-boot:run faithfully reproduces the production runtime. -->
+          <jvmArguments>${pathling.runtime.jvmModuleOpts}</jvmArguments>
         </configuration>
       </plugin>
       <plugin>
@@ -601,22 +614,7 @@
           <!-- Each integration test class runs in its own JVM to prevent URLStreamHandlerFactory
                conflicts between Spark/Hadoop and Tomcat. See SPARK-25694 and Spring Boot #10617. -->
           <reuseForks>false</reuseForks>
-          <argLine>@{argLine}
-            --add-opens java.base/java.lang=ALL-UNNAMED
-            --add-opens java.base/java.lang.invoke=ALL-UNNAMED
-            --add-opens java.base/java.lang.reflect=ALL-UNNAMED
-            --add-opens java.base/java.io=ALL-UNNAMED
-            --add-opens java.base/java.net=ALL-UNNAMED
-            --add-opens java.base/java.nio=ALL-UNNAMED
-            --add-opens java.base/java.util=ALL-UNNAMED
-            --add-opens java.base/java.util.concurrent=ALL-UNNAMED
-            --add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED
-            --add-opens java.base/sun.nio.ch=ALL-UNNAMED
-            --add-opens java.base/sun.nio.cs=ALL-UNNAMED
-            --add-opens java.base/sun.security.action=ALL-UNNAMED
-            --add-opens java.base/sun.util.calendar=ALL-UNNAMED
-            --add-exports java.base/sun.nio.ch=ALL-UNNAMED
-          </argLine>
+          <argLine>@{argLine} ${pathling.test.jvmModuleOpts}</argLine>
         </configuration>
         <executions>
           <execution>
@@ -639,22 +637,7 @@
               junit.jupiter.execution.parallel.enabled=true
             </configurationParameters>
           </properties>
-          <argLine>@{argLine}
-            --add-opens java.base/java.lang=ALL-UNNAMED
-            --add-opens java.base/java.lang.invoke=ALL-UNNAMED
-            --add-opens java.base/java.lang.reflect=ALL-UNNAMED
-            --add-opens java.base/java.io=ALL-UNNAMED
-            --add-opens java.base/java.net=ALL-UNNAMED
-            --add-opens java.base/java.nio=ALL-UNNAMED
-            --add-opens java.base/java.util=ALL-UNNAMED
-            --add-opens java.base/java.util.concurrent=ALL-UNNAMED
-            --add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED
-            --add-opens java.base/sun.nio.ch=ALL-UNNAMED
-            --add-opens java.base/sun.nio.cs=ALL-UNNAMED
-            --add-opens java.base/sun.security.action=ALL-UNNAMED
-            --add-opens java.base/sun.util.calendar=ALL-UNNAMED
-            --add-exports java.base/sun.nio.ch=ALL-UNNAMED
-          </argLine>
+          <argLine>@{argLine} ${pathling.test.jvmModuleOpts}</argLine>
         </configuration>
       </plugin>
       <plugin>
