@@ -24,8 +24,42 @@ import {
   buildParameterTypes,
   canExecuteInlineForm,
   canSaveInlineForm,
+  decodeViewReferenceValue,
+  encodeViewReferenceValue,
   isRuntimeValueValid,
 } from "../sqlQueryFormHelpers";
+
+describe("encodeViewReferenceValue / decodeViewReferenceValue", () => {
+  // The codec round-trips a view-definition reference.
+  it("round-trips a view-definition reference", () => {
+    const value = encodeViewReferenceValue("view-definition", "vd-1");
+    expect(value).toBe("view-definition:vd-1");
+    expect(decodeViewReferenceValue(value)).toEqual({
+      referenceType: "view-definition",
+      referenceId: "vd-1",
+    });
+  });
+
+  // The codec round-trips a sql-view reference.
+  it("round-trips a sql-view reference", () => {
+    const value = encodeViewReferenceValue("sql-view", "lib-1");
+    expect(value).toBe("sql-view:lib-1");
+    expect(decodeViewReferenceValue(value)).toEqual({
+      referenceType: "sql-view",
+      referenceId: "lib-1",
+    });
+  });
+
+  // Splitting on the first colon keeps ids that themselves contain colons
+  // intact, so the two id namespaces never collide.
+  it("preserves ids that contain colons", () => {
+    const value = encodeViewReferenceValue("sql-view", "urn:uuid:abc:def");
+    expect(decodeViewReferenceValue(value)).toEqual({
+      referenceType: "sql-view",
+      referenceId: "urn:uuid:abc:def",
+    });
+  });
+});
 
 describe("buildInlineSqlQueryLibrary", () => {
   // The assembled Library carries the SQL on FHIR profile, the
@@ -39,7 +73,8 @@ describe("buildInlineSqlQueryLibrary", () => {
         {
           rowId: "r1",
           label: "patients",
-          viewDefinitionId: "vd-patients",
+          referenceType: "view-definition",
+          referenceId: "vd-patients",
         },
       ],
       parameters: [{ rowId: "p1", name: "patient_id", type: "string" }],
@@ -68,6 +103,42 @@ describe("buildInlineSqlQueryLibrary", () => {
     ]);
     expect(library.parameter).toEqual([
       { name: "patient_id", use: "in", type: "string" },
+    ]);
+  });
+
+  // A view row backed by a SQLView emits a Library/<id> reference, while a
+  // ViewDefinition row emits ViewDefinition/<id>.
+  it("emits the correct reference prefix per source kind", () => {
+    const library = buildInlineSqlQueryLibrary({
+      sql: "SELECT 1",
+      tables: [
+        {
+          rowId: "r1",
+          label: "patients",
+          referenceType: "view-definition",
+          referenceId: "patient-demographics",
+        },
+        {
+          rowId: "r2",
+          label: "active",
+          referenceType: "sql-view",
+          referenceId: "active-patients",
+        },
+      ],
+      parameters: [],
+    });
+
+    expect(library.relatedArtifact).toEqual([
+      {
+        type: "depends-on",
+        label: "patients",
+        resource: "ViewDefinition/patient-demographics",
+      },
+      {
+        type: "depends-on",
+        label: "active",
+        resource: "Library/active-patients",
+      },
     ]);
   });
 
@@ -106,15 +177,22 @@ describe("canExecuteInlineForm", () => {
     expect(
       canExecuteInlineForm({
         sql: "   ",
-        tables: [{ rowId: "r1", label: "patients", viewDefinitionId: "vd1" }],
+        tables: [
+          {
+            rowId: "r1",
+            label: "patients",
+            referenceType: "view-definition",
+            referenceId: "vd1",
+          },
+        ],
         parameters: [],
       }),
     ).toBe(false);
   });
 
-  // Zero tables prevents execution because the server requires at least
+  // Zero views prevents execution because the server requires at least
   // one related artefact.
-  it("returns false when there are no tables", () => {
+  it("returns false when there are no views", () => {
     expect(
       canExecuteInlineForm({
         sql: "SELECT 1",
@@ -124,30 +202,49 @@ describe("canExecuteInlineForm", () => {
     ).toBe(false);
   });
 
-  // Tables with empty labels or unselected ViewDefinitions are invalid.
-  it("returns false when a table row is incomplete", () => {
+  // A view row with a blank label is incomplete.
+  it("returns false when a view row has no label", () => {
     expect(
       canExecuteInlineForm({
         sql: "SELECT 1",
-        tables: [{ rowId: "r1", label: "", viewDefinitionId: "vd1" }],
-        parameters: [],
-      }),
-    ).toBe(false);
-    expect(
-      canExecuteInlineForm({
-        sql: "SELECT 1",
-        tables: [{ rowId: "r1", label: "patients", viewDefinitionId: "" }],
+        tables: [
+          {
+            rowId: "r1",
+            label: "",
+            referenceType: "view-definition",
+            referenceId: "vd1",
+          },
+        ],
         parameters: [],
       }),
     ).toBe(false);
   });
 
-  // Minimum valid input has SQL and at least one well-formed table.
+  // A view row with no source picked (no referenceType / referenceId) is
+  // incomplete.
+  it("returns false when a view row has no source selected", () => {
+    expect(
+      canExecuteInlineForm({
+        sql: "SELECT 1",
+        tables: [{ rowId: "r1", label: "patients", referenceId: "" }],
+        parameters: [],
+      }),
+    ).toBe(false);
+  });
+
+  // Minimum valid input has SQL and at least one well-formed view row.
   it("returns true for the minimum valid input", () => {
     expect(
       canExecuteInlineForm({
         sql: "SELECT 1",
-        tables: [{ rowId: "r1", label: "patients", viewDefinitionId: "vd1" }],
+        tables: [
+          {
+            rowId: "r1",
+            label: "patients",
+            referenceType: "sql-view",
+            referenceId: "lib1",
+          },
+        ],
         parameters: [],
       }),
     ).toBe(true);
@@ -160,7 +257,14 @@ describe("canSaveInlineForm", () => {
     expect(
       canSaveInlineForm({
         sql: "SELECT 1",
-        tables: [{ rowId: "r1", label: "patients", viewDefinitionId: "vd1" }],
+        tables: [
+          {
+            rowId: "r1",
+            label: "patients",
+            referenceType: "view-definition",
+            referenceId: "vd1",
+          },
+        ],
         parameters: [],
       }),
     ).toBe(false);
@@ -171,7 +275,14 @@ describe("canSaveInlineForm", () => {
       canSaveInlineForm({
         title: "patients-by-condition",
         sql: "SELECT 1",
-        tables: [{ rowId: "r1", label: "patients", viewDefinitionId: "vd1" }],
+        tables: [
+          {
+            rowId: "r1",
+            label: "patients",
+            referenceType: "view-definition",
+            referenceId: "vd1",
+          },
+        ],
         parameters: [],
       }),
     ).toBe(true);

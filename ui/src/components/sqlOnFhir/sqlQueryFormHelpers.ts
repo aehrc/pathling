@@ -29,6 +29,7 @@ import {
 import { encodeSql } from "../../utils";
 
 import type {
+  SqlOnFhirReferenceType,
   SqlQueryLibrary,
   SqlQueryParameterDeclaration,
   SqlQueryParameterType,
@@ -43,6 +44,52 @@ const SQL_TEXT_EXTENSION =
   "https://sql-on-fhir.org/ig/StructureDefinition/sql-text";
 
 /**
+ * Encodes a view-row source into a single Radix `Select` item value.
+ *
+ * A ViewDefinition and a SQLView Library may share a logical id, so the
+ * value carries the kind as a prefix to keep the two id namespaces
+ * collision-safe within one dropdown.
+ *
+ * @param type - The kind of source (`view-definition` or `sql-view`).
+ * @param id - The logical id of the source.
+ * @returns The composite `${type}:${id}` value.
+ *
+ * @example
+ * encodeViewReferenceValue("sql-view", "active-patients");
+ * // "sql-view:active-patients"
+ */
+export function encodeViewReferenceValue(
+  type: SqlOnFhirReferenceType,
+  id: string,
+): string {
+  return `${type}:${id}`;
+}
+
+/**
+ * Decodes a composite `Select` item value back into its kind and id.
+ *
+ * Splits on the first `:` only, so ids that themselves contain colons (for
+ * example URN-style ids) are preserved intact.
+ *
+ * @param value - A value produced by {@link encodeViewReferenceValue}.
+ * @returns The decoded `referenceType` and `referenceId`.
+ *
+ * @example
+ * decodeViewReferenceValue("view-definition:vd-1");
+ * // { referenceType: "view-definition", referenceId: "vd-1" }
+ */
+export function decodeViewReferenceValue(value: string): {
+  referenceType: SqlOnFhirReferenceType;
+  referenceId: string;
+} {
+  const separator = value.indexOf(":");
+  return {
+    referenceType: value.slice(0, separator) as SqlOnFhirReferenceType,
+    referenceId: value.slice(separator + 1),
+  };
+}
+
+/**
  * Inputs to {@link buildInlineSqlQueryLibrary}.
  */
 export interface BuildInlineLibraryInput {
@@ -52,7 +99,7 @@ export interface BuildInlineLibraryInput {
   url?: string;
   /** Plain-text SQL the user wrote. */
   sql: string;
-  /** Tables (related artefacts) configured by the user. */
+  /** View rows (related artefacts) configured by the user. */
   tables: SqlQueryRelatedArtifact[];
   /** Declared runtime parameters. */
   parameters: SqlQueryParameterDeclaration[];
@@ -110,7 +157,10 @@ export function buildInlineSqlQueryLibrary(
     library.relatedArtifact = input.tables.map((table) => ({
       type: "depends-on" as const,
       label: table.label,
-      resource: `ViewDefinition/${table.viewDefinitionId}`,
+      resource:
+        table.referenceType === "sql-view"
+          ? `Library/${table.referenceId}`
+          : `ViewDefinition/${table.referenceId}`,
     }));
   }
 
@@ -142,7 +192,11 @@ export function canExecuteInlineForm(input: BuildInlineLibraryInput): boolean {
   if (input.tables.length === 0) {
     return false;
   }
-  if (input.tables.some((t) => t.label.trim() === "" || !t.viewDefinitionId)) {
+  if (
+    input.tables.some(
+      (t) => t.label.trim() === "" || !t.referenceType || !t.referenceId,
+    )
+  ) {
     return false;
   }
   return true;
