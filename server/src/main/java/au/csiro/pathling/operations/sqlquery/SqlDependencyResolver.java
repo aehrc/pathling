@@ -25,6 +25,7 @@ import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -122,7 +123,7 @@ public class SqlDependencyResolver {
    */
   @Nonnull
   private Map<String, String> resolveReferences(
-      @Nonnull final java.util.List<ViewArtifactReference> references,
+      @Nonnull final List<ViewArtifactReference> references,
       @Nonnull final Map<String, FhirView> suppliedViews,
       final int depth,
       final int maxDepth,
