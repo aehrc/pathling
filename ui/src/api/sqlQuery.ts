@@ -17,7 +17,7 @@
 
 /**
  * Client for the SQL on FHIR `$sqlquery-run` operation and the search
- * endpoint that lists stored SQLQuery Library resources.
+ * endpoint that lists stored SQLQuery and SQLView Library resources.
  *
  * @author John Grimes
  */
