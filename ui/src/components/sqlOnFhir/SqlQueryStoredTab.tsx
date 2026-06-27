@@ -16,9 +16,9 @@
  */
 
 /**
- * "Select Library" tab body for the SQL query form: picker, decoded SQL
- * preview and read-only summaries of related artefacts and declared
- * parameters.
+ * "Select query" tab body for the SQL query form: a grouped picker offering
+ * stored SQLQueries and SQLViews, a decoded SQL preview and read-only
+ * summaries of referenced views and declared parameters.
  *
  * @author John Grimes
  */
@@ -44,31 +44,35 @@ import { FieldLabel } from "../FieldLabel";
 import type { SqlQueryLibrarySummary } from "../../types/sqlQuery";
 
 interface SqlQueryStoredTabProps {
-  /** Stored SQLQuery Library summaries; undefined while loading. */
-  libraries: SqlQueryLibrarySummary[] | undefined;
-  /** Whether the libraries query is loading. */
+  /** Stored SQLQuery summaries; undefined while loading. */
+  queries: SqlQueryLibrarySummary[] | undefined;
+  /** Stored SQLView summaries; undefined while loading. */
+  views: SqlQueryLibrarySummary[] | undefined;
+  /** Whether either stored list is still loading. */
   isLoading: boolean;
-  /** Currently selected Library ID, or empty string when nothing is selected. */
+  /** Currently selected logical ID, or empty string when nothing is selected. */
   selectedId: string;
-  /** Callback fired when the user picks a Library. */
+  /** Callback fired when the user picks a source. */
   onSelect: (id: string) => void;
   /** Whether the controls should be disabled. */
   disabled?: boolean;
 }
 
 /**
- * Renders the "Select Library" tab body.
+ * Renders the "Select query" tab body.
  *
  * @param props - The component props.
- * @param props.libraries - Stored SQLQuery Library summaries.
- * @param props.isLoading - Whether the libraries query is loading.
- * @param props.selectedId - The currently selected Library ID.
- * @param props.onSelect - Callback fired when the user picks a Library.
+ * @param props.queries - Stored SQLQuery summaries.
+ * @param props.views - Stored SQLView summaries.
+ * @param props.isLoading - Whether either stored list is loading.
+ * @param props.selectedId - The currently selected logical ID.
+ * @param props.onSelect - Callback fired when the user picks a source.
  * @param props.disabled - Whether the controls should be disabled.
  * @returns The tab body.
  */
 export function SqlQueryStoredTab({
-  libraries,
+  queries,
+  views,
   isLoading,
   selectedId,
   onSelect,
@@ -76,23 +80,31 @@ export function SqlQueryStoredTab({
 }: Readonly<SqlQueryStoredTabProps>) {
   const copyToClipboard = useClipboard();
 
-  const selectedLibrary = libraries?.find((lib) => lib.id === selectedId);
+  const hasQueries = (queries?.length ?? 0) > 0;
+  const hasViews = (views?.length ?? 0) > 0;
+
+  // The selection is by logical id, unique across the Library store, so the
+  // active summary is located across both stored lists.
+  const selectedLibrary = [...(queries ?? []), ...(views ?? [])].find(
+    (lib) => lib.id === selectedId,
+  );
 
   if (isLoading) {
     return (
       <Flex align="center" gap="2" py="2">
         <Spinner size="1" />
         <Text size="2" color="gray">
-          Loading SQL query libraries...
+          Loading stored queries and views...
         </Text>
       </Flex>
     );
   }
 
-  if (!libraries || libraries.length === 0) {
+  if (!hasQueries && !hasViews) {
     return (
       <FieldGuidance>
-        No SQL query libraries found on the server. Use the "Provide SQL" tab to author one.
+        No stored SQL queries or SQL views found on the server. Use the "Provide SQL" tab to author
+        one.
       </FieldGuidance>
     );
   }
@@ -100,7 +112,7 @@ export function SqlQueryStoredTab({
   return (
     <Flex direction="column" gap="3">
       <Box>
-        <FieldLabel mb="2">SQL query library</FieldLabel>
+        <FieldLabel mb="2">SQL query source</FieldLabel>
         <Select.Root
           value={selectedId === "" ? undefined : selectedId}
           onValueChange={onSelect}
@@ -108,15 +120,30 @@ export function SqlQueryStoredTab({
         >
           <Select.Trigger
             style={{ width: "100%" }}
-            placeholder="Select a SQL query library"
-            aria-label="SQL query library"
+            placeholder="Select a query or view"
+            aria-label="SQL query source"
           />
           <Select.Content>
-            {libraries.map((lib) => (
-              <Select.Item key={lib.id} value={lib.id}>
-                {lib.title}
-              </Select.Item>
-            ))}
+            {hasQueries && (
+              <Select.Group>
+                <Select.Label>SQL queries</Select.Label>
+                {queries!.map((lib) => (
+                  <Select.Item key={lib.id} value={lib.id}>
+                    {lib.title}
+                  </Select.Item>
+                ))}
+              </Select.Group>
+            )}
+            {hasViews && (
+              <Select.Group>
+                <Select.Label>SQL views</Select.Label>
+                {views!.map((lib) => (
+                  <Select.Item key={lib.id} value={lib.id}>
+                    {lib.title}
+                  </Select.Item>
+                ))}
+              </Select.Group>
+            )}
           </Select.Content>
         </Select.Root>
       </Box>
@@ -154,7 +181,7 @@ export function SqlQueryStoredTab({
           </Box>
 
           <Box>
-            <FieldLabel mb="1">Tables</FieldLabel>
+            <FieldLabel mb="1">Views</FieldLabel>
             {selectedLibrary.relatedArtifacts.length > 0 ? (
               <Flex direction="column" gap="1">
                 {selectedLibrary.relatedArtifacts.map((ra) => (
@@ -192,7 +219,7 @@ export function SqlQueryStoredTab({
         </>
       ) : (
         <FieldGuidance>
-          Select a stored SQL query library to preview its SQL and bind runtime parameters.
+          Select a stored query or view to preview its SQL and bind runtime parameters.
         </FieldGuidance>
       )}
     </Flex>
