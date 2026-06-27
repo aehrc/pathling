@@ -31,6 +31,7 @@ import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -316,7 +317,7 @@ class SqlDependencyResolverTest {
   @Nonnull
   private static ParsedSqlQuery sqlQueryWithDeps(
       @Nonnull final String sql, @Nonnull final Map<String, String> dependenciesByLabel) {
-    final List<ViewArtifactReference> references = new java.util.ArrayList<>();
+    final List<ViewArtifactReference> references = new ArrayList<>();
     dependenciesByLabel.forEach(
         (label, resource) -> references.add(new ViewArtifactReference(label, resource)));
     return new ParsedSqlQuery(sql, references, List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
