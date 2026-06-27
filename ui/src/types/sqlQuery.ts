@@ -47,16 +47,25 @@ export type SqlQueryParameterType =
   | "dateTime";
 
 /**
+ * The kind of stored source a view row references, deciding the reference
+ * prefix emitted into `relatedArtifact.resource`.
+ */
+export type SqlOnFhirReferenceType = "view-definition" | "sql-view";
+
+/**
  * A `relatedArtifact` entry on a SQLQuery Library, expressed in form-state
- * terms.
+ * terms. A row binds a SQL table label to a chosen stored source, which may
+ * be a ViewDefinition (`ViewDefinition/<id>`) or a SQLView (`Library/<id>`).
  */
 export interface SqlQueryRelatedArtifact {
   /** Stable identifier for use as a React `key`. */
   rowId: string;
   /** Table name referenced by the SQL. */
   label: string;
-  /** ID of the referenced ViewDefinition (becomes `ViewDefinition/<id>`). */
-  viewDefinitionId: string;
+  /** The kind of the chosen source; `undefined` until a source is picked. */
+  referenceType?: SqlOnFhirReferenceType;
+  /** Logical id of the chosen ViewDefinition or SQLView; empty until picked. */
+  referenceId: string;
 }
 
 /**

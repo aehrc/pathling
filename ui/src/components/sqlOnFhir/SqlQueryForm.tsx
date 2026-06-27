@@ -235,6 +235,10 @@ export function SqlQueryForm({
                   id: vd.id,
                   name: vd.name,
                 }))}
+                sqlViews={(storedViews ?? []).map((view) => ({
+                  id: view.id,
+                  name: view.title,
+                }))}
                 disabled={disabled || isExecuting}
               />
               {saveError && (
