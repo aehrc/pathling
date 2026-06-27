@@ -62,6 +62,8 @@ export { useSaveViewDefinition } from "./useSaveViewDefinition";
 
 // SQL query operations.
 export { useSqlQueryLibraries } from "./useSqlQueryLibraries";
+export { useSqlViews } from "./useSqlViews";
+export type { UseSqlViewsOptions, UseSqlViewsResult } from "./useSqlViews";
 export { useSaveSqlQueryLibrary } from "./useSaveSqlQueryLibrary";
 export { useSqlQueryRun } from "./useSqlQueryRun";
 export type {
