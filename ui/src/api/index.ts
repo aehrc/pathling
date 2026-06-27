@@ -64,13 +64,16 @@ export type { ViewDefinition } from "./view";
 export {
   sqlQueryRun,
   listSqlQueryLibraries,
+  listStoredLibraries,
   sqlQueryExportKickOff,
   sqlQueryExportDownload,
   SQL_QUERY_LIBRARY_TYPE_SYSTEM,
   SQL_QUERY_LIBRARY_TYPE_FILTER,
+  SQL_VIEW_LIBRARY_TYPE_FILTER,
   SQL_QUERY_LIBRARY_PROFILE,
 } from "./sqlQuery";
 export type {
+  SqlOnFhirLibraryTypeCode,
   SqlQueryRunOptions,
   SqlQueryRunStoredOptions,
   SqlQueryRunInlineOptions,

@@ -24,7 +24,9 @@ import {
 } from "../../types/errors";
 import {
   listSqlQueryLibraries,
+  listStoredLibraries,
   SQL_QUERY_LIBRARY_TYPE_FILTER,
+  SQL_VIEW_LIBRARY_TYPE_FILTER,
   sqlQueryExportDownload,
   sqlQueryExportKickOff,
   sqlQueryRun,
@@ -369,6 +371,88 @@ describe("listSqlQueryLibraries", () => {
     );
     await expect(
       listSqlQueryLibraries("https://example.com/fhir"),
+    ).rejects.toThrow(UnauthorizedError);
+  });
+});
+
+describe("SQL_VIEW_LIBRARY_TYPE_FILTER", () => {
+  // The SQLView filter shares the SQL on FHIR Library code system with the
+  // SQLQuery filter; only the type code differs.
+  it("is the SQL on FHIR Library code system scoped to sql-view", () => {
+    expect(SQL_VIEW_LIBRARY_TYPE_FILTER).toBe(
+      "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes|sql-view",
+    );
+  });
+});
+
+describe("listStoredLibraries", () => {
+  // The generalised list function scopes its search by the requested type
+  // code, issuing the SQLView token for sql-view requests.
+  it("queries Library with the sql-view type filter", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ resourceType: "Bundle", entry: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/fhir+json" },
+      }),
+    );
+
+    await listStoredLibraries("https://example.com/fhir", {
+      typeCode: "sql-view",
+    });
+
+    const url = decodeURIComponent(mockFetch.mock.calls[0][0] as string);
+    expect(url).toContain("/Library?");
+    expect(url).toContain(`type=${SQL_VIEW_LIBRARY_TYPE_FILTER}`);
+  });
+
+  // The same function issues the SQLQuery token for sql-query requests, so
+  // both Library kinds share one code path.
+  it("queries Library with the sql-query type filter", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ resourceType: "Bundle", entry: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/fhir+json" },
+      }),
+    );
+
+    await listStoredLibraries("https://example.com/fhir", {
+      typeCode: "sql-query",
+    });
+
+    const url = decodeURIComponent(mockFetch.mock.calls[0][0] as string);
+    expect(url).toContain(`type=${SQL_QUERY_LIBRARY_TYPE_FILTER}`);
+  });
+
+  // The Authorization header is forwarded for authenticated servers.
+  it("attaches a bearer token when an access token is provided", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ resourceType: "Bundle" }), {
+        status: 200,
+        headers: { "Content-Type": "application/fhir+json" },
+      }),
+    );
+
+    await listStoredLibraries("https://example.com/fhir", {
+      typeCode: "sql-view",
+      accessToken: "secret",
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer secret" }),
+      }),
+    );
+  });
+
+  // A 401 propagates as UnauthorizedError, consistent with the rest of the
+  // API layer.
+  it("throws UnauthorizedError on a 401 response", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
+    await expect(
+      listStoredLibraries("https://example.com/fhir", { typeCode: "sql-view" }),
     ).rejects.toThrow(UnauthorizedError);
   });
 });

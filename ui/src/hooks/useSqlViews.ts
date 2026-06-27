@@ -26,45 +26,43 @@ import type { SqlQueryLibrarySummary } from "../types/sqlQuery";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 /**
- * TanStack Query key shared by readers and mutators of the SQL query
- * Library list.
+ * TanStack Query key for the stored SQLView list. Kept distinct from the
+ * SQLQuery list so each caches and invalidates independently.
  */
-export const SQL_QUERY_LIBRARIES_QUERY_KEY = ["sqlQueryLibraries"] as const;
+export const SQL_VIEWS_QUERY_KEY = ["sqlViews"] as const;
 
 /**
- * Options for {@link useSqlQueryLibraries}.
+ * Options for {@link useSqlViews}.
  */
-export interface UseSqlQueryLibrariesOptions {
+export interface UseSqlViewsOptions {
   /** Whether to enable the query. Defaults to `true`. */
   enabled?: boolean;
 }
 
 /**
- * Hook result type for {@link useSqlQueryLibraries}.
+ * Hook result type for {@link useSqlViews}.
  */
-export type UseSqlQueryLibrariesResult = UseQueryResult<
-  SqlQueryLibrarySummary[],
-  Error
->;
+export type UseSqlViewsResult = UseQueryResult<SqlQueryLibrarySummary[], Error>;
 
 /**
- * Fetches stored SQLQuery Library resources from the FHIR server.
+ * Fetches stored SQLView Library resources from the FHIR server.
+ *
+ * Shares the decoded-summary mapping with {@link useSqlQueryLibraries}; a
+ * SQLView simply carries no declared parameters.
  *
  * @param options - Optional query options.
- * @returns Query result with summaries of stored SQLQuery Libraries.
+ * @returns Query result with summaries of stored SQLView Libraries.
  */
-export function useSqlQueryLibraries(
-  options?: UseSqlQueryLibrariesOptions,
-): UseSqlQueryLibrariesResult {
+export function useSqlViews(options?: UseSqlViewsOptions): UseSqlViewsResult {
   const { fhirBaseUrl } = config;
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
 
   return useQuery<SqlQueryLibrarySummary[], Error>({
-    queryKey: SQL_QUERY_LIBRARIES_QUERY_KEY,
+    queryKey: SQL_VIEWS_QUERY_KEY,
     queryFn: async () => {
       const bundle = await listStoredLibraries(fhirBaseUrl!, {
-        typeCode: "sql-query",
+        typeCode: "sql-view",
         accessToken,
       });
       return mapLibraryBundle(bundle);
