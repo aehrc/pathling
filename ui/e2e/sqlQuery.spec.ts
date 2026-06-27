@@ -230,6 +230,9 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await page.getByRole("combobox", { name: /sql query source/i }).click();
     await page.getByRole("option", { name: mockSqlViewLibrary1.title }).click();
 
+    // A SQLView declares no parameters, so the runtime-params section is absent.
+    await expect(page.getByText("Runtime parameter values")).toBeHidden();
+
     // The dependency heading reads "Views" rather than "Tables".
     await expect(page.getByText("Views", { exact: true })).toBeVisible();
 

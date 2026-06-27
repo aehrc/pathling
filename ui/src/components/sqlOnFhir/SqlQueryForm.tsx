@@ -194,6 +194,11 @@ export function SqlQueryForm({
 
   const canSave = !disabled && !isSaving && source === "inline" && canSaveInlineForm(inlineInput);
 
+  // On the "Provide SQL" tab the runtime-params section stays anchored as the
+  // user declares parameters; on the "Select query" tab it appears only when
+  // the selected source actually declares parameters (a SQLView never does).
+  const showRuntimeParams = source === "inline" || declaredParameters.length > 0;
+
   return (
     <Card>
       <Flex direction="column" gap="4">
@@ -241,15 +246,17 @@ export function SqlQueryForm({
           </Box>
         </Tabs.Root>
 
-        <Box>
-          <FieldLabel mb="2">Runtime parameter values</FieldLabel>
-          <SqlQueryRuntimeBindings
-            parameters={declaredParameters}
-            bindings={bindings}
-            onChange={handleBindingChange}
-            disabled={disabled || isExecuting}
-          />
-        </Box>
+        {showRuntimeParams && (
+          <Box>
+            <FieldLabel mb="2">Runtime parameter values</FieldLabel>
+            <SqlQueryRuntimeBindings
+              parameters={declaredParameters}
+              bindings={bindings}
+              onChange={handleBindingChange}
+              disabled={disabled || isExecuting}
+            />
+          </Box>
+        )}
 
         <SqlQueryOutputControls
           format={format}
