@@ -23,7 +23,7 @@
  * @author John Grimes
  */
 
-import { Badge, Box, Code, Flex, Select, Spinner, Text } from "@radix-ui/themes";
+import { Badge, Box, Code, Flex, Select, Spinner, Text, Tooltip } from "@radix-ui/themes";
 
 import { SqlPreview } from "./SqlPreview";
 import { FieldGuidance } from "../FieldGuidance";
@@ -147,11 +147,26 @@ export function SqlQueryStoredTab({
               <Flex direction="column" gap="1">
                 {selectedLibrary.relatedArtifacts.map((ra) => (
                   <Flex key={`${ra.label}|${ra.reference}`} align="center" gap="2">
-                    <Code size="2">{ra.label}</Code>
-                    <Text size="2" color="gray">
+                    <Code size="2" style={{ flexShrink: 0 }}>
+                      {ra.label}
+                    </Code>
+                    <Text size="2" color="gray" style={{ flexShrink: 0 }}>
                       &rarr;
                     </Text>
-                    <Code size="2">{ra.reference}</Code>
+                    <Tooltip content={ra.reference}>
+                      <Code
+                        size="2"
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {ra.reference}
+                      </Code>
+                    </Tooltip>
                   </Flex>
                 ))}
               </Flex>
