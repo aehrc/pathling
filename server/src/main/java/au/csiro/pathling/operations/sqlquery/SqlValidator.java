@@ -217,6 +217,10 @@ public class SqlValidator {
           "org.apache.spark.sql.catalyst.expressions.StringInstr",
           "org.apache.spark.sql.catalyst.expressions.StringLocate",
           "org.apache.spark.sql.catalyst.expressions.FindInSet",
+          // String and array concatenation. The || operator parses directly to a Concat
+          // expression rather than an UnresolvedFunction, so it must be allow-listed in its own
+          // right to stay consistent with the concat() function, which is already permitted.
+          "org.apache.spark.sql.catalyst.expressions.Concat",
           // Logical operators.
           "org.apache.spark.sql.catalyst.expressions.And",
           "org.apache.spark.sql.catalyst.expressions.Or",

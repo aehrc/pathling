@@ -184,6 +184,38 @@ class SqlValidatorTest {
   }
 
   // -------------------------------------------------------------------------
+  // String concatenation. The || operator parses directly to a Concat
+  // expression (AstBuilder maps CONCAT_PIPE to Concat), so it never appears
+  // as an UnresolvedFunction and must be present in the expression allow-list
+  // in its own right. The equivalent concat() function call resolves to an
+  // UnresolvedFunction named 'concat', which is already permitted because it
+  // is a built-in, so the two spellings must behave consistently.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsStringConcatenationOperator() {
+    assertThatCode(() -> validate("SELECT a || b FROM t", "t")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsConcatFunction() {
+    assertThatCode(() -> validate("SELECT concat(a, b) FROM t", "t")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDrugStrengthStyleConcatenation() {
+    // Mirrors the real-world "Drug strength" view that triggered this fix: a
+    // human-readable strength label assembled from several columns using ||.
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT numerator_value || ' ' || numerator_unit || '/' || denominator_value"
+                        + " || ' ' || denominator_unit AS strength FROM t",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
   // Invalid SQL — should reject DDL and DML.
   // -------------------------------------------------------------------------
 
