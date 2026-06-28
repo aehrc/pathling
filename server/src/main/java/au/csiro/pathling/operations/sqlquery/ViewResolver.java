@@ -18,7 +18,9 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.read.ReadExecutor;
+import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.ViewDefinitionResource;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -29,17 +31,29 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import jakarta.annotation.Nonnull;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Resolves the {@link ViewArtifactReference}s declared by a SQLQuery Library into parsed {@link
- * FhirView}s, performing the per-resource-type authorisation check along the way. Has no Spark
- * dependency; the FhirView is the parsed view configuration, not yet a {@code Dataset}.
+ * Resolves a {@link ViewArtifactReference} that targets a {@code ViewDefinition} into a {@link
+ * ResolvedViewDefinition} leaf node, matching the reference's canonical URL against the stored
+ * {@code ViewDefinition.url} (the logical id plays no part). A request-supplied view is preferred
+ * over storage, matched by its URL. Has no Spark execution dependency; the {@link FhirView} is the
+ * parsed view configuration, not yet a {@code Dataset}.
+ *
+ * <p>Resolution is split into the supplied-view step and the stored-lookup step so the caller can
+ * detect an ambiguous reference (a URL matching both a {@code ViewDefinition} and a {@code SQLView
+ * Library}) before committing to either.
+ *
+ * @author John Grimes
  */
 // Bean name is set explicitly to avoid colliding with Spring MVC's DispatcherServlet, which
 // auto-discovers any bean named "viewResolver" and casts it to
@@ -47,7 +61,13 @@ import org.springframework.stereotype.Component;
 @Component("sqlQueryViewResolver")
 public class ViewResolver {
 
-  @Nonnull private final ReadExecutor readExecutor;
+  private static final String VIEW_DEFINITION = "ViewDefinition";
+
+  private static final String ACTIVE_STATUS = "active";
+
+  @Nonnull private final DataSource dataSource;
+
+  @Nonnull private final FhirEncoders fhirEncoders;
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
@@ -58,101 +78,125 @@ public class ViewResolver {
   /**
    * Constructs a new ViewResolver.
    *
-   * @param readExecutor read executor for stored ViewDefinition resources
+   * @param dataSource the data source used to match stored ViewDefinitions by url
+   * @param fhirEncoders FHIR encoders used to decode the matched ViewDefinition rows
    * @param serverConfiguration server configuration (used for the auth toggle)
    * @param fhirContext FHIR context used to serialise the resolved ViewDefinition for parsing
    */
   @Autowired
   public ViewResolver(
-      @Nonnull final ReadExecutor readExecutor,
+      @Nonnull final DataSource dataSource,
+      @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final FhirContext fhirContext) {
-    this.readExecutor = readExecutor;
+    this.dataSource = dataSource;
+    this.fhirEncoders = fhirEncoders;
     this.serverConfiguration = serverConfiguration;
     this.fhirContext = fhirContext;
     this.gson = ViewDefinitionGson.create();
   }
 
   /**
-   * Resolves each view reference to a parsed {@link FhirView}, reading every view from server
-   * storage. Equivalent to {@link #resolve(List, Map)} with no request-supplied views.
+   * Resolves a reference against a request-supplied view, preferring it over storage. A supplied
+   * view satisfies a reference when its URL matches the reference's url. It carries its own
+   * authorisation as the request payload, so no metadata or projected-resource READ check applies.
    *
-   * @param references the references declared by the SQLQuery Library, keyed by table label
-   * @return a map from label to resolved FhirView
-   * @throws InvalidRequestException if a reference cannot be resolved or parsed
+   * @param reference the dependency reference to resolve
+   * @param suppliedViews request-supplied views keyed by the canonical URL they satisfy
+   * @return the resolved leaf node, or empty if no supplied view matches the reference's url
    */
   @Nonnull
-  public Map<String, FhirView> resolve(@Nonnull final List<ViewArtifactReference> references) {
-    return resolve(references, Map.of());
-  }
-
-  /**
-   * Resolves each view reference to a parsed {@link FhirView}, preserving label order. A
-   * request-supplied view is used in preference to server storage when it matches the reference (by
-   * the ViewDefinition id extracted from the reference); otherwise the view is read from server
-   * storage, exactly as {@code $sqlquery-run} does. Request-supplied views are assumed already
-   * parsed and, for stored references, authorisation-checked by the caller.
-   *
-   * @param references the references declared by the SQLQuery Library, keyed by table label
-   * @param suppliedViews request-supplied views keyed by the ViewDefinition id (or canonical url's
-   *     final segment) they satisfy; may be empty
-   * @return a map from label to resolved FhirView
-   * @throws InvalidRequestException if a reference cannot be resolved or parsed
-   */
-  @Nonnull
-  public Map<String, FhirView> resolve(
-      @Nonnull final List<ViewArtifactReference> references,
+  public Optional<ResolvedViewDefinition> resolveSuppliedView(
+      @Nonnull final ViewArtifactReference reference,
       @Nonnull final Map<String, FhirView> suppliedViews) {
-    final Map<String, FhirView> resolved = new LinkedHashMap<>();
-
-    for (final ViewArtifactReference ref : references) {
-      final String viewDefinitionId = extractViewDefinitionId(ref.getCanonicalUrl());
-
-      // Prefer a request-supplied view that satisfies this reference, falling back to server
-      // storage when none is supplied.
-      final FhirView suppliedView = suppliedViews.get(viewDefinitionId);
-      if (suppliedView != null) {
-        resolved.put(ref.getLabel(), suppliedView);
-        continue;
-      }
-
-      final IBaseResource viewResource;
-      try {
-        viewResource = readExecutor.read("ViewDefinition", viewDefinitionId);
-      } catch (final Exception e) {
-        throw new InvalidRequestException(
-            "Failed to resolve ViewDefinition for label '"
-                + ref.getLabel()
-                + "' with reference '"
-                + ref.getCanonicalUrl()
-                + "': "
-                + e.getMessage());
-      }
-
-      final FhirView view = parseViewDefinition(viewResource);
-
-      if (serverConfiguration.getAuth().isEnabled()) {
-        SecurityAspect.checkHasAuthority(
-            PathlingAuthority.resourceAccess(AccessType.READ, view.getResource()));
-      }
-
-      resolved.put(ref.getLabel(), view);
+    final CanonicalReference canonical = CanonicalReference.parse(reference.getCanonicalUrl());
+    final FhirView supplied = suppliedViews.get(canonical.getUrl());
+    if (supplied == null) {
+      return Optional.empty();
     }
-
-    return resolved;
+    // A supplied view carries no version; its identity is its URL.
+    return Optional.of(new ResolvedViewDefinition(canonical.getUrl(), supplied));
   }
 
   /**
-   * Extracts a ViewDefinition id from a canonical URL or relative reference. Supports relative
-   * references like {@code ViewDefinition/my-id} and bare ids.
+   * Resolves a reference against a stored {@code ViewDefinition}, matching the reference's url (and
+   * version, when supplied) against {@code ViewDefinition.url}. Returns empty when no stored
+   * ViewDefinition matches, so the caller can fall back to a {@code SQLView}.
+   *
+   * <p>When a ViewDefinition matches, the {@code ViewDefinition} metadata READ check and the
+   * per-projected-resource-type READ check are enforced (when authorisation is enabled).
+   *
+   * @param reference the dependency reference to resolve
+   * @return the resolved leaf node, or empty if no stored ViewDefinition matches
+   * @throws InvalidRequestException if a matching ViewDefinition cannot be parsed
    */
   @Nonnull
-  private String extractViewDefinitionId(@Nonnull final String canonicalUrl) {
-    if (canonicalUrl.contains("/")) {
-      final String[] parts = canonicalUrl.split("/");
-      return parts[parts.length - 1];
+  public Optional<ResolvedViewDefinition> resolveStoredViewDefinition(
+      @Nonnull final ViewArtifactReference reference) {
+    final CanonicalReference canonical = CanonicalReference.parse(reference.getCanonicalUrl());
+    final List<IBaseResource> matches = matchByUrl(canonical);
+    if (matches.isEmpty()) {
+      return Optional.empty();
     }
-    return canonicalUrl;
+
+    final ViewDefinitionResource chosen =
+        (ViewDefinitionResource)
+            canonical.select(matches, ViewResolver::isActive, ViewResolver::versionOf);
+
+    // The ViewDefinition was read from storage: enforce the metadata READ check, then parse it and
+    // enforce the per-projected-resource READ check.
+    checkMetadataReadAuthority();
+    final FhirView view = parseViewDefinition(chosen);
+    checkProjectedResourceReadAuthority(view);
+
+    final String canonicalKey = CanonicalReference.key(chosen.getUrl(), chosen.getVersion());
+    return Optional.of(new ResolvedViewDefinition(canonicalKey, view));
+  }
+
+  /**
+   * Matches stored ViewDefinitions by the reference's url (and version, when supplied), returning
+   * the decoded resources. When the server holds no ViewDefinition data at all, the reference
+   * simply does not match, so an empty list is returned rather than surfacing the data source's
+   * missing-type error.
+   */
+  @Nonnull
+  private List<IBaseResource> matchByUrl(@Nonnull final CanonicalReference canonical) {
+    final Dataset<Row> viewDefinitions;
+    try {
+      viewDefinitions = dataSource.read(VIEW_DEFINITION);
+    } catch (final IllegalArgumentException e) {
+      if (isMissingResourceType(e)) {
+        return List.of();
+      }
+      throw e;
+    }
+    Dataset<Row> filtered =
+        viewDefinitions.filter(viewDefinitions.col("url").equalTo(canonical.getUrl()));
+    if (canonical.hasVersion()) {
+      filtered = filtered.filter(functions.col("version").equalTo(canonical.getVersion()));
+    }
+    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(VIEW_DEFINITION);
+    return filtered.as(encoder).collectAsList();
+  }
+
+  /**
+   * Indicates whether an {@link IllegalArgumentException} signals that the data source holds no
+   * data for the requested resource type (as opposed to a genuine error).
+   */
+  private static boolean isMissingResourceType(@Nonnull final IllegalArgumentException e) {
+    return e.getMessage() != null && e.getMessage().contains("No data found for resource type");
+  }
+
+  /** Returns whether a decoded ViewDefinition carries {@code active} status. */
+  private static boolean isActive(@Nonnull final IBaseResource resource) {
+    final ViewDefinitionResource view = (ViewDefinitionResource) resource;
+    return view.getStatusElement() != null
+        && ACTIVE_STATUS.equals(view.getStatusElement().getValueAsString());
+  }
+
+  /** Returns the version of a decoded ViewDefinition, or null when it has none. */
+  private static String versionOf(@Nonnull final IBaseResource resource) {
+    return ((ViewDefinitionResource) resource).getVersion();
   }
 
   /** Parses a ViewDefinition resource into a FhirView via JSON round-tripping. */
@@ -163,6 +207,29 @@ public class ViewResolver {
       return gson.fromJson(viewJson, FhirView.class);
     } catch (final JsonSyntaxException e) {
       throw new InvalidRequestException("Invalid ViewDefinition: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Enforces the metadata READ check for a ViewDefinition resolved from storage, when authorisation
+   * is enabled. Reading a {@code ViewDefinition} out of the server requires READ authority on the
+   * {@code ViewDefinition} type itself, independent of the data the view projects.
+   */
+  private void checkMetadataReadAuthority() {
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(
+          PathlingAuthority.resourceAccess(AccessType.READ, VIEW_DEFINITION));
+    }
+  }
+
+  /**
+   * Enforces the per-projected-resource-type READ check for a parsed view, when authorisation is
+   * enabled.
+   */
+  private void checkProjectedResourceReadAuthority(@Nonnull final FhirView view) {
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(
+          PathlingAuthority.resourceAccess(AccessType.READ, view.getResource()));
     }
   }
 }

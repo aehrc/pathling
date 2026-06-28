@@ -148,7 +148,7 @@ async function runStoredQuery(page: Page) {
   await page.goto("/admin/sql-on-fhir");
   await page.getByRole("tab", { name: /^sql query$/i }).click();
 
-  await page.getByRole("combobox", { name: /sql query library/i }).click();
+  await page.getByRole("combobox", { name: /sql query source/i }).click();
   await page.getByRole("option", { name: mockSqlQueryLibrary1.title }).click();
 
   // Enter a runtime value for the declared parameter.

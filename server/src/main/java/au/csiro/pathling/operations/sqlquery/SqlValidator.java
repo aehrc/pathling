@@ -217,6 +217,10 @@ public class SqlValidator {
           "org.apache.spark.sql.catalyst.expressions.StringInstr",
           "org.apache.spark.sql.catalyst.expressions.StringLocate",
           "org.apache.spark.sql.catalyst.expressions.FindInSet",
+          // String and array concatenation. The || operator parses directly to a Concat
+          // expression rather than an UnresolvedFunction, so it must be allow-listed in its own
+          // right to stay consistent with the concat() function, which is already permitted.
+          "org.apache.spark.sql.catalyst.expressions.Concat",
           // Logical operators.
           "org.apache.spark.sql.catalyst.expressions.And",
           "org.apache.spark.sql.catalyst.expressions.Or",
@@ -317,9 +321,9 @@ public class SqlValidator {
   }
 
   /**
-   * Pattern that legitimate relation identifiers must match. Mirrors the {@code
-   * SqlQueryLibraryParser} label pattern so that anything Spark's parser produces as an
-   * UnresolvedRelation but which could not have been a declared label is rejected outright.
+   * Pattern that legitimate relation identifiers must match. Mirrors the {@code SqlLibraryParser}
+   * label pattern so that anything Spark's parser produces as an UnresolvedRelation but which could
+   * not have been a declared label is rejected outright.
    */
   private static final Pattern LABEL_PATTERN = Pattern.compile("^[A-Za-z]\\w*$");
 
@@ -416,6 +420,18 @@ public class SqlValidator {
     final List<Expression> expressions = CollectionConverters.asJava(plan.expressions());
     for (final Expression expr : expressions) {
       walkExpressionStrict(expr, allowedLabels);
+    }
+    // A WITH node exposes its CTE definition bodies as innerChildren, not children, so the generic
+    // child walk below never reaches them. Walk them explicitly so that relation references inside
+    // a CTE body are validated against the declared-label set, just like top-level relations. The
+    // CTE names themselves are already in allowedLabels (collectCteNames runs first), so a CTE body
+    // may legitimately reference a sibling or declared label but not an undeclared external table.
+    if (plan instanceof final UnresolvedWith with) {
+      final List<Tuple2<String, SubqueryAlias>> ctes =
+          CollectionConverters.asJava(with.cteRelations());
+      for (final Tuple2<String, SubqueryAlias> cte : ctes) {
+        walkPlanStrict(cte._2(), allowedLabels);
+      }
     }
     final List<LogicalPlan> children = CollectionConverters.asJava(plan.children());
     for (final LogicalPlan child : children) {

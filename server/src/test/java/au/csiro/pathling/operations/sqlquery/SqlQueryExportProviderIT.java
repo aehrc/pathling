@@ -322,9 +322,9 @@ class SqlQueryExportProviderIT extends AbstractSqlQueryExportIT {
             List.of(
                 Map.of(
                     "system",
-                    SqlQueryLibraryParser.LIBRARY_TYPE_SYSTEM,
+                    SqlLibraryParser.LIBRARY_TYPE_SYSTEM,
                     "code",
-                    SqlQueryLibraryParser.LIBRARY_TYPE_CODE))));
+                    SqlLibraryParser.SQL_QUERY_TYPE_CODE))));
     final String sql = "SELECT id, family_name FROM patients ORDER BY id";
     library.put(
         "content",
@@ -344,16 +344,17 @@ class SqlQueryExportProviderIT extends AbstractSqlQueryExportIT {
                 "label",
                 "patients",
                 "resource",
-                "ViewDefinition/" + SqlQueryExportTestConfiguration.PATIENT_VIEW_ID)));
+                SqlQueryExportTestConfiguration.PATIENT_VIEW_URL)));
     return library;
   }
 
-  /** An inline Patient ViewDefinition whose id matches the inline query's relatedArtifact. */
+  /** An inline Patient ViewDefinition whose url matches the inline query's relatedArtifact. */
   @Nonnull
   private Map<String, Object> inlineViewDefinition() {
     final Map<String, Object> view = new LinkedHashMap<>();
     view.put("resourceType", "ViewDefinition");
     view.put("id", SqlQueryExportTestConfiguration.PATIENT_VIEW_ID);
+    view.put("url", SqlQueryExportTestConfiguration.PATIENT_VIEW_URL);
     view.put("name", "supplied_patient_view");
     view.put("resource", "Patient");
     view.put("status", "active");

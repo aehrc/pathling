@@ -22,9 +22,7 @@ import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -52,32 +50,26 @@ public class SqlQueryPipeline {
 
   @Nonnull private final SqlQueryRequestParser requestParser;
 
-  @Nonnull private final ViewResolver viewResolver;
+  @Nonnull private final SqlDependencyResolver dependencyResolver;
 
   @Nonnull private final SqlQueryExecutor executor;
-
-  @Nonnull private final SqlValidator sqlValidator;
 
   /**
    * Constructs a new SqlQueryPipeline.
    *
-   * @param requestParser parses a SQLQuery Library and binds runtime parameters
-   * @param viewResolver resolves the view references to parsed FhirViews, preferring
-   *     request-supplied views over server storage
+   * @param requestParser parses a SQLQuery or SQLView Library and binds runtime parameters
+   * @param dependencyResolver resolves the transitive dependency graph, preferring request-supplied
+   *     views over server storage
    * @param executor validates and runs the SQL against Spark
-   * @param sqlValidator the static SQL validator, used for kick-off-time validation that does not
-   *     require executing the query
    */
   @Autowired
   public SqlQueryPipeline(
       @Nonnull final SqlQueryRequestParser requestParser,
-      @Nonnull final ViewResolver viewResolver,
-      @Nonnull final SqlQueryExecutor executor,
-      @Nonnull final SqlValidator sqlValidator) {
+      @Nonnull final SqlDependencyResolver dependencyResolver,
+      @Nonnull final SqlQueryExecutor executor) {
     this.requestParser = requestParser;
-    this.viewResolver = viewResolver;
+    this.dependencyResolver = dependencyResolver;
     this.executor = executor;
-    this.sqlValidator = sqlValidator;
   }
 
   /**
@@ -107,30 +99,27 @@ public class SqlQueryPipeline {
       @Nonnull final Map<String, FhirView> suppliedViews) {
     final SqlQueryRequest request =
         requestParser.parse(library, format, acceptHeader, includeHeader, limit, parameters);
-    final Map<String, FhirView> resolvedViews =
-        viewResolver.resolve(request.getParsedQuery().getViewReferences(), suppliedViews);
-    return new PreparedSqlQuery(request, resolvedViews);
+    final ResolvedDependencyGraph dependencyGraph =
+        dependencyResolver.resolve(request.getParsedQuery(), suppliedViews);
+    return new PreparedSqlQuery(request, dependencyGraph);
   }
 
   /**
    * Runs the static SQL validation that does not require executing the query, so that malformed or
-   * disallowed SQL is detected before any Spark work. Used by the asynchronous export to surface
-   * these failures synchronously at kick-off.
+   * disallowed SQL is detected before any Spark work. Validates the top-level SQL and every SQLView
+   * node's SQL against its own declared labels. Used by the asynchronous export to surface these
+   * failures synchronously at kick-off.
    *
    * @param prepared the prepared query
    */
   public void validateStatically(@Nonnull final PreparedSqlQuery prepared) {
-    final Set<String> declaredLabels =
-        prepared.getRequest().getParsedQuery().getViewReferences().stream()
-            .map(ViewArtifactReference::getLabel)
-            .collect(Collectors.toUnmodifiableSet());
-    sqlValidator.validate(prepared.getRequest().getParsedQuery().getSql(), declaredLabels);
+    executor.validateStatically(prepared.getRequest(), prepared.getDependencyGraph());
   }
 
   /**
-   * Executes the prepared query against Spark, registering the resolved views under request-scoped
-   * temp views for the duration of the call and invoking {@code consumer} with the result dataset
-   * before they are dropped.
+   * Executes the prepared query against Spark, materialising the resolved dependency graph under
+   * request-scoped temp views for the duration of the call and invoking {@code consumer} with the
+   * result dataset before they are dropped.
    *
    * @param prepared the prepared query
    * @param dataSource the data source backing FhirView execution (filtered for the export filters)
@@ -143,6 +132,6 @@ public class SqlQueryPipeline {
       @Nonnull final String requestId,
       @Nonnull final Consumer<Dataset<Row>> consumer) {
     executor.execute(
-        prepared.getRequest(), prepared.getResolvedViews(), dataSource, requestId, consumer);
+        prepared.getRequest(), prepared.getDependencyGraph(), dataSource, requestId, consumer);
   }
 }

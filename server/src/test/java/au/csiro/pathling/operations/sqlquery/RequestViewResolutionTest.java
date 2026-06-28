@@ -18,111 +18,167 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
-import au.csiro.pathling.read.ReadExecutor;
-import au.csiro.pathling.views.FhirView;
+import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.view.ViewExecutionHelper;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for the request-supplied view resolution path of {@link ViewResolver}: a supplied view
- * is matched to a {@code relatedArtifact} reference by id and preferred over server storage, while
- * a reference with no matching supplied view falls back to storage.
+ * Tests for the resolution of request-supplied views against canonical dependency references: a
+ * supplied view is matched to a reference by its {@code url} and preferred over storage (resolved
+ * by {@link ViewResolver}), while a supplied view that carries no {@code url} is rejected at parse
+ * time (by {@link SqlQueryExportRequestParser}).
  *
  * @author John Grimes
  */
 class RequestViewResolutionTest {
 
-  private ReadExecutor readExecutor;
-  private ViewResolver resolver;
+  private static final String PATIENTS_URL = "https://example.org/Patients";
 
-  @BeforeEach
-  void setUp() {
-    readExecutor = mock(ReadExecutor.class);
-    final ServerConfiguration serverConfiguration = new ServerConfiguration();
-    final AuthorizationConfiguration auth = new AuthorizationConfiguration();
-    auth.setEnabled(false);
-    serverConfiguration.setAuth(auth);
-    resolver = new ViewResolver(readExecutor, serverConfiguration, FhirContext.forR4());
+  // ---------------------------------------------------------------------------
+  // Supplied-view matching by url (ViewResolver).
+  // ---------------------------------------------------------------------------
+
+  @Nested
+  class SuppliedViewMatching {
+
+    private ViewResolver resolver;
+
+    @BeforeEach
+    void setUp() {
+      final ServerConfiguration serverConfiguration = new ServerConfiguration();
+      final AuthorizationConfiguration auth = new AuthorizationConfiguration();
+      auth.setEnabled(false);
+      serverConfiguration.setAuth(auth);
+      resolver =
+          new ViewResolver(
+              mock(DataSource.class),
+              mock(FhirEncoders.class),
+              serverConfiguration,
+              FhirContext.forR4Cached());
+    }
+
+    @Test
+    void suppliedViewIsMatchedByUrlAndPreferredOverStorage() {
+      final var supplied =
+          au.csiro.pathling.views.FhirView.ofResource("Patient")
+              .select(
+                  au.csiro.pathling.views.FhirView.columns(
+                      au.csiro.pathling.views.FhirView.column("id", "id")))
+              .build();
+
+      final Optional<ResolvedViewDefinition> resolved =
+          resolver.resolveSuppliedView(
+              new ViewArtifactReference("patients", PATIENTS_URL), Map.of(PATIENTS_URL, supplied));
+
+      assertThat(resolved).isPresent();
+      assertThat(resolved.get().getView()).isSameAs(supplied);
+      assertThat(resolved.get().getCanonicalKey()).isEqualTo(PATIENTS_URL);
+    }
+
+    @Test
+    void resolvesNoSuppliedViewWhenNoneMatchesTheUrl() {
+      final Optional<ResolvedViewDefinition> resolved =
+          resolver.resolveSuppliedView(
+              new ViewArtifactReference("patients", PATIENTS_URL), Map.of());
+
+      assertThat(resolved).isEmpty();
+    }
   }
 
-  @Test
-  void suppliedViewIsPreferredAndStorageIsNotConsulted() {
-    final FhirView supplied =
-        FhirView.ofResource("Patient")
-            .select(FhirView.columns(FhirView.column("id", "id")))
-            .build();
-    final Map<String, FhirView> suppliedViews = Map.of("patient-bp", supplied);
+  // ---------------------------------------------------------------------------
+  // Url-less supplied-view rejection (SqlQueryExportRequestParser).
+  // ---------------------------------------------------------------------------
 
-    final Map<String, FhirView> resolved =
-        resolver.resolve(
-            List.of(new ViewArtifactReference("patients", "ViewDefinition/patient-bp")),
-            suppliedViews);
+  @Nested
+  class SuppliedViewValidation {
 
-    assertThat(resolved.get("patients")).isSameAs(supplied);
-    verify(readExecutor, never())
-        .read(
-            org.mockito.ArgumentMatchers.eq("ViewDefinition"),
-            org.mockito.ArgumentMatchers.anyString());
+    private ViewExecutionHelper viewExecutionHelper;
+    private SqlQueryExportRequestParser parser;
+
+    @BeforeEach
+    void setUp() {
+      viewExecutionHelper = mock(ViewExecutionHelper.class);
+      final ServerConfiguration serverConfiguration = new ServerConfiguration();
+      final AuthorizationConfiguration auth = new AuthorizationConfiguration();
+      auth.setEnabled(false);
+      serverConfiguration.setAuth(auth);
+      parser =
+          new SqlQueryExportRequestParser(
+              mock(SqlQueryPipeline.class),
+              mock(LibraryReferenceResolver.class),
+              viewExecutionHelper,
+              FhirContext.forR4Cached(),
+              serverConfiguration,
+              mock(QueryableDataSource.class));
+    }
+
+    @Test
+    void rejectsASuppliedViewWithoutAUrl() {
+      // The resolved view has no url, so it can never satisfy a canonical reference.
+      when(viewExecutionHelper.resolveViewInput(any(), any()))
+          .thenReturn(viewDefinitionWithoutUrl());
+      final Parameters body = parametersWithInlineView();
+
+      assertThatThrownBy(
+              () ->
+                  parser.parse(requestDetails(body), null, null, null, null, Set.of(), null, null))
+          .isInstanceOf(InvalidRequestException.class)
+          .hasMessageContaining("url");
+    }
+
+    @Nonnull
+    private Parameters parametersWithInlineView() {
+      final Parameters parameters = new Parameters();
+      final ParametersParameterComponent view = parameters.addParameter().setName("view");
+      view.addPart().setName("viewResource").setResource(viewDefinitionWithoutUrl());
+      return parameters;
+    }
+
+    @Nonnull
+    private ServletRequestDetails requestDetails(@Nonnull final Parameters body) {
+      final ServletRequestDetails requestDetails = mock(ServletRequestDetails.class);
+      when(requestDetails.getResource()).thenReturn(body);
+      when(requestDetails.getCompleteUrl()).thenReturn("http://localhost/fhir/$sqlquery-export");
+      when(requestDetails.getFhirServerBase()).thenReturn("http://localhost/fhir");
+      return requestDetails;
+    }
   }
 
-  @Test
-  void referenceWithNoSuppliedViewFallsBackToStorage() {
-    when(readExecutor.read("ViewDefinition", "patient-bp"))
-        .thenReturn(simpleViewDefinition("patient-bp", "Patient"));
-
-    final Map<String, FhirView> resolved =
-        resolver.resolve(
-            List.of(new ViewArtifactReference("patients", "ViewDefinition/patient-bp")), Map.of());
-
-    assertThat(resolved).containsOnlyKeys("patients");
-    verify(readExecutor).read("ViewDefinition", "patient-bp");
-  }
-
-  @Test
-  void mixesSuppliedAndStorageResolvedViews() {
-    final FhirView supplied =
-        FhirView.ofResource("Patient")
-            .select(FhirView.columns(FhirView.column("id", "id")))
-            .build();
-    when(readExecutor.read("ViewDefinition", "obs-view"))
-        .thenReturn(simpleViewDefinition("obs-view", "Observation"));
-
-    final Map<String, FhirView> resolved =
-        resolver.resolve(
-            List.of(
-                new ViewArtifactReference("patients", "ViewDefinition/patient-bp"),
-                new ViewArtifactReference("obs", "ViewDefinition/obs-view")),
-            Map.of("patient-bp", supplied));
-
-    assertThat(resolved.get("patients")).isSameAs(supplied);
-    assertThat(resolved.get("obs").getResource()).isEqualTo("Observation");
-    verify(readExecutor).read("ViewDefinition", "obs-view");
-    verify(readExecutor, never()).read("ViewDefinition", "patient-bp");
-  }
+  // ---------------------------------------------------------------------------
+  // Helpers.
+  // ---------------------------------------------------------------------------
 
   @Nonnull
-  private static ViewDefinitionResource simpleViewDefinition(
-      @Nonnull final String id, @Nonnull final String resourceType) {
+  private static ViewDefinitionResource viewDefinitionWithoutUrl() {
     final ViewDefinitionResource view = new ViewDefinitionResource();
-    view.setId(id);
-    view.setName(new StringType(id + "_view"));
-    view.setResource(new CodeType(resourceType));
+    view.setId("no-url-view");
+    view.setName(new StringType("no_url_view"));
+    view.setResource(new CodeType("Patient"));
     view.setStatus(new CodeType("active"));
     final SelectComponent select = new SelectComponent();
     final ColumnComponent column = new ColumnComponent();

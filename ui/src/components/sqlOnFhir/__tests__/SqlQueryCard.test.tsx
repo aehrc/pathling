@@ -46,6 +46,9 @@ vi.mock("../../../hooks", () => ({
     result: mockResult,
     error: mockError,
   }),
+  // The submitted-SQL preview composes useClipboard; the card itself does not
+  // exercise it, so a no-op stub suffices here.
+  useClipboard: () => vi.fn(),
 }));
 
 vi.mock("../../../utils", () => ({
@@ -142,6 +145,23 @@ describe("SqlQueryCard", () => {
     expect(screen.queryByLabelText(/download/i)).not.toBeInTheDocument();
   });
 
+  // The submitted SQL is echoed beneath a successful result in the shared,
+  // height-bounded preview area.
+  it("echoes the submitted SQL beneath a successful result", () => {
+    mockStatus = "success";
+    mockResult = TABULAR_RESULT;
+    render(
+      <SqlQueryCard
+        job={createJob({ sql: "SELECT * FROM patients" })}
+        onError={onError}
+        onClose={onClose}
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: /submitted sql/i })).toHaveValue(
+      "SELECT * FROM patients",
+    );
+  });
+
   // The card is a preview only and clamps the rendered rows to 10, with
   // full-result downloads deferred to a future SQL query export operation.
   it("clamps the rendered rows to 10 even if the result has more", () => {
@@ -227,7 +247,10 @@ describe("SqlQueryCard", () => {
       />,
     );
     expect(screen.getByText(/sql contains a disallowed operation/i)).toBeInTheDocument();
-    expect(screen.getByText(/drop table conditions/i)).toBeInTheDocument();
+    // The submitted SQL is echoed in the read-only preview area.
+    expect(screen.getByRole("textbox", { name: /submitted sql/i })).toHaveValue(
+      "DROP TABLE conditions",
+    );
   });
 
   // Generic errors fall back to the message text.

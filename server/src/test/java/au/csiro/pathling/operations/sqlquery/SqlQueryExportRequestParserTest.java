@@ -70,11 +70,17 @@ class SqlQueryExportRequestParserTest {
             deltaLake);
 
     final ParsedSqlQuery parsedQuery =
-        new ParsedSqlQuery("SELECT id FROM patients", java.util.List.of(), java.util.List.of());
+        new ParsedSqlQuery(
+            "SELECT id FROM patients",
+            java.util.List.of(),
+            java.util.List.of(),
+            SqlLibraryParser.SQL_QUERY_TYPE_CODE);
     final SqlQueryRequest request =
         new SqlQueryRequest(parsedQuery, SqlQueryOutputFormat.NDJSON, true, null, Map.of());
     when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
-        .thenReturn(new PreparedSqlQuery(request, Map.of()));
+        .thenReturn(
+            new PreparedSqlQuery(
+                request, new ResolvedDependencyGraph(java.util.List.of(), Map.of(), Map.of())));
     when(libraryReferenceResolver.resolve(any())).thenReturn(new Library());
   }
 

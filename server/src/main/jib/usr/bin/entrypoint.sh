@@ -18,7 +18,9 @@ set -e
 # The Pathling JVM module options required on Java 21. Both roles must run with
 # these, so they are defined once here and referenced from each branch. They
 # were previously supplied by the Jib build's jvmFlags, which Jib ignores once
-# an explicit entrypoint is configured.
+# an explicit entrypoint is configured. This list must be kept in sync with the
+# pathling.runtime.jvmModuleOpts property in the server pom.xml, which a shell
+# script cannot reference at build or run time.
 PATHLING_JVM_OPTS=(
   --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
   --add-opens=java.base/java.net=ALL-UNNAMED
