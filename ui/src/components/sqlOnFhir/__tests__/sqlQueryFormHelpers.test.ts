@@ -17,15 +17,18 @@
 
 import { describe, expect, it } from "vitest";
 
-import { decodeSql } from "../../../utils/sqlBase64";
+import { decodeSql, encodeSql } from "../../../utils/sqlBase64";
 import {
   areRuntimeBindingsValid,
   buildInlineSqlQueryLibrary,
   buildParameterTypes,
   canExecuteInlineForm,
   canSaveInlineForm,
+  extractRequestSql,
   isRuntimeValueValid,
 } from "../sqlQueryFormHelpers";
+
+import type { SqlQueryLibrary, SqlQueryRequest } from "../../../types/sqlQuery";
 
 describe("buildInlineSqlQueryLibrary", () => {
   // The assembled Library carries the SQL on FHIR profile, the
@@ -329,5 +332,81 @@ describe("buildParameterTypes", () => {
         { name: "active", type: "boolean" },
       ]),
     ).toEqual({ patient_id: "string", active: "boolean" });
+  });
+});
+
+describe("extractRequestSql", () => {
+  /**
+   * Builds an inline request wrapping a Library with the supplied content,
+   * so the recovery paths can be exercised in isolation.
+   *
+   * @param content - The `Library.content` array to embed.
+   * @returns An inline SQL query request.
+   */
+  function inlineRequest(content: SqlQueryLibrary["content"]): SqlQueryRequest {
+    return {
+      mode: "inline",
+      library: {
+        resourceType: "Library",
+        status: "active",
+        type: {
+          coding: [
+            {
+              system: "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
+              code: "sql-query",
+            },
+          ],
+        },
+        content,
+      },
+    };
+  }
+
+  // A stored request carries the SQL the form resolved from the picker.
+  it("returns the resolved SQL for a stored request", () => {
+    expect(
+      extractRequestSql({
+        mode: "stored",
+        libraryId: "lib-1",
+        sql: "SELECT 1",
+      }),
+    ).toBe("SELECT 1");
+  });
+
+  // A stored request that was built without a resolved SQL yields an empty
+  // string rather than throwing.
+  it("returns an empty string for a stored request with no resolved SQL", () => {
+    expect(extractRequestSql({ mode: "stored", libraryId: "lib-1" })).toBe("");
+  });
+
+  // Inline requests prefer the human-readable sql-text extension.
+  it("returns the sql-text extension for an inline request", () => {
+    const request = inlineRequest([
+      {
+        contentType: "application/sql",
+        data: encodeSql("SELECT 99"),
+        extension: [
+          {
+            url: "https://sql-on-fhir.org/ig/StructureDefinition/sql-text",
+            valueString: "SELECT 2",
+          },
+        ],
+      },
+    ]);
+    expect(extractRequestSql(request)).toBe("SELECT 2");
+  });
+
+  // When no extension is present, inline requests fall back to decoding the
+  // Base64 data.
+  it("decodes the Base64 data when no sql-text extension is present", () => {
+    const request = inlineRequest([
+      { contentType: "application/sql", data: encodeSql("SELECT 3") },
+    ]);
+    expect(extractRequestSql(request)).toBe("SELECT 3");
+  });
+
+  // An inline request with no content has no SQL to recover.
+  it("returns an empty string for an inline request with no content", () => {
+    expect(extractRequestSql(inlineRequest([]))).toBe("");
   });
 });

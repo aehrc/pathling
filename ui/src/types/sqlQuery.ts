@@ -184,6 +184,12 @@ export type SqlQueryRequest =
       mode: "stored";
       /** ID of a stored Library conforming to the SQLQuery profile. */
       libraryId: string;
+      /**
+       * Resolved SQL text of the referenced Library, retained for display
+       * only. The server receives just the `libraryId` reference, so this is
+       * never sent; it lets the result card show the query that ran.
+       */
+      sql?: string;
     })
   | (SqlQueryExecutionOptions & {
       mode: "inline";

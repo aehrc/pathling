@@ -152,6 +152,9 @@ export function SqlQueryForm({
       const request: SqlQueryRequest = {
         mode: "stored",
         libraryId: selectedLibraryId,
+        // Carry the resolved SQL for display only; the server receives just
+        // the reference.
+        sql: activeStoredLibrary?.sql,
         ...baseRequestOptions(),
       };
       onExecute(request);

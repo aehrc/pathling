@@ -168,3 +168,41 @@ describe("SqlQueryForm runtime parameter visibility", () => {
     expect(screen.getByText(RUNTIME_SECTION)).toBeInTheDocument();
   });
 });
+
+describe("SqlQueryForm stored execution", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // Executing a stored query attaches the resolved SQL to the request so the
+  // result card can show what ran, even though only the reference is sent to
+  // the server.
+  it("forwards the selected query's SQL on the request", async () => {
+    const user = userEvent.setup();
+    const onExecute = vi.fn();
+    render(
+      <SqlQueryForm
+        onExecute={onExecute}
+        onSaveToServer={vi.fn()}
+        isExecuting={false}
+        isSaving={false}
+      />,
+    );
+
+    await selectSource(user, "Plain query");
+    await user.click(screen.getByRole("button", { name: /execute/i }));
+
+    expect(onExecute).toHaveBeenCalledTimes(1);
+    expect(onExecute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: "stored",
+        libraryId: "plain-query",
+        sql: "SELECT 1",
+      }),
+    );
+  });
+});
