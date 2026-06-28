@@ -23,21 +23,9 @@
  * @author John Grimes
  */
 
-import { CopyIcon } from "@radix-ui/react-icons";
-import {
-  Badge,
-  Box,
-  Code,
-  Flex,
-  IconButton,
-  Select,
-  Spinner,
-  Text,
-  TextArea,
-  Tooltip,
-} from "@radix-ui/themes";
+import { Badge, Box, Code, Flex, Select, Spinner, Text } from "@radix-ui/themes";
 
-import { useClipboard } from "../../hooks";
+import { SqlPreview } from "./SqlPreview";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
 
@@ -78,8 +66,6 @@ export function SqlQueryStoredTab({
   onSelect,
   disabled = false,
 }: Readonly<SqlQueryStoredTabProps>) {
-  const copyToClipboard = useClipboard();
-
   const hasQueries = (queries?.length ?? 0) > 0;
   const hasViews = (views?.length ?? 0) > 0;
 
@@ -152,32 +138,7 @@ export function SqlQueryStoredTab({
         <>
           <Box>
             <FieldLabel mb="1">SQL preview</FieldLabel>
-            <Box style={{ position: "relative" }}>
-              <Tooltip content="Copy SQL to clipboard">
-                <IconButton
-                  size="1"
-                  variant="ghost"
-                  aria-label="Copy SQL to clipboard"
-                  onClick={() => copyToClipboard(selectedLibrary.sql)}
-                  style={{
-                    position: "absolute",
-                    top: 8,
-                    right: 8,
-                    zIndex: 1,
-                  }}
-                >
-                  <CopyIcon />
-                </IconButton>
-              </Tooltip>
-              <TextArea
-                readOnly
-                size="1"
-                rows={10}
-                value={selectedLibrary.sql}
-                style={{ fontFamily: "monospace" }}
-                aria-label="Decoded SQL preview"
-              />
-            </Box>
+            <SqlPreview sql={selectedLibrary.sql} ariaLabel="Decoded SQL preview" />
           </Box>
 
           <Box>
