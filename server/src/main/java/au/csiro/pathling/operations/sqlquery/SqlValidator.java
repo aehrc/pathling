@@ -417,6 +417,18 @@ public class SqlValidator {
     for (final Expression expr : expressions) {
       walkExpressionStrict(expr, allowedLabels);
     }
+    // A WITH node exposes its CTE definition bodies as innerChildren, not children, so the generic
+    // child walk below never reaches them. Walk them explicitly so that relation references inside
+    // a CTE body are validated against the declared-label set, just like top-level relations. The
+    // CTE names themselves are already in allowedLabels (collectCteNames runs first), so a CTE body
+    // may legitimately reference a sibling or declared label but not an undeclared external table.
+    if (plan instanceof final UnresolvedWith with) {
+      final List<Tuple2<String, SubqueryAlias>> ctes =
+          CollectionConverters.asJava(with.cteRelations());
+      for (final Tuple2<String, SubqueryAlias> cte : ctes) {
+        walkPlanStrict(cte._2(), allowedLabels);
+      }
+    }
     final List<LogicalPlan> children = CollectionConverters.asJava(plan.children());
     for (final LogicalPlan child : children) {
       walkPlanStrict(child, allowedLabels);
