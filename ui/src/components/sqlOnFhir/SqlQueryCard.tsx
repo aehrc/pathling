@@ -42,6 +42,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { ExportControls } from "./ExportControls";
+import { SqlPreview } from "./SqlPreview";
 import { SqlQueryExportCardWrapper } from "./SqlQueryExportCardWrapper";
 import { useSqlQueryRun } from "../../hooks";
 import { OperationOutcomeError } from "../../types/errors";
@@ -272,18 +273,7 @@ function SqlQueryResultBody({ result, sql }: Readonly<SqlQueryResultBodyProps>) 
       <Text size="1" color="gray">
         Submitted SQL:
       </Text>
-      <Box
-        style={{
-          fontFamily: "monospace",
-          fontSize: "0.85em",
-          background: "var(--gray-2)",
-          padding: "0.5rem",
-          borderRadius: "4px",
-          whiteSpace: "pre-wrap",
-        }}
-      >
-        {sql}
-      </Box>
+      <SqlPreview sql={sql} ariaLabel="Submitted SQL" />
     </Flex>
   );
 }
@@ -309,18 +299,7 @@ function SqlQueryErrorBody({ sql, error }: Readonly<SqlQueryErrorBodyProps>) {
       <Text size="1" color="gray">
         Submitted SQL:
       </Text>
-      <Box
-        style={{
-          fontFamily: "monospace",
-          fontSize: "0.85em",
-          background: "var(--gray-2)",
-          padding: "0.5rem",
-          borderRadius: "4px",
-          whiteSpace: "pre-wrap",
-        }}
-      >
-        {sql || "(empty)"}
-      </Box>
+      <SqlPreview sql={sql || "(empty)"} ariaLabel="Submitted SQL" />
       <Callout.Root color="red" size="1">
         <Callout.Icon>
           <ExclamationTriangleIcon />
