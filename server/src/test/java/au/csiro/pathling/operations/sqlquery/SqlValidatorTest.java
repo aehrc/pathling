@@ -357,6 +357,79 @@ class SqlValidatorTest {
   }
 
   // -------------------------------------------------------------------------
+  // Relation references inside CTE definition bodies. A WITH node exposes its
+  // CTE bodies as innerChildren rather than children, so the strict walk must
+  // descend into them explicitly. Without this, an undeclared table referenced
+  // inside a CTE body (for example an OMOP 'concept' vocabulary table) slips
+  // past static validation and surfaces as an opaque 500 from Spark's analyser
+  // instead of a clean rejection.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void rejectsUndeclaredTableInsideCteBody() {
+    // The relation is named only inside the CTE definition, never at the top level.
+    assertThatThrownBy(() -> validate("WITH cr AS (SELECT * FROM concept) SELECT * FROM cr"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table")
+        .hasMessageContaining("concept");
+  }
+
+  @Test
+  void rejectsUndeclaredTableInJoinInsideCteBody() {
+    // Mirrors the real OMOP concept-resolution CTE, which joins several undeclared
+    // vocabulary tables within its body.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "WITH cr AS ("
+                        + "  SELECT * FROM concept c"
+                        + "  LEFT JOIN concept_relationship rel ON c.concept_id = rel.concept_id_1"
+                        + ") SELECT * FROM cr"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsUndeclaredLabelInsideCteBody() {
+    // A label reference inside a CTE body must still be checked against the declared
+    // set: when 'patients' is not declared, the relation is undeclared and rejected.
+    assertThatThrownBy(() -> validate("WITH foo AS (SELECT * FROM patients) SELECT * FROM foo"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table")
+        .hasMessageContaining("patients");
+  }
+
+  @Test
+  void rejectsDatasourceShortNameFileReadInsideCteBody() {
+    // The datasource short-name file-read lane must stay closed inside CTE bodies too.
+    assertThatThrownBy(
+            () -> validate("WITH leak AS (SELECT * FROM csv.`/etc/passwd`) SELECT * FROM leak"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsUndeclaredTableInNestedCteBody() {
+    // Nested WITH: the inner CTE 'b' is defined inside the body of the outer CTE 'a'.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "WITH a AS (WITH b AS (SELECT * FROM concept) SELECT * FROM b) SELECT * FROM"
+                        + " a"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table")
+        .hasMessageContaining("concept");
+  }
+
+  @Test
+  void acceptsCteBodyReferencingDeclaredLabel() {
+    // The positive counterpart: once the body is walked, a declared label inside it
+    // resolves cleanly and the query is accepted.
+    assertThatCode(() -> validate("WITH cr AS (SELECT * FROM concept) SELECT * FROM cr", "concept"))
+        .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
   // View-derived Pathling UDFs flow through unaffected. ViewDefinition
   // FHIRPath expressions compile to Spark plans that contain ScalaUDFs (for
   // terminology and FHIRPath helpers). When user SQL references the resulting
