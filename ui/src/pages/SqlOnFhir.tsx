@@ -139,7 +139,10 @@ export function SqlOnFhir() {
         <Heading size="6">SQL on FHIR</Heading>
 
         <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-          <Box style={{ flex: 1 }}>
+          {/* The min-width of zero lets the form column shrink to share width
+              evenly with the results column, rather than being held open by
+              wide content such as long view references. */}
+          <Box style={{ flex: 1, minWidth: 0 }}>
             <SqlOnFhirForm
               mode={mode}
               onModeChange={setMode}
