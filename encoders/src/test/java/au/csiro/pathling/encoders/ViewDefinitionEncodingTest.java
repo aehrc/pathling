@@ -892,4 +892,84 @@ class ViewDefinitionEncodingTest {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     assertEquals("ViewDefinition", view.fhirType());
   }
+
+  // ========== URL AND VERSION ACCESSOR TESTS ==========
+
+  @Test
+  void testSetUrlWithStringValue() {
+    // setUrl(String) wraps the value in a UriType and getUrl() unwraps it.
+    final ViewDefinitionResource view = new ViewDefinitionResource();
+    view.setUrl("https://example.org/ViewDefinition/patients");
+
+    assertTrue(view.hasUrlElement());
+    assertInstanceOf(UriType.class, view.getUrlElement());
+    assertEquals("https://example.org/ViewDefinition/patients", view.getUrl());
+  }
+
+  @Test
+  void testSetUrlWithNullValue() {
+    // setUrl(null) clears the element, leaving the field null so getUrl() returns null.
+    final ViewDefinitionResource view = new ViewDefinitionResource();
+    view.setUrl("https://example.org/ViewDefinition/patients");
+    view.setUrl(null);
+
+    assertNull(view.getUrlElement());
+    assertNull(view.getUrl());
+    assertFalse(view.hasUrlElement());
+  }
+
+  @Test
+  void testSetVersionWithStringValue() {
+    // setVersion(String) wraps the value in a StringType and getVersion() unwraps it.
+    final ViewDefinitionResource view = new ViewDefinitionResource();
+    view.setVersion("2.0");
+
+    assertTrue(view.hasVersionElement());
+    assertInstanceOf(org.hl7.fhir.r4.model.StringType.class, view.getVersionElement());
+    assertEquals("2.0", view.getVersion());
+  }
+
+  @Test
+  void testSetVersionWithNullValue() {
+    // setVersion(null) clears the element, leaving the field null so getVersion() returns null.
+    final ViewDefinitionResource view = new ViewDefinitionResource();
+    view.setVersion("2.0");
+    view.setVersion(null);
+
+    assertNull(view.getVersionElement());
+    assertNull(view.getVersion());
+    assertFalse(view.hasVersionElement());
+  }
+
+  @Test
+  void testCopyRetainsUrlAndVersion() {
+    // copy() must duplicate the url and version elements when they are present.
+    final ViewDefinitionResource original = createSimpleViewDefinition();
+    original.setUrl("https://example.org/ViewDefinition/patients");
+    original.setVersion("2.0");
+
+    final ViewDefinitionResource copy = (ViewDefinitionResource) original.copy();
+
+    assertTrue(original.equalsDeep(copy));
+    assertEquals("https://example.org/ViewDefinition/patients", copy.getUrl());
+    assertEquals("2.0", copy.getVersion());
+  }
+
+  @Test
+  void testIsEmptyConsidersUrlAndVersion() {
+    // A populated url or version makes the resource non-empty.
+    final ViewDefinitionResource withUrl = new ViewDefinitionResource();
+    withUrl.setUrl("https://example.org/ViewDefinition/patients");
+    assertFalse(withUrl.isEmpty());
+
+    final ViewDefinitionResource withVersion = new ViewDefinitionResource();
+    withVersion.setVersion("1.0");
+    assertFalse(withVersion.isEmpty());
+
+    // Non-null but empty url and version elements leave the resource empty.
+    final ViewDefinitionResource emptyElements = new ViewDefinitionResource();
+    emptyElements.setUrlElement(new UriType());
+    emptyElements.setVersionElement(new org.hl7.fhir.r4.model.StringType());
+    assertTrue(emptyElements.isEmpty());
+  }
 }
