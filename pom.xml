@@ -84,7 +84,7 @@
     <pathling.antlrVersion>4.13.1</pathling.antlrVersion>
     <pathling.lombokVersion>1.18.38</pathling.lombokVersion>
     <pathling.infinispanVersion>15.0.3.Final</pathling.infinispanVersion>
-    <pathling.jacksonVersion>2.16.1</pathling.jacksonVersion>
+    <pathling.jacksonVersion>2.22.0</pathling.jacksonVersion>
     <pathling.jerseyVersion>3.1.11</pathling.jerseyVersion>
     <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
     <pathling.logbackVersion>1.5.25</pathling.logbackVersion>
