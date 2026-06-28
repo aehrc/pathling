@@ -39,6 +39,7 @@ import org.springframework.stereotype.Component;
  * <p>This provides a system-level operation at {@code /fhir/$sqlquery-run} that accepts a SQLQuery
  * Library resource inline or by reference.
  *
+ * @author John Grimes
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-SQLQueryRun.html">SQLQueryRun</a>
  * @see SqlQueryInstanceRunProvider for type-level and instance-level operations
@@ -69,6 +70,7 @@ public class SqlQueryRunProvider {
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
    * @param parameters runtime parameter bindings as a Parameters resource
+   * @param source the unsupported external data source parameter, rejected when supplied
    * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
@@ -82,8 +84,11 @@ public class SqlQueryRunProvider {
       @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
       @Nullable @OperationParam(name = "_limit") final IntegerType limit,
       @Nullable @OperationParam(name = "parameters") final Parameters parameters,
+      @Nullable @OperationParam(name = "source") final String source,
       @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
+
+    executionHelper.rejectSourceParameter(source);
 
     final String acceptHeader = requestDetails.getServletRequest().getHeader("Accept");
 

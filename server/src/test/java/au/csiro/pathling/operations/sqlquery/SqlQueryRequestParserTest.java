@@ -57,7 +57,7 @@ class SqlQueryRequestParserTest {
 
   @BeforeEach
   void setUp() {
-    parser = new SqlQueryRequestParser(new SqlQueryLibraryParser());
+    parser = new SqlQueryRequestParser(new SqlLibraryParser());
   }
 
   // ---------------------------------------------------------------------------
@@ -272,6 +272,79 @@ class SqlQueryRequestParserTest {
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("min_age")
         .hasMessageContaining("more than once");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Output-format selection: strict for explicit _format, lenient for Accept.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void rejectsUnsupportedExplicitFormatNamingValue() {
+    // An explicit _format that is not supported is rejected with the value named.
+    final Library library = libraryWithSql("SELECT 1");
+    assertThatThrownBy(() -> parser.parse(library, "xml", null, null, null, null))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("xml");
+  }
+
+  @Test
+  void honoursSupportedExplicitFormat() {
+    final Library library = libraryWithSql("SELECT 1");
+    final SqlQueryRequest request = parser.parse(library, "csv", null, null, null, null);
+    assertThat(request.getOutputFormat()).isEqualTo(SqlQueryOutputFormat.CSV);
+  }
+
+  @Test
+  void fallsBackToNdjsonWhenAcceptHeaderDoesNotMatch() {
+    // An Accept header that matches no supported media type is not rejected; it defaults to NDJSON.
+    final Library library = libraryWithSql("SELECT 1");
+    final SqlQueryRequest request =
+        parser.parse(library, null, "application/xml", null, null, null);
+    assertThat(request.getOutputFormat()).isEqualTo(SqlQueryOutputFormat.NDJSON);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Top-level SQLView (US3).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void acceptsTopLevelSqlViewLibrary() {
+    // A SQLView supplied as the top-level resource parses as a parameter-less query.
+    final Library library = SqlLibraryFixtures.sqlView("SELECT 1");
+
+    final SqlQueryRequest request = parser.parse(library, null, null, null, null, null);
+
+    assertThat(request.getParsedQuery().isView()).isTrue();
+    assertThat(request.getParameterBindings()).isEmpty();
+  }
+
+  @Test
+  void rejectsParametersSuppliedWithTopLevelSqlView() {
+    // A SQLView declares no parameter, so any supplied binding must be rejected.
+    final Library library = SqlLibraryFixtures.sqlView("SELECT 1");
+    final Parameters params = new Parameters();
+    params.addParameter().setName("min_age").setValue(new IntegerType(42));
+
+    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, params))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("min_age");
+  }
+
+  @Test
+  void rejectsTopLevelLibraryWithUnknownType() {
+    // A Library whose type is neither sql-query nor sql-view is rejected.
+    final Library library = new Library();
+    library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(
+        new CodeableConcept()
+            .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode("logic-library")));
+    library
+        .addContent()
+        .setContentType("application/sql")
+        .setData("SELECT 1".getBytes(StandardCharsets.UTF_8));
+
+    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, null))
+        .isInstanceOf(InvalidRequestException.class);
   }
 
   /** Builds a minimal SQLQuery-typed Library carrying the given SQL. */

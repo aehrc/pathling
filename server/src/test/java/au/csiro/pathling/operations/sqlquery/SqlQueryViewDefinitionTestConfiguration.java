@@ -66,11 +66,23 @@ public class SqlQueryViewDefinitionTestConfiguration {
   public static final String PATIENT_VIEW_ID = "patient-view";
 
   /**
+   * The canonical URL of the pre-loaded Patient ViewDefinition. The URL's final segment ({@code
+   * Patients}) deliberately differs from the logical id ({@link #PATIENT_VIEW_ID}), so resolving a
+   * dependency by this URL exercises the case the id-based resolution could not handle.
+   */
+  public static final String PATIENT_VIEW_URL =
+      "https://pathling.csiro.au/test/ViewDefinition/Patients";
+
+  /**
    * The id of the pre-loaded Observation ViewDefinition referenced by tests. Its FHIRPath uses
    * {@code .toString()} on a Decimal, which compiles to the Pathling-registered {@code
    * decimal_to_literal} UDF.
    */
   public static final String OBSERVATION_VIEW_ID = "observation-view";
+
+  /** The canonical URL of the pre-loaded Observation ViewDefinition. */
+  public static final String OBSERVATION_VIEW_URL =
+      "https://pathling.csiro.au/test/ViewDefinition/Observations";
 
   @Primary
   @Bean
@@ -95,6 +107,7 @@ public class SqlQueryViewDefinitionTestConfiguration {
   private static ViewDefinitionResource patientView() {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     view.setId(PATIENT_VIEW_ID);
+    view.setUrl(PATIENT_VIEW_URL);
     view.setName(new StringType("patient_view"));
     view.setResource(new CodeType("Patient"));
     view.setStatus(new CodeType("active"));
@@ -115,6 +128,7 @@ public class SqlQueryViewDefinitionTestConfiguration {
   private static ViewDefinitionResource observationView() {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     view.setId(OBSERVATION_VIEW_ID);
+    view.setUrl(OBSERVATION_VIEW_URL);
     view.setName(new StringType("observation_view"));
     view.setResource(new CodeType("Observation"));
     view.setStatus(new CodeType("active"));

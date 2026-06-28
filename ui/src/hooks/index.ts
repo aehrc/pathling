@@ -35,6 +35,16 @@ export { useBulkSubmit } from "./useBulkSubmit";
 export { useBulkSubmit as useBulkSubmitMonitor } from "./useBulkSubmit";
 export { useViewExport } from "./useViewExport";
 export type { ViewExportOutputFormat } from "./useViewExport";
+export { useSqlQueryExport } from "./useSqlQueryExport";
+export type {
+  UseSqlQueryExportOptions,
+  UseSqlQueryExportResult,
+} from "./useSqlQueryExport";
+export {
+  buildSqlQueryExportKickOffBody,
+  parseSqlQueryExportManifest,
+} from "./sqlQueryExportHelpers";
+export type { SqlQueryExportOutput } from "./sqlQueryExportHelpers";
 
 // View operations.
 export { useViewRun } from "./useViewRun";
@@ -52,6 +62,8 @@ export { useSaveViewDefinition } from "./useSaveViewDefinition";
 
 // SQL query operations.
 export { useSqlQueryLibraries } from "./useSqlQueryLibraries";
+export { useSqlViews } from "./useSqlViews";
+export type { UseSqlViewsOptions, UseSqlViewsResult } from "./useSqlViews";
 export { useSaveSqlQueryLibrary } from "./useSaveSqlQueryLibrary";
 export { useSqlQueryRun } from "./useSqlQueryRun";
 export type {

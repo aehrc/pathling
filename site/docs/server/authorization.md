@@ -90,6 +90,22 @@ the resource type specified in the ViewDefinition's `resource` element. For
 example, a ViewDefinition targeting `Patient` resources requires
 `pathling:read:Patient` authority in addition to the operation authority.
 
+### Reading view definitions and queries from storage
+
+Resolving a metadata resource from server storage requires `read` authority on
+that resource type, in addition to the per-projected-resource checks above:
+
+- Resolving a `ViewDefinition` from storage requires `pathling:read:ViewDefinition`.
+  This applies to a `view-run` or `view-export` `viewReference`, and to a
+  `ViewDefinition` referenced as a dependency of a SQL query.
+- Resolving a `SQLView` (a `Library`) from storage requires `pathling:read:Library`.
+  This applies to a `$sqlquery-run` or `$sqlquery-export` `queryReference` or
+  instance-level Library, and to a `SQLView` referenced as a dependency.
+
+A resource supplied inline in the request body (an inline `viewResource` or
+`queryResource`) is not read from storage and is therefore not subject to these
+metadata read checks, though the per-projected-resource read checks still apply.
+
 ## SMART configuration
 
 When authorisation is enabled, Pathling exposes a

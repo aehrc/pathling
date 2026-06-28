@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Arrays;
@@ -28,6 +29,8 @@ import lombok.Getter;
  * Output format options for the {@code $sqlquery-run} operation. Supports NDJSON, CSV, JSON,
  * Parquet, and FHIR ({@code Parameters} resource) formats as specified in the SQL on FHIR v2
  * specification.
+ *
+ * @author John Grimes
  */
 @Getter
 public enum SqlQueryOutputFormat {
@@ -73,11 +76,42 @@ public enum SqlQueryOutputFormat {
     if (isNullOrBlank(format)) {
       return DEFAULT_FORMAT;
     }
-    final String normalised = format.toLowerCase().trim();
+    return matchFormat(format).orElse(DEFAULT_FORMAT);
+  }
+
+  /**
+   * Parses an explicit {@code _format} parameter value strictly. A null or blank value maps to the
+   * default (NDJSON); a non-blank value that matches no supported code or media type is rejected.
+   *
+   * @param format the explicit {@code _format} value to parse, or null/blank for the default
+   * @return the corresponding format
+   * @throws InvalidRequestException if the value is non-blank and not a supported format
+   */
+  @Nonnull
+  public static SqlQueryOutputFormat fromStringStrict(@Nullable final String format) {
+    if (isNullOrBlank(format)) {
+      return DEFAULT_FORMAT;
+    }
+    return matchFormat(format)
+        .orElseThrow(
+            () ->
+                new InvalidRequestException(
+                    ("Unsupported _format value '%s'. Supported formats: ndjson, csv, json,"
+                            + " parquet, fhir.")
+                        .formatted(format)));
+  }
+
+  /**
+   * Matches a format string against the supported codes and content types. Any media-type
+   * parameters (e.g. {@code text/csv;charset=utf-8}) are stripped before matching, so a supported
+   * media type carrying parameters is treated as that format.
+   */
+  @Nonnull
+  private static Optional<SqlQueryOutputFormat> matchFormat(@Nonnull final String format) {
+    final String base = format.split(";", 2)[0].trim().toLowerCase();
     return Arrays.stream(values())
-        .filter(f -> f.code.equals(normalised) || f.contentType.equals(normalised))
-        .findFirst()
-        .orElse(DEFAULT_FORMAT);
+        .filter(f -> f.code.equals(base) || f.contentType.equals(base))
+        .findFirst();
   }
 
   /**

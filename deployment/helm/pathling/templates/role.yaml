@@ -6,6 +6,11 @@ rules:
   - apiGroups: [""]
     resources: ["pods", "services", "configmaps"]
     verbs: ["create", "get", "list", "watch", "delete"]
+  # Allow the driver to provision and remove the dynamically created scratch
+  # volumes used for executor local storage (claimName OnDemand).
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["create", "get", "list", "watch", "delete"]
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get", "list", "watch"]

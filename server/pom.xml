@@ -24,7 +24,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>server</artifactId>
-  <version>2.0.1</version>
+  <version>3.0.0-SNAPSHOT</version>
 
   <name>Pathling Server</name>
   <description>
@@ -36,17 +36,17 @@
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.majorVersion>1</project.majorVersion>
-    <pathling.version>9.7.1</pathling.version>
+    <pathling.version>9.9.0-SNAPSHOT</pathling.version>
     <pathling.hapiFhirVersion>8.10.0</pathling.hapiFhirVersion>
     <pathling.springBootVersion>3.5.14</pathling.springBootVersion>
     <pathling.sparkVersion>4.0.2</pathling.sparkVersion>
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
     <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
-    <pathling.nettyVersion>4.1.133.Final</pathling.nettyVersion>
+    <pathling.nettyVersion>4.1.135.Final</pathling.nettyVersion>
     <pathling.testSetup.skip>false</pathling.testSetup.skip>
     <pathling.ui.skip>false</pathling.ui.skip>
-    <pathling.jacksonVersion>2.18.6</pathling.jacksonVersion>
+    <pathling.jacksonVersion>2.22.0</pathling.jacksonVersion>
     <pathling.testDataVersion>1.0.0</pathling.testDataVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
     <pathling.jibVersion>3.4.6</pathling.jibVersion>
@@ -56,6 +56,17 @@
     <pathling.awsSdkVersion>2.40.3</pathling.awsSdkVersion>
     <pathling.bulkExportVersion>1.0.4</pathling.bulkExportVersion>
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
+
+    <!-- The JVM module options required to run Pathling on Spark with Java 21.
+         These open the JDK internals that Spark accesses reflectively, most
+         notably sun.util.calendar, which Spark's date conversion reaches via a
+         method handle. They are referenced by the spring-boot:run goal and must
+         be kept in sync with the production entrypoint, which cannot reference
+         this property at runtime (see src/main/jib/usr/bin/entrypoint.sh). -->
+    <pathling.runtime.jvmModuleOpts>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED</pathling.runtime.jvmModuleOpts>
+    <!-- The test harness needs every runtime option plus additional opens for
+         the mocking and serialisation frameworks exercised during testing. -->
+    <pathling.test.jvmModuleOpts>${pathling.runtime.jvmModuleOpts} --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED</pathling.test.jvmModuleOpts>
   </properties>
 
   <repositories>
@@ -385,17 +396,20 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-dependencies</artifactId>
-        <version>${pathling.springBootVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
+      <!-- Jackson BOM is imported before Spring Boot's BOM so that our pinned
+           Jackson version (which includes security patches) wins over the
+           version managed by Spring Boot. First BOM import wins in Maven. -->
       <dependency>
         <groupId>com.fasterxml.jackson</groupId>
         <artifactId>jackson-bom</artifactId>
         <version>${pathling.jacksonVersion}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${pathling.springBootVersion}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -411,19 +425,20 @@
         <version>1.12.1</version>
       </dependency>
       <!-- Override HAPI's transitive org.hl7.fhir.* core libraries to fix
-           CVE-2026-33180, CVE-2026-34359 and CVE-2026-45367. HAPI 8.10.0
-           bundles 6.9.4.1, which is still behind the patched 6.9.7.
+           CVE-2026-33180, CVE-2026-34359, CVE-2026-45367 and CVE-2026-55471
+           (XXE in XsltUtilities.saxonTransform). HAPI 8.10.0 bundles 6.9.4.1,
+           which is still behind the patched 6.9.10.
            REMOVE THESE TWO OVERRIDES once pathling.hapiFhirVersion is bumped
-           to a HAPI release that bundles org.hl7.fhir.* >= 6.9.7 natively. -->
+           to a HAPI release that bundles org.hl7.fhir.* >= 6.9.10 natively. -->
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>org.hl7.fhir.r4</artifactId>
-        <version>6.9.7</version>
+        <version>6.9.10</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>org.hl7.fhir.utilities</artifactId>
-        <version>6.9.7</version>
+        <version>6.9.10</version>
       </dependency>
       <!-- Override Tomcat to fix CVE-2026-41293 (CRITICAL), CVE-2026-43512
            (CRITICAL), CVE-2026-41284 (HIGH), CVE-2026-42498 (HIGH), and
@@ -584,7 +599,9 @@
         <artifactId>spring-boot-maven-plugin</artifactId>
         <version>${pathling.springBootVersion}</version>
         <configuration>
-          <jvmArguments>--add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED</jvmArguments>
+          <!-- Run with the shared runtime module options so that a local
+               spring-boot:run faithfully reproduces the production runtime. -->
+          <jvmArguments>${pathling.runtime.jvmModuleOpts}</jvmArguments>
         </configuration>
       </plugin>
       <plugin>
@@ -600,22 +617,7 @@
           <!-- Each integration test class runs in its own JVM to prevent URLStreamHandlerFactory
                conflicts between Spark/Hadoop and Tomcat. See SPARK-25694 and Spring Boot #10617. -->
           <reuseForks>false</reuseForks>
-          <argLine>@{argLine}
-            --add-opens java.base/java.lang=ALL-UNNAMED
-            --add-opens java.base/java.lang.invoke=ALL-UNNAMED
-            --add-opens java.base/java.lang.reflect=ALL-UNNAMED
-            --add-opens java.base/java.io=ALL-UNNAMED
-            --add-opens java.base/java.net=ALL-UNNAMED
-            --add-opens java.base/java.nio=ALL-UNNAMED
-            --add-opens java.base/java.util=ALL-UNNAMED
-            --add-opens java.base/java.util.concurrent=ALL-UNNAMED
-            --add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED
-            --add-opens java.base/sun.nio.ch=ALL-UNNAMED
-            --add-opens java.base/sun.nio.cs=ALL-UNNAMED
-            --add-opens java.base/sun.security.action=ALL-UNNAMED
-            --add-opens java.base/sun.util.calendar=ALL-UNNAMED
-            --add-exports java.base/sun.nio.ch=ALL-UNNAMED
-          </argLine>
+          <argLine>@{argLine} ${pathling.test.jvmModuleOpts}</argLine>
         </configuration>
         <executions>
           <execution>
@@ -638,22 +640,7 @@
               junit.jupiter.execution.parallel.enabled=true
             </configurationParameters>
           </properties>
-          <argLine>@{argLine}
-            --add-opens java.base/java.lang=ALL-UNNAMED
-            --add-opens java.base/java.lang.invoke=ALL-UNNAMED
-            --add-opens java.base/java.lang.reflect=ALL-UNNAMED
-            --add-opens java.base/java.io=ALL-UNNAMED
-            --add-opens java.base/java.net=ALL-UNNAMED
-            --add-opens java.base/java.nio=ALL-UNNAMED
-            --add-opens java.base/java.util=ALL-UNNAMED
-            --add-opens java.base/java.util.concurrent=ALL-UNNAMED
-            --add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED
-            --add-opens java.base/sun.nio.ch=ALL-UNNAMED
-            --add-opens java.base/sun.nio.cs=ALL-UNNAMED
-            --add-opens java.base/sun.security.action=ALL-UNNAMED
-            --add-opens java.base/sun.util.calendar=ALL-UNNAMED
-            --add-exports java.base/sun.nio.ch=ALL-UNNAMED
-          </argLine>
+          <argLine>@{argLine} ${pathling.test.jvmModuleOpts}</argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -846,12 +833,23 @@
                 </tags>
               </to>
               <container>
-                <jvmFlags>
-                  <jvmFlag>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</jvmFlag>
-                  <jvmFlag>--add-opens=java.base/java.net=ALL-UNNAMED</jvmFlag>
-                  <jvmFlag>--add-opens=java.base/sun.util.calendar=ALL-UNNAMED</jvmFlag>
-                </jvmFlags>
+                <!-- The dispatching entrypoint selects the server or executor role from the
+                     container's first argument. The Pathling JVM module options previously set
+                     here as jvmFlags now live in the entrypoint, since Jib ignores jvmFlags once
+                     an explicit entrypoint is configured. -->
+                <entrypoint>
+                  <command>/usr/bin/entrypoint.sh</command>
+                </entrypoint>
               </container>
+              <extraDirectories>
+                <paths>src/main/jib</paths>
+                <permissions>
+                  <permission>
+                    <file>/usr/bin/entrypoint.sh</file>
+                    <mode>755</mode>
+                  </permission>
+                </permissions>
+              </extraDirectories>
             </configuration>
             <executions>
               <execution>
@@ -867,6 +865,28 @@
                 <goals>
                   <goal>build</goal>
                 </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <!-- Verify the dual-role entrypoint's dispatch logic before the image is built.
+                 This runs without Docker, a network, or a cluster. -->
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>entrypoint-dispatch-test</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skipTests}</skip>
+                  <executable>bash</executable>
+                  <arguments>
+                    <argument>${project.basedir}/src/test/sh/entrypoint-test.sh</argument>
+                  </arguments>
+                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -937,12 +957,23 @@
                 <image>${pathling.fhirServerDockerRepo}:${project.version}</image>
               </to>
               <container>
-                <jvmFlags>
-                  <jvmFlag>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</jvmFlag>
-                  <jvmFlag>--add-opens=java.base/java.net=ALL-UNNAMED</jvmFlag>
-                  <jvmFlag>--add-opens=java.base/sun.util.calendar=ALL-UNNAMED</jvmFlag>
-                </jvmFlags>
+                <!-- The dispatching entrypoint selects the server or executor role from the
+                     container's first argument. The Pathling JVM module options previously set
+                     here as jvmFlags now live in the entrypoint, since Jib ignores jvmFlags once
+                     an explicit entrypoint is configured. -->
+                <entrypoint>
+                  <command>/usr/bin/entrypoint.sh</command>
+                </entrypoint>
               </container>
+              <extraDirectories>
+                <paths>src/main/jib</paths>
+                <permissions>
+                  <permission>
+                    <file>/usr/bin/entrypoint.sh</file>
+                    <mode>755</mode>
+                  </permission>
+                </permissions>
+              </extraDirectories>
             </configuration>
             <executions>
               <execution>
@@ -958,6 +989,28 @@
                 <goals>
                   <goal>build</goal>
                 </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <!-- Verify the dual-role entrypoint's dispatch logic before the image is built.
+                 This runs without Docker, a network, or a cluster. -->
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>entrypoint-dispatch-test</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skipTests}</skip>
+                  <executable>bash</executable>
+                  <arguments>
+                    <argument>${project.basedir}/src/test/sh/entrypoint-test.sh</argument>
+                  </arguments>
+                </configuration>
               </execution>
             </executions>
           </plugin>

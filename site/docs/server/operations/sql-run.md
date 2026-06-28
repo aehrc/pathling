@@ -26,18 +26,39 @@ type-level forms accept the Library inline or by reference.
 
 ## Parameters
 
-| Name             | Cardinality | Type       | Description                                                                                                                                                  |
-| ---------------- | ----------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `queryResource`  | 0..1        | Resource   | An inline Library resource conforming to the SQLQuery profile. Mutually exclusive with `queryReference`.                                                     |
-| `queryReference` | 0..1        | Reference  | A relative literal (`Library/[id]`) or canonical (`[url]` or `[url]\|[version]`) reference to a stored Library. Resolves against the server's Library store. |
-| `_format`        | 0..1        | code       | Output format. Accepts `ndjson` (default), `csv`, `json`, `parquet`, or `fhir`.                                                                              |
-| `header`         | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                                                                                    |
-| `_limit`         | 0..1        | integer    | Maximum number of rows to return. Always clamped to the server-configured `maxRows` ceiling.                                                                 |
-| `parameters`     | 0..1        | Parameters | Runtime parameter bindings. Each entry's name must match a `Library.parameter` declaration, and its `value[x]` must match the declared FHIR type.            |
+| Name             | Cardinality | Type       | Description                                                                                                                                                    |
+| ---------------- | ----------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `queryResource`  | 0..1        | Resource   | An inline Library resource conforming to the SQLQuery profile. Mutually exclusive with `queryReference`.                                                       |
+| `queryReference` | 0..1        | Reference  | A relative literal (`Library/[id]`) or canonical (`[url]` or `[url]\|[version]`) reference to a stored Library. Resolves against the server's Library store.   |
+| `_format`        | 0..1        | code       | Output format. Accepts `ndjson` (default), `csv`, `json`, `parquet`, or `fhir` (or the corresponding media type). An unsupported explicit value returns `400`. |
+| `header`         | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                                                                                      |
+| `_limit`         | 0..1        | integer    | Maximum number of rows to return. Always clamped to the server-configured `maxRows` ceiling.                                                                   |
+| `parameters`     | 0..1        | Parameters | Runtime parameter bindings. Each entry's name must match a `Library.parameter` declaration, and its `value[x]` must match the declared FHIR type.              |
 
 Exactly one of `queryResource` and `queryReference` must be supplied to the
 system and type-level forms. The instance-level form ignores both and uses the
 Library identified in the URL.
+
+The `source` parameter (an external data source) is not supported by this
+server; supplying it returns `400 Bad Request` with an OperationOutcome at every
+level, whether supplied in a POST `Parameters` body or as a GET query parameter.
+
+## Status codes
+
+| Status                      | Condition                                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `200 OK`                    | A supported format (explicit or defaulted) and successful execution.                                     |
+| `400 Bad Request`           | The unsupported `source` parameter, an unsupported explicit `_format`, or a malformed request/parameter. |
+| `422 Unprocessable Entity`  | `_format=fhir` where a result column has a type that cannot be represented as a FHIR value.              |
+| `500 Internal Server Error` | A genuine SQL execution or infrastructure fault.                                                         |
+
+When no `_format` is supplied, the format is negotiated from the `Accept` header,
+falling back to NDJSON when nothing matches.
+
+The operation declares the SQL on FHIR spec canonical
+`http://sql-on-fhir.org/OperationDefinition/$sqlquery-run` in the server
+[CapabilityStatement](https://hl7.org/fhir/R4/capabilitystatement.html); the
+server does not host a Pathling-authored OperationDefinition for it.
 
 ## The Library resource
 
@@ -45,15 +66,19 @@ The `$sqlquery-run` operation expects a Library that conforms to the SQLQuery
 profile. The relevant elements are:
 
 - `type` - must include the coding `sql-query` from
-  `https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes`.
+  `https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes`. A
+  [SQLView](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-SQLView.html)
+  (`sql-view`) is also accepted as a top-level resource and runs as a
+  parameter-less query.
 - `content` - exactly one entry with `contentType` of `application/sql` and the
   SQL text Base64-encoded in `data`.
-- `relatedArtifact` - one entry per ViewDefinition the query references. The
-  `label` becomes the table name available to the SQL, and `resource` points to
-  the ViewDefinition (relative literal or canonical reference).
+- `relatedArtifact` - one entry per dependency the query references. The `label`
+  becomes the table name available to the SQL, and `resource` is the canonical
+  URL of a ViewDefinition or a SQLView, matched against that resource's `url`.
+  See [Composing SQLViews](#composing-sqlviews).
 - `parameter` - optional declarations of named runtime parameters. Each entry
   with `use` of `in` must have a `name` and `type`, and the type must be a
-  primitive FHIR type.
+  primitive FHIR type. A SQLView declares no parameters.
 
 Example Library:
 
@@ -79,7 +104,7 @@ Example Library:
         {
             "type": "depends-on",
             "label": "patients",
-            "resource": "ViewDefinition/patient-demographics"
+            "resource": "https://example.org/ViewDefinition/patient-demographics"
         }
     ]
 }
@@ -127,7 +152,7 @@ Accept: application/x-ndjson
                     {
                         "type": "depends-on",
                         "label": "patients",
-                        "resource": "ViewDefinition/patient-demographics"
+                        "resource": "https://example.org/ViewDefinition/patient-demographics"
                     }
                 ]
             }
@@ -201,6 +226,11 @@ When `_format` is `fhir`, the response is a FHIR Parameters resource
 Each column appears as a part with a typed `value[x]`, mapped from the SQL
 result schema.
 
+If a result column has a type that cannot be represented as a FHIR value (for
+example an array or struct), the server responds `422 Unprocessable Entity` with
+an OperationOutcome identifying the column. The same query in a flat format
+(`ndjson`, `csv`, `json`, or `parquet`) succeeds.
+
 ## SQL constraints
 
 User SQL is validated before execution. The following are rejected:
@@ -247,6 +277,60 @@ time via the `parameters` input:
 Each binding's name must match a declaration on the Library, and its
 `value[x]` must match the declared FHIR type.
 
+## Composing SQLViews
+
+A `relatedArtifact` dependency may reference a
+[SQLView](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-SQLView.html)
+as well as a ViewDefinition. A SQLView is a reusable, named SQL query
+(a `Library` with `type` of `sql-view` and no parameters) that other queries
+build on as a virtual table. A SQLView may itself depend on ViewDefinitions and
+other SQLViews, forming a directed acyclic graph of virtual tables that the
+server resolves and executes. Each node's result is available to its referrer
+under the `label` of the `relatedArtifact` that points at it; labels are scoped
+to the node that declares them, so the same label may name different sources in
+different nodes.
+
+A SQLView may also be supplied directly as the top-level `queryResource`,
+`queryReference`, or instance-level Library; it then executes as a
+parameter-less query and returns its rows.
+
+### Reference resolution
+
+Each `relatedArtifact.resource` is an absolute **canonical URL** of a
+ViewDefinition or SQLView, resolved by matching the referenced resource's `url`
+element - never its logical id:
+
+- The reference must be an absolute canonical URL (scheme `http://`, `https://`
+  or `urn:`), optionally suffixed with a single `|version`. A relative literal
+  form such as `ViewDefinition/abc`, a bare id, or a value carrying a fragment
+  is rejected with a `400` at parse time.
+- `[url]|[version]` selects the resource whose `url` and `version` match
+  exactly; a bare `[url]` selects the latest active match (preferring `active`
+  status, then the greatest version string).
+- ViewDefinitions are searched first, then SQLView Libraries. A canonical that
+  matches both a ViewDefinition and a SQLView is rejected as ambiguous (`400`);
+  one that matches neither is a not-found error (`404`). Both messages name the
+  failing label and reference.
+
+A ViewDefinition or SQLView must therefore carry a `url` to be referenceable as
+a dependency. ViewDefinitions ingested before URL retention was added must be
+re-ingested so their `url` is stored.
+
+A `Library` that is a `sql-query` rather than a `sql-view`, a cycle (for example
+`A -> B -> A`), and a graph nested deeper than
+`pathling.sqlQuery.maxDependencyDepth` are each rejected with a `400` before any
+SQL executes, with a message identifying the cause. De-duplication, cycle
+detection, and depth enforcement are keyed on resolved canonical identity, so a
+bare-url and a `url|version` reference to the same stored resource materialise
+once.
+
+When authorisation is enabled, resolving a ViewDefinition from storage requires
+READ on `ViewDefinition`, and resolving a SQLView from storage requires READ on
+`Library`, in addition to the READ check on each projected resource type. A
+resource supplied inline in the request body is not read from storage and is not
+subject to the metadata check. See the
+[authorisation documentation](../authorization.md).
+
 ## Resource limits
 
 Two server-configured limits are always applied to a `$sqlquery-run`
@@ -257,6 +341,9 @@ invocation, regardless of any caller-supplied parameters:
 - `pathling.sqlQuery.timeoutSeconds` (default `60`) - the maximum wall-clock
   time, in seconds, that a query may run before its Spark job group is
   cancelled.
+- `pathling.sqlQuery.maxDependencyDepth` (default `10`) - the maximum nesting
+  depth of the SQLView dependency graph. A graph nested deeper is rejected with
+  a `400` before any Spark work.
 
 Long-running queries should use the asynchronous bulk submit path rather than
 the synchronous `$sqlquery-run` endpoint. See the
@@ -369,8 +456,8 @@ def main():
     library = build_sql_query_library(
         sql,
         {
-            "patients": "ViewDefinition/patient-demographics",
-            "conditions": "ViewDefinition/conditions",
+            "patients": "https://example.org/ViewDefinition/patient-demographics",
+            "conditions": "https://example.org/ViewDefinition/conditions",
         },
     )
 

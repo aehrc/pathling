@@ -49,4 +49,14 @@ public class SqlQueryConfiguration {
    */
   @Min(1)
   private long timeoutSeconds = 60L;
+
+  /**
+   * The maximum nesting depth of the dependency graph resolved for a single query. The top-level
+   * query's direct {@code relatedArtifact} dependencies sit at depth one; each further level of
+   * nested {@code SQLView} dependency increments the depth. A graph that nests deeper than this
+   * limit is rejected before any Spark work, guarding against accidental fan-out and runaway
+   * resolution. Real view graphs are shallow, so the default is generous while still bounded.
+   */
+  @Min(1)
+  private int maxDependencyDepth = 10;
 }

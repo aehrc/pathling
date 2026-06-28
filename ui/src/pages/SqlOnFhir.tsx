@@ -29,6 +29,7 @@ import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { SqlOnFhirForm } from "../components/sqlOnFhir/SqlOnFhirForm";
 import { SqlQueryCard } from "../components/sqlOnFhir/SqlQueryCard";
+import { extractRequestSql } from "../components/sqlOnFhir/sqlQueryFormHelpers";
 import { ViewCard } from "../components/sqlOnFhir/ViewCard";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
@@ -95,12 +96,11 @@ export function SqlOnFhir() {
    * @param request - The SQL query request.
    */
   const handleExecuteSqlQuery = (request: SqlQueryRequest) => {
-    const sql = request.mode === "inline" ? extractSqlText(request) : "";
     const newJob: SqlQueryJob = {
       id: crypto.randomUUID(),
       mode: request.mode,
       request,
-      sql,
+      sql: extractRequestSql(request),
       createdAt: new Date(),
     };
     setPageJobs((prev) => [{ type: "sql-query", job: newJob }, ...prev]);
@@ -139,7 +139,10 @@ export function SqlOnFhir() {
         <Heading size="6">SQL on FHIR</Heading>
 
         <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-          <Box style={{ flex: 1 }}>
+          {/* The min-width of zero lets the form column shrink to share width
+              evenly with the results column, rather than being held open by
+              wide content such as long view references. */}
+          <Box style={{ flex: 1, minWidth: 0 }}>
             <SqlOnFhirForm
               mode={mode}
               onModeChange={setMode}
@@ -179,30 +182,4 @@ export function SqlOnFhir() {
       <SessionExpiredDialog />
     </>
   );
-}
-
-/**
- * Extracts the plain SQL text from an inline `SqlQueryRequest`.
- *
- * Looks at the `sql-text` extension on `Library.content[0]` first, then
- * falls back to decoding `Library.content[0].data`. Returns the empty
- * string when neither is available.
- *
- * @param request - The SQL query request to inspect.
- * @returns The plain SQL text, or an empty string if it cannot be
- *   recovered.
- */
-function extractSqlText(request: SqlQueryRequest): string {
-  if (request.mode !== "inline") {
-    return "";
-  }
-  const content = request.library.content?.[0];
-  if (!content) {
-    return "";
-  }
-  const ext = content.extension?.find((e) => e.url.endsWith("/sql-text"));
-  if (ext?.valueString) {
-    return ext.valueString;
-  }
-  return "";
 }

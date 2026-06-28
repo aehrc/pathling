@@ -18,7 +18,9 @@
 package au.csiro.pathling.operations.view;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -44,12 +46,6 @@ class ViewExportFormatTest {
   }
 
   @Test
-  void parsesNdjsonFhirContentType() {
-    assertThat(ViewExportFormat.fromString("application/fhir+ndjson"))
-        .isEqualTo(ViewExportFormat.NDJSON);
-  }
-
-  @Test
   void parsesCsvCode() {
     assertThat(ViewExportFormat.fromString("csv")).isEqualTo(ViewExportFormat.CSV);
   }
@@ -71,8 +67,26 @@ class ViewExportFormatTest {
   }
 
   @Test
-  void defaultsToNdjsonForUnknown() {
-    assertThat(ViewExportFormat.fromString("unknown")).isEqualTo(ViewExportFormat.NDJSON);
+  void acceptsMediaTypeWithParameters() {
+    // A supported media type carrying parameters is treated as that format, not rejected.
+    assertThat(ViewExportFormat.fromString("text/csv;charset=utf-8"))
+        .isEqualTo(ViewExportFormat.CSV);
+  }
+
+  @Test
+  void rejectsUnknownNamingValue() {
+    // An explicit unsupported format is rejected with the unsupported value named.
+    assertThatThrownBy(() -> ViewExportFormat.fromString("unknown"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("unknown");
+  }
+
+  @Test
+  void rejectsJsonAsUnsupported() {
+    // json is only RECOMMENDED by the spec and is not supported by the export operation.
+    assertThatThrownBy(() -> ViewExportFormat.fromString("json"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("json");
   }
 
   @Test

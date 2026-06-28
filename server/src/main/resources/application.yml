@@ -85,6 +85,7 @@ pathling:
     viewDefinitionRunEnabled: true
     viewDefinitionInstanceRunEnabled: true
     viewDefinitionExportEnabled: true
+    sqlQueryExportEnabled: true
     bulkSubmitEnabled: true
 
   # Resource limits applied to the $sqlquery-run operation. Both limits are always applied,

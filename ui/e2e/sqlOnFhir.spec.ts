@@ -462,6 +462,46 @@ test.describe("SQL on FHIR page", () => {
       // Verify error message is displayed.
       await expect(page.getByText(/View run failed/)).toBeVisible();
     });
+
+    test("displays the 422 message for an invalid custom view definition", async ({
+      page,
+    }) => {
+      // An invalid custom ViewDefinition now returns 422; the OperationOutcome message must be
+      // surfaced clearly rather than as a generic failure (US3).
+      const errorOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [
+          {
+            severity: "error",
+            diagnostics: "Invalid ViewDefinition: bad path",
+          },
+        ],
+      };
+
+      await mockMetadata(page);
+      await mockViewDefinitions(page);
+      await mockViewRun(page, { status: 422, body: errorOutcome });
+
+      await page.goto("/admin/sql-on-fhir");
+
+      // Switch to the custom JSON tab and provide a view definition.
+      await page.getByRole("tab", { name: "Provide JSON" }).click();
+      const jsonInput = page.locator("textarea").last();
+      await jsonInput.fill(
+        JSON.stringify({
+          resourceType: "ViewDefinition",
+          name: "Invalid View",
+          resource: "Patient",
+          status: "active",
+          select: [{ column: [{ path: "bad.path", name: "x" }] }],
+        }),
+      );
+
+      await page.getByRole("button", { name: "Execute" }).click();
+
+      // The OperationOutcome diagnostics are shown clearly.
+      await expect(page.getByText(/Invalid ViewDefinition/)).toBeVisible();
+    });
   });
 
   test.describe("Export", () => {
@@ -500,17 +540,15 @@ test.describe("SQL on FHIR page", () => {
             body: JSON.stringify({
               resourceType: "Parameters",
               parameter: [
-                {
-                  name: "transactionTime",
-                  valueInstant: "2025-01-01T00:00:00Z",
-                },
-                { name: "requiresAccessToken", valueBoolean: false },
+                { name: "exportId", valueString: "test-job" },
+                { name: "status", valueCode: "completed" },
+                { name: "_format", valueCode: "ndjson" },
                 {
                   name: "output",
                   part: [
                     { name: "name", valueString: "patient_demographics" },
                     {
-                      name: "url",
+                      name: "location",
                       valueUri:
                         "http://localhost:3000/fhir/$result?job=test-job-123&file=patient_demographics.ndjson",
                     },
@@ -580,18 +618,16 @@ test.describe("SQL on FHIR page", () => {
             body: JSON.stringify({
               resourceType: "Parameters",
               parameter: [
-                {
-                  name: "transactionTime",
-                  valueInstant: "2025-01-01T00:00:00Z",
-                },
-                { name: "requiresAccessToken", valueBoolean: false },
+                { name: "exportId", valueString: "test-job" },
+                { name: "status", valueCode: "completed" },
+                { name: "_format", valueCode: "ndjson" },
                 // Files intentionally in non-alphabetical order.
                 {
                   name: "output",
                   part: [
                     { name: "name", valueString: "zebra_view" },
                     {
-                      name: "url",
+                      name: "location",
                       valueUri:
                         "http://localhost:3000/fhir/$result?job=test-job-456&file=zebra_view.ndjson",
                     },
@@ -602,7 +638,7 @@ test.describe("SQL on FHIR page", () => {
                   part: [
                     { name: "name", valueString: "alpha_view" },
                     {
-                      name: "url",
+                      name: "location",
                       valueUri:
                         "http://localhost:3000/fhir/$result?job=test-job-456&file=alpha_view.ndjson",
                     },
@@ -613,7 +649,7 @@ test.describe("SQL on FHIR page", () => {
                   part: [
                     { name: "name", valueString: "middle_view" },
                     {
-                      name: "url",
+                      name: "location",
                       valueUri:
                         "http://localhost:3000/fhir/$result?job=test-job-456&file=middle_view.ndjson",
                     },
@@ -806,17 +842,15 @@ test.describe("SQL on FHIR page", () => {
             body: JSON.stringify({
               resourceType: "Parameters",
               parameter: [
-                {
-                  name: "transactionTime",
-                  valueInstant: "2025-01-01T00:00:00Z",
-                },
-                { name: "requiresAccessToken", valueBoolean: false },
+                { name: "exportId", valueString: "test-job" },
+                { name: "status", valueCode: "completed" },
+                { name: "_format", valueCode: "ndjson" },
                 {
                   name: "output",
                   part: [
                     { name: "name", valueString: "patient_demographics" },
                     {
-                      name: "url",
+                      name: "location",
                       valueUri:
                         "http://localhost:3000/fhir/$result?file=patient_demographics.ndjson",
                     },

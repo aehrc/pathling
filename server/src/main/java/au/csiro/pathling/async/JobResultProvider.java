@@ -46,8 +46,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * Provides the $job-result operation for retrieving the result of a completed async job. This
- * endpoint is used when operations are configured with {@code redirectOnComplete=true}, following
- * the SQL on FHIR unify-async specification.
+ * endpoint is used by operations following the {@link AsyncPattern#STANDARD_ASYNC_PATTERN} (the HL7
+ * Asynchronous Interaction Request Pattern, <a
+ * href="https://build.fhir.org/ig/HL7/api-incubator-ig/branches/simplified-async-interaction/async-interaction.html">spec</a>).
  *
  * <p>The flow is: 1. Client polls $job endpoint until job completes 2. $job returns 303 See Other
  * with Location header pointing to $job-result 3. Client fetches result from $job-result endpoint

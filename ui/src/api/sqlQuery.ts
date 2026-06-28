@@ -17,7 +17,7 @@
 
 /**
  * Client for the SQL on FHIR `$sqlquery-run` operation and the search
- * endpoint that lists stored SQLQuery Library resources.
+ * endpoint that lists stored SQLQuery and SQLView Library resources.
  *
  * @author John Grimes
  */
@@ -28,9 +28,11 @@ import {
   checkResponse,
   pushOutputParameters,
 } from "./utils";
+import { buildSqlQueryExportKickOffBody } from "../hooks/sqlQueryExportHelpers";
 
 import type { AuthOptions } from "./rest";
 import type {
+  SqlQueryExportRequest,
   SqlQueryLibrary,
   SqlQueryOutputFormat,
   SqlQueryParameterType,
@@ -48,6 +50,27 @@ export const SQL_QUERY_LIBRARY_TYPE_SYSTEM =
  * Token-search filter that scopes a Library search to the SQLQuery profile.
  */
 export const SQL_QUERY_LIBRARY_TYPE_FILTER = `${SQL_QUERY_LIBRARY_TYPE_SYSTEM}|sql-query`;
+
+/**
+ * Token-search filter that scopes a Library search to the SQLView profile.
+ *
+ * Shares the code system with {@link SQL_QUERY_LIBRARY_TYPE_FILTER}; only the
+ * type code differs.
+ */
+export const SQL_VIEW_LIBRARY_TYPE_FILTER = `${SQL_QUERY_LIBRARY_TYPE_SYSTEM}|sql-view`;
+
+/**
+ * SQL on FHIR Library type codes that the UI can list and run.
+ */
+export type SqlOnFhirLibraryTypeCode = "sql-query" | "sql-view";
+
+/**
+ * Maps each listable Library type code to its token-search filter.
+ */
+const LIBRARY_TYPE_FILTERS: Record<SqlOnFhirLibraryTypeCode, string> = {
+  "sql-query": SQL_QUERY_LIBRARY_TYPE_FILTER,
+  "sql-view": SQL_VIEW_LIBRARY_TYPE_FILTER,
+};
 
 /**
  * Profile URL applied to inline SQLQuery Library resources.
@@ -187,11 +210,45 @@ export async function sqlQueryRun(
 }
 
 /**
- * Searches the FHIR server for stored SQLQuery Library resources.
+ * Searches the FHIR server for stored SQL on FHIR Library resources of a
+ * given type.
  *
  * Uses a `type` token search scoped to the SQL on FHIR Library type code
- * system and the `sql-query` code, so unrelated Library resources are
- * excluded.
+ * system and the requested code (`sql-query` or `sql-view`), so unrelated
+ * Library resources are excluded. SQLQueries and SQLViews are both Library
+ * resources distinguished only by this code, so a single function lists
+ * either kind.
+ *
+ * @param baseUrl - The FHIR server base URL.
+ * @param options - The type code to list, plus optional auth configuration.
+ * @returns A FHIR Bundle containing the matched Library resources.
+ * @throws {UnauthorizedError} When the request receives a 401 response.
+ * @throws {Error} For other non-successful responses.
+ *
+ * @example
+ * const bundle = await listStoredLibraries("https://example.com/fhir", {
+ *   typeCode: "sql-view",
+ * });
+ */
+export async function listStoredLibraries(
+  baseUrl: string,
+  options: { typeCode: SqlOnFhirLibraryTypeCode } & AuthOptions,
+): Promise<Bundle> {
+  const url = buildUrl(baseUrl, "/Library", {
+    type: LIBRARY_TYPE_FILTERS[options.typeCode],
+  });
+  const headers = buildHeaders({ accessToken: options.accessToken });
+
+  const response = await fetch(url, { method: "GET", headers });
+  await checkResponse(response, "Library search");
+  return (await response.json()) as Bundle;
+}
+
+/**
+ * Searches the FHIR server for stored SQLQuery Library resources.
+ *
+ * A thin wrapper over {@link listStoredLibraries} scoped to the `sql-query`
+ * type code, retained for the existing callers.
  *
  * @param baseUrl - The FHIR server base URL.
  * @param options - Optional auth configuration.
@@ -206,14 +263,10 @@ export async function listSqlQueryLibraries(
   baseUrl: string,
   options: AuthOptions = {},
 ): Promise<Bundle> {
-  const url = buildUrl(baseUrl, "/Library", {
-    type: SQL_QUERY_LIBRARY_TYPE_FILTER,
+  return listStoredLibraries(baseUrl, {
+    typeCode: "sql-query",
+    accessToken: options.accessToken,
   });
-  const headers = buildHeaders({ accessToken: options.accessToken });
-
-  const response = await fetch(url, { method: "GET", headers });
-  await checkResponse(response, "Library search");
-  return (await response.json()) as Bundle;
 }
 
 /**
@@ -301,4 +354,115 @@ function bindingToPart(
     case "dateTime":
       return { name, valueDateTime: rawValue };
   }
+}
+
+// =============================================================================
+// SQL query export
+// =============================================================================
+
+/**
+ * Options for kicking off an asynchronous `$sqlquery-export` operation.
+ */
+export interface SqlQueryExportKickOffOptions extends AuthOptions {
+  /** The export request, reusing the synchronous run's query source. */
+  request: SqlQueryExportRequest;
+}
+
+/**
+ * Result of a `$sqlquery-export` kick-off: the polling URL from the {@code Content-Location}
+ * header.
+ */
+export interface SqlQueryExportResult {
+  pollingUrl: string;
+}
+
+/**
+ * Options for downloading a `$sqlquery-export` output file.
+ */
+export interface SqlQueryExportDownloadOptions extends AuthOptions {
+  /** The fully-qualified download URL from the manifest's `output.location`. */
+  location: string;
+}
+
+/**
+ * Kicks off an asynchronous `$sqlquery-export` operation.
+ *
+ * @param baseUrl - The FHIR server base URL.
+ * @param options - The export options including the query source, format, and header flag.
+ * @returns The polling URL for tracking the export operation.
+ * @throws {UnauthorizedError} When the request receives a 401 response.
+ * @throws {Error} For other non-successful responses or a missing Content-Location header.
+ *
+ * @example
+ * const { pollingUrl } = await sqlQueryExportKickOff("https://example.com/fhir", {
+ *   request: { mode: "stored", libraryId: "patient-bp-query", format: "ndjson" },
+ *   accessToken: "token123",
+ * });
+ */
+export async function sqlQueryExportKickOff(
+  baseUrl: string,
+  options: SqlQueryExportKickOffOptions,
+): Promise<SqlQueryExportResult> {
+  const url = buildUrl(baseUrl, "/$sqlquery-export");
+  const headers = buildHeaders({
+    accessToken: options.accessToken,
+    contentType: "application/fhir+json",
+    prefer: "respond-async",
+  });
+
+  const body = buildSqlQueryExportKickOffBody(options.request);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  await checkResponse(response, "SQL query export kick-off");
+
+  if (response.status !== 202) {
+    const errorBody = await response.text();
+    throw new Error(
+      `SQL query export kick-off failed: ${response.status} - ${errorBody}`,
+    );
+  }
+
+  const contentLocation = response.headers.get("Content-Location");
+  if (!contentLocation) {
+    throw new Error(
+      "SQL query export kick-off failed: No Content-Location header",
+    );
+  }
+
+  return { pollingUrl: contentLocation };
+}
+
+/**
+ * Downloads a `$sqlquery-export` output file from its manifest location URL.
+ *
+ * @param options - Download options including the fully-qualified location URL.
+ * @returns A ReadableStream of the file contents.
+ * @throws {UnauthorizedError} When the request receives a 401 response.
+ * @throws {Error} For other non-successful responses or a missing body.
+ *
+ * @example
+ * const stream = await sqlQueryExportDownload({
+ *   location: "https://example.com/fhir/$result?job=abc&file=people.ndjson",
+ *   accessToken: "token123",
+ * });
+ */
+export async function sqlQueryExportDownload(
+  options: SqlQueryExportDownloadOptions,
+): Promise<ReadableStream> {
+  const headers = buildHeaders({ accessToken: options.accessToken });
+
+  const response = await fetch(options.location, { method: "GET", headers });
+
+  await checkResponse(response, "SQL query export download");
+
+  if (!response.body) {
+    throw new Error("SQL query export download failed: No response body");
+  }
+
+  return response.body;
 }

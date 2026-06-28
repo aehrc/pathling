@@ -163,6 +163,9 @@ error response and is excluded from the CapabilityStatement.
   ViewDefinition resources.
 - `pathling.operations.viewDefinitionExportEnabled` - (default: `true`) Enables
   the [$viewdefinition-export](./operations/view-export) operation.
+- `pathling.operations.sqlQueryExportEnabled` - (default: `true`) Enables the
+  system, type, and instance-level
+  [$sqlquery-export](./operations/sql-export) operation.
 - `pathling.operations.bulkSubmitEnabled` - (default: `true`) Enables the
   [$bulk-submit](./operations/bulk-submit) operation.
 
@@ -180,6 +183,12 @@ limits are always applied; they cannot be disabled per request.
   4xx response; a timeout that fires mid-stream aborts the connection and is
   recorded as a server warning. Long-running queries should use the
   asynchronous path.
+- `pathling.sqlQuery.maxDependencyDepth` - (default: `10`) The maximum nesting
+  depth of the SQLView dependency graph resolved for a single query. The
+  top-level query's direct dependencies sit at depth one; each further level of
+  nested SQLView dependency increments the depth. A graph nested deeper is
+  rejected with a `400` before any Spark work, guarding against accidental
+  fan-out and runaway resolution.
 
 ### Encoding
 

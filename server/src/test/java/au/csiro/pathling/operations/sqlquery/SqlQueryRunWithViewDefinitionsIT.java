@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
-import static au.csiro.pathling.operations.sqlquery.SqlQueryLibraryParser.LIBRARY_TYPE_CODE;
-import static au.csiro.pathling.operations.sqlquery.SqlQueryLibraryParser.LIBRARY_TYPE_SYSTEM;
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM;
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_QUERY_TYPE_CODE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ca.uhn.fhir.context.FhirContext;
@@ -79,10 +79,10 @@ class SqlQueryRunWithViewDefinitionsIT {
   private static final Gson GSON = new Gson();
 
   private static final String VIEW_REFERENCE =
-      "ViewDefinition/" + SqlQueryViewDefinitionTestConfiguration.PATIENT_VIEW_ID;
+      SqlQueryViewDefinitionTestConfiguration.PATIENT_VIEW_URL;
 
   private static final String OBSERVATION_VIEW_REFERENCE =
-      "ViewDefinition/" + SqlQueryViewDefinitionTestConfiguration.OBSERVATION_VIEW_ID;
+      SqlQueryViewDefinitionTestConfiguration.OBSERVATION_VIEW_URL;
 
   @LocalServerPort int port;
 
@@ -186,9 +186,12 @@ class SqlQueryRunWithViewDefinitionsIT {
   }
 
   @Test
-  void returns400WhenReferencedViewDefinitionDoesNotExist() {
+  void returnsErrorWhenReferencedViewDefinitionDoesNotExist() {
     final Library library =
-        sqlQueryLibrary("SELECT id FROM patients", "patients", "ViewDefinition/does-not-exist");
+        sqlQueryLibrary(
+            "SELECT id FROM patients",
+            "patients",
+            "https://pathling.csiro.au/test/ViewDefinition/does-not-exist");
 
     webTestClient
         .post()
@@ -232,7 +235,7 @@ class SqlQueryRunWithViewDefinitionsIT {
     library.setStatus(PublicationStatus.ACTIVE);
     library.setType(
         new CodeableConcept()
-            .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode(LIBRARY_TYPE_CODE)));
+            .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode(SQL_QUERY_TYPE_CODE)));
     final Attachment content = new Attachment();
     content.setContentType("application/sql");
     content.setData(sql.getBytes(StandardCharsets.UTF_8));

@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM;
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_QUERY_TYPE_CODE;
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_VIEW_TYPE_CODE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -30,18 +33,17 @@ import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
-/** Unit tests for {@link SqlQueryLibraryParser}. */
-class SqlQueryLibraryParserTest {
+/** Unit tests for {@link SqlLibraryParser} covering both the SQLQuery and SQLView profiles. */
+class SqlLibraryParserTest {
 
-  private static final String LIBRARY_TYPE_SYSTEM =
-      "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes";
-
-  private SqlQueryLibraryParser parser;
+  private SqlLibraryParser parser;
 
   @BeforeEach
   void setUp() {
-    parser = new SqlQueryLibraryParser();
+    parser = new SqlLibraryParser();
   }
 
   @Test
@@ -58,22 +60,22 @@ class SqlQueryLibraryParserTest {
         new RelatedArtifact()
             .setType(RelatedArtifactType.DEPENDSON)
             .setLabel("patients")
-            .setResource("ViewDefinition/patient-view"));
+            .setResource("https://example.org/ViewDefinition/patient-view"));
     library.addRelatedArtifact(
         new RelatedArtifact()
             .setType(RelatedArtifactType.DEPENDSON)
             .setLabel("observations")
-            .setResource("ViewDefinition/obs-view"));
+            .setResource("https://example.org/ViewDefinition/obs-view"));
 
     final ParsedSqlQuery result = parser.parse(library);
 
     assertThat(result.getViewReferences()).hasSize(2);
     assertThat(result.getViewReferences().get(0).getLabel()).isEqualTo("patients");
     assertThat(result.getViewReferences().get(0).getCanonicalUrl())
-        .isEqualTo("ViewDefinition/patient-view");
+        .isEqualTo("https://example.org/ViewDefinition/patient-view");
     assertThat(result.getViewReferences().get(1).getLabel()).isEqualTo("observations");
     assertThat(result.getViewReferences().get(1).getCanonicalUrl())
-        .isEqualTo("ViewDefinition/obs-view");
+        .isEqualTo("https://example.org/ViewDefinition/obs-view");
   }
 
   @Test
@@ -96,6 +98,63 @@ class SqlQueryLibraryParserTest {
     assertThat(result.getSql()).isEqualTo("SELECT 1");
     assertThat(result.getViewReferences()).isEmpty();
     assertThat(result.getDeclaredParameters()).isEmpty();
+  }
+
+  @Test
+  void reportsSqlQueryAsNotAView() {
+    final ParsedSqlQuery result = parser.parse(createMinimalLibrary("SELECT 1"));
+    assertThat(result.getLibraryTypeCode()).isEqualTo(SQL_QUERY_TYPE_CODE);
+    assertThat(result.isView()).isFalse();
+  }
+
+  // ---------------------------------------------------------------------------
+  // SQLView profile.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void parsesSqlViewWithTypeCodeSqlAndDependencies() {
+    final Library library = SqlLibraryFixtures.sqlView("SELECT * FROM patient_view");
+    SqlLibraryFixtures.addDependency(
+        library, "patient_view", "https://example.org/ViewDefinition/patient-view");
+    SqlLibraryFixtures.addDependency(library, "base", "https://example.org/Library/base");
+
+    final ParsedSqlQuery result = parser.parse(library);
+
+    assertThat(result.getLibraryTypeCode()).isEqualTo(SQL_VIEW_TYPE_CODE);
+    assertThat(result.isView()).isTrue();
+    assertThat(result.getSql()).isEqualTo("SELECT * FROM patient_view");
+    assertThat(result.getViewReferences()).hasSize(2);
+    assertThat(result.getViewReferences().get(0).getLabel()).isEqualTo("patient_view");
+    assertThat(result.getViewReferences().get(0).getCanonicalUrl())
+        .isEqualTo("https://example.org/ViewDefinition/patient-view");
+    assertThat(result.getViewReferences().get(1).getCanonicalUrl())
+        .isEqualTo("https://example.org/Library/base");
+    assertThat(result.getDeclaredParameters()).isEmpty();
+  }
+
+  @Test
+  void rejectsSqlViewDeclaringAParameter() {
+    // A SQLView SHALL NOT declare parameters; doing so is a 400.
+    final Library library = SqlLibraryFixtures.sqlView("SELECT 1");
+    SqlLibraryFixtures.addParameter(library, "min_age", "integer");
+
+    assertThatThrownBy(() -> parser.parse(library))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining(SQL_VIEW_TYPE_CODE)
+        .hasMessageContaining("parameter");
+  }
+
+  @Test
+  void stillParsesSqlQueryWithParameters() {
+    // The shared parser must continue to accept SQLQuery parameters unchanged.
+    final Library library = SqlLibraryFixtures.sqlQuery("SELECT * FROM t WHERE age > :min_age");
+    SqlLibraryFixtures.addParameter(library, "min_age", "integer");
+
+    final ParsedSqlQuery result = parser.parse(library);
+
+    assertThat(result.isView()).isFalse();
+    assertThat(result.getDeclaredParameters()).hasSize(1);
+    assertThat(result.getDeclaredParameters().get(0).getName()).isEqualTo("min_age");
   }
 
   // ---------------------------------------------------------------------------
@@ -156,7 +215,7 @@ class SqlQueryLibraryParserTest {
     assertThatThrownBy(() -> parser.parse(library))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("Library.type")
-        .hasMessageContaining("sql-query");
+        .hasMessageContaining(SQL_QUERY_TYPE_CODE);
   }
 
   @Test
@@ -177,7 +236,7 @@ class SqlQueryLibraryParserTest {
     assertThatThrownBy(() -> parser.parse(library))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining(LIBRARY_TYPE_SYSTEM)
-        .hasMessageContaining("sql-query");
+        .hasMessageContaining(SQL_QUERY_TYPE_CODE);
   }
 
   @Test
@@ -193,7 +252,7 @@ class SqlQueryLibraryParserTest {
             .addCoding(
                 new org.hl7.fhir.r4.model.Coding()
                     .setSystem(LIBRARY_TYPE_SYSTEM)
-                    .setCode("sql-query")));
+                    .setCode(SQL_QUERY_TYPE_CODE)));
     library
         .addContent()
         .setContentType("application/sql")
@@ -292,11 +351,59 @@ class SqlQueryLibraryParserTest {
         new RelatedArtifact()
             .setType(RelatedArtifactType.DEPENDSON)
             .setLabel("patients_2024")
-            .setResource("ViewDefinition/patient-view"));
+            .setResource("https://example.org/ViewDefinition/patient-view"));
 
     final ParsedSqlQuery result = parser.parse(library);
     assertThat(result.getViewReferences()).hasSize(1);
     assertThat(result.getViewReferences().get(0).getLabel()).isEqualTo("patients_2024");
+  }
+
+  // ---------------------------------------------------------------------------
+  // relatedArtifact.resource canonical-form invariant.
+  // ---------------------------------------------------------------------------
+
+  @ParameterizedTest(name = "rejects non-canonical resource ''{0}''")
+  @ValueSource(
+      strings = {
+        "ViewDefinition/abc",
+        "Library/abc",
+        "patient-view",
+        "https://example.org/V#section"
+      })
+  void rejectsNonCanonicalResourceReference(final String resource) {
+    final Library library = createMinimalLibrary("SELECT 1");
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("t")
+            .setResource(resource));
+
+    assertThatThrownBy(() -> parser.parse(library))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("relatedArtifact.resource")
+        .hasMessageContaining(resource)
+        .hasMessageContaining("canonical URL");
+  }
+
+  @ParameterizedTest(name = "accepts canonical resource ''{0}''")
+  @ValueSource(
+      strings = {
+        "https://example.org/ViewDefinition/patient-view",
+        "https://example.org/ViewDefinition/patient-view|2.0",
+        "http://example.org/Library/base",
+        "urn:uuid:53fefa32-fcbb-4ff8-8a92-55ee120877b7"
+      })
+  void acceptsCanonicalResourceReference(final String resource) {
+    final Library library = createMinimalLibrary("SELECT 1");
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("t")
+            .setResource(resource));
+
+    final ParsedSqlQuery result = parser.parse(library);
+    assertThat(result.getViewReferences()).hasSize(1);
+    assertThat(result.getViewReferences().get(0).getCanonicalUrl()).isEqualTo(resource);
   }
 
   // ---------------------------------------------------------------------------
@@ -362,7 +469,7 @@ class SqlQueryLibraryParserTest {
     assertThat(result.getSql()).isEqualTo("SELECT 1");
   }
 
-  /** Creates a minimal Library resource with the given SQL as Base64-encoded content. */
+  /** Creates a minimal SQLQuery Library resource with the given SQL as Base64-encoded content. */
   private Library createMinimalLibrary(final String sql) {
     final Library library = new Library();
     library.setStatus(PublicationStatus.ACTIVE);
@@ -378,6 +485,8 @@ class SqlQueryLibraryParserTest {
   private static CodeableConcept sqlQueryTypeCoding() {
     return new CodeableConcept()
         .addCoding(
-            new org.hl7.fhir.r4.model.Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode("sql-query"));
+            new org.hl7.fhir.r4.model.Coding()
+                .setSystem(LIBRARY_TYPE_SYSTEM)
+                .setCode(SQL_QUERY_TYPE_CODE));
   }
 }

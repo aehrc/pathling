@@ -133,12 +133,12 @@ class JobProviderTest {
 
   @Test
   void completedJobWithRedirectReturns303SeeOther() {
-    // When redirectOnComplete is enabled, completed jobs should return 303 See Other with a
-    // Location header pointing to the result endpoint.
+    // Under the HL7 Asynchronous Interaction Request Pattern, completed jobs should return 303 See
+    // Other with a Location header pointing to the result endpoint.
     final CompletableFuture<IBaseResource> future =
         CompletableFuture.completedFuture(new Parameters());
     final Job<IBaseResource> job = new Job<>(JOB_ID, "export", future, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     final IBaseResource result = jobProvider.job(JOB_ID, request, response);
@@ -152,8 +152,7 @@ class JobProviderTest {
 
   @Test
   void completedJobWithoutRedirectReturns200WithResult() {
-    // When redirectOnComplete is not enabled (default), completed jobs return 200 OK with the
-    // inline result.
+    // Under the default BULK_DATA pattern, completed jobs return 200 OK with the inline result.
     final Parameters expectedResult = new Parameters();
     expectedResult
         .addParameter()
@@ -162,7 +161,7 @@ class JobProviderTest {
     final CompletableFuture<IBaseResource> future =
         CompletableFuture.completedFuture(expectedResult);
     final Job<IBaseResource> job = new Job<>(JOB_ID, "export", future, Optional.empty());
-    // redirectOnComplete is false by default.
+    // The pattern defaults to BULK_DATA.
     jobRegistry.register(job);
 
     final IBaseResource result = jobProvider.job(JOB_ID, request, response);
@@ -179,7 +178,7 @@ class JobProviderTest {
     // In-progress jobs always return 202 Accepted, regardless of the redirect setting.
     final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
     final Job<IBaseResource> job = new Job<>(JOB_ID, "export", future, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     assertThatThrownBy(() -> jobProvider.job(JOB_ID, request, response))
@@ -201,7 +200,7 @@ class JobProviderTest {
     final CompletableFuture<IBaseResource> future =
         CompletableFuture.completedFuture(new Parameters());
     final Job<IBaseResource> job = new Job<>(JOB_ID, "export", future, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     jobProvider.job(JOB_ID, request, response);
@@ -219,7 +218,7 @@ class JobProviderTest {
     final CompletableFuture<IBaseResource> future =
         CompletableFuture.completedFuture(new Parameters());
     final Job<IBaseResource> job = new Job<>(JOB_ID, "export", future, Optional.empty());
-    job.setRedirectOnComplete(true);
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
     jobRegistry.register(job);
 
     jobProvider.job(JOB_ID, request, response);

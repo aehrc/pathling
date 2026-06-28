@@ -211,8 +211,9 @@ class ViewDefinitionRunProviderIT {
   }
 
   @Test
-  void invalidViewDefinitionReturns4xxError() {
-    // ViewDefinition missing required 'resource' field.
+  void invalidViewDefinitionReturns422() {
+    // A well-formed request carrying a semantically invalid ViewDefinition (missing the required
+    // 'resource' field) returns 422 Unprocessable Entity, not a generic 4xx (US7, FR-020).
     final Map<String, Object> invalidView = new HashMap<>();
     invalidView.put("resourceType", "ViewDefinition");
     invalidView.put("name", "invalid_view");
@@ -238,7 +239,260 @@ class ViewDefinitionRunProviderIT {
         .bodyValue(gson.toJson(parameters))
         .exchange()
         .expectStatus()
-        .is4xxClientError();
+        .isEqualTo(422);
+  }
+
+  // -------------------------------------------------------------------------
+  // Unsupported request rejection tests (US1)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void unsupportedFormatReturns400NamingTheFormat() {
+    final String viewJson = createSimplePatientView();
+    final Patient patient = new Patient();
+    patient.setId("p1");
+    patient.addName().setFamily("Smith");
+    final String patientJson = fhirContext.newJsonParser().encodeResourceToString(patient);
+
+    final String parametersJson =
+        createParametersWithInlineResourcesJson(viewJson, "parquet", List.of(patientJson));
+
+    final byte[] body =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
+            .header("Content-Type", "application/fhir+json")
+            .bodyValue(parametersJson)
+            .exchange()
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+
+    assertThat(new String(body, StandardCharsets.UTF_8)).contains("parquet");
+  }
+
+  @Test
+  void sourceParameterReturns400AtSystemLevel() {
+    sourceRejectedAtUri("http://localhost:" + port + "/fhir/$viewdefinition-run");
+  }
+
+  @Test
+  void sourceParameterReturns400AtTypeLevel() {
+    sourceRejectedAtUri("http://localhost:" + port + "/fhir/ViewDefinition/$run");
+  }
+
+  @Test
+  void sourceParameterReturns400AtInstanceLevelOverGet() {
+    // The source rejection happens before the stored ViewDefinition is read, so it applies even
+    // for an id that would otherwise be a 404.
+    final byte[] body =
+        webTestClient
+            .get()
+            .uri(
+                "http://localhost:"
+                    + port
+                    + "/fhir/ViewDefinition/some-view/$run?source=s3://bucket/data")
+            .header("Accept", "application/x-ndjson")
+            .exchange()
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+
+    assertThat(new String(body, StandardCharsets.UTF_8)).contains("source");
+  }
+
+  /** Posts a Parameters body carrying a source part to the given URI and asserts a 400. */
+  private void sourceRejectedAtUri(@Nonnull final String uri) {
+    final String viewJson = createSimplePatientView();
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    final List<Map<String, Object>> parameterList = new ArrayList<>();
+
+    final Map<String, Object> viewParam = new LinkedHashMap<>();
+    viewParam.put("name", "viewResource");
+    viewParam.put("resource", gson.fromJson(viewJson, Map.class));
+    parameterList.add(viewParam);
+
+    final Map<String, Object> sourceParam = new LinkedHashMap<>();
+    sourceParam.put("name", "source");
+    sourceParam.put("valueString", "s3://bucket/data");
+    parameterList.add(sourceParam);
+
+    parameters.put("parameter", parameterList);
+
+    final byte[] body =
+        webTestClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/fhir+json")
+            .bodyValue(gson.toJson(parameters))
+            .exchange()
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+
+    assertThat(new String(body, StandardCharsets.UTF_8)).contains("source");
+  }
+
+  // -------------------------------------------------------------------------
+  // viewReference tests (US4)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void unresolvedViewReferenceReturns404AtSystemLevel() {
+    unresolvedViewReferenceReturns404("http://localhost:" + port + "/fhir/$viewdefinition-run");
+  }
+
+  @Test
+  void unresolvedViewReferenceReturns404AtTypeLevel() {
+    unresolvedViewReferenceReturns404("http://localhost:" + port + "/fhir/ViewDefinition/$run");
+  }
+
+  /** Posts a viewReference that does not resolve and asserts a 404. */
+  private void unresolvedViewReferenceReturns404(@Nonnull final String uri) {
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    final List<Map<String, Object>> parameterList = new ArrayList<>();
+
+    final Map<String, Object> referenceValue = new LinkedHashMap<>();
+    referenceValue.put("reference", "ViewDefinition/does-not-exist");
+    final Map<String, Object> viewReferenceParam = new LinkedHashMap<>();
+    viewReferenceParam.put("name", "viewReference");
+    viewReferenceParam.put("valueReference", referenceValue);
+    parameterList.add(viewReferenceParam);
+
+    parameters.put("parameter", parameterList);
+
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/x-ndjson")
+        .bodyValue(gson.toJson(parameters))
+        .exchange()
+        .expectStatus()
+        .isNotFound();
+  }
+
+  // -------------------------------------------------------------------------
+  // Reference-typed patient cardinality (US5)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void moreThanOnePatientReturns400() {
+    final String viewJson = createSimplePatientView();
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    final List<Map<String, Object>> parameterList = new ArrayList<>();
+
+    final Map<String, Object> viewParam = new LinkedHashMap<>();
+    viewParam.put("name", "viewResource");
+    viewParam.put("resource", gson.fromJson(viewJson, Map.class));
+    parameterList.add(viewParam);
+
+    for (final String id : List.of("Patient/1", "Patient/2")) {
+      final Map<String, Object> referenceValue = new LinkedHashMap<>();
+      referenceValue.put("reference", id);
+      final Map<String, Object> patientParam = new LinkedHashMap<>();
+      patientParam.put("name", "patient");
+      patientParam.put("valueReference", referenceValue);
+      parameterList.add(patientParam);
+    }
+
+    parameters.put("parameter", parameterList);
+
+    webTestClient
+        .post()
+        .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
+        .header("Content-Type", "application/fhir+json")
+        .bodyValue(gson.toJson(parameters))
+        .exchange()
+        .expectStatus()
+        .isBadRequest();
+  }
+
+  // -------------------------------------------------------------------------
+  // Bundle unwrapping in the resource parameter (US6)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void bundleResourceUnwrapsToOneRowPerEntry() {
+    final String viewJson = createSimplePatientView();
+    final String bundleJson = patientBundleJson("b1", "b2", "b3");
+
+    final String parametersJson =
+        createParametersWithInlineResourcesJson(
+            viewJson, "application/x-ndjson", List.of(bundleJson));
+
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/x-ndjson")
+            .bodyValue(parametersJson)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .returnResult();
+
+    final String responseBody = new String(result.getResponseBodyContent(), StandardCharsets.UTF_8);
+    final String[] lines = responseBody.trim().split("\n");
+    assertThat(lines).hasSize(3);
+    assertThat(responseBody).contains("b1").contains("b2").contains("b3");
+  }
+
+  @Test
+  void emptyBundleContributesNoRowsAndDoesNotError() {
+    final String viewJson = createSimplePatientView();
+    final String emptyBundle = patientBundleJson();
+    final Patient standalone = new Patient();
+    standalone.setId("standalone");
+    standalone.addName().setFamily("Standalone");
+    final String standaloneJson = fhirContext.newJsonParser().encodeResourceToString(standalone);
+
+    final String parametersJson =
+        createParametersWithInlineResourcesJson(
+            viewJson, "application/x-ndjson", List.of(emptyBundle, standaloneJson));
+
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/x-ndjson")
+            .bodyValue(parametersJson)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .returnResult();
+
+    final String responseBody = new String(result.getResponseBodyContent(), StandardCharsets.UTF_8);
+    final String[] lines = responseBody.trim().split("\n");
+    assertThat(lines).hasSize(1);
+    assertThat(responseBody).contains("standalone");
+  }
+
+  /** Builds a Bundle JSON containing one Patient per supplied id. */
+  @Nonnull
+  private String patientBundleJson(@Nonnull final String... patientIds) {
+    final org.hl7.fhir.r4.model.Bundle bundle = new org.hl7.fhir.r4.model.Bundle();
+    bundle.setType(org.hl7.fhir.r4.model.Bundle.BundleType.COLLECTION);
+    for (final String id : patientIds) {
+      final Patient patient = new Patient();
+      patient.setId(id);
+      patient.addName().setFamily("Family-" + id);
+      bundle.addEntry().setResource(patient);
+    }
+    return fhirContext.newJsonParser().encodeResourceToString(bundle);
   }
 
   // -------------------------------------------------------------------------

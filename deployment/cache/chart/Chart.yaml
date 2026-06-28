@@ -8,7 +8,7 @@ name: pathling-cache
 description: A Varnish-based frontend cache optimised for use with Pathling Server
 icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
 type: application
-version: 1.0.0
+version: 1.1.0
 maintainers:
   - name: John Grimes
     email: John.Grimes@csiro.au

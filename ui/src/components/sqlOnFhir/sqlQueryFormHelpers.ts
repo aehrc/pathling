@@ -26,13 +26,14 @@ import {
   SQL_QUERY_LIBRARY_PROFILE,
   SQL_QUERY_LIBRARY_TYPE_SYSTEM,
 } from "../../api";
-import { encodeSql } from "../../utils";
+import { decodeSql, encodeSql } from "../../utils";
 
 import type {
   SqlQueryLibrary,
   SqlQueryParameterDeclaration,
   SqlQueryParameterType,
   SqlQueryRelatedArtifact,
+  SqlQueryRequest,
   SqlQueryRuntimeBindings,
 } from "../../types/sqlQuery";
 
@@ -52,7 +53,7 @@ export interface BuildInlineLibraryInput {
   url?: string;
   /** Plain-text SQL the user wrote. */
   sql: string;
-  /** Tables (related artefacts) configured by the user. */
+  /** View rows (related artefacts) configured by the user. */
   tables: SqlQueryRelatedArtifact[];
   /** Declared runtime parameters. */
   parameters: SqlQueryParameterDeclaration[];
@@ -110,7 +111,9 @@ export function buildInlineSqlQueryLibrary(
     library.relatedArtifact = input.tables.map((table) => ({
       type: "depends-on" as const,
       label: table.label,
-      resource: `ViewDefinition/${table.viewDefinitionId}`,
+      // The source is referenced by its canonical URL, matched against the
+      // referenced resource's `url` on the server.
+      resource: table.referenceUrl,
     }));
   }
 
@@ -123,6 +126,33 @@ export function buildInlineSqlQueryLibrary(
   }
 
   return library;
+}
+
+/**
+ * Recovers the plain SQL text from a `SqlQueryRequest` for display.
+ *
+ * For stored requests the text comes from the resolved `sql` field, which
+ * the form copies from the selected Library. For inline requests it is read
+ * from the `sql-text` extension on `Library.content[0]`, falling back to
+ * decoding the Base64 `data`. Returns the empty string when no SQL can be
+ * recovered.
+ *
+ * @param request - The request whose SQL should be displayed.
+ * @returns The plain SQL text, or an empty string if it cannot be recovered.
+ */
+export function extractRequestSql(request: SqlQueryRequest): string {
+  if (request.mode === "stored") {
+    return request.sql ?? "";
+  }
+  const content = request.library.content?.[0];
+  if (!content) {
+    return "";
+  }
+  const ext = content.extension?.find((e) => e.url.endsWith("/sql-text"));
+  if (ext?.valueString) {
+    return ext.valueString;
+  }
+  return content.data ? decodeSql(content.data) : "";
 }
 
 /**
@@ -142,7 +172,7 @@ export function canExecuteInlineForm(input: BuildInlineLibraryInput): boolean {
   if (input.tables.length === 0) {
     return false;
   }
-  if (input.tables.some((t) => t.label.trim() === "" || !t.viewDefinitionId)) {
+  if (input.tables.some((t) => t.label.trim() === "" || !t.referenceUrl)) {
     return false;
   }
   return true;
