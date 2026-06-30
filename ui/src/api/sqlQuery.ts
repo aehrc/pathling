@@ -28,9 +28,11 @@ import {
   checkResponse,
   pushOutputParameters,
 } from "./utils";
+import { buildSqlQueryExportKickOffBody } from "../hooks/sqlQueryExportHelpers";
 
 import type { AuthOptions } from "./rest";
 import type {
+  SqlQueryExportRequest,
   SqlQueryLibrary,
   SqlQueryOutputFormat,
   SqlQueryParameterType,
@@ -301,4 +303,115 @@ function bindingToPart(
     case "dateTime":
       return { name, valueDateTime: rawValue };
   }
+}
+
+// =============================================================================
+// SQL query export
+// =============================================================================
+
+/**
+ * Options for kicking off an asynchronous `$sqlquery-export` operation.
+ */
+export interface SqlQueryExportKickOffOptions extends AuthOptions {
+  /** The export request, reusing the synchronous run's query source. */
+  request: SqlQueryExportRequest;
+}
+
+/**
+ * Result of a `$sqlquery-export` kick-off: the polling URL from the `Content-Location`
+ * header.
+ */
+export interface SqlQueryExportResult {
+  pollingUrl: string;
+}
+
+/**
+ * Options for downloading a `$sqlquery-export` output file.
+ */
+export interface SqlQueryExportDownloadOptions extends AuthOptions {
+  /** The fully-qualified download URL from the manifest's `output.location`. */
+  location: string;
+}
+
+/**
+ * Kicks off an asynchronous `$sqlquery-export` operation.
+ *
+ * @param baseUrl - The FHIR server base URL.
+ * @param options - The export options including the query source, format, and header flag.
+ * @returns The polling URL for tracking the export operation.
+ * @throws {UnauthorizedError} When the request receives a 401 response.
+ * @throws {Error} For other non-successful responses or a missing Content-Location header.
+ *
+ * @example
+ * const { pollingUrl } = await sqlQueryExportKickOff("https://example.com/fhir", {
+ *   request: { mode: "stored", libraryId: "patient-bp-query", format: "ndjson" },
+ *   accessToken: "token123",
+ * });
+ */
+export async function sqlQueryExportKickOff(
+  baseUrl: string,
+  options: SqlQueryExportKickOffOptions,
+): Promise<SqlQueryExportResult> {
+  const url = buildUrl(baseUrl, "/$sqlquery-export");
+  const headers = buildHeaders({
+    accessToken: options.accessToken,
+    contentType: "application/fhir+json",
+    prefer: "respond-async",
+  });
+
+  const body = buildSqlQueryExportKickOffBody(options.request);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  await checkResponse(response, "SQL query export kick-off");
+
+  if (response.status !== 202) {
+    const errorBody = await response.text();
+    throw new Error(
+      `SQL query export kick-off failed: ${response.status} - ${errorBody}`,
+    );
+  }
+
+  const contentLocation = response.headers.get("Content-Location");
+  if (!contentLocation) {
+    throw new Error(
+      "SQL query export kick-off failed: No Content-Location header",
+    );
+  }
+
+  return { pollingUrl: contentLocation };
+}
+
+/**
+ * Downloads a `$sqlquery-export` output file from its manifest location URL.
+ *
+ * @param options - Download options including the fully-qualified location URL.
+ * @returns A ReadableStream of the file contents.
+ * @throws {UnauthorizedError} When the request receives a 401 response.
+ * @throws {Error} For other non-successful responses or a missing body.
+ *
+ * @example
+ * const stream = await sqlQueryExportDownload({
+ *   location: "https://example.com/fhir/$result?job=abc&file=people.ndjson",
+ *   accessToken: "token123",
+ * });
+ */
+export async function sqlQueryExportDownload(
+  options: SqlQueryExportDownloadOptions,
+): Promise<ReadableStream> {
+  const headers = buildHeaders({ accessToken: options.accessToken });
+
+  const response = await fetch(options.location, { method: "GET", headers });
+
+  await checkResponse(response, "SQL query export download");
+
+  if (!response.body) {
+    throw new Error("SQL query export download failed: No response body");
+  }
+
+  return response.body;
 }

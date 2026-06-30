@@ -19,6 +19,7 @@ package au.csiro.pathling.async;
 
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
@@ -56,6 +57,12 @@ public class Job<T> {
   /** The identifier of the user who owns this job, if authenticated. */
   @Nonnull private final Optional<String> ownerId;
 
+  /**
+   * The time at which this job was created (kick-off time). Used to populate the SQL on FHIR export
+   * manifest's {@code exportStartTime} and to compute {@code exportDuration}.
+   */
+  @Nonnull private final Instant startTime;
+
   /** The total number of stages in this job, used to calculate progress percentage. */
   private int totalStages;
 
@@ -72,10 +79,13 @@ public class Job<T> {
   @Setter private boolean markedAsDeleted;
 
   /**
-   * When true, completed jobs return 303 See Other with redirect to result endpoint, rather than
-   * returning the result inline. This follows the SQL on FHIR unify-async specification.
+   * The asynchronous wire contract this job follows. Under {@link
+   * AsyncPattern#STANDARD_ASYNC_PATTERN} (the HL7 Asynchronous Interaction Request Pattern, <a
+   * href="https://build.fhir.org/ig/HL7/api-incubator-ig/branches/simplified-async-interaction/async-interaction.html">spec</a>)
+   * a completed job returns 303 See Other with a redirect to the result endpoint, rather than
+   * returning the result inline. Defaults to {@link AsyncPattern#BULK_DATA} and is never null.
    */
-  @Setter private boolean redirectOnComplete;
+  @Setter private AsyncPattern pattern = AsyncPattern.BULK_DATA;
 
   /**
    * The last calculated progress percentage. When a job is at 100% that does not always indicate
@@ -102,6 +112,7 @@ public class Job<T> {
     this.operation = operation;
     this.result = result;
     this.ownerId = ownerId;
+    this.startTime = Instant.now();
     this.responseModification = httpServletResponse -> {};
   }
 

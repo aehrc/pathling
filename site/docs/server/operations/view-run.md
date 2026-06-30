@@ -13,22 +13,46 @@ follows the
 
 ## Endpoint
 
+The operation is available at the system, type, and instance levels:
+
 ```
 POST [base]/$viewdefinition-run
+POST [base]/ViewDefinition/$run
+GET|POST [base]/ViewDefinition/[id]/$run
 ```
+
+At the system and type levels, supply exactly one of `viewResource` (inline) or
+`viewReference` (a reference to a stored ViewDefinition). At the instance level,
+the view is taken from the path.
 
 ## Parameters
 
-| Name           | Cardinality | Type     | Description                                                                                               |
-| -------------- | ----------- | -------- | --------------------------------------------------------------------------------------------------------- |
-| `viewResource` | 1..1        | Resource | The ViewDefinition resource.                                                                              |
-| `_format`      | 0..1        | string   | Output format. Accepts `application/x-ndjson` (default) or `text/csv`.                                    |
-| `header`       | 0..1        | boolean  | Include header row in CSV output. Defaults to `true`.                                                     |
-| `_limit`       | 0..1        | integer  | Maximum number of rows to return.                                                                         |
-| `patient`      | 0..\*       | id       | Filter to resources for the specified patient(s).                                                         |
-| `group`        | 0..\*       | id       | Filter to resources for patients in the specified Group(s).                                               |
-| `_since`       | 0..1        | instant  | Only include resources where `meta.lastUpdated` is at or after this time.                                 |
-| `resource`     | 0..\*       | string   | Inline FHIR resources as JSON strings. When provided, these are used instead of the server's stored data. |
+| Name            | Cardinality | Type      | Description                                                                                                                                    |
+| --------------- | ----------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `viewResource`  | 0..1        | Resource  | An inline ViewDefinition resource. Mutually exclusive with `viewReference`.                                                                    |
+| `viewReference` | 0..1        | Reference | A reference to a stored ViewDefinition (e.g. `ViewDefinition/patient-demographics`). Mutually exclusive with `viewResource`.                   |
+| `_format`       | 0..1        | code      | Output format: `json`, `ndjson` (default), or `csv`, or the corresponding media type. An unsupported value returns `400`.                      |
+| `header`        | 0..1        | boolean   | Include header row in CSV output. Defaults to `true`.                                                                                          |
+| `_limit`        | 0..1        | integer   | Maximum number of rows to return.                                                                                                              |
+| `patient`       | 0..1        | Reference | Filter to resources for the specified patient. More than one value returns `400`.                                                              |
+| `group`         | 0..\*       | Reference | Filter to resources for patients in the specified Group(s).                                                                                    |
+| `_since`        | 0..1        | instant   | Only include resources where `meta.lastUpdated` is at or after this time.                                                                      |
+| `resource`      | 0..\*       | Resource  | Inline FHIR resources. A `Bundle` value is expanded to its entry resources. When provided, these are used instead of the server's stored data. |
+
+The `source` parameter (an external data source) is not supported by this
+server; supplying it returns `400 Bad Request` with an OperationOutcome.
+
+## Status codes
+
+| Status                     | Condition                                                                                                                                                                                                  |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200 OK`                   | Success. The body is the rows in the negotiated format.                                                                                                                                                    |
+| `400 Bad Request`          | Malformed request or invalid parameter: an unsupported `_format`, the unsupported `source` parameter, both `viewResource` and `viewReference`, neither supplied (system/type), or more than one `patient`. |
+| `404 Not Found`            | A `viewReference` (or instance `[id]`) that does not resolve to a stored ViewDefinition.                                                                                                                   |
+| `422 Unprocessable Entity` | A well-formed request carrying a semantically invalid ViewDefinition.                                                                                                                                      |
+
+When no `_format` is supplied, the format is negotiated from the `Accept` header,
+falling back to NDJSON when nothing matches.
 
 ## Request format
 
@@ -81,6 +105,32 @@ Accept: application/x-ndjson
     ]
 }
 ```
+
+## Running a stored ViewDefinition by reference
+
+Instead of sending the ViewDefinition inline, you can run one that is already
+stored on the server by supplying a `viewReference`:
+
+```http
+POST [base]/ViewDefinition/$run HTTP/1.1
+Content-Type: application/fhir+json
+Accept: application/x-ndjson
+
+{
+    "resourceType": "Parameters",
+    "parameter": [
+        {
+            "name": "viewReference",
+            "valueReference": {
+                "reference": "ViewDefinition/patient-demographics"
+            }
+        }
+    ]
+}
+```
+
+The reference must be a literal relative reference of the form
+`ViewDefinition/[id]`. A reference that does not resolve returns `404 Not Found`.
 
 ## Response formats
 
@@ -206,8 +256,8 @@ testing ViewDefinitions or processing resources without importing them.
 
 ### Patient filter
 
-Use the `patient` parameter to restrict results to resources associated with
-specific patients:
+Use the `patient` parameter (a single `Reference`) to restrict results to
+resources associated with that patient:
 
 ```json
 {
@@ -222,11 +272,9 @@ specific patients:
         },
         {
             "name": "patient",
-            "valueId": "patient-123"
-        },
-        {
-            "name": "patient",
-            "valueId": "patient-456"
+            "valueReference": {
+                "reference": "Patient/patient-123"
+            }
         }
     ]
 }
@@ -235,7 +283,7 @@ specific patients:
 ### Group filter
 
 Use the `group` parameter to restrict results to resources for patients who are
-members of the specified Group:
+members of the specified Group(s). It accepts one or more `Reference` values:
 
 ```json
 {
@@ -250,7 +298,9 @@ members of the specified Group:
         },
         {
             "name": "group",
-            "valueId": "cohort-study-group"
+            "valueReference": {
+                "reference": "Group/cohort-study-group"
+            }
         }
     ]
 }

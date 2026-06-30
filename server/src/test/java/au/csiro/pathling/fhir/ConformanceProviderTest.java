@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhir;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.PathlingServerVersion;
@@ -25,6 +26,7 @@ import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.OperationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.errors.ResourceNotFoundError;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.parser.IParser;
@@ -42,6 +44,7 @@ import org.hl7.fhir.r4.model.CapabilityStatement.ResourceInteractionComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.TypeRestfulInteraction;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Enumerations.SearchParamType;
+import org.hl7.fhir.r4.model.IdType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -232,6 +235,85 @@ class ConformanceProviderTest {
     assertThat(operationNames)
         .as("System-level operations should include viewdefinition-export")
         .contains("viewdefinition-export");
+  }
+
+  // -------------------------------------------------------------------------
+  // SQL on FHIR conformance canonicals (US2)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void viewDefinitionRunOperationsDeclareSpecCanonical() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    // The system-level viewdefinition-run operation declares the run canonical.
+    assertThat(systemOperationDefinition(capabilityStatement, "viewdefinition-run"))
+        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$viewdefinition-run");
+
+    // The ViewDefinition-level run operation declares the same run canonical.
+    assertThat(resourceOperationDefinition(capabilityStatement, "ViewDefinition", "run"))
+        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$viewdefinition-run");
+  }
+
+  @Test
+  void viewDefinitionExportDeclaresSpecCanonical() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+    assertThat(systemOperationDefinition(capabilityStatement, "viewdefinition-export"))
+        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$viewdefinition-export");
+  }
+
+  @Test
+  void sqlQueryRunDeclaresSpecCanonical() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+    assertThat(systemOperationDefinition(capabilityStatement, "sqlquery-run"))
+        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$sqlquery-run");
+  }
+
+  @Test
+  void sqlQueryExportDeclaresSpecCanonical() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+    assertThat(systemOperationDefinition(capabilityStatement, "sqlquery-export"))
+        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$sqlquery-export");
+  }
+
+  @Test
+  void sqlQueryExportNotDeclaredWhenDisabled() {
+    final ConformanceProvider provider =
+        createProviderWithDisabledOperations(ops -> ops.setSqlQueryExportEnabled(false));
+    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
+
+    final Set<String> operationNames =
+        capabilityStatement.getRest().getFirst().getOperation().stream()
+            .map(CapabilityStatementRestResourceOperationComponent::getName)
+            .collect(Collectors.toSet());
+    // The sibling sqlquery-run operation remains enabled, so the operation list is still populated;
+    // only sqlquery-export should have been dropped.
+    assertThat(operationNames).contains("sqlquery-run").doesNotContain("sqlquery-export");
+  }
+
+  @Test
+  void authoredSqlOnFhirOperationDefinitionsNoLongerServed() {
+    for (final String name :
+        List.of("run", "viewdefinition-run", "viewdefinition-export", "sqlquery-run")) {
+      assertThatThrownBy(
+              () ->
+                  conformanceProvider.getOperationDefinitionById(
+                      new IdType("OperationDefinition/" + name + "-1")))
+          .as("OperationDefinition for %s should no longer be served", name)
+          .isInstanceOf(ResourceNotFoundError.class);
+    }
+  }
+
+  @Test
+  void otherOperationDefinitionsStillServed() {
+    // The Bulk Data export OperationDefinition continues to be served unchanged.
+    assertThat(
+            conformanceProvider.getOperationDefinitionById(
+                new IdType("OperationDefinition/export-1")))
+        .isNotNull();
   }
 
   @Test
@@ -574,6 +656,28 @@ class ConformanceProviderTest {
         .filter(r -> r.getType().equals(typeCode))
         .findFirst()
         .orElseThrow(() -> new AssertionError("Resource not found: " + typeCode));
+  }
+
+  /** Returns the declared {@code definition} canonical for a system-level operation, or null. */
+  private String systemOperationDefinition(
+      final CapabilityStatement capabilityStatement, final String operationName) {
+    return capabilityStatement.getRest().getFirst().getOperation().stream()
+        .filter(o -> operationName.equals(o.getName()))
+        .map(CapabilityStatementRestResourceOperationComponent::getDefinition)
+        .findFirst()
+        .orElse(null);
+  }
+
+  /** Returns the declared {@code definition} canonical for a resource-level operation, or null. */
+  private String resourceOperationDefinition(
+      final CapabilityStatement capabilityStatement,
+      final String typeCode,
+      final String operationName) {
+    return findResource(capabilityStatement, typeCode).getOperation().stream()
+        .filter(o -> operationName.equals(o.getName()))
+        .map(CapabilityStatementRestResourceOperationComponent::getDefinition)
+        .findFirst()
+        .orElse(null);
   }
 
   /**

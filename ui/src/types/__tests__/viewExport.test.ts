@@ -28,18 +28,20 @@ import { getViewExportOutputFiles } from "../viewExport";
 import type { Parameters } from "fhir/r4";
 
 describe("getViewExportOutputFiles", () => {
-  it("extracts output files from Parameters resource", () => {
-    // A manifest with two output files.
+  it("extracts one file per output from a spec-shaped manifest", () => {
+    // A spec-shaped manifest where each output has a name and a single location part.
     const manifest: Parameters = {
       resourceType: "Parameters",
       parameter: [
-        { name: "transactionTime", valueInstant: "2025-01-01T00:00:00Z" },
+        { name: "exportId", valueString: "job-abc" },
+        { name: "status", valueCode: "completed" },
+        { name: "_format", valueCode: "ndjson" },
         {
           name: "output",
           part: [
             { name: "name", valueString: "patients" },
             {
-              name: "url",
+              name: "location",
               valueUri:
                 "http://example.org/$result?job=abc&file=patients.ndjson",
             },
@@ -50,7 +52,7 @@ describe("getViewExportOutputFiles", () => {
           part: [
             { name: "name", valueString: "observations" },
             {
-              name: "url",
+              name: "location",
               valueUri:
                 "http://example.org/$result?job=abc&file=observations.ndjson",
             },
@@ -72,6 +74,43 @@ describe("getViewExportOutputFiles", () => {
     });
   });
 
+  it("emits one entry per location when a view produced multiple files", () => {
+    // A single output with several location parts (e.g. a Spark-partitioned view).
+    const manifest: Parameters = {
+      resourceType: "Parameters",
+      parameter: [
+        {
+          name: "output",
+          part: [
+            { name: "name", valueString: "observations" },
+            {
+              name: "location",
+              valueUri:
+                "http://example.org/$result?job=abc&file=observations-0.ndjson",
+            },
+            {
+              name: "location",
+              valueUri:
+                "http://example.org/$result?job=abc&file=observations-1.ndjson",
+            },
+          ],
+        },
+      ],
+    };
+
+    const outputs = getViewExportOutputFiles(manifest);
+
+    expect(outputs).toHaveLength(2);
+    expect(outputs[0]).toEqual({
+      name: "observations",
+      url: "http://example.org/$result?job=abc&file=observations-0.ndjson",
+    });
+    expect(outputs[1]).toEqual({
+      name: "observations",
+      url: "http://example.org/$result?job=abc&file=observations-1.ndjson",
+    });
+  });
+
   it("returns empty array when no parameter property", () => {
     // A manifest with no parameters.
     const manifest: Parameters = { resourceType: "Parameters" };
@@ -82,9 +121,7 @@ describe("getViewExportOutputFiles", () => {
     // A manifest with parameters but no output entries.
     const manifest: Parameters = {
       resourceType: "Parameters",
-      parameter: [
-        { name: "transactionTime", valueInstant: "2025-01-01T00:00:00Z" },
-      ],
+      parameter: [{ name: "status", valueCode: "completed" }],
     };
     expect(getViewExportOutputFiles(manifest)).toEqual([]);
   });

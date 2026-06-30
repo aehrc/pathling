@@ -49,6 +49,7 @@ import org.springframework.stereotype.Component;
  *       Library
  * </ul>
  *
+ * @author John Grimes
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-SQLQueryRun.html">SQLQueryRun</a>
  * @see SqlQueryRunProvider for system-level $sqlquery-run operation
@@ -90,6 +91,7 @@ public class SqlQueryInstanceRunProvider implements IResourceProvider {
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
    * @param parameters runtime parameter bindings as a Parameters resource
+   * @param source the unsupported external data source parameter, rejected when supplied
    * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
@@ -103,8 +105,11 @@ public class SqlQueryInstanceRunProvider implements IResourceProvider {
       @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
       @Nullable @OperationParam(name = "_limit") final IntegerType limit,
       @Nullable @OperationParam(name = "parameters") final Parameters parameters,
+      @Nullable @OperationParam(name = "source") final String source,
       @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
+
+    executionHelper.rejectSourceParameter(source);
 
     final String acceptHeader = requestDetails.getServletRequest().getHeader("Accept");
 
@@ -128,19 +133,24 @@ public class SqlQueryInstanceRunProvider implements IResourceProvider {
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
    * @param parameters runtime parameter bindings as a Parameters resource
+   * @param source the unsupported external data source parameter, rejected when supplied
    * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
   @Operation(name = "$sqlquery-run", idempotent = true, manualResponse = true)
   @OperationAccess("sqlquery-run")
+  @SuppressWarnings("java:S107")
   public void runById(
       @IdParam final IdType libraryId,
       @Nullable @OperationParam(name = "_format") final String format,
       @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
       @Nullable @OperationParam(name = "_limit") final IntegerType limit,
       @Nullable @OperationParam(name = "parameters") final Parameters parameters,
+      @Nullable @OperationParam(name = "source") final String source,
       @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
+
+    executionHelper.rejectSourceParameter(source);
 
     final IBaseResource libraryResource =
         libraryReferenceResolver.resolve(new Reference("Library/" + libraryId.getIdPart()));

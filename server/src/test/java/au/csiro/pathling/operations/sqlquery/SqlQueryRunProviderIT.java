@@ -198,6 +198,222 @@ class SqlQueryRunProviderIT {
         .isNotFound();
   }
 
+  // -------------------------------------------------------------------------
+  // source rejection (US1, FR-001) — every level, over POST and GET
+  // -------------------------------------------------------------------------
+
+  @Test
+  void sourceRejectedAtSystemLevelOverPost() {
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    final Map<String, Object> queryResourceParam = new LinkedHashMap<>();
+    queryResourceParam.put("name", "queryResource");
+    queryResourceParam.put(
+        "resource",
+        GSON.fromJson(
+            jsonParser.encodeResourceToString(sqlQueryLibrary(SELF_CONTAINED_SQL)), Map.class));
+    final Map<String, Object> sourceParam = new LinkedHashMap<>();
+    sourceParam.put("name", "source");
+    sourceParam.put("valueString", "external");
+    parameters.put("parameter", List.of(queryResourceParam, sourceParam));
+
+    sourceRejected("/fhir/$sqlquery-run", GSON.toJson(parameters));
+  }
+
+  @Test
+  void sourceRejectedAtSystemLevelOverGet() {
+    getExpectStatus("/fhir/$sqlquery-run?source=external&_format=ndjson", 400);
+  }
+
+  @Test
+  void sourceRejectedAtTypeLevelOverGet() {
+    getExpectStatus("/fhir/Library/$sqlquery-run?source=external&_format=ndjson", 400);
+  }
+
+  @Test
+  void sourceRejectedAtInstanceLevelOverGet() {
+    // The source rejection precedes the stored-Library read, so it applies even for a missing id.
+    getExpectStatus("/fhir/Library/some-id/$sqlquery-run?source=external&_format=ndjson", 400);
+  }
+
+  /** Posts a body carrying a source part and asserts a 400 naming source. */
+  private void sourceRejected(@Nonnull final String path, @Nonnull final String body) {
+    final byte[] content =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + path)
+            .header("Content-Type", "application/fhir+json")
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    assertThat(new String(Objects.requireNonNull(content), StandardCharsets.UTF_8))
+        .contains("source");
+  }
+
+  // -------------------------------------------------------------------------
+  // _format handling (US1, FR-002/FR-003/FR-004)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void unsupportedExplicitFormatReturns400() {
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    final Map<String, Object> queryResourceParam = new LinkedHashMap<>();
+    queryResourceParam.put("name", "queryResource");
+    queryResourceParam.put(
+        "resource",
+        GSON.fromJson(
+            jsonParser.encodeResourceToString(sqlQueryLibrary(SELF_CONTAINED_SQL)), Map.class));
+    final Map<String, Object> formatParam = new LinkedHashMap<>();
+    formatParam.put("name", "_format");
+    formatParam.put("valueString", "xml");
+    parameters.put("parameter", List.of(queryResourceParam, formatParam));
+
+    final byte[] content =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$sqlquery-run")
+            .header("Content-Type", "application/fhir+json")
+            .bodyValue(GSON.toJson(parameters))
+            .exchange()
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    assertThat(new String(Objects.requireNonNull(content), StandardCharsets.UTF_8)).contains("xml");
+  }
+
+  @Test
+  void acceptHeaderMismatchDefaultsToNdjson() {
+    // No _format parameter and an Accept that matches no supported media type: defaults to NDJSON
+    // (the explicit-format rejection applies only to _format, not to content negotiation).
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    final Map<String, Object> queryResourceParam = new LinkedHashMap<>();
+    queryResourceParam.put("name", "queryResource");
+    queryResourceParam.put(
+        "resource",
+        GSON.fromJson(
+            jsonParser.encodeResourceToString(sqlQueryLibrary(SELF_CONTAINED_SQL)), Map.class));
+    parameters.put("parameter", List.of(queryResourceParam));
+
+    webTestClient
+        .post()
+        .uri("http://localhost:" + port + "/fhir/$sqlquery-run")
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/xml")
+        .bodyValue(GSON.toJson(parameters))
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectHeader()
+        .contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"));
+  }
+
+  // -------------------------------------------------------------------------
+  // Conformance canonical (US2, FR-005/FR-006)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void sqlQueryRunDeclaresSpecCanonicalAndForkNotServed() {
+    final byte[] metadata =
+        webTestClient
+            .get()
+            .uri("http://localhost:" + port + "/fhir/metadata")
+            .header("Accept", "application/fhir+json")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+
+    final Map<String, Object> capability =
+        GSON.fromJson(
+            new String(Objects.requireNonNull(metadata), StandardCharsets.UTF_8), Map.class);
+    final List<Map<String, Object>> rest = (List<Map<String, Object>>) capability.get("rest");
+    final List<Map<String, Object>> operations =
+        (List<Map<String, Object>>) rest.get(0).get("operation");
+
+    final String sqlQueryRunDefinition =
+        operations.stream()
+            .filter(o -> "sqlquery-run".equals(o.get("name")))
+            .map(o -> (String) o.get("definition"))
+            .findFirst()
+            .orElse(null);
+    assertThat(sqlQueryRunDefinition)
+        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$sqlquery-run");
+
+    // The Pathling-authored sqlquery-run OperationDefinition is no longer served.
+    getExpectStatus("/fhir/OperationDefinition/sqlquery-run", 404);
+  }
+
+  // -------------------------------------------------------------------------
+  // 422 for an unmappable FHIR column type (US11, FR-036/FR-037)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void fhirFormatWithUnmappableColumnTypeReturns422() {
+    // _format=fhir requires every column to map to a FHIR value; an array column cannot, so the
+    // shared streaming helper rejects it up front with 422 before any bytes are written. This
+    // regression test guards the existing behaviour in ResultStreamingHelper.
+    final String arrayColumnSql = "SELECT 1 AS id, array(1, 2, 3) AS arr";
+
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    final Map<String, Object> queryResourceParam = new LinkedHashMap<>();
+    queryResourceParam.put("name", "queryResource");
+    queryResourceParam.put(
+        "resource",
+        GSON.fromJson(
+            jsonParser.encodeResourceToString(sqlQueryLibrary(arrayColumnSql)), Map.class));
+    final Map<String, Object> formatParam = new LinkedHashMap<>();
+    formatParam.put("name", "_format");
+    formatParam.put("valueString", "fhir");
+    parameters.put("parameter", List.of(queryResourceParam, formatParam));
+    final String body = GSON.toJson(parameters);
+
+    webTestClient
+        .post()
+        .uri("http://localhost:" + port + "/fhir/$sqlquery-run")
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(body)
+        .exchange()
+        .expectStatus()
+        .isEqualTo(422);
+
+    // The same query in a flat format (NDJSON) succeeds.
+    final Map<String, Object> ndjsonParameters = new LinkedHashMap<>();
+    ndjsonParameters.put("resourceType", "Parameters");
+    final Map<String, Object> ndjsonQueryParam = new LinkedHashMap<>();
+    ndjsonQueryParam.put("name", "queryResource");
+    ndjsonQueryParam.put(
+        "resource",
+        GSON.fromJson(
+            jsonParser.encodeResourceToString(sqlQueryLibrary(arrayColumnSql)), Map.class));
+    ndjsonParameters.put("parameter", List.of(ndjsonQueryParam));
+
+    postOk("/fhir/$sqlquery-run", GSON.toJson(ndjsonParameters), SqlQueryOutputFormat.NDJSON);
+  }
+
+  /** Issues a GET and asserts the given status code. */
+  private void getExpectStatus(@Nonnull final String path, final int status) {
+    webTestClient
+        .get()
+        .uri("http://localhost:" + port + path)
+        .header("Accept", "application/fhir+json")
+        .exchange()
+        .expectStatus()
+        .isEqualTo(status);
+  }
+
   @Nonnull
   private String postOk(
       @Nonnull final String path,

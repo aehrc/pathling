@@ -18,114 +18,93 @@
 package au.csiro.pathling.operations.view;
 
 import au.csiro.pathling.OperationResponse;
-import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import au.csiro.pathling.operations.export.ExportManifest;
+import au.csiro.pathling.operations.export.ExportManifestOutput;
 import jakarta.annotation.Nonnull;
-import java.net.URISyntaxException;
+import jakarta.annotation.Nullable;
+import java.time.Instant;
 import java.util.List;
 import lombok.Getter;
-import org.apache.http.client.utils.URIBuilder;
-import org.hl7.fhir.r4.model.BooleanType;
-import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.UriType;
 
 /**
- * Represents the response from a ViewDefinition export operation, containing the export manifest.
+ * Represents the completion manifest returned at the result URL of a {@code $viewdefinition-export}
+ * operation. The manifest follows the SQL on FHIR shape: a required {@code exportId} and {@code
+ * status}, the echoed {@code clientTrackingId} and {@code _format}, the export timing fields, and
+ * one {@code output} per exported view with a {@code name} and one or more {@code location}
+ * download URLs.
  *
  * @author John Grimes
  */
 @Getter
 public class ViewDefinitionExportResponse implements OperationResponse<Parameters> {
 
-  @Nonnull private final String kickOffRequestUrl;
-
   @Nonnull private final String serverBaseUrl;
 
   @Nonnull private final List<ViewExportOutput> outputs;
 
-  /** Whether an access token is required to retrieve results. */
-  private final boolean requiresAccessToken;
+  /** The server-assigned export job identifier. */
+  @Nonnull private final String exportId;
+
+  /** The client-supplied tracking identifier, echoed only when present. */
+  @Nullable private final String clientTrackingId;
+
+  /** The effective output format code (e.g. {@code ndjson}). */
+  @Nonnull private final String format;
+
+  /** The time the export job was created (kick-off time). */
+  @Nonnull private final Instant exportStartTime;
+
+  /** The time the manifest was built on completion. */
+  @Nonnull private final Instant exportEndTime;
 
   /**
    * Creates a new ViewDefinitionExportResponse.
    *
-   * @param kickOffRequestUrl the original export request URL (used in the manifest)
    * @param serverBaseUrl the FHIR server base URL (used for constructing result URLs)
    * @param outputs the list of view export outputs
-   * @param requiresAccessToken whether access token is required to retrieve results
+   * @param exportId the server-assigned export job identifier
+   * @param clientTrackingId the client-supplied tracking identifier, or null if none was supplied
+   * @param format the effective output format code
+   * @param exportStartTime the export job creation (kick-off) time
+   * @param exportEndTime the time the manifest is built on completion
    */
+  @SuppressWarnings("java:S107")
   public ViewDefinitionExportResponse(
-      @Nonnull final String kickOffRequestUrl,
       @Nonnull final String serverBaseUrl,
       @Nonnull final List<ViewExportOutput> outputs,
-      final boolean requiresAccessToken) {
-    this.kickOffRequestUrl = kickOffRequestUrl;
+      @Nonnull final String exportId,
+      @Nullable final String clientTrackingId,
+      @Nonnull final String format,
+      @Nonnull final Instant exportStartTime,
+      @Nonnull final Instant exportEndTime) {
     this.serverBaseUrl = serverBaseUrl;
     this.outputs = outputs;
-    this.requiresAccessToken = requiresAccessToken;
+    this.exportId = exportId;
+    this.clientTrackingId = clientTrackingId;
+    this.format = format;
+    this.exportStartTime = exportStartTime;
+    this.exportEndTime = exportEndTime;
   }
 
   @Nonnull
   @Override
   public Parameters toOutput() {
-    final Parameters parameters = new Parameters();
-
-    // Ensure the base URL ends with a slash for proper URL construction.
-    final String normalizedBaseUrl =
-        serverBaseUrl.endsWith("/") ? serverBaseUrl : serverBaseUrl + "/";
-
-    // Add transactionTime parameter.
-    parameters.addParameter().setName("transactionTime").setValue(InstantType.now());
-
-    // Add request parameter.
-    parameters.addParameter().setName("request").setValue(new UriType(kickOffRequestUrl));
-
-    // Add requiresAccessToken parameter.
-    parameters
-        .addParameter()
-        .setName("requiresAccessToken")
-        .setValue(new BooleanType(requiresAccessToken));
-
-    // Add output parameters.
-    for (final ViewExportOutput output : outputs) {
-      for (final String fileUrl : output.fileUrls()) {
-        final ParametersParameterComponent outputParam =
-            parameters.addParameter().setName("output");
-        outputParam.addPart().setName("name").setValue(new StringType(output.name()));
-        outputParam
-            .addPart()
-            .setName("url")
-            .setValue(new UriType(buildResultUrl(normalizedBaseUrl, fileUrl)));
-      }
-    }
-
-    return parameters;
-  }
-
-  /**
-   * Converts a local file URL to a remote result URL.
-   *
-   * @param baseUrl the normalised base server URL
-   * @param localUrl the local file URL containing the job ID and filename
-   * @return the remote result URL
-   */
-  @Nonnull
-  private static String buildResultUrl(
-      @Nonnull final String baseUrl, @Nonnull final String localUrl) {
-    try {
-      final String[] parts = localUrl.split("/jobs/")[1].split("/");
-      final String jobUuid = parts[0];
-      final String file = parts[1];
-
-      return new URIBuilder(baseUrl + "$result")
-          .addParameter("job", jobUuid)
-          .addParameter("file", file)
-          .build()
-          .toString();
-    } catch (final URISyntaxException e) {
-      throw new InternalErrorException(e);
-    }
+    // Delegate to the shared manifest builder, mapping each view output to the generic export
+    // output shape. Both export operations produce the identical manifest, so the construction
+    // lives in one place.
+    final List<ExportManifestOutput> manifestOutputs =
+        outputs.stream()
+            .map(output -> new ExportManifestOutput(output.name(), output.fileUrls()))
+            .toList();
+    return new ExportManifest(
+            serverBaseUrl,
+            exportId,
+            clientTrackingId,
+            format,
+            exportStartTime,
+            exportEndTime,
+            manifestOutputs)
+        .toParameters();
   }
 }

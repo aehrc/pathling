@@ -19,11 +19,13 @@ package au.csiro.pathling.operations.view;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
+import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -34,6 +36,8 @@ import au.csiro.pathling.views.ViewDefinitionGson;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import jakarta.annotation.Nonnull;
@@ -55,9 +59,11 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Reference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -89,6 +95,8 @@ public class ViewExecutionHelper {
 
   @Nonnull private final ResultStreamingHelper streamingHelper;
 
+  @Nonnull private final ReadExecutor readExecutor;
+
   /**
    * Constructs a new ViewExecutionHelper.
    *
@@ -99,7 +107,9 @@ public class ViewExecutionHelper {
    * @param patientCompartmentService the patient compartment service
    * @param groupMemberService the group member service
    * @param serverConfiguration the server configuration
+   * @param readExecutor the read executor for resolving stored ViewDefinitions by id
    */
+  @SuppressWarnings("java:S107")
   @Autowired
   public ViewExecutionHelper(
       @Nonnull final SparkSession sparkSession,
@@ -108,7 +118,8 @@ public class ViewExecutionHelper {
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final PatientCompartmentService patientCompartmentService,
       @Nonnull final GroupMemberService groupMemberService,
-      @Nonnull final ServerConfiguration serverConfiguration) {
+      @Nonnull final ServerConfiguration serverConfiguration,
+      @Nonnull final ReadExecutor readExecutor) {
     this.sparkSession = sparkSession;
     this.deltaLake = deltaLake;
     this.fhirContext = fhirContext;
@@ -116,8 +127,125 @@ public class ViewExecutionHelper {
     this.patientCompartmentService = patientCompartmentService;
     this.groupMemberService = groupMemberService;
     this.serverConfiguration = serverConfiguration;
+    this.readExecutor = readExecutor;
     this.gson = ViewDefinitionGson.create();
     this.streamingHelper = new ResultStreamingHelper(gson);
+  }
+
+  /**
+   * Rejects the unsupported {@code source} parameter (external data source). Pathling does not
+   * implement external data sources, so a supplied {@code source} value is rejected rather than
+   * silently ignored, which would mislead the client about the data that was queried.
+   *
+   * @param source the {@code source} parameter value, if supplied
+   * @throws InvalidRequestException if {@code source} is present and non-blank
+   */
+  public void rejectSourceParameter(@Nullable final String source) {
+    if (source != null && !source.isBlank()) {
+      throw new InvalidRequestException(
+          "The 'source' parameter (external data source) is not supported by this server.");
+    }
+  }
+
+  /**
+   * Resolves the ViewDefinition to run from the mutually exclusive {@code viewResource} and {@code
+   * viewReference} parameters, for the system and type levels. Exactly one must be supplied.
+   *
+   * @param viewResource the inline ViewDefinition resource, if supplied
+   * @param viewReference a literal relative reference to a stored ViewDefinition, if supplied
+   * @return the ViewDefinition resource to execute
+   * @throws InvalidRequestException (400) if both or neither parameter is supplied
+   * @throws ResourceNotFoundException (404) if the reference does not resolve to a stored
+   *     ViewDefinition
+   */
+  @Nonnull
+  public IBaseResource resolveViewInput(
+      @Nullable final IBaseResource viewResource, @Nullable final Reference viewReference) {
+    final boolean hasResource = viewResource != null;
+    final boolean hasReference = viewReference != null && !viewReference.isEmpty();
+
+    if (hasResource && hasReference) {
+      throw new InvalidRequestException(
+          "Provide exactly one of 'viewResource' or 'viewReference', not both.");
+    }
+    if (!hasResource && !hasReference) {
+      throw new InvalidRequestException(
+          "Either 'viewResource' or 'viewReference' must be provided.");
+    }
+    if (hasResource) {
+      return viewResource;
+    }
+
+    final String id = ReferenceParameters.extractId(viewReference);
+    if (id == null) {
+      throw new ResourceNotFoundException(
+          "The viewReference does not resolve to a stored ViewDefinition.");
+    }
+    return readStoredViewDefinition(id);
+  }
+
+  /**
+   * Reads a stored ViewDefinition by its logical id, mapping a missing resource to a 404.
+   *
+   * @param id the logical id of the stored ViewDefinition
+   * @return the stored ViewDefinition resource
+   * @throws ResourceNotFoundException (404) if no ViewDefinition with the id exists
+   */
+  @Nonnull
+  public IBaseResource readStoredViewDefinition(@Nonnull final String id) {
+    try {
+      return readExecutor.read("ViewDefinition", id);
+    } catch (final ResourceNotFoundError e) {
+      throw new ResourceNotFoundException("ViewDefinition with ID '" + id + "' not found");
+    } catch (final IllegalArgumentException e) {
+      // Handle the case where no ViewDefinition data exists in the data source at all.
+      if (e.getMessage() != null && e.getMessage().contains("No data found for resource type")) {
+        throw new ResourceNotFoundException("ViewDefinition with ID '" + id + "' not found");
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * Reduces the {@code patient} parameter (a {@code Reference} capped at one) to the logical id
+   * used for compartment filtering.
+   *
+   * @param patients the supplied {@code patient} references, if any
+   * @return a list containing the single patient logical id, or an empty list
+   * @throws InvalidRequestException (400) if more than one {@code patient} is supplied
+   */
+  @Nonnull
+  public List<String> toPatientIds(@Nullable final List<Reference> patients) {
+    if (patients == null || patients.isEmpty()) {
+      return List.of();
+    }
+    if (patients.size() > 1) {
+      throw new InvalidRequestException("Only a single 'patient' parameter is supported.");
+    }
+    final String id = ReferenceParameters.extractId(patients.get(0));
+    return id == null ? List.of() : List.of(id);
+  }
+
+  /**
+   * Reduces the repeatable {@code group} parameter ({@code Reference} values) to the logical ids
+   * used for compartment filtering.
+   *
+   * @param groups the supplied {@code group} references, if any
+   * @return the list of group logical ids, in order
+   */
+  @Nonnull
+  public List<IdType> toGroupIds(@Nullable final List<Reference> groups) {
+    if (groups == null || groups.isEmpty()) {
+      return List.of();
+    }
+    final List<IdType> ids = new ArrayList<>();
+    for (final Reference group : groups) {
+      final String id = ReferenceParameters.extractId(group);
+      if (id != null) {
+        ids.add(new IdType(id));
+      }
+    }
+    return ids;
   }
 
   /**
@@ -160,10 +288,11 @@ public class ViewExecutionHelper {
           PathlingAuthority.resourceAccess(AccessType.READ, view.getResource()));
     }
 
-    // Determine output format: _format parameter overrides Accept header.
+    // Determine output format: an explicit _format parameter is parsed strictly (an unsupported
+    // value is rejected), while Accept-header negotiation remains lenient and falls back to NDJSON.
     final ViewOutputFormat outputFormat =
         (format != null && !format.isBlank())
-            ? ViewOutputFormat.fromString(format)
+            ? ViewOutputFormat.fromStringStrict(format)
             : ViewOutputFormat.fromAcceptHeader(acceptHeader);
     final boolean shouldIncludeHeader = includeHeader == null || includeHeader.booleanValue();
 
@@ -212,7 +341,9 @@ public class ViewExecutionHelper {
     try {
       result = executor.buildQuery(view);
     } catch (final ConstraintViolationException e) {
-      throw new InvalidRequestException("Invalid ViewDefinition: " + e.getMessage());
+      // A well-formed request carrying a semantically invalid ViewDefinition maps to 422,
+      // distinct from the 400 used for malformed requests and invalid parameters.
+      throw new UnprocessableEntityException("Invalid ViewDefinition: " + e.getMessage());
     } catch (final UnsupportedOperationException | UnsupportedFhirPathFeatureError e) {
       // Thrown when a FHIRPath expression is not supported, such as accessing a choice element
       // without specifying the type via ofType().
@@ -301,16 +432,32 @@ public class ViewExecutionHelper {
     return dataSource;
   }
 
-  /** Parses inline FHIR resources from JSON strings. */
+  /**
+   * Parses inline FHIR resources from JSON strings, unwrapping any {@code Bundle} value into its
+   * entry resources. A {@code Bundle} contributes its {@code entry[*].resource} members (one level
+   * of unwrapping); standalone resources are used directly. The data source is the union of all
+   * standalone resources and all unwrapped Bundle entry resources; an empty Bundle contributes
+   * nothing.
+   */
   @Nonnull
   private List<IBaseResource> parseInlineResources(@Nonnull final List<String> inlineResources) {
     final IParser jsonParser = fhirContext.newJsonParser();
     final List<IBaseResource> resources = new ArrayList<>();
     for (final String resourceJson : inlineResources) {
+      final IBaseResource parsed;
       try {
-        resources.add(jsonParser.parseResource(resourceJson));
+        parsed = jsonParser.parseResource(resourceJson);
       } catch (final Exception e) {
         throw new InvalidRequestException("Invalid inline resource: " + e.getMessage());
+      }
+      if (parsed instanceof final Bundle bundle) {
+        for (final Bundle.BundleEntryComponent entry : bundle.getEntry()) {
+          if (entry.hasResource()) {
+            resources.add(entry.getResource());
+          }
+        }
+      } else {
+        resources.add(parsed);
       }
     }
     return resources;

@@ -28,6 +28,7 @@ import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.operations.view.ViewDefinitionRunProvider;
 import au.csiro.pathling.operations.view.ViewExecutionHelper;
+import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
@@ -69,7 +70,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
   FhirServerTestConfiguration.class,
   PatientCompartmentService.class,
   GroupMemberService.class,
-  ViewExecutionHelper.class
+  ViewExecutionHelper.class,
+  ReadExecutor.class
 })
 class SecurityEnabledViewOperationTest extends SecurityTest {
 
@@ -109,7 +111,9 @@ class SecurityEnabledViewOperationTest extends SecurityTest {
                     null,
                     null,
                     null,
+                    null,
                     List.of(inlinePatient),
+                    null,
                     mockRequestDetails(),
                     response))
         .isExactlyInstanceOf(AccessDeniedError.class)
@@ -140,7 +144,9 @@ class SecurityEnabledViewOperationTest extends SecurityTest {
                     null,
                     null,
                     null,
+                    null,
                     List.of(inlinePatient),
+                    null,
                     mockRequestDetails(),
                     response));
 
@@ -170,7 +176,9 @@ class SecurityEnabledViewOperationTest extends SecurityTest {
                     null,
                     null,
                     null,
+                    null,
                     List.of(inlinePatient),
+                    null,
                     mockRequestDetails(),
                     response));
 
@@ -200,7 +208,9 @@ class SecurityEnabledViewOperationTest extends SecurityTest {
                     null,
                     null,
                     null,
+                    null,
                     List.of(inlinePatient),
+                    null,
                     mockRequestDetails(),
                     response))
         .isExactlyInstanceOf(AccessDeniedError.class)
@@ -230,7 +240,9 @@ class SecurityEnabledViewOperationTest extends SecurityTest {
                     null,
                     null,
                     null,
+                    null,
                     List.of(inlinePatient),
+                    null,
                     mockRequestDetails(),
                     response))
         .isExactlyInstanceOf(AccessDeniedError.class)
@@ -260,7 +272,9 @@ class SecurityEnabledViewOperationTest extends SecurityTest {
                     null,
                     null,
                     null,
+                    null,
                     List.of(inlineObservation),
+                    null,
                     mockRequestDetails(),
                     response));
 

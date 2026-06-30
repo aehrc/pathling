@@ -17,10 +17,16 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { OperationOutcomeError, UnauthorizedError } from "../../types/errors";
+import {
+  NotFoundError,
+  OperationOutcomeError,
+  UnauthorizedError,
+} from "../../types/errors";
 import {
   listSqlQueryLibraries,
   SQL_QUERY_LIBRARY_TYPE_FILTER,
+  sqlQueryExportDownload,
+  sqlQueryExportKickOff,
   sqlQueryRun,
 } from "../sqlQuery";
 
@@ -363,6 +369,84 @@ describe("listSqlQueryLibraries", () => {
     );
     await expect(
       listSqlQueryLibraries("https://example.com/fhir"),
+    ).rejects.toThrow(UnauthorizedError);
+  });
+});
+
+describe("sqlQueryExportKickOff", () => {
+  // The kick-off must request asynchronous processing and return the polling
+  // URL carried by the Content-Location header.
+  it("sets Prefer: respond-async and returns the polling URL", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, {
+        status: 202,
+        headers: { "Content-Location": "https://example.com/fhir/$job?id=abc" },
+      }),
+    );
+
+    const result = await sqlQueryExportKickOff("https://example.com/fhir", {
+      request: {
+        mode: "stored",
+        libraryId: "patient-bp-query",
+        format: "ndjson",
+      },
+    });
+
+    expect(result.pollingUrl).toBe("https://example.com/fhir/$job?id=abc");
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://example.com/fhir/$sqlquery-export",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ Prefer: "respond-async" }),
+      }),
+    );
+  });
+
+  // Without a Content-Location header the kick-off cannot be polled, so it
+  // fails rather than returning an undefined URL.
+  it("throws when no Content-Location header is present", async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202 }));
+    await expect(
+      sqlQueryExportKickOff("https://example.com/fhir", {
+        request: { mode: "stored", libraryId: "q", format: "ndjson" },
+      }),
+    ).rejects.toThrow("No Content-Location");
+  });
+});
+
+describe("sqlQueryExportDownload", () => {
+  it("returns the response body stream on success", async () => {
+    const body = new ReadableStream();
+    mockFetch.mockResolvedValueOnce(new Response(body, { status: 200 }));
+
+    const stream = await sqlQueryExportDownload({
+      location: "https://example.com/fhir/$result?job=j&file=people.ndjson",
+    });
+
+    expect(stream).toBe(body);
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://example.com/fhir/$result?job=j&file=people.ndjson",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("throws NotFoundError on a 404 response", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("Not found", { status: 404 }));
+    await expect(
+      sqlQueryExportDownload({
+        location: "https://example.com/fhir/$result?job=j&file=x",
+      }),
+    ).rejects.toThrow(NotFoundError);
+  });
+
+  it("throws UnauthorizedError on a 401 response", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
+    await expect(
+      sqlQueryExportDownload({
+        location: "https://example.com/fhir/$result?job=j&file=x",
+      }),
     ).rejects.toThrow(UnauthorizedError);
   });
 });
