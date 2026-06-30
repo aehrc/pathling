@@ -21,11 +21,14 @@ import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import org.apache.spark.sql.Column;
 
 /**
  * Contains functions for manipulating strings.
@@ -66,5 +69,77 @@ public class StringFunctions {
                 nonNull(separator)
                     ? separator.asSingular().getColumn()
                     : DefaultRepresentation.literal(JOIN_DEFAULT_SEPARATOR)));
+  }
+
+  /**
+   * The startsWith function returns true when the input string starts with the given prefix.
+   *
+   * <p>If prefix is the empty string ({@code ''}), the result is {@code true}.
+   *
+   * <p>If the input collection or prefix is empty, the result is empty.
+   *
+   * @param input The input string
+   * @param prefix The prefix to check for
+   * @return A {@link BooleanCollection} containing the result
+   * @see <a
+   *     href="https://build.fhir.org/ig/HL7/FHIRPath/en/#startswithprefix--string--boolean">FHIRPath
+   *     Specification - startsWith</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.EXPERIMENTAL)
+  @Nonnull
+  public static BooleanCollection startsWith(
+      @Nonnull final StringCollection input, @Nonnull final StringCollection prefix) {
+    return BooleanCollection.build(
+        ColumnRepresentation.binaryOperator(
+            input.asSingular().getColumn(), prefix.asSingular().getColumn(), Column::startsWith));
+  }
+
+  /**
+   * The endsWith function returns true when the input string ends with the given suffix.
+   *
+   * <p>If suffix is the empty string ({@code ''}), the result is {@code true}.
+   *
+   * <p>If the input collection or suffix is empty, the result is empty.
+   *
+   * @param input The input string
+   * @param suffix The suffix to check for
+   * @return A {@link BooleanCollection} containing the result
+   * @see <a
+   *     href="https://build.fhir.org/ig/HL7/FHIRPath/en/#endswithsuffix--string--boolean">FHIRPath
+   *     Specification - endsWith</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.EXPERIMENTAL)
+  @Nonnull
+  public static BooleanCollection endsWith(
+      @Nonnull final StringCollection input, @Nonnull final StringCollection suffix) {
+    return BooleanCollection.build(
+        ColumnRepresentation.binaryOperator(
+            input.asSingular().getColumn(), suffix.asSingular().getColumn(), Column::endsWith));
+  }
+
+  /**
+   * The contains function returns true when the input string contains the given substring.
+   *
+   * <p>If substring is the empty string ({@code ''}), the result is {@code true}.
+   *
+   * <p>If the input collection or substring is empty, the result is empty.
+   *
+   * @param input The input string
+   * @param substring The substring to check for
+   * @return A {@link BooleanCollection} containing the result
+   * @see <a
+   *     href="https://build.fhir.org/ig/HL7/FHIRPath/en/#containssubstring--string--boolean">FHIRPath
+   *     Specification - contains</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.EXPERIMENTAL)
+  @Nonnull
+  public static BooleanCollection contains(
+      @Nonnull final StringCollection input, @Nonnull final StringCollection substring) {
+    return BooleanCollection.build(
+        ColumnRepresentation.binaryOperator(
+            input.asSingular().getColumn(), substring.asSingular().getColumn(), Column::contains));
   }
 }
