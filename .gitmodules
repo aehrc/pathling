@@ -1,3 +1,4 @@
 [submodule "sql-on-fhir"]
 	path = sql-on-fhir
-	url = https://github.com/FHIR/sql-on-fhir.js.git
+	url = git@github.com:piotrszul/sql-on-fhir.js.git
+	branch = staging/benchmark
