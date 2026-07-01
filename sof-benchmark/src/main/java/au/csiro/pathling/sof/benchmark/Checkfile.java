@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * The committed build-time lock artifact that sits beside a benchmark file (see {@code
@@ -111,62 +112,39 @@ public final class Checkfile {
     }
     return new Checkfile(
         true,
-        parseAssertions(root.path("assertions")),
-        parseResourceCounts(root.path("sizes")),
-        parseFileChecksums(root.path("sizes")));
+        parseNested(root.path("assertions"), Function.identity(), JsonNode::asInt),
+        parseNested(root.path("sizes"), size -> size.path("resourceCounts"), JsonNode::asInt),
+        parseNested(
+            root.path("sizes"), size -> size.path("files"), file -> file.path("sha256").asText()));
   }
 
+  /**
+   * Parses a two-level JSON object into a nested map, selecting the inner object from each outer
+   * value and extracting each inner value.
+   *
+   * @param outer the outer JSON object (its field names become the outer map keys)
+   * @param innerSelector selects the inner JSON object to iterate from each outer value
+   * @param valueExtractor extracts the typed value from each inner JSON value
+   * @param <V> the inner value type
+   * @return the nested map, preserving field order
+   */
   @Nonnull
-  private static Map<String, Map<String, Integer>> parseAssertions(@Nonnull final JsonNode node) {
-    final Map<String, Map<String, Integer>> result = new LinkedHashMap<>();
-    final Iterator<Map.Entry<String, JsonNode>> cases = node.fields();
-    while (cases.hasNext()) {
-      final Map.Entry<String, JsonNode> caseEntry = cases.next();
-      final Map<String, Integer> bySize = new LinkedHashMap<>();
-      final Iterator<Map.Entry<String, JsonNode>> sizes = caseEntry.getValue().fields();
-      while (sizes.hasNext()) {
-        final Map.Entry<String, JsonNode> sizeEntry = sizes.next();
-        bySize.put(sizeEntry.getKey(), sizeEntry.getValue().asInt());
+  private static <V> Map<String, Map<String, V>> parseNested(
+      @Nonnull final JsonNode outer,
+      @Nonnull final Function<JsonNode, JsonNode> innerSelector,
+      @Nonnull final Function<JsonNode, V> valueExtractor) {
+    final Map<String, Map<String, V>> result = new LinkedHashMap<>();
+    final Iterator<Map.Entry<String, JsonNode>> outerFields = outer.fields();
+    while (outerFields.hasNext()) {
+      final Map.Entry<String, JsonNode> outerEntry = outerFields.next();
+      final Map<String, V> inner = new LinkedHashMap<>();
+      final Iterator<Map.Entry<String, JsonNode>> innerFields =
+          innerSelector.apply(outerEntry.getValue()).fields();
+      while (innerFields.hasNext()) {
+        final Map.Entry<String, JsonNode> innerEntry = innerFields.next();
+        inner.put(innerEntry.getKey(), valueExtractor.apply(innerEntry.getValue()));
       }
-      result.put(caseEntry.getKey(), bySize);
-    }
-    return result;
-  }
-
-  @Nonnull
-  private static Map<String, Map<String, Integer>> parseResourceCounts(
-      @Nonnull final JsonNode sizes) {
-    final Map<String, Map<String, Integer>> result = new LinkedHashMap<>();
-    final Iterator<Map.Entry<String, JsonNode>> sizeFields = sizes.fields();
-    while (sizeFields.hasNext()) {
-      final Map.Entry<String, JsonNode> sizeEntry = sizeFields.next();
-      final Map<String, Integer> counts = new LinkedHashMap<>();
-      final Iterator<Map.Entry<String, JsonNode>> countFields =
-          sizeEntry.getValue().path("resourceCounts").fields();
-      while (countFields.hasNext()) {
-        final Map.Entry<String, JsonNode> countEntry = countFields.next();
-        counts.put(countEntry.getKey(), countEntry.getValue().asInt());
-      }
-      result.put(sizeEntry.getKey(), counts);
-    }
-    return result;
-  }
-
-  @Nonnull
-  private static Map<String, Map<String, String>> parseFileChecksums(
-      @Nonnull final JsonNode sizes) {
-    final Map<String, Map<String, String>> result = new LinkedHashMap<>();
-    final Iterator<Map.Entry<String, JsonNode>> sizeFields = sizes.fields();
-    while (sizeFields.hasNext()) {
-      final Map.Entry<String, JsonNode> sizeEntry = sizeFields.next();
-      final Map<String, String> checksums = new LinkedHashMap<>();
-      final Iterator<Map.Entry<String, JsonNode>> fileFields =
-          sizeEntry.getValue().path("files").fields();
-      while (fileFields.hasNext()) {
-        final Map.Entry<String, JsonNode> fileEntry = fileFields.next();
-        checksums.put(fileEntry.getKey(), fileEntry.getValue().path("sha256").asText());
-      }
-      result.put(sizeEntry.getKey(), checksums);
+      result.put(outerEntry.getKey(), inner);
     }
     return result;
   }

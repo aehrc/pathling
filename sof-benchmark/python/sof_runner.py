@@ -84,11 +84,8 @@ def checkfile_sibling(benchmark_file: Path) -> Path:
     :param benchmark_file: the path to the benchmark ``*.json`` file.
     :return: the sibling ``*.check.json`` path.
     """
-    return benchmark_file.resolve().with_name(
-        benchmark_file.name[: -len(".json")] + ".check.json"
-        if benchmark_file.name.endswith(".json")
-        else benchmark_file.name + ".check.json"
-    )
+    base = benchmark_file.name.removesuffix(".json")
+    return benchmark_file.resolve().with_name(base + ".check.json")
 
 
 def load_checkfile(benchmark_file: Path) -> Optional[dict]:
@@ -395,9 +392,10 @@ def main() -> None:
                 measurement,
             )
 
+            pathling_version = resolve_version()
             report = build_report(
-                resolve_version(),
-                resolve_version(),
+                pathling_version,
+                pathling_version,
                 benchmark,
                 dataset,
                 environment(pc),
