@@ -32,6 +32,8 @@ together with the core. They are also child modules of the main `pom.xml`.
 - `site` - A website that contains documentation for Pathling.
 - `benchmark` - A benchmark for evaluating the performance of Pathling query
   execution.
+- `sof-benchmark` - A runner for the implementation-agnostic SQL-on-FHIR
+  performance benchmark, executed over the Pathling engine.
 
 The following modules are versioned independently and are **not** children of
 the main `pom.xml`:
@@ -57,6 +59,7 @@ graph TD
     r[lib/R<br/>R bindings]
     site[site<br/>Documentation website]
     benchmark[benchmark<br/>Performance benchmarks]
+    sof-benchmark[sof-benchmark<br/>SQL-on-FHIR benchmark runner]
     server[server<br/>FHIR server]
     ui[ui<br/>Admin UI]
     test-data[test-data<br/>Test data generation]
@@ -79,6 +82,7 @@ graph TD
     site --> python
     site --> r
     benchmark --> test-data
+    sof-benchmark --> library-runtime
 ```
 
 The "public API" of Pathling is defined as the public API of the library API
