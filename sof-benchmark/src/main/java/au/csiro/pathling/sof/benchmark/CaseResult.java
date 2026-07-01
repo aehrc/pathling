@@ -27,7 +27,7 @@ import java.util.List;
  */
 public class CaseResult {
 
-  @Nonnull private final String title;
+  @Nonnull private final String id;
 
   @Nonnull private final String status;
 
@@ -42,7 +42,7 @@ public class CaseResult {
   /**
    * Constructs a case result.
    *
-   * @param title the case title
+   * @param id the stable case id (the report's per-case key)
    * @param status {@code ok} or {@code count_mismatch}
    * @param inputRows the input row count of the subject
    * @param outputRows the output row count of the view
@@ -50,13 +50,13 @@ public class CaseResult {
    * @param loadMs the load duration of the subject in milliseconds
    */
   public CaseResult(
-      @Nonnull final String title,
+      @Nonnull final String id,
       @Nonnull final String status,
       final long inputRows,
       final long outputRows,
       @Nonnull final List<Double> executeExtractSamplesMs,
       final double loadMs) {
-    this.title = title;
+    this.id = id;
     this.status = status;
     this.inputRows = inputRows;
     this.outputRows = outputRows;
@@ -65,13 +65,13 @@ public class CaseResult {
   }
 
   /**
-   * Returns the case title.
+   * Returns the stable case id.
    *
-   * @return the case title
+   * @return the case id
    */
   @Nonnull
-  public String getTitle() {
-    return title;
+  public String getId() {
+    return id;
   }
 
   /**

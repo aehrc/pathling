@@ -48,6 +48,10 @@ public class BenchmarkFile {
 
   @Nonnull private static final ObjectMapper MAPPER = new ObjectMapper();
 
+  @Nonnull private final String name;
+
+  @Nonnull private final String version;
+
   @Nonnull private final String title;
 
   @Nonnull private final String fhirVersion;
@@ -61,12 +65,16 @@ public class BenchmarkFile {
   private final int measurement;
 
   private BenchmarkFile(
+      @Nonnull final String name,
+      @Nonnull final String version,
       @Nonnull final String title,
       @Nonnull final String fhirVersion,
       @Nonnull final BenchmarkDataset dataset,
       @Nonnull final List<BenchmarkCase> cases,
       final int warmup,
       final int measurement) {
+    this.name = name;
+    this.version = version;
     this.title = title;
     this.fhirVersion = fhirVersion;
     this.dataset = dataset;
@@ -91,6 +99,8 @@ public class BenchmarkFile {
       throw new UncheckedIOException("Failed to read benchmark file: " + file, e);
     }
 
+    final String name = requiredText(root, "name");
+    final String version = requiredText(root, "version");
     final String title = requiredText(root, "title");
     final String fhirVersion = requiredText(root, "fhirVersion");
     final BenchmarkDataset dataset = parseDataset(root.path("dataset"));
@@ -100,12 +110,19 @@ public class BenchmarkFile {
     final int warmup = iterations.path("warmup").asInt(DEFAULT_WARMUP);
     final int measurement = iterations.path("measurement").asInt(DEFAULT_MEASUREMENT);
 
-    return new BenchmarkFile(title, fhirVersion, dataset, cases, warmup, measurement);
+    return new BenchmarkFile(
+        name, version, title, fhirVersion, dataset, cases, warmup, measurement);
   }
 
   @Nonnull
   private static BenchmarkDataset parseDataset(@Nonnull final JsonNode dataset) {
     final String name = requiredText(dataset, "name");
+    final String version = requiredText(dataset, "version");
+    final JsonNode syntheaVersionNode = dataset.get("syntheaVersion");
+    final String syntheaVersion =
+        syntheaVersionNode == null || syntheaVersionNode.isNull()
+            ? null
+            : syntheaVersionNode.asText();
 
     final Map<String, Integer> sizePopulations = new LinkedHashMap<>();
     final JsonNode sizes = dataset.path("sizes");
@@ -118,27 +135,22 @@ public class BenchmarkFile {
     final List<String> resources = new ArrayList<>();
     dataset.path("resources").forEach(node -> resources.add(node.asText()));
 
-    return new BenchmarkDataset(name, sizePopulations, resources);
+    return new BenchmarkDataset(name, version, syntheaVersion, sizePopulations, resources);
   }
 
   @Nonnull
   private static List<BenchmarkCase> parseCases(@Nonnull final JsonNode casesNode) {
     final List<BenchmarkCase> cases = new ArrayList<>();
     for (final JsonNode caseNode : casesNode) {
+      final String id = requiredText(caseNode, "id");
       final String title = requiredText(caseNode, "title");
       final JsonNode view = caseNode.path("view");
       final String resource = requiredText(view, "resource");
       final String viewJson = serialize(view);
+      final boolean countVariancePermitted =
+          caseNode.path("countVariancePermitted").asBoolean(false);
 
-      final Map<String, Integer> expectCount = new LinkedHashMap<>();
-      final JsonNode expect = caseNode.path("expectCount");
-      final Iterator<Map.Entry<String, JsonNode>> expectFields = expect.fields();
-      while (expectFields.hasNext()) {
-        final Map.Entry<String, JsonNode> entry = expectFields.next();
-        expectCount.put(entry.getKey(), entry.getValue().asInt());
-      }
-
-      cases.add(new BenchmarkCase(title, resource, viewJson, expectCount));
+      cases.add(new BenchmarkCase(id, title, resource, viewJson, countVariancePermitted));
     }
     return cases;
   }
@@ -162,7 +174,28 @@ public class BenchmarkFile {
   }
 
   /**
-   * Returns the benchmark title (used as the {@code results} key in the report).
+   * Returns the stable suite name, which sources {@code report.benchmark.name} and the report's
+   * {@code results} map key.
+   *
+   * @return the suite name
+   */
+  @Nonnull
+  public String getName() {
+    return name;
+  }
+
+  /**
+   * Returns the authored suite version, which sources {@code report.benchmark.version}.
+   *
+   * @return the suite version
+   */
+  @Nonnull
+  public String getVersion() {
+    return version;
+  }
+
+  /**
+   * Returns the free-text benchmark title.
    *
    * @return the benchmark title
    */

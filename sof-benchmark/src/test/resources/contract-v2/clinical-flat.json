@@ -1,0 +1,67 @@
+{
+  "name": "clinical-flat",
+  "version": "1",
+  "title": "clinical-flat",
+  "description": "Fixture benchmark for contract-v2 runner tests.",
+  "group": "synthea-clinical",
+  "fhirVersion": "4.0.1",
+  "iterations": {
+    "warmup": 1,
+    "measurement": 5
+  },
+  "dataset": {
+    "name": "synthea-clinical",
+    "kind": "synthea",
+    "version": "1",
+    "syntheaVersion": "3.2.0",
+    "resources": ["Condition", "Observation"],
+    "sizes": {
+      "s": {
+        "population": 100
+      }
+    },
+    "defaultSize": "s"
+  },
+  "cases": [
+    {
+      "id": "condition-flat",
+      "title": "condition flat",
+      "view": {
+        "resource": "Condition",
+        "select": [
+          {
+            "column": [
+              { "name": "id", "path": "getResourceKey()", "type": "string" },
+              { "name": "code", "path": "code.coding.first().code", "type": "code" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "observation-components",
+      "title": "observation components",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          { "column": [{ "name": "id", "path": "getResourceKey()", "type": "string" }] },
+          {
+            "forEach": "component",
+            "column": [{ "name": "comp_code", "path": "code.coding.first().code", "type": "code" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": "active-conditions",
+      "title": "active conditions",
+      "description": "Reference resolved in where position; count divergence is engine-specific.",
+      "countVariancePermitted": true,
+      "view": {
+        "resource": "Condition",
+        "select": [{ "column": [{ "name": "id", "path": "getResourceKey()", "type": "string" }] }],
+        "where": [{ "path": "clinicalStatus.coding.exists(code = 'active')" }]
+      }
+    }
+  ]
+}
