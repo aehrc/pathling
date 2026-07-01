@@ -39,6 +39,10 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import click
+from pathling import PathlingContext
+from pathling.datasource import DataSource
+
 ENGINE_NAME = "Pathling"
 BINDING_NAME = "pathling-python"
 SCENARIO = "preloaded_repeated"
@@ -282,7 +286,7 @@ def resolve_version() -> str:
         return "UNKNOWN"
 
 
-def environment(pc) -> Dict[str, object]:
+def environment(pc: PathlingContext) -> Dict[str, object]:
     """Builds the report's environment block.
 
     :param pc: the Pathling context.
@@ -319,108 +323,102 @@ def _verify_dataset_integrity(
         )
 
 
-def main() -> None:
+@click.command()
+@click.argument(
+    "benchmark_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--size", required=True, help="Size key to run (e.g. s or m).")
+@click.option(
+    "--data",
+    "data_root",
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Root directory of materialized datasets.",
+)
+@click.option(
+    "--sink",
+    type=click.Choice(["csv", "parquet"]),
+    default=DEFAULT_SINK,
+    show_default=True,
+    help="Spark write format for the timed region.",
+)
+@click.option(
+    "--out",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=Path(DEFAULT_OUT),
+    show_default=True,
+    help="Report output path.",
+)
+def main(
+    benchmark_file: Path, size: str, data_root: Path, sink: str, out: Path
+) -> None:
     """Run the SQL-on-FHIR benchmark with the Pathling Python API."""
-    import click
-    from pathling import PathlingContext
+    benchmark = json.loads(benchmark_file.read_text())
+    fhir_version = benchmark["fhirVersion"]
+    dataset = benchmark["dataset"]
+    if size not in dataset["sizes"]:
+        raise click.BadParameter(
+            f"Size '{size}' is not declared for dataset '{dataset['name']}'.",
+            param_hint="--size",
+        )
+    iterations = benchmark.get("iterations", {})
+    warmup = iterations.get("warmup", DEFAULT_WARMUP)
+    measurement = iterations.get("measurement", DEFAULT_MEASUREMENT)
 
-    @click.command()
-    @click.argument(
-        "benchmark_file",
-        type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    )
-    @click.option("--size", required=True, help="Size key to run (e.g. s or m).")
-    @click.option(
-        "--data",
-        "data_root",
-        required=True,
-        type=click.Path(exists=True, file_okay=False, path_type=Path),
-        help="Root directory of materialized datasets.",
-    )
-    @click.option(
-        "--sink",
-        type=click.Choice(["csv", "parquet"]),
-        default=DEFAULT_SINK,
-        show_default=True,
-        help="Spark write format for the timed region.",
-    )
-    @click.option(
-        "--out",
-        type=click.Path(dir_okay=False, path_type=Path),
-        default=Path(DEFAULT_OUT),
-        show_default=True,
-        help="Report output path.",
-    )
-    def run(
-        benchmark_file: Path, size: str, data_root: Path, sink: str, out: Path
-    ) -> None:
-        benchmark = json.loads(benchmark_file.read_text())
-        fhir_version = benchmark["fhirVersion"]
-        dataset = benchmark["dataset"]
-        if size not in dataset["sizes"]:
-            raise click.BadParameter(
-                f"Size '{size}' is not declared for dataset '{dataset['name']}'.",
-                param_hint="--size",
-            )
-        iterations = benchmark.get("iterations", {})
-        warmup = iterations.get("warmup", DEFAULT_WARMUP)
-        measurement = iterations.get("measurement", DEFAULT_MEASUREMENT)
+    data_dir = locate_data_dir(data_root, dataset["name"], dataset["version"], size)
+    log.info("Located materialized data at %s", data_dir)
 
-        data_dir = locate_data_dir(data_root, dataset["name"], dataset["version"], size)
-        log.info("Located materialized data at %s", data_dir)
+    checkfile = load_checkfile(benchmark_file)
+    _verify_dataset_integrity(data_dir, checkfile, size)
 
-        checkfile = load_checkfile(benchmark_file)
-        _verify_dataset_integrity(data_dir, checkfile, size)
+    pc = PathlingContext.create()
+    cores = os.cpu_count() or 1
+    # Keep the tiny SoF inputs from spawning ~200 shuffle part-files and adding scheduling noise.
+    pc.spark.conf.set("spark.sql.shuffle.partitions", str(cores))
 
-        pc = PathlingContext.create()
-        cores = os.cpu_count() or 1
-        # Keep the tiny SoF inputs from spawning ~200 shuffle part-files and adding scheduling noise.
-        pc.spark.conf.set("spark.sql.shuffle.partitions", str(cores))
+    out_dir = tempfile.mkdtemp(prefix="sof-benchmark-out-")
+    try:
+        ndjson = pc.read.ndjson(str(data_dir))
+        results = run_cases(
+            benchmark["cases"],
+            size,
+            checkfile,
+            ndjson,
+            pc,
+            sink,
+            out_dir,
+            warmup,
+            measurement,
+        )
 
-        out_dir = tempfile.mkdtemp(prefix="sof-benchmark-out-")
-        try:
-            ndjson = pc.read.ndjson(str(data_dir))
-            results = run_cases(
-                benchmark["cases"],
-                size,
-                checkfile,
-                ndjson,
-                pc,
-                sink,
-                out_dir,
-                warmup,
-                measurement,
-            )
-
-            pathling_version = resolve_version()
-            report = build_report(
-                pathling_version,
-                pathling_version,
-                benchmark,
-                dataset,
-                environment(pc),
-                schema_sink(sink),
-                warmup,
-                measurement,
-                size,
-                fhir_version,
-                resource_counts(checkfile, size),
-                results,
-            )
-            Path(out).write_text(json.dumps(report, indent=2))
-            log.info("Wrote benchmark report to %s", out)
-        finally:
-            pc.spark.stop()
-
-    run()
+        pathling_version = resolve_version()
+        report = build_report(
+            pathling_version,
+            pathling_version,
+            benchmark,
+            dataset,
+            environment(pc),
+            schema_sink(sink),
+            warmup,
+            measurement,
+            size,
+            fhir_version,
+            resource_counts(checkfile, size),
+            results,
+        )
+        Path(out).write_text(json.dumps(report, indent=2))
+        log.info("Wrote benchmark report to %s", out)
+    finally:
+        pc.spark.stop()
 
 
 def run_cases(
     cases: List[dict],
     size: str,
     checkfile: Optional[dict],
-    ndjson,
-    pc,
+    ndjson: DataSource,
+    pc: PathlingContext,
     sink: str,
     out_dir: str,
     warmup: int,
@@ -460,7 +458,7 @@ def run_cases(
     return results
 
 
-def load_subject(ndjson, subject: str, pc) -> dict:
+def load_subject(ndjson: DataSource, subject: str, pc: PathlingContext) -> dict:
     """Performs the load phase for a subject: reads, FHIR-encodes, caches and forces materialization.
 
     :param ndjson: the NDJSON-backed data source.
