@@ -1,8 +1,5 @@
-# sof-benchmark-runner Specification
+## ADDED Requirements
 
-## Purpose
-TBD - created by archiving change add-sof-benchmark-runner. Update Purpose after archive.
-## Requirements
 ### Requirement: Deterministic data location by name/version/size
 
 The runner SHALL locate a benchmark's materialized NDJSON at the deterministic path
@@ -44,6 +41,8 @@ timings as if run over the locked data.
 - **THEN** the runner reports the offending file, its locked and actual sha256, and does
   not present the run as verified against the lock
 
+## MODIFIED Requirements
+
 ### Requirement: Single-view execute-and-extract timing
 
 For each case, the runner SHALL evaluate the case's `view` over the materialized data for
@@ -64,21 +63,6 @@ scenario: the load phase is excluded from the timed region, and the sink is `csv
 - **WHEN** the runner measures a case
 - **THEN** the timed region writes the full result to a `csv` sink
 - **AND** the output row count is obtained outside the timed region
-
-### Requirement: Load phase measured separately
-
-The runner SHALL read and FHIR-encode the input as a distinct load phase, force
-its materialization before the timed execute+extract region so that region does
-not absorb parse/encode cost, and record the load duration separately in the
-report.
-
-#### Scenario: Load cost excluded from execute+extract
-
-- **WHEN** a benchmark case is measured
-- **THEN** the input has already been materialized when the timed execute+extract
-  region begins
-- **AND** the report records the load duration separately from the execute+extract
-  samples
 
 ### Requirement: Output row-count correctness guard
 
@@ -158,3 +142,15 @@ timing values.
 - **AND** the reports differ only in `implementation.binding`, the environment, and the
   timing values
 
+## REMOVED Requirements
+
+### Requirement: Manifest-first data location
+
+**Reason**: Contract v2 replaces content-hash directories and manifest scanning with an
+explicit `(name, version)` dataset identity resolved to the deterministic path
+`<dataRoot>/<name>/<version>/<size>/`. Matching a `manifest.json` by `population` is no
+longer meaningful.
+
+**Migration**: Resolve data at `<dataRoot>/<dataset.name>/<dataset.version>/<size>/` (see
+the new "Deterministic data location by name/version/size" requirement) and verify the
+loaded files against the checkfile sha256 lock instead of matching a manifest.

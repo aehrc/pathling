@@ -18,19 +18,27 @@
 package au.csiro.pathling.sof.benchmark;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
- * The dataset recipe portion of a benchmark file: the human-readable name, the per-size
- * populations, and the resource types the materializer is expected to keep.
+ * The dataset identity portion of a benchmark file: the explicit {@code name} and {@code version}
+ * identity, the pinned generator version, the per-size populations, and the resource types the
+ * materializer is expected to keep.
  *
- * <p>These three values are exactly what {@link ManifestLocator} matches a materialized {@code
- * manifest.json} against, so the runner never reproduces the reference materializer's recipe hash.
+ * <p>Under contract v2 the {@code (name, version)} pair is the dataset's explicit identity and the
+ * first two on-disk directory segments, so the runner resolves data deterministically at {@code
+ * <dataRoot>/<name>/<version>/<size>/} rather than scanning manifests or reproducing a recipe hash.
  */
 public class BenchmarkDataset {
 
   @Nonnull private final String name;
+
+  @Nonnull private final String version;
+
+  @Nullable private final String syntheaVersion;
 
   @Nonnull private final Map<String, Integer> sizePopulations;
 
@@ -39,15 +47,21 @@ public class BenchmarkDataset {
   /**
    * Constructs a benchmark dataset descriptor.
    *
-   * @param name the dataset name, as written into the manifest
+   * @param name the explicit dataset name identity (first on-disk directory segment)
+   * @param version the explicit dataset version identity (second on-disk directory segment)
+   * @param syntheaVersion the pinned generator version, or null if not declared
    * @param sizePopulations a map of size key to the population declared for that size
    * @param resources the resource types the dataset retains
    */
   public BenchmarkDataset(
       @Nonnull final String name,
+      @Nonnull final String version,
+      @Nullable final String syntheaVersion,
       @Nonnull final Map<String, Integer> sizePopulations,
       @Nonnull final List<String> resources) {
     this.name = name;
+    this.version = version;
+    this.syntheaVersion = syntheaVersion;
     this.sizePopulations = sizePopulations;
     this.resources = resources;
   }
@@ -60,6 +74,26 @@ public class BenchmarkDataset {
   @Nonnull
   public String getName() {
     return name;
+  }
+
+  /**
+   * Returns the explicit dataset version identity used as the second on-disk directory segment.
+   *
+   * @return the dataset version
+   */
+  @Nonnull
+  public String getVersion() {
+    return version;
+  }
+
+  /**
+   * Returns the pinned generator version, if declared.
+   *
+   * @return the Synthea generator version, or empty if not declared
+   */
+  @Nonnull
+  public Optional<String> getSyntheaVersion() {
+    return Optional.ofNullable(syntheaVersion);
   }
 
   /**

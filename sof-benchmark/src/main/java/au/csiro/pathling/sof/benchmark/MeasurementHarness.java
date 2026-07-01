@@ -24,6 +24,7 @@ import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -111,7 +112,7 @@ public class MeasurementHarness {
    * @param loaded the cached subject the case runs over
    * @param subject the subject resource type
    * @param benchmarkCase the case to measure
-   * @param size the size key (used to resolve {@code expectCount})
+   * @param expectedCount the checkfile assertion for this case and size, if any
    * @return the measured case result
    */
   @Nonnull
@@ -119,13 +120,10 @@ public class MeasurementHarness {
       @Nonnull final LoadedSubject loaded,
       @Nonnull final String subject,
       @Nonnull final BenchmarkCase benchmarkCase,
-      @Nonnull final String size) {
+      @Nonnull final Optional<Integer> expectedCount) {
     final String viewJson = benchmarkCase.getViewJson();
     log.info(
-        "Measuring case '{}' ({} warmup, {} measured)",
-        benchmarkCase.getTitle(),
-        warmup,
-        iterations);
+        "Measuring case '{}' ({} warmup, {} measured)", benchmarkCase.getId(), warmup, iterations);
 
     for (int i = 0; i < warmup; i++) {
       writeOnce(loaded.getSource(), subject, viewJson);
@@ -144,11 +142,13 @@ public class MeasurementHarness {
     // Untimed correctness guard: count() never times the measured region because Catalyst would
     // prune projected columns and under-measure.
     final long outputRows = lastResult == null ? 0L : lastResult.count();
-    final String status = statusFor(benchmarkCase, size, outputRows);
-    log.info("Case '{}': {} output rows, status {}", benchmarkCase.getTitle(), outputRows, status);
+    final String status =
+        CorrectnessGuard.status(
+            expectedCount, outputRows, benchmarkCase.isCountVariancePermitted());
+    log.info("Case '{}': {} output rows, status {}", benchmarkCase.getId(), outputRows, status);
 
     return new CaseResult(
-        benchmarkCase.getTitle(),
+        benchmarkCase.getId(),
         status,
         loaded.getInputRows(),
         outputRows,
@@ -162,16 +162,5 @@ public class MeasurementHarness {
       @Nonnull final String viewJson) {
     final Dataset<Row> result = source.view(subject).json(viewJson).execute();
     result.write().format(sink).mode(SaveMode.Overwrite).save(outDir.toString());
-  }
-
-  @Nonnull
-  private static String statusFor(
-      @Nonnull final BenchmarkCase benchmarkCase,
-      @Nonnull final String size,
-      final long outputRows) {
-    return benchmarkCase
-        .expectCountFor(size)
-        .map(expected -> expected.longValue() == outputRows ? "ok" : "count_mismatch")
-        .orElse("ok");
   }
 }

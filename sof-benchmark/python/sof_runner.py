@@ -15,22 +15,24 @@
 # limitations under the License.
 #
 
-"""SQL-on-FHIR benchmark runner over the Pathling Python API.
+"""SQL-on-FHIR benchmark runner over the Pathling Python API (contract v2).
 
-This mirrors the Java ``SofBenchmarkRunner``: it locates a benchmark's materialized
-NDJSON manifest-first, separates the FHIR load/encode phase from the timed
-execute+extract region, times a full write of each case's result (never a lazy
-count), checks the output row count against ``expectCount``, and emits a report
-conforming to ``benchmark-report.schema.json`` with
-``implementation.name = "pathling-python"``.
+This mirrors the Java ``SofBenchmarkRunner``: it resolves a benchmark's materialized
+NDJSON deterministically at ``<dataRoot>/<name>/<version>/<size>/``, verifies the loaded
+files against the sibling checkfile's sha256 lock, separates the FHIR load/encode phase
+from the timed execute+extract region, times a full CSV write of each case's result
+(never a lazy count), checks the output row count against the checkfile assertion keyed by
+the case ``id`` (honouring ``countVariancePermitted``), and emits a report conforming to
+``benchmark-report.schema.json`` with ``implementation.engine.name = "Pathling"`` and
+``implementation.binding.name = "pathling-python"``.
 """
 
+import hashlib
 import json
 import logging
 import os
 import platform
 import statistics
-import subprocess
 import tempfile
 import time
 from importlib.metadata import PackageNotFoundError, version
@@ -41,7 +43,9 @@ import click
 from pathling import PathlingContext
 from pathling.datasource import DataSource
 
-IMPLEMENTATION_NAME = "pathling-python"
+ENGINE_NAME = "Pathling"
+BINDING_NAME = "pathling-python"
+SCENARIO = "preloaded_repeated"
 DEFAULT_SINK = "csv"
 DEFAULT_OUT = "benchmark-report.json"
 DEFAULT_WARMUP = 1
@@ -54,88 +58,221 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("sof_runner")
 
 
-def locate_data_dir(data_root: Path, name: str, size: str, population: int) -> Path:
-    """Locates the size-specific data directory by matching manifests.
+def locate_data_dir(data_root: Path, name: str, version_id: str, size: str) -> Path:
+    """Resolves the size-specific data directory deterministically from dataset identity.
 
-    Scans ``<data_root>/*/<size>/manifest.json`` and returns the directory whose manifest
-    matches the dataset name, size and population, so the reference materializer's recipe
-    hash is never reproduced.
+    Under contract v2 the materializer writes data to ``<data_root>/<name>/<version>/<size>/``,
+    so the directory is resolved directly from the explicit ``(name, version)`` identity rather
+    than scanning manifests or reproducing a recipe hash.
 
     :param data_root: the root directory containing materialized datasets.
-    :param name: the dataset name to match.
-    :param size: the size key to match.
-    :param population: the population to match.
-    :return: the directory containing the matching size's NDJSON files and manifest.
-    :raises FileNotFoundError: if no manifest under the data root matches all three.
+    :param name: the dataset name (first directory segment).
+    :param version_id: the dataset version (second directory segment).
+    :param size: the size key (third directory segment).
+    :return: the directory containing the size's NDJSON files.
+    :raises FileNotFoundError: if the resolved directory does not exist.
     """
-    if not data_root.is_dir():
+    data_dir = data_root / name / version_id / size
+    if not data_dir.is_dir():
         raise FileNotFoundError(
-            f"Data root does not exist or is not a directory: {data_root}"
+            f"No materialized data at {data_dir} for (name={name}, version={version_id}, "
+            f"size={size}). Run the materializer first: "
+            f"cd sql-on-fhir/benchmark && bun run data <file> --size {size}"
         )
-    for dataset_dir in sorted(data_root.iterdir()):
-        manifest_path = dataset_dir / size / "manifest.json"
-        if not manifest_path.is_file():
+    return data_dir
+
+
+def checkfile_sibling(benchmark_file: Path) -> Path:
+    """Resolves the checkfile beside a benchmark file by swapping ``.json`` for ``.check.json``.
+
+    :param benchmark_file: the path to the benchmark ``*.json`` file.
+    :return: the sibling ``*.check.json`` path.
+    """
+    base = benchmark_file.name.removesuffix(".json")
+    return benchmark_file.resolve().with_name(base + ".check.json")
+
+
+def load_checkfile(benchmark_file: Path) -> Optional[dict]:
+    """Loads the checkfile beside a benchmark file, or None when none exists.
+
+    :param benchmark_file: the path to the benchmark ``*.json`` file.
+    :return: the parsed checkfile dict, or None when the sibling is absent.
+    """
+    checkfile = checkfile_sibling(benchmark_file)
+    if not checkfile.is_file():
+        return None
+    return json.loads(checkfile.read_text())
+
+
+def expected_count(checkfile: Optional[dict], case_id: str, size: str) -> Optional[int]:
+    """Returns the checkfile assertion for a case and size, if present.
+
+    :param checkfile: the parsed checkfile, or None.
+    :param case_id: the stable case id.
+    :param size: the size key.
+    :return: the expected output row count, or None when no assertion is declared.
+    """
+    if checkfile is None:
+        return None
+    return checkfile.get("assertions", {}).get(case_id, {}).get(size)
+
+
+def resource_counts(checkfile: Optional[dict], size: str) -> Dict[str, int]:
+    """Returns the per-resource-type row counts locked for a size.
+
+    :param checkfile: the parsed checkfile, or None.
+    :param size: the size key.
+    :return: the resource counts, or an empty dict when unavailable.
+    """
+    if checkfile is None:
+        return {}
+    return checkfile.get("sizes", {}).get(size, {}).get("resourceCounts", {})
+
+
+def file_checksums(checkfile: Optional[dict], size: str) -> Dict[str, str]:
+    """Returns the per-file sha256 map locked for a size.
+
+    :param checkfile: the parsed checkfile, or None.
+    :param size: the size key.
+    :return: a map of file name to sha256, or an empty dict when unavailable.
+    """
+    if checkfile is None:
+        return {}
+    files = checkfile.get("sizes", {}).get(size, {}).get("files", {})
+    return {name: entry.get("sha256") for name, entry in files.items()}
+
+
+def sha256_of(path: Path) -> str:
+    """Computes the sha256 of a file as a lower-case hex string.
+
+    :param path: the file to hash.
+    :return: the lower-case hex sha256.
+    """
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def verify_checksums(data_dir: Path, locked: Dict[str, str]) -> List[str]:
+    """Verifies each locked file's sha256 against the corresponding NDJSON in the data directory.
+
+    :param data_dir: the directory containing the materialized ``<ResourceType>.ndjson`` files.
+    :param locked: the checkfile's file name to sha256 map for the size.
+    :return: the list of human-readable drift messages; empty when every locked file matches.
+    """
+    drift: List[str] = []
+    for file_name, locked_sha in locked.items():
+        file_path = data_dir / file_name
+        if not file_path.is_file():
+            drift.append(f"{file_name}: missing (locked {locked_sha})")
             continue
-        manifest = json.loads(manifest_path.read_text())
-        if (
-            manifest.get("name") == name
-            and manifest.get("size") == size
-            and manifest.get("population") == population
-        ):
-            return manifest_path.parent
-    raise FileNotFoundError(
-        f"No materialized dataset matches (name={name}, size={size}, population={population}) "
-        f"under {data_root}. Run the materializer first: "
-        f"cd sql-on-fhir/benchmark && bun run data <file> --size {size}"
-    )
+        actual = sha256_of(file_path)
+        if actual != locked_sha:
+            drift.append(
+                f"{file_name}: sha256 drift (locked {locked_sha}, actual {actual})"
+            )
+    return drift
+
+
+def correctness_status(
+    expected: Optional[int], output_rows: int, variance_permitted: bool
+) -> str:
+    """Determines a case's correctness status.
+
+    Present and equal is ``ok``; present and unequal is ``count_mismatch``; absent is ``ok``.
+    When count variance is permitted a divergence is never flagged.
+
+    :param expected: the checkfile assertion for this case and size, if any.
+    :param output_rows: the observed output row count.
+    :param variance_permitted: whether a count divergence must not be flagged.
+    :return: ``ok`` or ``count_mismatch``.
+    """
+    if variance_permitted:
+        return "ok"
+    if expected is None:
+        return "ok"
+    return "ok" if expected == output_rows else "count_mismatch"
 
 
 def schema_sink(sink: str) -> str:
     """Maps a Spark write format to a sink category permitted by the report schema.
 
-    File formats such as ``parquet`` that are not enumerated by the schema are reported
-    as ``other`` so the report stays schema-valid.
-
     :param sink: the Spark write format used for the timed region.
-    :return: a schema-valid sink category.
+    :return: a schema-valid sink category (``other`` for formats not enumerated by the schema).
     """
     return sink if sink in SCHEMA_SINKS else "other"
 
 
 def stats_for(samples: List[float]) -> Dict[str, float]:
-    """Computes summary statistics for a list of timing samples.
+    """Computes the fixed contract-v2 statistics set over timing samples.
 
     :param samples: the timing samples in milliseconds.
-    :return: a dict with min, mean, median and max (empty if there are no samples).
+    :return: a dict with exactly ``mean``, ``stddev``, ``min``, ``max`` and ``median`` (empty
+        when there are no samples).
     """
     if not samples:
         return {}
     return {
-        "min": min(samples),
         "mean": statistics.fmean(samples),
-        "median": statistics.median(samples),
+        "stddev": statistics.stdev(samples) if len(samples) > 1 else 0.0,
+        "min": min(samples),
         "max": max(samples),
+        "median": statistics.median(samples),
     }
 
 
-def resolve_benchmark_version(benchmark_file: Path) -> Optional[str]:
-    """Best-effort resolution of the benchmark submodule git SHA.
+def build_report(
+    engine_version: str,
+    binding_version: str,
+    benchmark: dict,
+    dataset: dict,
+    env: Dict[str, object],
+    sink: str,
+    warmup: int,
+    iterations: int,
+    size: str,
+    fhir_version: str,
+    counts: Dict[str, int],
+    results: List[dict],
+) -> dict:
+    """Builds a contract-v2 benchmark report dict.
 
-    :param benchmark_file: the path to the benchmark file.
-    :return: the git SHA of the benchmark file's directory, or None if unavailable.
+    :param engine_version: the execution engine version.
+    :param binding_version: the language binding version.
+    :param benchmark: the parsed benchmark file (for suite ``name``/``version``).
+    :param dataset: the benchmark's ``dataset`` block (for ``name``/``version``).
+    :param env: the environment description.
+    :param sink: the schema-valid sink category.
+    :param warmup: the actual warmup iteration count.
+    :param iterations: the actual measured iteration count.
+    :param size: the size key.
+    :param fhir_version: the FHIR version.
+    :param counts: the per-resource-type row counts observed at this size.
+    :param results: the per-case result dicts.
+    :return: the report dict, keyed under ``results`` by the authored suite name.
     """
-    directory = benchmark_file.resolve().parent
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(directory), "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    sha = result.stdout.strip()
-    return sha if result.returncode == 0 and sha else None
+    return {
+        "implementation": {
+            "engine": {"name": ENGINE_NAME, "version": engine_version},
+            "binding": {"name": BINDING_NAME, "version": binding_version},
+        },
+        "benchmark": {"name": benchmark["name"], "version": benchmark["version"]},
+        "dataset": {"name": dataset["name"], "version": dataset["version"]},
+        "environment": env,
+        "measurement": {
+            "scenario": SCENARIO,
+            "phases": ["execute", "extract"],
+            "sink": sink,
+            "warmup": warmup,
+            "iterations": iterations,
+        },
+        "results": {
+            benchmark["name"]: {
+                "size": size,
+                "fhirVersion": fhir_version,
+                "resourceCounts": counts,
+                "cases": results,
+            }
+        },
+    }
 
 
 def resolve_version() -> str:
@@ -162,6 +299,28 @@ def environment(pc: PathlingContext) -> Dict[str, object]:
         "spark": pc.spark.version,
         "cores": os.cpu_count(),
     }
+
+
+def _verify_dataset_integrity(
+    data_dir: Path, checkfile: Optional[dict], size: str
+) -> None:
+    """Logs the outcome of verifying loaded NDJSON against the checkfile sha256 lock."""
+    if checkfile is None:
+        log.warning(
+            "No checkfile beside the benchmark file; dataset integrity is unverified and "
+            "output row counts are not checked."
+        )
+        return
+    drift = verify_checksums(data_dir, file_checksums(checkfile, size))
+    if not drift:
+        log.info("Dataset integrity verified against the checkfile for size %s.", size)
+    else:
+        for message in drift:
+            log.error("Dataset integrity: %s", message)
+        log.error(
+            "Loaded data does not match the checkfile lock; timings are NOT verified "
+            "against the locked dataset."
+        )
 
 
 @click.command()
@@ -196,21 +355,22 @@ def main(
 ) -> None:
     """Run the SQL-on-FHIR benchmark with the Pathling Python API."""
     benchmark = json.loads(benchmark_file.read_text())
-    title = benchmark["title"]
     fhir_version = benchmark["fhirVersion"]
     dataset = benchmark["dataset"]
-    name = dataset["name"]
     if size not in dataset["sizes"]:
         raise click.BadParameter(
-            f"Size '{size}' is not declared for dataset '{name}'.", param_hint="--size"
+            f"Size '{size}' is not declared for dataset '{dataset['name']}'.",
+            param_hint="--size",
         )
-    population = dataset["sizes"][size]["population"]
     iterations = benchmark.get("iterations", {})
     warmup = iterations.get("warmup", DEFAULT_WARMUP)
     measurement = iterations.get("measurement", DEFAULT_MEASUREMENT)
 
-    data_dir = locate_data_dir(data_root, name, size, population)
+    data_dir = locate_data_dir(data_root, dataset["name"], dataset["version"], size)
     log.info("Located materialized data at %s", data_dir)
+
+    checkfile = load_checkfile(benchmark_file)
+    _verify_dataset_integrity(data_dir, checkfile, size)
 
     pc = PathlingContext.create()
     cores = os.cpu_count() or 1
@@ -221,29 +381,32 @@ def main(
     try:
         ndjson = pc.read.ndjson(str(data_dir))
         results = run_cases(
-            benchmark["cases"], size, ndjson, pc, sink, out_dir, warmup, measurement
+            benchmark["cases"],
+            size,
+            checkfile,
+            ndjson,
+            pc,
+            sink,
+            out_dir,
+            warmup,
+            measurement,
         )
 
-        report = {
-            "implementation": {
-                "name": IMPLEMENTATION_NAME,
-                "version": resolve_version(),
-            },
-            "environment": environment(pc),
-            "measurement": {
-                "phases": ["execute", "extract"],
-                "sink": schema_sink(sink),
-                "warmup": warmup,
-                "iterations": measurement,
-            },
-            "results": {
-                title: {"size": size, "fhirVersion": fhir_version, "cases": results}
-            },
-        }
-        benchmark_version = resolve_benchmark_version(benchmark_file)
-        if benchmark_version:
-            report["benchmarkVersion"] = benchmark_version
-
+        pathling_version = resolve_version()
+        report = build_report(
+            pathling_version,
+            pathling_version,
+            benchmark,
+            dataset,
+            environment(pc),
+            schema_sink(sink),
+            warmup,
+            measurement,
+            size,
+            fhir_version,
+            resource_counts(checkfile, size),
+            results,
+        )
         Path(out).write_text(json.dumps(report, indent=2))
         log.info("Wrote benchmark report to %s", out)
     finally:
@@ -253,6 +416,7 @@ def main(
 def run_cases(
     cases: List[dict],
     size: str,
+    checkfile: Optional[dict],
     ndjson: DataSource,
     pc: PathlingContext,
     sink: str,
@@ -263,7 +427,8 @@ def run_cases(
     """Loads each distinct subject once then measures every case over its loaded subject.
 
     :param cases: the benchmark cases in file order.
-    :param size: the size key (used to resolve expectCount).
+    :param size: the size key (used to resolve the checkfile assertion).
+    :param checkfile: the parsed checkfile, or None.
     :param ndjson: the NDJSON-backed data source.
     :param pc: the Pathling context.
     :param sink: the Spark write format.
@@ -283,7 +448,7 @@ def run_cases(
                 loaded_subjects[subject],
                 subject,
                 case,
-                size,
+                expected_count(checkfile, case["id"], size),
                 sink,
                 out_dir,
                 warmup,
@@ -311,7 +476,9 @@ def load_subject(ndjson: DataSource, subject: str, pc: PathlingContext) -> dict:
 
     # Rebuild as a dataset source over the already-cached DataFrame so view(...) is available.
     cached = pc.read.datasets({subject: encoded})
-    log.info("Loaded subject %s: %s input rows in %.1f ms", subject, input_rows, load_ms)
+    log.info(
+        "Loaded subject %s: %s input rows in %.1f ms", subject, input_rows, load_ms
+    )
     return {"source": cached, "input_rows": input_rows, "load_ms": load_ms}
 
 
@@ -319,7 +486,7 @@ def measure_case(
     loaded: dict,
     subject: str,
     case: dict,
-    size: str,
+    expected: Optional[int],
     sink: str,
     out_dir: str,
     warmup: int,
@@ -333,7 +500,7 @@ def measure_case(
     :param loaded: the cached subject the case runs over.
     :param subject: the subject resource type.
     :param case: the benchmark case.
-    :param size: the size key (used to resolve expectCount).
+    :param expected: the checkfile assertion for this case and size, if any.
     :param sink: the Spark write format.
     :param out_dir: the fixed output directory.
     :param warmup: the number of warmup iterations to discard.
@@ -343,10 +510,7 @@ def measure_case(
     view_json = json.dumps(case["view"])
     source = loaded["source"]
     log.info(
-        "Measuring case '%s' (%s warmup, %s measured)",
-        case["title"],
-        warmup,
-        measurement,
+        "Measuring case '%s' (%s warmup, %s measured)", case["id"], warmup, measurement
     )
 
     for _ in range(warmup):
@@ -365,14 +529,13 @@ def measure_case(
     # Untimed correctness guard: count() never times the measured region because Catalyst would
     # prune projected columns and under-measure.
     output_rows = last_df.count() if last_df is not None else 0
-    expect = case.get("expectCount", {}).get(size)
-    status = "ok" if expect is None or expect == output_rows else "count_mismatch"
-    log.info(
-        "Case '%s': %s output rows, status %s", case["title"], output_rows, status
+    status = correctness_status(
+        expected, output_rows, bool(case.get("countVariancePermitted", False))
     )
+    log.info("Case '%s': %s output rows, status %s", case["id"], output_rows, status)
 
     return {
-        "title": case["title"],
+        "id": case["id"],
         "status": status,
         "inputRows": loaded["input_rows"],
         "outputRows": output_rows,

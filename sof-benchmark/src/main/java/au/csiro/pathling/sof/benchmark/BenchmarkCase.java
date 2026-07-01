@@ -18,15 +18,21 @@
 package au.csiro.pathling.sof.benchmark;
 
 import jakarta.annotation.Nonnull;
-import java.util.Map;
-import java.util.Optional;
 
 /**
- * A single benchmark case: a title, the subject resource type the view runs over, the view itself
- * serialized to a JSON string ready for {@code FhirViewQuery.json(String)}, and the per-size
- * expected output row counts.
+ * A single benchmark case: its stable {@code id}, a free-text title, the subject resource type the
+ * view runs over, the view serialized to a JSON string ready for {@code
+ * FhirViewQuery.json(String)}, and whether count variance is permitted.
+ *
+ * <p>Under contract v2 the expected output row counts live in the sibling checkfile (keyed by
+ * {@code id}), not on the case. When {@code countVariancePermitted} is true, the case's reference
+ * is resolved in {@code where}/{@code forEach} position where empty-vs-null-vs-error is
+ * engine-specific, so the runner must not flag a cross-engine count divergence as {@code
+ * count_mismatch}.
  */
 public class BenchmarkCase {
+
+  @Nonnull private final String id;
 
   @Nonnull private final String title;
 
@@ -34,29 +40,42 @@ public class BenchmarkCase {
 
   @Nonnull private final String viewJson;
 
-  @Nonnull private final Map<String, Integer> expectCount;
+  private final boolean countVariancePermitted;
 
   /**
    * Constructs a benchmark case.
    *
-   * @param title the case title
+   * @param id the stable case id (the checkfile assertion key and the report's per-case key)
+   * @param title the free-text case title
    * @param resource the subject resource type of the view
    * @param viewJson the view serialized as a JSON string
-   * @param expectCount a map of size key to the expected output row count for that size
+   * @param countVariancePermitted whether a cross-engine count divergence must not be flagged
    */
   public BenchmarkCase(
+      @Nonnull final String id,
       @Nonnull final String title,
       @Nonnull final String resource,
       @Nonnull final String viewJson,
-      @Nonnull final Map<String, Integer> expectCount) {
+      final boolean countVariancePermitted) {
+    this.id = id;
     this.title = title;
     this.resource = resource;
     this.viewJson = viewJson;
-    this.expectCount = expectCount;
+    this.countVariancePermitted = countVariancePermitted;
   }
 
   /**
-   * Returns the case title.
+   * Returns the stable case id.
+   *
+   * @return the case id
+   */
+  @Nonnull
+  public String getId() {
+    return id;
+  }
+
+  /**
+   * Returns the free-text case title.
    *
    * @return the case title
    */
@@ -86,13 +105,12 @@ public class BenchmarkCase {
   }
 
   /**
-   * Returns the expected output row count for the given size, if one is declared.
+   * Returns whether a cross-engine count divergence must not be flagged as {@code count_mismatch}
+   * for this case.
    *
-   * @param size the size key
-   * @return the expected count, or empty when no expectation is declared for the size
+   * @return true when count variance is permitted
    */
-  @Nonnull
-  public Optional<Integer> expectCountFor(@Nonnull final String size) {
-    return Optional.ofNullable(expectCount.get(size));
+  public boolean isCountVariancePermitted() {
+    return countVariancePermitted;
   }
 }

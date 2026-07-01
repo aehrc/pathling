@@ -4,8 +4,9 @@
 `sql-on-fhir` submodule through the Pathling **Python** API. It is the
 language-binding counterpart to the Java `SofBenchmarkRunner` in
 `au.csiro.pathling.sof.benchmark`: same inputs, same report structure, only
-`implementation.name` (`pathling-python`) and the timing values differ. Running
-both isolates the binding-layer (py4j) overhead on top of the shared JVM engine.
+`implementation.binding` (`pathling-python`) and the timing values differ — both
+report the same `implementation.engine` (`Pathling`). Running both isolates the
+binding-layer (py4j) overhead on top of the shared JVM engine.
 
 ## Prerequisites
 
@@ -35,10 +36,12 @@ both isolates the binding-layer (py4j) overhead on top of the shared JVM engine.
   bun run data clinical-flat.json --size s
   ```
 
-  This writes `data/<name>_<hash>/s/{Condition,Observation}.ndjson` plus a
-  `manifest.json`. The runner locates the data manifest-first (matching dataset
-  `name` + `size` + `population`), so you never reproduce the materializer's
-  recipe hash.
+  This writes `data/<name>/<version>/s/{Condition,Observation}.ndjson` plus a
+  `manifest.json`, keyed by the dataset's explicit `(name, version)` identity. The
+  runner resolves the directory deterministically at
+  `<dataRoot>/<name>/<version>/<size>/` — no manifest scan, no recipe hash — and
+  verifies each loaded file against the committed sibling checkfile
+  (`<benchmark>.check.json`) `sha256` lock before benchmarking.
 
 ## Run
 
@@ -72,8 +75,30 @@ python sof-benchmark/python/sof_runner.py \
   discarded; one sample is recorded per measured iteration under
   `phaseSamplesMs.executeExtract`.
 - **Correctness guard:** the output row count (obtained outside the timed region)
-  is compared to `expectCount[size]` — `ok` when equal or absent, otherwise
-  `count_mismatch`. A mismatch is recorded, not fatal.
+  is compared to the checkfile assertion `assertions[<case id>][size]` — `ok` when
+  equal or absent, otherwise `count_mismatch`. A case that declares
+  `countVariancePermitted` is always `ok` (its reference resolves in a
+  `where`/`forEach` position where empty-vs-null-vs-error is engine-specific). A
+  mismatch is recorded, not fatal.
+
+## Report shape
+
+The report conforms to contract-v2 `benchmark-report.schema.json`: a structured
+`implementation` (`engine` = `Pathling` plus `binding` = `pathling-python`),
+`benchmark` and `dataset` identities, a `measurement` block with
+`scenario: preloaded_repeated` and `sink: csv`, per-size `resourceCounts`, and a
+`results` map keyed by the authored suite `name` whose cases are keyed by their
+stable `id` and carry `stats` of exactly `{mean, stddev, min, max, median}`.
+
+## Unit tests
+
+The runner's pure logic (data location, checkfile parsing, sha256 verification,
+correctness status, stats, report shape) is covered by `test_sof_runner.py`, which
+runs without a Spark session:
+
+```bash
+python -m pytest sof-benchmark/python/test_sof_runner.py
+```
 
 ## Validate the report
 

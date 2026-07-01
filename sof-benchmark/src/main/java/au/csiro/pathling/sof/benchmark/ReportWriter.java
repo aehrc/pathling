@@ -21,30 +21,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 /**
- * Emits a {@code benchmark-report.json} conforming to {@code benchmark-report.schema.json}.
+ * Emits a {@code benchmark-report.json} conforming to the contract-v2 {@code
+ * benchmark-report.schema.json}.
  *
- * <p>The report records the implementation (name and version), the optional benchmark version and
- * environment, the {@code measurement} block declaring the timed phases, sink and actual warmup and
- * iteration counts, and one {@code results} entry per benchmark keyed by title with each case's
- * status, input and output row counts, execute+extract samples, summary statistics, and the
- * separately recorded load samples.
+ * <p>The report records a structured {@code implementation} (engine plus language binding), the
+ * {@code benchmark} and {@code dataset} identities, the {@code environment}, a {@code measurement}
+ * block declaring the scenario, timed phases, sink and actual warmup and iteration counts, and one
+ * {@code results} entry keyed by the authored suite name carrying the size, FHIR version, per-size
+ * resource counts, and one entry per case keyed by its stable id with status, input and output row
+ * counts, timing samples, the fixed {@code stats} set, and separately recorded load samples.
  */
 public final class ReportWriter {
 
   @Nonnull private static final ObjectMapper MAPPER = new ObjectMapper();
-
-  /** The sink categories permitted by {@code benchmark-report.schema.json}. */
-  @Nonnull
-  private static final Set<String> SCHEMA_SINKS = Set.of("table", "csv", "memory", "other");
 
   private ReportWriter() {}
 
@@ -52,54 +49,68 @@ public final class ReportWriter {
    * Builds and writes the benchmark report.
    *
    * @param out the path to write the report to
-   * @param implementationName the implementation name (e.g. {@code pathling-java})
-   * @param version the implementation version
-   * @param benchmarkVersion the benchmark submodule git SHA, or null if unavailable
-   * @param environment the environment description (os, java, spark, cores)
-   * @param sink the Spark write format used for the timed region
+   * @param engineName the execution engine name (e.g. {@code Pathling})
+   * @param engineVersion the execution engine version
+   * @param bindingName the language binding name (e.g. {@code pathling-java})
+   * @param bindingVersion the language binding version
+   * @param benchmarkName the authored suite name (also the {@code results} map key)
+   * @param benchmarkVersion the authored suite version
+   * @param datasetName the dataset name identity
+   * @param datasetVersion the dataset version identity
+   * @param environment the environment description
+   * @param scenario the measurement scenario (e.g. {@code preloaded_repeated})
+   * @param sink the sink used for the timed region (e.g. {@code csv})
    * @param warmup the actual warmup iteration count
    * @param iterations the actual measured iteration count
-   * @param benchmarkTitle the benchmark title (the {@code results} key)
    * @param size the size key the benchmark was run at
    * @param fhirVersion the FHIR version
+   * @param resourceCounts the per-resource-type row counts observed at this size
    * @param results the per-case results
    */
   public static void write(
       @Nonnull final Path out,
-      @Nonnull final String implementationName,
-      @Nonnull final String version,
-      @Nullable final String benchmarkVersion,
+      @Nonnull final String engineName,
+      @Nonnull final String engineVersion,
+      @Nonnull final String bindingName,
+      @Nonnull final String bindingVersion,
+      @Nonnull final String benchmarkName,
+      @Nonnull final String benchmarkVersion,
+      @Nonnull final String datasetName,
+      @Nonnull final String datasetVersion,
       @Nonnull final ObjectNode environment,
+      @Nonnull final String scenario,
       @Nonnull final String sink,
       final int warmup,
       final int iterations,
-      @Nonnull final String benchmarkTitle,
       @Nonnull final String size,
       @Nonnull final String fhirVersion,
+      @Nonnull final Map<String, Integer> resourceCounts,
       @Nonnull final List<CaseResult> results) {
     final ObjectNode report = MAPPER.createObjectNode();
 
     final ObjectNode implementation = report.putObject("implementation");
-    implementation.put("name", implementationName);
-    implementation.put("version", version);
+    nameVersion(implementation.putObject("engine"), engineName, engineVersion);
+    nameVersion(implementation.putObject("binding"), bindingName, bindingVersion);
 
-    if (benchmarkVersion != null) {
-      report.put("benchmarkVersion", benchmarkVersion);
-    }
+    nameVersion(report.putObject("benchmark"), benchmarkName, benchmarkVersion);
+    nameVersion(report.putObject("dataset"), datasetName, datasetVersion);
     report.set("environment", environment);
 
     final ObjectNode measurement = report.putObject("measurement");
+    measurement.put("scenario", scenario);
     final ArrayNode phases = measurement.putArray("phases");
     phases.add("execute");
     phases.add("extract");
-    measurement.put("sink", schemaSink(sink));
+    measurement.put("sink", sink);
     measurement.put("warmup", warmup);
     measurement.put("iterations", iterations);
 
     final ObjectNode resultsNode = report.putObject("results");
-    final ObjectNode benchmarkNode = resultsNode.putObject(benchmarkTitle);
+    final ObjectNode benchmarkNode = resultsNode.putObject(benchmarkName);
     benchmarkNode.put("size", size);
     benchmarkNode.put("fhirVersion", fhirVersion);
+    final ObjectNode resourceCountsNode = benchmarkNode.putObject("resourceCounts");
+    resourceCounts.forEach(resourceCountsNode::put);
     final ArrayNode casesNode = benchmarkNode.putArray("cases");
     for (final CaseResult result : results) {
       casesNode.add(caseNode(result));
@@ -112,23 +123,16 @@ public final class ReportWriter {
     }
   }
 
-  /**
-   * Maps a Spark write format to a sink category permitted by the report schema. File formats such
-   * as {@code parquet} that are not enumerated by the schema are reported as {@code other} so the
-   * report stays schema-valid.
-   *
-   * @param sink the Spark write format used for the timed region
-   * @return a schema-valid sink category
-   */
-  @Nonnull
-  private static String schemaSink(@Nonnull final String sink) {
-    return SCHEMA_SINKS.contains(sink) ? sink : "other";
+  private static void nameVersion(
+      @Nonnull final ObjectNode node, @Nonnull final String name, @Nonnull final String version) {
+    node.put("name", name);
+    node.put("version", version);
   }
 
   @Nonnull
   private static ObjectNode caseNode(@Nonnull final CaseResult result) {
     final ObjectNode node = MAPPER.createObjectNode();
-    node.put("title", result.getTitle());
+    node.put("id", result.getId());
     node.put("status", result.getStatus());
     node.put("inputRows", result.getInputRows());
     node.put("outputRows", result.getOutputRows());
@@ -137,7 +141,7 @@ public final class ReportWriter {
     final ArrayNode samplesNode = node.putArray("samplesMs");
     samples.forEach(samplesNode::add);
 
-    node.set("stats", statsNode(samples));
+    node.set("stats", Statistics.toNode(MAPPER, samples));
 
     final ObjectNode phaseSamples = node.putObject("phaseSamplesMs");
     phaseSamples.putArray("load").add(result.getLoadMs());
@@ -145,32 +149,5 @@ public final class ReportWriter {
     samples.forEach(executeExtract::add);
 
     return node;
-  }
-
-  @Nonnull
-  private static ObjectNode statsNode(@Nonnull final List<Double> samples) {
-    final ObjectNode stats = MAPPER.createObjectNode();
-    if (samples.isEmpty()) {
-      return stats;
-    }
-    final List<Double> sorted = samples.stream().sorted().toList();
-    final double min = sorted.get(0);
-    final double max = sorted.get(sorted.size() - 1);
-    final double mean = sorted.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-    final double median = median(sorted);
-    stats.put("min", min);
-    stats.put("mean", mean);
-    stats.put("median", median);
-    stats.put("max", max);
-    return stats;
-  }
-
-  private static double median(@Nonnull final List<Double> sorted) {
-    final int size = sorted.size();
-    final int mid = size / 2;
-    if (size % 2 == 0) {
-      return (sorted.get(mid - 1) + sorted.get(mid)) / 2.0;
-    }
-    return sorted.get(mid);
   }
 }

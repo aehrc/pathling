@@ -1,0 +1,2 @@
+{"resourceType":"Condition","id":"c1","clinicalStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-clinical","code":"active"}]},"code":{"coding":[{"system":"http://snomed.info/sct","code":"44054006"}]},"subject":{"reference":"Patient/p1"}}
+{"resourceType":"Condition","id":"c2","clinicalStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-clinical","code":"resolved"}]},"code":{"coding":[{"system":"http://snomed.info/sct","code":"73211009"}]},"subject":{"reference":"Patient/p2"}}

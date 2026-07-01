@@ -23,17 +23,15 @@ import au.csiro.pathling.library.io.source.QueryableDataSource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,15 +47,26 @@ import org.slf4j.LoggerFactory;
  *   <benchmarkFile> --size s --data <dataRoot> --sink csv --out report-java.json
  * }</pre>
  *
- * <p>It parses the benchmark file, locates its materialized NDJSON via {@link ManifestLocator},
- * loads each distinct subject once, measures every case over its subject, and writes a schema-valid
- * report.
+ * <p>It parses the benchmark file, resolves its materialized NDJSON deterministically via {@link
+ * DataLocator}, verifies the loaded files against the {@link Checkfile} sha256 lock, loads each
+ * distinct subject once, measures every case over its subject, and writes a schema-valid report.
  */
 public final class SofBenchmarkRunner {
 
   @Nonnull private static final Logger log = LoggerFactory.getLogger(SofBenchmarkRunner.class);
 
-  @Nonnull private static final String IMPLEMENTATION_NAME = "pathling-java";
+  /** The execution engine name recorded in {@code implementation.engine}. */
+  @Nonnull private static final String ENGINE_NAME = "Pathling";
+
+  /** The language binding name recorded in {@code implementation.binding}. */
+  @Nonnull private static final String BINDING_NAME = "pathling-java";
+
+  /** The measurement scenario: preloaded data, load excluded from the timed region. */
+  @Nonnull private static final String SCENARIO = "preloaded_repeated";
+
+  /** The sink categories permitted by {@code benchmark-report.schema.json}. */
+  @Nonnull
+  private static final Set<String> SCHEMA_SINKS = Set.of("table", "csv", "memory", "other");
 
   private SofBenchmarkRunner() {}
 
@@ -71,11 +80,18 @@ public final class SofBenchmarkRunner {
 
     final BenchmarkFile benchmark = BenchmarkFile.parse(options.getBenchmarkFile());
     final String size = options.getSize();
-    final int population = benchmark.getDataset().populationFor(size);
+    // Validates that the size is declared for the dataset before resolving its data.
+    benchmark.getDataset().populationFor(size);
     final Path dataDir =
-        ManifestLocator.locate(
-            options.getDataRoot(), benchmark.getDataset().getName(), size, population);
+        DataLocator.locate(
+            options.getDataRoot(),
+            benchmark.getDataset().getName(),
+            benchmark.getDataset().getVersion(),
+            size);
     log.info("Located materialized data at {}", dataDir);
+
+    final Checkfile checkfile = Checkfile.parseOrEmpty(options.getBenchmarkFile());
+    verifyDatasetIntegrity(dataDir, checkfile, size);
 
     final SparkSession spark = buildSpark();
     final Path outDir = createOutputDir();
@@ -91,20 +107,27 @@ public final class SofBenchmarkRunner {
               options.getSink(),
               outDir);
 
-      final List<CaseResult> results = runCases(benchmark, size, ndjson, harness);
+      final List<CaseResult> results = runCases(benchmark, size, checkfile, ndjson, harness);
 
+      final String version = resolveVersion();
       ReportWriter.write(
           options.getOut(),
-          IMPLEMENTATION_NAME,
-          resolveVersion(),
-          resolveBenchmarkVersion(options.getBenchmarkFile()),
+          ENGINE_NAME,
+          version,
+          BINDING_NAME,
+          version,
+          benchmark.getName(),
+          benchmark.getVersion(),
+          benchmark.getDataset().getName(),
+          benchmark.getDataset().getVersion(),
           environment(spark),
-          options.getSink(),
+          SCENARIO,
+          schemaSink(options.getSink()),
           benchmark.getWarmup(),
           benchmark.getMeasurement(),
-          benchmark.getTitle(),
           size,
           benchmark.getFhirVersion(),
+          checkfile.resourceCounts(size),
           results);
       log.info("Wrote benchmark report to {}", options.getOut());
     } finally {
@@ -115,12 +138,14 @@ public final class SofBenchmarkRunner {
 
   /**
    * Loads each distinct subject once (in case order of first appearance) then measures every case
-   * over its loaded subject, returning the case results in benchmark-file order.
+   * over its loaded subject, returning the case results in benchmark-file order. The expected
+   * output row count for each case is sourced from the checkfile by the case's stable id.
    */
   @Nonnull
   private static List<CaseResult> runCases(
       @Nonnull final BenchmarkFile benchmark,
       @Nonnull final String size,
+      @Nonnull final Checkfile checkfile,
       @Nonnull final QueryableDataSource ndjson,
       @Nonnull final MeasurementHarness harness) {
     final Map<String, LoadedSubject> loadedSubjects = new LinkedHashMap<>();
@@ -129,9 +154,46 @@ public final class SofBenchmarkRunner {
       final String subject = benchmarkCase.getResource();
       final LoadedSubject loaded =
           loadedSubjects.computeIfAbsent(subject, s -> harness.load(ndjson, s));
-      results.add(harness.measure(loaded, subject, benchmarkCase, size));
+      results.add(
+          harness.measure(
+              loaded,
+              subject,
+              benchmarkCase,
+              checkfile.expectedCount(benchmarkCase.getId(), size)));
     }
     return results;
+  }
+
+  /**
+   * Verifies each loaded NDJSON file against the checkfile's sha256 lock, logging any drift. When
+   * no checkfile is present the run proceeds unverified with a clear warning.
+   */
+  private static void verifyDatasetIntegrity(
+      @Nonnull final Path dataDir, @Nonnull final Checkfile checkfile, @Nonnull final String size) {
+    if (!checkfile.isPresent()) {
+      log.warn(
+          "No checkfile beside the benchmark file; dataset integrity is unverified and output row"
+              + " counts are not checked.");
+      return;
+    }
+    final List<String> drift = ChecksumVerifier.verify(dataDir, checkfile.fileChecksums(size));
+    if (drift.isEmpty()) {
+      log.info("Dataset integrity verified against the checkfile for size {}.", size);
+    } else {
+      drift.forEach(message -> log.error("Dataset integrity: {}", message));
+      log.error(
+          "Loaded data does not match the checkfile lock; timings are NOT verified against the"
+              + " locked dataset.");
+    }
+  }
+
+  /**
+   * Maps a Spark write format to a sink category permitted by the report schema. Formats such as
+   * {@code parquet} that are not enumerated by the schema are reported as {@code other}.
+   */
+  @Nonnull
+  private static String schemaSink(@Nonnull final String sink) {
+    return SCHEMA_SINKS.contains(sink) ? sink : "other";
   }
 
   @Nonnull
@@ -168,37 +230,6 @@ public final class SofBenchmarkRunner {
   @Nonnull
   private static String resolveVersion() {
     return new PathlingVersion().getBuildVersion().orElse("UNKNOWN");
-  }
-
-  /**
-   * Best-effort resolution of the benchmark submodule's git SHA by running {@code git rev-parse
-   * HEAD} in the benchmark file's directory. Returns null when git is unavailable or the directory
-   * is not a checkout.
-   */
-  @Nullable
-  private static String resolveBenchmarkVersion(@Nonnull final Path benchmarkFile) {
-    final Path directory = benchmarkFile.toAbsolutePath().getParent();
-    if (directory == null) {
-      return null;
-    }
-    try {
-      final Process process =
-          new ProcessBuilder("git", "-C", directory.toString(), "rev-parse", "HEAD")
-              .redirectErrorStream(true)
-              .start();
-      final String output =
-          new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
-      if (!process.waitFor(10, TimeUnit.SECONDS)) {
-        process.destroyForcibly();
-        return null;
-      }
-      return process.exitValue() == 0 && !output.isEmpty() ? output : null;
-    } catch (final IOException e) {
-      return null;
-    } catch (final InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return null;
-    }
   }
 
   private static void deleteRecursively(@Nonnull final Path directory) {
