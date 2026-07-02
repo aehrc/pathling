@@ -18,18 +18,34 @@
 package au.csiro.pathling.sof.benchmark;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * The measured outcome of a single benchmark case: its correctness status, input and output row
  * counts, the timed execute+extract samples (one per measured iteration), and the separately
  * recorded load duration of its subject.
+ *
+ * <p>A case whose load, preparation, or evaluation raised is represented by {@link #failed}: its
+ * status is {@link #EXECUTION_ERROR}, it carries an advisory {@code message}, and it has no timing
+ * samples. Per-case failure isolation records such a case and continues the run rather than
+ * aborting it.
  */
 public class CaseResult {
+
+  /**
+   * The status of a case whose load, preparation, or evaluation raised. This is the
+   * always-conformant default for any such failure; the finer {@code timeout} and {@code malformed}
+   * refinements are not produced.
+   */
+  @Nonnull public static final String EXECUTION_ERROR = "execution_error";
 
   @Nonnull private final String id;
 
   @Nonnull private final String status;
+
+  @Nullable private final String message;
 
   private final long inputRows;
 
@@ -40,7 +56,7 @@ public class CaseResult {
   private final double loadMs;
 
   /**
-   * Constructs a case result.
+   * Constructs a measured case result with no advisory message.
    *
    * @param id the stable case id (the report's per-case key)
    * @param status {@code ok} or {@code count_mismatch}
@@ -56,12 +72,38 @@ public class CaseResult {
       final long outputRows,
       @Nonnull final List<Double> executeExtractSamplesMs,
       final double loadMs) {
+    this(id, status, null, inputRows, outputRows, executeExtractSamplesMs, loadMs);
+  }
+
+  private CaseResult(
+      @Nonnull final String id,
+      @Nonnull final String status,
+      @Nullable final String message,
+      final long inputRows,
+      final long outputRows,
+      @Nonnull final List<Double> executeExtractSamplesMs,
+      final double loadMs) {
     this.id = id;
     this.status = status;
+    this.message = message;
     this.inputRows = inputRows;
     this.outputRows = outputRows;
     this.executeExtractSamplesMs = executeExtractSamplesMs;
     this.loadMs = loadMs;
+  }
+
+  /**
+   * Constructs a failed case result: a case whose load, preparation, or evaluation raised. It has
+   * {@link #EXECUTION_ERROR} status, an advisory message, and no timing samples, so the run can
+   * record it and continue.
+   *
+   * @param id the stable case id
+   * @param message an advisory human-readable explanation of the failure
+   * @return the failed case result
+   */
+  @Nonnull
+  public static CaseResult failed(@Nonnull final String id, @Nonnull final String message) {
+    return new CaseResult(id, EXECUTION_ERROR, message, 0L, 0L, List.of(), 0.0);
   }
 
   /**
@@ -75,13 +117,24 @@ public class CaseResult {
   }
 
   /**
-   * Returns the correctness status ({@code ok} or {@code count_mismatch}).
+   * Returns the case status: {@code ok} or {@code count_mismatch} for a measured case, or {@link
+   * #EXECUTION_ERROR} for a failed case.
    *
    * @return the status
    */
   @Nonnull
   public String getStatus() {
     return status;
+  }
+
+  /**
+   * Returns the advisory failure message, present only for a failed (non-{@code ok}) case.
+   *
+   * @return the advisory message, if any
+   */
+  @Nonnull
+  public Optional<String> getMessage() {
+    return Optional.ofNullable(message);
   }
 
   /**

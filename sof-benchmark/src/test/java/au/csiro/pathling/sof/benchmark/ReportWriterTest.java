@@ -128,6 +128,55 @@ class ReportWriterTest {
   }
 
   @Test
+  void failedCaseRecordsExecutionErrorWithMessageAndNoSamples(@TempDir final Path dir)
+      throws Exception {
+    final ObjectNode environment = MAPPER.createObjectNode();
+    environment.put("os", "Test OS");
+    final List<CaseResult> results =
+        List.of(
+            new CaseResult("condition-flat", "ok", 2L, 2L, List.of(10.0, 12.0, 11.0), 42.0),
+            CaseResult.failed("broken-case", "boom: could not evaluate view"));
+
+    final Path out = dir.resolve("report.json");
+    ReportWriter.write(
+        out,
+        "Pathling",
+        "9.9.0",
+        "pathling-java",
+        "9.9.0",
+        "clinical-flat",
+        "1",
+        "synthea-clinical",
+        "1",
+        environment,
+        "preloaded_repeated",
+        "csv",
+        1,
+        3,
+        "s",
+        "4.0.1",
+        Map.of("Condition", 2, "Observation", 2),
+        results);
+    final JsonNode cases =
+        MAPPER.readTree(Files.readAllBytes(out)).at("/results/clinical-flat/cases");
+
+    // The succeeding case keeps its measurements and omits the advisory message.
+    final JsonNode okCase = cases.get(0);
+    assertEquals("ok", okCase.path("status").asText());
+    assertTrue(okCase.path("message").isMissingNode());
+    assertTrue(okCase.path("samplesMs").isArray());
+
+    // The failed case is recorded as execution_error with a message and no measurements.
+    final JsonNode failedCase = cases.get(1);
+    assertEquals("broken-case", failedCase.path("id").asText());
+    assertEquals("execution_error", failedCase.path("status").asText());
+    assertEquals("boom: could not evaluate view", failedCase.path("message").asText());
+    assertTrue(failedCase.path("samplesMs").isMissingNode());
+    assertTrue(failedCase.path("stats").isMissingNode());
+    assertTrue(failedCase.path("inputRows").isMissingNode());
+  }
+
+  @Test
   void satisfiesTopLevelSchemaRequiredKeys(@TempDir final Path dir) throws Exception {
     final JsonNode report = writeAndRead(dir.resolve("report.json"));
     final JsonNode schema =

@@ -82,7 +82,21 @@
                   "type": "string",
                   "description": "Matches the benchmark file's case id and the checkfile assertion key."
                 },
-                "status": { "enum": ["ok", "count_mismatch", "generation_error", "execution_error"] },
+                "status": {
+                  "enum": [
+                    "ok",
+                    "count_mismatch",
+                    "generation_error",
+                    "execution_error",
+                    "timeout",
+                    "malformed"
+                  ],
+                  "description": "Per-case outcome. execution_error = the engine raised while evaluating the case, or the case's inputs could not be loaded/prepared for execution (a load/preparation failure before the engine ran). timeout = the case exceeded a wall-clock generation/execution budget and was abandoned (distinct from execution_error). malformed = the case's inputs or outputs were structurally invalid — a materialized resource that will not parse, or a result that cannot be materialized to the sink (distinct from generation_error, where generation itself failed to produce data)."
+                },
+                "message": {
+                  "type": "string",
+                  "description": "OPTIONAL short human-readable explanation of a non-ok outcome (e.g. exception text or 'exceeded 300s budget'). Advisory context for a human reading the report, never machine-parsed; an ok case omits it."
+                },
                 "inputRows": {
                   "type": "integer",
                   "description": "Number of input resources of the case's view.resource type loaded for this (case, size) — the throughput/normalization denominator; distinct from outputRows and from the total across all resource types."

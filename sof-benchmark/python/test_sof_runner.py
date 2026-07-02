@@ -200,3 +200,41 @@ def test_parity_with_java_report_shape():
         "phaseSamplesMs",
     }
     assert set(case["stats"].keys()) == {"mean", "stddev", "min", "max", "median"}
+
+
+def test_run_isolated_records_a_failing_case_as_execution_error():
+    def boom():
+        raise RuntimeError("boom: could not evaluate view")
+
+    result = sof_runner.run_isolated("broken-case", boom)
+
+    assert result == {
+        "id": "broken-case",
+        "status": "execution_error",
+        "message": "boom: could not evaluate view",
+    }
+
+
+def test_run_isolated_returns_a_succeeding_case_unchanged():
+    measured = {"id": "ok-case", "status": "ok", "inputRows": 2, "outputRows": 2}
+
+    result = sof_runner.run_isolated("ok-case", lambda: measured)
+
+    assert result is measured
+    assert "message" not in result
+
+
+def test_one_failing_case_does_not_abort_the_run_nor_void_the_others():
+    def measurement_for(case_id):
+        if case_id == "second":
+            raise ValueError  # No message: falls back to repr().
+        return {"id": case_id, "status": "ok"}
+
+    ids = ["first", "second", "third"]
+    results = [sof_runner.run_isolated(i, lambda i=i: measurement_for(i)) for i in ids]
+
+    assert [r["id"] for r in results] == ["first", "second", "third"]
+    assert results[0]["status"] == "ok"
+    assert results[1]["status"] == "execution_error"
+    assert results[1]["message"]
+    assert results[2]["status"] == "ok"

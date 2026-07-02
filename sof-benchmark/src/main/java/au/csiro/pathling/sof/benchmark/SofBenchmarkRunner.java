@@ -32,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -151,17 +152,56 @@ public final class SofBenchmarkRunner {
     final Map<String, LoadedSubject> loadedSubjects = new LinkedHashMap<>();
     final List<CaseResult> results = new ArrayList<>();
     for (final BenchmarkCase benchmarkCase : benchmark.getCases()) {
-      final String subject = benchmarkCase.getResource();
-      final LoadedSubject loaded =
-          loadedSubjects.computeIfAbsent(subject, s -> harness.load(ndjson, s));
-      results.add(
-          harness.measure(
-              loaded,
-              subject,
-              benchmarkCase,
-              checkfile.expectedCount(benchmarkCase.getId(), size)));
+      results.add(measureIsolated(benchmarkCase, size, checkfile, ndjson, harness, loadedSubjects));
     }
     return results;
+  }
+
+  /**
+   * Measures one case under its own failure boundary (per-case failure isolation). A load,
+   * preparation, or evaluation failure is recorded as an {@code execution_error} with an advisory
+   * message and returned like any other outcome, so the caller's loop never aborts and never voids
+   * the other cases' recorded results.
+   */
+  @Nonnull
+  private static CaseResult measureIsolated(
+      @Nonnull final BenchmarkCase benchmarkCase,
+      @Nonnull final String size,
+      @Nonnull final Checkfile checkfile,
+      @Nonnull final QueryableDataSource ndjson,
+      @Nonnull final MeasurementHarness harness,
+      @Nonnull final Map<String, LoadedSubject> loadedSubjects) {
+    return runIsolated(
+        benchmarkCase.getId(),
+        () -> {
+          final String subject = benchmarkCase.getResource();
+          final LoadedSubject loaded =
+              loadedSubjects.computeIfAbsent(subject, s -> harness.load(ndjson, s));
+          return harness.measure(
+              loaded, subject, benchmarkCase, checkfile.expectedCount(benchmarkCase.getId(), size));
+        });
+  }
+
+  /**
+   * Runs a single case's measurement under a failure boundary (per-case failure isolation). When
+   * the measurement raises, the failure is recorded as an {@code execution_error} with an advisory
+   * message and returned like any other outcome, so the caller's loop never aborts and never voids
+   * the other cases' recorded results.
+   *
+   * @param id the stable case id
+   * @param measurement the measurement to run, which may raise
+   * @return the measured result, or a failed result if the measurement raised
+   */
+  @Nonnull
+  static CaseResult runIsolated(
+      @Nonnull final String id, @Nonnull final Supplier<CaseResult> measurement) {
+    try {
+      return measurement.get();
+    } catch (final RuntimeException e) {
+      final String message = e.getMessage() == null ? e.toString() : e.getMessage();
+      log.error("Case '{}' failed: {}", id, message, e);
+      return CaseResult.failed(id, message);
+    }
   }
 
   /**

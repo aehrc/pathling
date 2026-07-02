@@ -134,10 +134,19 @@ public final class ReportWriter {
     final ObjectNode node = MAPPER.createObjectNode();
     node.put("id", result.getId());
     node.put("status", result.getStatus());
+    // The advisory message accompanies a non-ok outcome only; an ok case omits it.
+    result.getMessage().ifPresent(message -> node.put("message", message));
+
+    final List<Double> samples = result.getExecuteExtractSamplesMs();
+    // A failed case has no timing samples, so it carries neither measurements nor stats — only its
+    // id, status and advisory message.
+    if (samples.isEmpty()) {
+      return node;
+    }
+
     node.put("inputRows", result.getInputRows());
     node.put("outputRows", result.getOutputRows());
 
-    final List<Double> samples = result.getExecuteExtractSamplesMs();
     final ArrayNode samplesNode = node.putArray("samplesMs");
     samples.forEach(samplesNode::add);
 

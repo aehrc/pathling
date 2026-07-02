@@ -37,7 +37,7 @@ import tempfile
 import time
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 import click
 from pathling import PathlingContext
@@ -46,6 +46,9 @@ from pathling.datasource import DataSource
 ENGINE_NAME = "Pathling"
 BINDING_NAME = "pathling-python"
 SCENARIO = "preloaded_repeated"
+# The always-conformant status for any load/prepare/evaluate failure; the finer timeout and
+# malformed refinements are not produced.
+EXECUTION_ERROR = "execution_error"
 DEFAULT_SINK = "csv"
 DEFAULT_OUT = "benchmark-report.json"
 DEFAULT_WARMUP = 1
@@ -440,11 +443,12 @@ def run_cases(
     loaded_subjects: Dict[str, dict] = {}
     results = []
     for case in cases:
-        subject = case["view"]["resource"]
-        if subject not in loaded_subjects:
-            loaded_subjects[subject] = load_subject(ndjson, subject, pc)
-        results.append(
-            measure_case(
+
+        def measurement_of(case=case) -> dict:
+            subject = case["view"]["resource"]
+            if subject not in loaded_subjects:
+                loaded_subjects[subject] = load_subject(ndjson, subject, pc)
+            return measure_case(
                 loaded_subjects[subject],
                 subject,
                 case,
@@ -454,8 +458,38 @@ def run_cases(
                 warmup,
                 measurement,
             )
-        )
+
+        results.append(run_isolated(case["id"], measurement_of))
     return results
+
+
+def failed_case(case_id: str, message: str) -> dict:
+    """Builds a failed case result: execution_error with an advisory message and no samples.
+
+    :param case_id: the stable case id.
+    :param message: an advisory human-readable explanation of the failure.
+    :return: the failed case result dict (id, status and message only).
+    """
+    return {"id": case_id, "status": EXECUTION_ERROR, "message": message}
+
+
+def run_isolated(case_id: str, measurement: Callable[[], dict]) -> dict:
+    """Runs a single case's measurement under a failure boundary (per-case failure isolation).
+
+    When the measurement raises, the failure is recorded as an ``execution_error`` with an
+    advisory message and returned like any other outcome, so the caller's loop never aborts
+    and never voids the other cases' recorded results.
+
+    :param case_id: the stable case id.
+    :param measurement: the measurement to run, which may raise.
+    :return: the measured result, or a failed result if the measurement raised.
+    """
+    try:
+        return measurement()
+    except Exception as exc:  # Record-and-continue: any per-case failure is isolated.
+        message = str(exc) or repr(exc)
+        log.error("Case '%s' failed: %s", case_id, message)
+        return failed_case(case_id, message)
 
 
 def load_subject(ndjson: DataSource, subject: str, pc: PathlingContext) -> dict:

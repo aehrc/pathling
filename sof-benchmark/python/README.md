@@ -27,8 +27,9 @@ binding-layer (py4j) overhead on top of the shared JVM engine.
   > ```
 
 - Materialized benchmark data. The data is **not** checked in — generate it with
-  the submodule's tool (needs the Synthea jar and a local
-  `executors.config.json`):
+  the submodule's tool. It needs Java on the `PATH`; the materializer auto-fetches
+  the pinned Synthea jar (checksum-verified and cached), so no manual jar download
+  is required and `tools/executors.config.json` is only an optional override:
 
   ```bash
   cd sql-on-fhir/benchmark
@@ -80,6 +81,11 @@ python sof-benchmark/python/sof_runner.py \
   `countVariancePermitted` is always `ok` (its reference resolves in a
   `where`/`forEach` position where empty-vs-null-vs-error is engine-specific). A
   mismatch is recorded, not fatal.
+- **Per-case failure isolation:** each case is measured under its own boundary. A
+  case whose load, preparation, or evaluation raises is recorded as
+  `execution_error` with an advisory `message`, and the run continues to the
+  remaining cases — a failing case never aborts the run, and a partial run still
+  emits a schema-valid report.
 
 ## Report shape
 
