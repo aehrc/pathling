@@ -101,7 +101,7 @@ public class SchemaMigrator {
    */
   private void checkTable(
       @Nonnull final String resourceCode, @Nonnull final Set<String> driftedTypes) {
-    final String tablePath = safelyJoinPaths(databasePath, resourceCode + ".parquet");
+    final String tablePath = safelyJoinPaths(databasePath, resourceCode + TABLE_EXTENSION);
     final SortedSet<String> missingFields;
     try {
       if (!DeltaTable.isDeltaTable(spark, tablePath)) {
