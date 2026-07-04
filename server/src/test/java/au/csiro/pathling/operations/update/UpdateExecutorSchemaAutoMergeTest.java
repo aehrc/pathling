@@ -37,12 +37,9 @@ import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.DeltaSchemaFixtures;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
+import au.csiro.pathling.util.LogCapture;
 import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -54,7 +51,6 @@ import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
@@ -151,22 +147,19 @@ class UpdateExecutorSchemaAutoMergeTest {
     final UpdateExecutor executor = newExecutor(true, dataSource);
     final ViewDefinitionResource update = createViewDefinition(VIEW_ID, "updated_view", "Patient");
 
-    final ListAppender<ILoggingEvent> appender = attachLogAppender();
-    try {
+    try (final LogCapture logCapture = LogCapture.forClass(UpdateExecutor.class)) {
       executor.merge("ViewDefinition", update);
-    } finally {
-      detachLogAppender(appender);
-    }
 
-    verify(dataSource).refresh("ViewDefinition");
-    assertThat(appender.list)
-        .anySatisfy(
-            event -> {
-              assertThat(event.getLevel()).isEqualTo(Level.INFO);
-              assertThat(event.getFormattedMessage())
-                  .contains("ViewDefinition")
-                  .contains("forEach");
-            });
+      verify(dataSource).refresh("ViewDefinition");
+      assertThat(logCapture.events())
+          .anySatisfy(
+              event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.INFO);
+                assertThat(event.getFormattedMessage())
+                    .contains("ViewDefinition")
+                    .contains("forEach");
+              });
+    }
   }
 
   /**
@@ -188,35 +181,6 @@ class UpdateExecutorSchemaAutoMergeTest {
   }
 
   // ---- helpers ----
-
-  /**
-   * Attaches a list appender to the {@link UpdateExecutor} logger to capture log events, lowering
-   * the logger level to INFO so the events under test are not filtered out by the test profile.
-   */
-  @Nonnull
-  private static ListAppender<ILoggingEvent> attachLogAppender() {
-    final Logger logger = (Logger) LoggerFactory.getLogger(UpdateExecutor.class);
-    previousLogLevel = logger.getLevel();
-    logger.setLevel(Level.INFO);
-    final ListAppender<ILoggingEvent> appender = new ListAppender<>();
-    appender.start();
-    logger.addAppender(appender);
-    return appender;
-  }
-
-  /**
-   * Detaches a previously attached list appender from the {@link UpdateExecutor} logger and
-   * restores the logger level.
-   */
-  private static void detachLogAppender(@Nonnull final ListAppender<ILoggingEvent> appender) {
-    final Logger logger = (Logger) LoggerFactory.getLogger(UpdateExecutor.class);
-    logger.detachAppender(appender);
-    logger.setLevel(previousLogLevel);
-    appender.stop();
-  }
-
-  /** The logger level in force before the list appender was attached, restored on detach. */
-  @Nullable private static Level previousLogLevel;
 
   /**
    * Two-stage setup: write a ViewDefinition through {@link UpdateExecutor} so the Delta log is

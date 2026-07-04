@@ -65,6 +65,9 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @TestMethodOrder(OrderAnnotation.class)
 class SchemaEvolutionReadIT {
 
+  /** A Patient id that exists in the prebuilt test data. */
+  private static final String EXISTING_PATIENT_ID = "72df0f76-2758-fac4-67cd-de33c4a2c95e";
+
   private static final String NEW_PATIENT_ID = "schema-drift-test-patient";
 
   @LocalServerPort int port;
@@ -93,6 +96,28 @@ class SchemaEvolutionReadIT {
     DeltaSchemaFixtures.removeFieldsFromTableSchema(
         warehouseDir.resolve("delta").resolve("Patient.parquet"), Set.of("gender"));
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
+  }
+
+  /**
+   * User story 2, acceptance scenario 2: with {@code schemaAutoMerge} enabled, a resource of the
+   * drifted type is readable immediately after startup, with no prior write, because the table was
+   * migrated at startup. This test must run before any write against the type.
+   */
+  @Test
+  @Order(1)
+  void getSucceedsAfterStartupWithNoPriorWrite() {
+    webTestClient
+        .get()
+        .uri("http://localhost:" + port + "/fhir/Patient/" + EXISTING_PATIENT_ID)
+        .header("Accept", "application/fhir+json")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.resourceType")
+        .isEqualTo("Patient")
+        .jsonPath("$.id")
+        .isEqualTo(EXISTING_PATIENT_ID);
   }
 
   /**
