@@ -63,7 +63,13 @@ public class DynamicDeltaSource implements QueryableDataSource {
   @Nonnull private final Set<String> dynamicallyDiscoveredTypes = ConcurrentHashMap.newKeySet();
 
   /**
-   * Constructs a new DynamicDeltaSource.
+   * The resource types whose tables were found drifted and could not be migrated at startup. Reads
+   * of these types fail with an actionable error until a successful refresh clears them.
+   */
+  @Nonnull private final Set<String> driftedTypes = ConcurrentHashMap.newKeySet();
+
+  /**
+   * Constructs a new DynamicDeltaSource with no drifted types.
    *
    * @param delegate the underlying QueryableDataSource to delegate to
    * @param spark the Spark session for Delta table operations
@@ -77,11 +83,32 @@ public class DynamicDeltaSource implements QueryableDataSource {
       @Nonnull final String databasePath,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final StorageConfiguration storageConfiguration) {
+    this(delegate, spark, databasePath, fhirEncoders, storageConfiguration, Set.of());
+  }
+
+  /**
+   * Constructs a new DynamicDeltaSource.
+   *
+   * @param delegate the underlying QueryableDataSource to delegate to
+   * @param spark the Spark session for Delta table operations
+   * @param databasePath the path to the Delta database
+   * @param fhirEncoders the FHIR encoders for creating empty datasets
+   * @param storageConfiguration the storage configuration
+   * @param driftedTypes the resource types left drifted and unmigrated at startup
+   */
+  public DynamicDeltaSource(
+      @Nonnull final QueryableDataSource delegate,
+      @Nonnull final SparkSession spark,
+      @Nonnull final String databasePath,
+      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final StorageConfiguration storageConfiguration,
+      @Nonnull final Set<String> driftedTypes) {
     this.delegate = delegate;
     this.spark = spark;
     this.databasePath = databasePath;
     this.fhirEncoders = fhirEncoders;
     this.cacheDatasets = storageConfiguration.getCacheDatasets();
+    this.driftedTypes.addAll(driftedTypes);
   }
 
   @Override
