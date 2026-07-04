@@ -23,6 +23,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.FileSystemPersistence;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
+import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.views.FhirView;
@@ -111,6 +112,41 @@ public class DynamicDeltaSource implements QueryableDataSource {
     // No data found - return an empty dataset with the correct schema.
     log.debug("No data found for resource type: {}, returning empty dataset", resourceCode);
     return QueryHelpers.createEmptyDataset(spark, fhirEncoders, resourceCode);
+  }
+
+  /**
+   * Re-loads the Delta table for the given resource type and replaces the dataset served for it, so
+   * that all consumers observe the table's current schema. Intended to be called after a
+   * schema-evolving write. When dataset caching is enabled, the stale cached dataset is
+   * unpersisted. If no Delta table exists for the type, the call is a no-op.
+   *
+   * @param resourceCode the resource type code to refresh
+   */
+  public void refresh(@Nonnull final String resourceCode) {
+    final String tablePath = getTablePath(resourceCode);
+    if (!DeltaTable.isDeltaTable(spark, tablePath)) {
+      log.debug("No Delta table found for resource type {}, nothing to refresh", resourceCode);
+      return;
+    }
+
+    // Unpersist the stale cached dataset before replacing it, so the cached plan for the old
+    // snapshot does not linger in the Spark cache.
+    if (cacheDatasets && delegate.getResourceTypes().contains(resourceCode)) {
+      delegate.read(resourceCode).unpersist();
+    }
+
+    final Dataset<Row> refreshed = spark.read().format("delta").load(tablePath);
+    if (delegate instanceof final DatasetSource datasetSource) {
+      // Replace the pinned entry in the delegate's resource map, so every consumer that resolves
+      // datasets through the delegate observes the evolved schema.
+      datasetSource.dataset(resourceCode, refreshed);
+      log.info("Refreshed dataset for resource type {}", resourceCode);
+    } else {
+      // The delegate cannot be mutated; serve the type through dynamic discovery, which re-loads
+      // the Delta table on each read.
+      dynamicallyDiscoveredTypes.add(resourceCode);
+      log.info("Registered resource type {} for dynamic discovery following refresh", resourceCode);
+    }
   }
 
   @Override

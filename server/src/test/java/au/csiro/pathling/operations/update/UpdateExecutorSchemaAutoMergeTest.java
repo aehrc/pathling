@@ -20,6 +20,10 @@ package au.csiro.pathling.operations.update;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.StorageConfiguration;
@@ -27,27 +31,30 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
+import au.csiro.pathling.io.DynamicDeltaSource;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.util.DeltaSchemaFixtures;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Set;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
@@ -131,22 +138,107 @@ class UpdateExecutorSchemaAutoMergeTest {
     assertThatNoException().isThrownBy(() -> executor.merge("ViewDefinition", update));
   }
 
+  /**
+   * When the warmup write evolves the table schema, the executor must refresh the data source entry
+   * for the resource type so that in-process consumers see the evolved schema (FR-001), and must
+   * log the fields that were added at INFO level (FR-010).
+   */
+  @Test
+  void warmupWriteTriggersRefreshAndLogsAddedFields() throws Exception {
+    seedTableAndDowngradeSchema();
+
+    final DynamicDeltaSource dataSource = mock(DynamicDeltaSource.class);
+    final UpdateExecutor executor = newExecutor(true, dataSource);
+    final ViewDefinitionResource update = createViewDefinition(VIEW_ID, "updated_view", "Patient");
+
+    final ListAppender<ILoggingEvent> appender = attachLogAppender();
+    try {
+      executor.merge("ViewDefinition", update);
+    } finally {
+      detachLogAppender(appender);
+    }
+
+    verify(dataSource).refresh("ViewDefinition");
+    assertThat(appender.list)
+        .anySatisfy(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.INFO);
+              assertThat(event.getFormattedMessage())
+                  .contains("ViewDefinition")
+                  .contains("forEach");
+            });
+  }
+
+  /**
+   * When the table schema already matches the encoder output, no warmup write occurs and no refresh
+   * must be invoked, so undrifted updates carry no extra cost (FR-008 analogue for the update
+   * path).
+   */
+  @Test
+  void mergeWithoutDriftDoesNotTriggerRefresh() {
+    seedTable();
+
+    final DynamicDeltaSource dataSource = mock(DynamicDeltaSource.class);
+    final UpdateExecutor executor = newExecutor(true, dataSource);
+    final ViewDefinitionResource update = createViewDefinition(VIEW_ID, "updated_view", "Patient");
+
+    executor.merge("ViewDefinition", update);
+
+    verify(dataSource, never()).refresh(anyString());
+  }
+
   // ---- helpers ----
+
+  /**
+   * Attaches a list appender to the {@link UpdateExecutor} logger to capture log events, lowering
+   * the logger level to INFO so the events under test are not filtered out by the test profile.
+   */
+  @Nonnull
+  private static ListAppender<ILoggingEvent> attachLogAppender() {
+    final Logger logger = (Logger) LoggerFactory.getLogger(UpdateExecutor.class);
+    previousLogLevel = logger.getLevel();
+    logger.setLevel(Level.INFO);
+    final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.addAppender(appender);
+    return appender;
+  }
+
+  /**
+   * Detaches a previously attached list appender from the {@link UpdateExecutor} logger and
+   * restores the logger level.
+   */
+  private static void detachLogAppender(@Nonnull final ListAppender<ILoggingEvent> appender) {
+    final Logger logger = (Logger) LoggerFactory.getLogger(UpdateExecutor.class);
+    logger.detachAppender(appender);
+    logger.setLevel(previousLogLevel);
+    appender.stop();
+  }
+
+  /** The logger level in force before the list appender was attached, restored on detach. */
+  @Nullable private static Level previousLogLevel;
 
   /**
    * Two-stage setup: write a ViewDefinition through {@link UpdateExecutor} so the Delta log is
    * created in the correct format, then rewrite the {@code schemaString} on disk to simulate an
-   * older encoder version.
+   * older encoder version. Struct-level removal is used rather than a wholesale schema replacement
+   * because Delta 4.x {@code updateAll()} silently ignores extra top-level columns in the source;
+   * {@code DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION} only fires when a struct-typed column in the
+   * target has fewer fields than the corresponding struct in the source.
    */
   private void seedTableAndDowngradeSchema() throws IOException {
+    seedTable();
+
+    final Path tablePath = tempDatabasePath.resolve("ViewDefinition.parquet");
+    DeltaSchemaFixtures.removeFieldsFromTableSchema(tablePath, Set.of("forEach", "forEachOrNull"));
+    invalidateDeltaMetadataCache(tablePath);
+  }
+
+  /** Writes an initial ViewDefinition through {@link UpdateExecutor} to create the Delta table. */
+  private void seedTable() {
     final UpdateExecutor seed = newExecutor(true);
     final ViewDefinitionResource initial = createViewDefinition(VIEW_ID, "initial_view", "Patient");
     seed.merge("ViewDefinition", initial);
-
-    final Path tablePath = tempDatabasePath.resolve("ViewDefinition.parquet");
-    final Path deltaLogDir = tablePath.resolve("_delta_log");
-    downgradeDeltaSchema(deltaLogDir);
-    invalidateDeltaMetadataCache(tablePath);
   }
 
   private void invalidateDeltaMetadataCache(@Nonnull final Path tablePath) {
@@ -156,6 +248,12 @@ class UpdateExecutorSchemaAutoMergeTest {
 
   @Nonnull
   private UpdateExecutor newExecutor(final boolean schemaAutoMerge) {
+    return newExecutor(schemaAutoMerge, mock(QueryableDataSource.class));
+  }
+
+  @Nonnull
+  private UpdateExecutor newExecutor(
+      final boolean schemaAutoMerge, @Nonnull final QueryableDataSource dataSource) {
     final StorageConfiguration storageConfiguration = new StorageConfiguration();
     storageConfiguration.setSchemaAutoMerge(schemaAutoMerge);
     return new UpdateExecutor(
@@ -163,71 +261,8 @@ class UpdateExecutorSchemaAutoMergeTest {
         fhirEncoders,
         tempDatabasePath.toAbsolutePath().toString(),
         cacheableDatabase,
-        storageConfiguration);
-  }
-
-  /**
-   * Rewrites the {@code metaData} action in the first Delta log commit to remove the {@code
-   * forEach} and {@code forEachOrNull} fields from all nested struct definitions in the table's
-   * {@code schemaString}. Also removes the Delta and Hadoop CRC side-cars so checksum validation
-   * does not reject the modified commit.
-   *
-   * <p>Why struct-level removal rather than a wholesale schema replacement: Delta 4.x {@code
-   * updateAll()} silently ignores extra top-level columns in the source, so a target with only
-   * {@code {id}} does not trigger {@code DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION}. The error only
-   * fires when a struct-typed column in the target has fewer fields than the corresponding struct
-   * in the source.
-   */
-  private static void downgradeDeltaSchema(@Nonnull final Path deltaLogDir) throws IOException {
-    final Path logFile = deltaLogDir.resolve("00000000000000000000.json");
-    assertThat(logFile).exists();
-
-    final ObjectMapper mapper = new ObjectMapper();
-    final List<String> original = Files.readAllLines(logFile);
-    final List<String> patched = new ArrayList<>(original.size());
-
-    for (final String line : original) {
-      final JsonNode node = mapper.readTree(line);
-      if (node.has("metaData")) {
-        final String schemaString = node.get("metaData").get("schemaString").asText();
-        final JsonNode schema = mapper.readTree(schemaString);
-        removeStructFields(schema, Set.of("forEach", "forEachOrNull"));
-        ((ObjectNode) node.get("metaData")).put("schemaString", mapper.writeValueAsString(schema));
-        patched.add(mapper.writeValueAsString(node));
-      } else {
-        patched.add(line);
-      }
-    }
-
-    Files.write(logFile, patched);
-
-    Files.deleteIfExists(deltaLogDir.resolve("00000000000000000000.crc"));
-    Files.deleteIfExists(deltaLogDir.resolve(".00000000000000000000.json.crc"));
-  }
-
-  /**
-   * Recursively removes fields with the given names from all struct-type definitions within a Spark
-   * schema JSON node (as serialised by Delta Lake). Struct nodes are identified by having a {@code
-   * fields} array; array-type nodes by having an {@code elementType} object.
-   */
-  private static void removeStructFields(
-      @Nonnull final JsonNode node, @Nonnull final Set<String> fieldNames) {
-    if (!node.isObject()) {
-      return;
-    }
-    if (node.has("fields")) {
-      final ArrayNode fields = (ArrayNode) node.get("fields");
-      for (int i = fields.size() - 1; i >= 0; i--) {
-        if (fieldNames.contains(fields.get(i).get("name").asText())) {
-          fields.remove(i);
-        }
-      }
-      for (final JsonNode field : fields) {
-        removeStructFields(field.get("type"), fieldNames);
-      }
-    } else if (node.has("elementType")) {
-      removeStructFields(node.get("elementType"), fieldNames);
-    }
+        storageConfiguration,
+        dataSource);
   }
 
   @Nonnull

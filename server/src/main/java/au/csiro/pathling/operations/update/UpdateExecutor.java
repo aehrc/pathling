@@ -23,11 +23,15 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.io.DynamicDeltaSource;
 import au.csiro.pathling.io.SchemaDrift;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
+import java.util.Collections;
 import java.util.List;
+import java.util.SortedSet;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -57,6 +61,8 @@ public class UpdateExecutor {
 
   private final boolean schemaAutoMerge;
 
+  @Nonnull private final QueryableDataSource dataSource;
+
   /**
    * Constructs a new UpdateExecutor.
    *
@@ -66,6 +72,7 @@ public class UpdateExecutor {
    * @param cacheableDatabase the cacheable database for cache invalidation
    * @param storageConfiguration the storage configuration, used to read the {@code schemaAutoMerge}
    *     flag
+   * @param dataSource the data source serving queries, refreshed after a schema-evolving write
    */
   public UpdateExecutor(
       @Nonnull final PathlingContext pathlingContext,
@@ -73,12 +80,14 @@ public class UpdateExecutor {
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") @Nonnull
           final String databasePath,
       @Nonnull final CacheableDatabase cacheableDatabase,
-      @Nonnull final StorageConfiguration storageConfiguration) {
+      @Nonnull final StorageConfiguration storageConfiguration,
+      @Nonnull final QueryableDataSource dataSource) {
     this.pathlingContext = pathlingContext;
     this.fhirEncoders = fhirEncoders;
     this.databasePath = databasePath;
     this.cacheableDatabase = cacheableDatabase;
     this.schemaAutoMerge = storageConfiguration.getSchemaAutoMerge();
+    this.dataSource = dataSource;
   }
 
   /**
@@ -138,9 +147,13 @@ public class UpdateExecutor {
 
     if (deltaTableExists(spark, tablePath)) {
       DeltaTable table = DeltaTable.forPath(spark, tablePath);
+      boolean schemaEvolved = false;
 
-      if (schemaAutoMerge
-          && SchemaDrift.hasMissingFields(updates.schema(), table.toDF().schema())) {
+      final SortedSet<String> missingFields =
+          schemaAutoMerge
+              ? SchemaDrift.missingFieldPaths(updates.schema(), table.toDF().schema())
+              : Collections.emptySortedSet();
+      if (!missingFields.isEmpty()) {
         // Delta's MERGE - even with spark.databricks.delta.schema.autoMerge.enabled=true - does
         // not support adding new fields to nested structs inside arrays. This is the exact failure
         // mode when the FHIR encoder gains new value-type columns (e.g. valueDecimal,
@@ -154,8 +167,8 @@ public class UpdateExecutor {
         // without inserting any data. The MERGE that follows then sees compatible schemas and
         // succeeds.
         //
-        // hasMissingFields() compares only field names and structural shape, ignoring nullability
-        // and column metadata. This avoids paying the warmup transaction when the schemas are
+        // SchemaDrift compares only field names and structural shape, ignoring nullability and
+        // column metadata. This avoids paying the warmup transaction when the schemas are
         // semantically equivalent but differ in metadata (e.g. parquet-side annotations).
         //
         // After the warmup write the table snapshot has changed, so we re-resolve DeltaTable
@@ -168,6 +181,8 @@ public class UpdateExecutor {
             .option("mergeSchema", "true")
             .save(tablePath);
         table = DeltaTable.forPath(spark, tablePath);
+        schemaEvolved = true;
+        log.info("Evolved schema of {} table, added fields: {}", resourceCode, missingFields);
       }
 
       // Perform a merge operation on the existing table.
@@ -179,6 +194,12 @@ public class UpdateExecutor {
           .whenNotMatched()
           .insertAll()
           .execute();
+
+      // After a schema-evolving write, refresh the dataset served for this resource type so that
+      // all in-process consumers observe the evolved schema without a server restart.
+      if (schemaEvolved && dataSource instanceof final DynamicDeltaSource dynamicDataSource) {
+        dynamicDataSource.refresh(resourceCode);
+      }
     } else {
       // Create a new table with the resources.
       log.debug("Creating new Delta table for resource type: {}", resourceCode);
