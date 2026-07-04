@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.config.StorageConfiguration;
@@ -26,6 +27,7 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
+import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
@@ -192,6 +194,69 @@ class DynamicDeltaSourceTest {
     source.refresh("Patient");
 
     assertThat(source.read("Patient").count()).isEqualTo(1);
+  }
+
+  // Verifies that constructing a view query over a drifted subject type throws SchemaDriftError.
+  // The executed query resolves its subject dataset through the delegate's own dispatcher rather
+  // than the guarded read(), so the guard must be applied when the query is constructed.
+  @Test
+  void viewOverDriftedTypeThrowsSchemaDriftError(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+    final FhirView view =
+        FhirView.ofResource("Patient")
+            .select(FhirView.columns(FhirView.column("id", "id")))
+            .build();
+
+    assertThatThrownBy(() -> source.view(view))
+        .isInstanceOf(SchemaDriftError.class)
+        .hasMessageContaining("Patient");
+    assertThatThrownBy(() -> source.view("Patient")).isInstanceOf(SchemaDriftError.class);
+    // A view over a type that is not drifted can still be constructed.
+    assertThatNoException().isThrownBy(() -> source.view("Observation"));
+  }
+
+  // Verifies that a source derived through map() keeps the drift guard, covering filtered view
+  // runs and exports which resolve datasets through the derived source rather than this one.
+  @Test
+  void mappedSourcePreservesDriftGuard(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+
+    final QueryableDataSource mapped = source.map((resourceType, dataset) -> dataset);
+
+    assertThatThrownBy(() -> mapped.read("Patient")).isInstanceOf(SchemaDriftError.class);
+    // The guard survives further derivation and applies to view construction on the derived
+    // source.
+    assertThatThrownBy(() -> mapped.map((resourceType, dataset) -> dataset).read("Patient"))
+        .isInstanceOf(SchemaDriftError.class);
+    assertThatThrownBy(() -> mapped.view("Patient")).isInstanceOf(SchemaDriftError.class);
+  }
+
+  // Verifies that a source derived through filterByResourceType() keeps the drift guard.
+  @Test
+  void filteredSourcePreservesDriftGuard(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+
+    final QueryableDataSource filtered = source.filterByResourceType(resourceType -> true);
+
+    assertThatThrownBy(() -> filtered.read("Patient")).isInstanceOf(SchemaDriftError.class);
+  }
+
+  // Verifies that once refresh() clears the drifted mark, newly derived sources read normally.
+  @Test
+  void derivedSourceAfterRefreshReadsSuccessfully(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+
+    source.refresh("Patient");
+
+    assertThat(source.map((resourceType, dataset) -> dataset).read("Patient").count()).isEqualTo(1);
   }
 
   // Verifies that refreshing a type with no Delta table is a harmless no-op.

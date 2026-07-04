@@ -120,9 +120,7 @@ public class DynamicDeltaSource implements QueryableDataSource {
 
     // A type whose table is drifted and unmigrated cannot be queried; fail with an actionable
     // error rather than an opaque analysis failure.
-    if (driftedTypes.contains(resourceCode)) {
-      throw new SchemaDriftError(resourceCode);
-    }
+    checkNotDrifted(resourceCode);
 
     // If delegate knows about this type, use it.
     if (delegate.getResourceTypes().contains(resourceCode)) {
@@ -204,12 +202,20 @@ public class DynamicDeltaSource implements QueryableDataSource {
   @Override
   @Nonnull
   public FhirViewQuery view(@Nullable final String subjectResource) {
+    // The executed query resolves its subject dataset through the delegate's own dispatcher
+    // rather than the guarded read(), so the drift guard is applied at query construction.
+    checkNotDrifted(subjectResource);
     return delegate.view(subjectResource);
   }
 
   @Override
   @Nonnull
   public FhirViewQuery view(@Nullable final FhirView view) {
+    // The executed query resolves its subject dataset through the delegate's own dispatcher
+    // rather than the guarded read(), so the drift guard is applied at query construction.
+    if (view != null) {
+      checkNotDrifted(view.getResource());
+    }
     return delegate.view(view);
   }
 
@@ -217,20 +223,34 @@ public class DynamicDeltaSource implements QueryableDataSource {
   @Nonnull
   public QueryableDataSource map(
       @Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
-    return delegate.map(operator);
+    // Derived sources resolve datasets from the delegate directly, so the drift guard is carried
+    // into them explicitly.
+    return new DriftGuardedSource(delegate.map(operator), driftedTypes);
   }
 
   @Override
   @Nonnull
   public QueryableDataSource filterByResourceType(
       @Nonnull final Predicate<String> resourceTypePredicate) {
-    return delegate.filterByResourceType(resourceTypePredicate);
+    // Derived sources resolve datasets from the delegate directly, so the drift guard is carried
+    // into them explicitly.
+    return new DriftGuardedSource(
+        delegate.filterByResourceType(resourceTypePredicate), driftedTypes);
   }
 
   @Override
   @Nonnull
   public DataSource cache() {
-    return delegate.cache();
+    final DataSource cached = delegate.cache();
+    return cached instanceof final QueryableDataSource queryable
+        ? new DriftGuardedSource(queryable, driftedTypes)
+        : cached;
+  }
+
+  private void checkNotDrifted(@Nullable final String resourceCode) {
+    if (resourceCode != null && driftedTypes.contains(resourceCode)) {
+      throw new SchemaDriftError(resourceCode);
+    }
   }
 
   @Nonnull
