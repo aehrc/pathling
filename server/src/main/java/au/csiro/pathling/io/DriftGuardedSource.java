@@ -31,34 +31,38 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 /**
- * A {@link QueryableDataSource} wrapper that carries the schema drift guard of a {@link
- * DynamicDeltaSource} into sources derived from it through {@code map} or {@code
- * filterByResourceType}. Reads of a drifted type fail with {@link SchemaDriftError} instead of an
- * opaque Spark analysis failure. View queries are guarded on their subject resource type when the
- * query is constructed, because the executed query resolves datasets through the wrapped source's
- * own dispatcher rather than the guarded {@code read}.
+ * A {@link QueryableDataSource} wrapper that guards reads against schema drift, and carries that
+ * guard into sources derived from it through {@code map} or {@code filterByResourceType}. Reads of
+ * a drifted type fail with {@link SchemaDriftError} instead of an opaque Spark analysis failure.
+ * View queries are guarded on their subject resource type when the query is constructed, because
+ * the executed query resolves datasets through the wrapped source's own dispatcher rather than the
+ * guarded {@code read}.
  *
- * <p>The drifted types are snapshotted at construction; derived sources are created per request, so
- * they reflect the drift state at the time of derivation.
+ * <p>The drifted types set is held by reference, so guard decisions reflect its current contents.
+ * This allows a mutable set shared with a refreshing source to clear the guard when a type is
+ * successfully migrated.
  *
  * @author John Grimes
  */
 public class DriftGuardedSource implements QueryableDataSource {
 
-  @Nonnull private final QueryableDataSource delegate;
+  /** The underlying QueryableDataSource that guarded operations delegate to. */
+  @Nonnull protected final QueryableDataSource delegate;
 
-  @Nonnull private final Set<String> driftedTypes;
+  /** The resource types whose tables are drifted and unmigrated. */
+  @Nonnull protected final Set<String> driftedTypes;
 
   /**
    * Constructs a new DriftGuardedSource.
    *
    * @param delegate the underlying QueryableDataSource to delegate to
-   * @param driftedTypes the resource types whose tables are drifted and unmigrated
+   * @param driftedTypes the resource types whose tables are drifted and unmigrated; held by
+   *     reference so that mutations are reflected in guard decisions
    */
   public DriftGuardedSource(
       @Nonnull final QueryableDataSource delegate, @Nonnull final Set<String> driftedTypes) {
     this.delegate = delegate;
-    this.driftedTypes = Set.copyOf(driftedTypes);
+    this.driftedTypes = driftedTypes;
   }
 
   @Override
@@ -120,7 +124,12 @@ public class DriftGuardedSource implements QueryableDataSource {
         : cached;
   }
 
-  private void checkNotDrifted(@Nullable final String resourceCode) {
+  /**
+   * Fails with a {@link SchemaDriftError} if the given resource type is marked as drifted.
+   *
+   * @param resourceCode the resource type code to check, or null to skip the check
+   */
+  protected final void checkNotDrifted(@Nullable final String resourceCode) {
     if (resourceCode != null && driftedTypes.contains(resourceCode)) {
       throw new SchemaDriftError(resourceCode);
     }

@@ -20,37 +20,33 @@ package au.csiro.pathling.io;
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.FileSystemPersistence;
-import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-import au.csiro.pathling.library.query.FhirViewQuery;
-import au.csiro.pathling.views.FhirView;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
-import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 /**
- * A QueryableDataSource wrapper that dynamically discovers new resource types created after
- * startup. Delegates to the underlying data source for known types, and attempts on-demand
- * discovery for unknown types by checking if a Delta table exists at the expected path.
+ * A {@link DriftGuardedSource} that dynamically discovers new resource types created after startup.
+ * Delegates to the underlying data source for known types, and attempts on-demand discovery for
+ * unknown types by checking if a Delta table exists at the expected path.
+ *
+ * <p>The drift guard behaviour, including its propagation into derived sources, is inherited from
+ * {@link DriftGuardedSource}. The drifted types set is mutable so that a successful {@link
+ * #refresh} clears the guard for the refreshed type.
  *
  * @author John Grimes
  */
 @Slf4j
-public class DynamicDeltaSource implements QueryableDataSource {
-
-  @Nonnull private final QueryableDataSource delegate;
+public class DynamicDeltaSource extends DriftGuardedSource {
 
   @Nonnull private final SparkSession spark;
 
@@ -61,12 +57,6 @@ public class DynamicDeltaSource implements QueryableDataSource {
   private final boolean cacheDatasets;
 
   @Nonnull private final Set<String> dynamicallyDiscoveredTypes = ConcurrentHashMap.newKeySet();
-
-  /**
-   * The resource types whose tables were found drifted and could not be migrated at startup. Reads
-   * of these types fail with an actionable error until a successful refresh clears them.
-   */
-  @Nonnull private final Set<String> driftedTypes = ConcurrentHashMap.newKeySet();
 
   /**
    * Constructs a new DynamicDeltaSource with no drifted types.
@@ -103,12 +93,25 @@ public class DynamicDeltaSource implements QueryableDataSource {
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final StorageConfiguration storageConfiguration,
       @Nonnull final Set<String> driftedTypes) {
-    this.delegate = delegate;
+    super(delegate, concurrentCopyOf(driftedTypes));
     this.spark = spark;
     this.databasePath = databasePath;
     this.fhirEncoders = fhirEncoders;
     this.cacheDatasets = storageConfiguration.getCacheDatasets();
-    this.driftedTypes.addAll(driftedTypes);
+  }
+
+  /**
+   * Copies the given types into a mutable concurrent set, so that the drifted mark can be cleared
+   * by {@link #refresh} and observed by derived sources.
+   *
+   * @param types the types to copy
+   * @return a mutable concurrent set containing the given types
+   */
+  @Nonnull
+  private static Set<String> concurrentCopyOf(@Nonnull final Set<String> types) {
+    final Set<String> copy = ConcurrentHashMap.newKeySet();
+    copy.addAll(types);
+    return copy;
   }
 
   @Override
@@ -191,66 +194,6 @@ public class DynamicDeltaSource implements QueryableDataSource {
     final Set<String> types = new HashSet<>(delegate.getResourceTypes());
     types.addAll(dynamicallyDiscoveredTypes);
     return types;
-  }
-
-  @Override
-  @Nonnull
-  public DataSinkBuilder write() {
-    return delegate.write();
-  }
-
-  @Override
-  @Nonnull
-  public FhirViewQuery view(@Nullable final String subjectResource) {
-    // The executed query resolves its subject dataset through the delegate's own dispatcher
-    // rather than the guarded read(), so the drift guard is applied at query construction.
-    checkNotDrifted(subjectResource);
-    return delegate.view(subjectResource);
-  }
-
-  @Override
-  @Nonnull
-  public FhirViewQuery view(@Nullable final FhirView view) {
-    // The executed query resolves its subject dataset through the delegate's own dispatcher
-    // rather than the guarded read(), so the drift guard is applied at query construction.
-    if (view != null) {
-      checkNotDrifted(view.getResource());
-    }
-    return delegate.view(view);
-  }
-
-  @Override
-  @Nonnull
-  public QueryableDataSource map(
-      @Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
-    // Derived sources resolve datasets from the delegate directly, so the drift guard is carried
-    // into them explicitly.
-    return new DriftGuardedSource(delegate.map(operator), driftedTypes);
-  }
-
-  @Override
-  @Nonnull
-  public QueryableDataSource filterByResourceType(
-      @Nonnull final Predicate<String> resourceTypePredicate) {
-    // Derived sources resolve datasets from the delegate directly, so the drift guard is carried
-    // into them explicitly.
-    return new DriftGuardedSource(
-        delegate.filterByResourceType(resourceTypePredicate), driftedTypes);
-  }
-
-  @Override
-  @Nonnull
-  public DataSource cache() {
-    final DataSource cached = delegate.cache();
-    return cached instanceof final QueryableDataSource queryable
-        ? new DriftGuardedSource(queryable, driftedTypes)
-        : cached;
-  }
-
-  private void checkNotDrifted(@Nullable final String resourceCode) {
-    if (resourceCode != null && driftedTypes.contains(resourceCode)) {
-      throw new SchemaDriftError(resourceCode);
-    }
   }
 
   @Nonnull
