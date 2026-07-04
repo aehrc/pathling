@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -28,6 +29,7 @@ import au.csiro.pathling.util.FhirServerTestConfiguration;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -162,6 +164,36 @@ class DynamicDeltaSourceTest {
     }
   }
 
+  // Verifies that reading a type recorded as drifted and unmigrated throws SchemaDriftError
+  // naming the type, and that other types are unaffected (FR-005, FR-006).
+  @Test
+  void readOfDriftedTypeThrowsSchemaDriftError(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+
+    assertThatThrownBy(() -> source.read("Patient"))
+        .isInstanceOf(SchemaDriftError.class)
+        .hasMessageContaining("Patient")
+        .hasMessageContaining("schemaAutoMerge");
+    // A type that is not drifted continues to work.
+    assertThat(source.read("ImmunizationEvaluation").count()).isZero();
+  }
+
+  // Verifies that a successful refresh clears the drifted mark, so a later schema-evolving update
+  // recovers the type without a restart (update-driven recovery).
+  @Test
+  void refreshClearsDriftedMark(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+    assertThatThrownBy(() -> source.read("Patient")).isInstanceOf(SchemaDriftError.class);
+
+    source.refresh("Patient");
+
+    assertThat(source.read("Patient").count()).isEqualTo(1);
+  }
+
   // Verifies that refreshing a type with no Delta table is a harmless no-op.
   @Test
   void refreshOfMissingTableIsNoOp(@TempDir final Path tempDir) {
@@ -183,11 +215,19 @@ class DynamicDeltaSourceTest {
   @Nonnull
   private DynamicDeltaSource newTempDirSource(
       @Nonnull final String databasePath, final boolean cacheDatasets) {
+    return newTempDirSource(databasePath, cacheDatasets, Set.of());
+  }
+
+  @Nonnull
+  private DynamicDeltaSource newTempDirSource(
+      @Nonnull final String databasePath,
+      final boolean cacheDatasets,
+      @Nonnull final Set<String> driftedTypes) {
     final StorageConfiguration storageConfiguration = new StorageConfiguration();
     storageConfiguration.setCacheDatasets(cacheDatasets);
     final QueryableDataSource baseSource = pathlingContext.read().delta(databasePath);
     return new DynamicDeltaSource(
-        baseSource, sparkSession, databasePath, fhirEncoders, storageConfiguration);
+        baseSource, sparkSession, databasePath, fhirEncoders, storageConfiguration, driftedTypes);
   }
 
   /** Writes a single-row Patient Delta table whose schema has only the given string columns. */

@@ -39,6 +39,7 @@ import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -162,6 +163,66 @@ class SchemaMigratorTest {
     }
   }
 
+  // Verifies that with the flag off, drifted tables are not written, a WARN names the type, the
+  // missing fields, and the remedy, and the type is reported in the drifted set (FR-004).
+  @Test
+  void flagOffLogsWarningAndReportsDriftedType(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    seedOldSchemaViewDefinitionTable(databasePath);
+    final long versionBefore = latestTableVersion(databasePath, "ViewDefinition");
+
+    try (final LogCapture logCapture = LogCapture.forClass(SchemaMigrator.class)) {
+      final Set<String> drifted = newMigrator(databasePath, false).migrate();
+
+      assertThat(drifted).containsExactly("ViewDefinition");
+      assertThat(latestTableVersion(databasePath, "ViewDefinition")).isEqualTo(versionBefore);
+      assertThat(logCapture.events())
+          .anySatisfy(
+              event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                assertThat(event.getFormattedMessage())
+                    .contains("ViewDefinition")
+                    .contains("url")
+                    .contains("version")
+                    .contains("schemaAutoMerge");
+              });
+    }
+  }
+
+  // Verifies that a migration failure for one table is logged with its cause, does not propagate,
+  // does not prevent other tables from migrating, and reports the failed type in the drifted set
+  // (FR-006).
+  @Test
+  void migrationFailureIsIsolatedAndReported(@TempDir final Path tempDir) throws IOException {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    seedOldSchemaViewDefinitionTable(databasePath);
+    seedOldSchemaPatientTable(databasePath);
+    // Make the Patient table's Delta log read-only so its migration write fails.
+    final Path patientLogDir = tempDir.resolve("Patient.parquet").resolve("_delta_log");
+    setWritable(patientLogDir, false);
+
+    try (final LogCapture logCapture = LogCapture.forClass(SchemaMigrator.class)) {
+      final Set<String> drifted;
+      try {
+        drifted = newMigrator(databasePath, true).migrate();
+      } finally {
+        setWritable(patientLogDir, true);
+      }
+
+      // The failed type is reported; the other drifted table has still been migrated.
+      assertThat(drifted).containsExactly("Patient");
+      assertThat(readTable(databasePath, "ViewDefinition").schema().fieldNames())
+          .contains("url", "version");
+      assertThat(logCapture.events())
+          .anySatisfy(
+              event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.ERROR);
+                assertThat(event.getFormattedMessage()).contains("Patient");
+                assertThat(event.getThrowableProxy()).isNotNull();
+              });
+    }
+  }
+
   // ---- helpers ----
 
   @Nonnull
@@ -181,6 +242,28 @@ class SchemaMigratorTest {
         .format("delta")
         .mode(SaveMode.ErrorIfExists)
         .save(databasePath + "/ViewDefinition.parquet");
+  }
+
+  /**
+   * Writes a Patient Delta table from encoder output with the top-level {@code gender} column
+   * dropped, simulating a table written by an older encoder version.
+   */
+  private void seedOldSchemaPatientTable(@Nonnull final String databasePath) {
+    final Patient patient = new Patient();
+    patient.setId("test-patient");
+    sparkSession
+        .createDataset(List.of(patient), fhirEncoders.of("Patient"))
+        .toDF()
+        .drop("gender")
+        .write()
+        .format("delta")
+        .mode(SaveMode.ErrorIfExists)
+        .save(databasePath + "/Patient.parquet");
+  }
+
+  /** Sets the writability of a directory, used to provoke migration write failures. */
+  private static void setWritable(@Nonnull final Path directory, final boolean writable) {
+    assertThat(directory.toFile().setWritable(writable, false)).isTrue();
   }
 
   /** Writes a ViewDefinition Delta table whose schema matches the current encoder output. */

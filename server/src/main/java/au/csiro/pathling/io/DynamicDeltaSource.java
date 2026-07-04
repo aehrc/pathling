@@ -118,6 +118,12 @@ public class DynamicDeltaSource implements QueryableDataSource {
       throw new IllegalArgumentException("Resource code must not be null");
     }
 
+    // A type whose table is drifted and unmigrated cannot be queried; fail with an actionable
+    // error rather than an opaque analysis failure.
+    if (driftedTypes.contains(resourceCode)) {
+      throw new SchemaDriftError(resourceCode);
+    }
+
     // If delegate knows about this type, use it.
     if (delegate.getResourceTypes().contains(resourceCode)) {
       return cacheIfEnabled(delegate.read(resourceCode));
@@ -173,6 +179,11 @@ public class DynamicDeltaSource implements QueryableDataSource {
       // the Delta table on each read.
       dynamicallyDiscoveredTypes.add(resourceCode);
       log.info("Registered resource type {} for dynamic discovery following refresh", resourceCode);
+    }
+
+    // The freshly loaded table carries the current schema, so the type is no longer drifted.
+    if (driftedTypes.remove(resourceCode)) {
+      log.info("Cleared drifted mark for resource type {}", resourceCode);
     }
   }
 
