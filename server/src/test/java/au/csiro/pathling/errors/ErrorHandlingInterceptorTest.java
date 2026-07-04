@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.io.SchemaDriftError;
 import ca.uhn.fhir.parser.DataFormatException;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
@@ -33,6 +34,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 import org.apache.spark.SparkException;
 import org.apache.spark.SparkRuntimeException;
+import org.hl7.fhir.r4.model.OperationOutcome;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -41,6 +43,29 @@ import org.junit.jupiter.api.Test;
  * @author John Grimes
  */
 class ErrorHandlingInterceptorTest {
+
+  // SchemaDriftError should map to a 500 response whose OperationOutcome diagnostics name the
+  // affected resource type, the condition, and the remedies, rather than the generic
+  // "Unexpected error occurred" message.
+  @Test
+  void convertsSchemaDriftErrorTo500WithActionableDiagnostics() {
+    final SchemaDriftError e = new SchemaDriftError("ViewDefinition");
+
+    final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e);
+
+    assertThat(result.getStatusCode()).isEqualTo(500);
+    assertThat(result.getOperationOutcome()).isInstanceOf(OperationOutcome.class);
+    final OperationOutcome outcome = (OperationOutcome) result.getOperationOutcome();
+    assertThat(outcome.getIssue()).hasSize(1);
+    final OperationOutcome.OperationOutcomeIssueComponent issue = outcome.getIssueFirstRep();
+    assertThat(issue.getSeverity()).isEqualTo(OperationOutcome.IssueSeverity.ERROR);
+    assertThat(issue.getCode()).isEqualTo(OperationOutcome.IssueType.PROCESSING);
+    assertThat(issue.getDiagnostics())
+        .contains("ViewDefinition")
+        .contains("behind this server's encoders")
+        .contains("schemaAutoMerge")
+        .contains("update a resource of this type");
+  }
 
   @Test
   void convertsUserRaisedExceptionTo400() {
