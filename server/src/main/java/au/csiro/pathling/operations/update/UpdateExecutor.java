@@ -32,6 +32,8 @@ import jakarta.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -62,6 +64,16 @@ public class UpdateExecutor {
   private final boolean schemaAutoMerge;
 
   @Nonnull private final QueryableDataSource dataSource;
+
+  /**
+   * Per-resource-code locks serialising the create-new-table branch of {@link #merge(String,
+   * List)}. Without this, concurrent first-creates of the same resource type can all pass the
+   * table-existence check and race the initial write, failing every loser with a Delta concurrency
+   * error. This executor is a singleton component, so an instance-scoped map covers the whole
+   * server process; cross-process coordination is out of scope.
+   */
+  @Nonnull
+  private final ConcurrentMap<String, Object> tableCreationLocks = new ConcurrentHashMap<>();
 
   /**
    * Constructs a new UpdateExecutor.
@@ -146,69 +158,100 @@ public class UpdateExecutor {
     final String tablePath = getTablePath(resourceCode);
 
     if (deltaTableExists(spark, tablePath)) {
-      DeltaTable table = DeltaTable.forPath(spark, tablePath);
-      boolean schemaEvolved = false;
-
-      final SortedSet<String> missingFields =
-          schemaAutoMerge
-              ? SchemaDrift.missingFieldPaths(updates.schema(), table.toDF().schema())
-              : Collections.emptySortedSet();
-      if (!missingFields.isEmpty()) {
-        // Delta's MERGE - even with spark.databricks.delta.schema.autoMerge.enabled=true - does
-        // not support adding new fields to nested structs inside arrays. This is the exact failure
-        // mode when the FHIR encoder gains new value-type columns (e.g. valueDecimal,
-        // valueDecimal_scale inside the extension element struct): the MERGE planner throws
-        // DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION because it cannot cast the richer source struct
-        // to the narrower target struct.
-        //
-        // A regular write with mergeSchema=true DOES support nested-struct field evolution.
-        // Writing limit(0) - zero rows, same schema as the encoder output - causes Delta to add
-        // any missing nested fields to the target table schema (with null for existing rows)
-        // without inserting any data. The MERGE that follows then sees compatible schemas and
-        // succeeds.
-        //
-        // SchemaDrift compares only field names and structural shape, ignoring nullability and
-        // column metadata. This avoids paying the warmup transaction when the schemas are
-        // semantically equivalent but differ in metadata (e.g. parquet-side annotations).
-        //
-        // After the warmup write the table snapshot has changed, so we re-resolve DeltaTable
-        // before the MERGE.
-        updates
-            .limit(0)
-            .write()
-            .format("delta")
-            .mode(SaveMode.Append)
-            .option("mergeSchema", "true")
-            .save(tablePath);
-        table = DeltaTable.forPath(spark, tablePath);
-        schemaEvolved = true;
-        log.info("Evolved schema of {} table, added fields: {}", resourceCode, missingFields);
-      }
-
-      // Perform a merge operation on the existing table.
-      table
-          .as("original")
-          .merge(updates.as("updates"), "original.id = updates.id")
-          .whenMatched()
-          .updateAll()
-          .whenNotMatched()
-          .insertAll()
-          .execute();
-
-      // After a schema-evolving write, refresh the dataset served for this resource type so that
-      // all in-process consumers observe the evolved schema without a server restart.
-      if (schemaEvolved && dataSource instanceof final DynamicDeltaSource dynamicDataSource) {
-        dynamicDataSource.refresh(resourceCode);
-      }
+      mergeIntoExistingTable(spark, resourceCode, tablePath, updates);
     } else {
-      // Create a new table with the resources.
-      log.debug("Creating new Delta table for resource type: {}", resourceCode);
-      updates.write().format("delta").mode(SaveMode.ErrorIfExists).save(tablePath);
+      // Serialise first-creates of this resource type so that concurrent requests cannot race the
+      // initial write. The existence check is repeated inside the lock: the loser of a race finds
+      // the table already created and recovers by merging into it instead of failing.
+      final Object creationLock =
+          tableCreationLocks.computeIfAbsent(resourceCode, key -> new Object());
+      synchronized (creationLock) {
+        if (deltaTableExists(spark, tablePath)) {
+          log.debug(
+              "Delta table for resource type {} was created concurrently; merging instead",
+              resourceCode);
+          mergeIntoExistingTable(spark, resourceCode, tablePath, updates);
+        } else {
+          // Create a new table with the resources.
+          log.debug("Creating new Delta table for resource type: {}", resourceCode);
+          updates.write().format("delta").mode(SaveMode.ErrorIfExists).save(tablePath);
+        }
+      }
     }
 
     // Invalidate the cache to ensure subsequent requests see the updated data. Use the optimised
     // single-table invalidation since we know exactly which table was modified.
     cacheableDatabase.invalidate(tablePath);
+  }
+
+  /**
+   * Merges updates into an existing Delta table, evolving the table schema first when {@code
+   * schemaAutoMerge} is enabled and the encoder output contains fields the table lacks.
+   *
+   * @param spark the Spark session
+   * @param resourceCode the type code of the resources being merged
+   * @param tablePath the path of the existing Delta table
+   * @param updates the dataset of resources to merge
+   */
+  private void mergeIntoExistingTable(
+      @Nonnull final SparkSession spark,
+      @Nonnull final String resourceCode,
+      @Nonnull final String tablePath,
+      @Nonnull final Dataset<Row> updates) {
+    DeltaTable table = DeltaTable.forPath(spark, tablePath);
+    boolean schemaEvolved = false;
+
+    final SortedSet<String> missingFields =
+        schemaAutoMerge
+            ? SchemaDrift.missingFieldPaths(updates.schema(), table.toDF().schema())
+            : Collections.emptySortedSet();
+    if (!missingFields.isEmpty()) {
+      // Delta's MERGE - even with spark.databricks.delta.schema.autoMerge.enabled=true - does
+      // not support adding new fields to nested structs inside arrays. This is the exact failure
+      // mode when the FHIR encoder gains new value-type columns (e.g. valueDecimal,
+      // valueDecimal_scale inside the extension element struct): the MERGE planner throws
+      // DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION because it cannot cast the richer source struct
+      // to the narrower target struct.
+      //
+      // A regular write with mergeSchema=true DOES support nested-struct field evolution.
+      // Writing limit(0) - zero rows, same schema as the encoder output - causes Delta to add
+      // any missing nested fields to the target table schema (with null for existing rows)
+      // without inserting any data. The MERGE that follows then sees compatible schemas and
+      // succeeds.
+      //
+      // SchemaDrift compares only field names and structural shape, ignoring nullability and
+      // column metadata. This avoids paying the warmup transaction when the schemas are
+      // semantically equivalent but differ in metadata (e.g. parquet-side annotations).
+      //
+      // After the warmup write the table snapshot has changed, so we re-resolve DeltaTable
+      // before the MERGE.
+      updates
+          .limit(0)
+          .write()
+          .format("delta")
+          .mode(SaveMode.Append)
+          .option("mergeSchema", "true")
+          .save(tablePath);
+      table = DeltaTable.forPath(spark, tablePath);
+      schemaEvolved = true;
+      log.info("Evolved schema of {} table, added fields: {}", resourceCode, missingFields);
+    }
+
+    // Perform a merge operation on the existing table.
+    table
+        .as("original")
+        .merge(updates.as("updates"), "original.id = updates.id")
+        .whenMatched()
+        .updateAll()
+        .whenNotMatched()
+        .insertAll()
+        .execute();
+
+    // After a schema-evolving write, refresh the dataset served for this resource type so that
+    // all in-process consumers observe the evolved schema without a server restart.
+    if (schemaEvolved && dataSource instanceof final DynamicDeltaSource dynamicDataSource) {
+      dynamicDataSource.refresh(resourceCode);
+    }
   }
 
   /**
