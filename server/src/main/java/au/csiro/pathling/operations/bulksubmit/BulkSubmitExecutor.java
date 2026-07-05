@@ -161,8 +161,11 @@ public class BulkSubmitExecutor {
    * @param manifestJob The manifest job to process.
    * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
    * @param fhirServerBase The FHIR server base URL for building result manifests.
+   * @return A future that completes when the asynchronous download work has reached a terminal
+   *     state, allowing callers to await it.
    */
-  public void downloadManifestJob(
+  @Nonnull
+  public CompletableFuture<Void> downloadManifestJob(
       @Nonnull final Submission submission,
       @Nonnull final ManifestJob manifestJob,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
@@ -197,7 +200,7 @@ public class BulkSubmitExecutor {
     }
 
     // Execute asynchronously to not block the request thread.
-    CompletableFuture.runAsync(
+    return CompletableFuture.runAsync(
         () ->
             downloadManifestJobInternal(
                 submission, manifestJob, fileRequestHeaders, fhirServerBase, jobId, resultFuture));
