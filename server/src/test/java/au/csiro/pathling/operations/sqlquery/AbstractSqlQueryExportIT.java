@@ -51,10 +51,13 @@ abstract class AbstractSqlQueryExportIT {
 
   @BeforeEach
   void setUpClient() {
+    // The 60-second response timeout matches the other server integration tests; the 5-second
+    // default is exceeded by Spark warmup on loaded CI runners.
     webTestClient =
         webTestClient
             .mutate()
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .responseTimeout(java.time.Duration.ofSeconds(60))
             .build();
   }
 
