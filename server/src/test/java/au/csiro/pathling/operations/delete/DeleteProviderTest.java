@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.delete;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.StorageConfiguration;
@@ -26,6 +27,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.update.UpdateExecutor;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
@@ -88,7 +90,8 @@ class DeleteProviderTest {
             fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
             cacheableDatabase,
-            new StorageConfiguration());
+            new StorageConfiguration(),
+            mock(QueryableDataSource.class));
 
     // Create DeleteExecutor with the temp database path.
     final DeleteExecutor deleteExecutor =

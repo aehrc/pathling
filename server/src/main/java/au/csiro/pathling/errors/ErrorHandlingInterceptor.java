@@ -17,8 +17,10 @@
 
 package au.csiro.pathling.errors;
 
+import static java.util.Objects.requireNonNull;
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
+import au.csiro.pathling.io.SchemaDriftError;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
@@ -135,6 +137,13 @@ public class ErrorHandlingInterceptor {
       return new InvalidRequestException(e);
     } catch (final AccessDeniedError e) {
       return buildException(HttpServletResponse.SC_FORBIDDEN, e.getMessage(), IssueType.FORBIDDEN);
+    } catch (final SchemaDriftError e) {
+      // A drifted, unmigrated table is a server-side deployment state; surface the actionable
+      // message instead of the generic "Unexpected error occurred".
+      return buildException(
+          HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+          requireNonNull(e.getMessage()),
+          IssueType.PROCESSING);
     } catch (final SparkRuntimeException e) {
       // SparkRuntimeException with USER_RAISED_EXCEPTION indicates an intentionally raised
       // error (via raise_error() in Spark SQL) that should be surfaced to the client.
@@ -154,7 +163,6 @@ public class ErrorHandlingInterceptor {
   }
 
   @Nonnull
-  @SuppressWarnings("SameParameterValue")
   private static BaseServerResponseException buildException(
       final int theStatusCode, @Nonnull final String message, @Nonnull final IssueType issueType) {
     final OperationOutcome opOutcome = new OperationOutcome();
