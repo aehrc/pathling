@@ -88,3 +88,11 @@ CVE-2026-43869
 # W3C Baggage propagators; the API jar is present only for HAPI FHIR instrumentation
 # annotations, so the vulnerable Baggage parsing code path is never reached.
 CVE-2026-45292
+
+# jackson-databind: per-property @JsonIgnoreProperties bypass when combined with
+# ACCEPT_CASE_INSENSITIVE_PROPERTIES. Pathling does not enable case-insensitive
+# property matching or use per-property @JsonIgnoreProperties, so the vulnerable
+# path is unreachable. No fixed version is published to Maven Central yet
+# (2.22.1/2.21.5/2.18.9 all absent as of 2026-07-05); remove this suppression
+# and upgrade jackson-bom once 2.22.1 is released.
+CVE-2026-54515
