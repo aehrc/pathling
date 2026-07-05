@@ -55,6 +55,14 @@ spec:
               value: "7078"
             - name: spark.driver.bindAddress
               value: 0.0.0.0
+            # In client mode, Spark only sets an ownerReference on executor
+            # pods when it knows the driver pod's name. This allows Kubernetes
+            # garbage collection to remove executor pods (and their on-demand
+            # PVCs) when the driver pod is deleted, e.g. on rollout restart.
+            - name: spark.kubernetes.driver.pod.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             {{- range $configKey, $configValue := .Values.pathling.config }}
             - name: {{ $configKey }}
               value: {{ $configValue | quote }}
