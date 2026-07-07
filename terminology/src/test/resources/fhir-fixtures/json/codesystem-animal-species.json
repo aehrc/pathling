@@ -44,6 +44,14 @@
                         "code": "synonym"
                       },
                       "value": "Canine"
+                    },
+                    {
+                      "language": "de",
+                      "use": {
+                        "system": "http://terminology.hl7.org/CodeSystem/designation-usage",
+                        "code": "display"
+                      },
+                      "value": "Hund"
                     }
                   ],
                   "property": [

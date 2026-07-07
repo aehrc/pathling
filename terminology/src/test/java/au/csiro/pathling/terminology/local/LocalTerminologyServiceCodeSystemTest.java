@@ -73,6 +73,21 @@ class LocalTerminologyServiceCodeSystemTest {
   }
 
   @Test
+  void displayHonoursAcceptLanguage() {
+    // Dog carries a German display designation; the default remains the English display.
+    final String german =
+        service.lookup(species(FhirFixtures.DOG), "display", "de").stream()
+            .filter(Property.class::isInstance)
+            .map(Property.class::cast)
+            .map(Property::getValueAsString)
+            .findFirst()
+            .orElse(null);
+    assertEquals("Hund", german);
+    assertEquals(
+        "Dog", propertyValues(species(FhirFixtures.DOG), "display").get(0).primitiveValue());
+  }
+
+  @Test
   void returnsDeclaredScalarPropertiesWithTypes() {
     final List<Type> legs = propertyValues(species(FhirFixtures.DOG), "legs");
     assertEquals(1, legs.size());

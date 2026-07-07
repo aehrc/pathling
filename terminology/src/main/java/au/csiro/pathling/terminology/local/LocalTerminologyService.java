@@ -78,6 +78,9 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   /** The SNOMED CT "preferred" acceptability SCTID within a language reference set. */
   private static final String PREFERRED_ACCEPTABILITY = "900000000000548007";
 
+  /** The designation use code identifying a display designation. */
+  private static final String DISPLAY_DESIGNATION_USE = "display";
+
   @Nonnull private final TerminologyConfiguration configuration;
   @Nonnull private final Map<String, String> hadoopConfiguration;
   @Nonnull private final Map<String, CodeSystemIndexes> indexesCache = new ConcurrentHashMap<>();
@@ -166,11 +169,19 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     }
     ensureInitialised();
     final String refsetId = snomedImplicitConceptMap(conceptMapUrl);
-    if (refsetId != null) {
-      return translateSnomedAssociation(conceptMapUrl, coding, refsetId, reverse);
+    final List<Translation> translations =
+        refsetId != null
+            ? translateSnomedAssociation(conceptMapUrl, coding, refsetId, reverse)
+            : conceptMapIndex.translate(
+                conceptMapUrl, coding.getSystem(), coding.getCode(), reverse);
+    if (target == null || target.isEmpty()) {
+      return translations;
     }
-    return conceptMapIndex.translate(
-        conceptMapUrl, coding.getSystem(), coding.getCode(), reverse, target);
+    // The target names the value set in which a translation is sought: keep only translations
+    // whose concept is a member of it, matching remote-mode behaviour.
+    return translations.stream()
+        .filter(translation -> validateCode(target, translation.getConcept()))
+        .toList();
   }
 
   /**
@@ -308,7 +319,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     final ConceptDictionary dictionary = indexes.dictionary();
 
     if (wants(propertyCode, PROPERTY_DISPLAY)) {
-      final String display = selectDisplay(indexes, dense, acceptLanguage);
+      final String display = selectDisplay(systemUrl, indexes, dense, acceptLanguage);
       if (display != null) {
         result.add(Property.of(PROPERTY_DISPLAY, new StringType(display)));
       }
@@ -432,16 +443,21 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   }
 
   /**
-   * Selects the display term for a concept, preferring the language-reference-set preferred synonym
-   * for the requested language and falling back to the stored default display.
+   * Selects the display term for a concept in the requested language, falling back to the stored
+   * default display. SNOMED CT uses the language reference set's preferred synonym; FHIR code
+   * systems use a matching-language designation.
    */
   @Nullable
   private String selectDisplay(
+      @Nonnull final String systemUrl,
       @Nonnull final CodeSystemIndexes indexes,
       final int dense,
       @Nullable final String acceptLanguage) {
     if (acceptLanguage != null && !acceptLanguage.isBlank()) {
-      final String preferred = preferredSynonym(indexes, dense, acceptLanguage);
+      final String preferred =
+          SNOMED_URI.equals(systemUrl)
+              ? preferredSynonym(indexes, dense, acceptLanguage)
+              : fhirDisplayForLanguage(indexes, dense, acceptLanguage);
       if (preferred != null) {
         return preferred;
       }
@@ -449,7 +465,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     return indexes.dictionary().display(dense);
   }
 
-  /** Finds the preferred synonym of a concept in the given language, or null if there is none. */
+  /** Finds the preferred synonym of a SNOMED concept in the given language, or null if none. */
   @Nullable
   private String preferredSynonym(
       @Nonnull final CodeSystemIndexes indexes, final int dense, @Nonnull final String language) {
@@ -467,6 +483,31 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       }
     }
     return null;
+  }
+
+  /**
+   * Finds the display term of a FHIR CodeSystem concept in the given language from its
+   * designations, preferring a designation whose use is {@code display} over any other
+   * matching-language designation. Returns null when no designation matches the language.
+   */
+  @Nullable
+  private String fhirDisplayForLanguage(
+      @Nonnull final CodeSystemIndexes indexes, final int dense, @Nonnull final String language) {
+    final String primary = primaryLanguageTag(language);
+    String match = null;
+    for (final Description description : indexes.descriptions().descriptionsOf(dense)) {
+      if (description.getLanguage() == null
+          || !primary.equals(primaryLanguageTag(description.getLanguage()))) {
+        continue;
+      }
+      if (DISPLAY_DESIGNATION_USE.equals(description.getTypeCode())) {
+        return description.getTerm();
+      }
+      if (match == null) {
+        match = description.getTerm();
+      }
+    }
+    return match;
   }
 
   @Nonnull

@@ -64,6 +64,7 @@ public final class FhirFixtures {
   public static final String VS_LAND_DWELLERS = "http://example.org/fhir/ValueSet/land-dwellers";
   public static final String VS_NESTED_MAMMALS = "http://example.org/fhir/ValueSet/nested-mammals";
   public static final String VS_EXPANSION_ONLY = "http://example.org/fhir/ValueSet/expansion-only";
+  public static final String VS_PETS = "http://example.org/fhir/ValueSet/pets";
 
   /** The canonical URL of the fixture concept map. */
   public static final String CONCEPT_MAP = "http://example.org/fhir/ConceptMap/species-to-category";

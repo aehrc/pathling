@@ -101,21 +101,34 @@ class LocalTerminologyServiceTranslateTest {
   }
 
   @Test
-  void translatesWithTargetSystemFilter() {
+  void reverseTranslationInvertsEquivalence() {
+    // Sparrow maps to "pet" with a "wider" equivalence; the reverse mapping is "narrower".
+    final List<Translation> result =
+        fhirService.translate(category("pet"), FhirFixtures.CONCEPT_MAP, true, null);
+    final ConceptMapEquivalence sparrowEquivalence =
+        result.stream()
+            .filter(t -> FhirFixtures.SPARROW.equals(t.getConcept().getCode()))
+            .map(Translation::getEquivalence)
+            .findFirst()
+            .orElseThrow();
+    assertEquals(ConceptMapEquivalence.NARROWER, sparrowEquivalence);
+  }
+
+  @Test
+  void translatesWithTargetValueSetFilter() {
+    // The target names a value set: dog maps to "pet", which is a member of the pets value set.
     final List<Translation> matching =
         fhirService.translate(
-            species(FhirFixtures.DOG),
-            FhirFixtures.CONCEPT_MAP,
-            false,
-            FhirFixtures.ANIMAL_CATEGORY);
+            species(FhirFixtures.DOG), FhirFixtures.CONCEPT_MAP, false, FhirFixtures.VS_PETS);
     assertEquals(Set.of("pet"), targetCodes(matching));
 
+    // A target value set that does not contain the mapped concept excludes the translation.
     final List<Translation> nonMatching =
         fhirService.translate(
             species(FhirFixtures.DOG),
             FhirFixtures.CONCEPT_MAP,
             false,
-            "http://example.org/fhir/CodeSystem/other");
+            FhirFixtures.VS_MAMMALS_ENUMERATED);
     assertTrue(nonMatching.isEmpty());
   }
 

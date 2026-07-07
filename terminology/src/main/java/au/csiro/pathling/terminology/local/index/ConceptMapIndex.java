@@ -106,13 +106,14 @@ public final class ConceptMapIndex {
   }
 
   /**
-   * Translates a coding through a concept map.
+   * Translates a coding through a concept map. Filtering to a target value set, when requested, is
+   * applied by the caller against the resolved value set membership, matching remote-mode
+   * behaviour.
    *
    * @param conceptMapUrl the canonical URL of the concept map
    * @param system the coding system
    * @param code the coding code
    * @param reverse whether to translate target to source instead of source to target
-   * @param target an optional target system filter, or null for all
    * @return the translations, empty if the map or the code is unknown
    */
   @Nonnull
@@ -120,8 +121,7 @@ public final class ConceptMapIndex {
       @Nonnull final String conceptMapUrl,
       @Nonnull final String system,
       @Nonnull final String code,
-      final boolean reverse,
-      @Nullable final String target) {
+      final boolean reverse) {
     final Mappings mappings = byUrl.get(conceptMapUrl);
     if (mappings == null) {
       return List.of();
@@ -130,12 +130,10 @@ public final class ConceptMapIndex {
         (reverse ? mappings.reverse : mappings.forward).getOrDefault(key(system, code), List.of());
     final List<Translation> result = new ArrayList<>();
     for (final MapTarget mapTarget : targets) {
-      if (target == null || target.equals(mapTarget.system)) {
-        result.add(
-            Translation.of(
-                mapTarget.equivalence,
-                new Coding().setSystem(mapTarget.system).setCode(mapTarget.code)));
-      }
+      result.add(
+          Translation.of(
+              mapTarget.equivalence,
+              new Coding().setSystem(mapTarget.system).setCode(mapTarget.code)));
     }
     return result;
   }
@@ -161,7 +159,19 @@ public final class ConceptMapIndex {
           .add(new MapTarget(targetSystem, targetCode, equivalence));
       reverse
           .computeIfAbsent(key(targetSystem, targetCode), k -> new ArrayList<>())
-          .add(new MapTarget(sourceSystem, sourceCode, equivalence));
+          .add(new MapTarget(sourceSystem, sourceCode, invert(equivalence)));
+    }
+
+    /** Inverts an equivalence for reverse translation, so that e.g. wider becomes narrower. */
+    @Nonnull
+    private static ConceptMapEquivalence invert(@Nonnull final ConceptMapEquivalence equivalence) {
+      return switch (equivalence) {
+        case WIDER -> ConceptMapEquivalence.NARROWER;
+        case NARROWER -> ConceptMapEquivalence.WIDER;
+        case SUBSUMES -> ConceptMapEquivalence.SPECIALIZES;
+        case SPECIALIZES -> ConceptMapEquivalence.SUBSUMES;
+        default -> equivalence;
+      };
     }
   }
 
