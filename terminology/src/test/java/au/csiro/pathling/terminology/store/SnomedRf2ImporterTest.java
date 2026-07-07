@@ -40,6 +40,7 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_URL;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.DESCRIPTION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.REFSET_MEMBER;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.RELATIONSHIP;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,6 +52,7 @@ import au.csiro.pathling.test.Rf2Mini;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -332,6 +334,67 @@ class SnomedRf2ImporterTest {
         "http://snomed.info/sct/" + extensionModule + "/version/20230601",
         codeSystem.get(COLUMN_VERSION));
     assertEquals(extensionModule, codeSystem.get(COLUMN_SNOMED_EDITION));
+  }
+
+  @Test
+  void combinesMultipleDescriptionAndLanguageFiles(@TempDir final Path work) throws Exception {
+    // Arrange: copy the base release and split its description file into a description and a text
+    // definition file, and its language reference set into two files, as real releases ship (for
+    // example sct2_Description plus sct2_TextDefinition, and one language file per dialect). All
+    // files must be read; earlier revisions kept only one file of each kind.
+    final Path release = work.resolve("release");
+    copyDirectory(Rf2Mini.baseRelease(), release);
+    splitFile(
+        release.resolve("Snapshot").resolve("Terminology"),
+        "sct2_Description_",
+        "sct2_TextDefinition_Snapshot-en_INT_20230601.txt");
+    splitFile(
+        release.resolve("Snapshot").resolve("Refset").resolve("Language"),
+        "der2_cRefset_Language",
+        "der2_cRefset_LanguageSnapshot-en-XX_INT_20230601.txt");
+
+    // Act: import the split release.
+    final String store = work.resolve("store").toString();
+    new SnomedRf2Importer(spark, store).importFrom(release.toString(), null);
+
+    // Assert: the description table and displays match the unsplit base import exactly.
+    final TerminologyStoreReader splitReader = TerminologyStoreReader.open(store, Map.of());
+    final AtomicInteger splitDescriptions = new AtomicInteger();
+    splitReader.readTable(DESCRIPTION, row -> splitDescriptions.incrementAndGet());
+    final AtomicInteger baseDescriptions = new AtomicInteger();
+    reader.readTable(DESCRIPTION, row -> baseDescriptions.incrementAndGet());
+    assertEquals(baseDescriptions.get(), splitDescriptions.get());
+
+    final Map<String, String> display = new HashMap<>();
+    splitReader.readTable(
+        CONCEPT, row -> display.put(row.getString(COLUMN_CODE), row.getString(COLUMN_DISPLAY)));
+    assertEquals("Diabetes mellitus", display.get(Rf2Mini.DIABETES));
+    assertEquals("Type 2 diabetes mellitus", display.get(Rf2Mini.TYPE2_DIABETES));
+  }
+
+  /**
+   * Moves the second half of the data rows of the single file in {@code directory} whose name
+   * starts with {@code prefix} into a new sibling file named {@code newName}, preserving the header
+   * in both.
+   */
+  private static void splitFile(final Path directory, final String prefix, final String newName)
+      throws Exception {
+    final Path original;
+    try (final Stream<Path> files = Files.list(directory)) {
+      original =
+          files
+              .filter(f -> f.getFileName().toString().startsWith(prefix))
+              .findFirst()
+              .orElseThrow();
+    }
+    final List<String> lines = Files.readAllLines(original);
+    final int splitPoint = 1 + (lines.size() - 1) / 2;
+    final List<String> first = new ArrayList<>(lines.subList(0, splitPoint));
+    final List<String> second = new ArrayList<>();
+    second.add(lines.get(0));
+    second.addAll(lines.subList(splitPoint, lines.size()));
+    Files.write(original, first);
+    Files.write(directory.resolve(newName), second);
   }
 
   @Test

@@ -319,23 +319,23 @@ public class SnomedRf2Importer {
   /** The RF2 files located within a release's Snapshot directory. */
   private static final class Rf2Files {
     @Nonnull final String concept;
-    @Nullable final String description;
+    @Nonnull final List<String> descriptions;
     @Nullable final String relationship;
-    @Nullable final String language;
+    @Nonnull final List<String> languages;
     @Nullable final String moduleDependency;
     @Nonnull final List<String> otherRefsets;
 
     Rf2Files(
         @Nonnull final String concept,
-        @Nullable final String description,
+        @Nonnull final List<String> descriptions,
         @Nullable final String relationship,
-        @Nullable final String language,
+        @Nonnull final List<String> languages,
         @Nullable final String moduleDependency,
         @Nonnull final List<String> otherRefsets) {
       this.concept = concept;
-      this.description = description;
+      this.descriptions = descriptions;
       this.relationship = relationship;
-      this.language = language;
+      this.languages = languages;
       this.moduleDependency = moduleDependency;
       this.otherRefsets = otherRefsets;
     }
@@ -345,9 +345,9 @@ public class SnomedRf2Importer {
   private Rf2Files locateFiles(@Nonnull final String source) {
     final Path root = new Path(source);
     String concept = null;
-    String description = null;
+    final List<String> descriptions = new ArrayList<>();
     String relationship = null;
-    String language = null;
+    final List<String> languages = new ArrayList<>();
     String moduleDependency = null;
     final List<String> otherRefsets = new ArrayList<>();
     boolean sawNonSnapshotRelease = false;
@@ -372,11 +372,11 @@ public class SnomedRf2Importer {
           concept = path;
         } else if (name.startsWith("sct2_Description_")
             || name.startsWith("sct2_TextDefinition_")) {
-          description = path;
+          descriptions.add(path);
         } else if (name.startsWith("sct2_Relationship_")) {
           relationship = path;
         } else if (name.contains("Refset_Language")) {
-          language = path;
+          languages.add(path);
         } else if (name.contains("Refset_ModuleDependency")) {
           moduleDependency = path;
         } else if (name.startsWith("der2_") && name.contains("Refset")) {
@@ -396,7 +396,7 @@ public class SnomedRf2Importer {
           "No SNOMED CT snapshot concept file was found under " + source + "." + detail);
     }
     return new Rf2Files(
-        concept, description, relationship, language, moduleDependency, otherRefsets);
+        concept, descriptions, relationship, languages, moduleDependency, otherRefsets);
   }
 
   // --- RF2 parsing. ---
@@ -497,7 +497,7 @@ public class SnomedRf2Importer {
       @Nonnull final Dataset<Row> concepts,
       @Nonnull final Dataset<Row> denseByCode,
       @Nonnull final String systemVersionId) {
-    if (files.description == null) {
+    if (files.descriptions.isEmpty()) {
       final Dataset<Row> emptyTable = emptyDescriptionTable();
       final Dataset<Row> emptyDisplay =
           concepts
@@ -509,22 +509,31 @@ public class SnomedRf2Importer {
     // The description and language reference set files are each consumed several times below (the
     // description table, the preferred synonym, and the FSN all read the descriptions; the
     // acceptability map and the preferred flag both read the language refset). They are the largest
-    // files in a release, so the parsed rows are cached to read and parse each file only once.
+    // files in a release, so the parsed rows are cached to read and parse each file only once. A
+    // release may ship several files of each kind (descriptions plus text definitions, one language
+    // file per dialect), so all of them are combined.
     final Dataset<Row> descRaw =
-        readRf2(files.description, "id", "conceptId", "typeId", COLUMN_TERM)
+        files.descriptions.stream()
+            .map(path -> readRf2(path, "id", "conceptId", "typeId", COLUMN_TERM))
+            .reduce(Dataset::unionByName)
+            .orElseThrow()
             .filter(col(COLUMN_ACTIVE).equalTo("1"))
             .persist();
 
     // Active language reference set rows: description id -> (refset, acceptability).
     final Dataset<Row> langActive =
-        (files.language == null
-                ? emptyLanguage()
-                : readRf2(files.language, "referencedComponentId", "refsetId", ACCEPTABILITY_ID)
-                    .filter(col(COLUMN_ACTIVE).equalTo("1"))
-                    .select(
-                        col("referencedComponentId").alias("descId"),
-                        col("refsetId"),
-                        col(ACCEPTABILITY_ID)))
+        files.languages.stream()
+            .map(path -> readRf2(path, "referencedComponentId", "refsetId", ACCEPTABILITY_ID))
+            .reduce(Dataset::unionByName)
+            .map(
+                combined ->
+                    combined
+                        .filter(col(COLUMN_ACTIVE).equalTo("1"))
+                        .select(
+                            col("referencedComponentId").alias("descId"),
+                            col("refsetId"),
+                            col(ACCEPTABILITY_ID)))
+            .orElseGet(this::emptyLanguage)
             .persist();
 
     // Acceptability map per description.
