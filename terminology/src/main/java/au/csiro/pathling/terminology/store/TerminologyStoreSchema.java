@@ -89,6 +89,105 @@ public final class TerminologyStoreSchema {
   public static final String COLUMN_IMPORTED_AT = "imported_at";
 
   /**
+   * The stable identifier of a code system version, a hash of its URL and version. This is the
+   * partition column of every content table so that versions coexist and replace atomically.
+   */
+  public static final String COLUMN_SYSTEM_VERSION_ID = "system_version_id";
+
+  /** The canonical URL of a code system (e.g. {@code http://snomed.info/sct}). */
+  public static final String COLUMN_URL = "url";
+
+  /** The SNOMED edition module identifier parsed from a version URI; null for non-SNOMED. */
+  public static final String COLUMN_SNOMED_EDITION = "snomed_edition";
+
+  /** The SNOMED effectiveTime parsed from a version URI; null for non-SNOMED. */
+  public static final String COLUMN_SNOMED_EFFECTIVE_TIME = "snomed_effective_time";
+
+  /** The number of concepts in a code system version. */
+  public static final String COLUMN_CONCEPT_COUNT = "concept_count";
+
+  /** The FHIR CodeSystem hierarchy meaning ({@code is-a} for SNOMED). */
+  public static final String COLUMN_HIERARCHY_MEANING = "hierarchy_meaning";
+
+  /** A concept code (SCTID or CodeSystem concept code). */
+  public static final String COLUMN_CODE = "code";
+
+  /** The contiguous per-system-version integer that addresses a concept in the runtime bitmaps. */
+  public static final String COLUMN_DENSE_ID = "dense_id";
+
+  /** Whether a concept, description, or relationship is active. */
+  public static final String COLUMN_ACTIVE = "active";
+
+  /** An RF2 effectiveTime ({@code YYYYMMDD}). */
+  public static final String COLUMN_EFFECTIVE_TIME = "effective_time";
+
+  /** The SNOMED module identifier of a concept. */
+  public static final String COLUMN_MODULE_ID = "module_id";
+
+  /** Whether a SNOMED concept is sufficiently defined. */
+  public static final String COLUMN_DEFINED = "defined";
+
+  /** The default display term of a concept. */
+  public static final String COLUMN_DISPLAY = "display";
+
+  /** The dense identifier of the concept a description or property belongs to. */
+  public static final String COLUMN_CONCEPT_DENSE_ID = "concept_dense_id";
+
+  /** A description or designation term. */
+  public static final String COLUMN_TERM = "term";
+
+  /** The BCP-47 language of a description. */
+  public static final String COLUMN_LANGUAGE = "language";
+
+  /** The description type SCTID or designation use code. */
+  public static final String COLUMN_TYPE_CODE = "type_code";
+
+  /** The code system of a description type or designation use. */
+  public static final String COLUMN_TYPE_SYSTEM = "type_system";
+
+  /** A map from language reference set identifier to acceptability (SNOMED only). */
+  public static final String COLUMN_ACCEPTABILITY = "acceptability";
+
+  /** The dense identifier of a relationship's source concept. */
+  public static final String COLUMN_SOURCE_DENSE_ID = "source_dense_id";
+
+  /** The dense identifier of a relationship's target concept. */
+  public static final String COLUMN_TARGET_DENSE_ID = "target_dense_id";
+
+  /** The relationship group of a SNOMED relationship. */
+  public static final String COLUMN_ROLE_GROUP = "role_group";
+
+  /** A scalar property code (FHIR CodeSystem property). */
+  public static final String COLUMN_PROPERTY_CODE = "property_code";
+
+  /** The declared type of a scalar property value. */
+  public static final String COLUMN_VALUE_TYPE = "value_type";
+
+  /** The canonical string encoding of a scalar property value. */
+  public static final String COLUMN_VALUE = "value";
+
+  /** The dense identifier of a closure ancestor. */
+  public static final String COLUMN_ANCESTOR_DENSE_ID = "ancestor_dense_id";
+
+  /** The dense identifier of a closure descendant. */
+  public static final String COLUMN_DESCENDANT_DENSE_ID = "descendant_dense_id";
+
+  /** Whether a closure edge is a direct parent-child edge. */
+  public static final String COLUMN_DIRECT = "direct";
+
+  /** The reference set identifier of a membership row. */
+  public static final String COLUMN_REFSET_CODE = "refset_code";
+
+  /** The dense identifier of a reference set member's referenced concept. */
+  public static final String COLUMN_REFERENCED_DENSE_ID = "referenced_dense_id";
+
+  /** The association target code of a reference set member (drives {@code ?fhir_cm}). */
+  public static final String COLUMN_TARGET_CODE = "target_code";
+
+  /** The full R4 resource JSON of an imported ValueSet or ConceptMap. */
+  public static final String COLUMN_RESOURCE_JSON = "resource_json";
+
+  /**
    * Returns the path to a table within a store.
    *
    * @param storagePath the root path of the store
