@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.vcl.VclAttributeConstraint;
 import au.csiro.pathling.vcl.VclCode;
 import au.csiro.pathling.vcl.VclCodeValue;
 import au.csiro.pathling.vcl.VclConjunction;
@@ -120,10 +121,8 @@ class EclToVclTranslatorTest {
         new VclConjunction(
             List.of(
                 concept(VclFilterOperator.IS_A, CLINICAL_FINDING),
-                new VclFilter(
-                    FINDING_SITE,
-                    VclFilterOperator.IN,
-                    new VclFilterListValue(List.of(new VclCode(PANCREAS)))))),
+                new VclAttributeConstraint(
+                    FINDING_SITE, true, false, false, new VclCode(PANCREAS)))),
         exact);
 
     // Hierarchy on the attribute value.
@@ -134,11 +133,50 @@ class EclToVclTranslatorTest {
         new VclConjunction(
             List.of(
                 concept(VclFilterOperator.IS_A, CLINICAL_FINDING),
-                new VclFilter(
-                    FINDING_SITE,
-                    VclFilterOperator.IN,
-                    new VclFilterListValue(List.of(concept(VclFilterOperator.IS_A, PANCREAS)))))),
+                new VclAttributeConstraint(
+                    FINDING_SITE, true, false, false, concept(VclFilterOperator.IS_A, PANCREAS)))),
         hierarchyValue);
+  }
+
+  @Test
+  void translatesHierarchyOnTheAttributeName() {
+    // << on the attribute name broadens over descendant attribute types.
+    final VclExpression descendantsOrSelf =
+        EclToVclTranslator.translate(
+            "<< " + CLINICAL_FINDING + " : << " + FINDING_SITE + " = " + PANCREAS);
+    assertEquals(
+        new VclConjunction(
+            List.of(
+                concept(VclFilterOperator.IS_A, CLINICAL_FINDING),
+                new VclAttributeConstraint(
+                    FINDING_SITE, true, true, false, new VclCode(PANCREAS)))),
+        descendantsOrSelf);
+
+    // < on the attribute name matches descendant attribute types only.
+    final VclExpression descendantsOnly =
+        EclToVclTranslator.translate(
+            "<< " + CLINICAL_FINDING + " : < " + FINDING_SITE + " = " + PANCREAS);
+    assertEquals(
+        new VclConjunction(
+            List.of(
+                concept(VclFilterOperator.IS_A, CLINICAL_FINDING),
+                new VclAttributeConstraint(
+                    FINDING_SITE, false, true, false, new VclCode(PANCREAS)))),
+        descendantsOnly);
+  }
+
+  @Test
+  void translatesNegatedAttributeConstraint() {
+    final VclExpression negated =
+        EclToVclTranslator.translate(
+            "<< " + CLINICAL_FINDING + " : " + FINDING_SITE + " != " + PANCREAS);
+    assertEquals(
+        new VclConjunction(
+            List.of(
+                concept(VclFilterOperator.IS_A, CLINICAL_FINDING),
+                new VclAttributeConstraint(
+                    FINDING_SITE, true, false, true, new VclCode(PANCREAS)))),
+        negated);
   }
 
   @Test

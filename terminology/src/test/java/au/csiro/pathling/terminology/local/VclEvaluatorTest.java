@@ -146,6 +146,24 @@ class VclEvaluatorTest {
   }
 
   @Test
+  void attributeNameHierarchyMatchesTheAttributeSubtree() {
+    // A hierarchy operator on the attribute name (<< finding site) must be accepted and evaluated.
+    // The fixture has no descendant attribute types, so it matches the same concepts as the exact
+    // attribute constraint rather than being rejected.
+    final VclExpression expression =
+        EclToVclTranslator.translate(
+            "< "
+                + Rf2Mini.DISORDER
+                + " : << "
+                + Rf2Mini.FINDING_SITE
+                + " = "
+                + Rf2Mini.PANCREAS_STRUCTURE);
+    assertEquals(
+        Set.of(Rf2Mini.DIABETES, Rf2Mini.TYPE1_DIABETES, Rf2Mini.TYPE2_DIABETES),
+        codes(expression));
+  }
+
+  @Test
   void moduleIdFilterMatchesAllCoreConcepts() {
     final Set<String> result =
         codes(

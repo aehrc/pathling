@@ -20,6 +20,7 @@ package au.csiro.pathling.terminology.local;
 import au.csiro.pathling.terminology.local.index.CodeSystemIndexes;
 import au.csiro.pathling.terminology.local.index.ConceptDictionary;
 import au.csiro.pathling.terminology.local.index.HierarchyIndex;
+import au.csiro.pathling.vcl.VclAttributeConstraint;
 import au.csiro.pathling.vcl.VclCode;
 import au.csiro.pathling.vcl.VclCodeListValue;
 import au.csiro.pathling.vcl.VclCodeValue;
@@ -38,6 +39,7 @@ import au.csiro.pathling.vcl.VclSystemScoped;
 import au.csiro.pathling.vcl.VclWildcard;
 import au.csiro.pathling.vcl.VclWildcardValue;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
 import org.roaringbitmap.RoaringBitmap;
 
@@ -122,6 +124,9 @@ public class VclEvaluator {
     }
     if (expression instanceof final VclFilter filter) {
       return evalFilter(filter);
+    }
+    if (expression instanceof final VclAttributeConstraint attribute) {
+      return evalAttributeConstraint(attribute);
     }
     if (expression instanceof final VclNavigation navigation) {
       return evalNavigation(navigation);
@@ -235,13 +240,52 @@ public class VclEvaluator {
       @Nonnull final String attributeType,
       @Nonnull final VclFilterOperator operator,
       @Nonnull final VclFilterValue value) {
-    final RoaringBitmap valueConcepts = resolveValueSet(value);
-    if (operator == VclFilterOperator.NOT_IN) {
+    return attributeSources(
+        List.of(attributeType), resolveValueSet(value), operator == VclFilterOperator.NOT_IN);
+  }
+
+  @Nonnull
+  private RoaringBitmap evalAttributeConstraint(@Nonnull final VclAttributeConstraint constraint) {
+    final List<String> attributeTypes = attributeTypeCodes(constraint);
+    return attributeSources(attributeTypes, eval(constraint.getValue()), constraint.isNegated());
+  }
+
+  /** Expands the constraint's attribute type over the attribute-type hierarchy where requested. */
+  @Nonnull
+  private List<String> attributeTypeCodes(@Nonnull final VclAttributeConstraint constraint) {
+    final List<String> codes = new ArrayList<>();
+    if (constraint.isIncludeAttributeSelf()) {
+      codes.add(constraint.getAttributeType());
+    }
+    if (constraint.isIncludeAttributeDescendants()) {
+      // The attribute type is only expandable when it is itself a stored concept; otherwise the
+      // named type stands alone (there are no descendant attribute types to add).
+      final Integer dense = dictionary().denseId(constraint.getAttributeType());
+      if (dense != null) {
+        indexes
+            .hierarchy()
+            .descendantsOf(dense)
+            .forEach((org.roaringbitmap.IntConsumer) desc -> codes.add(dictionary().code(desc)));
+      }
+    }
+    return codes;
+  }
+
+  @Nonnull
+  private RoaringBitmap attributeSources(
+      @Nonnull final List<String> attributeTypes,
+      @Nonnull final RoaringBitmap valueConcepts,
+      final boolean negated) {
+    final RoaringBitmap sources = new RoaringBitmap();
+    for (final String attributeType : attributeTypes) {
+      sources.or(indexes.relationships().sourcesOf(attributeType, valueConcepts));
+    }
+    if (negated) {
       final RoaringBitmap all = dictionary().activeConcepts();
-      all.andNot(indexes.relationships().sourcesOf(attributeType, valueConcepts));
+      all.andNot(sources);
       return all;
     }
-    return indexes.relationships().sourcesOf(attributeType, valueConcepts);
+    return sources;
   }
 
   @Nonnull

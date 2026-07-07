@@ -37,6 +37,7 @@ import au.csiro.pathling.ecl.generated.EclParser.RefinedExprContext;
 import au.csiro.pathling.ecl.generated.EclParser.RefinementContext;
 import au.csiro.pathling.ecl.generated.EclParser.SubAttributeContext;
 import au.csiro.pathling.ecl.generated.EclParser.SubRefinementContext;
+import au.csiro.pathling.vcl.VclAttributeConstraint;
 import au.csiro.pathling.vcl.VclCode;
 import au.csiro.pathling.vcl.VclCodeValue;
 import au.csiro.pathling.vcl.VclConjunction;
@@ -299,11 +300,32 @@ public final class EclToVclTranslator {
     if (ctx.REVERSE() != null) {
       throw new UnsupportedEclConstructError("reverse attribute flag (R)");
     }
-    final String attribute = attributeName(ctx.eclAttributeName());
+    final EclAttributeNameContext nameCtx = ctx.eclAttributeName();
+    if (nameCtx.wildCard() != null) {
+      throw new UnsupportedEclConstructError("wildcard attribute name");
+    }
+    final String attribute = conceptId(nameCtx.eclConceptReference().getText());
+
+    // A hierarchy operator on the attribute name broadens the constraint to descendant attribute
+    // types (resolved at evaluation time), so the whole attribute subtree is matched.
+    boolean includeSelf = true;
+    boolean includeDescendants = false;
+    final ConstraintOperatorContext operator = nameCtx.constraintOperator();
+    if (operator != null) {
+      if (operator.DESC_OR_SELF() != null) {
+        includeDescendants = true;
+      } else if (operator.DESC() != null) {
+        includeSelf = false;
+        includeDescendants = true;
+      } else {
+        throw new UnsupportedEclConstructError(
+            "hierarchy operator other than < or << on an attribute name");
+      }
+    }
+
     final VclExpression value = buildAttributeValue(ctx.attributeValue());
-    final VclFilterOperator operator =
-        ctx.comparison().NOTEQUALS() != null ? VclFilterOperator.NOT_IN : VclFilterOperator.IN;
-    return new VclFilter(attribute, operator, new VclFilterListValue(List.of(value)));
+    final boolean negated = ctx.comparison().NOTEQUALS() != null;
+    return new VclAttributeConstraint(attribute, includeSelf, includeDescendants, negated, value);
   }
 
   @Nonnull
