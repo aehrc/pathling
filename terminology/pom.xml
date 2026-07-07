@@ -60,6 +60,36 @@
       <scope>provided</scope>
     </dependency>
 
+    <!-- Delta Lake. The Spark integration is used at import time to write the store
+         and is provided by the runtime classpath, exactly as Spark is. The Kernel
+         libraries read the store on executors through the Hadoop FileSystem API with
+         no Spark dependency at query time. -->
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-spark_${pathling.scalaVersion}</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-kernel-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-kernel-defaults</artifactId>
+    </dependency>
+
+    <!-- Compressed bitmaps for the runtime terminology indexes. -->
+    <dependency>
+      <groupId>org.roaringbitmap</groupId>
+      <artifactId>RoaringBitmap</artifactId>
+    </dependency>
+
+    <!-- ANTLR runtime for the VCL and ECL parsers. -->
+    <dependency>
+      <groupId>org.antlr</groupId>
+      <artifactId>antlr4-runtime</artifactId>
+    </dependency>
+
     <!-- HAPI FHIR -->
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
@@ -159,6 +189,21 @@
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
       </plugin>
+      <plugin>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4-maven-plugin</artifactId>
+        <version>${pathling.antlrVersion}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>antlr4</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <visitor>true</visitor>
+        </configuration>
+      </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -224,6 +269,10 @@
             <configuration>
               <failOnError>false</failOnError>
               <failOnWarnings>false</failOnWarnings>
+              <sourceFileExcludes>
+                <sourceFileExclude>au/csiro/pathling/vcl/generated/**</sourceFileExclude>
+                <sourceFileExclude>au/csiro/pathling/ecl/generated/**</sourceFileExclude>
+              </sourceFileExcludes>
               <additionalClasspathElements>
                 <additionalClasspathElement>${project.build.outputDirectory}</additionalClasspathElement>
               </additionalClasspathElements>

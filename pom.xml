@@ -78,6 +78,7 @@
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
     <pathling.scalaFullVersion>2.13.16</pathling.scalaFullVersion>
     <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
+    <pathling.roaringBitmapVersion>1.3.0</pathling.roaringBitmapVersion>
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>8.10.0</pathling.hapiFhirVersion>
@@ -322,6 +323,21 @@
         <groupId>io.delta</groupId>
         <artifactId>delta-spark_${pathling.scalaVersion}</artifactId>
         <version>${pathling.deltaVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.delta</groupId>
+        <artifactId>delta-kernel-api</artifactId>
+        <version>${pathling.deltaVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.delta</groupId>
+        <artifactId>delta-kernel-defaults</artifactId>
+        <version>${pathling.deltaVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.roaringbitmap</groupId>
+        <artifactId>RoaringBitmap</artifactId>
+        <version>${pathling.roaringBitmapVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
