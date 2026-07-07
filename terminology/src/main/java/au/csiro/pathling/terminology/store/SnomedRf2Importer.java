@@ -60,15 +60,22 @@ import static org.apache.spark.sql.functions.struct;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -138,7 +145,31 @@ public class SnomedRf2Importer {
    * @throws TerminologyImportException if the source is not a valid RF2 snapshot release
    */
   public void importFrom(@Nonnull final String source, @Nullable final String editionUriOverride) {
-    final Rf2Files files = locateFiles(source);
+    // A zip archive is extracted to a temporary directory first, since the file discovery and Spark
+    // readers operate on the extracted release layout. A plain directory is read in place.
+    final java.nio.file.Path extracted = isZipArchive(source) ? extractArchive(source) : null;
+    try {
+      final String releaseRoot = extracted != null ? extracted.toString() : source;
+      importFromRelease(releaseRoot, source, editionUriOverride);
+    } finally {
+      if (extracted != null) {
+        deleteRecursively(extracted);
+      }
+    }
+  }
+
+  /**
+   * Imports an RF2 snapshot release from an extracted directory layout.
+   *
+   * @param releaseRoot the directory holding the extracted release, scanned for the Snapshot files
+   * @param source the original source path, recorded in the manifest for provenance
+   * @param editionUriOverride an explicit edition/version URI, or null to detect it
+   */
+  private void importFromRelease(
+      @Nonnull final String releaseRoot,
+      @Nonnull final String source,
+      @Nullable final String editionUriOverride) {
+    final Rf2Files files = locateFiles(releaseRoot);
 
     log.info("Reading concepts from {}", files.concept);
     final Dataset<Row> conceptRaw = readRf2(files.concept, "id", COLUMN_ACTIVE, "moduleId");
@@ -195,6 +226,83 @@ public class SnomedRf2Importer {
     writeManifest(writer, version, source);
     concepts.unpersist();
     log.info("Import complete for {} version {} ({} concepts)", SNOMED_URI, version, conceptCount);
+  }
+
+  // --- Archive extraction. ---
+
+  /**
+   * Reports whether the source points at a zip archive, by its {@code .zip} extension.
+   *
+   * @param source the source path
+   * @return true if the source is a zip archive
+   */
+  private static boolean isZipArchive(@Nonnull final String source) {
+    return source.toLowerCase().endsWith(".zip");
+  }
+
+  /**
+   * Extracts a zip archive to a fresh local temporary directory, reading the archive through the
+   * Hadoop file system so it may reside on any accessible storage. Entries are streamed to disk to
+   * bound memory use, and paths are validated to prevent extraction outside the target directory.
+   *
+   * @param source the path of the zip archive
+   * @return the temporary directory containing the extracted release
+   * @throws TerminologyImportException if the archive cannot be read or extracted
+   */
+  @Nonnull
+  private java.nio.file.Path extractArchive(@Nonnull final String source) {
+    final Path archive = new Path(source);
+    try {
+      final FileSystem fs = archive.getFileSystem(hadoopConf);
+      if (!fs.exists(archive)) {
+        throw new TerminologyImportException("RF2 source path does not exist: " + source);
+      }
+      final java.nio.file.Path target = Files.createTempDirectory("pathling-rf2-");
+      log.info("Extracting RF2 archive {} to {}", source, target);
+      try (final ZipInputStream zip =
+          new ZipInputStream(new BufferedInputStream(fs.open(archive)))) {
+        ZipEntry entry;
+        while ((entry = zip.getNextEntry()) != null) {
+          if (entry.isDirectory()) {
+            continue;
+          }
+          final java.nio.file.Path destination = target.resolve(entry.getName()).normalize();
+          if (!destination.startsWith(target)) {
+            throw new TerminologyImportException(
+                "Refusing to extract archive entry outside the target directory: "
+                    + entry.getName());
+          }
+          Files.createDirectories(destination.getParent());
+          Files.copy(zip, destination, StandardCopyOption.REPLACE_EXISTING);
+        }
+      }
+      return target;
+    } catch (final IOException e) {
+      throw new TerminologyImportException("Unable to extract the RF2 archive at " + source, e);
+    }
+  }
+
+  /**
+   * Deletes a directory tree, used to clean up an extracted archive. Failures are logged rather
+   * than thrown, since cleanup should never mask a successful import.
+   *
+   * @param directory the directory to delete
+   */
+  private static void deleteRecursively(@Nonnull final java.nio.file.Path directory) {
+    try (final Stream<java.nio.file.Path> paths = Files.walk(directory)) {
+      paths
+          .sorted(Comparator.reverseOrder())
+          .forEach(
+              path -> {
+                try {
+                  Files.deleteIfExists(path);
+                } catch (final IOException e) {
+                  log.debug("Failed to delete temporary file {}", path, e);
+                }
+              });
+    } catch (final IOException e) {
+      log.warn("Failed to clean up temporary extraction directory {}", directory, e);
+    }
   }
 
   // --- File discovery. ---

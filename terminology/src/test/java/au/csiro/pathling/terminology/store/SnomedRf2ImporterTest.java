@@ -48,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.test.Rf2Mini;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -56,8 +57,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -280,5 +285,35 @@ class SnomedRf2ImporterTest {
     // Nothing was written to the store.
     assertThrows(
         TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
+  }
+
+  @Test
+  void importsFromZipArchive(@TempDir final Path work) throws Exception {
+    // Arrange: package the rf2-mini base release into a .zip archive, as real releases ship.
+    final Path archive = work.resolve("rf2.zip");
+    zipDirectory(Rf2Mini.baseRelease(), archive);
+    final String store = work.resolve("zip-store").toString();
+
+    // Act: import directly from the archive without extracting it first.
+    new SnomedRf2Importer(spark, store).importFrom(archive.toString(), null);
+
+    // Assert: the archive yielded the same concept set as the equivalent directory import.
+    final TerminologyStoreReader zipReader = TerminologyStoreReader.open(store, Map.of());
+    final AtomicInteger conceptCount = new AtomicInteger();
+    zipReader.readTable(CONCEPT, row -> conceptCount.incrementAndGet());
+    assertEquals(denseByCode.size(), conceptCount.get());
+  }
+
+  /** Writes every regular file beneath {@code directory} into a zip archive at {@code archive}. */
+  private static void zipDirectory(final Path directory, final Path archive) throws Exception {
+    try (final OutputStream fileOut = Files.newOutputStream(archive);
+        final ZipOutputStream zipOut = new ZipOutputStream(fileOut);
+        final Stream<Path> files = Files.walk(directory)) {
+      for (final Path file : (Iterable<Path>) files.filter(Files::isRegularFile)::iterator) {
+        zipOut.putNextEntry(new ZipEntry(directory.relativize(file).toString().replace('\\', '/')));
+        Files.copy(file, zipOut);
+        zipOut.closeEntry();
+      }
+    }
   }
 }
