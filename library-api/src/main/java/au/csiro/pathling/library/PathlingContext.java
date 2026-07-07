@@ -24,6 +24,7 @@ import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.config.TerminologyMode;
 import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ResourceTypes;
@@ -35,6 +36,9 @@ import au.csiro.pathling.sql.PathlingUdfConfigurer;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.local.LocalTerminologyServiceFactory;
+import au.csiro.pathling.terminology.store.TerminologyStoreException;
+import au.csiro.pathling.terminology.store.TerminologyStoreReader;
 import au.csiro.pathling.validation.ValidationUtils;
 import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
 import au.csiro.pathling.views.StrictStringTypeAdapterFactory;
@@ -46,10 +50,13 @@ import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -279,7 +286,7 @@ public class PathlingContext {
         @Nonnull final QueryConfiguration queryConfig) {
       final FhirEncoderBuilder encoderBuilder = getEncoderBuilder(encodingConfig);
       final TerminologyServiceFactory terminologyServiceFactory =
-          getTerminologyServiceFactory(terminologyConfig);
+          getTerminologyServiceFactory(spark, terminologyConfig);
 
       return new PathlingContext(
           spark, encoderBuilder.getOrCreate(), terminologyServiceFactory, queryConfig);
@@ -815,9 +822,65 @@ public class PathlingContext {
 
   @Nonnull
   private static TerminologyServiceFactory getTerminologyServiceFactory(
-      @Nonnull final TerminologyConfiguration configuration) {
+      @Nonnull final SparkSession spark, @Nonnull final TerminologyConfiguration configuration) {
+    if (TerminologyMode.LOCAL.equals(configuration.getMode())) {
+      return getLocalTerminologyServiceFactory(spark, configuration);
+    }
     // Pathling only supports FHIR R4, so we use the version enum directly to avoid creating another
     // FhirContext.
     return new DefaultTerminologyServiceFactory(FhirVersionEnum.R4, configuration);
+  }
+
+  /**
+   * Builds the local-mode terminology service factory. The store is opened eagerly here on the
+   * driver so that a missing path, an unreadable manifest, or an incompatible store format fails at
+   * context creation rather than at first query. The driver's Hadoop configuration is snapshotted
+   * into a serialisable map so the store is reachable on executors, where a Hadoop configuration is
+   * neither supplied nor serialisable.
+   */
+  @Nonnull
+  private static TerminologyServiceFactory getLocalTerminologyServiceFactory(
+      @Nonnull final SparkSession spark, @Nonnull final TerminologyConfiguration configuration) {
+    warnAboutIgnoredServerSettings(configuration);
+
+    // The local block and storage path are guaranteed present by configuration validation.
+    final String storagePath =
+        Objects.requireNonNull(Objects.requireNonNull(configuration.getLocal()).getStoragePath());
+    final Map<String, String> hadoopConfiguration =
+        snapshotHadoopConfiguration(spark.sessionState().newHadoopConf());
+
+    // Fail fast at context creation if the store cannot be opened.
+    try {
+      TerminologyStoreReader.open(storagePath, hadoopConfiguration);
+    } catch (final TerminologyStoreException e) {
+      throw new IllegalStateException(
+          "Unable to open the local terminology store at '" + storagePath + "': " + e.getMessage(),
+          e);
+    }
+
+    return new LocalTerminologyServiceFactory(configuration, hadoopConfiguration);
+  }
+
+  @Nonnull
+  private static Map<String, String> snapshotHadoopConfiguration(
+      @Nonnull final Configuration configuration) {
+    final Map<String, String> snapshot = new HashMap<>();
+    for (final Map.Entry<String, String> entry : configuration) {
+      snapshot.put(entry.getKey(), entry.getValue());
+    }
+    return snapshot;
+  }
+
+  private static void warnAboutIgnoredServerSettings(
+      @Nonnull final TerminologyConfiguration configuration) {
+    final TerminologyConfiguration defaults = TerminologyConfiguration.builder().build();
+    if (!defaults.getServerUrl().equals(configuration.getServerUrl())) {
+      log.warn(
+          "Terminology mode is local; the configured server URL is ignored: {}",
+          configuration.getServerUrl());
+    }
+    if (configuration.getAuthentication().isEnabled()) {
+      log.warn("Terminology mode is local; the configured authentication settings are ignored.");
+    }
   }
 }
