@@ -24,6 +24,7 @@ import au.csiro.pathling.terminology.local.index.CodeSystemIndexes;
 import au.csiro.pathling.terminology.store.TerminologyStoreReader;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.Closeable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +50,7 @@ import org.roaringbitmap.RoaringBitmap;
  * @author John Grimes
  */
 @Slf4j
-public class LocalTerminologyService implements TerminologyService {
+public class LocalTerminologyService implements TerminologyService, Closeable {
 
   @Nonnull private final TerminologyConfiguration configuration;
   @Nonnull private final Map<String, String> hadoopConfiguration;
@@ -148,6 +149,21 @@ public class LocalTerminologyService implements TerminologyService {
       @Nullable final String propertyCode,
       @Nullable final String acceptLanguage) {
     return Collections.emptyList();
+  }
+
+  /**
+   * Releases the store reader, loaded indexes, and cached expansions so that a subsequent rebuild
+   * (for example after re-importing content) starts from a fresh view of the store. This is invoked
+   * by {@link LocalTerminologyServiceFactory#reset()} through the {@code ObjectHolder}, which only
+   * releases services that are {@link Closeable}.
+   */
+  @Override
+  public synchronized void close() {
+    indexesCache.clear();
+    reader = null;
+    valueSetResolver = null;
+    expansionCache = null;
+    initialised = false;
   }
 
   @Nonnull

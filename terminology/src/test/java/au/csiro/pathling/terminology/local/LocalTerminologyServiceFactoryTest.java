@@ -39,9 +39,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests for {@link LocalTerminologyServiceFactory} and the {@link LocalTerminologyService}
- * skeleton: the factory builds a local service, is serialisable so it can be shipped to executors,
- * memoises the service per JVM, and the skeleton returns unknown-content fallbacks.
+ * Tests for {@link LocalTerminologyServiceFactory} and the {@link LocalTerminologyService}: the
+ * factory builds a local service, is serialisable so it can be shipped to executors, memoises the
+ * service per JVM, and the operations not yet implemented return unknown-content fallbacks. {@code
+ * member_of} is exercised separately by {@link LocalTerminologyServiceValidateCodeTest}.
  *
  * @author John Grimes
  */
@@ -95,12 +96,12 @@ class LocalTerminologyServiceFactoryTest {
   }
 
   @Test
-  void skeletonReturnsUnknownContentFallbacks() {
+  void unimplementedOperationsReturnUnknownContentFallbacks() {
     final TerminologyService service =
         new LocalTerminologyServiceFactory(configuration, Map.of()).build();
 
-    // member_of: unknown content is not a member.
-    assertTrue(!service.validateCode("http://snomed.info/sct?fhir_vs", CODING_A));
+    // The operations layered on in the later user stories return the unknown-content fallbacks
+    // without touching the store, so they hold even for a store path that does not yet exist.
     // translate: unknown content yields no translations.
     assertTrue(service.translate(CODING_A, "http://example.org/cm", false, null).isEmpty());
     // subsumes: unknown content is not subsumed.
