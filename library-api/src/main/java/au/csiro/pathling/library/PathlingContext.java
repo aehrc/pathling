@@ -879,7 +879,13 @@ public class PathlingContext {
           "Terminology mode is local; the configured server URL is ignored: {}",
           configuration.getServerUrl());
     }
-    if (configuration.getAuthentication().isEnabled()) {
+    if (!defaults.getClient().equals(configuration.getClient())) {
+      log.warn("Terminology mode is local; the configured HTTP client settings are ignored.");
+    }
+    if (!defaults.getCache().equals(configuration.getCache())) {
+      log.warn("Terminology mode is local; the configured cache settings are ignored.");
+    }
+    if (!defaults.getAuthentication().equals(configuration.getAuthentication())) {
       log.warn("Terminology mode is local; the configured authentication settings are ignored.");
     }
   }

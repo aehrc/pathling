@@ -235,6 +235,18 @@ class VclParserTest {
         outer, Vcl.parse("consists_of ^ { has_ingredient ^ { has_tradename = 2201670 } }"));
   }
 
+  @Test
+  void parsesNavigationInsideFilterList() {
+    // A filter-list element may itself be a reverse navigation (the DOT form of the filter rule),
+    // not only a property filter.
+    assertEquals(
+        new VclFilter(
+            "concept",
+            VclFilterOperator.IN,
+            new VclFilterListValue(List.of(new VclNavigation(new VclCodeValue("x"), "y")))),
+        Vcl.parse("concept ^ { x.y }"));
+  }
+
   // --- Value set inclusion ---
 
   @Test

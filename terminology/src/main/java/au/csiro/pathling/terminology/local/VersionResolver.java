@@ -124,7 +124,7 @@ public class VersionResolver {
     for (final T item : items) {
       final String key = getKey.apply(item);
       final Matcher matcher = SNOMED_VERSION_PATTERN.matcher(key);
-      if (!matcher.find()) {
+      if (!matcher.matches()) {
         throw new AmbiguousVersionException(
             "Invalid version '" + key + "' for SNOMED CT code system with URL " + url);
       }

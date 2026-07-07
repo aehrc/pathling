@@ -24,7 +24,9 @@ import lombok.Value;
 
 /**
  * A nested list of filters used as the right-hand side of an {@code ^}/{@code ~^} filter, evaluated
- * conjunctively against the property's target concepts.
+ * conjunctively against the property's target concepts. Each element is the result of the {@code
+ * filter} grammar production, so it is either a {@link VclFilter} (a {@code property OP value}
+ * form) or a {@link VclNavigation} (a {@code source.property} form).
  *
  * @author John Grimes
  */
@@ -33,6 +35,6 @@ public class VclFilterListValue implements VclFilterValue {
 
   @Serial private static final long serialVersionUID = 1L;
 
-  /** The nested filters. */
-  @Nonnull List<VclFilter> filters;
+  /** The nested filters, each a {@link VclFilter} or {@link VclNavigation}. */
+  @Nonnull List<VclExpression> filters;
 }

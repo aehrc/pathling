@@ -193,9 +193,11 @@ class VclModelBuilder {
   }
 
   @Nonnull
-  private List<VclFilter> filterListValues(@Nonnull final FilterListContext ctx) {
-    final List<VclFilter> filters = new ArrayList<>();
-    ctx.filter().forEach(filter -> filters.add((VclFilter) buildFilter(filter)));
+  private List<VclExpression> filterListValues(@Nonnull final FilterListContext ctx) {
+    // Each element is a `filter` production, either a property filter or a reverse navigation, so
+    // the elements are held as the common VclExpression supertype.
+    final List<VclExpression> filters = new ArrayList<>();
+    ctx.filter().forEach(filter -> filters.add(buildFilter(filter)));
     return filters;
   }
 
