@@ -114,7 +114,7 @@ public class ValueSetResolver {
     if (expression == null) {
       return Optional.empty();
     }
-    return resolveSystemVersion(SNOMED_URI, requestedVersion)
+    return resolveCodeSystemVersion(SNOMED_URI, requestedVersion)
         .map(id -> new ResolvedValueSet(id, SNOMED_URI, expression));
   }
 
@@ -160,13 +160,26 @@ public class ValueSetResolver {
       return Optional.empty();
     }
     final String systemUrl = primarySystem.get().getSystem();
-    return resolveSystemVersion(systemUrl, primarySystem.get().getVersion())
+    return resolveCodeSystemVersion(systemUrl, primarySystem.get().getVersion())
         .map(id -> new ResolvedValueSet(id, systemUrl, expression));
   }
 
+  /**
+   * Resolves a code system URL and optional version to the stable identifier of a stored code
+   * system version. An explicit version selects exactly that version; an absent version selects the
+   * default per the version-ordering rules. This backs both value set resolution and the per-coding
+   * operations (lookup, subsumes, translate).
+   *
+   * @param url the code system canonical URL
+   * @param requestedVersion the requested version, or null for the default
+   * @return the stable system version identifier, or empty if the system or version is absent from
+   *     the store
+   * @throws au.csiro.pathling.terminology.local.AmbiguousVersionException if an unversioned SNOMED
+   *     reference cannot select a single default edition
+   */
   @Nonnull
-  private Optional<String> resolveSystemVersion(
-      @Nonnull final String url, final String requestedVersion) {
+  public Optional<String> resolveCodeSystemVersion(
+      @Nonnull final String url, @jakarta.annotation.Nullable final String requestedVersion) {
     final List<CodeSystemEntry> candidates =
         catalogue.stream().filter(entry -> url.equals(entry.getUrl())).toList();
     if (candidates.isEmpty()) {

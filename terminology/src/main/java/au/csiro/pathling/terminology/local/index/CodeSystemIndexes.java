@@ -37,6 +37,7 @@ public final class CodeSystemIndexes {
   private volatile HierarchyIndex hierarchy;
   private volatile RefsetIndex refsets;
   private volatile RelationshipIndex relationships;
+  private volatile DescriptionIndex descriptions;
 
   private CodeSystemIndexes(
       @Nonnull final TerminologyStoreReader reader,
@@ -125,6 +126,26 @@ public final class CodeSystemIndexes {
         if (local == null) {
           local = RelationshipIndex.load(reader, systemVersionId);
           relationships = local;
+        }
+      }
+    }
+    return local;
+  }
+
+  /**
+   * Returns the description index, loading it on first use.
+   *
+   * @return the description index
+   */
+  @Nonnull
+  public DescriptionIndex descriptions() {
+    DescriptionIndex local = descriptions;
+    if (local == null) {
+      synchronized (this) {
+        local = descriptions;
+        if (local == null) {
+          local = DescriptionIndex.load(reader, systemVersionId);
+          descriptions = local;
         }
       }
     }
