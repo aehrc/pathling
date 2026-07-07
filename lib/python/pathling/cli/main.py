@@ -39,6 +39,7 @@ from pathling.cli import console as console_module
 from pathling.cli import convert as convert_module
 from pathling.cli import export as export_module
 from pathling.cli import fhirpath as fhirpath_module
+from pathling.cli import import_terminology as import_terminology_module
 from pathling.cli import run as run_module
 from pathling.cli import terminology as terminology_module
 from pathling.cli import view as view_module
@@ -211,6 +212,9 @@ cli.add_command(console_module.console)
 # Register the terminology commands.
 for _terminology_command in terminology_module.TERMINOLOGY_COMMANDS:
     cli.add_command(_terminology_command)
+
+for _import_command in import_terminology_module.IMPORT_COMMANDS:
+    cli.add_command(_import_command)
 
 
 if __name__ == "__main__":
