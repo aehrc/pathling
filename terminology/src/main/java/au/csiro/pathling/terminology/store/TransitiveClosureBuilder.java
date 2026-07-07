@@ -64,7 +64,7 @@ public class TransitiveClosureBuilder {
                 col(COLUMN_TARGET_DENSE_ID).alias(COLUMN_ANCESTOR_DENSE_ID),
                 col(COLUMN_SOURCE_DENSE_ID).alias(COLUMN_DESCENDANT_DENSE_ID))
             .distinct()
-            .persist(StorageLevel.MEMORY_AND_DISK());
+            .transform(TransitiveClosureBuilder::materialiseWithTruncatedLineage);
 
     Dataset<Row> result = edges;
     Dataset<Row> frontier = edges;
@@ -86,17 +86,13 @@ public class TransitiveClosureBuilder {
                   col("e." + COLUMN_DESCENDANT_DENSE_ID))
               .distinct();
 
-      final Dataset<Row> newPairs = extended.except(result).persist(StorageLevel.MEMORY_AND_DISK());
+      // Materialising each generation behind a leaf plan keeps the logical plan size constant
+      // across iterations; without this, analysis cost grows exponentially with hierarchy depth.
+      final Dataset<Row> newPairs = materialiseWithTruncatedLineage(extended.except(result));
       if (newPairs.isEmpty()) {
-        newPairs.unpersist();
         break;
       }
-      final Dataset<Row> grown = result.union(newPairs).persist(StorageLevel.MEMORY_AND_DISK());
-      // Materialise before releasing the previous generation so lineage does not accumulate.
-      grown.count();
-      result.unpersist();
-      frontier.unpersist();
-      result = grown;
+      result = result.union(newPairs);
       frontier = newPairs;
     }
 
@@ -116,5 +112,24 @@ public class TransitiveClosureBuilder {
             col("c." + COLUMN_ANCESTOR_DENSE_ID),
             col("c." + COLUMN_DESCENDANT_DENSE_ID),
             col("d." + COLUMN_ANCESTOR_DENSE_ID).isNotNull().alias(COLUMN_DIRECT));
+  }
+
+  /**
+   * Eagerly computes a dataset, caches the rows, and returns a dataset whose logical plan is a leaf
+   * over the computed rows. This truncates the Catalyst lineage so that iterative self-referential
+   * plans do not grow with each generation.
+   *
+   * @param dataset the dataset to materialise
+   * @return an equivalent cached dataset with a leaf logical plan
+   */
+  @Nonnull
+  private static Dataset<Row> materialiseWithTruncatedLineage(@Nonnull final Dataset<Row> dataset) {
+    final Dataset<Row> truncated =
+        dataset
+            .sparkSession()
+            .createDataFrame(dataset.javaRDD(), dataset.schema())
+            .persist(StorageLevel.MEMORY_AND_DISK());
+    truncated.count();
+    return truncated;
   }
 }

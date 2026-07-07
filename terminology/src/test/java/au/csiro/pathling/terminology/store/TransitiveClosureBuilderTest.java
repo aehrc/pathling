@@ -58,6 +58,7 @@ class TransitiveClosureBuilderTest {
         SparkSession.builder()
             .appName("TransitiveClosureBuilderTest")
             .master("local[2]")
+            .config("spark.sql.shuffle.partitions", "2")
             .config("spark.driver.bindAddress", "localhost")
             .config("spark.driver.host", "localhost")
             .config("spark.ui.enabled", "false")
@@ -143,5 +144,26 @@ class TransitiveClosureBuilderTest {
     final Dataset<Row> input = edges(new ArrayList<>(List.of(RowFactory.create("v", 1, 0))));
     final Set<Pair> closure = collect(new TransitiveClosureBuilder().build(input));
     assertFalse(closure.stream().anyMatch(p -> p.ancestor() == p.descendant()));
+  }
+
+  @Test
+  void handlesDeepHierarchies() {
+    // A chain 0 <- 1 <- ... <- 16, deeper than a real SNOMED CT is-a path. Guards against the
+    // iterative plan growing with each generation, which previously made analysis cost exponential
+    // in hierarchy depth and exhausted driver memory beyond a depth of six.
+    final int depth = 16;
+    final List<Row> rows = new ArrayList<>();
+    for (int i = 1; i <= depth; i++) {
+      rows.add(RowFactory.create("v", i, i - 1));
+    }
+
+    final Set<Pair> closure = collect(new TransitiveClosureBuilder().build(edges(rows)));
+
+    // The closure of a chain of depth d contains d * (d + 1) / 2 pairs.
+    assertEquals(depth * (depth + 1) / 2, closure.size());
+    // The deepest concept has every other concept as an ancestor, only its parent directly.
+    assertEquals(depth, closure.stream().filter(p -> p.descendant() == depth).count());
+    assertTrue(closure.contains(new Pair("v", depth - 1, depth, true)));
+    assertTrue(closure.contains(new Pair("v", 0, depth, false)));
   }
 }
