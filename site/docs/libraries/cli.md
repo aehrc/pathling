@@ -267,6 +267,23 @@ Invalid combinations - supplying both or neither of `--other-code` /
 `--other-system-column` - are reported as usage errors before any Spark session
 starts.
 
+### Terminology import commands
+
+The `import-snomed` and `import-fhir-terminology` commands import terminology
+content into a local terminology store for use with
+[local terminology mode](terminology#local-terminology-mode). Both take a
+`SOURCE` path and a `STORAGE_PATH` for the store, report progress, and print a
+completion summary.
+
+```bash
+pathling import-snomed /data/rf2.zip /data/tx-store
+pathling import-fhir-terminology /data/hl7.terminology.tgz /data/tx-store
+```
+
+`import-snomed` accepts `--edition-uri` to override the detected SNOMED
+edition/version. `import-fhir-terminology` accepts a JSON file, a directory of
+JSON files, or a FHIR NPM package (`.tgz`).
+
 ## Configuration file
 
 Defaults for the global options can be set in a TOML file at
