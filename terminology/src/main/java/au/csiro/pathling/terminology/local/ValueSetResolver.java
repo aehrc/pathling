@@ -56,9 +56,12 @@ public class ValueSetResolver {
 
   @Nonnull private final List<CodeSystemEntry> catalogue;
   @Nonnull private final VersionResolver versionResolver;
+  @jakarta.annotation.Nullable private final ValueSetStore valueSetStore;
+  @jakarta.annotation.Nullable private final ComposeTranslator composeTranslator;
 
   /**
-   * Creates a resolver over a catalogue of imported code system versions.
+   * Creates a resolver over a catalogue of imported code system versions, without support for
+   * explicit imported value sets.
    *
    * @param catalogue the code system versions in the store
    * @param versionResolver the resolver that selects a default version
@@ -66,8 +69,24 @@ public class ValueSetResolver {
   public ValueSetResolver(
       @Nonnull final List<CodeSystemEntry> catalogue,
       @Nonnull final VersionResolver versionResolver) {
+    this(catalogue, versionResolver, null);
+  }
+
+  /**
+   * Creates a resolver that also resolves explicit imported FHIR value sets by canonical URL.
+   *
+   * @param catalogue the code system versions in the store
+   * @param versionResolver the resolver that selects a default version
+   * @param valueSetStore the catalogue of imported value sets, or null for none
+   */
+  public ValueSetResolver(
+      @Nonnull final List<CodeSystemEntry> catalogue,
+      @Nonnull final VersionResolver versionResolver,
+      @jakarta.annotation.Nullable final ValueSetStore valueSetStore) {
     this.catalogue = catalogue;
     this.versionResolver = versionResolver;
+    this.valueSetStore = valueSetStore;
+    this.composeTranslator = valueSetStore == null ? null : new ComposeTranslator(valueSetStore);
   }
 
   /**
@@ -90,9 +109,30 @@ public class ValueSetResolver {
     if (valueSetUrl.startsWith(SNOMED_URI)) {
       return resolveSnomed(valueSetUrl);
     }
-    // Explicit ValueSet resolution is added with FHIR terminology import; until then such a URL is
-    // unknown content.
-    return Optional.empty();
+    return resolveExplicit(valueSetUrl);
+  }
+
+  /**
+   * Resolves an explicit imported FHIR value set by canonical URL and optional {@code |version}.
+   */
+  @Nonnull
+  private Optional<ResolvedValueSet> resolveExplicit(@Nonnull final String valueSetUrl) {
+    if (valueSetStore == null || composeTranslator == null) {
+      return Optional.empty();
+    }
+    final int pipe = valueSetUrl.indexOf('|');
+    final String url = pipe < 0 ? valueSetUrl : valueSetUrl.substring(0, pipe);
+    final String version = pipe < 0 ? null : valueSetUrl.substring(pipe + 1);
+    return valueSetStore
+        .resolve(url, version)
+        .flatMap(composeTranslator::translate)
+        .flatMap(
+            compose ->
+                resolveCodeSystemVersion(compose.getSystemUrl(), null)
+                    .map(
+                        id ->
+                            new ResolvedValueSet(
+                                id, compose.getSystemUrl(), compose.getExpression())));
   }
 
   @Nonnull

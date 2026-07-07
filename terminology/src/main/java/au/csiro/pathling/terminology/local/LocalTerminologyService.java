@@ -22,6 +22,7 @@ import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.local.index.CodeSystemIndexes;
 import au.csiro.pathling.terminology.local.index.ConceptDictionary;
+import au.csiro.pathling.terminology.local.index.ConceptMapIndex;
 import au.csiro.pathling.terminology.local.index.Description;
 import au.csiro.pathling.terminology.local.index.HierarchyIndex;
 import au.csiro.pathling.terminology.local.index.RelationshipIndex;
@@ -42,6 +43,7 @@ import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.roaringbitmap.IntConsumer;
 import org.roaringbitmap.RoaringBitmap;
@@ -80,10 +82,13 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   @Nonnull private final Map<String, String> hadoopConfiguration;
   @Nonnull private final Map<String, CodeSystemIndexes> indexesCache = new ConcurrentHashMap<>();
 
+  private static final String SNOMED_URI = "http://snomed.info/sct";
+
   private volatile boolean initialised;
   private TerminologyStoreReader reader;
   private ValueSetResolver valueSetResolver;
   private ExpansionCache expansionCache;
+  private ConceptMapIndex conceptMapIndex;
 
   /**
    * Creates a local terminology service.
@@ -156,7 +161,74 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       @Nonnull final String conceptMapUrl,
       final boolean reverse,
       @Nullable final String target) {
-    return Collections.emptyList();
+    if (coding.getSystem() == null || coding.getCode() == null) {
+      return Collections.emptyList();
+    }
+    ensureInitialised();
+    final String refsetId = snomedImplicitConceptMap(conceptMapUrl);
+    if (refsetId != null) {
+      return translateSnomedAssociation(conceptMapUrl, coding, refsetId, reverse);
+    }
+    return conceptMapIndex.translate(
+        conceptMapUrl, coding.getSystem(), coding.getCode(), reverse, target);
+  }
+
+  /**
+   * Returns the reference set identifier of a SNOMED implicit concept map URL ({@code
+   * ?fhir_cm=[refsetId]}), or null if the URL is not a SNOMED implicit concept map.
+   */
+  @Nullable
+  private static String snomedImplicitConceptMap(@Nonnull final String conceptMapUrl) {
+    final int query = conceptMapUrl.indexOf('?');
+    if (query < 0 || !conceptMapUrl.startsWith(SNOMED_URI)) {
+      return null;
+    }
+    final String queryString = conceptMapUrl.substring(query + 1);
+    return queryString.startsWith("fhir_cm=") ? queryString.substring("fhir_cm=".length()) : null;
+  }
+
+  /** Translates through a SNOMED association reference set, forward or reversed. */
+  @Nonnull
+  private List<Translation> translateSnomedAssociation(
+      @Nonnull final String conceptMapUrl,
+      @Nonnull final Coding coding,
+      @Nonnull final String refsetId,
+      final boolean reverse) {
+    if (!SNOMED_URI.equals(coding.getSystem())) {
+      return Collections.emptyList();
+    }
+    final int base = conceptMapUrl.indexOf('?');
+    final String baseUri = base < 0 ? conceptMapUrl : conceptMapUrl.substring(0, base);
+    final String requestedVersion = SNOMED_URI.equals(baseUri) ? null : baseUri;
+    final Optional<String> systemVersionId =
+        valueSetResolver.resolveCodeSystemVersion(SNOMED_URI, requestedVersion);
+    if (systemVersionId.isEmpty()) {
+      return Collections.emptyList();
+    }
+    final CodeSystemIndexes indexes = indexesFor(systemVersionId.get());
+    final Map<Integer, String> associations = indexes.refsets().associationTargets(refsetId);
+    final ConceptDictionary dictionary = indexes.dictionary();
+    final List<Translation> translations = new ArrayList<>();
+    if (reverse) {
+      // Find the referenced concepts whose association target is the requested code.
+      for (final Map.Entry<Integer, String> entry : associations.entrySet()) {
+        if (coding.getCode().equals(entry.getValue())) {
+          translations.add(snomedTranslation(dictionary.code(entry.getKey())));
+        }
+      }
+    } else {
+      final Integer dense = dictionary.denseId(coding.getCode());
+      if (dense != null && associations.containsKey(dense)) {
+        translations.add(snomedTranslation(associations.get(dense)));
+      }
+    }
+    return translations;
+  }
+
+  @Nonnull
+  private static Translation snomedTranslation(@Nonnull final String code) {
+    return Translation.of(
+        ConceptMapEquivalence.EQUAL, new Coding().setSystem(SNOMED_URI).setCode(code));
   }
 
   @Nonnull
@@ -275,21 +347,59 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     if (wants(propertyCode, PROPERTY_INACTIVE)) {
       result.add(Property.of(PROPERTY_INACTIVE, new BooleanType(!dictionary.isActive(dense))));
     }
-    if (wants(propertyCode, PROPERTY_MODULE_ID) && dictionary.moduleId(dense) != null) {
-      result.add(Property.of(PROPERTY_MODULE_ID, new CodeType(dictionary.moduleId(dense))));
-    }
-    if (wants(propertyCode, PROPERTY_EFFECTIVE_TIME) && dictionary.effectiveTime(dense) != null) {
-      result.add(
-          Property.of(
-              PROPERTY_EFFECTIVE_TIME,
-              new DateTimeType(formatEffectiveTime(dictionary.effectiveTime(dense)))));
-    }
-    if (wants(propertyCode, PROPERTY_SUFFICIENTLY_DEFINED)) {
-      result.add(
-          Property.of(PROPERTY_SUFFICIENTLY_DEFINED, new BooleanType(dictionary.isDefined(dense))));
+    // The following properties are specific to SNOMED CT.
+    if (SNOMED_URI.equals(systemUrl)) {
+      if (wants(propertyCode, PROPERTY_MODULE_ID) && dictionary.moduleId(dense) != null) {
+        result.add(Property.of(PROPERTY_MODULE_ID, new CodeType(dictionary.moduleId(dense))));
+      }
+      if (wants(propertyCode, PROPERTY_EFFECTIVE_TIME) && dictionary.effectiveTime(dense) != null) {
+        result.add(
+            Property.of(
+                PROPERTY_EFFECTIVE_TIME,
+                new DateTimeType(formatEffectiveTime(dictionary.effectiveTime(dense)))));
+      }
+      if (wants(propertyCode, PROPERTY_SUFFICIENTLY_DEFINED)) {
+        result.add(
+            Property.of(
+                PROPERTY_SUFFICIENTLY_DEFINED, new BooleanType(dictionary.isDefined(dense))));
+      }
+    } else {
+      // Declared scalar properties of a FHIR CodeSystem concept.
+      addScalarProperties(indexes, dense, propertyCode, result);
     }
     addAttributeProperties(systemUrl, indexes, dense, propertyCode, result);
     return result;
+  }
+
+  /**
+   * Adds each declared scalar FHIR CodeSystem property of the concept, typed per its value type.
+   */
+  private void addScalarProperties(
+      @Nonnull final CodeSystemIndexes indexes,
+      final int dense,
+      @Nullable final String propertyCode,
+      @Nonnull final List<PropertyOrDesignation> result) {
+    for (final au.csiro.pathling.terminology.local.index.PropertyValue value :
+        indexes.properties().propertiesOf(dense)) {
+      if (wants(propertyCode, value.getCode())) {
+        result.add(
+            Property.of(value.getCode(), scalarValue(value.getValueType(), value.getValue())));
+      }
+    }
+  }
+
+  /** Reconstructs a FHIR value from a stored scalar property type and string encoding. */
+  @Nonnull
+  private static org.hl7.fhir.r4.model.Type scalarValue(
+      @Nonnull final String valueType, @Nonnull final String value) {
+    return switch (valueType) {
+      case "integer" -> new org.hl7.fhir.r4.model.IntegerType(value);
+      case "boolean" -> new BooleanType(value);
+      case "decimal" -> new org.hl7.fhir.r4.model.DecimalType(value);
+      case "dateTime" -> new DateTimeType(value);
+      case "code" -> new CodeType(value);
+      default -> new StringType(value);
+    };
   }
 
   /** Adds each defining-relationship attribute of the concept as a Coding-valued property. */
@@ -412,6 +522,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     reader = null;
     valueSetResolver = null;
     expansionCache = null;
+    conceptMapIndex = null;
     initialised = false;
   }
 
@@ -436,11 +547,14 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
           Objects.requireNonNull(local.getStoragePath(), "A terminology storage path is required");
       log.debug("Opening local terminology store: {}", storagePath);
       reader = TerminologyStoreReader.open(storagePath, hadoopConfiguration);
+      final VersionResolver versionResolver = new VersionResolver(local.getDefaultSnomedEdition());
       valueSetResolver =
           new ValueSetResolver(
               CodeSystemEntry.loadCatalogue(reader),
-              new VersionResolver(local.getDefaultSnomedEdition()));
+              versionResolver,
+              ValueSetStore.load(reader, versionResolver));
       expansionCache = new ExpansionCache(local.getExpansionCacheSize());
+      conceptMapIndex = ConceptMapIndex.load(reader);
       initialised = true;
     }
   }

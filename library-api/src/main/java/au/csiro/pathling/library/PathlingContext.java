@@ -38,6 +38,7 @@ import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.local.LocalTerminologyServiceFactory;
+import au.csiro.pathling.terminology.store.FhirTerminologyImporter;
 import au.csiro.pathling.terminology.store.SnomedRf2Importer;
 import au.csiro.pathling.terminology.store.TerminologyStoreException;
 import au.csiro.pathling.terminology.store.TerminologyStoreReader;
@@ -647,6 +648,23 @@ public class PathlingContext {
    */
   public void importSnomed(@Nonnull final String source, @Nonnull final String storagePath) {
     importSnomed(source, storagePath, null);
+  }
+
+  /**
+   * Imports FHIR R4 CodeSystem, ValueSet, and ConceptMap resources into a local terminology store.
+   * The source may be a single JSON file, a directory of JSON files, or a FHIR NPM package ({@code
+   * .tgz}), on any filesystem accessible through the Hadoop FileSystem API. Bundles are unwrapped.
+   * The source is validated before any table is written, so an invalid source leaves the store
+   * unmodified.
+   *
+   * @param source the path to a JSON file, a directory of JSON files, or a FHIR NPM package
+   * @param storagePath the terminology store location, created if absent
+   * @throws au.csiro.pathling.terminology.store.TerminologyImportException if the source contains
+   *     no importable resources or an invalid resource; the store is left unmodified
+   */
+  public void importFhirTerminology(
+      @Nonnull final String source, @Nonnull final String storagePath) {
+    new FhirTerminologyImporter(spark, storagePath).importFrom(source);
   }
 
   /**

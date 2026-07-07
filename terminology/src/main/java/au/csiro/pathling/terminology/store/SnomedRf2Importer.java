@@ -47,7 +47,6 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.DESCRIPTION;
-import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.MANIFEST;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.REFSET_MEMBER;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.RELATIONSHIP;
 import static org.apache.spark.sql.functions.coalesce;
@@ -65,8 +64,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -84,7 +81,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.expressions.Window;
 import org.apache.spark.sql.types.DataTypes;
@@ -151,7 +147,7 @@ public class SnomedRf2Importer {
 
     final String version =
         editionUriOverride != null ? editionUriOverride : detectEditionUri(conceptRaw);
-    final String systemVersionId = systemVersionId(SNOMED_URI, version);
+    final String systemVersionId = TerminologyStoreSchema.systemVersionId(SNOMED_URI, version);
     final SnomedVersion parsed = parseVersion(version);
     log.info("Detected SNOMED CT edition {} version {}", parsed.edition, version);
 
@@ -188,14 +184,14 @@ public class SnomedRf2Importer {
     // All parsing succeeded; write the content tables, then the manifest last.
     log.info("Writing {} concepts to the store", conceptCount);
     final TerminologyStoreWriter writer = new TerminologyStoreWriter(spark, storagePath);
-    writePartitioned(writer, codeSystemRow, CODE_SYSTEM, systemVersionId);
-    writePartitioned(writer, conceptTable, CONCEPT, systemVersionId);
-    writePartitioned(writer, descriptions.table, DESCRIPTION, systemVersionId);
-    writePartitioned(writer, relationships.attributes, RELATIONSHIP, systemVersionId);
+    writer.writePartitionedBySystemVersion(codeSystemRow, CODE_SYSTEM, systemVersionId);
+    writer.writePartitionedBySystemVersion(conceptTable, CONCEPT, systemVersionId);
+    writer.writePartitionedBySystemVersion(descriptions.table, DESCRIPTION, systemVersionId);
+    writer.writePartitionedBySystemVersion(relationships.attributes, RELATIONSHIP, systemVersionId);
     log.info("Computing the transitive closure");
-    writePartitioned(
-        writer, new TransitiveClosureBuilder().build(relationships.isa), CLOSURE, systemVersionId);
-    writePartitioned(writer, refsetMembers, REFSET_MEMBER, systemVersionId);
+    writer.writePartitionedBySystemVersion(
+        new TransitiveClosureBuilder().build(relationships.isa), CLOSURE, systemVersionId);
+    writer.writePartitionedBySystemVersion(refsetMembers, REFSET_MEMBER, systemVersionId);
     writeManifest(writer, version, source);
     concepts.unpersist();
     log.info("Import complete for {} version {} ({} concepts)", SNOMED_URI, version, conceptCount);
@@ -585,67 +581,14 @@ public class SnomedRf2Importer {
       @Nonnull final TerminologyStoreWriter writer,
       @Nonnull final String version,
       @Nonnull final String source) {
-    final ManifestEntry entry =
+    writer.upsertManifestEntry(
         new ManifestEntry(
             TerminologyStoreSchema.STORE_FORMAT_VERSION,
             "code_system",
             SNOMED_URI,
             version,
             source,
-            Instant.now());
-    if (tableExists(MANIFEST)) {
-      // Atomically replace only this system's manifest entry, leaving other entries untouched.
-      final List<Row> rows =
-          List.of(
-              RowFactory.create(
-                  entry.getStoreFormatVersion(),
-                  entry.getEntryType(),
-                  entry.getCanonicalUrl(),
-                  entry.getVersion(),
-                  entry.getSource(),
-                  java.sql.Timestamp.from(entry.getImportedAt())));
-      final Dataset<Row> data =
-          spark.createDataFrame(rows, TerminologyStoreSchema.manifestSchema());
-      writer.replaceWhere(
-          data, MANIFEST, canonicalUrlPredicate(SNOMED_URI) + " AND " + versionPredicate(version));
-    } else {
-      writer.writeManifest(List.of(entry), SaveMode.Append);
-    }
-  }
-
-  @Nonnull
-  private static String canonicalUrlPredicate(@Nonnull final String url) {
-    return TerminologyStoreSchema.COLUMN_CANONICAL_URL + " = '" + url + "'";
-  }
-
-  @Nonnull
-  private static String versionPredicate(@Nonnull final String version) {
-    return COLUMN_VERSION + " = '" + version + "'";
-  }
-
-  // --- Writing helpers. ---
-
-  private void writePartitioned(
-      @Nonnull final TerminologyStoreWriter writer,
-      @Nonnull final Dataset<Row> data,
-      @Nonnull final String tableName,
-      @Nonnull final String systemVersionId) {
-    if (tableExists(tableName)) {
-      writer.replaceWhere(
-          data, tableName, COLUMN_SYSTEM_VERSION_ID + " = '" + systemVersionId + "'");
-    } else {
-      writer.writeTable(data, tableName, SaveMode.Overwrite, List.of(COLUMN_SYSTEM_VERSION_ID));
-    }
-  }
-
-  private boolean tableExists(@Nonnull final String tableName) {
-    final Path log =
-        new Path(TerminologyStoreSchema.tablePath(storagePath, tableName), "_delta_log");
-    try {
-      return log.getFileSystem(hadoopConf).exists(log);
-    } catch (final IOException e) {
-      return false;
-    }
+            Instant.now()));
   }
 
   // --- Version detection. ---
@@ -683,21 +626,6 @@ public class SnomedRf2Importer {
       return new SnomedVersion(matcher.group("edition"), matcher.group("time"));
     }
     return new SnomedVersion(null, null);
-  }
-
-  @Nonnull
-  private static String systemVersionId(@Nonnull final String url, @Nonnull final String version) {
-    try {
-      final MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      final byte[] hash = digest.digest((url + "|" + version).getBytes(StandardCharsets.UTF_8));
-      final StringBuilder builder = new StringBuilder();
-      for (int i = 0; i < 8; i++) {
-        builder.append(String.format("%02x", hash[i]));
-      }
-      return builder.toString();
-    } catch (final NoSuchAlgorithmException e) {
-      throw new IllegalStateException("SHA-256 is not available", e);
-    }
   }
 
   // --- Empty data frames for absent files. ---

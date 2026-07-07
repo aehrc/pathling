@@ -186,9 +186,58 @@ public class VclEvaluator {
           return dictionary().conceptsWhere(d -> time.equals(dictionary().effectiveTime(d)));
         }
       default:
+        if (indexes.properties().propertyCodes().contains(property)) {
+          // A declared FHIR CodeSystem scalar property.
+          return evalScalarPropertyFilter(filter);
+        }
         // Any other property is an attribute SCTID: an attribute constraint.
         return evalAttributeConstraint(property, filter.getOperator(), filter.getValue());
     }
+  }
+
+  /** Evaluates a filter over a declared FHIR CodeSystem scalar property. */
+  @Nonnull
+  private RoaringBitmap evalScalarPropertyFilter(@Nonnull final VclFilter filter) {
+    final String property = filter.getProperty();
+    final VclFilterOperator operator = filter.getOperator();
+    if (operator == VclFilterOperator.EXISTS) {
+      final boolean wantExists = "true".equalsIgnoreCase(codeValue(filter.getValue()));
+      return dictionary().conceptsWhere(d -> hasProperty(d, property) == wantExists);
+    }
+    if (operator == VclFilterOperator.REGEX) {
+      final java.util.regex.Pattern pattern =
+          java.util.regex.Pattern.compile(codeValue(filter.getValue()));
+      return dictionary()
+          .conceptsWhere(
+              d ->
+                  propertyValues(d, property).stream().anyMatch(v -> pattern.matcher(v).matches()));
+    }
+    if (operator == VclFilterOperator.IN || operator == VclFilterOperator.NOT_IN) {
+      final java.util.Set<String> values = new java.util.HashSet<>(codeList(filter.getValue()));
+      final boolean in = operator == VclFilterOperator.IN;
+      return dictionary()
+          .conceptsWhere(
+              d -> propertyValues(d, property).stream().anyMatch(v -> values.contains(v) == in));
+    }
+    // The default operator ("=") matches an exact property value.
+    final String expected = codeValue(filter.getValue());
+    return dictionary().conceptsWhere(d -> propertyValues(d, property).contains(expected));
+  }
+
+  private boolean hasProperty(final int dense, @Nonnull final String property) {
+    return indexes.properties().propertiesOf(dense).stream()
+        .anyMatch(value -> property.equals(value.getCode()));
+  }
+
+  @Nonnull
+  private List<String> propertyValues(final int dense, @Nonnull final String property) {
+    final List<String> values = new ArrayList<>();
+    for (final var value : indexes.properties().propertiesOf(dense)) {
+      if (property.equals(value.getCode())) {
+        values.add(value.getValue());
+      }
+    }
+    return values;
   }
 
   @Nonnull

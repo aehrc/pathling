@@ -38,6 +38,7 @@ public final class CodeSystemIndexes {
   private volatile RefsetIndex refsets;
   private volatile RelationshipIndex relationships;
   private volatile DescriptionIndex descriptions;
+  private volatile PropertyIndex properties;
 
   private CodeSystemIndexes(
       @Nonnull final TerminologyStoreReader reader,
@@ -146,6 +147,26 @@ public final class CodeSystemIndexes {
         if (local == null) {
           local = DescriptionIndex.load(reader, systemVersionId);
           descriptions = local;
+        }
+      }
+    }
+    return local;
+  }
+
+  /**
+   * Returns the scalar property index, loading it on first use.
+   *
+   * @return the scalar property index
+   */
+  @Nonnull
+  public PropertyIndex properties() {
+    PropertyIndex local = properties;
+    if (local == null) {
+      synchronized (this) {
+        local = properties;
+        if (local == null) {
+          local = PropertyIndex.load(reader, systemVersionId);
+          properties = local;
         }
       }
     }

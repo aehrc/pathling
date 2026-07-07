@@ -20,38 +20,29 @@ package au.csiro.pathling.terminology.local;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.LocalTerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyMode;
-import au.csiro.pathling.terminology.TerminologyService;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Map;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link LocalTerminologyServiceFactory} and the {@link LocalTerminologyService}: the
- * factory builds a local service, is serialisable so it can be shipped to executors, memoises the
- * service per JVM, and the operations not yet implemented return unknown-content fallbacks. {@code
- * member_of} is exercised separately by {@link LocalTerminologyServiceValidateCodeTest}.
+ * factory builds a local service, is serialisable so it can be shipped to executors, and memoises
+ * the service per JVM. The terminology operations themselves are exercised by the service-level and
+ * end-to-end tests.
  *
  * @author John Grimes
  */
 class LocalTerminologyServiceFactoryTest {
-
-  private static final Coding CODING_A =
-      new Coding("http://snomed.info/sct", "73211009", "Diabetes mellitus");
-  private static final Coding CODING_B =
-      new Coding("http://snomed.info/sct", "46635009", "Type 1 diabetes mellitus");
 
   private TerminologyConfiguration configuration;
 
@@ -93,21 +84,6 @@ class LocalTerminologyServiceFactoryTest {
         new LocalTerminologyServiceFactory(configuration, Map.of());
 
     assertSame(factory.build(), factory.build());
-  }
-
-  @Test
-  void unimplementedOperationsReturnUnknownContentFallbacks() {
-    final TerminologyService service =
-        new LocalTerminologyServiceFactory(configuration, Map.of()).build();
-
-    // The operations layered on in the later user stories return the unknown-content fallbacks
-    // without touching the store, so they hold even for a store path that does not yet exist.
-    // translate: unknown content yields no translations.
-    assertTrue(service.translate(CODING_A, "http://example.org/cm", false, null).isEmpty());
-    // subsumes: unknown content is not subsumed.
-    assertEquals(ConceptSubsumptionOutcome.NOTSUBSUMED, service.subsumes(CODING_A, CODING_B));
-    // lookup: unknown content yields no properties or designations.
-    assertTrue(service.lookup(CODING_A, null, null).isEmpty());
   }
 
   @Test

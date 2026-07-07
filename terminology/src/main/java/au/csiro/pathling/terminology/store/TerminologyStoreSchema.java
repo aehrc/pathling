@@ -18,6 +18,9 @@
 package au.csiro.pathling.terminology.store;
 
 import jakarta.annotation.Nonnull;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
@@ -188,6 +191,29 @@ public final class TerminologyStoreSchema {
   public static final String COLUMN_RESOURCE_JSON = "resource_json";
 
   /**
+   * Derives the stable identifier of a code system version from its URL and version. This is the
+   * partition key of every content table, so that versions coexist and replace atomically.
+   *
+   * @param url the code system canonical URL
+   * @param version the code system version
+   * @return a short hexadecimal hash of the URL and version
+   */
+  @Nonnull
+  public static String systemVersionId(@Nonnull final String url, @Nonnull final String version) {
+    try {
+      final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      final byte[] hash = digest.digest((url + "|" + version).getBytes(StandardCharsets.UTF_8));
+      final StringBuilder builder = new StringBuilder();
+      for (int i = 0; i < 8; i++) {
+        builder.append(String.format("%02x", hash[i]));
+      }
+      return builder.toString();
+    } catch (final NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 is not available", e);
+    }
+  }
+
+  /**
    * Returns the path to a table within a store.
    *
    * @param storagePath the root path of the store
@@ -199,6 +225,20 @@ public final class TerminologyStoreSchema {
       @Nonnull final String storagePath, @Nonnull final String tableName) {
     final String base = storagePath.endsWith("/") ? storagePath : storagePath + "/";
     return base + tableName;
+  }
+
+  /**
+   * Returns the Spark schema of a resource table ({@code value_set} or {@code concept_map}), which
+   * stores each imported FHIR resource as JSON keyed by its canonical URL and version.
+   *
+   * @return the resource table schema
+   */
+  @Nonnull
+  public static StructType resourceTableSchema() {
+    return new StructType()
+        .add(COLUMN_CANONICAL_URL, DataTypes.StringType, false)
+        .add(COLUMN_VERSION, DataTypes.StringType, true)
+        .add(COLUMN_RESOURCE_JSON, DataTypes.StringType, false);
   }
 
   /**

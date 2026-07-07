@@ -157,6 +157,35 @@ public class TerminologyStoreReader {
       throw new TerminologyStoreException(
           "Table '" + tableName + "' not found in terminology store: " + storagePath, e);
     }
+    readSnapshot(tableName, snapshot, consumer);
+  }
+
+  /**
+   * Streams the rows of an optional store table to a consumer, doing nothing if the table has never
+   * been written. This supports tables that only some importers create (for example a FHIR-only
+   * store has no reference set table), so an index over an absent table loads as empty rather than
+   * failing.
+   *
+   * @param tableName the table name (a {@link TerminologyStoreSchema} constant)
+   * @param consumer receives each row in turn
+   * @throws TerminologyStoreException if the table exists but cannot be read
+   */
+  public void readTableIfPresent(
+      @Nonnull final String tableName, @Nonnull final Consumer<TerminologyStoreRow> consumer) {
+    final String path = TerminologyStoreSchema.tablePath(storagePath, tableName);
+    final Snapshot snapshot;
+    try {
+      snapshot = Table.forPath(engine, path).getLatestSnapshot(engine);
+    } catch (final TableNotFoundException e) {
+      return;
+    }
+    readSnapshot(tableName, snapshot, consumer);
+  }
+
+  private void readSnapshot(
+      @Nonnull final String tableName,
+      @Nonnull final Snapshot snapshot,
+      @Nonnull final Consumer<TerminologyStoreRow> consumer) {
 
     final Scan scan = snapshot.getScanBuilder().build();
     final Row scanState = scan.getScanState(engine);
