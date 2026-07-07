@@ -268,6 +268,73 @@ class SnomedRf2ImporterTest {
   }
 
   @Test
+  void detectsDerivedEditionFromModuleDependencyRefset(@TempDir final Path work) throws Exception {
+    // Arrange: copy the base release, move a handful of concepts into a derived edition module,
+    // and add a module dependency reference set declaring that module's dependency on the core and
+    // model modules, alongside a content-less leaf module (mirroring the International ICD-10
+    // mapping module). The concept content remains majority core module and the mapping module is
+    // also at the top of the dependency graph, so detection must select the concept-bearing module
+    // that depends on the other concept-bearing modules.
+    final String extensionModule = "32506021000036107";
+    final String modelModule = "900000000000012004";
+    final String mappingModule = "449080006";
+    final String moduleDependencyRefset = "900000000000534007";
+    final Path release = work.resolve("release");
+    copyDirectory(Rf2Mini.baseRelease(), release);
+    reassignConceptModules(release, extensionModule, 5);
+    final Path metadata = release.resolve("Snapshot").resolve("Refset").resolve("Metadata");
+    Files.createDirectories(metadata);
+    final String header =
+        "id\teffectiveTime\tactive\tmoduleId\trefsetId\treferencedComponentId"
+            + "\tsourceEffectiveTime\ttargetEffectiveTime\n";
+    final StringBuilder refset = new StringBuilder(header);
+    int member = 0;
+    for (final String[] edge :
+        new String[][] {
+          {extensionModule, Rf2Mini.CORE_MODULE},
+          {extensionModule, modelModule},
+          {Rf2Mini.CORE_MODULE, modelModule},
+          {mappingModule, Rf2Mini.CORE_MODULE},
+          {mappingModule, modelModule}
+        }) {
+      refset
+          .append(
+              String.join(
+                  "\t",
+                  "m" + ++member,
+                  "20230601",
+                  "1",
+                  edge[0],
+                  moduleDependencyRefset,
+                  edge[1],
+                  "20230601",
+                  "20230601"))
+          .append("\n");
+    }
+    Files.writeString(
+        metadata.resolve("der2_ssRefset_ModuleDependencySnapshot_AU1000036_20230601.txt"),
+        refset.toString());
+
+    // Act: import with detection (no override).
+    final String store = work.resolve("store").toString();
+    new SnomedRf2Importer(spark, store).importFrom(release.toString(), null);
+
+    // Assert: the edition is the derived module at the top of the dependency graph.
+    final TerminologyStoreReader derivedReader = TerminologyStoreReader.open(store, Map.of());
+    final Map<String, String> codeSystem = new HashMap<>();
+    derivedReader.readTable(
+        CODE_SYSTEM,
+        row -> {
+          codeSystem.put(COLUMN_VERSION, row.getString(COLUMN_VERSION));
+          codeSystem.put(COLUMN_SNOMED_EDITION, row.getString(COLUMN_SNOMED_EDITION));
+        });
+    assertEquals(
+        "http://snomed.info/sct/" + extensionModule + "/version/20230601",
+        codeSystem.get(COLUMN_VERSION));
+    assertEquals(extensionModule, codeSystem.get(COLUMN_SNOMED_EDITION));
+  }
+
+  @Test
   void rejectsNonSnapshotSourceWithoutTouchingStore(@TempDir final Path emptyDir) throws Exception {
     // A directory with a Full release layout but no Snapshot directory.
     final Path full = emptyDir.resolve("Full").resolve("Terminology");
@@ -302,6 +369,44 @@ class SnomedRf2ImporterTest {
     final AtomicInteger conceptCount = new AtomicInteger();
     zipReader.readTable(CONCEPT, row -> conceptCount.incrementAndGet());
     assertEquals(denseByCode.size(), conceptCount.get());
+  }
+
+  /**
+   * Rewrites the module of the first {@code count} active concepts in the release's concept file to
+   * {@code module}, giving a derived edition module some content of its own.
+   */
+  private static void reassignConceptModules(
+      final Path release, final String module, final int count) throws Exception {
+    final Path terminology = release.resolve("Snapshot").resolve("Terminology");
+    try (final Stream<Path> files = Files.list(terminology)) {
+      final Path conceptFile =
+          files
+              .filter(f -> f.getFileName().toString().startsWith("sct2_Concept_"))
+              .findFirst()
+              .orElseThrow();
+      final List<String> lines = Files.readAllLines(conceptFile);
+      int reassigned = 0;
+      for (int i = 1; i < lines.size() && reassigned < count; i++) {
+        final String[] fields = lines.get(i).split("\t", -1);
+        if ("1".equals(fields[2])) {
+          fields[3] = module;
+          lines.set(i, String.join("\t", fields));
+          reassigned++;
+        }
+      }
+      Files.write(conceptFile, lines);
+    }
+  }
+
+  /** Copies every regular file beneath {@code source} into {@code target}, preserving layout. */
+  private static void copyDirectory(final Path source, final Path target) throws Exception {
+    try (final Stream<Path> files = Files.walk(source)) {
+      for (final Path file : (Iterable<Path>) files.filter(Files::isRegularFile)::iterator) {
+        final Path destination = target.resolve(source.relativize(file).toString());
+        Files.createDirectories(destination.getParent());
+        Files.copy(file, destination);
+      }
+    }
   }
 
   /** Writes every regular file beneath {@code directory} into a zip archive at {@code archive}. */

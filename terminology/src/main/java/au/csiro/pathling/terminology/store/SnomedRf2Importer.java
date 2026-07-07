@@ -68,9 +68,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -99,10 +104,11 @@ import org.apache.spark.sql.types.StructType;
  * transitive closure of the is-a hierarchy is precomputed, and the resulting tables are written to
  * the store, replacing any previous content for the same code system version atomically.
  *
- * <p>Only snapshot releases are supported. The edition and version are detected from the release's
- * module and effectiveTime content, or taken from an explicit override. A release whose input is
- * malformed, or that is not a snapshot, is rejected before any table is written, so the store is
- * left unchanged.
+ * <p>Only snapshot releases are supported. The edition module is detected from the module
+ * dependency reference set when present (falling back to the most frequent concept module), the
+ * version from the maximum effectiveTime, or both are taken from an explicit override. A release
+ * whose input is malformed, or that is not a snapshot, is rejected before any table is written, so
+ * the store is left unchanged.
  *
  * @author John Grimes
  */
@@ -177,7 +183,9 @@ public class SnomedRf2Importer {
         files.concept, conceptRaw, "id", COLUMN_ACTIVE, "moduleId", "definitionStatusId");
 
     final String version =
-        editionUriOverride != null ? editionUriOverride : detectEditionUri(conceptRaw);
+        editionUriOverride != null
+            ? editionUriOverride
+            : detectEditionUri(conceptRaw, files.moduleDependency);
     final String systemVersionId = TerminologyStoreSchema.systemVersionId(SNOMED_URI, version);
     final SnomedVersion parsed = parseVersion(version);
     log.info("Detected SNOMED CT edition {} version {}", parsed.edition, version);
@@ -314,6 +322,7 @@ public class SnomedRf2Importer {
     @Nullable final String description;
     @Nullable final String relationship;
     @Nullable final String language;
+    @Nullable final String moduleDependency;
     @Nonnull final List<String> otherRefsets;
 
     Rf2Files(
@@ -321,11 +330,13 @@ public class SnomedRf2Importer {
         @Nullable final String description,
         @Nullable final String relationship,
         @Nullable final String language,
+        @Nullable final String moduleDependency,
         @Nonnull final List<String> otherRefsets) {
       this.concept = concept;
       this.description = description;
       this.relationship = relationship;
       this.language = language;
+      this.moduleDependency = moduleDependency;
       this.otherRefsets = otherRefsets;
     }
   }
@@ -337,6 +348,7 @@ public class SnomedRf2Importer {
     String description = null;
     String relationship = null;
     String language = null;
+    String moduleDependency = null;
     final List<String> otherRefsets = new ArrayList<>();
     boolean sawNonSnapshotRelease = false;
 
@@ -365,6 +377,8 @@ public class SnomedRf2Importer {
           relationship = path;
         } else if (name.contains("Refset_Language")) {
           language = path;
+        } else if (name.contains("Refset_ModuleDependency")) {
+          moduleDependency = path;
         } else if (name.startsWith("der2_") && name.contains("Refset")) {
           otherRefsets.add(path);
         }
@@ -381,7 +395,8 @@ public class SnomedRf2Importer {
       throw new TerminologyImportException(
           "No SNOMED CT snapshot concept file was found under " + source + "." + detail);
     }
-    return new Rf2Files(concept, description, relationship, language, otherRefsets);
+    return new Rf2Files(
+        concept, description, relationship, language, moduleDependency, otherRefsets);
   }
 
   // --- RF2 parsing. ---
@@ -730,18 +745,98 @@ public class SnomedRf2Importer {
   }
 
   @Nonnull
-  private String detectEditionUri(@Nonnull final Dataset<Row> conceptRaw) {
-    final Row row =
+  private String detectEditionUri(
+      @Nonnull final Dataset<Row> conceptRaw, @Nullable final String moduleDependencyPath) {
+    final Map<String, Long> conceptCounts = new HashMap<>();
+    for (final Row row :
         conceptRaw
             .filter(col(COLUMN_ACTIVE).equalTo("1"))
             .groupBy("moduleId")
             .count()
-            .orderBy(col("count").desc(), col("moduleId"))
-            .first();
-    final String module = row.getString(0);
+            .collectAsList()) {
+      conceptCounts.put(row.getString(0), row.getLong(1));
+    }
+    final String dependencyModule =
+        moduleDependencyPath != null
+            ? editionModuleFromDependencies(moduleDependencyPath, conceptCounts)
+            : null;
+    final String module =
+        dependencyModule != null ? dependencyModule : majorityModule(conceptCounts);
     final String effectiveTime =
         conceptRaw.agg(org.apache.spark.sql.functions.max("effectiveTime")).first().getString(0);
     return SNOMED_URI + "/" + module + "/version/" + effectiveTime;
+  }
+
+  /**
+   * Determines the edition module from the module dependency reference set. The edition module is
+   * the concept-bearing module whose transitive dependencies reach the most other concept-bearing
+   * modules; a derived edition depends on the modules it extends, while side modules at the top of
+   * the graph (such as the International ICD-10 mapping module) carry no concepts. Ties are broken
+   * by concept count and then by module identifier, and the method returns null when the reference
+   * set has no active rows, in which case detection falls back to the most frequent concept module.
+   */
+  @Nullable
+  private String editionModuleFromDependencies(
+      @Nonnull final String moduleDependencyPath, @Nonnull final Map<String, Long> conceptCounts) {
+    final List<Row> dependencies =
+        readRf2(moduleDependencyPath, COLUMN_ACTIVE, "moduleId", "referencedComponentId")
+            .filter(col(COLUMN_ACTIVE).equalTo("1"))
+            .select("moduleId", "referencedComponentId")
+            .distinct()
+            .collectAsList();
+    if (dependencies.isEmpty()) {
+      return null;
+    }
+    final Map<String, Set<String>> dependsOn = new HashMap<>();
+    for (final Row dependency : dependencies) {
+      dependsOn
+          .computeIfAbsent(dependency.getString(0), key -> new HashSet<>())
+          .add(dependency.getString(1));
+    }
+    return conceptCounts.keySet().stream()
+        .max(
+            Comparator.<String>comparingLong(
+                    module ->
+                        reachableFrom(module, dependsOn).stream()
+                            .filter(
+                                reached ->
+                                    !reached.equals(module) && conceptCounts.containsKey(reached))
+                            .count())
+                .thenComparingLong(conceptCounts::get)
+                .thenComparing(Comparator.reverseOrder()))
+        .orElse(null);
+  }
+
+  /** Returns the set of modules transitively reachable from {@code module} via dependencies. */
+  @Nonnull
+  private static Set<String> reachableFrom(
+      @Nonnull final String module, @Nonnull final Map<String, Set<String>> dependsOn) {
+    final Set<String> reached = new HashSet<>();
+    final ArrayDeque<String> frontier = new ArrayDeque<>();
+    frontier.add(module);
+    while (!frontier.isEmpty()) {
+      final String current = frontier.remove();
+      for (final String next : dependsOn.getOrDefault(current, Set.of())) {
+        if (reached.add(next)) {
+          frontier.add(next);
+        }
+      }
+    }
+    return reached;
+  }
+
+  /** Returns the most frequent active concept module, as a fallback edition heuristic. */
+  @Nonnull
+  private static String majorityModule(@Nonnull final Map<String, Long> conceptCounts) {
+    return conceptCounts.entrySet().stream()
+        .max(
+            Map.Entry.<String, Long>comparingByValue()
+                .thenComparing(Map.Entry.comparingByKey(Comparator.reverseOrder())))
+        .orElseThrow(
+            () ->
+                new TerminologyImportException(
+                    "The release contains no active concepts, so no edition can be detected."))
+        .getKey();
   }
 
   @Nonnull
