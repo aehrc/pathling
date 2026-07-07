@@ -31,12 +31,14 @@ import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
+import au.csiro.pathling.library.terminology.TerminologyImportOptions;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.sql.PathlingUdfConfigurer;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.local.LocalTerminologyServiceFactory;
+import au.csiro.pathling.terminology.store.SnomedRf2Importer;
 import au.csiro.pathling.terminology.store.TerminologyStoreException;
 import au.csiro.pathling.terminology.store.TerminologyStoreReader;
 import au.csiro.pathling.validation.ValidationUtils;
@@ -611,6 +613,40 @@ public class PathlingContext {
   @Nonnull
   public DataSourceBuilder read() {
     return new DataSourceBuilder(this);
+  }
+
+  /**
+   * Imports a SNOMED CT RF2 snapshot release into a local terminology store. The release is read
+   * through the Hadoop FileSystem API and written as Delta tables under the store path, replacing
+   * any previous content for the same code system version atomically. Progress is logged per stage
+   * and the import runs as Spark jobs visible in the Spark UI.
+   *
+   * @param source the path to an RF2 release archive or extracted directory, on any filesystem
+   *     accessible through the Hadoop FileSystem API
+   * @param storagePath the terminology store location, created if absent
+   * @param options optional overrides, or null for the defaults
+   * @throws au.csiro.pathling.terminology.store.TerminologyImportException if the source is not a
+   *     valid RF2 snapshot release; the store is left unmodified
+   */
+  public void importSnomed(
+      @Nonnull final String source,
+      @Nonnull final String storagePath,
+      @Nullable final TerminologyImportOptions options) {
+    final String editionUri = options == null ? null : options.getEditionUri();
+    new SnomedRf2Importer(spark, storagePath).importFrom(source, editionUri);
+  }
+
+  /**
+   * Imports a SNOMED CT RF2 snapshot release into a local terminology store using the default
+   * options.
+   *
+   * @param source the path to an RF2 release archive or extracted directory
+   * @param storagePath the terminology store location, created if absent
+   * @throws au.csiro.pathling.terminology.store.TerminologyImportException if the source is not a
+   *     valid RF2 snapshot release; the store is left unmodified
+   */
+  public void importSnomed(@Nonnull final String source, @Nonnull final String storagePath) {
+    importSnomed(source, storagePath, null);
   }
 
   /**
