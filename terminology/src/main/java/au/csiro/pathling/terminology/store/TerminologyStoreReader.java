@@ -51,8 +51,9 @@ import org.apache.hadoop.conf.Configuration;
 
 /**
  * Reads a terminology store on executors through the Hadoop FileSystem API using Delta Kernel, with
- * no Spark dependency at query time. Reading pins a Delta snapshot, so a concurrent re-import that
- * replaces a version never exposes a partially written state to an open reader.
+ * no Spark dependency at query time. Each table read pins that table's latest Delta snapshot, so a
+ * concurrent re-import that atomically replaces a version never exposes a partially written state
+ * to an in-progress read.
  *
  * @author John Grimes
  */
