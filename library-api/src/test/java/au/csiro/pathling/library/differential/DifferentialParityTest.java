@@ -107,6 +107,14 @@ class DifferentialParityTest {
   /** System property naming an RF2 archive to import when the store is empty. */
   private static final String RF2_PATH_PROPERTY = "pathling.test.rf2Path";
 
+  /**
+   * Optional system property naming a SNOMED CT edition/version URI (for example {@code
+   * http://snomed.info/sct/32506021000036107/version/20260430}). When set, every corpus reference
+   * is pinned to this version on both sides, so a reference server holding several SNOMED releases
+   * can be compared against a store holding exactly one.
+   */
+  private static final String SNOMED_VERSION_PROPERTY = "pathling.test.snomedVersion";
+
   // SNOMED CT International core concepts, present in any derived edition.
   private static final String DIABETES = "73211009"; // Diabetes mellitus.
   private static final String TYPE_1_DIABETES = "46635009";
@@ -259,15 +267,16 @@ class DifferentialParityTest {
    */
   @Nonnull
   private static Map<String, Column> corpus() {
-    // References are left unversioned so each side resolves them against its single loaded SNOMED
-    // release. Both sides hold the same edition content, so the results compare equal even though
-    // each server may label that release with a different edition module URI.
-    final String eclDiabetes = SNOMED_URI + "?fhir_vs=ecl/" + encode("<< " + DIABETES);
-    final String isaDiabetes = SNOMED_URI + "?fhir_vs=isa/" + DIABETES;
-    final String refsetSpecimen = SNOMED_URI + "?fhir_vs=refset/" + SPECIMEN_TYPE_REFSET;
+    // When pathling.test.snomedVersion is set, all references are pinned to that release on both
+    // sides; otherwise references are left unversioned and each side resolves them against its
+    // single loaded SNOMED release.
+    final String system = System.getProperty(SNOMED_VERSION_PROPERTY, SNOMED_URI);
+    final String eclDiabetes = system + "?fhir_vs=ecl/" + encode("<< " + DIABETES);
+    final String isaDiabetes = system + "?fhir_vs=isa/" + DIABETES;
+    final String refsetSpecimen = system + "?fhir_vs=refset/" + SPECIMEN_TYPE_REFSET;
     final String vclDiabetes =
-        "http://fhir.org/VCL?v1=" + encode("(" + SNOMED_URI + ")concept << " + DIABETES);
-    final String sameAsMap = SNOMED_URI + "?fhir_cm=" + SAME_AS_REFSET;
+        "http://fhir.org/VCL?v1=" + encode("(" + system + ")concept << " + DIABETES);
+    final String sameAsMap = system + "?fhir_cm=" + SAME_AS_REFSET;
 
     final List<String> membershipSubjects =
         List.of(DIABETES, TYPE_1_DIABETES, TYPE_2_DIABETES, HYPERTENSION, ASTHMA, SPECIMEN_FLUID);
@@ -395,7 +404,7 @@ class DifferentialParityTest {
 
   @Nonnull
   private static Column snomed(@Nonnull final String code) {
-    return toCoding(lit(code), SNOMED_URI, null);
+    return toCoding(lit(code), SNOMED_URI, System.getProperty(SNOMED_VERSION_PROPERTY));
   }
 
   @Nonnull

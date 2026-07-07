@@ -33,10 +33,13 @@ spurious failures.
 
 ## Loading identical content into both sides
 
-The two sides must hold the **same SNOMED CT edition and version**. The corpus
-leaves all references unversioned, so each side resolves them against its
-single loaded SNOMED release; if the releases differ, display and designation
-comparisons will produce spurious mismatches.
+The two sides must hold the **same SNOMED CT edition and version**. By default
+the corpus leaves all references unversioned, so each side resolves them
+against its single loaded SNOMED release; if the releases differ, display and
+designation comparisons will produce spurious mismatches. When the reference
+server holds several SNOMED releases, pin every reference to one release on
+both sides by setting `pathling.test.snomedVersion` to its edition/version URI
+(for example `http://snomed.info/sct/32506021000036107/version/20260430`).
 
 1. **Reference server.** Point `pathling.test.txServerUrl` at a FHIR terminology
    server that already has this edition loaded. Confirm it is present:
@@ -65,8 +68,10 @@ mvn test -Dtest=DifferentialParityTest -Dgroups=differential \
   -Dpathling.test.rf2Path=/path/to/SnomedCT_*.zip
 ```
 
-Omit `pathling.test.rf2Path` once the store has been built. To validate a
-different edition, load that edition on both sides.
+Omit `pathling.test.rf2Path` once the store has been built. Add
+`-Dpathling.test.snomedVersion=<edition/version URI>` when the reference server
+holds more than one SNOMED release. To validate a different edition, load that
+edition on both sides.
 
 ## Interpreting failures
 
