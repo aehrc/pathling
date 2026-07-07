@@ -224,6 +224,7 @@ public class SnomedRf2Importer {
         new TransitiveClosureBuilder().build(relationships.isa), CLOSURE, systemVersionId);
     writer.writePartitionedBySystemVersion(refsetMembers, REFSET_MEMBER, systemVersionId);
     writeManifest(writer, version, source);
+    descriptions.cached.forEach(Dataset::unpersist);
     concepts.unpersist();
     log.info("Import complete for {} version {} ({} concepts)", SNOMED_URI, version, conceptCount);
   }
@@ -459,9 +460,19 @@ public class SnomedRf2Importer {
     @Nonnull final Dataset<Row> table;
     @Nonnull final Dataset<Row> display;
 
-    Descriptions(@Nonnull final Dataset<Row> table, @Nonnull final Dataset<Row> display) {
+    /**
+     * The cached source data frames feeding {@link #table} and {@link #display}, released once both
+     * have been written.
+     */
+    @Nonnull final List<Dataset<Row>> cached;
+
+    Descriptions(
+        @Nonnull final Dataset<Row> table,
+        @Nonnull final Dataset<Row> display,
+        @Nonnull final List<Dataset<Row>> cached) {
       this.table = table;
       this.display = display;
+      this.cached = cached;
     }
   }
 
@@ -477,23 +488,29 @@ public class SnomedRf2Importer {
           concepts
               .select(col(COLUMN_CODE), lit(null).cast("string").alias(COLUMN_DISPLAY))
               .limit(0);
-      return new Descriptions(emptyTable, emptyDisplay);
+      return new Descriptions(emptyTable, emptyDisplay, List.of());
     }
 
+    // The description and language reference set files are each consumed several times below (the
+    // description table, the preferred synonym, and the FSN all read the descriptions; the
+    // acceptability map and the preferred flag both read the language refset). They are the largest
+    // files in a release, so the parsed rows are cached to read and parse each file only once.
     final Dataset<Row> descRaw =
         readRf2(files.description, "id", "conceptId", "typeId", COLUMN_TERM)
-            .filter(col(COLUMN_ACTIVE).equalTo("1"));
+            .filter(col(COLUMN_ACTIVE).equalTo("1"))
+            .persist();
 
     // Active language reference set rows: description id -> (refset, acceptability).
     final Dataset<Row> langActive =
-        files.language == null
-            ? emptyLanguage()
-            : readRf2(files.language, "referencedComponentId", "refsetId", ACCEPTABILITY_ID)
-                .filter(col(COLUMN_ACTIVE).equalTo("1"))
-                .select(
-                    col("referencedComponentId").alias("descId"),
-                    col("refsetId"),
-                    col(ACCEPTABILITY_ID));
+        (files.language == null
+                ? emptyLanguage()
+                : readRf2(files.language, "referencedComponentId", "refsetId", ACCEPTABILITY_ID)
+                    .filter(col(COLUMN_ACTIVE).equalTo("1"))
+                    .select(
+                        col("referencedComponentId").alias("descId"),
+                        col("refsetId"),
+                        col(ACCEPTABILITY_ID)))
+            .persist();
 
     // Acceptability map per description.
     final Dataset<Row> acceptability =
@@ -543,7 +560,7 @@ public class SnomedRf2Importer {
                 coalesce(col("preferredTerm"), col("fsnTerm"), col(COLUMN_CODE))
                     .alias(COLUMN_DISPLAY));
 
-    return new Descriptions(table, display);
+    return new Descriptions(table, display, List.of(descRaw, langActive));
   }
 
   @Nonnull
