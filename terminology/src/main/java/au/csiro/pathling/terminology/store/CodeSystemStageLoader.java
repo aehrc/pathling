@@ -136,7 +136,7 @@ public class CodeSystemStageLoader {
                 col(COLUMN_ACTIVE),
                 col(COLUMN_DEFINED),
                 col(COLUMN_DISPLAY))
-            .persist(StorageLevel.MEMORY_AND_DISK());
+            .persist(StorageLevel.DISK_ONLY());
     final long totalConcepts = rawConcepts.count();
     final long survivingConcepts = survivors.count();
     if (totalConcepts > survivingConcepts) {
@@ -201,7 +201,7 @@ public class CodeSystemStageLoader {
                 survivingDense,
                 col(COLUMN_SOURCE_DENSE_ID).equalTo(survivingDense.col(COLUMN_DENSE_ID)),
                 "left_semi")
-            .persist(StorageLevel.MEMORY_AND_DISK());
+            .persist(StorageLevel.DISK_ONLY());
     final Dataset<Row> targetByCode =
         codeToDense.select(
             col(COLUMN_CODE).alias("target_code_join"),
@@ -216,7 +216,7 @@ public class CodeSystemStageLoader {
                 col(COLUMN_PROPERTY_CODE).alias(COLUMN_TYPE_CODE),
                 col(COLUMN_TARGET_DENSE_ID),
                 lit(null).cast(DataTypes.IntegerType).alias(COLUMN_ROLE_GROUP))
-            .persist(StorageLevel.MEMORY_AND_DISK());
+            .persist(StorageLevel.DISK_ONLY());
     final long dangling = codingProperties.count() - resolved.count();
     if (dangling > 0) {
       log.warn(
