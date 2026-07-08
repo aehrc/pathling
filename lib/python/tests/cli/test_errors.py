@@ -225,3 +225,18 @@ def test_local_mode_message_includes_root_cause():
     message = friendly_message(RuntimeError("store is empty"), store_path="/s")
 
     assert "store is empty" in message
+
+
+def test_local_mode_message_does_not_repeat_store_path():
+    """When the root cause already names the store path, the friendly message
+    does not state it a second time."""
+    # The library failure already names the store path in quotes.
+    exc = RuntimeError(
+        "No readable terminology store at '/data/tx-store'. The path may not "
+        "exist or may not contain an imported store."
+    )
+
+    message = friendly_message(exc, store_path="/data/tx-store")
+
+    assert message.count("/data/tx-store") == 1
+    assert "import-snomed" in message

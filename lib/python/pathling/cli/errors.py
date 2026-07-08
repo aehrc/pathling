@@ -168,11 +168,19 @@ def friendly_message(
     # naming a server that was never contacted (FR-011). This takes precedence
     # over the connection-error branch below.
     if store_path is not None:
-        message = (
-            f"{root} The local terminology store at {store_path} could not be "
-            "used. Check that it exists and has been populated with "
-            "'pathling import-snomed' or 'pathling import-fhir-terminology'."
-        )
+        # The library failure usually already names the store path, so only
+        # restate it when the root cause has not, to avoid a repeated path.
+        if store_path in root:
+            message = (
+                f"{root} Check that it has been populated with 'pathling "
+                "import-snomed' or 'pathling import-fhir-terminology'."
+            )
+        else:
+            message = (
+                f"{root} The local terminology store at {store_path} could not "
+                "be used. Check that it exists and has been populated with "
+                "'pathling import-snomed' or 'pathling import-fhir-terminology'."
+            )
         if verbose:
             trace = "".join(
                 traceback.format_exception(type(exc), exc, exc.__traceback__)
