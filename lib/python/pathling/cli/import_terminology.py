@@ -28,12 +28,37 @@ Author: John Grimes.
 import click
 
 from pathling.cli import session
+from pathling.cli.errors import EXIT_USAGE, CliError
 from pathling.cli.render import progress_status
+
+
+def _resolve_storage_path(config, storage_path):
+    """Resolves the target store path, falling back to the configured store.
+
+    The explicit ``STORAGE_PATH`` positional wins; otherwise the configured
+    ``tx-store.path`` is used. When neither is available the command is a usage
+    error naming both mechanisms (FR-010).
+
+    :param config: the resolved CLI configuration.
+    :param storage_path: the ``STORAGE_PATH`` positional, or None when omitted.
+    :return: the resolved store path.
+    :raises CliError: with EXIT_USAGE when no path is available from either
+            source.
+    """
+    if storage_path is not None:
+        return storage_path
+    if config.tx_store is not None:
+        return config.tx_store.path
+    raise CliError(
+        "No storage path given. Provide the STORAGE_PATH argument, or configure "
+        "'tx-store.path' (or the --tx-store flag).",
+        exit_code=EXIT_USAGE,
+    )
 
 
 @click.command(name="import-snomed")
 @click.argument("source")
-@click.argument("storage_path")
+@click.argument("storage_path", required=False)
 @click.option(
     "--edition-uri", "edition_uri", help="Override the SNOMED edition/version URI."
 )
@@ -41,27 +66,31 @@ from pathling.cli.render import progress_status
 def import_snomed(obj, source, storage_path, edition_uri):
     """Import a SNOMED CT RF2 snapshot release into a local terminology store.
 
+    STORAGE_PATH may be omitted when 'tx-store.path' (or --tx-store) is set.
+
     Example:
 
         pathling import-snomed /data/rf2.zip /data/tx-store
     """
     config = obj.config
     console = obj.console
+    resolved_path = _resolve_storage_path(config, storage_path)
     pc = session.create_context(config, console)
     with progress_status(console, "Importing SNOMED CT...", config.verbose):
-        pc.import_snomed(source, storage_path, edition_uri)
-    click.echo(f"Imported SNOMED CT from {source} into {storage_path}")
+        pc.import_snomed(source, resolved_path, edition_uri)
+    click.echo(f"Imported SNOMED CT from {source} into {resolved_path}")
 
 
 @click.command(name="import-fhir-terminology")
 @click.argument("source")
-@click.argument("storage_path")
+@click.argument("storage_path", required=False)
 @click.pass_obj
 def import_fhir_terminology(obj, source, storage_path):
     """Import FHIR CodeSystem, ValueSet, and ConceptMap resources into a store.
 
     The source may be a JSON file, a directory of JSON files, or a FHIR NPM
-    package (.tgz).
+    package (.tgz). STORAGE_PATH may be omitted when 'tx-store.path' (or
+    --tx-store) is set.
 
     Example:
 
@@ -69,10 +98,11 @@ def import_fhir_terminology(obj, source, storage_path):
     """
     config = obj.config
     console = obj.console
+    resolved_path = _resolve_storage_path(config, storage_path)
     pc = session.create_context(config, console)
     with progress_status(console, "Importing FHIR terminology...", config.verbose):
-        pc.import_fhir_terminology(source, storage_path)
-    click.echo(f"Imported FHIR terminology from {source} into {storage_path}")
+        pc.import_fhir_terminology(source, resolved_path)
+    click.echo(f"Imported FHIR terminology from {source} into {resolved_path}")
 
 
 #: The terminology import commands registered by the root command group.

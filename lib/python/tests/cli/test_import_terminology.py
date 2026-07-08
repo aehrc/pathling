@@ -66,3 +66,57 @@ def test_import_snomed_missing_source_fails(runner, patched_context, tmp_path):
         cli, ["import-snomed", str(tmp_path / "does-not-exist"), store]
     )
     assert result.exit_code != 0
+
+
+# ========== Storage-path fallback to tx-store.path (US3, T013) ==========
+
+
+def test_import_snomed_falls_back_to_configured_store(
+    runner, patched_context, tmp_path
+):
+    """With tx-store.path configured, an omitted STORAGE_PATH uses the store."""
+    store = str(tmp_path / "configured-store")
+    result = runner.invoke(cli, ["--tx-store", store, "import-snomed", RF2_MINI])
+    assert result.exit_code == 0, result.output
+    assert "Imported SNOMED CT" in result.stdout
+    # The completion summary names the resolved store.
+    assert store in result.stdout
+
+
+def test_import_snomed_explicit_positional_wins(runner, patched_context, tmp_path):
+    """An explicit STORAGE_PATH wins over the configured tx-store.path."""
+    configured = str(tmp_path / "configured-store")
+    explicit = str(tmp_path / "explicit-store")
+    result = runner.invoke(
+        cli, ["--tx-store", configured, "import-snomed", RF2_MINI, explicit]
+    )
+    assert result.exit_code == 0, result.output
+    assert explicit in result.stdout
+    assert configured not in result.stdout
+
+
+def test_import_snomed_no_path_anywhere_is_usage_error(
+    runner, patched_context, tmp_path
+):
+    """With neither a positional nor a configured store, exit 2 naming both."""
+    result = runner.invoke(cli, ["import-snomed", RF2_MINI])
+    assert result.exit_code == 2
+    assert "STORAGE_PATH" in result.stderr or "storage path" in result.stderr.lower()
+    assert "tx-store.path" in result.stderr
+
+
+def test_import_fhir_falls_back_to_configured_store(runner, patched_context, tmp_path):
+    """import-fhir-terminology also falls back to the configured store."""
+    store = str(tmp_path / "configured-store")
+    result = runner.invoke(
+        cli, ["--tx-store", store, "import-fhir-terminology", FHIR_FIXTURES]
+    )
+    assert result.exit_code == 0, result.output
+    assert store in result.stdout
+
+
+def test_import_fhir_no_path_anywhere_is_usage_error(runner, patched_context, tmp_path):
+    """import-fhir-terminology with no path anywhere exits 2 naming both."""
+    result = runner.invoke(cli, ["import-fhir-terminology", FHIR_FIXTURES])
+    assert result.exit_code == 2
+    assert "tx-store.path" in result.stderr
