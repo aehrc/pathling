@@ -54,6 +54,7 @@ class LocalTerminologyServiceLookupTest {
 
   private static final String SYNONYM = "900000000000013009";
   private static final String FSN = "900000000000003001";
+  private static final String PREFERRED_FOR_LANGUAGE = "preferredForLanguage";
   private static final String FINDING_SITE = "363698007";
   private static final String ASSOCIATED_MORPHOLOGY = "116676008";
 
@@ -126,13 +127,25 @@ class LocalTerminologyServiceLookupTest {
 
   @Test
   void returnsDesignationsWithSnomedUseCodings() {
+    // "Diabetes mellitus" is the preferred synonym in the fixture's language reference set, so it
+    // is designated preferredForLanguage rather than as a plain synonym, matching server
+    // behaviour. It surfaces with both the dialect language code and the plain display language.
     final List<Designation> designations = designations(snomed(Rf2Mini.DIABETES));
     assertTrue(
         designations.stream()
             .anyMatch(
                 d ->
                     d.getUse() != null
-                        && SYNONYM.equals(d.getUse().getCode())
+                        && PREFERRED_FOR_LANGUAGE.equals(d.getUse().getCode())
+                        && "en-x-sctlang-90000000-00005090-07".equals(d.getLanguage())
+                        && "Diabetes mellitus".equals(d.getValue())));
+    assertTrue(
+        designations.stream()
+            .anyMatch(
+                d ->
+                    d.getUse() != null
+                        && PREFERRED_FOR_LANGUAGE.equals(d.getUse().getCode())
+                        && "en".equals(d.getLanguage())
                         && "Diabetes mellitus".equals(d.getValue())));
     assertTrue(
         designations.stream()
@@ -141,13 +154,27 @@ class LocalTerminologyServiceLookupTest {
                     d.getUse() != null
                         && FSN.equals(d.getUse().getCode())
                         && "Diabetes mellitus (disorder)".equals(d.getValue())));
+    // The preferred synonym must not also appear as a plain synonym designation.
+    assertFalse(
+        designations.stream()
+            .anyMatch(
+                d ->
+                    d.getUse() != null
+                        && SYNONYM.equals(d.getUse().getCode())
+                        && "Diabetes mellitus".equals(d.getValue())));
   }
 
   @Test
   void returnsAcceptableSynonymDesignation() {
-    // TYPE2_DIABETES carries an extra acceptable synonym "T2DM".
+    // TYPE2_DIABETES carries an extra acceptable synonym "T2DM", designated as a plain synonym.
     final List<Designation> designations = designations(snomed(Rf2Mini.TYPE2_DIABETES));
-    assertTrue(designations.stream().anyMatch(d -> "T2DM".equals(d.getValue())));
+    assertTrue(
+        designations.stream()
+            .anyMatch(
+                d ->
+                    d.getUse() != null
+                        && SYNONYM.equals(d.getUse().getCode())
+                        && "T2DM".equals(d.getValue())));
   }
 
   @Test

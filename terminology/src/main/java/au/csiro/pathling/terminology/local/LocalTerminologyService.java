@@ -32,10 +32,12 @@ import jakarta.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -80,6 +82,13 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
 
   /** The designation use code identifying a display designation. */
   private static final String DISPLAY_DESIGNATION_USE = "display";
+
+  /** The system of the {@code preferredForLanguage} designation use coding. */
+  private static final String PREFERRED_FOR_LANGUAGE_SYSTEM =
+      "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra";
+
+  /** The designation use code for a language reference set's preferred term. */
+  private static final String PREFERRED_FOR_LANGUAGE_CODE = "preferredForLanguage";
 
   @Nonnull private final TerminologyConfiguration configuration;
   @Nonnull private final Map<String, String> hadoopConfiguration;
@@ -325,15 +334,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       }
     }
     if (wants(propertyCode, Designation.PROPERTY_CODE)) {
-      for (final Description description : indexes.descriptions().descriptionsOf(dense)) {
-        final Coding use =
-            description.getTypeCode() == null
-                ? null
-                : new Coding()
-                    .setSystem(description.getTypeSystem())
-                    .setCode(description.getTypeCode());
-        result.add(Designation.of(use, description.getLanguage(), description.getTerm()));
-      }
+      addDesignations(systemUrl, indexes, dense, result);
     }
     if (wants(propertyCode, PROPERTY_PARENT)) {
       indexes
@@ -440,6 +441,126 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
                                   .setCode(dictionary.code(target))
                                   .setDisplay(dictionary.display(target)))));
     }
+  }
+
+  /**
+   * Builds the designation list for a concept, replicating the reference server's presentation of
+   * SNOMED descriptions. Within each language reference set, the preferred synonym is designated
+   * {@code preferredForLanguage} with a dialect language code, while acceptable terms keep their
+   * description type as the use; descriptions outside every language reference set carry no use.
+   * The stored display also surfaces as a {@code preferredForLanguage} designation in its plain
+   * language. FHIR CodeSystem designations are passed through with their declared use.
+   */
+  private void addDesignations(
+      @Nonnull final String systemUrl,
+      @Nonnull final CodeSystemIndexes indexes,
+      final int dense,
+      @Nonnull final List<PropertyOrDesignation> result) {
+    final boolean snomed = SNOMED_URI.equals(systemUrl);
+    final Set<String> seen = new HashSet<>();
+    for (final Description description : indexes.descriptions().descriptionsOf(dense)) {
+      final Map<String, String> acceptability = description.getAcceptability();
+      if (!snomed) {
+        addDesignation(
+            result, seen, typeUse(description), description.getLanguage(), description.getTerm());
+      } else if (acceptability == null || acceptability.isEmpty()) {
+        // A description outside every language reference set carries no use.
+        addDesignation(result, seen, null, description.getLanguage(), description.getTerm());
+      } else {
+        for (final Map.Entry<String, String> entry : acceptability.entrySet()) {
+          final boolean preferredSynonym =
+              SYNONYM_TYPE.equals(description.getTypeCode())
+                  && PREFERRED_ACCEPTABILITY.equals(entry.getValue());
+          if (preferredSynonym) {
+            addDesignation(
+                result,
+                seen,
+                preferredForLanguageUse(),
+                dialectLanguage(description.getLanguage(), entry.getKey()),
+                description.getTerm());
+          } else {
+            addDesignation(
+                result,
+                seen,
+                typeUse(description),
+                description.getLanguage(),
+                description.getTerm());
+          }
+        }
+      }
+    }
+    if (snomed) {
+      // The stored display surfaces as a preferredForLanguage designation in its plain language.
+      final String display = indexes.dictionary().display(dense);
+      if (display != null) {
+        addDesignation(
+            result,
+            seen,
+            preferredForLanguageUse(),
+            languageOfTerm(indexes, dense, display),
+            display);
+      }
+    }
+  }
+
+  /** Adds a designation to the result unless an identical one has already been added. */
+  private static void addDesignation(
+      @Nonnull final List<PropertyOrDesignation> result,
+      @Nonnull final Set<String> seen,
+      @Nullable final Coding use,
+      @Nullable final String language,
+      @Nonnull final String term) {
+    final String key =
+        (use == null ? "" : use.getSystem() + "|" + use.getCode()) + "|" + language + "|" + term;
+    if (seen.add(key)) {
+      result.add(Designation.of(use, language, term));
+    }
+  }
+
+  /** Builds the use coding for a description's declared type, or null when it has none. */
+  @Nullable
+  private static Coding typeUse(@Nonnull final Description description) {
+    return description.getTypeCode() == null
+        ? null
+        : new Coding().setSystem(description.getTypeSystem()).setCode(description.getTypeCode());
+  }
+
+  /** Builds the {@code preferredForLanguage} designation use coding. */
+  @Nonnull
+  private static Coding preferredForLanguageUse() {
+    return new Coding()
+        .setSystem(PREFERRED_FOR_LANGUAGE_SYSTEM)
+        .setCode(PREFERRED_FOR_LANGUAGE_CODE)
+        .setDisplay("Preferred For Language");
+  }
+
+  /**
+   * Builds the dialect language code for a term preferred within a language reference set, in the
+   * form the reference server uses (for example {@code en-x-sctlang-90000000-00005090-07}).
+   */
+  @Nullable
+  private static String dialectLanguage(
+      @Nullable final String language, @Nonnull final String refsetId) {
+    if (language == null) {
+      return null;
+    }
+    final StringBuilder dialect = new StringBuilder(language).append("-x-sctlang");
+    for (int start = 0; start < refsetId.length(); start += 8) {
+      dialect.append('-').append(refsetId, start, Math.min(start + 8, refsetId.length()));
+    }
+    return dialect.toString();
+  }
+
+  /** Returns the language of the first description carrying the given term, or null. */
+  @Nullable
+  private static String languageOfTerm(
+      @Nonnull final CodeSystemIndexes indexes, final int dense, @Nonnull final String term) {
+    for (final Description description : indexes.descriptions().descriptionsOf(dense)) {
+      if (term.equals(description.getTerm())) {
+        return description.getLanguage();
+      }
+    }
+    return null;
   }
 
   /**
