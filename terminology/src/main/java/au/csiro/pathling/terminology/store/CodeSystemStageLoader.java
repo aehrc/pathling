@@ -169,8 +169,9 @@ public class CodeSystemStageLoader {
     writer.writePartitionedBySystemVersion(
         withSystemVersion(relationships, systemVersionId), RELATIONSHIP, systemVersionId);
     log.info("Computing the transitive closure for CodeSystem {}", url);
-    writer.writePartitionedBySystemVersion(
-        new TransitiveClosureBuilder().build(isaEdges), CLOSURE, systemVersionId);
+    final Dataset<Row> closure = new TransitiveClosureBuilder().build(isaEdges);
+    writer.writePartitionedBySystemVersion(closure, CLOSURE, systemVersionId);
+    closure.unpersist();
     writer.upsertManifestEntry(
         new ManifestEntry(
             TerminologyStoreSchema.STORE_FORMAT_VERSION,

@@ -26,6 +26,8 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_
 import static org.apache.spark.sql.functions.col;
 
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -56,6 +58,11 @@ public class TransitiveClosureBuilder {
    */
   @Nonnull
   public Dataset<Row> build(@Nonnull final Dataset<Row> isaEdges) {
+    // Every per-generation cache is tracked so it can be released once the closure is consolidated.
+    // A deep hierarchy produces one generation per hop, so retaining them all would grow driver
+    // memory in proportion to the depth of the hierarchy.
+    final List<Dataset<Row>> intermediates = new ArrayList<>();
+
     // A direct edge (child is-a parent) is the ancestor/descendant pair (parent, child).
     final Dataset<Row> edges =
         isaEdges
@@ -65,6 +72,7 @@ public class TransitiveClosureBuilder {
                 col(COLUMN_SOURCE_DENSE_ID).alias(COLUMN_DESCENDANT_DENSE_ID))
             .distinct()
             .transform(TransitiveClosureBuilder::materialiseWithTruncatedLineage);
+    intermediates.add(edges);
 
     Dataset<Row> result = edges;
     Dataset<Row> frontier = edges;
@@ -90,8 +98,11 @@ public class TransitiveClosureBuilder {
       // across iterations; without this, analysis cost grows exponentially with hierarchy depth.
       final Dataset<Row> newPairs = materialiseWithTruncatedLineage(extended.except(result));
       if (newPairs.isEmpty()) {
+        // The terminal empty generation is not part of the result, so release it immediately.
+        newPairs.unpersist();
         break;
       }
+      intermediates.add(newPairs);
       result = result.union(newPairs);
       frontier = newPairs;
     }
@@ -104,20 +115,29 @@ public class TransitiveClosureBuilder {
             .and(
                 col("c." + COLUMN_DESCENDANT_DENSE_ID)
                     .equalTo(col("d." + COLUMN_DESCENDANT_DENSE_ID)));
-    return result
-        .as("c")
-        .join(edges.as("d"), joinCondition, "left_outer")
-        .select(
-            col("c." + COLUMN_SYSTEM_VERSION_ID),
-            col("c." + COLUMN_ANCESTOR_DENSE_ID),
-            col("c." + COLUMN_DESCENDANT_DENSE_ID),
-            col("d." + COLUMN_ANCESTOR_DENSE_ID).isNotNull().alias(COLUMN_DIRECT));
+    final Dataset<Row> flagged =
+        result
+            .as("c")
+            .join(edges.as("d"), joinCondition, "left_outer")
+            .select(
+                col("c." + COLUMN_SYSTEM_VERSION_ID),
+                col("c." + COLUMN_ANCESTOR_DENSE_ID),
+                col("c." + COLUMN_DESCENDANT_DENSE_ID),
+                col("d." + COLUMN_ANCESTOR_DENSE_ID).isNotNull().alias(COLUMN_DIRECT));
+
+    // Collapse the per-generation union into a single leaf so every generation cache can be
+    // released; without this the whole union of generations stays cached until the closure is
+    // written, holding driver memory in proportion to the depth of the hierarchy.
+    final Dataset<Row> closure = materialiseWithTruncatedLineage(flagged);
+    intermediates.forEach(Dataset::unpersist);
+    return closure;
   }
 
   /**
-   * Eagerly computes a dataset, caches the rows, and returns a dataset whose logical plan is a leaf
-   * over the computed rows. This truncates the Catalyst lineage so that iterative self-referential
-   * plans do not grow with each generation.
+   * Eagerly computes a dataset, caches the rows to disk, and returns a dataset whose logical plan
+   * is a leaf over the computed rows. This truncates the Catalyst lineage so that iterative
+   * self-referential plans do not grow with each generation, and caching to disk rather than memory
+   * keeps the accumulated generations of a deep hierarchy off the driver heap.
    *
    * @param dataset the dataset to materialise
    * @return an equivalent cached dataset with a leaf logical plan
@@ -128,7 +148,7 @@ public class TransitiveClosureBuilder {
         dataset
             .sparkSession()
             .createDataFrame(dataset.javaRDD(), dataset.schema())
-            .persist(StorageLevel.MEMORY_AND_DISK());
+            .persist(StorageLevel.DISK_ONLY());
     truncated.count();
     return truncated;
   }

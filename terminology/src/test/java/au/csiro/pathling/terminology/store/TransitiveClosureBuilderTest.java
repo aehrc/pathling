@@ -147,6 +147,29 @@ class TransitiveClosureBuilderTest {
   }
 
   @Test
+  void releasesPerGenerationCachesAfterBuild() {
+    // A deep chain forces one generation per hop. The builder must consolidate the closure and
+    // release every per-generation cache, leaving only the single dataset it returns; otherwise a
+    // deep hierarchy accumulates one cached RDD per hop and exhausts driver memory.
+    final int depth = 20;
+    final List<Row> rows = new ArrayList<>();
+    for (int i = 1; i <= depth; i++) {
+      rows.add(RowFactory.create("v", i, i - 1));
+    }
+
+    final int before = spark.sparkContext().getPersistentRDDs().size();
+    final Dataset<Row> closure = new TransitiveClosureBuilder().build(edges(rows));
+    // Consume the result so every job the builder scheduled has run.
+    assertEquals(depth * (depth + 1) / 2, collect(closure).size());
+    final int leaked = spark.sparkContext().getPersistentRDDs().size() - before;
+
+    // Only the returned closure remains cached; all per-generation intermediates are released.
+    assertEquals(1, leaked);
+
+    closure.unpersist();
+  }
+
+  @Test
   void handlesDeepHierarchies() {
     // A chain 0 <- 1 <- ... <- 16, deeper than a real SNOMED CT is-a path. Guards against the
     // iterative plan growing with each generation, which previously made analysis cost exponential
