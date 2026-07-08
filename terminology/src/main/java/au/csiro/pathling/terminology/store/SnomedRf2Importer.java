@@ -228,8 +228,9 @@ public class SnomedRf2Importer {
     writer.writePartitionedBySystemVersion(descriptions.table, DESCRIPTION, systemVersionId);
     writer.writePartitionedBySystemVersion(relationships.attributes, RELATIONSHIP, systemVersionId);
     log.info("Computing the transitive closure");
-    writer.writePartitionedBySystemVersion(
-        new TransitiveClosureBuilder().build(relationships.isa), CLOSURE, systemVersionId);
+    final Dataset<Row> closure = new TransitiveClosureBuilder().build(relationships.isa);
+    writer.writePartitionedBySystemVersion(closure, CLOSURE, systemVersionId);
+    closure.unpersist();
     writer.writePartitionedBySystemVersion(refsetMembers, REFSET_MEMBER, systemVersionId);
     writeManifest(writer, version, source);
     descriptions.cached.forEach(Dataset::unpersist);
