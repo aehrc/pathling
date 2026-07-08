@@ -91,9 +91,30 @@ def _server_url_from(ctx: click.Context) -> Optional[str]:
 
     :param ctx: the Click context.
     :return: the configured terminology server URL, or None when no context is
-             present.
+             present or a local store is configured.
     """
-    return ctx.obj.config.tx_server if isinstance(ctx.obj, CliContext) else None
+    if not isinstance(ctx.obj, CliContext):
+        return None
+    # In local mode no server is contacted, so a server URL must never be named.
+    if ctx.obj.config.tx_store is not None:
+        return None
+    return ctx.obj.config.tx_server
+
+
+def _store_path_from(ctx: click.Context) -> Optional[str]:
+    """Returns the configured local terminology store path, or None.
+
+    Threaded into the friendly error message so a runtime failure in local mode
+    names the store it could not use (FR-011).
+
+    :param ctx: the Click context.
+    :return: the configured store path, or None when no context is present or no
+             local store is configured.
+    """
+    if not isinstance(ctx.obj, CliContext):
+        return None
+    store = ctx.obj.config.tx_store
+    return store.path if store is not None else None
 
 
 class PathlingCli(click.Group):
@@ -125,6 +146,7 @@ class PathlingCli(click.Group):
                 exc,
                 verbose=_verbose_from(ctx),
                 server_url=_server_url_from(ctx),
+                store_path=_store_path_from(ctx),
             )
             _console_from(ctx).print(message, style="red")
             sys.exit(EXIT_RUNTIME)

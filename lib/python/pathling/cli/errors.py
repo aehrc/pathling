@@ -149,16 +149,36 @@ def friendly_message(
     exc: BaseException,
     verbose: bool = False,
     server_url: Optional[str] = None,
+    store_path: Optional[str] = None,
 ) -> str:
     """Builds a friendly, actionable message for an unexpected exception.
 
     :param exc: the exception to describe.
     :param verbose: when True, append the full traceback.
     :param server_url: a server URL to name in connection errors, or None.
+    :param store_path: a local terminology store path to name in local-mode
+           failures, or None. When set, the message names the store and suggests
+           the import commands, and never names a terminology server (FR-011).
     :return: the message to present to the user.
     """
     root = unwrap_java_exception(exc)
     category = _categorise(root)
+
+    # In local mode, name the store and point at the import commands rather than
+    # naming a server that was never contacted (FR-011). This takes precedence
+    # over the connection-error branch below.
+    if store_path is not None:
+        message = (
+            f"{root} The local terminology store at {store_path} could not be "
+            "used. Check that it exists and has been populated with "
+            "'pathling import-snomed' or 'pathling import-fhir-terminology'."
+        )
+        if verbose:
+            trace = "".join(
+                traceback.format_exception(type(exc), exc, exc.__traceback__)
+            )
+            message = message + "\n\n" + trace
+        return message
 
     if category == "connection" and server_url:
         message = (

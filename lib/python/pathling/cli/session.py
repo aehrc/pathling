@@ -124,6 +124,22 @@ def _create_pathling_context(config: CliConfig):
         # the CLI surfaces as its own concise message.
         spark.sparkContext.setLogLevel("OFF")
 
+    store = config.tx_store
+    if store is not None:
+        # Local mode: evaluate terminology against the imported store. The
+        # server URL and authentication are deliberately not passed - the store
+        # wins over any configured server or credentials. Tuning values are only
+        # forwarded when set, so the library defaults apply otherwise.
+        local_kwargs = {
+            "terminology_mode": "local",
+            "terminology_storage_path": store.path,
+        }
+        if store.default_snomed_edition is not None:
+            local_kwargs["default_snomed_edition"] = store.default_snomed_edition
+        if store.expansion_cache_size is not None:
+            local_kwargs["expansion_cache_size"] = store.expansion_cache_size
+        return PathlingContext.create(spark, enable_auth=False, **local_kwargs)
+
     auth = config.tx_auth
     return PathlingContext.create(
         spark,

@@ -118,8 +118,9 @@ def test_central_handler_passes_tx_server_as_server_url(runner, monkeypatch, tmp
     """
     captured = {}
 
-    def fake_friendly(exc, verbose=False, server_url=None):
+    def fake_friendly(exc, verbose=False, server_url=None, store_path=None):
         captured["server_url"] = server_url
+        captured["store_path"] = store_path
         return "rendered"
 
     monkeypatch.setattr("pathling.cli.main.friendly_message", fake_friendly)
@@ -154,3 +155,42 @@ def test_central_handler_passes_tx_server_as_server_url(runner, monkeypatch, tmp
 
     assert result.exit_code == 1
     assert captured["server_url"] == "https://tx.example/fhir"
+
+
+# ========== Local-mode error threading (US1, T005) ==========
+
+
+def test_server_url_from_is_none_when_store_configured():
+    """_server_url_from returns None in local mode so no server is ever named."""
+    import click
+
+    from pathling.cli.config import CliConfig, TxStore
+    from pathling.cli.main import CliContext, _server_url_from, _store_path_from
+    from pathling.cli.render import stderr_console
+
+    ctx = click.Context(cli)
+    ctx.obj = CliContext(
+        config=CliConfig(tx_store=TxStore(path="/data/tx-store")),
+        console=stderr_console(),
+    )
+
+    assert _server_url_from(ctx) is None
+    assert _store_path_from(ctx) == "/data/tx-store"
+
+
+def test_server_url_from_returns_url_in_remote_mode():
+    """In remote mode the configured server URL is returned and no store path."""
+    import click
+
+    from pathling.cli.config import CliConfig
+    from pathling.cli.main import CliContext, _server_url_from, _store_path_from
+    from pathling.cli.render import stderr_console
+
+    ctx = click.Context(cli)
+    ctx.obj = CliContext(
+        config=CliConfig(tx_server="https://tx.example/fhir"),
+        console=stderr_console(),
+    )
+
+    assert _server_url_from(ctx) == "https://tx.example/fhir"
+    assert _store_path_from(ctx) is None

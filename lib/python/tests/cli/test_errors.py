@@ -190,3 +190,38 @@ def test_bare_parse_error_not_categorised_as_fhirpath():
 def test_genuine_fhirpath_error_still_categorised():
     """A message naming FHIRPath is still categorised as a FHIRPath error."""
     assert _categorise("FHIRPath parse error at position 3") == "fhirpath"
+
+
+# ========== Local-mode friendly messages (US1, T005) ==========
+
+
+def test_local_mode_message_names_store_and_suggests_import():
+    """A local-mode failure names the store path and suggests the import
+    commands (FR-011)."""
+    exc = RuntimeError("no such table")
+
+    message = friendly_message(exc, store_path="/data/tx-store")
+
+    assert "/data/tx-store" in message
+    assert "import-snomed" in message
+    assert "import-fhir-terminology" in message
+
+
+def test_local_mode_message_never_names_a_server():
+    """A connection-style failure in local mode never names a terminology server
+    URL, even when one is also supplied (FR-011)."""
+    exc = RuntimeError("Connection refused")
+
+    message = friendly_message(
+        exc, server_url="https://tx.example/fhir", store_path="/data/tx-store"
+    )
+
+    assert "https://tx.example/fhir" not in message
+    assert "/data/tx-store" in message
+
+
+def test_local_mode_message_includes_root_cause():
+    """The local-mode message still surfaces the underlying failure cause."""
+    message = friendly_message(RuntimeError("store is empty"), store_path="/s")
+
+    assert "store is empty" in message

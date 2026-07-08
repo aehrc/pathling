@@ -246,7 +246,10 @@ def _execute(
     except CliError:
         raise
     except Exception as exc:  # noqa: BLE001 - enrich connection failures.
-        if is_connection_error(exc):
+        # In local mode no server is contacted, so the server-URL enrichment is
+        # skipped and the failure is left to the central handler, which names
+        # the store path instead (FR-011).
+        if config.tx_store is None and is_connection_error(exc):
             raise CliError(
                 f"Could not reach the terminology server at {config.tx_server}: "
                 f"{unwrap_java_exception(exc)}. Set the server with --tx-server "
