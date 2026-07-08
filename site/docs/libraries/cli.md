@@ -40,6 +40,7 @@ through a configuration file.
 | Option                                                                      | Config key           | Default                                 |
 | --------------------------------------------------------------------------- | -------------------- | --------------------------------------- |
 | `--tx-server`                                                               | `tx-server`          | the library default terminology server  |
+| `--tx-store`                                                                | `tx-store.path`      | none (remote mode)                      |
 | `--tx-client-id`, `--tx-client-secret`, `--tx-token-endpoint`, `--tx-scope` | `[terminology-auth]` | none                                    |
 | `--fhir-version`                                                            | `fhir-version`       | `R4`                                    |
 | `--spark-conf KEY=VALUE`                                                    | `[spark]`            | none                                    |
@@ -284,6 +285,40 @@ pathling import-fhir-terminology /data/hl7.terminology.tgz /data/tx-store
 edition/version. `import-fhir-terminology` accepts a JSON file, a directory of
 JSON files, or a FHIR NPM package (`.tgz`).
 
+The `STORAGE_PATH` positional is optional: when it is omitted, the commands fall
+back to the configured `tx-store.path` (see below). An explicit positional wins
+over the configured path. Supplying neither is a usage error.
+
+### Local terminology mode
+
+Once a store has been populated, point any terminology-evaluating command at it
+with `--tx-store` (or the `tx-store.path` config key) to evaluate terminology
+against the local store instead of a remote server, entirely offline. This
+applies to every command that creates a session, including `view`, `fhirpath`,
+`convert`, `run`, and `console`.
+
+```bash
+pathling --tx-store /data/tx-store member-of codes.csv \
+  --code-column code --system 'http://snomed.info/sct' \
+  --value-set 'http://snomed.info/sct?fhir_vs=ecl/<404684003'
+```
+
+The `[tx-store]` config table records the store once, along with optional tuning
+values:
+
+```toml
+[tx-store]
+path = "/data/tx-store"                      # selects local mode
+default-snomed-edition = "32506021000036107" # optional
+expansion-cache-size = 200                   # optional, positive integer
+```
+
+The presence of a store selects local mode. When a store is configured, the
+store wins over any explicitly set `--tx-server` or terminology authentication:
+each is ignored and a warning is printed. The built-in default server URL never
+triggers this warning. A runtime failure in local mode names the store path and
+suggests the import commands rather than a terminology server URL.
+
 ## Configuration file
 
 Defaults for the global options can be set in a TOML file at
@@ -305,10 +340,17 @@ token-endpoint = "https://auth.example.org/token"
 [spark]
 "spark.sql.shuffle.partitions" = 16
 "spark.executor.memory" = "4g"
+
+[tx-store]
+path = "/data/tx-store"
+default-snomed-edition = "32506021000036107"
+expansion-cache-size = 200
 ```
 
 Command-line flags always take precedence over the config file. Unknown keys
-produce a warning that names the key and lists the valid keys.
+produce a warning that names the key and lists the valid keys. The `[tx-store]`
+table selects [local terminology mode](#local-terminology-mode); its tuning keys
+are config-file only, while the store path can also be set with `--tx-store`.
 
 ### Spark configuration
 

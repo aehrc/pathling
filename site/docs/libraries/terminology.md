@@ -1024,6 +1024,18 @@ pc <- pathling_connect(
 ```
 
 </TabItem>
+<TabItem value="cli" label="CLI">
+
+```bash
+pathling --tx-store /data/tx-store member-of codes.csv \
+  --code-column code --system 'http://snomed.info/sct' \
+  --value-set 'http://snomed.info/sct?fhir_vs=ecl/<< 73211009'
+```
+
+The store can also be recorded once in the `[tx-store]` config table. See the
+[command line interface documentation](cli#local-terminology-mode) for details.
+
+</TabItem>
 </Tabs>
 
 The following configuration parameters control local mode:
