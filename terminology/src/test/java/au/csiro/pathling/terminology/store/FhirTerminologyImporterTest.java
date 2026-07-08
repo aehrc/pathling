@@ -320,6 +320,19 @@ class FhirTerminologyImporterTest {
   }
 
   @Test
+  void importsACodeSystemWrappedInABundleThroughTheStreamingPath(@TempDir final Path dir) {
+    final String store = dir.resolve("store").toString();
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(FhirPackageFixtures.resource("bundle-codesystem.json").toString());
+
+    final Map<String, Set<String>> byType = manifestByType(store);
+    assertTrue(byType.get("code_system").contains("http://example.org/fhir/CodeSystem/bundled"));
+    // The wrapped CodeSystem's nesting hierarchy is queryable, proving it flowed through the same
+    // streaming flattener and stage loader as a standalone CodeSystem.
+    assertTrue(closurePairs(store).contains("A->B"));
+  }
+
+  @Test
   void flatParentPropertiesYieldTheSameClosureAsNesting(@TempDir final Path dir) {
     // The flat-parent fixture declares the same A/B/C/D hierarchy through parent properties,
     // including a dangling reference and a duplicate concept, yet answers the same closure.

@@ -66,8 +66,6 @@ public class CodeSystemStreamFlattener {
   private static final String STANDARD_PARENT_URI = "http://hl7.org/fhir/concept-properties#parent";
   private static final String STANDARD_CHILD_URI = "http://hl7.org/fhir/concept-properties#child";
   private static final String FIELD_URI = "uri";
-  private static final String ROLE_CHILD = "child";
-  private static final String ROLE_PARENT = "parent";
 
   @Nonnull private final CodeSystemStaging staging;
   private final long progressInterval;
@@ -277,10 +275,10 @@ public class CodeSystemStreamFlattener {
       // it the parent. The property row is retained above; the edge is derived, not moved.
       if (referencedCode != null) {
         if (parentPropertyCodes.contains(propertyCode)) {
-          staging.appendCodeEdge(dense, ROLE_CHILD, referencedCode);
+          staging.appendCodeEdge(dense, CodeSystemStaging.ROLE_CHILD, referencedCode);
         }
         if (childPropertyCodes.contains(propertyCode)) {
-          staging.appendCodeEdge(dense, ROLE_PARENT, referencedCode);
+          staging.appendCodeEdge(dense, CodeSystemStaging.ROLE_PARENT, referencedCode);
         }
       }
     }

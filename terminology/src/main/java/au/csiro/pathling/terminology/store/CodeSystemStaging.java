@@ -79,6 +79,12 @@ public class CodeSystemStaging implements AutoCloseable {
   /** The staging column holding the still-unresolved referenced code of a property-derived edge. */
   static final String COLUMN_OTHER_CODE = "other_code";
 
+  /** The {@code known_role} value marking the known side of an edge as the child. */
+  static final String ROLE_CHILD = "child";
+
+  /** The {@code known_role} value marking the known side of an edge as the parent. */
+  static final String ROLE_PARENT = "parent";
+
   private static final JsonFactory FACTORY = new JsonFactory();
 
   private static final String FILE_CONCEPT = "concept.ndjson";

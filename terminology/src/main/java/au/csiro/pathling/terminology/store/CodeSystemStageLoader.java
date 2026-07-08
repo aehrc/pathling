@@ -180,6 +180,7 @@ public class CodeSystemStageLoader {
             source,
             Instant.now()));
     survivors.unpersist();
+    relationships.unpersist();
   }
 
   /**
@@ -302,11 +303,13 @@ public class CodeSystemStageLoader {
     // child property.
     return resolved.select(
         when(
-                col(CodeSystemStaging.COLUMN_KNOWN_ROLE).equalTo(lit("child")),
+                col(CodeSystemStaging.COLUMN_KNOWN_ROLE).equalTo(lit(CodeSystemStaging.ROLE_CHILD)),
                 col(CodeSystemStaging.COLUMN_KNOWN_DENSE_ID))
             .otherwise(col("other_dense"))
             .alias(COLUMN_SOURCE_DENSE_ID),
-        when(col(CodeSystemStaging.COLUMN_KNOWN_ROLE).equalTo(lit("child")), col("other_dense"))
+        when(
+                col(CodeSystemStaging.COLUMN_KNOWN_ROLE).equalTo(lit(CodeSystemStaging.ROLE_CHILD)),
+                col("other_dense"))
             .otherwise(col(CodeSystemStaging.COLUMN_KNOWN_DENSE_ID))
             .alias(COLUMN_TARGET_DENSE_ID));
   }
