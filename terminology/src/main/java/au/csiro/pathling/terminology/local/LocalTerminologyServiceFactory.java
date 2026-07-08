@@ -29,7 +29,10 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * A serialisable {@link TerminologyServiceFactory} that builds a {@link LocalTerminologyService} on
- * each executor JVM, memoised per JVM exactly as the remote factory is.
+ * each executor JVM, memoised once per distinct store configuration within the JVM. Unlike the
+ * remote factory, which permits only one configuration per process, local mode may legitimately
+ * work with more than one store in a single JVM (for example, when a process queries two stores in
+ * turn), so each distinct configuration keeps its own service.
  *
  * <p>The factory carries only serialisable state: the terminology configuration (including the
  * local store path and cache settings) and a snapshot of the driver's Hadoop configuration, which
@@ -48,16 +51,16 @@ public final class LocalTerminologyServiceFactory implements TerminologyServiceF
   @Nonnull
   private static final ObjectHolder<LocalTerminologyServiceFactory, TerminologyService>
       terminologyServiceHolder =
-          ObjectHolder.singleton(LocalTerminologyServiceFactory::createService);
+          ObjectHolder.perConfiguration(LocalTerminologyServiceFactory::createService);
 
   @Nonnull private final TerminologyConfiguration configuration;
   @Nonnull private final Map<String, String> hadoopConfiguration;
 
   /**
    * The per-instance memo of the built service. The UDFs call {@link #build()} once per row, and
-   * the per-JVM holder compares this factory's full state (including the Hadoop configuration
-   * snapshot) on every lookup, so the resolved service is cached here after the first call. The
-   * memo is transient and rebuilt after deserialisation on each executor.
+   * the per-JVM holder looks the service up by this factory's full state (including the Hadoop
+   * configuration snapshot) on every call, so the resolved service is cached here after the first
+   * call. The memo is transient and rebuilt after deserialisation on each executor.
    */
   @EqualsAndHashCode.Exclude private transient volatile TerminologyService service;
 
