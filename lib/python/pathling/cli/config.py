@@ -638,10 +638,15 @@ def resolve_config(
         env,
     )
 
+    # Resolve the local terminology store; its presence selects local mode.
+    resolved_tx_store = _resolve_tx_store(file_data, tx_store, on_warning)
+
     # Some terminology auth input was supplied but it is insufficient to
     # authenticate (a client ID and a token endpoint are both required); tell the
-    # user rather than silently disabling it (FR-005).
-    if tx_auth is not None and not tx_auth.enabled:
+    # user rather than silently disabling it (FR-005). In local mode the store
+    # wins and auth is ignored entirely, so this incomplete-auth warning is
+    # suppressed in favour of the store-wins warning below.
+    if resolved_tx_store is None and tx_auth is not None and not tx_auth.enabled:
         notify = on_warning or (lambda message: print(message, file=sys.stderr))
         notify(
             "Terminology authentication is incomplete and will be disabled: a "
@@ -661,8 +666,23 @@ def resolve_config(
     resolved_spark = resolve_spark_conf(spark_table, spark_conf_flags, env)
     spark_conf = merge_spark_conf(resolved_spark, on_warning=spark_warn)
 
-    # Resolve the local terminology store; its presence selects local mode.
-    resolved_tx_store = _resolve_tx_store(file_data, tx_store, on_warning)
+    # When a store is selected it wins over any server or authentication
+    # settings; warn about the ones that were explicitly configured so the
+    # override is never a silent surprise (FR-004, FR-005). An explicitly set
+    # authentication is also disabled so it can never reach the session.
+    if resolved_tx_store is not None:
+        conflict_warn = on_warning or (lambda message: print(message, file=sys.stderr))
+        if tx_server_explicit:
+            conflict_warn(
+                "A local terminology store is configured, so the terminology "
+                "server setting is ignored."
+            )
+        if tx_auth is not None:
+            conflict_warn(
+                "A local terminology store is configured, so the terminology "
+                "authentication settings are ignored."
+            )
+            tx_auth = None
 
     return CliConfig(
         tx_server=resolved_tx_server,

@@ -171,3 +171,41 @@ def test_member_of_via_flag_offline(monkeypatch, spark_session, local_store, tmp
     assert captured["tx_store"] is not None
     assert captured["tx_store"].path == local_store
     assert captured["tx_server_explicit"] is False
+
+
+def test_member_of_via_config_file_offline(
+    monkeypatch, spark_session, local_store, tmp_path
+):
+    """A [tx-store] config file drives local mode with no terminology flags."""
+    captured = _local_context_spy(monkeypatch, spark_session, local_store)
+    codes = _write_codes(str(tmp_path))
+    # Write a project-local pathling.toml selecting the store, and run from it.
+    config_file = tmp_path / "pathling.toml"
+    config_file.write_text(f'[tx-store]\npath = "{local_store}"\n', encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    runner = make_cli_runner()
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            codes,
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            DIABETES_VALUE_SET,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    membership = _membership(result.stdout)
+    assert membership[DIABETES] == "True"
+    assert membership[HYPERTENSION] == "False"
+    # Local mode was selected from the config file, with no explicit server.
+    assert captured["tx_store"] is not None
+    assert captured["tx_store"].path == local_store
+    assert captured["tx_server_explicit"] is False

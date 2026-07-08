@@ -949,3 +949,85 @@ def test_no_tx_store_input_yields_none_and_no_warnings(tmp_path, monkeypatch):
 
     assert config.tx_store is None
     assert warnings == []
+
+
+# ========== Local terminology store: conflict warnings (US2, T010) ==========
+
+
+def test_store_with_explicit_flag_server_warns(tmp_path, monkeypatch):
+    """A store plus an explicit --tx-server flag warns the server is ignored."""
+    warnings = []
+
+    config = resolve_config(
+        tx_store="/data/tx-store",
+        tx_server="https://tx.example/fhir",
+        on_warning=warnings.append,
+        **_isolated_defaults(monkeypatch, tmp_path),
+    )
+
+    assert config.tx_store is not None
+    assert any(
+        "server" in message.lower() and "ignored" in message.lower()
+        for message in warnings
+    )
+
+
+def test_store_with_config_key_server_warns(tmp_path):
+    """A store plus an explicit tx-server config key warns the server is ignored."""
+    path = _write_config(
+        tmp_path,
+        'tx-server = "https://tx.example/fhir"\n\n[tx-store]\npath = "/data/tx-store"\n',
+    )
+    warnings = []
+
+    resolve_config(config_path=path, on_warning=warnings.append)
+
+    assert any(
+        "server" in message.lower() and "ignored" in message.lower()
+        for message in warnings
+    )
+
+
+def test_store_with_default_server_does_not_warn(tmp_path, monkeypatch):
+    """A store with only the built-in default server URL produces no warning."""
+    warnings = []
+
+    resolve_config(
+        tx_store="/data/tx-store",
+        on_warning=warnings.append,
+        **_isolated_defaults(monkeypatch, tmp_path),
+    )
+
+    assert not any("server" in message.lower() for message in warnings)
+
+
+def test_store_with_explicit_auth_warns_and_disables(tmp_path):
+    """A store plus explicit terminology auth warns and disables the auth."""
+    path = _write_config(
+        tmp_path,
+        '[tx-store]\npath = "/data/tx-store"\n\n'
+        "[terminology-auth]\n"
+        'client-id = "c"\n'
+        'token-endpoint = "https://auth/token"\n',
+    )
+    warnings = []
+
+    config = resolve_config(config_path=path, on_warning=warnings.append)
+
+    assert any(
+        "auth" in message.lower() and "ignored" in message.lower()
+        for message in warnings
+    )
+    # The authentication is disabled so it can never reach the session.
+    assert config.tx_auth is None
+
+
+def test_config_driven_store_matches_flag_driven(tmp_path, monkeypatch):
+    """A config-driven store resolves to the same TxStore as the flag-driven one."""
+    path = _write_config(tmp_path, '[tx-store]\npath = "/data/tx-store"\n')
+    from_config = resolve_config(config_path=path)
+    from_flag = resolve_config(
+        tx_store="/data/tx-store", **_isolated_defaults(monkeypatch, tmp_path)
+    )
+
+    assert from_config.tx_store == from_flag.tx_store
