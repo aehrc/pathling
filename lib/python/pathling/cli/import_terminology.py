@@ -25,11 +25,30 @@ mode, streamed to stderr.
 Author: John Grimes.
 """
 
+import dataclasses
+
 import click
 
 from pathling.cli import session
 from pathling.cli.errors import EXIT_USAGE, CliError
 from pathling.cli.render import progress_status
+
+
+def _import_context(config, console):
+    """Creates a context for importing into a store.
+
+    The import commands populate a store rather than query terminology, so the
+    context must not enter local mode: doing so would eagerly validate the
+    target store and reject a not-yet-created one, breaking the first import
+    into a configured store (FR-010). Clearing ``tx_store`` restores the plain
+    context used before local mode existed; the resolved import target is passed
+    to the import methods directly.
+
+    :param config: the resolved CLI configuration.
+    :param console: the stderr console for the status spinner.
+    :return: a configured :class:`PathlingContext` not bound to any store.
+    """
+    return session.create_context(dataclasses.replace(config, tx_store=None), console)
 
 
 def _resolve_storage_path(config, storage_path):
@@ -75,7 +94,7 @@ def import_snomed(obj, source, storage_path, edition_uri):
     config = obj.config
     console = obj.console
     resolved_path = _resolve_storage_path(config, storage_path)
-    pc = session.create_context(config, console)
+    pc = _import_context(config, console)
     with progress_status(console, "Importing SNOMED CT...", config.verbose):
         pc.import_snomed(source, resolved_path, edition_uri)
     click.echo(f"Imported SNOMED CT from {source} into {resolved_path}")
@@ -99,7 +118,7 @@ def import_fhir_terminology(obj, source, storage_path):
     config = obj.config
     console = obj.console
     resolved_path = _resolve_storage_path(config, storage_path)
-    pc = session.create_context(config, console)
+    pc = _import_context(config, console)
     with progress_status(console, "Importing FHIR terminology...", config.verbose):
         pc.import_fhir_terminology(source, resolved_path)
     click.echo(f"Imported FHIR terminology from {source} into {resolved_path}")

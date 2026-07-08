@@ -132,6 +132,25 @@ def _local_context_spy(monkeypatch, spark_session, store):
     return captured
 
 
+def _real_context_over_shared_spark(monkeypatch, spark_session):
+    """Routes the CLI's context creation through the real factory.
+
+    The CLI builds the context exactly as it would in production (honouring
+    whatever configuration the command passes), but over the module's Spark
+    session so the JVM is not started twice. Unlike ``_local_context_spy`` this
+    does not clear or override the configuration, so it exercises the real
+    local-versus-remote mode decision the command makes.
+    """
+
+    def factory(config, console=None):
+        monkeypatch.setattr(
+            session_module, "_build_quiet_spark", lambda cfg: spark_session
+        )
+        return session_module._create_pathling_context(config)
+
+    monkeypatch.setattr(session_module, "create_context", factory)
+
+
 def _membership(csv_output):
     """Parses the member-of CSV output into a code -> membership map."""
     reader = csv.DictReader(csv_output.splitlines())
@@ -209,3 +228,24 @@ def test_member_of_via_config_file_offline(
     assert captured["tx_store"] is not None
     assert captured["tx_store"].path == local_store
     assert captured["tx_server_explicit"] is False
+
+
+def test_import_into_fresh_configured_store(monkeypatch, spark_session, tmp_path):
+    """import-snomed with only tx-store.path configured creates a fresh store.
+
+    This is the first-import case: the configured store does not yet exist, so
+    the import command must not enter local mode (whose eager store validation
+    would reject the missing store) but must still import into the fallback path
+    (FR-010 acceptance scenario 1).
+    """
+    _real_context_over_shared_spark(monkeypatch, spark_session)
+    fresh_store = os.path.join(str(tmp_path), "fresh-store")
+    runner = make_cli_runner()
+
+    result = runner.invoke(cli, ["--tx-store", fresh_store, "import-snomed", RF2_MINI])
+
+    assert result.exit_code == 0, result.output + "\n" + result.stderr
+    assert fresh_store in result.stdout
+    # The store was actually created and populated on disk.
+    assert os.path.isdir(fresh_store)
+    assert os.listdir(fresh_store)
