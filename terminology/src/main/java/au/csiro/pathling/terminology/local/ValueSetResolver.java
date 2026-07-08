@@ -33,7 +33,9 @@ import au.csiro.pathling.vcl.VclWildcard;
 import jakarta.annotation.Nonnull;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -54,10 +56,28 @@ public class ValueSetResolver {
   private static final Pattern SNOMED_VERSIONED =
       Pattern.compile("^http://snomed\\.info/x?sct/\\d+/version/\\d+$");
 
+  /** The maximum number of memoised URL resolutions retained. */
+  private static final int RESOLUTION_CACHE_SIZE = 1000;
+
   @Nonnull private final List<CodeSystemEntry> catalogue;
   @Nonnull private final VersionResolver versionResolver;
   @jakarta.annotation.Nullable private final ValueSetStore valueSetStore;
   @jakarta.annotation.Nullable private final ComposeTranslator composeTranslator;
+
+  /**
+   * A bounded, least-recently-used memo of URL resolutions. Resolution parses the URL (including
+   * any embedded ECL or VCL expression) and resolves versions, so it is computed once per URL
+   * rather than once per row.
+   */
+  @Nonnull
+  private final Map<String, Optional<ResolvedValueSet>> resolutionCache =
+      new LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(
+            final Map.Entry<String, Optional<ResolvedValueSet>> eldest) {
+          return size() > RESOLUTION_CACHE_SIZE;
+        }
+      };
 
   /**
    * Creates a resolver over a catalogue of imported code system versions, without support for
@@ -103,6 +123,21 @@ public class ValueSetResolver {
    */
   @Nonnull
   public Optional<ResolvedValueSet> resolve(@Nonnull final String valueSetUrl) {
+    synchronized (resolutionCache) {
+      final Optional<ResolvedValueSet> cached = resolutionCache.get(valueSetUrl);
+      if (cached != null) {
+        return cached;
+      }
+    }
+    final Optional<ResolvedValueSet> resolved = resolveUncached(valueSetUrl);
+    synchronized (resolutionCache) {
+      resolutionCache.putIfAbsent(valueSetUrl, resolved);
+      return resolutionCache.get(valueSetUrl);
+    }
+  }
+
+  @Nonnull
+  private Optional<ResolvedValueSet> resolveUncached(@Nonnull final String valueSetUrl) {
     if (valueSetUrl.startsWith(VCL_URI_PREFIX)) {
       return resolveVcl(valueSetUrl);
     }

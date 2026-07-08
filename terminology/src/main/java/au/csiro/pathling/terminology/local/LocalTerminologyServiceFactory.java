@@ -24,6 +24,7 @@ import au.csiro.pathling.utilities.ObjectHolder;
 import jakarta.annotation.Nonnull;
 import java.io.Serial;
 import java.util.Map;
+import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -36,15 +37,11 @@ import lombok.extern.slf4j.Slf4j;
  * reachable on executors where a Hadoop {@code Configuration} is neither available nor
  * serialisable.
  *
- * @param configuration the terminology configuration, including the local store settings
- * @param hadoopConfiguration a snapshot of the driver's Hadoop configuration
  * @author John Grimes
  */
 @Slf4j
-public record LocalTerminologyServiceFactory(
-    @Nonnull TerminologyConfiguration configuration,
-    @Nonnull Map<String, String> hadoopConfiguration)
-    implements TerminologyServiceFactory {
+@EqualsAndHashCode
+public final class LocalTerminologyServiceFactory implements TerminologyServiceFactory {
 
   @Serial private static final long serialVersionUID = 6210349769947958142L;
 
@@ -52,6 +49,30 @@ public record LocalTerminologyServiceFactory(
   private static final ObjectHolder<LocalTerminologyServiceFactory, TerminologyService>
       terminologyServiceHolder =
           ObjectHolder.singleton(LocalTerminologyServiceFactory::createService);
+
+  @Nonnull private final TerminologyConfiguration configuration;
+  @Nonnull private final Map<String, String> hadoopConfiguration;
+
+  /**
+   * The per-instance memo of the built service. The UDFs call {@link #build()} once per row, and
+   * the per-JVM holder compares this factory's full state (including the Hadoop configuration
+   * snapshot) on every lookup, so the resolved service is cached here after the first call. The
+   * memo is transient and rebuilt after deserialisation on each executor.
+   */
+  @EqualsAndHashCode.Exclude private transient volatile TerminologyService service;
+
+  /**
+   * Creates a factory.
+   *
+   * @param configuration the terminology configuration, including the local store settings
+   * @param hadoopConfiguration a snapshot of the driver's Hadoop configuration
+   */
+  public LocalTerminologyServiceFactory(
+      @Nonnull final TerminologyConfiguration configuration,
+      @Nonnull final Map<String, String> hadoopConfiguration) {
+    this.configuration = configuration;
+    this.hadoopConfiguration = hadoopConfiguration;
+  }
 
   /**
    * Resets the cached local terminology services. Useful for testing or when configuration changes
@@ -65,13 +86,28 @@ public record LocalTerminologyServiceFactory(
   @Nonnull
   @Override
   public TerminologyService build() {
-    return terminologyServiceHolder.getOrCreate(this);
+    TerminologyService cached = service;
+    if (cached == null) {
+      cached = terminologyServiceHolder.getOrCreate(this);
+      service = cached;
+    }
+    return cached;
   }
 
   @Nonnull
   @Override
   public TerminologyConfiguration getConfiguration() {
     return configuration;
+  }
+
+  /**
+   * Returns the snapshot of the driver's Hadoop configuration carried by this factory.
+   *
+   * @return the Hadoop configuration snapshot
+   */
+  @Nonnull
+  public Map<String, String> hadoopConfiguration() {
+    return hadoopConfiguration;
   }
 
   @Nonnull

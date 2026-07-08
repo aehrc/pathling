@@ -19,6 +19,7 @@ package au.csiro.pathling.terminology.local;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -57,6 +58,15 @@ class ValueSetResolverTest {
 
   private static String encode(final String value) {
     return URLEncoder.encode(value, StandardCharsets.UTF_8);
+  }
+
+  @Test
+  void memoisesResolutionOfRepeatedUrls() {
+    // Resolution parses the URL (including any embedded ECL) and resolves versions, so it must be
+    // computed once per URL rather than once per row.
+    final ValueSetResolver resolver = singleEdition();
+    final String url = Rf2Mini.SNOMED_URI + "?fhir_vs=ecl/" + encode("<< " + Rf2Mini.DIABETES);
+    assertSame(resolver.resolve(url), resolver.resolve(url));
   }
 
   @Test
