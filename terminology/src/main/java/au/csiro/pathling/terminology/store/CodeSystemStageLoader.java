@@ -240,7 +240,7 @@ public class CodeSystemStageLoader {
                 "left_semi")
             .select(col(COLUMN_SOURCE_DENSE_ID), col(COLUMN_TARGET_DENSE_ID));
     final Dataset<Row> edges =
-        denseEdges.union(propertyEdges(staging, codeToDense, url)).distinct();
+        denseEdges.union(propertyEdges(staging, survivingDense, codeToDense, url)).distinct();
     return withSystemVersion(edges, systemVersionId);
   }
 
@@ -249,6 +249,7 @@ public class CodeSystemStageLoader {
    * dense (child, parent) pairs, dropping and counting dangling references.
    *
    * @param staging the sealed staging
+   * @param survivingDense the surviving concept dense identifiers
    * @param codeToDense the surviving code-to-dense mapping
    * @param url the CodeSystem URL, for the dangling-edge warning
    * @return the resolved property-derived edges as (source_dense_id, target_dense_id)
@@ -256,10 +257,20 @@ public class CodeSystemStageLoader {
   @Nonnull
   private Dataset<Row> propertyEdges(
       @Nonnull final CodeSystemStaging staging,
+      @Nonnull final Dataset<Row> survivingDense,
       @Nonnull final Dataset<Row> codeToDense,
       @Nonnull final String url) {
+    // The known side must belong to a surviving concept; edges owned by a dropped duplicate go too.
     final Dataset<Row> codeEdges =
-        spark.read().schema(CodeSystemStaging.codeEdgeSchema()).json(staging.codeEdgePath());
+        spark
+            .read()
+            .schema(CodeSystemStaging.codeEdgeSchema())
+            .json(staging.codeEdgePath())
+            .join(
+                survivingDense,
+                col(CodeSystemStaging.COLUMN_KNOWN_DENSE_ID)
+                    .equalTo(survivingDense.col(COLUMN_DENSE_ID)),
+                "left_semi");
     final Dataset<Row> otherByCode =
         codeToDense.select(
             col(COLUMN_CODE).alias("other_code_join"), col(COLUMN_DENSE_ID).alias("other_dense"));

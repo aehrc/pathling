@@ -22,6 +22,8 @@ import com.fasterxml.jackson.core.JsonToken;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -59,7 +61,20 @@ public class CodeSystemStreamFlattener {
   private static final String PROPERTY_INACTIVE = "inactive";
   private static final String CODING_TYPE = "Coding";
 
+  private static final String PROPERTY_PARENT = "parent";
+  private static final String PROPERTY_CHILD = "child";
+  private static final String STANDARD_PARENT_URI = "http://hl7.org/fhir/concept-properties#parent";
+  private static final String STANDARD_CHILD_URI = "http://hl7.org/fhir/concept-properties#child";
+  private static final String FIELD_URI = "uri";
+  private static final String ROLE_CHILD = "child";
+  private static final String ROLE_PARENT = "parent";
+
   @Nonnull private final CodeSystemStaging staging;
+
+  // Property codes recognised as parent- or child-valued is-a edges. The standard property codes
+  // parent and child are always recognised; a declaration carrying the standard URI adds its code.
+  @Nonnull private final Set<String> parentPropertyCodes = new HashSet<>(Set.of(PROPERTY_PARENT));
+  @Nonnull private final Set<String> childPropertyCodes = new HashSet<>(Set.of(PROPERTY_CHILD));
 
   @Nullable private String hierarchyMeaning;
 
@@ -100,6 +115,7 @@ public class CodeSystemStreamFlattener {
       parser.nextToken();
       switch (field) {
         case FIELD_HIERARCHY_MEANING -> hierarchyMeaning = parser.getValueAsString();
+        case FIELD_PROPERTY -> readPropertyDeclarations(parser);
         case FIELD_RESOURCE_CONCEPT -> flattenConceptArray(parser, null);
         default -> parser.skipChildren();
       }
@@ -230,6 +246,7 @@ public class CodeSystemStreamFlattener {
       if (propertyCode == null) {
         continue;
       }
+      final String referencedCode = CODING_TYPE.equals(valueType) ? codingCode : scalarValue;
       if (CODING_TYPE.equals(valueType)) {
         if (codingCode != null) {
           staging.appendCodingProperty(dense, propertyCode, codingCode);
@@ -240,8 +257,50 @@ public class CodeSystemStreamFlattener {
           inactive = true;
         }
       }
+      // A parent property makes this concept a child of the referenced code; a child property makes
+      // it the parent. The property row is retained above; the edge is derived, not moved.
+      if (referencedCode != null) {
+        if (parentPropertyCodes.contains(propertyCode)) {
+          staging.appendCodeEdge(dense, ROLE_CHILD, referencedCode);
+        }
+        if (childPropertyCodes.contains(propertyCode)) {
+          staging.appendCodeEdge(dense, ROLE_PARENT, referencedCode);
+        }
+      }
     }
     return inactive;
+  }
+
+  /**
+   * Reads the top-level {@code property} declarations, recognising any property code whose declared
+   * URI is the standard parent or child concept-property URI. Declarations that appear before the
+   * concepts (as in every real CodeSystem) inform hierarchy detection during flattening.
+   */
+  private void readPropertyDeclarations(@Nonnull final JsonParser parser) throws IOException {
+    if (parser.currentToken() != JsonToken.START_ARRAY) {
+      parser.skipChildren();
+      return;
+    }
+    while (parser.nextToken() != JsonToken.END_ARRAY) {
+      String code = null;
+      String uri = null;
+      while (parser.nextToken() != JsonToken.END_OBJECT) {
+        final String field = parser.currentName();
+        parser.nextToken();
+        switch (field) {
+          case FIELD_CODE -> code = parser.getValueAsString();
+          case FIELD_URI -> uri = parser.getValueAsString();
+          default -> parser.skipChildren();
+        }
+      }
+      if (code != null) {
+        if (STANDARD_PARENT_URI.equals(uri)) {
+          parentPropertyCodes.add(code);
+        } else if (STANDARD_CHILD_URI.equals(uri)) {
+          childPropertyCodes.add(code);
+        }
+      }
+    }
   }
 
   /**

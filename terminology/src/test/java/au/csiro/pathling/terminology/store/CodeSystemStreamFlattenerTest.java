@@ -215,6 +215,87 @@ class CodeSystemStreamFlattenerTest {
     }
   }
 
+  @Test
+  void recognisesParentPropertiesByCodeAndByDeclaredUri() throws Exception {
+    // A parent property, whether keyed by the standard code or a declared standard URI, emits a
+    // child-role edge, and the property row is retained.
+    assertEquals(Set.of("0:child:Y"), codeEdgesOf(byCodeParent()));
+    assertEquals(Set.of("0:child:Y"), codeEdgesOf(byUriParent()));
+
+    try (CodeSystemStaging staging = CodeSystemStaging.create()) {
+      flattenString(staging, byCodeParent());
+      staging.sealForReading();
+      final Set<String> propertyCodes = new HashSet<>();
+      for (final Row row :
+          spark
+              .read()
+              .schema(CodeSystemStaging.propertySchema())
+              .json(staging.propertyPath())
+              .collectAsList()) {
+        propertyCodes.add(row.getAs(TerminologyStoreSchema.COLUMN_PROPERTY_CODE));
+      }
+      assertTrue(propertyCodes.contains("parent"), "the parent property row is still emitted");
+    }
+  }
+
+  @Test
+  void recognisesChildPropertiesAsParentRoleEdges() throws Exception {
+    final String json =
+        "{\"resourceType\":\"CodeSystem\",\"url\":\"u\",\"version\":\"1\",\"concept\":["
+            + "{\"code\":\"X\",\"property\":[{\"code\":\"child\",\"valueCode\":\"Y\"}]}]}";
+    assertEquals(Set.of("0:parent:Y"), codeEdgesOf(json));
+  }
+
+  @Test
+  void doesNotEmitEdgesForNonHierarchyCodeProperties() throws Exception {
+    final String json =
+        "{\"resourceType\":\"CodeSystem\",\"url\":\"u\",\"version\":\"1\",\"concept\":["
+            + "{\"code\":\"X\",\"property\":[{\"code\":\"habitat\",\"valueCode\":\"land\"}]}]}";
+    assertEquals(Set.of(), codeEdgesOf(json));
+  }
+
+  private static String byCodeParent() {
+    return "{\"resourceType\":\"CodeSystem\",\"url\":\"u\",\"version\":\"1\",\"concept\":["
+        + "{\"code\":\"X\",\"property\":[{\"code\":\"parent\",\"valueCode\":\"Y\"}]}]}";
+  }
+
+  private static String byUriParent() {
+    return "{\"resourceType\":\"CodeSystem\",\"url\":\"u\",\"version\":\"1\","
+        + "\"property\":[{\"code\":\"isa\","
+        + "\"uri\":\"http://hl7.org/fhir/concept-properties#parent\",\"type\":\"code\"}],"
+        + "\"concept\":[{\"code\":\"X\",\"property\":[{\"code\":\"isa\",\"valueCode\":\"Y\"}]}]}";
+  }
+
+  private Set<String> codeEdgesOf(final String json) throws Exception {
+    try (CodeSystemStaging staging = CodeSystemStaging.create()) {
+      flattenString(staging, json);
+      staging.sealForReading();
+      final Set<String> edges = new HashSet<>();
+      for (final Row row :
+          spark
+              .read()
+              .schema(CodeSystemStaging.codeEdgeSchema())
+              .json(staging.codeEdgePath())
+              .collectAsList()) {
+        edges.add(
+            row.getAs(CodeSystemStaging.COLUMN_KNOWN_DENSE_ID)
+                + ":"
+                + row.getAs(CodeSystemStaging.COLUMN_KNOWN_ROLE)
+                + ":"
+                + row.getAs(CodeSystemStaging.COLUMN_OTHER_CODE));
+      }
+      return edges;
+    }
+  }
+
+  private static void flattenString(final CodeSystemStaging staging, final String json)
+      throws Exception {
+    final CodeSystemStreamFlattener flattener = new CodeSystemStreamFlattener(staging);
+    try (JsonParser parser = FACTORY.createParser(json.getBytes(StandardCharsets.UTF_8))) {
+      flattener.flatten(parser);
+    }
+  }
+
   /** Extracts the balanced JSON object beginning at {@code start} within {@code json}. */
   private static String extractBalancedObject(final String json, final int start) {
     int depth = 0;

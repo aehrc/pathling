@@ -319,6 +319,40 @@ class FhirTerminologyImporterTest {
         TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
   }
 
+  @Test
+  void flatParentPropertiesYieldTheSameClosureAsNesting(@TempDir final Path dir) {
+    // The flat-parent fixture declares the same A/B/C/D hierarchy through parent properties,
+    // including a dangling reference and a duplicate concept, yet answers the same closure.
+    final Set<String> nested = importFixtureClosure(dir, "nested-hierarchy.json", "nested");
+    final Set<String> flatParent =
+        importFixtureClosure(dir, "flat-parent-props.json", "flat-parent");
+    assertEquals(nested, flatParent);
+    assertTrue(flatParent.contains("A->D"), "a grandparent subsumes a grandchild");
+  }
+
+  @Test
+  void flatChildPropertiesYieldTheSameClosureAsNesting(@TempDir final Path dir) {
+    final Set<String> nested = importFixtureClosure(dir, "nested-hierarchy.json", "nested");
+    final Set<String> flatChild = importFixtureClosure(dir, "flat-child-props.json", "flat-child");
+    assertEquals(nested, flatChild);
+  }
+
+  @Test
+  void mixedNestingAndPropertyEdgesDeduplicateTheOverlap(@TempDir final Path dir) {
+    final Set<String> mixed = importFixtureClosure(dir, "mixed-nesting-parent.json", "mixed");
+    // B is-a A comes from both nesting and a parent property, and C is-a A from a property; the
+    // overlapping B is-a A edge is not double-counted.
+    assertEquals(Set.of("A->B", "A->C"), mixed);
+  }
+
+  private Set<String> importFixtureClosure(
+      final Path dir, final String fixtureName, final String suffix) {
+    final String store = dir.resolve("store-" + suffix).toString();
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(FhirPackageFixtures.resource(fixtureName).toString());
+    return closurePairs(store);
+  }
+
   private Set<String> importNestedAndReadClosure(final Path dir, final String suffix) {
     final String store = dir.resolve("store-" + suffix).toString();
     new FhirTerminologyImporter(spark, store)
