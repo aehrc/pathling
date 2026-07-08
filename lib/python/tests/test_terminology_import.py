@@ -31,7 +31,7 @@ from pyspark.sql import functions as F
 from pytest import fixture
 
 from pathling import PathlingContext
-from pathling._version import __java_version__
+from pathling._version import __delta_version__, __java_version__, __scala_version__
 from pathling.functions import to_coding
 from pathling.udfs import member_of
 
@@ -54,7 +54,13 @@ def spark_session(request):
         .master("local[2]")
         .config(
             "spark.jars.packages",
-            f"au.csiro.pathling:library-runtime:{__java_version__}",
+            f"au.csiro.pathling:library-runtime:{__java_version__},"
+            f"io.delta:delta-spark_{__scala_version__}:{__delta_version__}",
+        )
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+        .config(
+            "spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
         )
         .config("spark.sql.warehouse.dir", mkdtemp())
         .config("spark.driver.memory", "4g")
