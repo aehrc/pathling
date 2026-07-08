@@ -18,6 +18,7 @@
 package au.csiro.pathling.terminology.store;
 
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CLOSURE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ACTIVE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ANCESTOR_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CODE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CONCEPT_DENSE_ID;
@@ -198,6 +199,147 @@ class FhirTerminologyImporterTest {
 
     final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store);
     assertThrows(TerminologyImportException.class, () -> importer.importFrom(patient.toString()));
+  }
+
+  // --- Streaming import (feature 024). ---
+
+  @Test
+  void importsTheNestedFixtureEquivalentlyAcrossSourceShapes(@TempDir final Path dir)
+      throws Exception {
+    // The bare file, a directory, and a package of the same CodeSystem produce equivalent stores.
+    final Set<String> fileClosure = importNestedAndReadClosure(dir, "file");
+    assertTrue(fileClosure.contains("A->D"), "root A subsumes grandchild D");
+    assertTrue(fileClosure.contains("A->B"));
+    assertTrue(fileClosure.contains("C->D"));
+
+    final Path dirSource = dir.resolve("dir");
+    Files.createDirectories(dirSource);
+    Files.copy(
+        FhirPackageFixtures.resource("nested-hierarchy.json"), dirSource.resolve("nested.json"));
+    final String dirStore = dir.resolve("dir-store").toString();
+    new FhirTerminologyImporter(spark, dirStore).importFrom(dirSource.toString());
+    assertEquals(fileClosure, closurePairs(dirStore));
+
+    final Path archive =
+        FhirPackageFixtures.buildPackage(dir, "nested.tgz", "nested-hierarchy.json");
+    final String pkgStore = dir.resolve("pkg-store").toString();
+    new FhirTerminologyImporter(spark, pkgStore).importFrom(archive.toString());
+    assertEquals(fileClosure, closurePairs(pkgStore));
+  }
+
+  @Test
+  void streamingImportPreservesConceptDetail(@TempDir final Path dir) {
+    final String store = dir.resolve("store").toString();
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(FhirPackageFixtures.resource("nested-hierarchy.json").toString());
+
+    final TerminologyStoreReader reader = TerminologyStoreReader.open(store, Map.of());
+    final Map<String, String> display = new HashMap<>();
+    final Map<String, Boolean> active = new HashMap<>();
+    reader.readTable(
+        CONCEPT,
+        row -> {
+          display.put(row.getString(COLUMN_CODE), row.getString(COLUMN_DISPLAY));
+          active.put(row.getString(COLUMN_CODE), row.getBoolean(COLUMN_ACTIVE));
+        });
+    assertEquals(4, display.size());
+    // The display falls back to the code, and an inactive property clears the active flag.
+    assertEquals("C", display.get("C"));
+    assertEquals(Boolean.FALSE, active.get("C"));
+    assertEquals(Boolean.TRUE, active.get("A"));
+  }
+
+  @Test
+  void rejectsCodeSystemMissingUrlDuringPreScan(@TempDir final Path dir) {
+    final String store = dir.resolve("store").toString();
+    final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store);
+
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class,
+            () ->
+                importer.importFrom(
+                    FhirPackageFixtures.resource("codesystem-no-url.json").toString()));
+    assertTrue(e.getMessage().toLowerCase().contains("canonical url"));
+    // The pre-scan failed before any write, so the store was never created.
+    assertThrows(
+        TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
+  }
+
+  @Test
+  void reportsPartialVersionOnMidStreamCorruptionAndRepairsOnReRun(@TempDir final Path dir)
+      throws Exception {
+    final String store = dir.resolve("store").toString();
+    // A package whose second CodeSystem is corrupt: the first has already been written, so the
+    // failure is reported as a possibly-partial version that a re-run repairs.
+    final Path corruptPackage =
+        FhirPackageFixtures.buildPackage(
+            dir, "corrupt.tgz", "simple-valid.json", "corrupt-concepts.json");
+    final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store);
+
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class, () -> importer.importFrom(corruptPackage.toString()));
+    final String message = e.getMessage();
+    assertTrue(message.contains("http://example.org/fhir/CodeSystem/corrupt"), message);
+    assertTrue(message.toLowerCase().contains("partial"), message);
+    assertTrue(message.toLowerCase().contains("re-run"), message);
+
+    // Re-running with a corrected source repairs the store.
+    final Path fixedPackage =
+        FhirPackageFixtures.buildPackage(
+            dir, "fixed.tgz", "simple-valid.json", "corrupt-concepts-fixed.json");
+    new FhirTerminologyImporter(spark, store).importFrom(fixedPackage.toString());
+
+    final Map<String, Set<String>> byType = manifestByType(store);
+    assertTrue(byType.get("code_system").contains("http://example.org/fhir/CodeSystem/corrupt"));
+    final Set<String> corruptCodes = new HashSet<>();
+    TerminologyStoreReader.open(store, Map.of())
+        .readTable(CONCEPT, row -> corruptCodes.add(row.getString(COLUMN_CODE)));
+    // Both the leading valid CodeSystem's codes and the repaired CodeSystem's codes are present.
+    assertTrue(corruptCodes.contains("A"));
+    assertTrue(corruptCodes.contains("B"));
+  }
+
+  @Test
+  void rejectsAnOversizedWholeResourceWithAnActionableError(@TempDir final Path dir)
+      throws Exception {
+    final Path guardPackage = FhirPackageFixtures.buildGuardPackage(dir);
+    final String store = dir.resolve("store").toString();
+    // A tiny limit makes the padded ValueSet exceed the whole-resource guard.
+    final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store, 100L);
+
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class, () -> importer.importFrom(guardPackage.toString()));
+    assertTrue(e.getMessage().contains("ValueSet"), e.getMessage());
+    assertTrue(e.getMessage().toLowerCase().contains("limit"), e.getMessage());
+    // The guard fired during validation, before any write.
+    assertThrows(
+        TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
+  }
+
+  private Set<String> importNestedAndReadClosure(final Path dir, final String suffix) {
+    final String store = dir.resolve("store-" + suffix).toString();
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(FhirPackageFixtures.resource("nested-hierarchy.json").toString());
+    return closurePairs(store);
+  }
+
+  private Set<String> closurePairs(final String store) {
+    final TerminologyStoreReader reader = TerminologyStoreReader.open(store, Map.of());
+    final Map<Integer, String> codeByDense = new HashMap<>();
+    reader.readTable(
+        CONCEPT, row -> codeByDense.put(row.getInt(COLUMN_DENSE_ID), row.getString(COLUMN_CODE)));
+    final Set<String> pairs = new HashSet<>();
+    reader.readTable(
+        CLOSURE,
+        row ->
+            pairs.add(
+                codeByDense.get(row.getInt(COLUMN_ANCESTOR_DENSE_ID))
+                    + "->"
+                    + codeByDense.get(row.getInt(COLUMN_DESCENDANT_DENSE_ID))));
+    return pairs;
   }
 
   private Map<String, Set<String>> manifestByType(final String store) {
