@@ -47,6 +47,8 @@ def test_all_commands_registered():
             "designation",
             "run",
             "console",
+            "import-snomed",
+            "import-fhir-terminology",
         ]
     )
 
