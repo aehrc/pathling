@@ -27,6 +27,7 @@ import static au.csiro.pathling.sql.Terminology.subsumes;
 import static au.csiro.pathling.sql.Terminology.translate;
 import static org.apache.spark.sql.functions.lit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.LocalTerminologyConfiguration;
@@ -146,10 +147,13 @@ class LocalTerminologyFunctionsTest {
 
   @Test
   void designationReturnsSynonyms() {
+    // Acceptable synonyms carry the synonym use; the preferred term is designated
+    // preferredForLanguage instead, matching server behaviour.
     final Coding synonymUse = new Coding().setSystem(SNOMED_URI).setCode(SYNONYM);
     final List<String> designations =
-        evaluate(designation(snomed(Rf2Mini.DIABETES), synonymUse, "en")).getList(0);
-    assertTrue(designations.contains("Diabetes mellitus"));
+        evaluate(designation(snomed(Rf2Mini.TYPE2_DIABETES), synonymUse, "en")).getList(0);
+    assertTrue(designations.contains("T2DM"));
+    assertFalse(designations.contains("Type 2 diabetes mellitus"));
   }
 
   @Test
