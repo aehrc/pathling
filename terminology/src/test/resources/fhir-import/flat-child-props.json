@@ -1,0 +1,27 @@
+{
+  "resourceType": "CodeSystem",
+  "url": "http://example.org/fhir/CodeSystem/flat-child",
+  "version": "1.0.0",
+  "name": "FlatChildProps",
+  "status": "active",
+  "content": "complete",
+  "hierarchyMeaning": "is-a",
+  "property": [{ "code": "child", "type": "code" }],
+  "concept": [
+    {
+      "code": "A",
+      "display": "Alpha",
+      "property": [
+        { "code": "child", "valueCode": "B" },
+        { "code": "child", "valueCode": "C" }
+      ]
+    },
+    { "code": "B", "display": "Beta" },
+    {
+      "code": "C",
+      "display": "Gamma",
+      "property": [{ "code": "child", "valueCode": "D" }]
+    },
+    { "code": "D", "display": "Delta" }
+  ]
+}

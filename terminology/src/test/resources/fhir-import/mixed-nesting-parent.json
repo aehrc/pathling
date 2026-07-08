@@ -1,0 +1,34 @@
+{
+  "resourceType": "CodeSystem",
+  "url": "http://example.org/fhir/CodeSystem/mixed",
+  "version": "1.0.0",
+  "name": "MixedNestingParent",
+  "status": "active",
+  "content": "complete",
+  "hierarchyMeaning": "is-a",
+  "property": [
+    {
+      "code": "parent",
+      "uri": "http://hl7.org/fhir/concept-properties#parent",
+      "type": "code"
+    }
+  ],
+  "concept": [
+    {
+      "code": "A",
+      "display": "Alpha",
+      "concept": [
+        {
+          "code": "B",
+          "display": "Beta",
+          "property": [{ "code": "parent", "valueCode": "A" }]
+        }
+      ]
+    },
+    {
+      "code": "C",
+      "display": "Gamma",
+      "property": [{ "code": "parent", "valueCode": "A" }]
+    }
+  ]
+}
