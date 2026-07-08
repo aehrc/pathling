@@ -286,6 +286,7 @@ public class FhirTerminologyImporter {
       @Nonnull final String source,
       @Nonnull final CodeSystemStageLoader loader,
       @Nonnull final ImportCounts counts) {
+    log.info("Streaming CodeSystem {}", url);
     try (CodeSystemStaging staging = CodeSystemStaging.create()) {
       final CodeSystemStreamFlattener flattener = new CodeSystemStreamFlattener(staging);
       try (JsonParser parser = JSON_FACTORY.createParser(new java.io.ByteArrayInputStream(bytes))) {

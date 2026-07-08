@@ -254,6 +254,37 @@ class CodeSystemStreamFlattenerTest {
     assertEquals(Set.of(), codeEdgesOf(json));
   }
 
+  @Test
+  void emitsARunningConceptCountEveryProgressInterval() throws Exception {
+    final ch.qos.logback.classic.Logger logger =
+        (ch.qos.logback.classic.Logger)
+            org.slf4j.LoggerFactory.getLogger(CodeSystemStreamFlattener.class);
+    final ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
+        new ch.qos.logback.core.read.ListAppender<>();
+    appender.start();
+    final ch.qos.logback.classic.Level previousLevel = logger.getLevel();
+    logger.setLevel(ch.qos.logback.classic.Level.INFO);
+    logger.addAppender(appender);
+    try (CodeSystemStaging staging = CodeSystemStaging.create()) {
+      // Five flat concepts with an interval of two: a running count is logged at two and four.
+      final String json =
+          "{\"resourceType\":\"CodeSystem\",\"url\":\"u\",\"version\":\"1\",\"concept\":["
+              + "{\"code\":\"a\"},{\"code\":\"b\"},{\"code\":\"c\"},{\"code\":\"d\"},{\"code\":\"e\"}]}";
+      final CodeSystemStreamFlattener flattener = new CodeSystemStreamFlattener(staging, 2);
+      try (JsonParser parser = FACTORY.createParser(json.getBytes(StandardCharsets.UTF_8))) {
+        flattener.flatten(parser);
+      }
+    } finally {
+      logger.detachAppender(appender);
+      logger.setLevel(previousLevel);
+    }
+    final long progressMessages =
+        appender.list.stream()
+            .filter(event -> event.getFormattedMessage().startsWith("Parsed "))
+            .count();
+    assertEquals(2, progressMessages);
+  }
+
   private static String byCodeParent() {
     return "{\"resourceType\":\"CodeSystem\",\"url\":\"u\",\"version\":\"1\",\"concept\":["
         + "{\"code\":\"X\",\"property\":[{\"code\":\"parent\",\"valueCode\":\"Y\"}]}]}";

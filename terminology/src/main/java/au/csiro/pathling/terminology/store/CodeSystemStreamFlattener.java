@@ -70,6 +70,7 @@ public class CodeSystemStreamFlattener {
   private static final String ROLE_PARENT = "parent";
 
   @Nonnull private final CodeSystemStaging staging;
+  private final long progressInterval;
 
   // Property codes recognised as parent- or child-valued is-a edges. The standard property codes
   // parent and child are always recognised; a declaration carrying the standard URI adds its code.
@@ -81,12 +82,24 @@ public class CodeSystemStreamFlattener {
   private int nextDenseId;
 
   /**
-   * Creates a flattener that writes into the given staging.
+   * Creates a flattener that writes into the given staging, logging progress every million
+   * concepts.
    *
    * @param staging the staging to append rows to
    */
   public CodeSystemStreamFlattener(@Nonnull final CodeSystemStaging staging) {
+    this(staging, DEFAULT_PROGRESS_INTERVAL);
+  }
+
+  /**
+   * Creates a flattener with an explicit progress interval, for testing.
+   *
+   * @param staging the staging to append rows to
+   * @param progressInterval the number of concepts between running-count progress messages
+   */
+  CodeSystemStreamFlattener(@Nonnull final CodeSystemStaging staging, final long progressInterval) {
     this.staging = staging;
+    this.progressInterval = progressInterval;
   }
 
   /**
@@ -142,6 +155,9 @@ public class CodeSystemStreamFlattener {
   private void flattenConcept(@Nonnull final JsonParser parser, @Nullable final Integer parentDense)
       throws IOException {
     final int dense = nextDenseId++;
+    if (progressInterval > 0 && nextDenseId % progressInterval == 0) {
+      log.info("Parsed {} concepts", nextDenseId);
+    }
     if (parentDense != null) {
       // A nested concept is-a its enclosing concept.
       staging.appendDenseEdge(dense, parentDense);
