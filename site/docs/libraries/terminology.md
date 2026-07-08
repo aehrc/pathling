@@ -984,6 +984,49 @@ pathling import-fhir-terminology /data/hl7.terminology.tgz /data/tx-store
 </TabItem>
 </Tabs>
 
+#### Large CodeSystems
+
+CodeSystems are imported with bounded memory regardless of their size. The
+import streams each CodeSystem from the source, transcodes it to temporary files
+on the driver, and loads it with Spark, so peak memory does not grow with the
+number of concepts and a single CodeSystem may exceed the 2 GB limit on a single
+in-memory object (for example, the OMOP vocabulary package's multi-gigabyte
+CodeSystem). This applies equally to a bare JSON file, a directory, and a `.tgz`
+package.
+
+During a long import, a running count of parsed concepts is logged at a fixed
+interval alongside stage-transition messages, so progress is visible rather than
+appearing to hang. The CLI surfaces these messages in `--verbose` mode.
+
+#### Hierarchies from parent and child properties
+
+Many flat CodeSystems express their hierarchy through `parent` (or `child`)
+concept properties rather than nested concepts. The import derives is-a edges
+from code-valued `parent` and `child` properties, recognised by the standard
+`parent`/`child` property codes or a property declaration carrying the standard
+[concept-properties](https://hl7.org/fhir/codesystem-concept-properties.html)
+URI, in addition to concept nesting. Edges from both sources are combined, so
+subsumption and descendant-based membership queries work over property-based
+hierarchies just as they do over nested ones. A `parent` or `child` reference to
+a code absent from the CodeSystem is skipped with a warning, and duplicate
+concept codes resolve to their first occurrence with a warning.
+
+#### Bundles and non-CodeSystem resources
+
+ValueSets and ConceptMaps are stored whole, so a single resource must fit in
+memory; one larger than 1 GB fails with an actionable error naming the resource
+rather than an opaque memory error. Bundle-wrapped sources are also parsed in
+memory, so a Bundle is subject to the same in-memory limit; supply large
+CodeSystems as standalone resources to benefit from the streaming path.
+
+#### Recovering from a failed import
+
+If an import fails partway through writing a CodeSystem (for example, because the
+source is truncated or corrupt), it reports that the store may hold a partial
+version of that CodeSystem and advises re-running the import. Because content is
+keyed by system version, re-running with a corrected source fully replaces the
+partial version and repairs the store.
+
 ### Querying in local mode
 
 Create a context configured for local mode by setting the terminology mode to

@@ -53,6 +53,7 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.RELATIO
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.min;
+import static org.apache.spark.sql.functions.when;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -285,21 +286,12 @@ public class CodeSystemStageLoader {
     // Orient each edge: the child is the known side for a parent property, the other side for a
     // child property.
     return resolved.select(
-        org.apache
-            .spark
-            .sql
-            .functions
-            .when(
+        when(
                 col(CodeSystemStaging.COLUMN_KNOWN_ROLE).equalTo(lit("child")),
                 col(CodeSystemStaging.COLUMN_KNOWN_DENSE_ID))
             .otherwise(col("other_dense"))
             .alias(COLUMN_SOURCE_DENSE_ID),
-        org.apache
-            .spark
-            .sql
-            .functions
-            .when(
-                col(CodeSystemStaging.COLUMN_KNOWN_ROLE).equalTo(lit("child")), col("other_dense"))
+        when(col(CodeSystemStaging.COLUMN_KNOWN_ROLE).equalTo(lit("child")), col("other_dense"))
             .otherwise(col(CodeSystemStaging.COLUMN_KNOWN_DENSE_ID))
             .alias(COLUMN_TARGET_DENSE_ID));
   }

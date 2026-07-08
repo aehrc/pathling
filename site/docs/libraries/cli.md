@@ -283,7 +283,15 @@ pathling import-fhir-terminology /data/hl7.terminology.tgz /data/tx-store
 
 `import-snomed` accepts `--edition-uri` to override the detected SNOMED
 edition/version. `import-fhir-terminology` accepts a JSON file, a directory of
-JSON files, or a FHIR NPM package (`.tgz`).
+JSON files, or a FHIR NPM package (`.tgz`), and imports CodeSystems of any size
+with bounded memory (for example, the multi-gigabyte OMOP vocabulary CodeSystem).
+
+Large imports run for many minutes. With `--verbose`, the command streams a
+running count of parsed concepts and stage-transition messages so progress is
+visible; without it, the startup spinner covers the wait. If an import fails
+partway through writing a CodeSystem, it reports that the store may hold a
+partial version and advises re-running; because content is keyed by system
+version, re-running with a corrected source repairs the store.
 
 The `STORAGE_PATH` positional is optional: when it is omitted, the commands fall
 back to the configured `tx-store.path` (see below). An explicit positional wins
