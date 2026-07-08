@@ -293,6 +293,19 @@ partway through writing a CodeSystem, it reports that the store may hold a
 partial version and advises re-running; because content is keyed by system
 version, re-running with a corrected source repairs the store.
 
+Peak memory does not grow with the number of concepts, but the largest
+vocabularies still need more driver heap than the 1 GB default to hold the
+working set of the Spark joins that build the store. The OMOP vocabulary (around
+6.6 million concepts), for example, imports comfortably with a 4 GB heap. Set
+the heap with the `SPARK_DRIVER_MEMORY` environment variable; in local mode the
+driver JVM starts before `--spark-conf` can size its heap, so that flag has no
+effect on driver memory.
+
+```bash
+SPARK_DRIVER_MEMORY=4g pathling import-fhir-terminology \
+  /data/ohdsi.fhir.omop-0.1.0.tgz /data/tx-store
+```
+
 The `STORAGE_PATH` positional is optional: when it is omitted, the commands fall
 back to the configured `tx-store.path` (see below). An explicit positional wins
 over the configured path. Supplying neither is a usage error.
