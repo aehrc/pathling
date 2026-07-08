@@ -24,15 +24,16 @@ test_that("pathling_import_fhir_terminology enables local member_of", {
     terminology_storage_path = store
   )
 
+  # The column is deliberately not named "code", which to_sdf would treat as a JSON struct column.
   df <- spark %>% to_sdf(
-    code = c("dog", "sparrow")
+    animal = c("dog", "sparrow")
   )
 
   result <- df %>%
     select_expr(
-      code,
+      animal,
       is_member = !!tx_member_of(
-        !!tx_to_coding(code, "http://example.org/fhir/CodeSystem/animal-species"),
+        !!tx_to_coding(animal, "http://example.org/fhir/CodeSystem/animal-species"),
         "http://example.org/fhir/ValueSet/mammals-enumerated"
       )
     )
@@ -40,7 +41,7 @@ test_that("pathling_import_fhir_terminology enables local member_of", {
   expect_equal(
     sdf_collect(result),
     tibble::tibble(
-      code = c("dog", "sparrow"),
+      animal = c("dog", "sparrow"),
       is_member = c(TRUE, FALSE)
     )
   )

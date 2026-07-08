@@ -626,15 +626,18 @@ public class PathlingContext {
    *     accessible through the Hadoop FileSystem API
    * @param storagePath the terminology store location, created if absent
    * @param options optional overrides, or null for the defaults
+   * @return this context, for chaining
    * @throws au.csiro.pathling.terminology.store.TerminologyImportException if the source is not a
    *     valid RF2 snapshot release; the store is left unmodified
    */
-  public void importSnomed(
+  @Nonnull
+  public PathlingContext importSnomed(
       @Nonnull final String source,
       @Nonnull final String storagePath,
       @Nullable final TerminologyImportOptions options) {
     final String editionUri = options == null ? null : options.getEditionUri();
     new SnomedRf2Importer(spark, storagePath).importFrom(source, editionUri);
+    return this;
   }
 
   /**
@@ -643,11 +646,14 @@ public class PathlingContext {
    *
    * @param source the path to an RF2 release archive or extracted directory
    * @param storagePath the terminology store location, created if absent
+   * @return this context, for chaining
    * @throws au.csiro.pathling.terminology.store.TerminologyImportException if the source is not a
    *     valid RF2 snapshot release; the store is left unmodified
    */
-  public void importSnomed(@Nonnull final String source, @Nonnull final String storagePath) {
-    importSnomed(source, storagePath, null);
+  @Nonnull
+  public PathlingContext importSnomed(
+      @Nonnull final String source, @Nonnull final String storagePath) {
+    return importSnomed(source, storagePath, null);
   }
 
   /**
@@ -659,12 +665,15 @@ public class PathlingContext {
    *
    * @param source the path to a JSON file, a directory of JSON files, or a FHIR NPM package
    * @param storagePath the terminology store location, created if absent
+   * @return this context, for chaining
    * @throws au.csiro.pathling.terminology.store.TerminologyImportException if the source contains
    *     no importable resources or an invalid resource; the store is left unmodified
    */
-  public void importFhirTerminology(
+  @Nonnull
+  public PathlingContext importFhirTerminology(
       @Nonnull final String source, @Nonnull final String storagePath) {
     new FhirTerminologyImporter(spark, storagePath).importFrom(source);
+    return this;
   }
 
   /**
