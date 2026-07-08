@@ -300,6 +300,14 @@ def load_config_file(
                     f"Ignoring unknown config key 'tx-store.{key}' in {path}. "
                     f"Valid keys are: {valid_tx_store}."
                 )
+    elif tx_store_table is not None:
+        # A scalar tx-store value cannot configure local mode; warn rather than
+        # silently ignoring it (a common mistake is 'tx-store = \"/path\"'
+        # instead of a [tx-store] table with a 'path' key).
+        warn(
+            f"Ignoring 'tx-store' in {path}; it must be a [tx-store] table with "
+            "a 'path' key, not a single value."
+        )
     return data
 
 

@@ -913,6 +913,21 @@ def test_tx_store_table_without_path_warns_and_is_inert(tmp_path):
     )
 
 
+def test_scalar_tx_store_warns_and_is_ignored(tmp_path):
+    """A scalar top-level tx-store value (a string instead of a [tx-store]
+    table) is warned about rather than silently ignored."""
+    path = _write_config(tmp_path, 'tx-store = "/data/store"\n')
+    warnings = []
+
+    config = resolve_config(config_path=path, on_warning=warnings.append)
+
+    assert config.tx_store is None
+    assert any(
+        "tx-store" in message.lower() and "table" in message.lower()
+        for message in warnings
+    )
+
+
 def test_tx_server_explicit_true_for_flag(tmp_path, monkeypatch):
     """tx_server_explicit is True when the server URL came from the flag."""
     config = resolve_config(
