@@ -31,6 +31,7 @@ from pathling.cli.config import (
     DEFAULT_FHIR_VERSION,
     DEFAULT_TX_SERVER,
     CliConfig,
+    TxStore,
     default_config_path,
     load_config_file,
     resolve_bulk_auth,
@@ -748,3 +749,203 @@ def test_spark_flag_non_spark_key_is_error(tmp_path, monkeypatch):
 
     assert exc_info.value.exit_code == 2
     assert "executor.memory" in exc_info.value.message
+
+
+# ========== Local terminology store: resolution (Foundational, T001) ==========
+
+
+def test_tx_store_table_parsed_into_txstore(tmp_path):
+    """A [tx-store] table is parsed into a TxStore carrying all three values."""
+    path = _write_config(
+        tmp_path,
+        "[tx-store]\n"
+        'path = "/data/tx-store"\n'
+        'default-snomed-edition = "32506021000036107"\n'
+        "expansion-cache-size = 200\n",
+    )
+
+    config = resolve_config(config_path=path)
+
+    assert config.tx_store == TxStore(
+        path="/data/tx-store",
+        default_snomed_edition="32506021000036107",
+        expansion_cache_size=200,
+    )
+
+
+def test_tx_store_tuning_keys_optional(tmp_path):
+    """A [tx-store] table with only a path leaves the tuning fields unset."""
+    path = _write_config(tmp_path, '[tx-store]\npath = "/data/tx-store"\n')
+
+    config = resolve_config(config_path=path)
+
+    assert config.tx_store is not None
+    assert config.tx_store.path == "/data/tx-store"
+    assert config.tx_store.default_snomed_edition is None
+    assert config.tx_store.expansion_cache_size is None
+
+
+def test_tx_store_flag_overrides_config_path(tmp_path):
+    """The --tx-store flag overrides tx-store.path while tuning keys still apply."""
+    path = _write_config(
+        tmp_path,
+        '[tx-store]\npath = "/data/config-store"\nexpansion-cache-size = 50\n',
+    )
+
+    config = resolve_config(tx_store="/data/flag-store", config_path=path)
+
+    assert config.tx_store.path == "/data/flag-store"
+    # The config table's tuning keys still apply over the flag-supplied path.
+    assert config.tx_store.expansion_cache_size == 50
+
+
+def test_tx_store_flag_without_config(tmp_path, monkeypatch):
+    """The --tx-store flag alone selects local mode with no tuning values."""
+    config = resolve_config(
+        tx_store="/data/flag-store", **_isolated_defaults(monkeypatch, tmp_path)
+    )
+
+    assert config.tx_store == TxStore(path="/data/flag-store")
+
+
+def test_tx_store_empty_flag_is_usage_error(tmp_path, monkeypatch):
+    """An empty --tx-store value is a usage error before any session."""
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(tx_store="", **_isolated_defaults(monkeypatch, tmp_path))
+
+    assert exc_info.value.exit_code == 2
+
+
+def test_tx_store_non_string_path_is_usage_error(tmp_path):
+    """A non-string tx-store.path is a usage error naming the key."""
+    path = _write_config(tmp_path, "[tx-store]\npath = 42\n")
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(config_path=path)
+
+    assert exc_info.value.exit_code == 2
+    assert "path" in exc_info.value.message
+
+
+def test_tx_store_non_string_edition_is_usage_error(tmp_path):
+    """A non-string default-snomed-edition is a usage error naming the key."""
+    path = _write_config(
+        tmp_path, '[tx-store]\npath = "/s"\ndefault-snomed-edition = 5\n'
+    )
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(config_path=path)
+
+    assert exc_info.value.exit_code == 2
+    assert "default-snomed-edition" in exc_info.value.message
+
+
+def test_tx_store_non_integer_cache_size_is_usage_error(tmp_path):
+    """A non-integer expansion-cache-size is a usage error naming the key."""
+    path = _write_config(
+        tmp_path, '[tx-store]\npath = "/s"\nexpansion-cache-size = "big"\n'
+    )
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(config_path=path)
+
+    assert exc_info.value.exit_code == 2
+    assert "expansion-cache-size" in exc_info.value.message
+
+
+def test_tx_store_non_positive_cache_size_is_usage_error(tmp_path):
+    """A non-positive expansion-cache-size is a usage error naming the key."""
+    path = _write_config(
+        tmp_path, '[tx-store]\npath = "/s"\nexpansion-cache-size = 0\n'
+    )
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(config_path=path)
+
+    assert exc_info.value.exit_code == 2
+    assert "expansion-cache-size" in exc_info.value.message
+
+
+def test_tx_store_boolean_cache_size_is_usage_error(tmp_path):
+    """A boolean expansion-cache-size is rejected (bool is not a valid integer).
+
+    TOML has no dedicated integer/bool coercion, and Python treats ``True`` as
+    ``1``; the value must be an honest integer, so a boolean is a usage error.
+    """
+    path = _write_config(
+        tmp_path, '[tx-store]\npath = "/s"\nexpansion-cache-size = true\n'
+    )
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(config_path=path)
+
+    assert exc_info.value.exit_code == 2
+    assert "expansion-cache-size" in exc_info.value.message
+
+
+def test_tx_store_unknown_key_warns(tmp_path):
+    """An unknown key in [tx-store] warns and lists the valid keys."""
+    path = _write_config(tmp_path, '[tx-store]\npath = "/s"\nbogus = 1\n')
+    warnings = []
+
+    load_config_file(path, on_warning=warnings.append)
+
+    assert any("tx-store.bogus" in message for message in warnings)
+    assert any(
+        "default-snomed-edition" in message
+        and "expansion-cache-size" in message
+        and "path" in message
+        for message in warnings
+    )
+
+
+def test_tx_store_table_without_path_warns_and_is_inert(tmp_path):
+    """A [tx-store] table without a path yields no store and warns it is inert."""
+    path = _write_config(tmp_path, "[tx-store]\nexpansion-cache-size = 200\n")
+    warnings = []
+
+    config = resolve_config(config_path=path, on_warning=warnings.append)
+
+    assert config.tx_store is None
+    assert any(
+        "tx-store" in message.lower() and "path" in message.lower()
+        for message in warnings
+    )
+
+
+def test_tx_server_explicit_true_for_flag(tmp_path, monkeypatch):
+    """tx_server_explicit is True when the server URL came from the flag."""
+    config = resolve_config(
+        tx_server="https://flag/fhir", **_isolated_defaults(monkeypatch, tmp_path)
+    )
+
+    assert config.tx_server_explicit is True
+
+
+def test_tx_server_explicit_true_for_config_key(tmp_path):
+    """tx_server_explicit is True when the server URL came from the config key."""
+    path = _write_config(tmp_path, 'tx-server = "https://file/fhir"\n')
+
+    config = resolve_config(config_path=path)
+
+    assert config.tx_server_explicit is True
+
+
+def test_tx_server_explicit_false_for_default(tmp_path, monkeypatch):
+    """tx_server_explicit is False when only the built-in default applies."""
+    config = resolve_config(**_isolated_defaults(monkeypatch, tmp_path))
+
+    assert config.tx_server == DEFAULT_TX_SERVER
+    assert config.tx_server_explicit is False
+
+
+def test_no_tx_store_input_yields_none_and_no_warnings(tmp_path, monkeypatch):
+    """With no tx-store input, tx_store is None and no new warnings fire."""
+    warnings = []
+
+    config = resolve_config(
+        on_warning=warnings.append, **_isolated_defaults(monkeypatch, tmp_path)
+    )
+
+    assert config.tx_store is None
+    assert warnings == []

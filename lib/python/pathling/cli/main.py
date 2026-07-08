@@ -133,6 +133,12 @@ class PathlingCli(click.Group):
 @click.group(cls=PathlingCli, context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(version=__version__, prog_name="pathling")
 @click.option("--tx-server", help="Terminology server URL (config key: tx-server).")
+@click.option(
+    "--tx-store",
+    "tx_store",
+    help="Local terminology store location (config key: tx-store.path). "
+    "Selects local mode; --tx-server and terminology auth are ignored when set.",
+)
 @click.option("--tx-client-id", help="Terminology auth client ID.")
 @click.option("--tx-client-secret", help="Terminology auth client secret.")
 @click.option("--tx-token-endpoint", help="Terminology auth token endpoint.")
@@ -164,6 +170,7 @@ class PathlingCli(click.Group):
 def cli(
     ctx: click.Context,
     tx_server,
+    tx_store,
     tx_client_id,
     tx_client_secret,
     tx_token_endpoint,
@@ -185,6 +192,7 @@ def cli(
     console = stderr_console()
     config = resolve_config(
         tx_server=tx_server,
+        tx_store=tx_store,
         tx_client_id=tx_client_id,
         tx_client_secret=tx_client_secret,
         tx_token_endpoint=tx_token_endpoint,
