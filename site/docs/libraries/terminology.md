@@ -994,6 +994,14 @@ in-memory object (for example, the OMOP vocabulary package's multi-gigabyte
 CodeSystem). This applies equally to a bare JSON file, a directory, and a `.tgz`
 package.
 
+Peak memory is bounded, but the largest vocabularies still need more than the
+default 1 GB driver heap to hold the working set of the Spark joins that build
+the store; the OMOP vocabulary, for example, imports comfortably with a 4 GB
+heap. See
+[driver memory for large imports](cli#terminology-import-commands) in the CLI
+guide for how to raise it, which applies equally to imports run through the
+library.
+
 During a long import, a running count of parsed concepts is logged at a fixed
 interval alongside stage-transition messages, so progress is visible rather than
 appearing to hang. The CLI surfaces these messages in `--verbose` mode.
