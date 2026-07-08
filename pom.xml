@@ -1070,6 +1070,8 @@
                   <exclude>**/.lintr</exclude>
                   <exclude>**/*.src</exclude>
                   <exclude>openspec/**</exclude>
+                  <exclude>**/.envrc</exclude>
+                  <exclude>**/.coverage</exclude>
                 </excludes>
               </licenseSet>
             </licenseSets>
