@@ -81,6 +81,19 @@ public class FhirTerminologyImporter {
    */
   static final long DEFAULT_WHOLE_RESOURCE_LIMIT_BYTES = 1L << 30;
 
+  /**
+   * The Parquet row-group size applied while writing store tables during import. A small, fixed
+   * row-group bounds the memory each of the many concurrent Delta writers buffers, so peak write
+   * memory stays within a modest driver heap regardless of the number of concepts. Without this
+   * bound the writers default to 128 MB row groups and, multiplied across the driver's cores,
+   * reserve almost the whole heap through the Parquet memory pool, starving the shuffle that feeds
+   * the write and exhausting the heap on the largest tables.
+   */
+  static final int IMPORT_PARQUET_BLOCK_SIZE_BYTES = 16 * 1024 * 1024;
+
+  /** The Hadoop configuration key controlling the Parquet row-group size. */
+  private static final String PARQUET_BLOCK_SIZE_KEY = "parquet.block.size";
+
   private static final JsonFactory JSON_FACTORY = newFactory();
 
   private static FhirContext fhirContext;
@@ -156,16 +169,56 @@ public class FhirTerminologyImporter {
     final TerminologyStoreWriter writer = new TerminologyStoreWriter(spark, storagePath);
     final CodeSystemStageLoader loader = new CodeSystemStageLoader(spark, writer);
     final ImportCounts counts = new ImportCounts();
+    // Bound the Parquet row-group size for the duration of the writes so that concurrent Delta
+    // writers buffer a fixed amount of memory, then restore the caller's configuration.
+    final Configuration baseHadoopConf = spark.sparkContext().hadoopConfiguration();
+    final String previousBlockSize =
+        applyBoundedParquetRowGroup(baseHadoopConf, IMPORT_PARQUET_BLOCK_SIZE_BYTES);
     try {
       importPass(source, byEntry, writer, loader, counts);
     } catch (final IOException e) {
       throw new TerminologyImportException("Unable to read the FHIR source at " + source, e);
+    } finally {
+      restoreParquetRowGroup(baseHadoopConf, previousBlockSize);
     }
     log.info(
         "FHIR import complete: {} code systems, {} value sets, {} concept maps",
         counts.codeSystems,
         counts.valueSets,
         counts.conceptMaps);
+  }
+
+  /**
+   * Applies the bounded Parquet row-group size to a Hadoop configuration, returning the value it
+   * replaced so it can be restored afterwards.
+   *
+   * @param hadoopConf the base Hadoop configuration the write path derives from
+   * @param blockSizeBytes the bounded row-group size to apply
+   * @return the prior {@code parquet.block.size} value, or null if it was unset
+   */
+  @Nullable
+  static String applyBoundedParquetRowGroup(
+      @Nonnull final Configuration hadoopConf, final int blockSizeBytes) {
+    final String previous = hadoopConf.get(PARQUET_BLOCK_SIZE_KEY);
+    hadoopConf.setInt(PARQUET_BLOCK_SIZE_KEY, blockSizeBytes);
+    return previous;
+  }
+
+  /**
+   * Restores a Hadoop configuration's Parquet row-group size to a previously captured value,
+   * unsetting it when the prior value was absent.
+   *
+   * @param hadoopConf the base Hadoop configuration to restore
+   * @param previous the value captured by {@link #applyBoundedParquetRowGroup}, or null if it was
+   *     unset
+   */
+  static void restoreParquetRowGroup(
+      @Nonnull final Configuration hadoopConf, @Nullable final String previous) {
+    if (previous == null) {
+      hadoopConf.unset(PARQUET_BLOCK_SIZE_KEY);
+    } else {
+      hadoopConf.set(PARQUET_BLOCK_SIZE_KEY, previous);
+    }
   }
 
   private void validate(

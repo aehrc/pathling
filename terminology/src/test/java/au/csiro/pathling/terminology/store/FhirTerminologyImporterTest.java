@@ -32,6 +32,7 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.DESCRIPTION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.PROPERTY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,6 +44,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -85,6 +87,50 @@ class FhirTerminologyImporterTest {
       spark.stop();
       spark = null;
     }
+  }
+
+  // The import path bounds the Parquet row-group size while writing, so the many concurrent Delta
+  // writers together stay within a modest driver heap, and restores the caller's configuration
+  // afterwards rather than leaving the bound in place.
+
+  @Test
+  void boundsParquetRowGroupSizeAndRestoresUnsetKey() {
+    final Configuration conf = new Configuration(false);
+    final String previous =
+        FhirTerminologyImporter.applyBoundedParquetRowGroup(
+            conf, FhirTerminologyImporter.IMPORT_PARQUET_BLOCK_SIZE_BYTES);
+
+    // The key was unset, so there is no prior value and the bounded size is now in effect.
+    assertNull(previous);
+    assertEquals(
+        FhirTerminologyImporter.IMPORT_PARQUET_BLOCK_SIZE_BYTES,
+        conf.getInt("parquet.block.size", -1));
+
+    FhirTerminologyImporter.restoreParquetRowGroup(conf, previous);
+
+    // Restoring an originally-unset key leaves it unset rather than pinned to the bound.
+    assertNull(conf.get("parquet.block.size"));
+  }
+
+  @Test
+  void restoresCallerParquetRowGroupSize() {
+    final Configuration conf = new Configuration(false);
+    conf.set("parquet.block.size", "999");
+
+    final String previous =
+        FhirTerminologyImporter.applyBoundedParquetRowGroup(
+            conf, FhirTerminologyImporter.IMPORT_PARQUET_BLOCK_SIZE_BYTES);
+
+    // The caller's value is captured and the bounded size takes effect for the duration.
+    assertEquals("999", previous);
+    assertEquals(
+        FhirTerminologyImporter.IMPORT_PARQUET_BLOCK_SIZE_BYTES,
+        conf.getInt("parquet.block.size", -1));
+
+    FhirTerminologyImporter.restoreParquetRowGroup(conf, previous);
+
+    // The caller's original value is put back exactly.
+    assertEquals("999", conf.get("parquet.block.size"));
   }
 
   @Test
