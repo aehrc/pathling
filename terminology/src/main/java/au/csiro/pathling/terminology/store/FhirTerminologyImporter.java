@@ -32,7 +32,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -144,12 +146,18 @@ public class FhirTerminologyImporter {
     // Pre-scan and validate before any write so an invalid source leaves the store untouched.
     final List<ScannedResource> scanned = new FhirResourceScanner(hadoopConf).scan(source);
     validate(scanned, source);
+    // The pre-scan already established each entry's type, URL, and version, so the import pass
+    // routes by looking these up rather than re-reading each entry's content into memory.
+    final Map<String, ScannedResource> byEntry = new HashMap<>();
+    for (final ScannedResource resource : scanned) {
+      byEntry.put(resource.getEntryName(), resource);
+    }
 
     final TerminologyStoreWriter writer = new TerminologyStoreWriter(spark, storagePath);
     final CodeSystemStageLoader loader = new CodeSystemStageLoader(spark, writer);
     final ImportCounts counts = new ImportCounts();
     try {
-      importPass(source, writer, loader, counts);
+      importPass(source, byEntry, writer, loader, counts);
     } catch (final IOException e) {
       throw new TerminologyImportException("Unable to read the FHIR source at " + source, e);
     }
@@ -215,6 +223,7 @@ public class FhirTerminologyImporter {
 
   private void importPass(
       @Nonnull final String source,
+      @Nonnull final Map<String, ScannedResource> byEntry,
       @Nonnull final TerminologyStoreWriter writer,
       @Nonnull final CodeSystemStageLoader loader,
       @Nonnull final ImportCounts counts)
@@ -228,7 +237,7 @@ public class FhirTerminologyImporter {
         final String name = status.getPath().getName();
         if (name.endsWith(".json") && !FhirResourceScanner.isPackageMetadata(name)) {
           try (InputStream in = fs.open(status.getPath())) {
-            importFile(in, status.getPath().toString(), source, writer, loader, counts);
+            importEntry(in, status.getPath().toString(), source, byEntry, writer, loader, counts);
           }
         }
       }
@@ -241,46 +250,52 @@ public class FhirTerminologyImporter {
           if (!entry.isDirectory()
               && name.endsWith(".json")
               && !FhirResourceScanner.isPackageMetadata(name)) {
-            importFile(tar, entry.getName(), source, writer, loader, counts);
+            importEntry(tar, entry.getName(), source, byEntry, writer, loader, counts);
           }
         }
       }
     } else {
       try (InputStream in = fs.open(root)) {
-        importFile(in, source, source, writer, loader, counts);
+        importEntry(in, source, source, byEntry, writer, loader, counts);
       }
     }
   }
 
   /**
-   * Imports one JSON entry, routing a CodeSystem through the streaming path and any other resource
-   * through the whole-resource HAPI path. The entry is buffered so its resource type can be sniffed
-   * before routing; the stream is not closed here.
+   * Imports one JSON entry, routing by the pre-scan result: a CodeSystem is streamed straight from
+   * the entry stream into staging with no whole-entry buffering, while a bounded whole resource is
+   * read into memory for the HAPI path. The stream is positioned at the start of the entry; for an
+   * archive it reports end-of-entry so the streaming parser never reads past the entry, and it is
+   * not closed here.
    */
-  private void importFile(
+  private void importEntry(
       @Nonnull final InputStream in,
       @Nonnull final String entryName,
       @Nonnull final String source,
+      @Nonnull final Map<String, ScannedResource> byEntry,
       @Nonnull final TerminologyStoreWriter writer,
       @Nonnull final CodeSystemStageLoader loader,
       @Nonnull final ImportCounts counts)
       throws IOException {
-    final byte[] bytes = IOUtils.toByteArray(in);
-    final ScannedResource scanned = scanBytes(bytes, entryName);
+    final ScannedResource scanned = byEntry.get(entryName);
+    if (scanned == null || !scanned.isImportable()) {
+      return;
+    }
     if (scanned.isCodeSystem()) {
       requireUrl(scanned.getUrl(), "CodeSystem", entryName);
-      flattenAndLoad(bytes, scanned.getUrl(), scanned.getVersion(), source, loader, counts);
-    } else if (scanned.isImportable()) {
-      importWholeResource(bytes, entryName, source, writer, loader, counts);
+      flattenAndLoad(in, scanned.getUrl(), scanned.getVersion(), source, loader, counts);
+    } else {
+      importWholeResource(IOUtils.toByteArray(in), entryName, source, writer, loader, counts);
     }
   }
 
   /**
-   * Flattens a CodeSystem from its JSON bytes through the streaming path and loads it, translating
-   * failures into the partial-version contract once a write has begun.
+   * Flattens a CodeSystem straight from its entry stream through the streaming path and loads it,
+   * translating failures into the partial-version contract once a write has begun. The stream is
+   * consumed but not closed.
    */
   private void flattenAndLoad(
-      @Nonnull final byte[] bytes,
+      @Nonnull final InputStream in,
       @Nonnull final String url,
       @Nullable final String version,
       @Nonnull final String source,
@@ -289,7 +304,7 @@ public class FhirTerminologyImporter {
     log.info("Streaming CodeSystem {}", url);
     try (CodeSystemStaging staging = CodeSystemStaging.create()) {
       final CodeSystemStreamFlattener flattener = new CodeSystemStreamFlattener(staging);
-      try (JsonParser parser = JSON_FACTORY.createParser(new java.io.ByteArrayInputStream(bytes))) {
+      try (JsonParser parser = JSON_FACTORY.createParser(in)) {
         flattener.flatten(parser);
       } catch (final IOException | RuntimeException e) {
         if (counts.writeBegun) {
@@ -365,7 +380,13 @@ public class FhirTerminologyImporter {
       // Re-encode the Bundle-extracted CodeSystem so it flows through the same streaming flattener.
       final byte[] json =
           parser().encodeResourceToString(codeSystem).getBytes(StandardCharsets.UTF_8);
-      flattenAndLoad(json, codeSystem.getUrl(), codeSystem.getVersion(), source, loader, counts);
+      flattenAndLoad(
+          new java.io.ByteArrayInputStream(json),
+          codeSystem.getUrl(),
+          codeSystem.getVersion(),
+          source,
+          loader,
+          counts);
     } else if (resource instanceof final ValueSet valueSet) {
       requireUrl(valueSet.getUrl(), "ValueSet", entryName);
       counts.writeBegun = true;
@@ -390,17 +411,6 @@ public class FhirTerminologyImporter {
           conceptMap,
           source);
       counts.conceptMaps++;
-    }
-  }
-
-  @Nonnull
-  private static ScannedResource scanBytes(
-      @Nonnull final byte[] bytes, @Nonnull final String entryName) {
-    try {
-      return FhirResourceScanner.scanStream(
-          new java.io.ByteArrayInputStream(bytes), entryName, bytes.length);
-    } catch (final IOException e) {
-      throw new TerminologyImportException("Unable to read resource metadata from " + entryName, e);
     }
   }
 

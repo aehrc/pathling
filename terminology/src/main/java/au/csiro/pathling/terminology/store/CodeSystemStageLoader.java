@@ -150,7 +150,7 @@ public class CodeSystemStageLoader {
     final Dataset<Row> codeToDense = survivors.select(col(COLUMN_CODE), col(COLUMN_DENSE_ID));
 
     final Dataset<Row> relationships =
-        resolveCodingProperties(staging, survivingDense, codeToDense);
+        resolveCodingProperties(staging, survivingDense, codeToDense, url);
     final Dataset<Row> isaEdges =
         resolveIsaEdges(staging, survivingDense, codeToDense, systemVersionId, url);
 
@@ -190,7 +190,8 @@ public class CodeSystemStageLoader {
   private Dataset<Row> resolveCodingProperties(
       @Nonnull final CodeSystemStaging staging,
       @Nonnull final Dataset<Row> survivingDense,
-      @Nonnull final Dataset<Row> codeToDense) {
+      @Nonnull final Dataset<Row> codeToDense,
+      @Nonnull final String url) {
     final Dataset<Row> codingProperties =
         spark
             .read()
@@ -199,19 +200,33 @@ public class CodeSystemStageLoader {
             .join(
                 survivingDense,
                 col(COLUMN_SOURCE_DENSE_ID).equalTo(survivingDense.col(COLUMN_DENSE_ID)),
-                "left_semi");
+                "left_semi")
+            .persist(StorageLevel.MEMORY_AND_DISK());
     final Dataset<Row> targetByCode =
         codeToDense.select(
             col(COLUMN_CODE).alias("target_code_join"),
             col(COLUMN_DENSE_ID).alias(COLUMN_TARGET_DENSE_ID));
-    return codingProperties
-        .join(
-            targetByCode, codingProperties.col(COLUMN_TARGET_CODE).equalTo(col("target_code_join")))
-        .select(
-            col(COLUMN_SOURCE_DENSE_ID),
-            col(COLUMN_PROPERTY_CODE).alias(COLUMN_TYPE_CODE),
-            col(COLUMN_TARGET_DENSE_ID),
-            lit(null).cast(DataTypes.IntegerType).alias(COLUMN_ROLE_GROUP));
+    final Dataset<Row> resolved =
+        codingProperties
+            .join(
+                targetByCode,
+                codingProperties.col(COLUMN_TARGET_CODE).equalTo(col("target_code_join")))
+            .select(
+                col(COLUMN_SOURCE_DENSE_ID),
+                col(COLUMN_PROPERTY_CODE).alias(COLUMN_TYPE_CODE),
+                col(COLUMN_TARGET_DENSE_ID),
+                lit(null).cast(DataTypes.IntegerType).alias(COLUMN_ROLE_GROUP))
+            .persist(StorageLevel.MEMORY_AND_DISK());
+    final long dangling = codingProperties.count() - resolved.count();
+    if (dangling > 0) {
+      log.warn(
+          "Dropped {} Coding-valued property reference(s) with no matching concept in CodeSystem"
+              + " {}",
+          dangling,
+          url);
+    }
+    codingProperties.unpersist();
+    return resolved;
   }
 
   /**
