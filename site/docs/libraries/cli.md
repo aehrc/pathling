@@ -222,8 +222,8 @@ normal tracebacks without ending the session; leave with `exit` or Ctrl-D
 ### Terminology commands
 
 The `member-of`, `translate`, `subsumes`, `subsumed-by`, `display`,
-`property-of`, and `designation` commands read a tabular dataset (CSV or
-Parquet), build codings from a `--code-column` plus either a fixed `--system`
+`property-of`, and `designation` commands read a tabular dataset (CSV, Parquet,
+or Delta), build codings from a `--code-column` plus either a fixed `--system`
 URI or a `--system-column`, and append the operation's result column(s).
 
 ```bash
@@ -233,6 +233,29 @@ pathling member-of codes.csv --code-column code \
 
 pathling translate codes.csv --code-column code \
   --system http://snomed.info/sct --concept-map '<uri>'
+```
+
+The input format is set with `--from csv|parquet|delta`. When omitted, it is
+auto-detected from the dataset path: files ending in `.csv` or `.parquet` are
+read as CSV or Parquet; a directory containing a `_delta_log` entry is read as
+Delta; and any other directory containing at least one `.parquet` file is read
+as Parquet. CSV inputs are read with a header row and all columns as strings.
+Passing `--from` bypasses detection, which is useful for Delta tables or CSV
+files with an unconventional extension. An input whose format cannot be
+determined - an unrecognised suffix, or a directory with neither a `_delta_log`
+entry nor `.parquet` files - is reported as a usage error before any Spark
+session starts. This also lets you read the CLI's own Parquet or Delta output
+directory straight back into another terminology command.
+
+```bash
+# Explicit Delta input.
+pathling display warehouse/codes --from delta \
+  --code-column code --system http://snomed.info/sct
+
+# Auto-detected Delta directory (contains _delta_log).
+pathling member-of warehouse/codes --code-column code \
+  --system http://snomed.info/sct \
+  --value-set 'http://snomed.info/sct?fhir_vs=refset/...'
 ```
 
 The default result column names (`member_of`, `translated_system` and

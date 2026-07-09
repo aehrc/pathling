@@ -19,9 +19,9 @@
 
 Each command reads a tabular dataset (CSV, Parquet, or Delta), builds codings
 from a named code column plus either a fixed system URI or a per-row system
-column,
-calls the corresponding library terminology function, appends the result
-column(s), and emits the augmented dataset per the shared output options.
+column, calls the corresponding library terminology function, appends the
+result column(s), and emits the augmented dataset per the shared output
+options.
 
 Author: John Grimes.
 """
