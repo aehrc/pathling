@@ -103,6 +103,23 @@ def test_render_csv_semicolon_delimiter():
     assert output.splitlines()[0] == "id;family"
 
 
+def test_render_csv_omits_header_when_disabled():
+    """render_csv omits the header line when the header is disabled (T015)."""
+    output = render_csv(COLUMNS, ROWS, header=False)
+
+    parsed = list(csv.reader(io.StringIO(output)))
+    # The first line is a data row, not the column names.
+    assert parsed[0] == ["1", "Smith"]
+    assert COLUMNS not in parsed
+
+
+def test_render_csv_includes_header_by_default():
+    """render_csv includes the header line by default (T015)."""
+    output = render_csv(COLUMNS, ROWS)
+
+    assert list(csv.reader(io.StringIO(output)))[0] == COLUMNS
+
+
 # ========== Delimiter decoding and validation (T002) ==========
 
 

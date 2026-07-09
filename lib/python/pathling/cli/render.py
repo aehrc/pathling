@@ -350,18 +350,23 @@ def render_table(columns: Sequence[str], rows: Sequence[Sequence]) -> str:
 
 
 def render_csv(
-    columns: Sequence[str], rows: Sequence[Sequence], delimiter: str = ","
+    columns: Sequence[str],
+    rows: Sequence[Sequence],
+    delimiter: str = ",",
+    header: bool = True,
 ) -> str:
-    """Renders rows as CSV with a header line.
+    """Renders rows as CSV, optionally with a header line.
 
     :param columns: the column names.
     :param rows: the row values.
     :param delimiter: the field separator (default comma).
+    :param header: whether to emit the header line (default True).
     :return: the CSV text.
     """
     buffer = io.StringIO()
     writer = csv.writer(buffer, delimiter=delimiter, lineterminator="\n")
-    writer.writerow(list(columns))
+    if header:
+        writer.writerow(list(columns))
     for row in rows:
         writer.writerow(["" if value is None else value for value in row])
     return buffer.getvalue()
@@ -394,6 +399,7 @@ def render_rows(
     rows: Sequence[Sequence],
     fmt: str,
     delimiter: str = ",",
+    header: bool = True,
 ) -> str:
     """Renders rows in the requested stdout format.
 
@@ -401,13 +407,15 @@ def render_rows(
     :param rows: the row values.
     :param fmt: one of table, csv, or ndjson.
     :param delimiter: the CSV field separator; ignored for non-CSV formats.
+    :param header: whether CSV output includes a header line; ignored for
+           non-CSV formats.
     :return: the rendered text.
     :raises CliError: when the format cannot render to stdout.
     """
     if fmt == OutputFormat.TABLE:
         return render_table(columns, rows)
     if fmt == OutputFormat.CSV:
-        return render_csv(columns, rows, delimiter)
+        return render_csv(columns, rows, delimiter, header)
     if fmt == OutputFormat.NDJSON:
         return render_ndjson(columns, rows)
     raise CliError(
@@ -465,7 +473,7 @@ def write_output(df, spec: OutputSpec, console: Console) -> None:
             rows = [list(row) for row in df.limit(spec.limit).collect()]
         else:
             rows = [list(row) for row in df.collect()]
-        text = render_rows(columns, rows, spec.format, spec.delimiter)
+        text = render_rows(columns, rows, spec.format, spec.delimiter, spec.header)
         # Strip any trailing newline so print's own newline does not introduce
         # a spurious blank line (which would parse as an empty CSV row).
         print(text.rstrip("\n"))
@@ -515,7 +523,7 @@ def _write_file(df, spec: OutputSpec) -> None:
     if not spec.departition:
         # Leave Spark's native directory of part files at the target, written
         # with full parallelism (no repartition to a single partition).
-        _write_spark_directory(df, spec.format, path, spec.delimiter)
+        _write_spark_directory(df, spec.format, path, spec.delimiter, spec.header)
         return
 
     part_extension = _PART_EXTENSIONS[spec.format]
@@ -523,14 +531,18 @@ def _write_file(df, spec: OutputSpec) -> None:
     # on the same filesystem so departitioning moves rather than copies.
     temp_dir = path.parent / f".{path.name}.departition-{uuid.uuid4().hex}"
     try:
-        _write_spark_directory(df.repartition(1), spec.format, temp_dir, spec.delimiter)
+        _write_spark_directory(
+            df.repartition(1), spec.format, temp_dir, spec.delimiter, spec.header
+        )
         departition(spark, temp_dir, path, part_extension)
     finally:
         # Always remove the temporary directory, including on a write failure.
         remove_path(spark, temp_dir)
 
 
-def _write_spark_directory(frame, fmt: str, target_dir, delimiter: str = ",") -> None:
+def _write_spark_directory(
+    frame, fmt: str, target_dir, delimiter: str = ",", header: bool = True
+) -> None:
     """Writes a frame to a Spark directory of part files in the given format.
 
     :param frame: the Spark DataFrame to write (already repartitioned as
@@ -538,10 +550,14 @@ def _write_spark_directory(frame, fmt: str, target_dir, delimiter: str = ",") ->
     :param fmt: the file format - CSV, NDJSON, or Parquet.
     :param target_dir: the directory Spark writes its part files into.
     :param delimiter: the CSV field separator; ignored for non-CSV formats.
+    :param header: whether a CSV header row is written; ignored for non-CSV
+           formats.
     """
     writer = frame.write.mode("overwrite")
     if fmt == OutputFormat.CSV:
-        writer.option("header", "true").option("sep", delimiter).csv(str(target_dir))
+        writer.option("header", "true" if header else "false").option(
+            "sep", delimiter
+        ).csv(str(target_dir))
     elif fmt == OutputFormat.NDJSON:
         # Retain null-valued fields so every record carries the same keys,
         # matching the prior driver-side behaviour.

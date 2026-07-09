@@ -145,6 +145,22 @@ def test_csv_file_written_with_supplied_delimiter(spark, tmp_path):
     assert {tuple(row) for row in rows[1:]} == {("1", "Smith"), ("2", "Jones")}
 
 
+# ========== CSV output header control (T016) ==========
+
+
+def test_csv_file_omits_header_when_disabled(spark, tmp_path):
+    """A CSV file omits the header row when the spec disables it (T016)."""
+    df = spark.createDataFrame([("1", "Smith")], "id string, family string")
+    out = tmp_path / "out.csv"
+
+    _write_file(df, _spec(out, OutputFormat.CSV, header=False))
+
+    _assert_only_target(out, tmp_path)
+    rows = list(csv.reader(io.StringIO(out.read_text())))
+    # The only line is the data row; there is no header line.
+    assert rows == [["1", "Smith"]]
+
+
 # ========== NDJSON single-file output (T005) ==========
 
 
