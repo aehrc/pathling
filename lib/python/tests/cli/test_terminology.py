@@ -26,6 +26,7 @@ Author: John Grimes.
 
 import csv
 import io
+import json
 
 from pytest import fixture
 
@@ -232,6 +233,72 @@ def test_member_of_headerless_input(runner, patched_context, delimited_csv):
     # The positional column names carry through to the output header.
     assert rows[0] == ["_c0", "_c1", "member_of"]
     assert rows[1][2] == "True"
+
+
+# ========== Non-CSV no-op (T023) ==========
+
+
+def test_output_options_ignored_for_ndjson(runner, patched_context, delimited_csv):
+    """--delimiter/--header are accepted but do not affect NDJSON output (T023).
+
+    The delimiter still applies to the CSV *input* read (here a semicolon file),
+    but the NDJSON output path never consults the delimiter or header, so the
+    result is unaffected JSON objects.
+    """
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter=";",
+        name="semi.csv",
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "ndjson",
+            "--delimiter",
+            ";",
+            "--no-header",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    line = result.stdout.splitlines()[0]
+    record = json.loads(line)
+    # The record keeps its keys and values; the header/delimiter had no effect.
+    assert record["code"] == "368529001"
+    assert "member_of" in record
+
+
+def test_output_options_ignored_for_table(runner, patched_context, codes_csv):
+    """--no-header does not suppress the table's header (T023)."""
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(codes_csv),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--no-header",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    # The table always carries its column names, regardless of --no-header.
+    assert "member_of" in result.stdout
 
 
 # ========== member-of ==========
