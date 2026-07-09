@@ -223,6 +223,8 @@ def test_infer_format_from_extension():
     from pathlib import Path
 
     assert infer_format_from_extension(Path("out.csv")) == OutputFormat.CSV
+    # A .tsv extension is a CSV output (tab separation is chosen via --delimiter).
+    assert infer_format_from_extension(Path("out.tsv")) == OutputFormat.CSV
     # The json-array format is removed, so a .json extension is not inferred.
     assert infer_format_from_extension(Path("out.json")) is None
     assert infer_format_from_extension(Path("out.ndjson")) == OutputFormat.NDJSON

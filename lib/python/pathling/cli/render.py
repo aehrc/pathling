@@ -197,6 +197,8 @@ def output_options(func):
 # Maps file extensions to output formats for inference.
 _EXTENSION_FORMATS = {
     ".csv": OutputFormat.CSV,
+    # A .tsv file is CSV output; tab separation is selected with --delimiter.
+    ".tsv": OutputFormat.CSV,
     ".ndjson": OutputFormat.NDJSON,
     ".jsonl": OutputFormat.NDJSON,
     ".parquet": OutputFormat.PARQUET,

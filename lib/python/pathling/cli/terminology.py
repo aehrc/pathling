@@ -98,14 +98,15 @@ def _read_dataset(pc, dataset, delimiter=",", input_header=True):
             f"Dataset does not exist: {path}. Check the path.", exit_code=EXIT_USAGE
         )
     suffix = path.suffix.lower()
-    if suffix == ".csv":
+    # A .tsv file is read as CSV; the tab separator is supplied via --delimiter.
+    if suffix in (".csv", ".tsv"):
         return pc.spark.read.csv(
             str(path), header=input_header, inferSchema=False, sep=delimiter
         )
     if suffix == ".parquet":
         return pc.spark.read.parquet(str(path))
     raise CliError(
-        f"Unsupported dataset type '{suffix}'. Use a .csv or .parquet file.",
+        f"Unsupported dataset type '{suffix}'. Use a .csv, .tsv, or .parquet file.",
         exit_code=EXIT_USAGE,
     )
 

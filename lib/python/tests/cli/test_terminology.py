@@ -149,6 +149,57 @@ def test_read_dataset_parses_semicolon_separated(pathling_ctx, delimited_csv):
     assert df.collect()[0]["code"] == "368529001"
 
 
+def test_read_dataset_reads_tsv_extension(pathling_ctx, delimited_csv):
+    """_read_dataset reads a .tsv file as CSV with the supplied delimiter (T024)."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    df = _read_dataset(pathling_ctx, str(path), delimiter="\t")
+
+    assert df.columns == ["code", "system"]
+    assert df.collect()[0]["code"] == "368529001"
+
+
+def test_member_of_tsv_round_trip(runner, patched_context, delimited_csv, tmp_path):
+    """member-of round-trips a .tsv file to a .tsv output (quickstart P1)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED], ["439319006", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+    out = tmp_path / "out.tsv"
+
+    # No explicit --format: the output format is inferred from the .tsv extension.
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--delimiter",
+            "\\t",
+            "-o",
+            str(out),
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    assert rows[0] == ["code", "system", "member_of"]
+
+
 def test_member_of_tab_separated_round_trip(
     runner, patched_context, delimited_csv, tmp_path
 ):
