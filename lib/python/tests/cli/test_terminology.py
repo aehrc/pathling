@@ -1062,6 +1062,139 @@ def test_from_csv_missing_path_is_usage_error(runner, monkeypatch, tmp_path):
     assert "does not exist" in result.stderr.lower()
 
 
+# ========== --from input format: auto-detection (US2) ==========
+
+
+def test_autodetect_delta_directory(runner, patched_context, tmp_path):
+    """A Delta directory is auto-detected without --from (acceptance 3)."""
+    table = _write_delta(
+        patched_context.spark, tmp_path / "codes", ["code"], [["55915-3"]]
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "display",
+            str(table),
+            "--code-column",
+            "code",
+            "--system",
+            LOINC,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert "Beta 2 globulin" in result.stdout
+
+
+def test_autodetect_parquet_directory(runner, patched_context, tmp_path):
+    """A Parquet directory is auto-detected without --from (acceptance 4)."""
+    data = _write_parquet(
+        patched_context.spark,
+        tmp_path / "codes",
+        ["code", "system"],
+        [["368529001", SNOMED]],
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(data),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[1][2] == "True"
+
+
+def test_roundtrip_own_parquet_output(runner, patched_context, codes_csv, tmp_path):
+    """The CLI's own Parquet output reads back into a second command without
+    --from (SC-002)."""
+    out = tmp_path / "out.parquet"
+    first = runner.invoke(
+        cli,
+        [
+            "display",
+            str(codes_csv),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "-o",
+            str(out),
+        ],
+    )
+    assert first.exit_code == 0, first.stderr
+    assert out.exists()
+
+    # The second command reads the first command's Parquet output directory,
+    # auto-detected as Parquet with no --from flag.
+    second = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(out),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert second.exit_code == 0, second.stderr
+    assert "member_of" in _stdout_rows(second)[0]
+
+
+def test_autodetect_undeterminable_directory_is_usage_error(
+    runner, monkeypatch, tmp_path
+):
+    """An unrecognisable directory fails before Spark with an actionable error
+    (acceptance 5)."""
+
+    def spy(config, console=None):
+        raise AssertionError("context must not be created on a usage error")
+
+    monkeypatch.setattr("pathling.cli.session.create_context", spy)
+    directory = tmp_path / "mystery"
+    directory.mkdir()
+    (directory / "notes.txt").write_text("nothing tabular here")
+
+    result = runner.invoke(
+        cli,
+        [
+            "display",
+            str(directory),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+        ],
+    )
+
+    assert result.exit_code == 2
+    # The message names the offending path and suggests the flag. Newlines are
+    # stripped first because the console wraps the long message across lines,
+    # which would otherwise split the path and the flag text mid-token.
+    flattened = result.stderr.replace("\n", "")
+    assert str(directory) in flattened
+    assert "--from csv|parquet|delta" in flattened
+
+
 # ========== Config precedence wiring ==========
 
 
