@@ -27,7 +27,7 @@ Author: John Grimes.
 import csv
 import io
 
-from pytest import fixture
+from pytest import fixture, raises
 
 from pathling.cli.main import cli
 
@@ -43,6 +43,31 @@ def _write_csv(path, header, rows):
         writer = csv.writer(handle)
         writer.writerow(header)
         writer.writerows(rows)
+    return path
+
+
+def _write_parquet(spark, path, header, rows):
+    """Writes a Parquet dataset directory with the given header and rows.
+
+    The dataset is written through the shared Spark session, so it takes the
+    same directory-of-part-files form as the CLI's own Parquet output. Both the
+    single-file and directory forms of Parquet are read back through
+    ``spark.read.parquet``, so this directory form exercises the directory case.
+    """
+    spark.createDataFrame([tuple(row) for row in rows], header).write.parquet(str(path))
+    return path
+
+
+def _write_delta(spark, path, header, rows):
+    """Writes a Delta table directory with the given header and rows.
+
+    The table is written through the shared Spark session, which is Delta
+    enabled, producing a directory containing a ``_delta_log`` entry alongside
+    the Parquet data files.
+    """
+    spark.createDataFrame([tuple(row) for row in rows], header).write.format(
+        "delta"
+    ).save(str(path))
     return path
 
 
@@ -108,6 +133,95 @@ def test_coding_column_matches_library_schema(pathling_ctx):
     )
 
     assert cli_fields == library_fields
+
+
+# ========== _detect_tabular_format ==========
+
+
+def test_detect_csv_file(tmp_path):
+    """A file ending in .csv is detected as CSV."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    path = _write_csv(tmp_path / "codes.csv", ["code"], [["a"]])
+    assert _detect_tabular_format(path) == "csv"
+
+
+def test_detect_csv_file_uppercase_suffix(tmp_path):
+    """Suffix matching is case-insensitive, so .CSV is detected as CSV."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    path = _write_csv(tmp_path / "codes.CSV", ["code"], [["a"]])
+    assert _detect_tabular_format(path) == "csv"
+
+
+def test_detect_parquet_file(tmp_path):
+    """A file ending in .parquet is detected as Parquet."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    path = tmp_path / "codes.parquet"
+    path.write_bytes(b"PAR1")
+    assert _detect_tabular_format(path) == "parquet"
+
+
+def test_detect_delta_directory(tmp_path):
+    """A directory containing a _delta_log entry is detected as Delta."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    directory = tmp_path / "table"
+    (directory / "_delta_log").mkdir(parents=True)
+    (directory / "part-0.parquet").write_bytes(b"PAR1")
+    assert _detect_tabular_format(directory) == "delta"
+
+
+def test_detect_parquet_directory(tmp_path):
+    """A directory with Parquet contents but no _delta_log is detected as Parquet."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    directory = tmp_path / "data"
+    directory.mkdir()
+    (directory / "part-00000.snappy.parquet").write_bytes(b"PAR1")
+    (directory / "_SUCCESS").write_bytes(b"")
+    assert _detect_tabular_format(directory) == "parquet"
+
+
+def test_detect_delta_wins_over_parquet(tmp_path):
+    """A directory with both _delta_log and .parquet files is detected as Delta."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    directory = tmp_path / "table"
+    (directory / "_delta_log").mkdir(parents=True)
+    (directory / "stray.parquet").write_bytes(b"PAR1")
+    assert _detect_tabular_format(directory) == "delta"
+
+
+def test_detect_unrecognised_file_suffix_raises(tmp_path):
+    """An unrecognised file suffix is a usage error suggesting --from."""
+    from pathling.cli.errors import EXIT_USAGE, CliError
+    from pathling.cli.terminology import _detect_tabular_format
+
+    path = tmp_path / "codes.txt"
+    path.write_text("code\na\n")
+    with raises(CliError) as info:
+        _detect_tabular_format(path)
+    assert info.value.exit_code == EXIT_USAGE
+    assert "--from csv|parquet|delta" in str(info.value)
+
+
+def test_detect_empty_directory_raises(tmp_path):
+    """An unrecognisable directory is a usage error naming the path and contents."""
+    from pathling.cli.errors import EXIT_USAGE, CliError
+    from pathling.cli.terminology import _detect_tabular_format
+
+    directory = tmp_path / "mystery"
+    directory.mkdir()
+    (directory / "notes.txt").write_text("hello")
+    with raises(CliError) as info:
+        _detect_tabular_format(directory)
+    message = str(info.value)
+    assert info.value.exit_code == EXIT_USAGE
+    # The message names the offending path and suggests the flag.
+    assert str(directory) in message
+    assert "--from csv|parquet|delta" in message
 
 
 # ========== member-of ==========

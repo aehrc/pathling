@@ -72,6 +72,45 @@ def _common_options(func):
     return func
 
 
+def _detect_tabular_format(path):
+    """Detects the tabular format of a dataset from its name and layout.
+
+    Detection inspects only the path's suffix and, for directories, the names
+    of its immediate entries; it never reads file contents. A file ending in
+    ``.csv`` or ``.parquet`` (case-insensitive) resolves to that format. A
+    directory containing a ``_delta_log`` entry resolves to ``delta``; otherwise
+    a directory containing at least one ``.parquet`` file resolves to
+    ``parquet``. Anything else is a usage error suggesting ``--from``.
+
+    :param path: the dataset :class:`Path`, which is assumed to exist.
+    :return: one of ``csv``, ``parquet``, or ``delta``.
+    :raises CliError: with EXIT_USAGE when the format cannot be determined.
+    """
+    if path.is_dir():
+        names = [entry.name for entry in path.iterdir()]
+        if "_delta_log" in names:
+            return "delta"
+        if any(name.lower().endswith(".parquet") for name in names):
+            return "parquet"
+        contents = ", ".join(sorted(names)) if names else "no entries"
+        raise CliError(
+            f"Could not determine the format of directory {path} "
+            f"(found: {contents}); it has no _delta_log entry and no .parquet "
+            "files. Specify it with --from csv|parquet|delta.",
+            exit_code=EXIT_USAGE,
+        )
+    suffix = path.suffix.lower()
+    if suffix == ".csv":
+        return "csv"
+    if suffix == ".parquet":
+        return "parquet"
+    raise CliError(
+        f"Could not determine the format of {path} from its suffix "
+        f"'{path.suffix}'. Specify it with --from csv|parquet|delta.",
+        exit_code=EXIT_USAGE,
+    )
+
+
 def _read_dataset(pc, dataset):
     """Reads a CSV or Parquet dataset into a Spark DataFrame.
 
