@@ -53,6 +53,24 @@ _RESOURCE_STACK = ExitStack()
 atexit.register(_RESOURCE_STACK.close)
 
 
+def public_namespace() -> dict:
+    """Builds the mapping of the package's public API names to their objects.
+
+    The set of names is derived from the ``pathling`` package's public API list
+    (``pathling.__all__``) so that it stays in sync automatically and no second,
+    hand-maintained list exists. The ``pathling`` package is imported inside the
+    function so that the ``--help`` and ``--version`` fast paths are not slowed
+    and do not trigger the JVM-backed imports; resolving the names here forces
+    those imports, which is only appropriate after a command has decided to
+    start the environment.
+
+    :return: a mapping of each public name to the object it exports.
+    """
+    import pathling
+
+    return {name: getattr(pathling, name) for name in pathling.__all__}
+
+
 def quiet_log4j2_path() -> str:
     """Resolves a filesystem path to the packaged quiet log4j2 configuration.
 
