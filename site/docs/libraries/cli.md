@@ -176,6 +176,19 @@ two variables already in scope: `spark` (the Spark session) and `pathling`
 (the configured Pathling context), built with the same configuration
 resolution as every other command.
 
+The Pathling public functions are also pre-imported, so no
+`from pathling import ...` line is needed. This covers the terminology and
+coding functions (`to_coding`, `to_snomed_coding`, `to_loinc_coding`,
+`member_of`, `translate`, `subsumes`, and so on), the argument helper types
+(`Coding`, `PropertyType`, `Equivalence`), and the API types (`PathlingContext`,
+`DataSource`, and the rest). See the
+[Python API reference](https://pathling.csiro.au/docs/python/pathling.html) for
+the full list. The terminology
+display function is bound under both its natural name `display` and the alias
+`tx_display`. Any pre-imported name is only a default: assigning or defining the
+same name in your own code takes precedence, and an explicit
+`from pathling import ...` continues to work unchanged.
+
 ```bash
 # Run a script file.
 pathling run my_script.py
@@ -221,16 +234,22 @@ passes through unmodified.
 ### console
 
 Open an interactive [IPython](https://ipython.org/) console with the same
-`spark` and `pathling` variables in scope.
+`spark` and `pathling` variables in scope, and the Pathling public functions
+pre-imported just as in [`run`](#run).
 
 ```bash
 pathling console
 ```
 
 After the startup progress indicator, a banner identifies the Pathling
-version and the variables in scope. Errors evaluated at the prompt show
-normal tracebacks without ending the session; leave with `exit` or Ctrl-D
-(exit code 0).
+version, the variables in scope, and the pre-imported functions. Errors
+evaluated at the prompt show normal tracebacks without ending the session;
+leave with `exit` or Ctrl-D (exit code 0).
+
+The one difference from `run` is the terminology display function. IPython
+installs its own `display` at the prompt, so Pathling's terminology display is
+bound as `tx_display` only; `display` remains IPython's built-in. A snippet that
+uses `tx_display` therefore behaves the same in the console and in a script.
 
 ### Terminology commands
 
