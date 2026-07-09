@@ -46,7 +46,9 @@ test_that("pathling_import_fhir_terminology enables local member_of", {
     )
   )
 
-  pathling_disconnect(pc_local)
+  # Do not disconnect here. This context wraps the shared connection returned by def_spark(),
+  # which sparklyr reuses across every test in the suite. Disconnecting it tears down the shared
+  # gateway and leaves the following test unable to re-establish its session.
 })
 
 test_that("pathling_connect rejects local mode without a storage path", {
