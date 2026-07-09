@@ -17,11 +17,10 @@
 
 """The Pathling terminology commands.
 
-Each command reads a tabular dataset (CSV, Parquet, or Delta), builds codings
-from a named code column plus either a fixed system URI or a per-row system
-column, calls the corresponding library terminology function, appends the
-result column(s), and emits the augmented dataset per the shared output
-options.
+Each command reads a tabular dataset (CSV or Parquet), builds codings from a
+named code column plus either a fixed system URI or a per-row system column,
+calls the corresponding library terminology function, appends the result
+column(s), and emits the augmented dataset per the shared output options.
 
 Author: John Grimes.
 """
@@ -55,12 +54,6 @@ def _common_options(func):
     options = [
         click.argument("dataset"),
         click.option(
-            "--from",
-            "from_format",
-            type=click.Choice(("csv", "parquet", "delta")),
-            help="Input format (default: auto-detected from the dataset path).",
-        ),
-        click.option(
             "--code-column", "code_column", required=True, help="Code column name."
         ),
         click.option("--system", "system", help="Fixed code system URI."),
@@ -79,66 +72,28 @@ def _common_options(func):
     return func
 
 
-def _detect_tabular_format(path):
-    """Detects the tabular format of a dataset from its name and layout.
+def _read_dataset(pc, dataset):
+    """Reads a CSV or Parquet dataset into a Spark DataFrame.
 
-    Detection inspects only the path's suffix and, for directories, the names
-    of its immediate entries; it never reads file contents. A file ending in
-    ``.csv`` or ``.parquet`` (case-insensitive) resolves to that format. A
-    directory containing a ``_delta_log`` entry resolves to ``delta``; otherwise
-    a directory containing at least one ``.parquet`` file resolves to
-    ``parquet``. Anything else is a usage error suggesting ``--from``.
-
-    :param path: the dataset :class:`Path`, which is assumed to exist.
-    :return: one of ``csv``, ``parquet``, or ``delta``.
-    :raises CliError: with EXIT_USAGE when the format cannot be determined.
+    :param pc: the Pathling context.
+    :param dataset: the path to the dataset file.
+    :return: the loaded DataFrame.
+    :raises CliError: when the path is missing or the type is unsupported.
     """
-    if path.is_dir():
-        names = [entry.name for entry in path.iterdir()]
-        if "_delta_log" in names:
-            return "delta"
-        if any(name.lower().endswith(".parquet") for name in names):
-            return "parquet"
-        contents = ", ".join(sorted(names)) if names else "no entries"
+    path = Path(dataset)
+    if not path.exists():
         raise CliError(
-            f"Could not determine the format of directory {path} "
-            f"(found: {contents}); it has no _delta_log entry and no .parquet "
-            "files. Specify it with --from csv|parquet|delta.",
-            exit_code=EXIT_USAGE,
+            f"Dataset does not exist: {path}. Check the path.", exit_code=EXIT_USAGE
         )
     suffix = path.suffix.lower()
     if suffix == ".csv":
-        return "csv"
+        return pc.spark.read.csv(str(path), header=True, inferSchema=False)
     if suffix == ".parquet":
-        return "parquet"
+        return pc.spark.read.parquet(str(path))
     raise CliError(
-        f"Could not determine the format of {path} from its suffix "
-        f"'{path.suffix}'. Specify it with --from csv|parquet|delta.",
+        f"Unsupported dataset type '{suffix}'. Use a .csv or .parquet file.",
         exit_code=EXIT_USAGE,
     )
-
-
-def _read_dataset(pc, dataset, from_format):
-    """Reads a tabular dataset into a Spark DataFrame using a resolved format.
-
-    The format is resolved earlier, before the Spark session starts (see
-    :func:`_execute`), so this function only dispatches to the matching reader.
-    CSV is read with a header row and no schema inference, preserving the
-    previous semantics; Parquet and Delta accept both single-file and directory
-    inputs.
-
-    :param pc: the Pathling context.
-    :param dataset: the path to the dataset file or directory.
-    :param from_format: the resolved format, one of ``csv``, ``parquet``, or
-           ``delta``.
-    :return: the loaded DataFrame.
-    """
-    path = str(dataset)
-    if from_format == "csv":
-        return pc.spark.read.csv(path, header=True, inferSchema=False)
-    if from_format == "parquet":
-        return pc.spark.read.parquet(path)
-    return pc.spark.read.format("delta").load(path)
 
 
 def _validate_columns(df, required, dataset):
@@ -250,7 +205,6 @@ def _validate_coding_source(dataset, system, system_column):
 def _execute(
     obj,
     dataset,
-    from_format,
     system,
     system_column,
     output_format,
@@ -264,7 +218,6 @@ def _execute(
 
     :param obj: the CLI context object.
     :param dataset: the dataset path.
-    :param from_format: the explicit ``--from`` value, or None to auto-detect.
     :param system: a fixed system URI, or None.
     :param system_column: a per-row system column name, or None.
     :param output_format: the ``--format`` value, or None.
@@ -278,15 +231,11 @@ def _execute(
     config = obj.config
     console = obj.console
 
-    # Validate cheap inputs before paying the Spark cold start. Resolving the
-    # input format here means an unknown or undeterminable format fails fast,
-    # before the multi-second Spark cold start (FR-005). An explicit --from
-    # wins; otherwise the format is detected from the path (FR-002/FR-003).
+    # Validate cheap inputs before paying the Spark cold start.
     _validate_coding_source(dataset, system, system_column)
-    resolved_format = from_format or _detect_tabular_format(Path(dataset))
     output_spec = resolve_output(output, output_format, limit, overwrite, departition)
     pc = session.create_context(config, console)
-    df = _read_dataset(pc, dataset, resolved_format)
+    df = _read_dataset(pc, dataset)
 
     try:
         with progress_status(
@@ -316,7 +265,6 @@ def _execute(
 def member_of(
     obj,
     dataset,
-    from_format,
     code_column,
     system,
     system_column,
@@ -348,7 +296,6 @@ def member_of(
     _execute(
         obj,
         dataset,
-        from_format,
         system,
         system_column,
         output_format,
@@ -374,7 +321,6 @@ def member_of(
 def translate(
     obj,
     dataset,
-    from_format,
     code_column,
     system,
     system_column,
@@ -423,7 +369,6 @@ def translate(
     _execute(
         obj,
         dataset,
-        from_format,
         system,
         system_column,
         output_format,
@@ -472,7 +417,6 @@ def _run_subsumption(
     operation,
     default_name,
     dataset,
-    from_format,
     code_column,
     system,
     system_column,
@@ -494,7 +438,6 @@ def _run_subsumption(
     :param operation: the udf attribute name (``subsumes`` or ``subsumed_by``).
     :param default_name: the default result column name.
     :param dataset: the dataset path.
-    :param from_format: the explicit ``--from`` value, or None to auto-detect.
     :param code_column: the left code column.
     :param system: the left fixed system URI, or None.
     :param system_column: the left per-row system column, or None.
@@ -554,7 +497,6 @@ def _run_subsumption(
     _execute(
         obj,
         dataset,
-        from_format,
         system,
         system_column,
         output_format,
@@ -573,7 +515,6 @@ def _run_subsumption(
 def subsumes(
     obj,
     dataset,
-    from_format,
     code_column,
     system,
     system_column,
@@ -607,7 +548,6 @@ def subsumes(
         "subsumes",
         "subsumes",
         dataset,
-        from_format,
         code_column,
         system,
         system_column,
@@ -632,7 +572,6 @@ def subsumes(
 def subsumed_by(
     obj,
     dataset,
-    from_format,
     code_column,
     system,
     system_column,
@@ -666,7 +605,6 @@ def subsumed_by(
         "subsumed_by",
         "subsumed_by",
         dataset,
-        from_format,
         code_column,
         system,
         system_column,
@@ -694,7 +632,6 @@ def subsumed_by(
 def display(
     obj,
     dataset,
-    from_format,
     code_column,
     system,
     system_column,
@@ -725,7 +662,6 @@ def display(
     _execute(
         obj,
         dataset,
-        from_format,
         system,
         system_column,
         output_format,
@@ -755,7 +691,6 @@ def display(
 def property_of(
     obj,
     dataset,
-    from_format,
     code_column,
     system,
     system_column,
@@ -792,7 +727,6 @@ def property_of(
     _execute(
         obj,
         dataset,
-        from_format,
         system,
         system_column,
         output_format,
@@ -815,7 +749,6 @@ def property_of(
 def designation(
     obj,
     dataset,
-    from_format,
     code_column,
     system,
     system_column,
@@ -858,7 +791,6 @@ def designation(
     _execute(
         obj,
         dataset,
-        from_format,
         system,
         system_column,
         output_format,

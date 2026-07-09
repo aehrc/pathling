@@ -40,22 +40,7 @@ runs:
     - name: Set up TinyTeX
       uses: r-lib/actions/setup-tinytex@v2
 
-    # Native libraries required to build the R package and its documentation
-    # toolchain from source. When the R package cache misses, devtools and
-    # pkgdown are compiled from source, which pulls in systemfonts, textshaping
-    # and ragg. Those packages need the font (fontconfig, freetype, harfbuzz,
-    # fribidi) and image (png, tiff, jpeg) development headers, and libcurl is
-    # needed for the documentation build.
-    - name: Install system libraries
+    # libcurl is required for building the R package documentation.
+    - name: Install libcurl
       shell: bash
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          libcurl4-openssl-dev \
-          libfontconfig1-dev \
-          libfreetype-dev \
-          libharfbuzz-dev \
-          libfribidi-dev \
-          libpng-dev \
-          libtiff-dev \
-          libjpeg-dev
+      run: sudo apt-get install -y libcurl4-openssl-dev
