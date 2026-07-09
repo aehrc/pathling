@@ -17,10 +17,13 @@
 
 """The ``pathling console`` command.
 
-Opens an interactive IPython session with ``spark`` (the Spark session) and
-``pathling`` (the configured Pathling context) bound in the user namespace,
-after a banner identifying the version and the variables in scope. IPython is
-imported inside the command body so that ``--help`` stays fast.
+Opens an interactive IPython session with ``spark`` (the Spark session),
+``pathling`` (the configured Pathling context), and the Pathling package's
+public API pre-imported into the user namespace, after a banner identifying the
+version and the variables in scope. The terminology display function is bound as
+``tx_display`` rather than ``display`` so that IPython's built-in ``display``
+remains reachable at the prompt. IPython is imported inside the command body so
+that ``--help`` stays fast.
 
 Author: John Grimes.
 """
@@ -37,7 +40,9 @@ def build_banner() -> str:
     """Builds the banner shown before the console's first prompt.
 
     The banner identifies the Pathling and Python versions, lists the
-    variables in scope, and explains how to exit.
+    variables in scope, notes that the Pathling public functions are
+    pre-imported (with the terminology display available as ``tx_display``),
+    and explains how to exit.
 
     :return: the banner text.
     """
@@ -45,6 +50,10 @@ def build_banner() -> str:
         f"Pathling console (version {__version__}, "
         f"Python {platform.python_version()})\n"
         "Variables in scope: spark (SparkSession), pathling (PathlingContext)\n"
+        "Pathling public functions are pre-imported (member_of, translate, "
+        "to_coding, ...); see https://pathling.csiro.au/docs/python/pathling.html\n"
+        "The terminology display function is available as tx_display "
+        "(display is IPython's built-in).\n"
         "Type exit or press Ctrl-D to leave.\n"
     )
 
@@ -54,8 +63,11 @@ def build_banner() -> str:
 def console(obj):
     """Open an interactive console with the Pathling environment ready.
 
-    Starts an IPython session with two variables in scope: spark (the Spark
-    session) and pathling (the configured Pathling context). Exit with
+    Starts an IPython session with spark (the Spark session) and pathling
+    (the configured Pathling context) in scope. The Pathling public functions
+    (member_of, translate, to_coding, and so on) are pre-imported, so no
+    "from pathling import ..." is needed; the terminology display is available
+    as tx_display, leaving IPython's built-in display unchanged. Exit with
     'exit' or Ctrl-D.
 
     \b
@@ -70,6 +82,14 @@ def console(obj):
     """
     pc = session.create_context(obj.config, obj.console)
 
+    # Pre-import the public API surface, but expose the terminology display as
+    # tx_display only: IPython installs its own `display` into the interpreter's
+    # built-ins, so binding Pathling's display here would silently shadow it.
+    user_ns = session.public_namespace()
+    user_ns["tx_display"] = user_ns.pop("display")
+    user_ns["spark"] = pc.spark
+    user_ns["pathling"] = pc
+
     import IPython
     from traitlets.config import Config
 
@@ -77,6 +97,6 @@ def console(obj):
     config.TerminalInteractiveShell.banner1 = build_banner()
     IPython.start_ipython(
         argv=[],
-        user_ns={"spark": pc.spark, "pathling": pc},
+        user_ns=user_ns,
         config=config,
     )
