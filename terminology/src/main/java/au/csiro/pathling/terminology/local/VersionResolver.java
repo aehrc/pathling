@@ -54,8 +54,8 @@ public class VersionResolver {
   private static final Pattern SEMVER_FORMAT =
       Pattern.compile(
           "^(?<major>0|[1-9]\\d*)\\.(?<minor>0|[1-9]\\d*)\\.(?<patch>0|[1-9]\\d*)"
-              + "(?:-(?<prerelease>[\\da-zA-Z-]+(?:\\.[\\da-zA-Z-]+)*))?"
-              + "(?:\\+(?<build>[\\da-zA-Z-]+(?:\\.[\\da-zA-Z-]+)*))?$");
+              + "(?:-(?<prerelease>[\\da-zA-Z-]++(?:\\.[\\da-zA-Z-]++)*+))?"
+              + "(?:\\+(?<build>[\\da-zA-Z-]++(?:\\.[\\da-zA-Z-]++)*+))?$");
 
   private static final Pattern SNOMED_VERSION_PATTERN =
       Pattern.compile(

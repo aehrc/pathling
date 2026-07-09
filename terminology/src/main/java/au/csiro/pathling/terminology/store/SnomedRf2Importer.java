@@ -267,7 +267,7 @@ public class SnomedRf2Importer {
       if (!fs.exists(archive)) {
         throw new TerminologyImportException("RF2 source path does not exist: " + source);
       }
-      final java.nio.file.Path target = Files.createTempDirectory("pathling-rf2-");
+      final java.nio.file.Path target = SecureTempDirectory.create("pathling-rf2-");
       log.info("Extracting RF2 archive {} to {}", source, target);
       try (final ZipInputStream zip =
           new ZipInputStream(new BufferedInputStream(fs.open(archive)))) {

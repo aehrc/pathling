@@ -124,9 +124,8 @@ public class ValueSetResolver {
   @Nonnull
   public Optional<ResolvedValueSet> resolve(@Nonnull final String valueSetUrl) {
     synchronized (resolutionCache) {
-      final Optional<ResolvedValueSet> cached = resolutionCache.get(valueSetUrl);
-      if (cached != null) {
-        return cached;
+      if (resolutionCache.containsKey(valueSetUrl)) {
+        return resolutionCache.get(valueSetUrl);
       }
     }
     final Optional<ResolvedValueSet> resolved = resolveUncached(valueSetUrl);

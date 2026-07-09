@@ -22,8 +22,11 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.utilities.ObjectHolder;
 import jakarta.annotation.Nonnull;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serial;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 
@@ -62,7 +65,8 @@ public final class LocalTerminologyServiceFactory implements TerminologyServiceF
    * configuration snapshot) on every call, so the resolved service is cached here after the first
    * call. The memo is transient and rebuilt after deserialisation on each executor.
    */
-  @EqualsAndHashCode.Exclude private transient volatile TerminologyService service;
+  @EqualsAndHashCode.Exclude
+  private transient AtomicReference<TerminologyService> service = new AtomicReference<>();
 
   /**
    * Creates a factory.
@@ -89,12 +93,28 @@ public final class LocalTerminologyServiceFactory implements TerminologyServiceF
   @Nonnull
   @Override
   public TerminologyService build() {
-    TerminologyService cached = service;
+    TerminologyService cached = service.get();
     if (cached == null) {
       cached = terminologyServiceHolder.getOrCreate(this);
-      service = cached;
+      service.compareAndSet(null, cached);
+      cached = service.get();
     }
     return cached;
+  }
+
+  /**
+   * Restores the transient service memo after deserialisation, since transient fields are not
+   * reinitialised by the default deserialisation mechanism.
+   *
+   * @param in the stream to read the object from
+   * @throws IOException if an I/O error occurs while reading
+   * @throws ClassNotFoundException if the class of a serialised object cannot be found
+   */
+  @Serial
+  private void readObject(@Nonnull final ObjectInputStream in)
+      throws IOException, ClassNotFoundException {
+    in.defaultReadObject();
+    service = new AtomicReference<>();
   }
 
   @Nonnull

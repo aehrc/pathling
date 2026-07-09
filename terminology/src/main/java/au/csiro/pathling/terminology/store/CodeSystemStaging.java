@@ -120,7 +120,7 @@ public class CodeSystemStaging implements AutoCloseable {
   @Nonnull
   public static CodeSystemStaging create() {
     try {
-      final Path directory = Files.createTempDirectory("pathling-fhir-import-");
+      final Path directory = SecureTempDirectory.create("pathling-fhir-import-");
       final CodeSystemStaging staging = new CodeSystemStaging(directory);
       // Open every file eagerly so an empty staging table still reads back as zero rows.
       for (final String file : ALL_FILES) {

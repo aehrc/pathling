@@ -18,6 +18,8 @@
 package au.csiro.pathling.terminology.local.index;
 
 import au.csiro.pathling.terminology.store.TerminologyStoreReader;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import jakarta.annotation.Nonnull;
 
 /**
@@ -30,23 +32,26 @@ import jakarta.annotation.Nonnull;
  */
 public final class CodeSystemIndexes {
 
-  @Nonnull private final TerminologyStoreReader reader;
-  @Nonnull private final String systemVersionId;
   @Nonnull private final ConceptDictionary dictionary;
 
-  private volatile HierarchyIndex hierarchy;
-  private volatile RefsetIndex refsets;
-  private volatile RelationshipIndex relationships;
-  private volatile DescriptionIndex descriptions;
-  private volatile PropertyIndex properties;
+  // The secondary indexes load lazily on first use so a workload that only needs some of them does
+  // not pay for the others. Memoising suppliers give thread-safe, load-once semantics.
+  @Nonnull private final Supplier<HierarchyIndex> hierarchy;
+  @Nonnull private final Supplier<RefsetIndex> refsets;
+  @Nonnull private final Supplier<RelationshipIndex> relationships;
+  @Nonnull private final Supplier<DescriptionIndex> descriptions;
+  @Nonnull private final Supplier<PropertyIndex> properties;
 
   private CodeSystemIndexes(
       @Nonnull final TerminologyStoreReader reader,
       @Nonnull final String systemVersionId,
       @Nonnull final ConceptDictionary dictionary) {
-    this.reader = reader;
-    this.systemVersionId = systemVersionId;
     this.dictionary = dictionary;
+    this.hierarchy = Suppliers.memoize(() -> HierarchyIndex.load(reader, systemVersionId));
+    this.refsets = Suppliers.memoize(() -> RefsetIndex.load(reader, systemVersionId));
+    this.relationships = Suppliers.memoize(() -> RelationshipIndex.load(reader, systemVersionId));
+    this.descriptions = Suppliers.memoize(() -> DescriptionIndex.load(reader, systemVersionId));
+    this.properties = Suppliers.memoize(() -> PropertyIndex.load(reader, systemVersionId));
   }
 
   /**
@@ -80,17 +85,7 @@ public final class CodeSystemIndexes {
    */
   @Nonnull
   public HierarchyIndex hierarchy() {
-    HierarchyIndex local = hierarchy;
-    if (local == null) {
-      synchronized (this) {
-        local = hierarchy;
-        if (local == null) {
-          local = HierarchyIndex.load(reader, systemVersionId);
-          hierarchy = local;
-        }
-      }
-    }
-    return local;
+    return hierarchy.get();
   }
 
   /**
@@ -100,17 +95,7 @@ public final class CodeSystemIndexes {
    */
   @Nonnull
   public RefsetIndex refsets() {
-    RefsetIndex local = refsets;
-    if (local == null) {
-      synchronized (this) {
-        local = refsets;
-        if (local == null) {
-          local = RefsetIndex.load(reader, systemVersionId);
-          refsets = local;
-        }
-      }
-    }
-    return local;
+    return refsets.get();
   }
 
   /**
@@ -120,17 +105,7 @@ public final class CodeSystemIndexes {
    */
   @Nonnull
   public RelationshipIndex relationships() {
-    RelationshipIndex local = relationships;
-    if (local == null) {
-      synchronized (this) {
-        local = relationships;
-        if (local == null) {
-          local = RelationshipIndex.load(reader, systemVersionId);
-          relationships = local;
-        }
-      }
-    }
-    return local;
+    return relationships.get();
   }
 
   /**
@@ -140,17 +115,7 @@ public final class CodeSystemIndexes {
    */
   @Nonnull
   public DescriptionIndex descriptions() {
-    DescriptionIndex local = descriptions;
-    if (local == null) {
-      synchronized (this) {
-        local = descriptions;
-        if (local == null) {
-          local = DescriptionIndex.load(reader, systemVersionId);
-          descriptions = local;
-        }
-      }
-    }
-    return local;
+    return descriptions.get();
   }
 
   /**
@@ -160,16 +125,6 @@ public final class CodeSystemIndexes {
    */
   @Nonnull
   public PropertyIndex properties() {
-    PropertyIndex local = properties;
-    if (local == null) {
-      synchronized (this) {
-        local = properties;
-        if (local == null) {
-          local = PropertyIndex.load(reader, systemVersionId);
-          properties = local;
-        }
-      }
-    }
-    return local;
+    return properties.get();
   }
 }
