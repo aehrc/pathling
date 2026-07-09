@@ -54,6 +54,13 @@ def _common_options(func):
     options = [
         click.argument("dataset"),
         click.option(
+            "--input-header/--no-input-header",
+            "input_header",
+            default=True,
+            show_default=True,
+            help="Treat the first line of a CSV input as a header (default: enabled).",
+        ),
+        click.option(
             "--code-column", "code_column", required=True, help="Code column name."
         ),
         click.option("--system", "system", help="Fixed code system URI."),
@@ -72,11 +79,16 @@ def _common_options(func):
     return func
 
 
-def _read_dataset(pc, dataset):
+def _read_dataset(pc, dataset, delimiter=",", input_header=True):
     """Reads a CSV or Parquet dataset into a Spark DataFrame.
 
     :param pc: the Pathling context.
     :param dataset: the path to the dataset file.
+    :param delimiter: the CSV field separator; applied to ``.csv`` inputs only
+           (Parquet carries its own schema).
+    :param input_header: whether the first line of a CSV input is a header row;
+           applied to ``.csv`` inputs only. When False, Spark assigns positional
+           column names ``_c0``, ``_c1``, ... referenced via ``--code-column``.
     :return: the loaded DataFrame.
     :raises CliError: when the path is missing or the type is unsupported.
     """
@@ -86,12 +98,15 @@ def _read_dataset(pc, dataset):
             f"Dataset does not exist: {path}. Check the path.", exit_code=EXIT_USAGE
         )
     suffix = path.suffix.lower()
-    if suffix == ".csv":
-        return pc.spark.read.csv(str(path), header=True, inferSchema=False)
+    # A .tsv file is read as CSV; the tab separator is supplied via --delimiter.
+    if suffix in (".csv", ".tsv"):
+        return pc.spark.read.csv(
+            str(path), header=input_header, inferSchema=False, sep=delimiter
+        )
     if suffix == ".parquet":
         return pc.spark.read.parquet(str(path))
     raise CliError(
-        f"Unsupported dataset type '{suffix}'. Use a .csv or .parquet file.",
+        f"Unsupported dataset type '{suffix}'. Use a .csv, .tsv, or .parquet file.",
         exit_code=EXIT_USAGE,
     )
 
@@ -212,6 +227,9 @@ def _execute(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     build,
 ):
     """Runs a terminology operation and emits the augmented dataset.
@@ -225,6 +243,10 @@ def _execute(
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
     :param departition: whether file output is departitioned to a single file.
+    :param delimiter: the CSV field separator for both the input read and the
+           output write.
+    :param header: whether CSV output includes a header row.
+    :param input_header: whether the first line of a CSV input is a header row.
     :param build: a callback ``(pc, df) -> result_df`` performing the operation.
     :raises CliError: for validation and unreachable-server failures.
     """
@@ -233,9 +255,11 @@ def _execute(
 
     # Validate cheap inputs before paying the Spark cold start.
     _validate_coding_source(dataset, system, system_column)
-    output_spec = resolve_output(output, output_format, limit, overwrite, departition)
+    output_spec = resolve_output(
+        output, output_format, limit, overwrite, departition, delimiter, header
+    )
     pc = session.create_context(config, console)
-    df = _read_dataset(pc, dataset)
+    df = _read_dataset(pc, dataset, delimiter, input_header)
 
     try:
         with progress_status(
@@ -275,6 +299,9 @@ def member_of(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     value_set,
 ):
     """Test codes for membership of a value set.
@@ -303,6 +330,9 @@ def member_of(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 
@@ -331,6 +361,9 @@ def translate(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     concept_map,
     reverse,
     equivalences,
@@ -376,6 +409,9 @@ def translate(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 
@@ -427,6 +463,9 @@ def _run_subsumption(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     other_code,
     other_code_column,
     other_system,
@@ -447,6 +486,10 @@ def _run_subsumption(
     :param output: the output path, or None.
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
+    :param departition: whether file output is departitioned to a single file.
+    :param delimiter: the CSV field separator for the input read and output write.
+    :param header: whether CSV output includes a header row.
+    :param input_header: whether the first line of a CSV input is a header row.
     :param other_code: a fixed target code applied to every row, or None.
     :param other_code_column: the right code column, or None when a fixed target
            code is supplied.
@@ -504,6 +547,9 @@ def _run_subsumption(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 
@@ -525,6 +571,9 @@ def subsumes(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     other_code,
     other_code_column,
     other_system,
@@ -558,6 +607,9 @@ def subsumes(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         other_code,
         other_code_column,
         other_system,
@@ -582,6 +634,9 @@ def subsumed_by(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     other_code,
     other_code_column,
     other_system,
@@ -615,6 +670,9 @@ def subsumed_by(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         other_code,
         other_code_column,
         other_system,
@@ -642,6 +700,9 @@ def display(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     accept_language,
 ):
     """Look up display names for codes.
@@ -669,6 +730,9 @@ def display(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 
@@ -701,6 +765,9 @@ def property_of(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     property_code,
     property_type,
     accept_language,
@@ -734,6 +801,9 @@ def property_of(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 
@@ -759,6 +829,9 @@ def designation(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     use,
     language,
 ):
@@ -798,6 +871,9 @@ def designation(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 

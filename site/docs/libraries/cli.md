@@ -66,13 +66,15 @@ specify `--from`.
 Tabular results (from `view`, `fhirpath`, and the terminology commands) render
 as a human-readable table by default.
 
-| Option                           | Behaviour                                                                                                              |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `--format`                       | `table` (default), `csv`, `ndjson`; with `-o` also `parquet`, `delta`.                                                 |
-| `-o PATH`                        | Write to a file instead of stdout; the format is inferred from the extension (`.csv`, `.ndjson`/`.jsonl`, `.parquet`). |
-| `--limit N`                      | Row cap for stdout table output (default 50).                                                                          |
-| `--overwrite`                    | Allow replacing an existing output path.                                                                               |
-| `--departition/--no-departition` | Write file output as a single file (default) or as a Spark directory of part files. No effect on Delta.                |
+| Option                           | Behaviour                                                                                                                     |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `--format`                       | `table` (default), `csv`, `ndjson`; with `-o` also `parquet`, `delta`.                                                        |
+| `-o PATH`                        | Write to a file instead of stdout; the format is inferred from the extension (`.csv`/`.tsv`, `.ndjson`/`.jsonl`, `.parquet`). |
+| `--limit N`                      | Row cap for stdout table output (default 50).                                                                                 |
+| `--overwrite`                    | Allow replacing an existing output path.                                                                                      |
+| `--departition/--no-departition` | Write file output as a single file (default) or as a Spark directory of part files. No effect on Delta.                       |
+| `--delimiter CHAR`               | Field separator for CSV input and output (default `,`). Accepts a backslash escape such as `\t` for a tab.                    |
+| `--header/--no-header`           | Include a header row in CSV output (default enabled).                                                                         |
 
 File output is produced by Spark's distributed writers, so results larger than
 driver memory can be written. By default the output is departitioned to a
@@ -81,6 +83,17 @@ directory of part files. Delta output is always written as a table directory.
 
 For scripted use, prefer `--format csv` or `--format ndjson`, which stream the
 full result.
+
+The `--delimiter` and `--header/--no-header` options apply to CSV output for
+`view`, `fhirpath`, and the terminology commands, and are ignored for non-CSV
+formats. The delimiter is also used to read CSV input in the terminology
+commands, so a tab-separated dataset round-trips in a single invocation:
+
+```bash
+pathling member-of codes.tsv --code-column code \
+  --system http://snomed.info/sct --value-set <uri> \
+  --delimiter '\t' --format csv
+```
 
 ## Commands
 
@@ -238,6 +251,18 @@ pathling translate codes.csv --code-column code \
 The default result column names (`member_of`, `translated_system` and
 `translated_code`, `subsumes`, `subsumed_by`, `display`, `property`,
 `designation`) can be overridden with `--result-column`.
+
+CSV input is read with the shared `--delimiter` (so a tab- or semicolon-separated
+dataset is read correctly); a `.tsv` file is read as CSV. Pass `--no-input-header`
+to read a headerless CSV; its
+columns are then addressable by the positional names Spark assigns (`_c0`, `_c1`,
+...), which you reference via `--code-column`, `--system-column`, and the other
+column options.
+
+```bash
+pathling member-of headerless.csv --no-input-header --code-column _c0 \
+  --system http://snomed.info/sct --value-set '<uri>'
+```
 
 #### Subsumption against a fixed target coding
 

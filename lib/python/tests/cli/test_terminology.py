@@ -26,6 +26,7 @@ Author: John Grimes.
 
 import csv
 import io
+import json
 
 from pytest import fixture
 
@@ -108,6 +109,247 @@ def test_coding_column_matches_library_schema(pathling_ctx):
     )
 
     assert cli_fields == library_fields
+
+
+# ========== CSV read delimiter (US1) ==========
+
+
+def test_read_dataset_parses_tab_separated(pathling_ctx, delimited_csv):
+    """_read_dataset parses a tab-separated CSV into the correct columns (T010)."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="tab.csv",
+    )
+
+    df = _read_dataset(pathling_ctx, str(path), delimiter="\t")
+
+    # Without the delimiter the tabbed line would collapse into one column.
+    assert df.columns == ["code", "system"]
+    assert df.collect()[0]["code"] == "368529001"
+
+
+def test_read_dataset_parses_semicolon_separated(pathling_ctx, delimited_csv):
+    """_read_dataset parses a semicolon-separated CSV into columns (T010)."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter=";",
+        name="semi.csv",
+    )
+
+    df = _read_dataset(pathling_ctx, str(path), delimiter=";")
+
+    assert df.columns == ["code", "system"]
+    assert df.collect()[0]["code"] == "368529001"
+
+
+def test_read_dataset_reads_tsv_extension(pathling_ctx, delimited_csv):
+    """_read_dataset reads a .tsv file as CSV with the supplied delimiter (T024)."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    df = _read_dataset(pathling_ctx, str(path), delimiter="\t")
+
+    assert df.columns == ["code", "system"]
+    assert df.collect()[0]["code"] == "368529001"
+
+
+def test_member_of_tsv_round_trip(runner, patched_context, delimited_csv, tmp_path):
+    """member-of round-trips a .tsv file to a .tsv output (quickstart P1)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED], ["439319006", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+    out = tmp_path / "out.tsv"
+
+    # No explicit --format: the output format is inferred from the .tsv extension.
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--delimiter",
+            "\\t",
+            "-o",
+            str(out),
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    assert rows[0] == ["code", "system", "member_of"]
+
+
+def test_member_of_tab_separated_round_trip(
+    runner, patched_context, delimited_csv, tmp_path
+):
+    """member-of round-trips a tab-separated dataset to stdout and a file (T011)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED], ["439319006", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes_tab.csv",
+    )
+    base = [
+        "member-of",
+        str(dataset),
+        "--code-column",
+        "code",
+        "--system",
+        SNOMED,
+        "--value-set",
+        VALUE_SET,
+        "--delimiter",
+        "\\t",
+    ]
+
+    # Stdout: the input parses correctly and the output is tab-separated.
+    result = runner.invoke(cli, base + ["--format", "csv"])
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(result.stdout), delimiter="\t"))
+    assert rows[0] == ["code", "system", "member_of"]
+    assert rows[1][2] == "True"
+
+    # File: the written file is tab-separated with the same columns.
+    out = tmp_path / "out.csv"
+    file_result = runner.invoke(cli, base + ["-o", str(out)])
+    assert file_result.exit_code == 0, file_result.stderr
+    file_rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    assert file_rows[0] == ["code", "system", "member_of"]
+
+
+# ========== Headerless CSV input (US3) ==========
+
+
+def test_read_dataset_headerless_uses_positional_columns(pathling_ctx, delimited_csv):
+    """_read_dataset treats the first line as data when input-header is off (T019)."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv([["368529001", SNOMED]], header=None, name="headerless.csv")
+
+    df = _read_dataset(pathling_ctx, str(path), input_header=False)
+
+    # Spark assigns positional column names when there is no header row.
+    assert df.columns == ["_c0", "_c1"]
+    assert df.collect()[0]["_c0"] == "368529001"
+
+
+def test_member_of_headerless_input(runner, patched_context, delimited_csv):
+    """member-of runs against a headerless dataset via --no-input-header (T020)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED], ["439319006", SNOMED]],
+        header=None,
+        name="headerless.csv",
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(dataset),
+            "--no-input-header",
+            "--code-column",
+            "_c0",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = _stdout_rows(result)
+    # The positional column names carry through to the output header.
+    assert rows[0] == ["_c0", "_c1", "member_of"]
+    assert rows[1][2] == "True"
+
+
+# ========== Non-CSV no-op (T023) ==========
+
+
+def test_output_options_ignored_for_ndjson(runner, patched_context, delimited_csv):
+    """--delimiter/--header are accepted but do not affect NDJSON output (T023).
+
+    The delimiter still applies to the CSV *input* read (here a semicolon file),
+    but the NDJSON output path never consults the delimiter or header, so the
+    result is unaffected JSON objects.
+    """
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter=";",
+        name="semi.csv",
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "ndjson",
+            "--delimiter",
+            ";",
+            "--no-header",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    line = result.stdout.splitlines()[0]
+    record = json.loads(line)
+    # The record keeps its keys and values; the header/delimiter had no effect.
+    assert record["code"] == "368529001"
+    assert "member_of" in record
+
+
+def test_output_options_ignored_for_table(runner, patched_context, codes_csv):
+    """--no-header does not suppress the table's header (T023)."""
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(codes_csv),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--no-header",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    # The table always carries its column names, regardless of --no-header.
+    assert "member_of" in result.stdout
 
 
 # ========== member-of ==========
