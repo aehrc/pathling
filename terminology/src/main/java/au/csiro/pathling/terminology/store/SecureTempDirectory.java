@@ -47,6 +47,11 @@ final class SecureTempDirectory {
    * @return the path of the newly created directory
    * @throws IOException if the directory cannot be created
    */
+  // The non-POSIX fallback creates the directory without explicit permission attributes. This is
+  // safe because it is only reached on non-POSIX file systems such as Windows, where the per-user
+  // temporary location already isolates the directory from other users; the POSIX path above
+  // restricts permissions atomically at creation.
+  @SuppressWarnings("java:S5443")
   @Nonnull
   static Path create(@Nonnull final String prefix) throws IOException {
     if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
