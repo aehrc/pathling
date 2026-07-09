@@ -54,7 +54,13 @@ def spark(pathling_ctx):
 
 
 def _spec(
-    path: Path, fmt: str, *, overwrite: bool = False, departition: bool = True
+    path: Path,
+    fmt: str,
+    *,
+    overwrite: bool = False,
+    departition: bool = True,
+    delimiter: str = ",",
+    header: bool = True,
 ) -> OutputSpec:
     """Builds an :class:`OutputSpec` for a file path and format.
 
@@ -62,10 +68,17 @@ def _spec(
     :param fmt: the output format.
     :param overwrite: whether an existing target may be replaced.
     :param departition: whether single-file departitioning is applied.
+    :param delimiter: the CSV field separator.
+    :param header: whether CSV output includes a header row.
     :return: the output specification.
     """
     return OutputSpec(
-        path=path, format=fmt, overwrite=overwrite, departition=departition
+        path=path,
+        format=fmt,
+        overwrite=overwrite,
+        departition=departition,
+        delimiter=delimiter,
+        header=header,
     )
 
 
@@ -111,6 +124,41 @@ def test_csv_yields_single_file_with_header(spark, tmp_path):
     assert rows[0] == ["id", "family"]
     # Compared as a set so the assertion does not depend on row ordering.
     assert {tuple(row) for row in rows[1:]} == {("1", "Smith"), ("2", "")}
+
+
+# ========== CSV delimiter on file output (T009) ==========
+
+
+def test_csv_file_written_with_supplied_delimiter(spark, tmp_path):
+    """A CSV file is written with the spec's delimiter via Spark's ``sep``."""
+    df = spark.createDataFrame(
+        [("1", "Smith"), ("2", "Jones")], "id string, family string"
+    )
+    out = tmp_path / "out.csv"
+
+    _write_file(df, _spec(out, OutputFormat.CSV, delimiter="\t"))
+
+    _assert_only_target(out, tmp_path)
+    # The file parses as tab-separated with the expected columns and data.
+    rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    assert rows[0] == ["id", "family"]
+    assert {tuple(row) for row in rows[1:]} == {("1", "Smith"), ("2", "Jones")}
+
+
+# ========== CSV output header control (T016) ==========
+
+
+def test_csv_file_omits_header_when_disabled(spark, tmp_path):
+    """A CSV file omits the header row when the spec disables it (T016)."""
+    df = spark.createDataFrame([("1", "Smith")], "id string, family string")
+    out = tmp_path / "out.csv"
+
+    _write_file(df, _spec(out, OutputFormat.CSV, header=False))
+
+    _assert_only_target(out, tmp_path)
+    rows = list(csv.reader(io.StringIO(out.read_text())))
+    # The only line is the data row; there is no header line.
+    assert rows == [["1", "Smith"]]
 
 
 # ========== NDJSON single-file output (T005) ==========

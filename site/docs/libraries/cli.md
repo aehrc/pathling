@@ -67,13 +67,15 @@ specify `--from`.
 Tabular results (from `view`, `fhirpath`, and the terminology commands) render
 as a human-readable table by default.
 
-| Option                           | Behaviour                                                                                                              |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `--format`                       | `table` (default), `csv`, `ndjson`; with `-o` also `parquet`, `delta`.                                                 |
-| `-o PATH`                        | Write to a file instead of stdout; the format is inferred from the extension (`.csv`, `.ndjson`/`.jsonl`, `.parquet`). |
-| `--limit N`                      | Row cap for stdout table output (default 50).                                                                          |
-| `--overwrite`                    | Allow replacing an existing output path.                                                                               |
-| `--departition/--no-departition` | Write file output as a single file (default) or as a Spark directory of part files. No effect on Delta.                |
+| Option                           | Behaviour                                                                                                                     |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `--format`                       | `table` (default), `csv`, `ndjson`; with `-o` also `parquet`, `delta`.                                                        |
+| `-o PATH`                        | Write to a file instead of stdout; the format is inferred from the extension (`.csv`/`.tsv`, `.ndjson`/`.jsonl`, `.parquet`). |
+| `--limit N`                      | Row cap for stdout table output (default 50).                                                                                 |
+| `--overwrite`                    | Allow replacing an existing output path.                                                                                      |
+| `--departition/--no-departition` | Write file output as a single file (default) or as a Spark directory of part files. No effect on Delta.                       |
+| `--delimiter CHAR`               | Field separator for CSV input and output (default `,`). Accepts a backslash escape such as `\t` for a tab.                    |
+| `--header/--no-header`           | Include a header row in CSV output (default enabled).                                                                         |
 
 File output is produced by Spark's distributed writers, so results larger than
 driver memory can be written. By default the output is departitioned to a
@@ -82,6 +84,17 @@ directory of part files. Delta output is always written as a table directory.
 
 For scripted use, prefer `--format csv` or `--format ndjson`, which stream the
 full result.
+
+The `--delimiter` and `--header/--no-header` options apply to CSV output for
+`view`, `fhirpath`, and the terminology commands, and are ignored for non-CSV
+formats. The delimiter is also used to read CSV input in the terminology
+commands, so a tab-separated dataset round-trips in a single invocation:
+
+```bash
+pathling member-of codes.tsv --code-column code \
+  --system http://snomed.info/sct --value-set <uri> \
+  --delimiter '\t' --format csv
+```
 
 ## Commands
 
@@ -164,6 +177,19 @@ two variables already in scope: `spark` (the Spark session) and `pathling`
 (the configured Pathling context), built with the same configuration
 resolution as every other command.
 
+The Pathling public functions are also pre-imported, so no
+`from pathling import ...` line is needed. This covers the terminology and
+coding functions (`to_coding`, `to_snomed_coding`, `to_loinc_coding`,
+`member_of`, `translate`, `subsumes`, and so on), the argument helper types
+(`Coding`, `PropertyType`, `Equivalence`), and the API types (`PathlingContext`,
+`DataSource`, and the rest). See the
+[Python API reference](https://pathling.csiro.au/docs/python/pathling.html) for
+the full list. The terminology
+display function is bound under both its natural name `display` and the alias
+`tx_display`. Any pre-imported name is only a default: assigning or defining the
+same name in your own code takes precedence, and an explicit
+`from pathling import ...` continues to work unchanged.
+
 ```bash
 # Run a script file.
 pathling run my_script.py
@@ -209,22 +235,28 @@ passes through unmodified.
 ### console
 
 Open an interactive [IPython](https://ipython.org/) console with the same
-`spark` and `pathling` variables in scope.
+`spark` and `pathling` variables in scope, and the Pathling public functions
+pre-imported just as in [`run`](#run).
 
 ```bash
 pathling console
 ```
 
 After the startup progress indicator, a banner identifies the Pathling
-version and the variables in scope. Errors evaluated at the prompt show
-normal tracebacks without ending the session; leave with `exit` or Ctrl-D
-(exit code 0).
+version, the variables in scope, and the pre-imported functions. Errors
+evaluated at the prompt show normal tracebacks without ending the session;
+leave with `exit` or Ctrl-D (exit code 0).
+
+The one difference from `run` is the terminology display function. IPython
+installs its own `display` at the prompt, so Pathling's terminology display is
+bound as `tx_display` only; `display` remains IPython's built-in. A snippet that
+uses `tx_display` therefore behaves the same in the console and in a script.
 
 ### Terminology commands
 
 The `member-of`, `translate`, `subsumes`, `subsumed-by`, `display`,
-`property-of`, and `designation` commands read a tabular dataset (CSV or
-Parquet), build codings from a `--code-column` plus either a fixed `--system`
+`property-of`, and `designation` commands read a tabular dataset (CSV, Parquet,
+or Delta), build codings from a `--code-column` plus either a fixed `--system`
 URI or a `--system-column`, and append the operation's result column(s).
 
 ```bash
@@ -236,9 +268,43 @@ pathling translate codes.csv --code-column code \
   --system http://snomed.info/sct --concept-map '<uri>'
 ```
 
+The input format is set with `--from csv|parquet|delta`. When omitted, it is
+auto-detected from the dataset path: files ending in `.csv` or `.parquet` are
+read as CSV or Parquet; a directory containing a `_delta_log` entry is read as
+Delta; and any other directory containing at least one `.parquet` file is read
+as Parquet. CSV inputs are read with a header row by default and all columns as
+strings. Passing `--from` bypasses detection, which is useful for Delta tables or CSV
+files with an unconventional extension. An input whose format cannot be
+determined - an unrecognised suffix, or a directory with neither a `_delta_log`
+entry nor `.parquet` files - is reported as a usage error before any Spark
+session starts. This also lets you read the CLI's own Parquet or Delta output
+directory straight back into another terminology command.
+
+```bash
+# Explicit Delta input.
+pathling display warehouse/codes --from delta \
+  --code-column code --system http://snomed.info/sct
+
+# Auto-detected Delta directory (contains _delta_log).
+pathling member-of warehouse/codes --code-column code \
+  --system http://snomed.info/sct \
+  --value-set 'http://snomed.info/sct?fhir_vs=refset/...'
+```
+
 The default result column names (`member_of`, `translated_system` and
 `translated_code`, `subsumes`, `subsumed_by`, `display`, `property`,
 `designation`) can be overridden with `--result-column`.
+
+CSV input is read with the shared `--delimiter` (so a tab- or semicolon-separated
+dataset is read correctly); a `.tsv` file is read as CSV. Pass `--no-input-header`
+to read a headerless CSV; its columns are then addressable by the positional names
+Spark assigns (`_c0`, `_c1`, ...), which you reference via `--code-column`,
+`--system-column`, and the other column options.
+
+```bash
+pathling member-of headerless.csv --no-input-header --code-column _c0 \
+  --system http://snomed.info/sct --value-set '<uri>'
+```
 
 #### Subsumption against a fixed target coding
 

@@ -17,10 +17,11 @@
 
 """The Pathling terminology commands.
 
-Each command reads a tabular dataset (CSV or Parquet), builds codings from a
-named code column plus either a fixed system URI or a per-row system column,
-calls the corresponding library terminology function, appends the result
-column(s), and emits the augmented dataset per the shared output options.
+Each command reads a tabular dataset (CSV, Parquet, or Delta), builds codings
+from a named code column plus either a fixed system URI or a per-row system
+column, calls the corresponding library terminology function, appends the
+result column(s), and emits the augmented dataset per the shared output
+options.
 
 Author: John Grimes.
 """
@@ -54,6 +55,19 @@ def _common_options(func):
     options = [
         click.argument("dataset"),
         click.option(
+            "--from",
+            "from_format",
+            type=click.Choice(("csv", "parquet", "delta")),
+            help="Input format (default: auto-detected from the dataset path).",
+        ),
+        click.option(
+            "--input-header/--no-input-header",
+            "input_header",
+            default=True,
+            show_default=True,
+            help="Treat the first line of a CSV input as a header (default: enabled).",
+        ),
+        click.option(
             "--code-column", "code_column", required=True, help="Code column name."
         ),
         click.option("--system", "system", help="Fixed code system URI."),
@@ -72,28 +86,74 @@ def _common_options(func):
     return func
 
 
-def _read_dataset(pc, dataset):
-    """Reads a CSV or Parquet dataset into a Spark DataFrame.
+def _detect_tabular_format(path):
+    """Detects the tabular format of a dataset from its name and layout.
 
-    :param pc: the Pathling context.
-    :param dataset: the path to the dataset file.
-    :return: the loaded DataFrame.
-    :raises CliError: when the path is missing or the type is unsupported.
+    Detection inspects only the path's suffix and, for directories, the names
+    of its immediate entries; it never reads file contents. A file ending in
+    ``.csv`` or ``.tsv`` (case-insensitive) resolves to ``csv``; a file ending
+    in ``.parquet`` resolves to ``parquet``. A directory containing a
+    ``_delta_log`` entry resolves to ``delta``; otherwise a directory containing
+    at least one ``.parquet`` file resolves to ``parquet``. Anything else is a
+    usage error suggesting ``--from``.
+
+    :param path: the dataset :class:`Path`, which is assumed to exist.
+    :return: one of ``csv``, ``parquet``, or ``delta``.
+    :raises CliError: with EXIT_USAGE when the format cannot be determined.
     """
-    path = Path(dataset)
-    if not path.exists():
+    if path.is_dir():
+        names = [entry.name for entry in path.iterdir()]
+        if "_delta_log" in names:
+            return "delta"
+        if any(name.lower().endswith(".parquet") for name in names):
+            return "parquet"
+        contents = ", ".join(sorted(names)) if names else "no entries"
         raise CliError(
-            f"Dataset does not exist: {path}. Check the path.", exit_code=EXIT_USAGE
+            f"Could not determine the format of directory {path} "
+            f"(found: {contents}); it has no _delta_log entry and no .parquet "
+            "files. Specify it with --from csv|parquet|delta.",
+            exit_code=EXIT_USAGE,
         )
     suffix = path.suffix.lower()
-    if suffix == ".csv":
-        return pc.spark.read.csv(str(path), header=True, inferSchema=False)
+    # A .tsv file is treated as CSV; the tab separator is supplied via --delimiter.
+    if suffix in (".csv", ".tsv"):
+        return "csv"
     if suffix == ".parquet":
-        return pc.spark.read.parquet(str(path))
+        return "parquet"
     raise CliError(
-        f"Unsupported dataset type '{suffix}'. Use a .csv or .parquet file.",
+        f"Could not determine the format of {path} from its suffix "
+        f"'{path.suffix}'. Specify it with --from csv|parquet|delta.",
         exit_code=EXIT_USAGE,
     )
+
+
+def _read_dataset(pc, dataset, from_format, delimiter=",", input_header=True):
+    """Reads a tabular dataset into a Spark DataFrame using a resolved format.
+
+    The format is resolved earlier, before the Spark session starts (see
+    :func:`_execute`), so this function only dispatches to the matching reader.
+    CSV is read with no schema inference; the delimiter and header options apply
+    to CSV inputs only, since Parquet and Delta carry their own schema. Parquet
+    and Delta accept both single-file and directory inputs.
+
+    :param pc: the Pathling context.
+    :param dataset: the path to the dataset file or directory.
+    :param from_format: the resolved format, one of ``csv``, ``parquet``, or
+           ``delta``.
+    :param delimiter: the CSV field separator; applied to ``csv`` inputs only.
+    :param input_header: whether the first line of a CSV input is a header row;
+           applied to ``csv`` inputs only. When False, Spark assigns positional
+           column names ``_c0``, ``_c1``, ... referenced via ``--code-column``.
+    :return: the loaded DataFrame.
+    """
+    path = str(dataset)
+    if from_format == "csv":
+        return pc.spark.read.csv(
+            path, header=input_header, inferSchema=False, sep=delimiter
+        )
+    if from_format == "parquet":
+        return pc.spark.read.parquet(path)
+    return pc.spark.read.format("delta").load(path)
 
 
 def _validate_columns(df, required, dataset):
@@ -205,6 +265,7 @@ def _validate_coding_source(dataset, system, system_column):
 def _execute(
     obj,
     dataset,
+    from_format,
     system,
     system_column,
     output_format,
@@ -212,12 +273,16 @@ def _execute(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     build,
 ):
     """Runs a terminology operation and emits the augmented dataset.
 
     :param obj: the CLI context object.
     :param dataset: the dataset path.
+    :param from_format: the explicit ``--from`` value, or None to auto-detect.
     :param system: a fixed system URI, or None.
     :param system_column: a per-row system column name, or None.
     :param output_format: the ``--format`` value, or None.
@@ -225,17 +290,27 @@ def _execute(
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
     :param departition: whether file output is departitioned to a single file.
+    :param delimiter: the CSV field separator for both the input read and the
+           output write.
+    :param header: whether CSV output includes a header row.
+    :param input_header: whether the first line of a CSV input is a header row.
     :param build: a callback ``(pc, df) -> result_df`` performing the operation.
     :raises CliError: for validation and unreachable-server failures.
     """
     config = obj.config
     console = obj.console
 
-    # Validate cheap inputs before paying the Spark cold start.
+    # Validate cheap inputs before paying the Spark cold start. Resolving the
+    # input format here means an unknown or undeterminable format fails fast,
+    # before the multi-second Spark cold start (FR-005). An explicit --from
+    # wins; otherwise the format is detected from the path (FR-002/FR-003).
     _validate_coding_source(dataset, system, system_column)
-    output_spec = resolve_output(output, output_format, limit, overwrite, departition)
+    resolved_format = from_format or _detect_tabular_format(Path(dataset))
+    output_spec = resolve_output(
+        output, output_format, limit, overwrite, departition, delimiter, header
+    )
     pc = session.create_context(config, console)
-    df = _read_dataset(pc, dataset)
+    df = _read_dataset(pc, dataset, resolved_format, delimiter, input_header)
 
     try:
         with progress_status(
@@ -268,6 +343,7 @@ def _execute(
 def member_of(
     obj,
     dataset,
+    from_format,
     code_column,
     system,
     system_column,
@@ -278,6 +354,9 @@ def member_of(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     value_set,
 ):
     """Test codes for membership of a value set.
@@ -299,6 +378,7 @@ def member_of(
     _execute(
         obj,
         dataset,
+        from_format,
         system,
         system_column,
         output_format,
@@ -306,6 +386,9 @@ def member_of(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 
@@ -324,6 +407,7 @@ def member_of(
 def translate(
     obj,
     dataset,
+    from_format,
     code_column,
     system,
     system_column,
@@ -334,6 +418,9 @@ def translate(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     concept_map,
     reverse,
     equivalences,
@@ -372,6 +459,7 @@ def translate(
     _execute(
         obj,
         dataset,
+        from_format,
         system,
         system_column,
         output_format,
@@ -379,6 +467,9 @@ def translate(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 
@@ -420,6 +511,7 @@ def _run_subsumption(
     operation,
     default_name,
     dataset,
+    from_format,
     code_column,
     system,
     system_column,
@@ -430,6 +522,9 @@ def _run_subsumption(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     other_code,
     other_code_column,
     other_system,
@@ -441,6 +536,7 @@ def _run_subsumption(
     :param operation: the udf attribute name (``subsumes`` or ``subsumed_by``).
     :param default_name: the default result column name.
     :param dataset: the dataset path.
+    :param from_format: the explicit ``--from`` value, or None to auto-detect.
     :param code_column: the left code column.
     :param system: the left fixed system URI, or None.
     :param system_column: the left per-row system column, or None.
@@ -450,6 +546,10 @@ def _run_subsumption(
     :param output: the output path, or None.
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
+    :param departition: whether file output is departitioned to a single file.
+    :param delimiter: the CSV field separator for the input read and output write.
+    :param header: whether CSV output includes a header row.
+    :param input_header: whether the first line of a CSV input is a header row.
     :param other_code: a fixed target code applied to every row, or None.
     :param other_code_column: the right code column, or None when a fixed target
            code is supplied.
@@ -500,6 +600,7 @@ def _run_subsumption(
     _execute(
         obj,
         dataset,
+        from_format,
         system,
         system_column,
         output_format,
@@ -507,6 +608,9 @@ def _run_subsumption(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 
@@ -518,6 +622,7 @@ def _run_subsumption(
 def subsumes(
     obj,
     dataset,
+    from_format,
     code_column,
     system,
     system_column,
@@ -528,6 +633,9 @@ def subsumes(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     other_code,
     other_code_column,
     other_system,
@@ -551,6 +659,7 @@ def subsumes(
         "subsumes",
         "subsumes",
         dataset,
+        from_format,
         code_column,
         system,
         system_column,
@@ -561,6 +670,9 @@ def subsumes(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         other_code,
         other_code_column,
         other_system,
@@ -575,6 +687,7 @@ def subsumes(
 def subsumed_by(
     obj,
     dataset,
+    from_format,
     code_column,
     system,
     system_column,
@@ -585,6 +698,9 @@ def subsumed_by(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     other_code,
     other_code_column,
     other_system,
@@ -608,6 +724,7 @@ def subsumed_by(
         "subsumed_by",
         "subsumed_by",
         dataset,
+        from_format,
         code_column,
         system,
         system_column,
@@ -618,6 +735,9 @@ def subsumed_by(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         other_code,
         other_code_column,
         other_system,
@@ -635,6 +755,7 @@ def subsumed_by(
 def display(
     obj,
     dataset,
+    from_format,
     code_column,
     system,
     system_column,
@@ -645,6 +766,9 @@ def display(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     accept_language,
 ):
     """Look up display names for codes.
@@ -665,6 +789,7 @@ def display(
     _execute(
         obj,
         dataset,
+        from_format,
         system,
         system_column,
         output_format,
@@ -672,6 +797,9 @@ def display(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 
@@ -694,6 +822,7 @@ def display(
 def property_of(
     obj,
     dataset,
+    from_format,
     code_column,
     system,
     system_column,
@@ -704,6 +833,9 @@ def property_of(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     property_code,
     property_type,
     accept_language,
@@ -730,6 +862,7 @@ def property_of(
     _execute(
         obj,
         dataset,
+        from_format,
         system,
         system_column,
         output_format,
@@ -737,6 +870,9 @@ def property_of(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 
@@ -752,6 +888,7 @@ def property_of(
 def designation(
     obj,
     dataset,
+    from_format,
     code_column,
     system,
     system_column,
@@ -762,6 +899,9 @@ def designation(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
+    input_header,
     use,
     language,
 ):
@@ -794,6 +934,7 @@ def designation(
     _execute(
         obj,
         dataset,
+        from_format,
         system,
         system_column,
         output_format,
@@ -801,6 +942,9 @@ def designation(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
+        input_header,
         build,
     )
 

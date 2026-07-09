@@ -331,3 +331,81 @@ def test_missing_script_is_usage_error_without_session(
 
     assert result.exit_code == 2
     assert "missing.py" in result.stderr
+
+
+# ========== Pre-imported Pathling functions (US1) ==========
+
+
+def test_public_functions_available_without_import(runner, patched_context, tmp_path):
+    """A script uses public functions and types with no import (FR-001)."""
+    script = _write_script(
+        tmp_path,
+        "print(callable(to_snomed_coding))\n"
+        "print(callable(member_of))\n"
+        "print(Coding.__name__)\n",
+    )
+
+    result = runner.invoke(cli, ["run", script])
+
+    assert result.exit_code == 0, result.stderr
+    lines = result.stdout.splitlines()
+    assert lines[0] == "True"
+    assert lines[1] == "True"
+    assert lines[2] == "Coding"
+
+
+def test_inline_and_stdin_resolve_public_function(runner, patched_context):
+    """Inline -c and piped stdin programs resolve a public name with no import."""
+    inline = runner.invoke(cli, ["run", "-c", "print(callable(translate))"])
+    piped = runner.invoke(cli, ["run", "-"], input="print(callable(subsumes))\n")
+
+    assert inline.exit_code == 0, inline.stderr
+    assert inline.stdout.splitlines()[0] == "True"
+    assert piped.exit_code == 0, piped.stderr
+    assert piped.stdout.splitlines()[0] == "True"
+
+
+def test_display_and_tx_display_are_the_same_object(runner, patched_context):
+    """In run, display and tx_display are the same terminology function (FR-004)."""
+    result = runner.invoke(cli, ["run", "-c", "print(display is tx_display)"])
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "True"
+
+
+def test_user_code_overrides_injected_name(runner, patched_context):
+    """A user definition of an injected name takes precedence (FR-006)."""
+    result = runner.invoke(
+        cli, ["run", "-c", "translate = lambda x: 'mine'\nprint(translate('x'))"]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "mine"
+
+
+def test_explicit_import_still_works(runner, patched_context):
+    """An explicit from-import continues to work unchanged (FR-007)."""
+    result = runner.invoke(
+        cli,
+        ["run", "-c", "from pathling import member_of\nprint(callable(member_of))"],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "True"
+
+
+def test_every_public_name_is_in_program_globals(runner, patched_context):
+    """Every name in pathling.__all__ is bound in the program globals (INV-1)."""
+    # dir() is captured before `import pathling` rebinds the injected name, so
+    # the expectation is derived from __all__ rather than a hard-coded list.
+    program = (
+        "names = set(dir())\n"
+        "import pathling\n"
+        "missing = [n for n in pathling.__all__ if n not in names]\n"
+        "print(missing)\n"
+    )
+
+    result = runner.invoke(cli, ["run", "-c", program])
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "[]"

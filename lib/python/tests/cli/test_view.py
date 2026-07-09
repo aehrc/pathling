@@ -84,6 +84,36 @@ def test_view_csv(runner, patched_context, ndjson_source, view_file):
     assert len(rows) == PATIENT_COUNT + 1
 
 
+def test_view_accepts_delimiter_and_header_options(
+    runner, patched_context, ndjson_source, view_file
+):
+    """view inherits --delimiter/--header from the shared output options and runs.
+
+    Adding the two options to the shared ``output_options`` decorator would break
+    every command that applies it unless each accepts and forwards them; this
+    guards ``view`` against that regression (T007).
+    """
+    result = runner.invoke(
+        cli,
+        [
+            "view",
+            ndjson_source,
+            "--view",
+            str(view_file),
+            "--format",
+            "csv",
+            "--delimiter",
+            ";",
+            "--no-header",
+        ],
+    )
+
+    # The command must accept the shared options and still produce its result;
+    # the delimiter/header behaviour itself is covered by the render tests.
+    assert result.exit_code == 0, result.stderr
+    assert FIRST_FAMILY in result.stdout
+
+
 def test_view_format_json_rejected(runner, patched_context, ndjson_source, view_file):
     """The removed json format is rejected as an invalid --format choice."""
     result = runner.invoke(

@@ -19,9 +19,13 @@
 
 Executes user-supplied Python code - from a script file, standard input, or an
 inline ``-c`` option - with ``spark`` (the Spark session) and ``pathling`` (the
-configured Pathling context) bound in the code's global scope, reproducing
-Python interpreter script semantics (``sys.argv``, ``__main__``, ``__file__``,
-``sys.path``, traceback fidelity, and ``SystemExit`` propagation).
+configured Pathling context) bound in the code's global scope, along with the
+Pathling package's public API (its terminology and coding functions, argument
+helper types, and API types) so scripts need no explicit ``from pathling import
+...``. The terminology display function is bound as both ``display`` and
+``tx_display``. Python interpreter script semantics (``sys.argv``, ``__main__``,
+``__file__``, ``sys.path``, traceback fidelity, and ``SystemExit`` propagation)
+are reproduced.
 
 Author: John Grimes.
 """
@@ -233,9 +237,12 @@ def run(ctx, script, code, args):
     """Run Python code with the Pathling environment ready.
 
     Executes a script file (or '-' for standard input, or inline code via
-    -c) with two variables already in scope: spark (the Spark session) and
-    pathling (the configured Pathling context). Trailing arguments are
-    passed to the code as sys.argv, following Python interpreter
+    -c) with spark (the Spark session) and pathling (the configured Pathling
+    context) already in scope. The Pathling public functions (to_coding,
+    to_snomed_coding, member_of, translate, subsumes, display, and so on) are
+    pre-imported too, so no "from pathling import ..." is needed; the
+    terminology display is available as both display and tx_display. Trailing
+    arguments are passed to the code as sys.argv, following Python interpreter
     conventions.
 
     \b
@@ -258,6 +265,14 @@ def run(ctx, script, code, args):
 
     obj = ctx.obj
     pc = session.create_context(obj.config, obj.console)
-    namespace = {"spark": pc.spark, "pathling": pc}
+    # Pre-import the whole public API surface so scripts need no explicit
+    # `from pathling import ...`. The terminology display is bound under its
+    # natural name `display` and also aliased as `tx_display`, so a snippet
+    # developed at the console (where `display` is IPython's built-in and the
+    # terminology display is `tx_display`) pastes into a script unchanged.
+    namespace = session.public_namespace()
+    namespace["tx_display"] = namespace["display"]
+    namespace["spark"] = pc.spark
+    namespace["pathling"] = pc
 
     _execute(source, program_args, namespace)

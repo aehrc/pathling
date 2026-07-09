@@ -29,11 +29,13 @@ import os
 import tempfile
 from pathlib import Path
 
+import pathling
 import pathling.context as context_module
 from pathling.cli.config import CliConfig, TxAuth, TxStore
 from pathling.cli.session import (
     _build_quiet_spark,
     _create_pathling_context,
+    public_namespace,
     quiet_log4j2_path,
 )
 
@@ -273,3 +275,64 @@ def test_remote_mode_passes_existing_parameters_unchanged(monkeypatch):
     assert captured["client_id"] == "c"
     # Local-mode parameters are absent in remote mode.
     assert "terminology_mode" not in captured or captured["terminology_mode"] != "local"
+
+
+# ========== Public namespace helper ==========
+
+
+def test_public_namespace_keys_equal_all():
+    """The helper's keys are exactly the package's public API list (FR-003)."""
+    namespace = public_namespace()
+
+    assert set(namespace) == set(pathling.__all__)
+
+
+def test_public_namespace_values_are_the_resolved_objects():
+    """Each key maps to the object resolved from the package (INV-5)."""
+    namespace = public_namespace()
+
+    # A representative function, argument type, and API type all resolve to the
+    # same objects the package exports.
+    assert namespace["member_of"] is pathling.member_of
+    assert namespace["Coding"] is pathling.Coding
+    assert namespace["PathlingContext"] is pathling.PathlingContext
+
+
+def test_public_namespace_covers_every_public_name():
+    """Every name in __all__ resolves to its package attribute (INV-5)."""
+    namespace = public_namespace()
+
+    for name in pathling.__all__:
+        assert namespace[name] is getattr(pathling, name)
+
+
+# ========== Namespace sync invariant (INV-5) ==========
+
+
+def test_run_namespace_is_superset_of_public_api():
+    """The run namespace is derived from __all__ plus the run-only extras (INV-1)."""
+    expected = set(pathling.__all__) | {"spark", "pathling", "tx_display"}
+
+    namespace = dict(public_namespace())
+    namespace["tx_display"] = namespace["display"]
+    namespace["spark"] = object()
+    namespace["pathling"] = object()
+
+    assert set(namespace) >= expected
+
+
+def test_console_namespace_equals_public_api_minus_display():
+    """The console namespace is __all__ minus display plus the console extras
+    (INV-2)."""
+    expected = (set(pathling.__all__) - {"display"}) | {
+        "spark",
+        "pathling",
+        "tx_display",
+    }
+
+    namespace = dict(public_namespace())
+    namespace["tx_display"] = namespace.pop("display")
+    namespace["spark"] = object()
+    namespace["pathling"] = object()
+
+    assert set(namespace) == expected
