@@ -110,6 +110,82 @@ def test_coding_column_matches_library_schema(pathling_ctx):
     assert cli_fields == library_fields
 
 
+# ========== CSV read delimiter (US1) ==========
+
+
+def test_read_dataset_parses_tab_separated(pathling_ctx, delimited_csv):
+    """_read_dataset parses a tab-separated CSV into the correct columns (T010)."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="tab.csv",
+    )
+
+    df = _read_dataset(pathling_ctx, str(path), delimiter="\t")
+
+    # Without the delimiter the tabbed line would collapse into one column.
+    assert df.columns == ["code", "system"]
+    assert df.collect()[0]["code"] == "368529001"
+
+
+def test_read_dataset_parses_semicolon_separated(pathling_ctx, delimited_csv):
+    """_read_dataset parses a semicolon-separated CSV into columns (T010)."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter=";",
+        name="semi.csv",
+    )
+
+    df = _read_dataset(pathling_ctx, str(path), delimiter=";")
+
+    assert df.columns == ["code", "system"]
+    assert df.collect()[0]["code"] == "368529001"
+
+
+def test_member_of_tab_separated_round_trip(
+    runner, patched_context, delimited_csv, tmp_path
+):
+    """member-of round-trips a tab-separated dataset to stdout and a file (T011)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED], ["439319006", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes_tab.csv",
+    )
+    base = [
+        "member-of",
+        str(dataset),
+        "--code-column",
+        "code",
+        "--system",
+        SNOMED,
+        "--value-set",
+        VALUE_SET,
+        "--delimiter",
+        "\\t",
+    ]
+
+    # Stdout: the input parses correctly and the output is tab-separated.
+    result = runner.invoke(cli, base + ["--format", "csv"])
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(result.stdout), delimiter="\t"))
+    assert rows[0] == ["code", "system", "member_of"]
+    assert rows[1][2] == "True"
+
+    # File: the written file is tab-separated with the same columns.
+    out = tmp_path / "out.csv"
+    file_result = runner.invoke(cli, base + ["-o", str(out)])
+    assert file_result.exit_code == 0, file_result.stderr
+    file_rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    assert file_rows[0] == ["code", "system", "member_of"]
+
+
 # ========== member-of ==========
 
 

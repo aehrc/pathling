@@ -87,6 +87,22 @@ def test_csv_has_header_and_rows():
     assert parsed[2] == ["2", ""]
 
 
+def test_render_csv_uses_supplied_delimiter():
+    """render_csv separates fields with a supplied delimiter (T008)."""
+    output = render_csv(COLUMNS, ROWS, delimiter="\t")
+
+    parsed = list(csv.reader(io.StringIO(output), delimiter="\t"))
+    assert parsed[0] == COLUMNS
+    assert parsed[1] == ["1", "Smith"]
+
+
+def test_render_csv_semicolon_delimiter():
+    """render_csv honours a semicolon delimiter (T008)."""
+    output = render_csv(COLUMNS, ROWS, delimiter=";")
+
+    assert output.splitlines()[0] == "id;family"
+
+
 # ========== Delimiter decoding and validation (T002) ==========
 
 

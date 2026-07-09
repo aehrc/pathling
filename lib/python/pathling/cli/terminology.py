@@ -72,11 +72,13 @@ def _common_options(func):
     return func
 
 
-def _read_dataset(pc, dataset):
+def _read_dataset(pc, dataset, delimiter=","):
     """Reads a CSV or Parquet dataset into a Spark DataFrame.
 
     :param pc: the Pathling context.
     :param dataset: the path to the dataset file.
+    :param delimiter: the CSV field separator; applied to ``.csv`` inputs only
+           (Parquet carries its own schema).
     :return: the loaded DataFrame.
     :raises CliError: when the path is missing or the type is unsupported.
     """
@@ -87,7 +89,9 @@ def _read_dataset(pc, dataset):
         )
     suffix = path.suffix.lower()
     if suffix == ".csv":
-        return pc.spark.read.csv(str(path), header=True, inferSchema=False)
+        return pc.spark.read.csv(
+            str(path), header=True, inferSchema=False, sep=delimiter
+        )
     if suffix == ".parquet":
         return pc.spark.read.parquet(str(path))
     raise CliError(
@@ -242,7 +246,7 @@ def _execute(
         output, output_format, limit, overwrite, departition, delimiter, header
     )
     pc = session.create_context(config, console)
-    df = _read_dataset(pc, dataset)
+    df = _read_dataset(pc, dataset, delimiter)
 
     try:
         with progress_status(
