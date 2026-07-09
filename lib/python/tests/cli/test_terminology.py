@@ -186,6 +186,54 @@ def test_member_of_tab_separated_round_trip(
     assert file_rows[0] == ["code", "system", "member_of"]
 
 
+# ========== Headerless CSV input (US3) ==========
+
+
+def test_read_dataset_headerless_uses_positional_columns(pathling_ctx, delimited_csv):
+    """_read_dataset treats the first line as data when input-header is off (T019)."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv([["368529001", SNOMED]], header=None, name="headerless.csv")
+
+    df = _read_dataset(pathling_ctx, str(path), input_header=False)
+
+    # Spark assigns positional column names when there is no header row.
+    assert df.columns == ["_c0", "_c1"]
+    assert df.collect()[0]["_c0"] == "368529001"
+
+
+def test_member_of_headerless_input(runner, patched_context, delimited_csv):
+    """member-of runs against a headerless dataset via --no-input-header (T020)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED], ["439319006", SNOMED]],
+        header=None,
+        name="headerless.csv",
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(dataset),
+            "--no-input-header",
+            "--code-column",
+            "_c0",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = _stdout_rows(result)
+    # The positional column names carry through to the output header.
+    assert rows[0] == ["_c0", "_c1", "member_of"]
+    assert rows[1][2] == "True"
+
+
 # ========== member-of ==========
 
 
