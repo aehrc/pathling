@@ -207,7 +207,7 @@ def test_detect_unrecognised_file_suffix_raises(tmp_path):
     assert "--from csv|parquet|delta" in str(info.value)
 
 
-def test_detect_empty_directory_raises(tmp_path):
+def test_detect_unrecognisable_directory_raises(tmp_path):
     """An unrecognisable directory is a usage error naming the path and contents."""
     from pathling.cli.errors import EXIT_USAGE, CliError
     from pathling.cli.terminology import _detect_tabular_format
