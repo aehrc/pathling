@@ -212,6 +212,8 @@ def _execute(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
     build,
 ):
     """Runs a terminology operation and emits the augmented dataset.
@@ -225,6 +227,9 @@ def _execute(
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
     :param departition: whether file output is departitioned to a single file.
+    :param delimiter: the CSV field separator for both the input read and the
+           output write.
+    :param header: whether CSV output includes a header row.
     :param build: a callback ``(pc, df) -> result_df`` performing the operation.
     :raises CliError: for validation and unreachable-server failures.
     """
@@ -233,7 +238,9 @@ def _execute(
 
     # Validate cheap inputs before paying the Spark cold start.
     _validate_coding_source(dataset, system, system_column)
-    output_spec = resolve_output(output, output_format, limit, overwrite, departition)
+    output_spec = resolve_output(
+        output, output_format, limit, overwrite, departition, delimiter, header
+    )
     pc = session.create_context(config, console)
     df = _read_dataset(pc, dataset)
 
@@ -275,6 +282,8 @@ def member_of(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
     value_set,
 ):
     """Test codes for membership of a value set.
@@ -303,6 +312,8 @@ def member_of(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
         build,
     )
 
@@ -331,6 +342,8 @@ def translate(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
     concept_map,
     reverse,
     equivalences,
@@ -376,6 +389,8 @@ def translate(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
         build,
     )
 
@@ -427,6 +442,8 @@ def _run_subsumption(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
     other_code,
     other_code_column,
     other_system,
@@ -447,6 +464,9 @@ def _run_subsumption(
     :param output: the output path, or None.
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
+    :param departition: whether file output is departitioned to a single file.
+    :param delimiter: the CSV field separator for the input read and output write.
+    :param header: whether CSV output includes a header row.
     :param other_code: a fixed target code applied to every row, or None.
     :param other_code_column: the right code column, or None when a fixed target
            code is supplied.
@@ -504,6 +524,8 @@ def _run_subsumption(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
         build,
     )
 
@@ -525,6 +547,8 @@ def subsumes(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
     other_code,
     other_code_column,
     other_system,
@@ -558,6 +582,8 @@ def subsumes(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
         other_code,
         other_code_column,
         other_system,
@@ -582,6 +608,8 @@ def subsumed_by(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
     other_code,
     other_code_column,
     other_system,
@@ -615,6 +643,8 @@ def subsumed_by(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
         other_code,
         other_code_column,
         other_system,
@@ -642,6 +672,8 @@ def display(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
     accept_language,
 ):
     """Look up display names for codes.
@@ -669,6 +701,8 @@ def display(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
         build,
     )
 
@@ -701,6 +735,8 @@ def property_of(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
     property_code,
     property_type,
     accept_language,
@@ -734,6 +770,8 @@ def property_of(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
         build,
     )
 
@@ -759,6 +797,8 @@ def designation(
     limit,
     overwrite,
     departition,
+    delimiter,
+    header,
     use,
     language,
 ):
@@ -798,6 +838,8 @@ def designation(
         limit,
         overwrite,
         departition,
+        delimiter,
+        header,
         build,
     )
 

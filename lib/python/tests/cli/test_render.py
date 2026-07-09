@@ -26,12 +26,14 @@ import csv
 import io
 import json
 
+import click
 import pytest
 
 from pathling.cli.errors import CliError
 from pathling.cli.render import (
     OutputFormat,
     check_overwrite,
+    decode_delimiter,
     infer_format_from_extension,
     output_options,
     render_csv,
@@ -83,6 +85,55 @@ def test_csv_has_header_and_rows():
     assert parsed[1] == ["1", "Smith"]
     # None is rendered as an empty field.
     assert parsed[2] == ["2", ""]
+
+
+# ========== Delimiter decoding and validation (T002) ==========
+
+
+def test_decode_delimiter_defaults_and_passes_single_chars():
+    """A comma default and single characters decode to themselves."""
+    assert decode_delimiter(",") == ","
+    assert decode_delimiter(";") == ";"
+    assert decode_delimiter("|") == "|"
+
+
+def test_decode_delimiter_decodes_escape_sequences():
+    """A backslash escape such as ``\\t`` decodes to its single character."""
+    # The command-line value is the two characters backslash-t.
+    assert decode_delimiter("\\t") == "\t"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "ab",  # more than one character after decoding
+        "",  # empty
+        "\\",  # a lone trailing backslash cannot be escape-decoded
+        "\\n",  # a line feed would collide with CSV row terminators
+        "\\r",  # a carriage return would collide with CSV row terminators
+    ],
+)
+def test_decode_delimiter_rejects_invalid(value):
+    """Multi-character, empty, undecodable, and line-terminator values are rejected."""
+    with pytest.raises(click.BadParameter):
+        decode_delimiter(value)
+
+
+def test_delimiter_callback_rejects_before_spark_via_usage_error():
+    """An invalid --delimiter is a usage error (exit code 2) at parse time."""
+    from click.testing import CliRunner
+
+    @click.command()
+    @output_options
+    def cmd(**kwargs):
+        pass
+
+    result = CliRunner().invoke(cmd, ["--delimiter", "ab", "--format", "csv"])
+
+    # Click renders a BadParameter as a usage error with a non-zero exit code,
+    # so validation happens before any command body (and any Spark) runs.
+    assert result.exit_code == 2
+    assert "delimiter" in result.output.lower()
 
 
 # ========== NDJSON ==========
@@ -220,6 +271,41 @@ def test_departition_flag_appears_in_command_help():
     result = CliRunner().invoke(cmd, ["--help"])
 
     assert "--no-departition" in result.output
+
+
+# ========== Delimiter and header resolution (T005) ==========
+
+
+def test_resolve_output_delimiter_and_header_default():
+    """By default the resolved spec carries a comma delimiter and a header."""
+    spec = resolve_output("out.csv", None)
+
+    assert spec.delimiter == ","
+    assert spec.header is True
+
+
+def test_resolve_output_carries_delimiter_and_header():
+    """resolve_output records the supplied delimiter and header on the spec."""
+    spec = resolve_output("out.csv", None, delimiter="\t", header=False)
+
+    assert spec.delimiter == "\t"
+    assert spec.header is False
+
+
+def test_delimiter_and_header_flags_appear_in_command_help():
+    """The new output options are offered in command help."""
+    import click
+    from click.testing import CliRunner
+
+    @click.command()
+    @output_options
+    def cmd(**kwargs):
+        pass
+
+    result = CliRunner().invoke(cmd, ["--help"])
+
+    assert "--delimiter" in result.output
+    assert "--no-header" in result.output
 
 
 # ========== Overwrite handling ==========

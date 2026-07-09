@@ -27,6 +27,7 @@ piped output stays clean.
 Author: John Grimes.
 """
 
+import codecs
 import csv
 import io
 import json
@@ -82,13 +83,68 @@ OUTPUT_FORMAT_CHOICE = click.Choice(
 )
 
 
+def decode_delimiter(value: str) -> str:
+    """Decodes and validates a CSV field separator supplied on the command line.
+
+    The raw value is escape-decoded so a tab can be supplied as ``\\t`` rather
+    than a literal tab, then validated to be exactly one character that is not a
+    CSV row terminator. Validation runs at option-parse time (before any Spark
+    session starts) by raising :class:`click.BadParameter`, which Click renders
+    as a usage error with a non-zero exit code.
+
+    :param value: the raw ``--delimiter`` value.
+    :return: the decoded single-character delimiter.
+    :raises click.BadParameter: when the value cannot be escape-decoded, is not
+            exactly one character (including empty), or decodes to a carriage
+            return or line feed.
+    :example:
+        >>> decode_delimiter("\\t")
+        '\\t'
+        >>> decode_delimiter(";")
+        ';'
+    """
+    try:
+        decoded = codecs.decode(value, "unicode_escape")
+    except UnicodeDecodeError as exc:
+        raise click.BadParameter(
+            f"could not decode {value!r}. Provide a single character, "
+            "optionally as a backslash escape such as '\\t'."
+        ) from exc
+    if len(decoded) != 1:
+        raise click.BadParameter(
+            f"must be a single character, but {value!r} is "
+            f"{'empty' if decoded == '' else f'{len(decoded)} characters'}."
+        )
+    if decoded in ("\r", "\n"):
+        raise click.BadParameter(
+            "must not be a carriage return or line feed, which would collide "
+            "with CSV row terminators."
+        )
+    return decoded
+
+
+def _delimiter_callback(ctx, param, value: str) -> str:
+    """Click callback that decodes and validates the ``--delimiter`` value.
+
+    :param ctx: the Click context (unused).
+    :param param: the Click parameter (unused).
+    :param value: the raw option value.
+    :return: the decoded single-character delimiter.
+    :raises click.BadParameter: when the value is invalid (see
+            :func:`decode_delimiter`).
+    """
+    return decode_delimiter(value)
+
+
 def output_options(func):
     """Applies the shared output options to a command callback.
 
     These options form the common output surface of every command that emits a
     result DataFrame - ``--format``, ``-o``/``--output``, ``--limit``,
-    ``--overwrite``, and ``--departition/--no-departition`` - and are resolved
-    together by :func:`resolve_output` and consumed by :func:`write_output`.
+    ``--overwrite``, ``--departition/--no-departition``, ``--delimiter``, and
+    ``--header/--no-header`` - and are resolved together by
+    :func:`resolve_output` and consumed by :func:`write_output`. The delimiter
+    and header apply to CSV output only and are no-ops for other formats.
 
     :param func: the command callback to decorate.
     :return: the decorated callback.
@@ -118,6 +174,20 @@ def output_options(func):
             help="Write file output as a single file (or a Spark directory of "
             "part files).",
         ),
+        click.option(
+            "--delimiter",
+            "delimiter",
+            default=",",
+            callback=_delimiter_callback,
+            help="Field separator for CSV input and output (default: ',').",
+        ),
+        click.option(
+            "--header/--no-header",
+            "header",
+            default=True,
+            show_default=True,
+            help="Include a header row in CSV output (default: enabled).",
+        ),
     ]
     for option in reversed(options):
         func = option(func)
@@ -143,6 +213,10 @@ class OutputSpec:
     :param overwrite: whether an existing output path may be replaced.
     :param departition: whether file output is departitioned to a single file
            (the default) rather than left as a Spark directory of part files.
+    :param delimiter: the field separator for CSV output (stdout and file);
+           applies to CSV only, a no-op for other formats.
+    :param header: whether CSV output includes a header row; applies to CSV
+           only, a no-op for other formats.
     """
 
     path: Optional[Path]
@@ -150,6 +224,8 @@ class OutputSpec:
     limit: int = DEFAULT_LIMIT
     overwrite: bool = False
     departition: bool = True
+    delimiter: str = ","
+    header: bool = True
 
 
 def infer_format_from_extension(path: Path) -> Optional[str]:
@@ -167,6 +243,8 @@ def resolve_output(
     limit: int = DEFAULT_LIMIT,
     overwrite: bool = False,
     departition: bool = True,
+    delimiter: str = ",",
+    header: bool = True,
 ) -> OutputSpec:
     """Resolves and validates output options.
 
@@ -175,6 +253,10 @@ def resolve_output(
     :param limit: the stdout table row cap.
     :param overwrite: whether replacing an existing output path is allowed.
     :param departition: whether file output is departitioned to a single file.
+    :param delimiter: the CSV field separator, already decoded and validated by
+           the option callback; a no-op for non-CSV formats.
+    :param header: whether CSV output includes a header row; a no-op for non-CSV
+           formats.
     :return: the resolved :class:`OutputSpec`.
     :raises CliError: when the combination of options is invalid.
     """
@@ -220,6 +302,8 @@ def resolve_output(
         limit=limit,
         overwrite=overwrite,
         departition=departition,
+        delimiter=delimiter,
+        header=header,
     )
 
 
