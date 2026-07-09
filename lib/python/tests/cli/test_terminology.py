@@ -914,6 +914,154 @@ def test_bracketed_runtime_error_renders_safely(
     assert "[ANALYSIS_ERROR]" in result.stderr
 
 
+# ========== --from input format: explicit (US1) ==========
+
+
+def test_from_delta_reads_delta_table(runner, patched_context, tmp_path):
+    """display --from delta reads a Delta table directory (acceptance 1)."""
+    table = _write_delta(
+        patched_context.spark, tmp_path / "codes", ["code"], [["55915-3"]]
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "display",
+            str(table),
+            "--from",
+            "delta",
+            "--code-column",
+            "code",
+            "--system",
+            LOINC,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert "Beta 2 globulin" in result.stdout
+
+
+def test_from_parquet_reads_parquet_directory(runner, patched_context, tmp_path):
+    """member-of --from parquet reads a Parquet directory (acceptance 2)."""
+    data = _write_parquet(
+        patched_context.spark,
+        tmp_path / "codes",
+        ["code", "system"],
+        [["368529001", SNOMED]],
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(data),
+            "--from",
+            "parquet",
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[1][2] == "True"
+
+
+def test_from_csv_reads_arbitrary_extension(runner, patched_context, tmp_path):
+    """translate --from csv reads a CSV file with an arbitrary extension
+    (acceptance 3)."""
+    dataset = _write_csv(tmp_path / "codes.txt", ["code"], [["368529001"]])
+
+    result = runner.invoke(
+        cli,
+        [
+            "translate",
+            str(dataset),
+            "--from",
+            "csv",
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--concept-map",
+            CONCEPT_MAP,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert any("368529002" in row for row in _stdout_rows(result)[1:])
+
+
+def test_from_invalid_choice_is_usage_error(runner, monkeypatch, codes_csv):
+    """--from with an out-of-range value fails before Spark, listing the choices
+    (acceptance 4)."""
+
+    def spy(config, console=None):
+        raise AssertionError("context must not be created on a usage error")
+
+    monkeypatch.setattr("pathling.cli.session.create_context", spy)
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(codes_csv),
+            "--from",
+            "bogus",
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+        ],
+    )
+
+    assert result.exit_code == 2
+    # The Click choice error lists the three valid formats.
+    assert "csv" in result.stderr
+    assert "parquet" in result.stderr
+    assert "delta" in result.stderr
+
+
+def test_from_csv_missing_path_is_usage_error(runner, monkeypatch, tmp_path):
+    """--from with a missing path fails before Spark with the existing error
+    (acceptance 5)."""
+
+    def spy(config, console=None):
+        raise AssertionError("context must not be created on a usage error")
+
+    monkeypatch.setattr("pathling.cli.session.create_context", spy)
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(tmp_path / "nope.csv"),
+            "--from",
+            "csv",
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "does not exist" in result.stderr.lower()
+
+
 # ========== Config precedence wiring ==========
 
 
