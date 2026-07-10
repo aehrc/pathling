@@ -148,7 +148,7 @@ class MyApp {
 Results in:
 
 | CODE      | DESCRIPTION               | VIRAL_INFECTION |
-|-----------|---------------------------|-----------------|
+| --------- | ------------------------- | --------------- |
 | 65363002  | Otitis media              | false           |
 | 16114001  | Fracture of ankle         | false           |
 | 444814009 | Viral sinusitis           | true            |
@@ -282,7 +282,7 @@ class MyApp {
 Results in:
 
 | CODE      | DESCRIPTION               | READ_CODE |
-|-----------|---------------------------|-----------|
+| --------- | ------------------------- | --------- |
 | 65363002  | Otitis media              | X00ik     |
 | 16114001  | Fracture of ankle         | S34..     |
 | 444814009 | Viral sinusitis           | XUjp0     |
@@ -419,7 +419,7 @@ class MyApp {
 Results in:
 
 | CODE      | DESCRIPTION       | IS_ENT |
-|-----------|-------------------|--------|
+| --------- | ----------------- | ------ |
 | 65363002  | Otitis media      | true   |
 | 16114001  | Fracture of ankle | false  |
 | 444814009 | Viral sinusitis   | true   |
@@ -556,7 +556,7 @@ class MyApp {
 Results in:
 
 | CODE      | DESCRIPTION       | PARENT    | PARENT_DISPLAY                          |
-|-----------|-------------------|-----------|-----------------------------------------|
+| --------- | ----------------- | --------- | --------------------------------------- |
 | 65363002  | Otitis media      | 43275000  | Otitis                                  |
 | 65363002  | Otitis media      | 68996008  | Disorder of middle ear                  |
 | 16114001  | Fracture of ankle | 125603006 | Injury of ankle                         |
@@ -686,7 +686,7 @@ class MyApp {
 Results in:
 
 | CODE      | DESCRIPTION                          | SYNONYM                                    |
-|-----------|--------------------------------------|--------------------------------------------|
+| --------- | ------------------------------------ | ------------------------------------------ |
 | 65363002  | Otitis media                         | OM - Otitis media                          |
 | 16114001  | Fracture of ankle                    | Ankle fracture                             |
 | 16114001  | Fracture of ankle                    | Fracture of distal end of tibia and fibula |
@@ -713,7 +713,6 @@ The default value for the header can be configured during the creation of
 the `PathlingContext` with the `accept_language` or `acceptLanguage` parameter.
 The parameter with the same name can also be used to override the default value
 in `display()` and `property_of()` functions.
-
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -840,11 +839,11 @@ class MyApp {
 
 Results in:
 
-| CODE     | DESCRIPTION	                       | DISPLAY                                           | DISPLAY_DE                          
-|----------|------------------------------------|---------------------------------------------------|-------------------------------------|
-| 8302-2	  | Body Height	                       | Taille du patient \[Longueur] Patient ; Numérique | Körpergröße                         
-| 29463-7	 | Body Weight	                       | Poids corporel \[Masse] Patient ; Numérique       | Körpergewicht                       
-| 718-7	   | Hemoglobin \[Mass/volume] in Blood | Hémoglobine \[Masse/Volume] Sang ; Numérique      | Hämoglobin \[Masse/Volumen] in Blut 
+| CODE    | DESCRIPTION                        | DISPLAY                                           | DISPLAY_DE                          |
+| ------- | ---------------------------------- | ------------------------------------------------- | ----------------------------------- |
+| 8302-2  | Body Height                        | Taille du patient \[Longueur] Patient ; Numérique | Körpergröße                         |
+| 29463-7 | Body Weight                        | Poids corporel \[Masse] Patient ; Numérique       | Körpergewicht                       |
+| 718-7   | Hemoglobin \[Mass/volume] in Blood | Hémoglobine \[Masse/Volume] Sang ; Numérique      | Hämoglobin \[Masse/Volumen] in Blut |
 
 ### Authentication
 
@@ -926,3 +925,190 @@ class MyApp {
 
 </TabItem>
 </Tabs>
+
+## Local terminology mode
+
+By default the terminology functions call a remote FHIR terminology server. As
+an alternative, Pathling can evaluate the same functions against a **local
+terminology store** with no network dependency. You import SNOMED CT and FHIR
+terminology content into the store once, then configure a context for local
+mode pointing at that store. All seven terminology functions (`member_of`,
+`translate`, `subsumes`, `subsumed_by`, `display`, `property_of` and
+`designation`) work identically in local mode.
+
+Local mode is useful when a terminology server is unavailable, when network
+access or request volume is a constraint, or when reproducibility across
+environments matters.
+
+### Importing content
+
+SNOMED CT is imported from an RF2 snapshot release (a `.zip` archive or an
+extracted directory). FHIR CodeSystem, ValueSet and ConceptMap resources are
+imported from a JSON file, a directory of JSON files, or a FHIR NPM package
+(`.tgz`). The store is written as Delta tables under a location on any
+filesystem accessible through the Hadoop FileSystem API, and can be reused
+across sessions and from cluster deployments. Re-importing a version replaces it
+atomically.
+
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+from pathling import PathlingContext
+
+pc = PathlingContext.create()
+pc.import_snomed(
+    "/data/SnomedCT_InternationalRF2_PRODUCTION_20250601T120000Z.zip",
+    "/data/tx-store",
+)
+pc.import_fhir_terminology("/data/hl7.terminology.r4-6.5.0.tgz", "/data/tx-store")
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+pc <- pathling_connect()
+pathling_import_snomed(pc, "/data/rf2.zip", "/data/tx-store")
+pathling_import_fhir_terminology(pc, "/data/hl7.terminology.tgz", "/data/tx-store")
+```
+
+</TabItem>
+<TabItem value="cli" label="CLI">
+
+```bash
+pathling import-snomed /data/rf2.zip /data/tx-store
+pathling import-fhir-terminology /data/hl7.terminology.tgz /data/tx-store
+```
+
+</TabItem>
+</Tabs>
+
+#### Large CodeSystems
+
+CodeSystems are imported with bounded memory regardless of their size. The
+import streams each CodeSystem from the source, transcodes it to temporary files
+on the driver, and loads it with Spark, so peak memory does not grow with the
+number of concepts and a single CodeSystem may exceed the 2 GB limit on a single
+in-memory object (for example, the OMOP vocabulary package's multi-gigabyte
+CodeSystem). This applies equally to a bare JSON file, a directory, and a `.tgz`
+package.
+
+Peak memory is bounded, but the largest vocabularies still need more than the
+default 1 GB driver heap to hold the working set of the Spark joins that build
+the store; the OMOP vocabulary, for example, imports comfortably with a 4 GB
+heap. See
+[driver memory for large imports](cli#terminology-import-commands) in the CLI
+guide for how to raise it, which applies equally to imports run through the
+library.
+
+During a long import, a running count of parsed concepts is logged at a fixed
+interval alongside stage-transition messages, so progress is visible rather than
+appearing to hang. The CLI surfaces these messages in `--verbose` mode.
+
+#### Hierarchies from parent and child properties
+
+Many flat CodeSystems express their hierarchy through `parent` (or `child`)
+concept properties rather than nested concepts. The import derives is-a edges
+from code-valued `parent` and `child` properties, recognised by the standard
+`parent`/`child` property codes or a property declaration carrying the standard
+[concept-properties](https://hl7.org/fhir/codesystem-concept-properties.html)
+URI, in addition to concept nesting. Edges from both sources are combined, so
+subsumption and descendant-based membership queries work over property-based
+hierarchies just as they do over nested ones. A `parent` or `child` reference to
+a code absent from the CodeSystem is skipped with a warning, and duplicate
+concept codes resolve to their first occurrence with a warning.
+
+#### Bundles and non-CodeSystem resources
+
+ValueSets and ConceptMaps are stored whole, so a single resource must fit in
+memory; one larger than 1 GB fails with an actionable error naming the resource
+rather than an opaque memory error. Bundle-wrapped sources are also parsed in
+memory, so a Bundle is subject to the same in-memory limit; supply large
+CodeSystems as standalone resources to benefit from the streaming path.
+
+#### Recovering from a failed import
+
+If an import fails partway through writing a CodeSystem (for example, because the
+source is truncated or corrupt), it reports that the store may hold a partial
+version of that CodeSystem and advises re-running the import. Because content is
+keyed by system version, re-running with a corrected source fully replaces the
+partial version and repairs the store.
+
+### Querying in local mode
+
+Create a context configured for local mode by setting the terminology mode to
+`local` and pointing at the store. The terminology functions then evaluate
+against the store.
+
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+from pathling import PathlingContext
+from pathling.functions import to_snomed_coding
+from pathling.udfs import member_of
+from pyspark.sql import functions as F
+
+pc = PathlingContext.create(
+    terminology_mode="local",
+    terminology_storage_path="/data/tx-store",
+)
+
+result = df.select(
+    "id",
+    member_of(
+        to_snomed_coding(F.col("code")),
+        "http://snomed.info/sct?fhir_vs=ecl/<< 73211009 |Diabetes mellitus|",
+    ).alias("is_diabetes"),
+)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+pc <- pathling_connect(
+  terminology_mode = "local",
+  terminology_storage_path = "/data/tx-store"
+)
+```
+
+</TabItem>
+<TabItem value="cli" label="CLI">
+
+```bash
+pathling --tx-store /data/tx-store member-of codes.csv \
+  --code-column code --system 'http://snomed.info/sct' \
+  --value-set 'http://snomed.info/sct?fhir_vs=ecl/<< 73211009'
+```
+
+The store can also be recorded once in the `[tx-store]` config table. See the
+[command line interface documentation](cli#local-terminology-mode) for details.
+
+</TabItem>
+</Tabs>
+
+The following configuration parameters control local mode:
+
+- `terminology_mode` (`terminology.mode`): `server` (the default) or `local`.
+- `terminology_storage_path` (`terminology.local.storagePath`): the store
+  location, required in local mode.
+- `default_snomed_edition` (`terminology.local.defaultSnomedEdition`): the
+  SNOMED CT module identifier used to disambiguate an unversioned SNOMED
+  reference when the store holds multiple editions.
+- `expansion_cache_size` (`terminology.local.expansionCacheSize`): the maximum
+  number of value set expansions cached per executor.
+
+### Supported expressions
+
+Local `member_of` resolves explicit imported value sets by canonical URL (with
+an optional `|version`), the SNOMED implicit value set forms (`?fhir_vs`,
+`?fhir_vs=refset/[id]`, `?fhir_vs=isa/[id]`, `?fhir_vs=ecl/[expr]`), and VCL
+implicit value sets (`http://fhir.org/VCL?v1=[expr]`). A supported subset of
+SNOMED CT Expression Constraint Language is translated to the internal VCL
+model; ECL constructs outside that subset (role groups, cardinality, term
+filters, history supplements and concrete values) raise an error naming the
+unsupported construct. Local `translate` resolves imported ConceptMaps and the
+SNOMED implicit concept map form (`?fhir_cm=[refsetId]`). Content that has not
+been imported yields the same "unknown content" results as remote mode.

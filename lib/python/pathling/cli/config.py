@@ -53,12 +53,17 @@ PROJECT_CONFIG_FILENAME = "pathling.toml"
 
 # Valid top-level keys in the config file.
 VALID_CONFIG_KEYS = frozenset(
-    {"tx-server", "fhir-version", "terminology-auth", "bulk-auth", "spark"}
+    {"tx-server", "fhir-version", "terminology-auth", "bulk-auth", "spark", "tx-store"}
 )
 
 # Valid keys within the [terminology-auth] and [bulk-auth] tables.
 VALID_AUTH_KEYS = frozenset(
     {"client-id", "client-secret", "private-key-jwk", "token-endpoint", "scope"}
+)
+
+# Valid keys within the [tx-store] table.
+VALID_TX_STORE_KEYS = frozenset(
+    {"path", "default-snomed-edition", "expansion-cache-size"}
 )
 
 
@@ -117,6 +122,28 @@ class BulkAuth:
 
 
 @dataclass
+class TxStore:
+    """Resolved local terminology store settings for a single invocation.
+
+    A ``TxStore`` exists only when a store path was supplied (via the
+    ``--tx-store`` flag or the ``tx-store.path`` config key); its presence on
+    :class:`CliConfig` is what selects local terminology mode. Tuning fields
+    left unset fall through to the library defaults.
+
+    :param path: the store location; a filesystem path or a URI. Not checked for
+           existence.
+    :param default_snomed_edition: the SNOMED CT module identifier used to
+           disambiguate an ambiguous edition, or None to use the library default.
+    :param expansion_cache_size: the per-executor value set expansion cache size,
+           or None to use the library default.
+    """
+
+    path: str
+    default_snomed_edition: Optional[str] = None
+    expansion_cache_size: Optional[int] = None
+
+
+@dataclass
 class CliConfig:
     """Resolved global configuration for a single invocation.
 
@@ -131,6 +158,12 @@ class CliConfig:
            config file, or None when absent. Carried so ``export`` resolves bulk
            credentials from the already-loaded config rather than re-reading a
            file.
+    :param tx_store: the resolved local terminology store settings, or None. When
+           present, terminology evaluation uses the local store rather than a
+           remote server.
+    :param tx_server_explicit: whether the terminology server URL was set
+           explicitly (via flag or config key) rather than falling back to the
+           built-in default. Drives the store-wins conflict warning.
     """
 
     tx_server: str = DEFAULT_TX_SERVER
@@ -140,6 +173,8 @@ class CliConfig:
     config_path: Optional[Path] = None
     spark_conf: dict = field(default_factory=dict)
     bulk_auth_table: Optional[dict] = None
+    tx_store: Optional[TxStore] = None
+    tx_server_explicit: bool = False
 
 
 def _load_toml(path: Path) -> dict:
@@ -256,6 +291,23 @@ def load_config_file(
                         f"Ignoring unknown config key '{table_name}.{key}' in "
                         f"{path}. Valid keys are: {valid_auth}."
                     )
+    tx_store_table = data.get("tx-store")
+    if isinstance(tx_store_table, dict):
+        valid_tx_store = ", ".join(sorted(VALID_TX_STORE_KEYS))
+        for key in tx_store_table:
+            if key not in VALID_TX_STORE_KEYS:
+                warn(
+                    f"Ignoring unknown config key 'tx-store.{key}' in {path}. "
+                    f"Valid keys are: {valid_tx_store}."
+                )
+    elif tx_store_table is not None:
+        # A scalar tx-store value cannot configure local mode; warn rather than
+        # silently ignoring it (a common mistake is 'tx-store = \"/path\"'
+        # instead of a [tx-store] table with a 'path' key).
+        warn(
+            f"Ignoring 'tx-store' in {path}; it must be a [tx-store] table with "
+            "a 'path' key, not a single value."
+        )
     return data
 
 
@@ -385,6 +437,85 @@ def resolve_bulk_auth(
     )
 
 
+def _resolve_tx_store(
+    file_data: dict,
+    tx_store_flag: Optional[str],
+    on_warning: Optional[Callable[[str], None]],
+) -> Optional[TxStore]:
+    """Resolves and validates the local terminology store settings.
+
+    The store path follows the precedence ``--tx-store`` flag >
+    ``tx-store.path`` config key; the tuning keys come from the config table
+    only. All type and range checks happen here, before any Spark session, so a
+    configuration mistake fails fast (FR-008).
+
+    :param file_data: the parsed config file contents.
+    :param tx_store_flag: the ``--tx-store`` flag value, or None.
+    :param on_warning: the warning callback for the path-less-table notice.
+    :return: a populated :class:`TxStore`, or None when no store is configured.
+    :raises CliError: with EXIT_USAGE for an empty flag or an invalid table value.
+    """
+    from pathling.cli.errors import EXIT_USAGE, CliError
+
+    # An empty flag value is a usage error rather than a silent no-op (FR-008).
+    if tx_store_flag is not None and not tx_store_flag:
+        raise CliError(
+            "The --tx-store value must not be empty. Provide a store path or URI.",
+            exit_code=EXIT_USAGE,
+        )
+
+    table = file_data.get("tx-store")
+    table = table if isinstance(table, dict) else {}
+
+    config_path = table.get("path")
+    if config_path is not None and not isinstance(config_path, str):
+        raise CliError(
+            "The tx-store.path config value must be a string.",
+            exit_code=EXIT_USAGE,
+        )
+
+    resolved_path = tx_store_flag or config_path
+
+    edition = table.get("default-snomed-edition")
+    if edition is not None and not isinstance(edition, str):
+        raise CliError(
+            "The tx-store.default-snomed-edition config value must be a string.",
+            exit_code=EXIT_USAGE,
+        )
+
+    cache_size = table.get("expansion-cache-size")
+    if cache_size is not None:
+        # A bool is an int in Python; reject it so the value is an honest count.
+        if isinstance(cache_size, bool) or not isinstance(cache_size, int):
+            raise CliError(
+                "The tx-store.expansion-cache-size config value must be an integer.",
+                exit_code=EXIT_USAGE,
+            )
+        if cache_size < 1:
+            raise CliError(
+                "The tx-store.expansion-cache-size config value must be a "
+                "positive integer.",
+                exit_code=EXIT_USAGE,
+            )
+
+    # Without a path, tuning keys cannot activate local mode; warn that the
+    # table is inert rather than silently ignoring it (FR-009).
+    if resolved_path is None:
+        if table:
+            notify = on_warning or (lambda message: print(message, file=sys.stderr))
+            notify(
+                "The [tx-store] config table has no effect without a 'path' key "
+                "(or the --tx-store flag); remote terminology mode will be used."
+            )
+        return None
+
+    return TxStore(
+        path=resolved_path,
+        default_snomed_edition=edition,
+        expansion_cache_size=cache_size,
+    )
+
+
 def resolve_config_source(
     config_path: Optional[Path],
     cwd: Path,
@@ -425,6 +556,7 @@ def resolve_config(
     config_path: Optional[Path] = None,
     cwd: Optional[Path] = None,
     env: Optional[dict] = None,
+    tx_store: Optional[str] = None,
     on_warning: Optional[Callable[[str], None]] = None,
     on_notice: Optional[Callable[[str], None]] = None,
 ) -> CliConfig:
@@ -449,6 +581,8 @@ def resolve_config(
     :param cwd: the directory searched for a project-local ``pathling.toml``;
            defaults to the current working directory.
     :param env: the environment mapping for secret resolution.
+    :param tx_store: the ``--tx-store`` flag value selecting a local terminology
+           store, or None.
     :param on_warning: an optional warning callback passed to the file loader and
            used to surface the managed Spark-package version-override warning;
            defaults to writing to stderr so warnings appear even in quiet mode.
@@ -485,6 +619,10 @@ def resolve_config(
         else:
             on_notice(f"Using project config {path}.")
 
+    # Record whether the server URL was set explicitly (flag or config key) as
+    # opposed to falling back to the built-in default; the store-wins conflict
+    # warning fires only for an explicit server (FR-004).
+    tx_server_explicit = bool(tx_server or file_data.get("tx-server"))
     resolved_tx_server = tx_server or file_data.get("tx-server") or DEFAULT_TX_SERVER
     resolved_fhir_version = (
         fhir_version or file_data.get("fhir-version") or DEFAULT_FHIR_VERSION
@@ -508,10 +646,15 @@ def resolve_config(
         env,
     )
 
+    # Resolve the local terminology store; its presence selects local mode.
+    resolved_tx_store = _resolve_tx_store(file_data, tx_store, on_warning)
+
     # Some terminology auth input was supplied but it is insufficient to
     # authenticate (a client ID and a token endpoint are both required); tell the
-    # user rather than silently disabling it (FR-005).
-    if tx_auth is not None and not tx_auth.enabled:
+    # user rather than silently disabling it (FR-005). In local mode the store
+    # wins and auth is ignored entirely, so this incomplete-auth warning is
+    # suppressed in favour of the store-wins warning below.
+    if resolved_tx_store is None and tx_auth is not None and not tx_auth.enabled:
         notify = on_warning or (lambda message: print(message, file=sys.stderr))
         notify(
             "Terminology authentication is incomplete and will be disabled: a "
@@ -531,6 +674,24 @@ def resolve_config(
     resolved_spark = resolve_spark_conf(spark_table, spark_conf_flags, env)
     spark_conf = merge_spark_conf(resolved_spark, on_warning=spark_warn)
 
+    # When a store is selected it wins over any server or authentication
+    # settings; warn about the ones that were explicitly configured so the
+    # override is never a silent surprise (FR-004, FR-005). An explicitly set
+    # authentication is also disabled so it can never reach the session.
+    if resolved_tx_store is not None:
+        conflict_warn = on_warning or (lambda message: print(message, file=sys.stderr))
+        if tx_server_explicit:
+            conflict_warn(
+                "A local terminology store is configured, so the terminology "
+                "server setting is ignored."
+            )
+        if tx_auth is not None:
+            conflict_warn(
+                "A local terminology store is configured, so the terminology "
+                "authentication settings are ignored."
+            )
+            tx_auth = None
+
     return CliConfig(
         tx_server=resolved_tx_server,
         tx_auth=tx_auth,
@@ -539,4 +700,6 @@ def resolve_config(
         config_path=path if path.exists() else None,
         spark_conf=spark_conf,
         bulk_auth_table=file_data.get("bulk-auth"),
+        tx_store=resolved_tx_store,
+        tx_server_explicit=tx_server_explicit,
     )

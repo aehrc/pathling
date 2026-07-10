@@ -150,6 +150,10 @@ class PathlingContext:
         scope: Optional[str] = None,
         token_expiry_tolerance: Optional[int] = 120,
         accept_language: Optional[str] = None,
+        terminology_mode: Optional[str] = "server",
+        terminology_storage_path: Optional[str] = None,
+        default_snomed_edition: Optional[str] = None,
+        expansion_cache_size: Optional[int] = 100,
         explain_queries: Optional[bool] = False,
         max_unbound_traversal_depth: Optional[int] = 10,
         enable_delta=False,
@@ -225,7 +229,17 @@ class PathlingContext:
                https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language. If not provided,
                the header is not sent. The server can use the header to return the result in the
                preferred language if it is able. The actual behaviour may depend on the server
-               implementation and the code systems used.
+               implementation and the code systems used. In local mode this value selects the
+               preferred display and designation language.
+        :param terminology_mode: the terminology evaluation backend, either ``"server"`` (the
+               default, using a remote FHIR terminology server) or ``"local"`` (evaluating against a
+               local terminology store with no network access).
+        :param terminology_storage_path: the location of the local terminology store, required when
+               ``terminology_mode`` is ``"local"``.
+        :param default_snomed_edition: the SNOMED CT module identifier used to disambiguate an
+               unversioned SNOMED reference when the local store holds multiple editions.
+        :param expansion_cache_size: the maximum number of value set expansions cached per executor
+               in local mode.
         :param explain_queries: setting this option to `True` will enable additional logging relating
                to the query plan used to execute queries
         :param max_unbound_traversal_depth: maximum depth for self-referencing structure traversals
@@ -238,6 +252,15 @@ class PathlingContext:
         :param debug_suspend: if true, the JVM will suspend until a debugger is attached
         :return: a :class:`PathlingContext` instance initialized with the specified configuration
         """
+        # Validate the terminology mode up front, before paying the Spark cold start.
+        if terminology_mode not in ("server", "local"):
+            raise ValueError(
+                f"terminology_mode must be 'server' or 'local', got '{terminology_mode}'"
+            )
+        if terminology_mode == "local" and terminology_storage_path is None:
+            raise ValueError(
+                "terminology_storage_path is required when terminology_mode is 'local'"
+            )
 
         def _new_spark_session():
             extra_configs = {}
@@ -302,8 +325,29 @@ class PathlingContext:
             .build()
         )
 
+        # Select the terminology evaluation mode (validated at the top of this method).
+        mode = (
+            jvm.au.csiro.pathling.config.TerminologyMode.LOCAL
+            if terminology_mode == "local"
+            else jvm.au.csiro.pathling.config.TerminologyMode.SERVER
+        )
+
+        # Build the local terminology configuration when a storage path is supplied.
+        local_config = None
+        if terminology_storage_path is not None:
+            local_builder = (
+                jvm.au.csiro.pathling.config.LocalTerminologyConfiguration.builder()
+                .storagePath(terminology_storage_path)
+                .expansionCacheSize(expansion_cache_size)
+            )
+            if default_snomed_edition is not None:
+                local_builder = local_builder.defaultSnomedEdition(
+                    default_snomed_edition
+                )
+            local_config = local_builder.build()
+
         # Build a terminology configuration object from the provided parameters.
-        terminology_config = (
+        terminology_builder = (
             jvm.au.csiro.pathling.config.TerminologyConfiguration.builder()
             .enabled(enable_terminology)
             .serverUrl(terminology_server_url)
@@ -312,8 +356,11 @@ class PathlingContext:
             .cache(cache_config)
             .authentication(auth_config)
             .acceptLanguage(accept_language)
-            .build()
+            .mode(mode)
         )
+        if local_config is not None:
+            terminology_builder = terminology_builder.local(local_config)
+        terminology_config = terminology_builder.build()
 
         # Build a query configuration object from the provided parameters.
         query_config = (
@@ -352,6 +399,45 @@ class PathlingContext:
         :return: The version of the Pathling library.
         """
         return self._jpc.getVersion()
+
+    def import_snomed(
+        self,
+        source: str,
+        storage_path: str,
+        edition_uri: Optional[str] = None,
+    ) -> None:
+        """
+        Imports a SNOMED CT RF2 snapshot release into a local terminology store.
+
+        :param source: the path to an RF2 release archive or extracted directory, on any filesystem
+               accessible through the Hadoop FileSystem API
+        :param storage_path: the terminology store location, created if absent
+        :param edition_uri: an explicit SNOMED edition/version URI, overriding detection
+        :raises: the mapped JVM ``TerminologyImportException`` if the source is not a valid RF2
+                 snapshot release; the store is left unmodified
+        """
+        jvm = self._spark._jvm
+        options = None
+        if edition_uri is not None:
+            options = (
+                jvm.au.csiro.pathling.library.terminology.TerminologyImportOptions.builder()
+                .editionUri(edition_uri)
+                .build()
+            )
+        self._jpc.importSnomed(source, storage_path, options)
+
+    def import_fhir_terminology(self, source: str, storage_path: str) -> None:
+        """
+        Imports FHIR R4 CodeSystem, ValueSet, and ConceptMap resources into a local terminology
+        store.
+
+        :param source: the path to a JSON file, a directory of JSON files, or a FHIR NPM package
+               (``.tgz``), on any filesystem accessible through the Hadoop FileSystem API
+        :param storage_path: the terminology store location, created if absent
+        :raises: the mapped JVM ``TerminologyImportException`` if the source contains no importable
+                 resources or an invalid resource; the store is left unmodified
+        """
+        self._jpc.importFhirTerminology(source, storage_path)
 
     def encode(
         self,

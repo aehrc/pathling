@@ -24,17 +24,24 @@ import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.config.TerminologyMode;
 import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
+import au.csiro.pathling.library.terminology.TerminologyImportOptions;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.sql.PathlingUdfConfigurer;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.local.LocalTerminologyServiceFactory;
+import au.csiro.pathling.terminology.store.FhirTerminologyImporter;
+import au.csiro.pathling.terminology.store.SnomedRf2Importer;
+import au.csiro.pathling.terminology.store.TerminologyStoreException;
+import au.csiro.pathling.terminology.store.TerminologyStoreReader;
 import au.csiro.pathling.validation.ValidationUtils;
 import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
 import au.csiro.pathling.views.StrictStringTypeAdapterFactory;
@@ -46,10 +53,13 @@ import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -279,7 +289,7 @@ public class PathlingContext {
         @Nonnull final QueryConfiguration queryConfig) {
       final FhirEncoderBuilder encoderBuilder = getEncoderBuilder(encodingConfig);
       final TerminologyServiceFactory terminologyServiceFactory =
-          getTerminologyServiceFactory(terminologyConfig);
+          getTerminologyServiceFactory(spark, terminologyConfig);
 
       return new PathlingContext(
           spark, encoderBuilder.getOrCreate(), terminologyServiceFactory, queryConfig);
@@ -607,6 +617,66 @@ public class PathlingContext {
   }
 
   /**
+   * Imports a SNOMED CT RF2 snapshot release into a local terminology store. The release is read
+   * through the Hadoop FileSystem API and written as Delta tables under the store path, replacing
+   * any previous content for the same code system version atomically. Progress is logged per stage
+   * and the import runs as Spark jobs visible in the Spark UI.
+   *
+   * @param source the path to an RF2 release archive or extracted directory, on any filesystem
+   *     accessible through the Hadoop FileSystem API
+   * @param storagePath the terminology store location, created if absent
+   * @param options optional overrides, or null for the defaults
+   * @return this context, for chaining
+   * @throws au.csiro.pathling.terminology.store.TerminologyImportException if the source is not a
+   *     valid RF2 snapshot release; the store is left unmodified
+   */
+  @Nonnull
+  public PathlingContext importSnomed(
+      @Nonnull final String source,
+      @Nonnull final String storagePath,
+      @Nullable final TerminologyImportOptions options) {
+    final String editionUri = options == null ? null : options.getEditionUri();
+    new SnomedRf2Importer(spark, storagePath).importFrom(source, editionUri);
+    return this;
+  }
+
+  /**
+   * Imports a SNOMED CT RF2 snapshot release into a local terminology store using the default
+   * options.
+   *
+   * @param source the path to an RF2 release archive or extracted directory
+   * @param storagePath the terminology store location, created if absent
+   * @return this context, for chaining
+   * @throws au.csiro.pathling.terminology.store.TerminologyImportException if the source is not a
+   *     valid RF2 snapshot release; the store is left unmodified
+   */
+  @Nonnull
+  public PathlingContext importSnomed(
+      @Nonnull final String source, @Nonnull final String storagePath) {
+    return importSnomed(source, storagePath, null);
+  }
+
+  /**
+   * Imports FHIR R4 CodeSystem, ValueSet, and ConceptMap resources into a local terminology store.
+   * The source may be a single JSON file, a directory of JSON files, or a FHIR NPM package ({@code
+   * .tgz}), on any filesystem accessible through the Hadoop FileSystem API. Bundles are unwrapped.
+   * The source is validated before any table is written, so an invalid source leaves the store
+   * unmodified.
+   *
+   * @param source the path to a JSON file, a directory of JSON files, or a FHIR NPM package
+   * @param storagePath the terminology store location, created if absent
+   * @return this context, for chaining
+   * @throws au.csiro.pathling.terminology.store.TerminologyImportException if the source contains
+   *     no importable resources or an invalid resource; the store is left unmodified
+   */
+  @Nonnull
+  public PathlingContext importFhirTerminology(
+      @Nonnull final String source, @Nonnull final String storagePath) {
+    new FhirTerminologyImporter(spark, storagePath).importFrom(source);
+    return this;
+  }
+
+  /**
    * Gets the version of the Pathling library.
    *
    * @return the version of the Pathling library
@@ -815,9 +885,71 @@ public class PathlingContext {
 
   @Nonnull
   private static TerminologyServiceFactory getTerminologyServiceFactory(
-      @Nonnull final TerminologyConfiguration configuration) {
+      @Nonnull final SparkSession spark, @Nonnull final TerminologyConfiguration configuration) {
+    if (TerminologyMode.LOCAL.equals(configuration.getMode())) {
+      return getLocalTerminologyServiceFactory(spark, configuration);
+    }
     // Pathling only supports FHIR R4, so we use the version enum directly to avoid creating another
     // FhirContext.
     return new DefaultTerminologyServiceFactory(FhirVersionEnum.R4, configuration);
+  }
+
+  /**
+   * Builds the local-mode terminology service factory. The store is opened eagerly here on the
+   * driver so that a missing path, an unreadable manifest, or an incompatible store format fails at
+   * context creation rather than at first query. The driver's Hadoop configuration is snapshotted
+   * into a serialisable map so the store is reachable on executors, where a Hadoop configuration is
+   * neither supplied nor serialisable.
+   */
+  @Nonnull
+  private static TerminologyServiceFactory getLocalTerminologyServiceFactory(
+      @Nonnull final SparkSession spark, @Nonnull final TerminologyConfiguration configuration) {
+    warnAboutIgnoredServerSettings(configuration);
+
+    // The local block and storage path are guaranteed present by configuration validation.
+    final String storagePath =
+        Objects.requireNonNull(Objects.requireNonNull(configuration.getLocal()).getStoragePath());
+    final Map<String, String> hadoopConfiguration =
+        snapshotHadoopConfiguration(spark.sessionState().newHadoopConf());
+
+    // Fail fast at context creation if the store cannot be opened.
+    try {
+      TerminologyStoreReader.open(storagePath, hadoopConfiguration);
+    } catch (final TerminologyStoreException e) {
+      throw new IllegalStateException(
+          "Unable to open the local terminology store at '" + storagePath + "': " + e.getMessage(),
+          e);
+    }
+
+    return new LocalTerminologyServiceFactory(configuration, hadoopConfiguration);
+  }
+
+  @Nonnull
+  private static Map<String, String> snapshotHadoopConfiguration(
+      @Nonnull final Configuration configuration) {
+    final Map<String, String> snapshot = new HashMap<>();
+    for (final Map.Entry<String, String> entry : configuration) {
+      snapshot.put(entry.getKey(), entry.getValue());
+    }
+    return snapshot;
+  }
+
+  private static void warnAboutIgnoredServerSettings(
+      @Nonnull final TerminologyConfiguration configuration) {
+    final TerminologyConfiguration defaults = TerminologyConfiguration.builder().build();
+    if (!defaults.getServerUrl().equals(configuration.getServerUrl())) {
+      log.warn(
+          "Terminology mode is local; the configured server URL is ignored: {}",
+          configuration.getServerUrl());
+    }
+    if (!defaults.getClient().equals(configuration.getClient())) {
+      log.warn("Terminology mode is local; the configured HTTP client settings are ignored.");
+    }
+    if (!defaults.getCache().equals(configuration.getCache())) {
+      log.warn("Terminology mode is local; the configured cache settings are ignored.");
+    }
+    if (!defaults.getAuthentication().equals(configuration.getAuthentication())) {
+      log.warn("Terminology mode is local; the configured authentication settings are ignored.");
+    }
   }
 }

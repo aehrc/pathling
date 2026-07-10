@@ -1164,6 +1164,46 @@ def test_bracketed_runtime_error_renders_safely(
     assert "[ANALYSIS_ERROR]" in result.stderr
 
 
+def test_local_mode_skips_server_enrichment(
+    runner, patched_context, codes_csv, monkeypatch
+):
+    """In local mode a failure names the store path, not a terminology server.
+
+    The connection-failure enrichment that names the remote server URL must be
+    skipped when a store is configured (FR-011); the message instead names the
+    store and suggests the import commands.
+    """
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError(_BRACKETED_CONNECTION_ERROR)
+
+    monkeypatch.setattr("pathling.udfs.member_of", _boom)
+
+    result = runner.invoke(
+        cli,
+        [
+            "--tx-store",
+            "/data/tx-store",
+            "member-of",
+            str(codes_csv),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+        ],
+    )
+
+    assert result.exit_code == 1
+    # The store is named and the import commands suggested.
+    assert "/data/tx-store" in result.stderr
+    assert "import-snomed" in result.stderr
+    # No terminology server URL is named, and the default is never mentioned.
+    assert "terminology server" not in result.stderr.lower()
+    assert "ontoserver" not in result.stderr
+
+
 # ========== --from input format: explicit (US1) ==========
 
 

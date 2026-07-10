@@ -78,7 +78,15 @@ StorageType <- list(
 #' @param token_expiry_tolerance The minimum number of seconds that a token should have before
 #'   expiry when deciding whether to send it with a terminology request
 #' @param accept_language The default value of the Accept-Language HTTP header passed to the
-#'   terminology server
+#'   terminology server. In local mode this selects the preferred display and designation language.
+#' @param terminology_mode The terminology evaluation backend, either "server" (the default) or
+#'   "local" (evaluating against a local terminology store with no network access)
+#' @param terminology_storage_path The location of the local terminology store, required when
+#'   terminology_mode is "local"
+#' @param default_snomed_edition The SNOMED CT module identifier used to disambiguate an unversioned
+#'   SNOMED reference when the local store holds multiple editions
+#' @param expansion_cache_size The maximum number of value set expansions cached per executor in
+#'   local mode
 #' @param explain_queries Setting this option to TRUE will enable additional logging relating
 #'   to the query plan used to execute queries
 #' @param max_unbound_traversal_depth Maximum depth for self-referencing structure traversals
@@ -130,9 +138,19 @@ pathling_connect <- function(
   scope = NULL,
   token_expiry_tolerance = 120,
   accept_language = NULL,
+  terminology_mode = "server",
+  terminology_storage_path = NULL,
+  default_snomed_edition = NULL,
+  expansion_cache_size = 100,
   explain_queries = FALSE,
   max_unbound_traversal_depth = 10
 ) {
+  if (!terminology_mode %in% c("server", "local")) {
+    stop("terminology_mode must be 'server' or 'local'")
+  }
+  if (terminology_mode == "local" && is.null(terminology_storage_path)) {
+    stop("terminology_storage_path is required when terminology_mode is 'local'")
+  }
   spark_info <- pathling_spark_info()
 
 
@@ -196,7 +214,12 @@ pathling_connect <- function(
     j_invoke("tokenExpiryTolerance", as.integer(token_expiry_tolerance)) %>%
     j_invoke("build")
 
-  terminology_config <- j_invoke_static(
+  mode_enum <- j_invoke_static(
+    spark, "au.csiro.pathling.config.TerminologyMode", "valueOf",
+    toupper(terminology_mode)
+  )
+
+  terminology_config_builder <- j_invoke_static(
     spark, "au.csiro.pathling.config.TerminologyConfiguration", "builder"
   ) %>%
     j_invoke("enabled", as.logical(enable_terminology)) %>%
@@ -206,6 +229,21 @@ pathling_connect <- function(
     j_invoke("cache", cache_config) %>%
     j_invoke("authentication", auth_config) %>%
     j_invoke("acceptLanguage", accept_language) %>%
+    j_invoke("mode", mode_enum)
+
+  if (!is.null(terminology_storage_path)) {
+    local_config <- j_invoke_static(
+      spark, "au.csiro.pathling.config.LocalTerminologyConfiguration", "builder"
+    ) %>%
+      j_invoke("storagePath", terminology_storage_path) %>%
+      j_invoke("defaultSnomedEdition", default_snomed_edition) %>%
+      j_invoke("expansionCacheSize", as.integer(expansion_cache_size)) %>%
+      j_invoke("build")
+    terminology_config_builder <- terminology_config_builder %>%
+      j_invoke("local", local_config)
+  }
+
+  terminology_config <- terminology_config_builder %>%
     j_invoke("build")
 
   query_config <- j_invoke_static(

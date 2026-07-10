@@ -40,6 +40,7 @@ through a configuration file.
 | Option                                                                      | Config key           | Default                                 |
 | --------------------------------------------------------------------------- | -------------------- | --------------------------------------- |
 | `--tx-server`                                                               | `tx-server`          | the library default terminology server  |
+| `--tx-store`                                                                | `tx-store.path`      | none (remote mode)                      |
 | `--tx-client-id`, `--tx-client-secret`, `--tx-token-endpoint`, `--tx-scope` | `[terminology-auth]` | none                                    |
 | `--fhir-version`                                                            | `fhir-version`       | `R4`                                    |
 | `--spark-conf KEY=VALUE`                                                    | `[spark]`            | none                                    |
@@ -333,6 +334,78 @@ Invalid combinations - supplying both or neither of `--other-code` /
 `--other-system-column` - are reported as usage errors before any Spark session
 starts.
 
+### Terminology import commands
+
+The `import-snomed` and `import-fhir-terminology` commands import terminology
+content into a local terminology store for use with
+[local terminology mode](terminology#local-terminology-mode). Both take a
+`SOURCE` path and a `STORAGE_PATH` for the store, report progress, and print a
+completion summary.
+
+```bash
+pathling import-snomed /data/rf2.zip /data/tx-store
+pathling import-fhir-terminology /data/hl7.terminology.tgz /data/tx-store
+```
+
+`import-snomed` accepts `--edition-uri` to override the detected SNOMED
+edition/version. `import-fhir-terminology` accepts a JSON file, a directory of
+JSON files, or a FHIR NPM package (`.tgz`), and imports CodeSystems of any size
+with bounded memory (for example, the multi-gigabyte OMOP vocabulary CodeSystem).
+
+Large imports run for many minutes. With `--verbose`, the command streams a
+running count of parsed concepts and stage-transition messages so progress is
+visible; without it, the startup spinner covers the wait. If an import fails
+partway through writing a CodeSystem, it reports that the store may hold a
+partial version and advises re-running; because content is keyed by system
+version, re-running with a corrected source repairs the store.
+
+Peak memory does not grow with the number of concepts, but the largest
+vocabularies still need more driver heap than the 1 GB default to hold the
+working set of the Spark joins that build the store. The OMOP vocabulary (around
+6.6 million concepts), for example, imports comfortably with a 4 GB heap. Set
+the heap with the `SPARK_DRIVER_MEMORY` environment variable; in local mode the
+driver JVM starts before `--spark-conf` can size its heap, so that flag has no
+effect on driver memory.
+
+```bash
+SPARK_DRIVER_MEMORY=4g pathling import-fhir-terminology \
+  /data/ohdsi.fhir.omop-0.1.0.tgz /data/tx-store
+```
+
+The `STORAGE_PATH` positional is optional: when it is omitted, the commands fall
+back to the configured `tx-store.path` (see below). An explicit positional wins
+over the configured path. Supplying neither is a usage error.
+
+### Local terminology mode
+
+Once a store has been populated, point any terminology-evaluating command at it
+with `--tx-store` (or the `tx-store.path` config key) to evaluate terminology
+against the local store instead of a remote server, entirely offline. This
+applies to every command that creates a session, including `view`, `fhirpath`,
+`convert`, `run`, and `console`.
+
+```bash
+pathling --tx-store /data/tx-store member-of codes.csv \
+  --code-column code --system 'http://snomed.info/sct' \
+  --value-set 'http://snomed.info/sct?fhir_vs=ecl/<404684003'
+```
+
+The `[tx-store]` config table records the store once, along with optional tuning
+values:
+
+```toml
+[tx-store]
+path = "/data/tx-store"                      # selects local mode
+default-snomed-edition = "32506021000036107" # optional
+expansion-cache-size = 200                   # optional, positive integer
+```
+
+The presence of a store selects local mode. When a store is configured, the
+store wins over any explicitly set `--tx-server` or terminology authentication:
+each is ignored and a warning is printed. The built-in default server URL never
+triggers this warning. A runtime failure in local mode names the store path and
+suggests the import commands rather than a terminology server URL.
+
 ## Configuration file
 
 Defaults for the global options can be set in a TOML file at
@@ -354,10 +427,17 @@ token-endpoint = "https://auth.example.org/token"
 [spark]
 "spark.sql.shuffle.partitions" = 16
 "spark.executor.memory" = "4g"
+
+[tx-store]
+path = "/data/tx-store"
+default-snomed-edition = "32506021000036107"
+expansion-cache-size = 200
 ```
 
 Command-line flags always take precedence over the config file. Unknown keys
-produce a warning that names the key and lists the valid keys.
+produce a warning that names the key and lists the valid keys. The `[tx-store]`
+table selects [local terminology mode](#local-terminology-mode); its tuning keys
+are config-file only, while the store path can also be set with `--tx-store`.
 
 ### Spark configuration
 

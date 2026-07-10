@@ -13,9 +13,9 @@ main `pom.xml` in the root of the repository:
 - `utilities` - Utility functions used by different components of Pathling.
 - `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into
   Spark Datasets.
-- `terminology` - Interact with
+- `terminology` - Terminology operations from Spark, either through
   a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html)
-  from Spark.
+  or a locally imported terminology store.
 - `fhirpath` - A library that can
   translate [FHIRPath expressions](https://hl7.org/fhirpath/) into Spark
   queries.

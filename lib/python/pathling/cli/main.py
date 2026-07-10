@@ -39,6 +39,7 @@ from pathling.cli import console as console_module
 from pathling.cli import convert as convert_module
 from pathling.cli import export as export_module
 from pathling.cli import fhirpath as fhirpath_module
+from pathling.cli import import_terminology as import_terminology_module
 from pathling.cli import run as run_module
 from pathling.cli import terminology as terminology_module
 from pathling.cli import view as view_module
@@ -90,9 +91,30 @@ def _server_url_from(ctx: click.Context) -> Optional[str]:
 
     :param ctx: the Click context.
     :return: the configured terminology server URL, or None when no context is
-             present.
+             present or a local store is configured.
     """
-    return ctx.obj.config.tx_server if isinstance(ctx.obj, CliContext) else None
+    if not isinstance(ctx.obj, CliContext):
+        return None
+    # In local mode no server is contacted, so a server URL must never be named.
+    if ctx.obj.config.tx_store is not None:
+        return None
+    return ctx.obj.config.tx_server
+
+
+def _store_path_from(ctx: click.Context) -> Optional[str]:
+    """Returns the configured local terminology store path, or None.
+
+    Threaded into the friendly error message so a runtime failure in local mode
+    names the store it could not use (FR-011).
+
+    :param ctx: the Click context.
+    :return: the configured store path, or None when no context is present or no
+             local store is configured.
+    """
+    if not isinstance(ctx.obj, CliContext):
+        return None
+    store = ctx.obj.config.tx_store
+    return store.path if store is not None else None
 
 
 class PathlingCli(click.Group):
@@ -124,6 +146,7 @@ class PathlingCli(click.Group):
                 exc,
                 verbose=_verbose_from(ctx),
                 server_url=_server_url_from(ctx),
+                store_path=_store_path_from(ctx),
             )
             _console_from(ctx).print(message, style="red")
             sys.exit(EXIT_RUNTIME)
@@ -132,6 +155,12 @@ class PathlingCli(click.Group):
 @click.group(cls=PathlingCli, context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(version=__version__, prog_name="pathling")
 @click.option("--tx-server", help="Terminology server URL (config key: tx-server).")
+@click.option(
+    "--tx-store",
+    "tx_store",
+    help="Local terminology store location (config key: tx-store.path). "
+    "Selects local mode; --tx-server and terminology auth are ignored when set.",
+)
 @click.option("--tx-client-id", help="Terminology auth client ID.")
 @click.option("--tx-client-secret", help="Terminology auth client secret.")
 @click.option("--tx-token-endpoint", help="Terminology auth token endpoint.")
@@ -163,6 +192,7 @@ class PathlingCli(click.Group):
 def cli(
     ctx: click.Context,
     tx_server,
+    tx_store,
     tx_client_id,
     tx_client_secret,
     tx_token_endpoint,
@@ -184,6 +214,7 @@ def cli(
     console = stderr_console()
     config = resolve_config(
         tx_server=tx_server,
+        tx_store=tx_store,
         tx_client_id=tx_client_id,
         tx_client_secret=tx_client_secret,
         tx_token_endpoint=tx_token_endpoint,
@@ -211,6 +242,9 @@ cli.add_command(console_module.console)
 # Register the terminology commands.
 for _terminology_command in terminology_module.TERMINOLOGY_COMMANDS:
     cli.add_command(_terminology_command)
+
+for _import_command in import_terminology_module.IMPORT_COMMANDS:
+    cli.add_command(_import_command)
 
 
 if __name__ == "__main__":

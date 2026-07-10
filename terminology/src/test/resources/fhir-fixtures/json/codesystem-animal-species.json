@@ -1,0 +1,109 @@
+{
+  "resourceType": "CodeSystem",
+  "url": "http://example.org/fhir/CodeSystem/animal-species",
+  "version": "1.0.0",
+  "name": "AnimalSpecies",
+  "status": "active",
+  "content": "complete",
+  "hierarchyMeaning": "is-a",
+  "property": [
+    {
+      "code": "legs",
+      "type": "integer"
+    },
+    {
+      "code": "habitat",
+      "type": "code"
+    },
+    {
+      "code": "endangered",
+      "type": "boolean"
+    }
+  ],
+  "concept": [
+    {
+      "code": "organism",
+      "display": "Organism",
+      "concept": [
+        {
+          "code": "animal",
+          "display": "Animal",
+          "concept": [
+            {
+              "code": "mammal",
+              "display": "Mammal",
+              "concept": [
+                {
+                  "code": "dog",
+                  "display": "Dog",
+                  "designation": [
+                    {
+                      "language": "en",
+                      "use": {
+                        "system": "http://terminology.hl7.org/CodeSystem/designation-usage",
+                        "code": "synonym"
+                      },
+                      "value": "Canine"
+                    },
+                    {
+                      "language": "de",
+                      "use": {
+                        "system": "http://terminology.hl7.org/CodeSystem/designation-usage",
+                        "code": "display"
+                      },
+                      "value": "Hund"
+                    }
+                  ],
+                  "property": [
+                    { "code": "legs", "valueInteger": 4 },
+                    { "code": "habitat", "valueCode": "land" },
+                    { "code": "endangered", "valueBoolean": false }
+                  ]
+                },
+                {
+                  "code": "cat",
+                  "display": "Cat",
+                  "property": [
+                    { "code": "legs", "valueInteger": 4 },
+                    { "code": "habitat", "valueCode": "land" }
+                  ]
+                },
+                {
+                  "code": "whale",
+                  "display": "Whale",
+                  "property": [
+                    { "code": "legs", "valueInteger": 0 },
+                    { "code": "habitat", "valueCode": "water" },
+                    { "code": "endangered", "valueBoolean": true }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "bird",
+              "display": "Bird",
+              "concept": [
+                {
+                  "code": "sparrow",
+                  "display": "Sparrow",
+                  "property": [
+                    { "code": "legs", "valueInteger": 2 },
+                    { "code": "habitat", "valueCode": "land" }
+                  ]
+                },
+                {
+                  "code": "penguin",
+                  "display": "Penguin",
+                  "property": [
+                    { "code": "legs", "valueInteger": 2 },
+                    { "code": "habitat", "valueCode": "water" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
