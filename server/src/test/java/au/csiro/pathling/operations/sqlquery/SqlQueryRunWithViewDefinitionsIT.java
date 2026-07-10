@@ -272,6 +272,26 @@ class SqlQueryRunWithViewDefinitionsIT {
   }
 
   @Test
+  void describeQueryOverRegisteredView() {
+    // DESCRIBE QUERY over a declared view returns the projected column schema through the endpoint
+    // without scanning the view's data (spec 029 US2).
+    final Library library =
+        sqlQueryLibrary(
+            "DESCRIBE QUERY SELECT id, family_name FROM patients", "patients", VIEW_REFERENCE);
+
+    final String body =
+        postOk(
+            "/fhir/$sqlquery-run",
+            parametersJson(library, SqlQueryOutputFormat.NDJSON),
+            SqlQueryOutputFormat.NDJSON);
+
+    final String[] lines = body.trim().split("\n");
+    assertThat(lines).hasSize(2);
+    assertThat(body).contains("\"col_name\":\"id\"").contains("\"col_name\":\"family_name\"");
+    assertThat(body).doesNotContain("Smith");
+  }
+
+  @Test
   void returnsErrorWhenReferencedViewDefinitionDoesNotExist() {
     final Library library =
         sqlQueryLibrary(

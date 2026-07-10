@@ -25,6 +25,7 @@ import au.csiro.pathling.config.SqlQueryConfiguration;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
@@ -86,6 +87,36 @@ class SqlQueryExecutorTest {
     assertThat(rows).hasSize(1);
   }
 
+  @Test
+  void describeQueryReturnsProjectedColumnTypes() {
+    final Dataset<Row> backing =
+        sparkSession.sql("SELECT CAST(1 AS INT) AS id, CAST('x' AS STRING) AS name");
+    final List<Row> rows =
+        runDescribe(
+            "DESCRIBE QUERY SELECT id, count(*) AS n FROM " + VIEW_NAME + " GROUP BY id",
+            backing,
+            null);
+
+    final var typesByColumn =
+        rows.stream().collect(Collectors.toMap(row -> row.getString(0), row -> row.getString(1)));
+    // count(*) projects a bigint; the passed-through id keeps its int type.
+    assertThat(typesByColumn).containsEntry("id", "int").containsEntry("n", "bigint");
+  }
+
+  @Test
+  void describeQueryBindsParameterMarker() {
+    final Dataset<Row> backing = sparkSession.sql("SELECT 1 AS id");
+    final List<Row> rows =
+        runDescribe(
+            "DESCRIBE QUERY SELECT :threshold AS v FROM " + VIEW_NAME,
+            backing,
+            null,
+            Map.of("threshold", 5));
+    // The bound parameter yields a single projected column, described without scanning the view.
+    assertThat(rows).hasSize(1);
+    assertThat(rows.get(0).getString(0)).isEqualTo("v");
+  }
+
   /**
    * Reproduces the executor's describe pipeline in the JVM: register the backing dataset as the
    * label-named temp view, run the parse-time gate, execute through {@code sparkSession.sql}, run
@@ -94,10 +125,20 @@ class SqlQueryExecutorTest {
   @Nonnull
   private List<Row> runDescribe(
       @Nonnull final String sql, @Nonnull final Dataset<Row> backing, final Integer limit) {
+    return runDescribe(sql, backing, limit, Map.of());
+  }
+
+  @Nonnull
+  private List<Row> runDescribe(
+      @Nonnull final String sql,
+      @Nonnull final Dataset<Row> backing,
+      final Integer limit,
+      @Nonnull final Map<String, Object> parameters) {
     backing.createOrReplaceTempView(VIEW_NAME);
     try {
       sqlValidator.validate(sql, Set.of(VIEW_NAME));
-      Dataset<Row> result = sparkSession.sql(sql);
+      Dataset<Row> result =
+          parameters.isEmpty() ? sparkSession.sql(sql) : sparkSession.sql(sql, parameters);
       sqlValidator.validateAnalyzed(result.queryExecution().analyzed(), Set.of(VIEW_NAME));
       if (limit != null) {
         result = result.limit(limit);

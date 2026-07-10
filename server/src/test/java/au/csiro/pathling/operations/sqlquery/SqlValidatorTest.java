@@ -658,6 +658,76 @@ class SqlValidatorTest {
   }
 
   // -------------------------------------------------------------------------
+  // DESCRIBE [QUERY] <query> — the query-introspection form is allowed and its
+  // inner query is validated exactly like a directly submitted query (spec 029
+  // US2). The QUERY keyword is optional in the Spark grammar.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsDescribeQueryOverDeclaredLabel() {
+    assertThatCode(() -> validate("DESCRIBE QUERY SELECT id FROM patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescQueryForm() {
+    assertThatCode(() -> validate("DESC QUERY SELECT id FROM patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsKeywordlessDescribeQuery() {
+    // The QUERY keyword is optional; DESCRIBE SELECT ... parses to the same command.
+    assertThatCode(() -> validate("DESCRIBE SELECT id FROM patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescribeQueryWithCte() {
+    assertThatCode(
+            () ->
+                validate(
+                    "DESCRIBE QUERY WITH x AS (SELECT id FROM patients) SELECT * FROM x",
+                    "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void rejectsDescribeQueryOverUndeclaredTable() {
+    assertThatThrownBy(() -> validate("DESCRIBE QUERY SELECT * FROM undeclared", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsDescribeQueryWithReflectFunction() {
+    assertThatThrownBy(
+            () -> validate("DESCRIBE QUERY SELECT reflect('java.lang.System', 'getenv')"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function");
+  }
+
+  @Test
+  void rejectsDescribeQueryWithNonBuiltInFunction() {
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "DESCRIBE QUERY SELECT member_of(coding, 'http://snomed.info/sct?fhir_vs')"
+                        + " FROM patients",
+                    "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("non-built-in function");
+  }
+
+  @Test
+  void rejectsDescribeQueryWithDisallowedPlanNode() {
+    // The range TVF is a disallowed plan node in the inner query, just as in a submitted query.
+    assertThatThrownBy(() -> validate("DESCRIBE QUERY SELECT * FROM range(0, 100)"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed plan node");
+  }
+
+  // -------------------------------------------------------------------------
   // Invalid SQL syntax.
   // -------------------------------------------------------------------------
 

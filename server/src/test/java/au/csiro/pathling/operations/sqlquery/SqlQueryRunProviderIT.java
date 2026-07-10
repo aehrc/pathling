@@ -150,6 +150,27 @@ class SqlQueryRunProviderIT {
   }
 
   @Test
+  void describeQueryReturnsProjectedSchema() {
+    // DESCRIBE QUERY returns the schema of an arbitrary query without executing it (spec 029 US2).
+    final String sql = "DESCRIBE QUERY SELECT id, name FROM (VALUES (1, 'alice')) AS t(id, name)";
+    final String body =
+        postOk(
+            "/fhir/$sqlquery-run",
+            parametersJson(sqlQueryLibrary(sql), SqlQueryOutputFormat.NDJSON),
+            SqlQueryOutputFormat.NDJSON);
+
+    final String[] lines = body.trim().split("\n");
+    assertThat(lines).hasSize(2);
+    assertThat(body)
+        .contains("\"col_name\":\"id\"")
+        .contains("\"col_name\":\"name\"")
+        .contains("\"data_type\":\"int\"")
+        .contains("\"data_type\":\"string\"");
+    // The query is not executed, so no data values appear.
+    assertThat(body).doesNotContain("alice");
+  }
+
+  @Test
   void rejectsRequestWithNeitherQueryResourceNorQueryReference() {
     final Map<String, Object> parameters = new LinkedHashMap<>();
     parameters.put("resourceType", "Parameters");
