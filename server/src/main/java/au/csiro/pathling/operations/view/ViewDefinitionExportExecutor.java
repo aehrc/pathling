@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.view;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.ParquetSchemaValidator;
 import au.csiro.pathling.operations.export.ExportDataSourceBuilder;
 import au.csiro.pathling.operations.export.ExportFileWriter;
 import au.csiro.pathling.views.FhirView;
@@ -151,7 +152,12 @@ public class ViewDefinitionExportExecutor {
     return switch (format) {
       case NDJSON -> fileWriter.writeNdjson(result, viewName, jobDirPath);
       case CSV -> fileWriter.writeCsv(result, viewName, includeHeader, jobDirPath);
-      case PARQUET -> fileWriter.writeParquet(result, viewName, jobDirPath);
+      case PARQUET -> {
+        // Reject unresolved (VOID) columns before writing, since Spark's Parquet writer would
+        // otherwise fail the job with an opaque internal error.
+        ParquetSchemaValidator.validateSchemaForParquet(result.schema());
+        yield fileWriter.writeParquet(result, viewName, jobDirPath);
+      }
     };
   }
 }
