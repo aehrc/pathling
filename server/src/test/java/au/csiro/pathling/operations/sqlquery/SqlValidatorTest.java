@@ -570,6 +570,94 @@ class SqlValidatorTest {
   }
 
   // -------------------------------------------------------------------------
+  // DESCRIBE [TABLE] <label> — the plain named-view introspection form is
+  // allowed for declared labels; every unsafe variant is rejected at parse
+  // time (issue #2651, spec 029 US1/US3).
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsDescribeOfDeclaredLabel() {
+    assertThatCode(() -> validate("DESCRIBE patients", "patients")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescribeTableOfDeclaredLabel() {
+    assertThatCode(() -> validate("DESCRIBE TABLE patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescSynonymOfDeclaredLabel() {
+    assertThatCode(() -> validate("DESC patients", "patients")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsLowerCaseDescribeOfDeclaredLabel() {
+    assertThatCode(() -> validate("describe patients", "patients")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void rejectsDescribeExtended() {
+    assertThatThrownBy(() -> validate("DESCRIBE EXTENDED patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation")
+        .hasMessageContaining("EXTENDED");
+  }
+
+  @Test
+  void rejectsDescribeFormatted() {
+    assertThatThrownBy(() -> validate("DESCRIBE FORMATTED patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation")
+        .hasMessageContaining("EXTENDED");
+  }
+
+  @Test
+  void rejectsDescribeWithPartitionSpec() {
+    assertThatThrownBy(() -> validate("DESCRIBE patients PARTITION (x = 1)", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation")
+        .hasMessageContaining("partition");
+  }
+
+  @Test
+  void rejectsDescribeColumnForm() {
+    assertThatThrownBy(() -> validate("DESCRIBE patients id", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation");
+  }
+
+  @Test
+  void rejectsDescribeExtendedAsJson() {
+    assertThatThrownBy(() -> validate("DESCRIBE EXTENDED patients AS JSON", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation");
+  }
+
+  @Test
+  void rejectsDescribeOfUndeclaredLabel() {
+    assertThatThrownBy(() -> validate("DESCRIBE undeclared", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsDescribeOfMultiPartIdentifier() {
+    assertThatThrownBy(() -> validate("DESCRIBE db.patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsDescribeOfTempViewShapedNameNotInLabelSet() {
+    // A name shaped like a request-scoped temp view but not a declared label must be rejected,
+    // so one request cannot introspect another request's views.
+    assertThatThrownBy(() -> validate("DESCRIBE sqlquery_abc123_patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  // -------------------------------------------------------------------------
   // Invalid SQL syntax.
   // -------------------------------------------------------------------------
 
