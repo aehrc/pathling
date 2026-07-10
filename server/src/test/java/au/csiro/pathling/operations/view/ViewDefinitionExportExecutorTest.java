@@ -18,10 +18,12 @@
 package au.csiro.pathling.operations.view;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
@@ -247,6 +249,88 @@ class ViewDefinitionExportExecutorTest {
     assertThat(filename).matches(".*patients\\.\\d{5}\\.parquet$");
   }
 
+  @Test
+  void parquetExportWithVoidColumnThrowsInvalidUserInputError() throws IOException {
+    // A view column that resolves to an empty FHIRPath collection has an unresolved (VOID) type,
+    // which Spark's Parquet writer cannot handle. The export must fail with a clear, user-facing
+    // error rather than an internal Spark error, and must write nothing to the job directory.
+    final Patient patient = createPatient("test-1", "Smith");
+    executor = createExecutor(patient);
+
+    final ViewInput viewInput = new ViewInput("patients", createVoidColumnView());
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput),
+            null,
+            ViewExportFormat.PARQUET,
+            true,
+            Collections.emptySet(),
+            null);
+
+    assertThatThrownBy(() -> executor.execute(request, UUID.randomUUID().toString()))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("'nothing'")
+        .hasMessageContaining("CAST")
+        .hasMessageContaining("output format");
+
+    // No Parquet output should have been written for the rejected request.
+    assertThat(parquetFilesUnder(uniqueTempDir)).isEmpty();
+  }
+
+  @Test
+  void ndjsonExportWithVoidColumnIsUnaffected() {
+    // The new validation applies only to Parquet; NDJSON export of the same view is unaffected.
+    final Patient patient = createPatient("test-1", "Smith");
+    executor = createExecutor(patient);
+
+    final ViewInput viewInput = new ViewInput("patients", createVoidColumnView());
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput),
+            null,
+            ViewExportFormat.NDJSON,
+            true,
+            Collections.emptySet(),
+            null);
+
+    assertThatCode(() -> executor.execute(request, UUID.randomUUID().toString()))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void csvExportWithVoidColumnIsUnaffectedByNewValidation() {
+    // CSV export of the same view must not be touched by the new Parquet validation; it retains
+    // its pre-existing behaviour (it does not throw the new InvalidUserInputError).
+    final Patient patient = createPatient("test-1", "Smith");
+    executor = createExecutor(patient);
+
+    final ViewInput viewInput = new ViewInput("patients", createVoidColumnView());
+    final ViewDefinitionExportRequest request =
+        new ViewDefinitionExportRequest(
+            "http://example.org/$viewdefinition-export",
+            "http://example.org/fhir",
+            List.of(viewInput),
+            null,
+            ViewExportFormat.CSV,
+            true,
+            Collections.emptySet(),
+            null);
+
+    // The pre-existing behaviour may accept or reject the column, but it must never be the new
+    // Parquet-specific InvalidUserInputError.
+    try {
+      executor.execute(request, UUID.randomUUID().toString());
+    } catch (final InvalidUserInputError e) {
+      throw new AssertionError("CSV export must not be affected by the new Parquet validation", e);
+    } catch (final RuntimeException ignored) {
+      // Any pre-existing failure mode is acceptable; only the new validation is under test.
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Multiple views tests
   // -------------------------------------------------------------------------
@@ -410,5 +494,22 @@ class ViewDefinitionExportExecutorTest {
             FhirView.columns(
                 FhirView.column("id", "id"), FhirView.column("family_name", "name.first().family")))
         .build();
+  }
+
+  private FhirView createVoidColumnView() {
+    // The empty FHIRPath literal "{}" resolves to an empty collection whose Spark type is NullType
+    // (VOID), reproducing the unresolved-column failure mode.
+    return FhirView.ofResource("Patient")
+        .select(FhirView.columns(FhirView.column("id", "id"), FhirView.column("nothing", "{}")))
+        .build();
+  }
+
+  /** Returns every Parquet output file found beneath the given directory. */
+  private List<Path> parquetFilesUnder(final Path root) throws IOException {
+    try (final java.util.stream.Stream<Path> paths = Files.walk(root)) {
+      return paths
+          .filter(p -> p.getFileName().toString().endsWith(".parquet"))
+          .collect(java.util.stream.Collectors.toList());
+    }
   }
 }
