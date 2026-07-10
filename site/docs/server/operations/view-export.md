@@ -195,6 +195,14 @@ part per file.
 | CSV     | `csv`           | `text/csv`                       | Comma-separated values. Use `header=false` to exclude headers. |
 | Parquet | `parquet`       | `application/vnd.apache.parquet` | Apache Parquet columnar format. Efficient for large datasets.  |
 
+Parquet cannot represent a column whose type is unresolved (Spark `NullType`,
+displayed as "VOID"), such as a column that resolves to an empty collection. If
+a view's result contains such a column and Parquet output is requested, the
+export job fails and the polled status carries an `OperationOutcome` that names
+every offending column and suggests two remediations: add an explicit cast in
+the view, or choose a different output format. The NDJSON and CSV formats are
+unaffected.
+
 ## Multiple views
 
 Export multiple views in a single request by including multiple `view`
