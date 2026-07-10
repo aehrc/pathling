@@ -110,6 +110,9 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
         .testError(
             "stringArray.startsWith('o')",
             "startsWith() errors when input collection is not singular")
+        .testError(
+            "singleString.startsWith(stringArray)",
+            "startsWith() errors when the argument is not singular")
         .build();
   }
 
@@ -140,6 +143,9 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
         .group("endsWith() function error cases")
         .testError(
             "stringArray.endsWith('o')", "endsWith() errors when input collection is not singular")
+        .testError(
+            "singleString.endsWith(stringArray)",
+            "endsWith() errors when the argument is not singular")
         .build();
   }
 
@@ -172,6 +178,9 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
         .group("contains() function error cases")
         .testError(
             "stringArray.contains('o')", "contains() errors when input collection is not singular")
+        .testError(
+            "singleString.contains(stringArray)",
+            "contains() errors when the argument is not singular")
         .build();
   }
 }

@@ -76,7 +76,8 @@ public class StringFunctions {
    *
    * <p>If prefix is the empty string ({@code ''}), the result is {@code true}.
    *
-   * <p>If the input collection or prefix is empty, the result is empty.
+   * <p>If the input collection or the prefix argument is an empty collection ({@code {}}), the
+   * result is empty.
    *
    * @param input The input string
    * @param prefix The prefix to check for
@@ -100,7 +101,8 @@ public class StringFunctions {
    *
    * <p>If suffix is the empty string ({@code ''}), the result is {@code true}.
    *
-   * <p>If the input collection or suffix is empty, the result is empty.
+   * <p>If the input collection or the suffix argument is an empty collection ({@code {}}), the
+   * result is empty.
    *
    * @param input The input string
    * @param suffix The suffix to check for
