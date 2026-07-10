@@ -26,8 +26,7 @@ import lombok.Data;
 
 /**
  * Configuration for local terminology mode, describing where the terminology store lives and how it
- * is used. Required when {@link TerminologyConfiguration#getMode()} is {@link
- * TerminologyMode#LOCAL}.
+ * is used. Required when the terminology mode is {@link TerminologyMode#LOCAL}.
  *
  * @author John Grimes
  */
