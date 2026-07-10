@@ -120,6 +120,40 @@ class SqlQueryRunSecurityIT {
     assertThat(body).contains("alice").contains("bob");
   }
 
+  /**
+   * The complete DESCRIBE / SHOW rejection matrix from the feature contract. Every unsafe
+   * introspection form must be rejected at the API boundary with a 400 and an {@code
+   * OperationOutcome} (spec 029 US3 / FR-006 to FR-010). If any of these succeeds, a carve-out in
+   * {@code SqlValidator} is too wide.
+   */
+  @org.junit.jupiter.params.ParameterizedTest(name = "rejects: {0}")
+  @org.junit.jupiter.params.provider.ValueSource(
+      strings = {
+        // Extended / formatted describe leaks storage and catalogue metadata.
+        "DESCRIBE EXTENDED patients",
+        "DESCRIBE FORMATTED patients",
+        // AS JSON form.
+        "DESCRIBE EXTENDED patients AS JSON",
+        // Column and partition forms.
+        "DESCRIBE patients id",
+        "DESCRIBE patients PARTITION (x = 1)",
+        // Undeclared, multi-part, and other-request temp-view targets.
+        "DESCRIBE some_delta_table",
+        "DESCRIBE db.patients",
+        "DESCRIBE sqlquery_abc123_patients",
+        // DESCRIBE QUERY with a forbidden inner query.
+        "DESCRIBE QUERY SELECT * FROM undeclared_table",
+        "DESCRIBE QUERY SELECT reflect('java.lang.System', 'getenv')",
+        // Other catalogue / metadata commands remain rejected.
+        "SHOW COLUMNS FROM patients",
+        "SHOW TABLES",
+        "DESCRIBE FUNCTION abs"
+      })
+  void rejectsUnsafeIntrospectionForms(final String sql) {
+    final String body = postExpect4xx(parametersJson(sqlQueryLibrary(sql)));
+    assertThat(body).contains("OperationOutcome");
+  }
+
   @Test
   void rejectsTvfDosAttack() {
     // The literal exploit recorded in the threat model: a Cartesian product over two range TVFs.
