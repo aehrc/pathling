@@ -43,6 +43,8 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Patient;
@@ -506,10 +508,10 @@ class ViewDefinitionExportExecutorTest {
 
   /** Returns every Parquet output file found beneath the given directory. */
   private List<Path> parquetFilesUnder(final Path root) throws IOException {
-    try (final java.util.stream.Stream<Path> paths = Files.walk(root)) {
+    try (final Stream<Path> paths = Files.walk(root)) {
       return paths
           .filter(p -> p.getFileName().toString().endsWith(".parquet"))
-          .collect(java.util.stream.Collectors.toList());
+          .collect(Collectors.toList());
     }
   }
 }
