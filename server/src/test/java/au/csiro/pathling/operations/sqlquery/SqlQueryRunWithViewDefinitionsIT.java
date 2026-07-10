@@ -185,6 +185,112 @@ class SqlQueryRunWithViewDefinitionsIT {
         .contains("\"weight_kg\":\"65\"");
   }
 
+  // -------------------------------------------------------------------------
+  // DESCRIBE <label> against a registered ViewDefinition-backed view returns
+  // the view's column schema through the endpoint (spec 029 US1). The patient
+  // view projects two string columns: id and family_name.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void describesRegisteredViewNdjson() {
+    final Library library = sqlQueryLibrary("DESCRIBE patients", "patients", VIEW_REFERENCE);
+
+    final String body =
+        postOk(
+            "/fhir/$sqlquery-run",
+            parametersJson(library, SqlQueryOutputFormat.NDJSON),
+            SqlQueryOutputFormat.NDJSON);
+
+    final String[] lines = body.trim().split("\n");
+    assertThat(lines).hasSize(2);
+    assertThat(body)
+        .contains("\"col_name\":\"id\"")
+        .contains("\"col_name\":\"family_name\"")
+        .contains("\"data_type\":\"string\"");
+    // No data rows from the view itself leak through.
+    assertThat(body).doesNotContain("Smith").doesNotContain("Johnson");
+  }
+
+  @Test
+  void describeTableFormMatchesPlainForm() {
+    final Library library = sqlQueryLibrary("DESCRIBE TABLE patients", "patients", VIEW_REFERENCE);
+
+    final String body =
+        postOk(
+            "/fhir/$sqlquery-run",
+            parametersJson(library, SqlQueryOutputFormat.NDJSON),
+            SqlQueryOutputFormat.NDJSON);
+
+    assertThat(body.trim().split("\n")).hasSize(2);
+    assertThat(body).contains("\"col_name\":\"id\"").contains("\"col_name\":\"family_name\"");
+  }
+
+  @Test
+  void describeSynonymMatchesPlainForm() {
+    final Library library = sqlQueryLibrary("DESC patients", "patients", VIEW_REFERENCE);
+
+    final String body =
+        postOk(
+            "/fhir/$sqlquery-run",
+            parametersJson(library, SqlQueryOutputFormat.NDJSON),
+            SqlQueryOutputFormat.NDJSON);
+
+    assertThat(body).contains("\"col_name\":\"id\"").contains("\"col_name\":\"family_name\"");
+  }
+
+  @Test
+  void describesRegisteredViewCsvWithHeader() {
+    final Library library = sqlQueryLibrary("DESCRIBE patients", "patients", VIEW_REFERENCE);
+
+    final String body =
+        postOk(
+            "/fhir/$sqlquery-run",
+            parametersJson(library, SqlQueryOutputFormat.CSV, true),
+            SqlQueryOutputFormat.CSV);
+
+    final String[] lines = body.trim().split("\n");
+    assertThat(lines[0].trim()).isEqualTo("col_name,data_type,comment");
+    assertThat(body).contains("id,string").contains("family_name,string");
+  }
+
+  @Test
+  void describesRegisteredViewFhir() {
+    final Library library = sqlQueryLibrary("DESCRIBE patients", "patients", VIEW_REFERENCE);
+
+    final String body =
+        postOk(
+            "/fhir/$sqlquery-run",
+            parametersJson(library, SqlQueryOutputFormat.FHIR),
+            SqlQueryOutputFormat.FHIR);
+
+    // The describe result columns are all strings, so the FHIR complex-type rejection never fires.
+    assertThat(body)
+        .contains("Parameters")
+        .contains("col_name")
+        .contains("id")
+        .contains("family_name");
+  }
+
+  @Test
+  void describeQueryOverRegisteredView() {
+    // DESCRIBE QUERY over a declared view returns the projected column schema through the endpoint
+    // without scanning the view's data (spec 029 US2).
+    final Library library =
+        sqlQueryLibrary(
+            "DESCRIBE QUERY SELECT id, family_name FROM patients", "patients", VIEW_REFERENCE);
+
+    final String body =
+        postOk(
+            "/fhir/$sqlquery-run",
+            parametersJson(library, SqlQueryOutputFormat.NDJSON),
+            SqlQueryOutputFormat.NDJSON);
+
+    final String[] lines = body.trim().split("\n");
+    assertThat(lines).hasSize(2);
+    assertThat(body).contains("\"col_name\":\"id\"").contains("\"col_name\":\"family_name\"");
+    assertThat(body).doesNotContain("Smith");
+  }
+
   @Test
   void returnsErrorWhenReferencedViewDefinitionDoesNotExist() {
     final Library library =
@@ -251,7 +357,24 @@ class SqlQueryRunWithViewDefinitionsIT {
   @Nonnull
   private String parametersJson(
       @Nonnull final Library library, @Nonnull final SqlQueryOutputFormat format) {
-    return parametersJson(library, format, null);
+    return parametersJson(library, format, (Integer) null);
+  }
+
+  @Nonnull
+  private String parametersJson(
+      @Nonnull final Library library,
+      @Nonnull final SqlQueryOutputFormat format,
+      final boolean includeHeader) {
+    final String base = parametersJson(library, format, (Integer) null);
+    final Map<String, Object> parameters = GSON.fromJson(base, Map.class);
+    @SuppressWarnings("unchecked")
+    final List<Map<String, Object>> parameterList =
+        (List<Map<String, Object>>) parameters.get("parameter");
+    final Map<String, Object> headerParam = new LinkedHashMap<>();
+    headerParam.put("name", "header");
+    headerParam.put("valueBoolean", includeHeader);
+    parameterList.add(headerParam);
+    return GSON.toJson(parameters);
   }
 
   @Nonnull

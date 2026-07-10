@@ -570,6 +570,164 @@ class SqlValidatorTest {
   }
 
   // -------------------------------------------------------------------------
+  // DESCRIBE [TABLE] <label> — the plain named-view introspection form is
+  // allowed for declared labels; every unsafe variant is rejected at parse
+  // time (issue #2651, spec 029 US1/US3).
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsDescribeOfDeclaredLabel() {
+    assertThatCode(() -> validate("DESCRIBE patients", "patients")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescribeTableOfDeclaredLabel() {
+    assertThatCode(() -> validate("DESCRIBE TABLE patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescSynonymOfDeclaredLabel() {
+    assertThatCode(() -> validate("DESC patients", "patients")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsLowerCaseDescribeOfDeclaredLabel() {
+    assertThatCode(() -> validate("describe patients", "patients")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void rejectsDescribeExtended() {
+    assertThatThrownBy(() -> validate("DESCRIBE EXTENDED patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation")
+        .hasMessageContaining("EXTENDED");
+  }
+
+  @Test
+  void rejectsDescribeFormatted() {
+    assertThatThrownBy(() -> validate("DESCRIBE FORMATTED patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation")
+        .hasMessageContaining("EXTENDED");
+  }
+
+  @Test
+  void rejectsDescribeWithPartitionSpec() {
+    assertThatThrownBy(() -> validate("DESCRIBE patients PARTITION (x = 1)", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation")
+        .hasMessageContaining("partition");
+  }
+
+  @Test
+  void rejectsDescribeColumnForm() {
+    assertThatThrownBy(() -> validate("DESCRIBE patients id", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation");
+  }
+
+  @Test
+  void rejectsDescribeExtendedAsJson() {
+    assertThatThrownBy(() -> validate("DESCRIBE EXTENDED patients AS JSON", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation");
+  }
+
+  @Test
+  void rejectsDescribeOfUndeclaredLabel() {
+    assertThatThrownBy(() -> validate("DESCRIBE undeclared", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsDescribeOfMultiPartIdentifier() {
+    assertThatThrownBy(() -> validate("DESCRIBE db.patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsDescribeOfTempViewShapedNameNotInLabelSet() {
+    // A name shaped like a request-scoped temp view but not a declared label must be rejected,
+    // so one request cannot introspect another request's views.
+    assertThatThrownBy(() -> validate("DESCRIBE sqlquery_abc123_patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  // -------------------------------------------------------------------------
+  // DESCRIBE [QUERY] <query> — the query-introspection form is allowed and its
+  // inner query is validated exactly like a directly submitted query (spec 029
+  // US2). The QUERY keyword is optional in the Spark grammar.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsDescribeQueryOverDeclaredLabel() {
+    assertThatCode(() -> validate("DESCRIBE QUERY SELECT id FROM patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescQueryForm() {
+    assertThatCode(() -> validate("DESC QUERY SELECT id FROM patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsKeywordlessDescribeQuery() {
+    // The QUERY keyword is optional; DESCRIBE SELECT ... parses to the same command.
+    assertThatCode(() -> validate("DESCRIBE SELECT id FROM patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescribeQueryWithCte() {
+    assertThatCode(
+            () ->
+                validate(
+                    "DESCRIBE QUERY WITH x AS (SELECT id FROM patients) SELECT * FROM x",
+                    "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void rejectsDescribeQueryOverUndeclaredTable() {
+    assertThatThrownBy(() -> validate("DESCRIBE QUERY SELECT * FROM undeclared", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsDescribeQueryWithReflectFunction() {
+    assertThatThrownBy(
+            () -> validate("DESCRIBE QUERY SELECT reflect('java.lang.System', 'getenv')"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function");
+  }
+
+  @Test
+  void rejectsDescribeQueryWithNonBuiltInFunction() {
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "DESCRIBE QUERY SELECT member_of(coding, 'http://snomed.info/sct?fhir_vs')"
+                        + " FROM patients",
+                    "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("non-built-in function");
+  }
+
+  @Test
+  void rejectsDescribeQueryWithDisallowedPlanNode() {
+    // The range TVF is a disallowed plan node in the inner query, just as in a submitted query.
+    assertThatThrownBy(() -> validate("DESCRIBE QUERY SELECT * FROM range(0, 100)"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed plan node");
+  }
+
+  // -------------------------------------------------------------------------
   // Invalid SQL syntax.
   // -------------------------------------------------------------------------
 

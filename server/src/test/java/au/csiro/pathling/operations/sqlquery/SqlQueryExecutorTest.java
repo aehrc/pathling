@@ -22,18 +22,136 @@ import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import jakarta.annotation.Nonnull;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 
 /**
- * Unit tests for the row-cap clamp logic in {@link SqlQueryExecutor#effectiveLimit(Integer,
- * String)}. These verify that the server-configured cap is always honoured and that a
- * caller-supplied {@code _limit} can only narrow, never widen, the result set.
+ * Tests for {@link SqlQueryExecutor}. Two concerns are covered:
+ *
+ * <ul>
+ *   <li>The row-cap clamp logic in {@link SqlQueryExecutor#effectiveLimit(Integer, String)}, which
+ *       verifies that the server-configured cap is always honoured and that a caller-supplied
+ *       {@code _limit} can only narrow, never widen, the result set.
+ *   <li>That a {@code DESCRIBE <label>} statement flows through the same validate → execute →
+ *       {@code validateAnalyzed} sequence the executor uses and yields the engine's describe rows.
+ *       This exercises the analysed-mode carve-out end to end in the JVM, since the executor calls
+ *       {@link SqlValidator#validateAnalyzed} on the eagerly-executed command plan (spec 029 US1).
+ * </ul>
  */
+@Import(SqlValidator.class)
+@SpringBootUnitTest
 class SqlQueryExecutorTest {
 
   private static final String REQUEST_ID = "test-request";
+
+  private static final String VIEW_NAME = "patients";
+
+  @Autowired private SqlValidator sqlValidator;
+
+  @Autowired private SparkSession sparkSession;
+
+  // -------------------------------------------------------------------------
+  // DESCRIBE <label> flows through the executor's validate/execute/analyse
+  // sequence and returns the engine's describe rows.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void describeReturnsColumnRowsMatchingSchema() {
+    final Dataset<Row> backing =
+        sparkSession.sql("SELECT CAST(1 AS INT) AS id, CAST('x' AS STRING) AS name");
+    final List<Row> rows = runDescribe("DESCRIBE " + VIEW_NAME, backing, null);
+
+    // One row per column of the backing dataset, carrying the three describe fields.
+    final var typesByColumn =
+        rows.stream().collect(Collectors.toMap(row -> row.getString(0), row -> row.getString(1)));
+    assertThat(typesByColumn).containsEntry("id", "int").containsEntry("name", "string");
+    // The describe result schema is always col_name, data_type, comment.
+    assertThat(rows.get(0).schema().fieldNames())
+        .containsExactly("col_name", "data_type", "comment");
+  }
+
+  @Test
+  void limitAppliesToDescribeRows() {
+    final Dataset<Row> backing = sparkSession.sql("SELECT 1 AS a, 2 AS b, 3 AS c");
+    final List<Row> rows = runDescribe("DESCRIBE " + VIEW_NAME, backing, 1);
+    assertThat(rows).hasSize(1);
+  }
+
+  @Test
+  void describeQueryReturnsProjectedColumnTypes() {
+    final Dataset<Row> backing =
+        sparkSession.sql("SELECT CAST(1 AS INT) AS id, CAST('x' AS STRING) AS name");
+    final List<Row> rows =
+        runDescribe(
+            "DESCRIBE QUERY SELECT id, count(*) AS n FROM " + VIEW_NAME + " GROUP BY id",
+            backing,
+            null);
+
+    final var typesByColumn =
+        rows.stream().collect(Collectors.toMap(row -> row.getString(0), row -> row.getString(1)));
+    // count(*) projects a bigint; the passed-through id keeps its int type.
+    assertThat(typesByColumn).containsEntry("id", "int").containsEntry("n", "bigint");
+  }
+
+  @Test
+  void describeQueryBindsParameterMarker() {
+    final Dataset<Row> backing = sparkSession.sql("SELECT 1 AS id");
+    final List<Row> rows =
+        runDescribe(
+            "DESCRIBE QUERY SELECT :threshold AS v FROM " + VIEW_NAME,
+            backing,
+            null,
+            Map.of("threshold", 5));
+    // The bound parameter yields a single projected column, described without scanning the view.
+    assertThat(rows).hasSize(1);
+    assertThat(rows.get(0).getString(0)).isEqualTo("v");
+  }
+
+  /**
+   * Reproduces the executor's describe pipeline in the JVM: register the backing dataset as the
+   * label-named temp view, run the parse-time gate, execute through {@code sparkSession.sql}, run
+   * the analysed-mode gate on the eagerly-executed plan, apply any limit, and collect.
+   */
+  @Nonnull
+  private List<Row> runDescribe(
+      @Nonnull final String sql, @Nonnull final Dataset<Row> backing, final Integer limit) {
+    return runDescribe(sql, backing, limit, Map.of());
+  }
+
+  @Nonnull
+  private List<Row> runDescribe(
+      @Nonnull final String sql,
+      @Nonnull final Dataset<Row> backing,
+      final Integer limit,
+      @Nonnull final Map<String, Object> parameters) {
+    backing.createOrReplaceTempView(VIEW_NAME);
+    try {
+      sqlValidator.validate(sql, Set.of(VIEW_NAME));
+      Dataset<Row> result =
+          parameters.isEmpty() ? sparkSession.sql(sql) : sparkSession.sql(sql, parameters);
+      sqlValidator.validateAnalyzed(result.queryExecution().analyzed(), Set.of(VIEW_NAME));
+      if (limit != null) {
+        result = result.limit(limit);
+      }
+      return result.collectAsList();
+    } finally {
+      sparkSession.catalog().dropTempView(VIEW_NAME);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Row-cap clamp logic.
+  // -------------------------------------------------------------------------
 
   @Test
   void appliesServerCapWhenCallerHasNoLimit() {
