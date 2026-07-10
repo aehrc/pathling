@@ -219,6 +219,15 @@ When `_format` is `json`, the response is a single JSON array of row objects.
 
 When `_format` is `parquet`, the response is a binary Parquet file.
 
+Parquet cannot represent a column whose type is unresolved (Spark `NullType`,
+displayed as "VOID"). This typically arises when a query projects a literal
+`NULL` without a cast (for example `SELECT NULL AS foo`). If the result
+contains such a column, the request is rejected with an HTTP 400 and an
+`OperationOutcome` that names every offending column and suggests two
+remediations: add an explicit `CAST` (for example `CAST(foo AS STRING)`), or
+choose a different output format. Other formats (`ndjson`, `csv`, `json`,
+`fhir`) accept these columns without error.
+
 ### FHIR Parameters
 
 When `_format` is `fhir`, the response is a FHIR Parameters resource
