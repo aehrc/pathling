@@ -252,6 +252,54 @@ User SQL is validated before execution. The following are rejected:
 The query may use standard Spark SQL functions, joins, aggregates, and
 subqueries against the views referenced by the Library.
 
+## Schema introspection
+
+The operation accepts the `DESCRIBE` statement in two read-only, metadata-only
+forms, so consumers can discover the columns and types of a view or query ahead
+of execution without hard-coding that knowledge. Both forms perform no data
+scan and stream their results through the same output formats as an ordinary
+query.
+
+- `DESCRIBE [TABLE] <label>` returns the columns of a view declared as a
+  `relatedArtifact` label in the request. `DESC` is an accepted synonym, and the
+  `TABLE` keyword is optional.
+- `DESCRIBE [QUERY] <query>` returns the columns of an arbitrary query without
+  executing it. The `QUERY` keyword is optional, so `DESCRIBE SELECT ...` is
+  equivalent. The inner query is validated with exactly the same rules as a
+  directly submitted query.
+
+The result has one row per column, with three string columns:
+
+| Column      | Description                                        |
+| ----------- | -------------------------------------------------- |
+| `col_name`  | The column name.                                   |
+| `data_type` | The Spark SQL type (e.g. `string`, `date`, `int`). |
+| `comment`   | The column comment, or null when none is set.      |
+
+For example, submitting `DESCRIBE patients` (with `patients` declared as a
+`relatedArtifact` label) and `Accept: application/x-ndjson` returns:
+
+```
+{"col_name":"id","data_type":"string","comment":null}
+{"col_name":"gender","data_type":"string","comment":null}
+{"col_name":"birth_date","data_type":"date","comment":null}
+```
+
+`DESCRIBE QUERY` returns the schema of the query without reading any of the
+underlying view data.
+
+All other introspection variants remain rejected with a `400`:
+
+- `DESCRIBE EXTENDED` and `DESCRIBE FORMATTED` (they expose storage and
+  catalogue metadata).
+- `DESCRIBE ... AS JSON`.
+- The column form (`DESCRIBE <label> <column>`) and partition form
+  (`DESCRIBE <label> PARTITION (...)`).
+- A target that is not a declared label, including multi-part identifiers,
+  backing tables, and another request's temporary view name.
+- `SHOW COLUMNS` and every other catalogue command (`SHOW TABLES`,
+  `DESCRIBE FUNCTION`, `DESCRIBE DATABASE`, and so on).
+
 ## Runtime parameters
 
 A Library may declare named parameters, which are then bound at execution

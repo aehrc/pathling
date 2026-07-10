@@ -86,6 +86,17 @@ import scala.jdk.javaapi.CollectionConverters;
  *       walks.
  * </ol>
  *
+ * <p>Two schema-introspection statements are carved out of the blanket {@link Command} rejection:
+ * {@code DESCRIBE [TABLE] <label>} and {@code DESCRIBE [QUERY] <query>}. Because Spark executes
+ * {@link Command} plans eagerly when {@code sparkSession.sql(...)} builds the Dataset - before the
+ * analysed-plan walk runs - the parse-time carve-out ({@code validateDescribeStrict}) is the
+ * complete security gate for these forms: it accepts only the non-extended, partition-free table
+ * form over a declared label, and the query form whose inner query passes the full strict walk. The
+ * analysed-mode carve-out ({@code isAllowedDescribeAnalyzed}) is defence in depth only; it
+ * re-recognises the rewritten {@code DescribeTableCommand} / {@code DescribeQueryCommand} and
+ * confirms the resolved target is one of the registered temp views. Every other DESCRIBE / SHOW
+ * variant remains rejected.
+ *
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-SQLQueryRun.html">SQLQueryRun</a>
  */
