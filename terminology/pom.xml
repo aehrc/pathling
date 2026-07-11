@@ -76,6 +76,17 @@
     <dependency>
       <groupId>io.delta</groupId>
       <artifactId>delta-kernel-defaults</artifactId>
+      <!-- Delta Kernel declares an old Parquet (1.12.3) that lacks the LZ4_RAW
+           codec expected by Spark 4's Parquet 1.15.x. As a Spark package,
+           library-runtime must never bundle its own Parquet; Spark supplies it
+           on the runtime classpath. Exclude Delta Kernel's copy so the single
+           Spark-provided Parquet is used everywhere. -->
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.parquet</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- Compressed bitmaps for the runtime terminology indexes. -->
