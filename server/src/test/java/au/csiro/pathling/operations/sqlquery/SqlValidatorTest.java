@@ -243,6 +243,54 @@ class SqlValidatorTest {
   }
 
   @Test
+  void rejectsReflectionInsideNamedWindowDefinition() {
+    // A named-window definition body is a plan sub-structure the strict walk must
+    // descend into: a reflection-style function hidden in its PARTITION BY must
+    // still be rejected, exactly as it is in the inline form.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT sum(x) OVER w FROM t"
+                        + " WINDOW w AS (PARTITION BY java_method('java.lang.Math', 'random')"
+                        + " ORDER BY id)",
+                    "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function");
+  }
+
+  @Test
+  void rejectsUdfInsideNamedWindowDefinitionOrderBy() {
+    // A non-built-in (terminology UDF) function in the ORDER BY of a named window
+    // must also be rejected.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT sum(x) OVER w FROM t"
+                        + " WINDOW w AS (PARTITION BY id"
+                        + " ORDER BY member_of(coding, 'http://snomed.info/sct?fhir_vs'))",
+                    "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("non-built-in function");
+  }
+
+  @Test
+  void rejectsNonLiteralFunctionInNamedWindowFrameBound() {
+    // A frame bound cannot smuggle a function: Spark's grammar requires the bound
+    // to be a literal, so a function-valued bound is rejected at parse time. This
+    // guards the frame-bound position of a named window's definition body.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT sum(x) OVER w FROM t"
+                        + " WINDOW w AS (ORDER BY id"
+                        + " ROWS BETWEEN CAST(java_method('java.lang.Math', 'random') AS INT)"
+                        + " PRECEDING AND CURRENT ROW)",
+                    "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("Invalid SQL syntax");
+  }
+
+  @Test
   void acceptsNamedWindowWithRangeFrame() {
     // The reporter's ten-column case reduced to two aggregates that share one
     // named window carrying a RANGE frame with a CURRENT ROW boundary.

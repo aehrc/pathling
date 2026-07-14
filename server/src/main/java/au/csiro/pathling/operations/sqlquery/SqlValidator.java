@@ -33,11 +33,13 @@ import org.apache.spark.sql.catalyst.catalog.HiveTableRelation;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.ExpressionInfo;
 import org.apache.spark.sql.catalyst.expressions.SubqueryExpression;
+import org.apache.spark.sql.catalyst.expressions.WindowSpecDefinition;
 import org.apache.spark.sql.catalyst.plans.logical.Command;
 import org.apache.spark.sql.catalyst.plans.logical.DescribeRelation;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias;
 import org.apache.spark.sql.catalyst.plans.logical.UnresolvedWith;
+import org.apache.spark.sql.catalyst.plans.logical.WithWindowDefinition;
 import org.apache.spark.sql.execution.command.DescribeQueryCommand;
 import org.apache.spark.sql.execution.command.DescribeTableCommand;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
@@ -474,6 +476,17 @@ public class SqlValidator {
         walkPlanStrict(cte._2(), allowedLabels);
       }
     }
+    // A WithWindowDefinition node (a WINDOW w AS (...) clause) holds its named-window
+    // specifications in a windowDefinitions map that is neither a tree child nor reported
+    // by plan.expressions(), so the generic walk never reaches it. Walk each definition
+    // explicitly so that a disallowed function hidden in a named window's PARTITION BY,
+    // ORDER BY, or frame bound is rejected just as it is in the inline OVER (...) form.
+    if (plan instanceof final WithWindowDefinition withWindow) {
+      for (final WindowSpecDefinition spec :
+          CollectionConverters.asJava(withWindow.windowDefinitions()).values()) {
+        walkExpressionStrict(spec, allowedLabels);
+      }
+    }
     final List<LogicalPlan> children = CollectionConverters.asJava(plan.children());
     for (final LogicalPlan child : children) {
       walkPlanStrict(child, allowedLabels);
@@ -539,6 +552,16 @@ public class SqlValidator {
     final List<Expression> expressions = CollectionConverters.asJava(plan.expressions());
     for (final Expression expr : expressions) {
       walkExpressionAnalyzed(expr, registeredViewNames);
+    }
+    // Defence in depth: mirror the strict-walk carve-out for any WithWindowDefinition that
+    // survives analysis (for example a pipe-SQL WINDOW clause), whose windowDefinitions map
+    // is not reached by plan.expressions(). The authoritative gate is the strict walk in
+    // validate; ordinary SQL substitutes named windows into Window nodes before this runs.
+    if (plan instanceof final WithWindowDefinition withWindow) {
+      for (final WindowSpecDefinition spec :
+          CollectionConverters.asJava(withWindow.windowDefinitions()).values()) {
+        walkExpressionAnalyzed(spec, registeredViewNames);
+      }
     }
     final boolean childTrust = inTrustedAlias || isTrustedAlias(plan, registeredViewNames);
     final List<LogicalPlan> children = CollectionConverters.asJava(plan.children());
