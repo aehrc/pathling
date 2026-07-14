@@ -288,6 +288,15 @@ public class SqlValidator {
           "org.apache.spark.sql.catalyst.expressions.WindowSpecDefinition",
           "org.apache.spark.sql.catalyst.expressions.SpecifiedWindowFrame",
           "org.apache.spark.sql.catalyst.expressions.UnspecifiedFrame",
+          // The SpecialFrameBoundary markers for an explicit frame (CURRENT ROW,
+          // UNBOUNDED PRECEDING, UNBOUNDED FOLLOWING). These are leaf, unevaluable
+          // objects describing a frame edge and carry no code-execution risk.
+          "org.apache.spark.sql.catalyst.expressions.CurrentRow",
+          "org.apache.spark.sql.catalyst.expressions.UnboundedPreceding",
+          "org.apache.spark.sql.catalyst.expressions.UnboundedFollowing",
+          // The named-window reference (OVER w) resolved during analysis into the
+          // already-permitted WindowExpression; it is an unevaluable placeholder.
+          "org.apache.spark.sql.catalyst.expressions.UnresolvedWindowExpression",
           // Struct, array, and map expressions.
           "org.apache.spark.sql.catalyst.expressions.CreateNamedStruct",
           "org.apache.spark.sql.catalyst.expressions.CreateArray",

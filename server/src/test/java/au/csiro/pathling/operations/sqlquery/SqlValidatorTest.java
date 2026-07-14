@@ -160,6 +160,108 @@ class SqlValidatorTest {
         .doesNotThrowAnyException();
   }
 
+  // -------------------------------------------------------------------------
+  // Explicit window frames (US1, #2650). An inline frame with the CURRENT ROW,
+  // UNBOUNDED PRECEDING, and UNBOUNDED FOLLOWING boundary markers must be
+  // accepted. Before the fix, the CURRENT ROW boundary was rejected as
+  // "CurrentRow$" (the Scala case-object runtime name). Value-based bounds
+  // (N PRECEDING / N FOLLOWING) were already permitted and are covered here as
+  // a non-regression guard.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsWindowFrameWithCurrentRow() {
+    // The reporter's "rolling worst value over the prior 24 hours per patient"
+    // form, reduced to the window construct over a declared label.
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT patient_id, min(value) OVER ("
+                        + "  PARTITION BY patient_id"
+                        + "  ORDER BY obs_time"
+                        + "  RANGE BETWEEN INTERVAL '24' HOUR PRECEDING AND CURRENT ROW"
+                        + ") AS worst_value FROM t",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsWindowFrameWithUnboundedPrecedingToCurrentRow() {
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT sum(x) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT"
+                        + " ROW) FROM t",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsWindowFrameWithUnboundedBounds() {
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT sum(x) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED"
+                        + " FOLLOWING) FROM t",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsValueBoundedWindowFrame() {
+    // Value bounds parse to ordinary arithmetic expressions (UnaryMinus over a
+    // Literal), which are already permitted, so this needs no new allow-list
+    // entry; it guards against a regression in that reasoning.
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT avg(x) OVER (ORDER BY id ROWS BETWEEN 3 PRECEDING AND 1 FOLLOWING)"
+                        + " FROM t",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
+  // Named window definitions (US2, #2649). A SELECT that references a named
+  // window via OVER w with a matching WINDOW w AS (...) clause must be
+  // accepted. Before the fix, the named-window reference was rejected as
+  // "UnresolvedWindowExpression". The frameless form isolates that gate; the
+  // frame-bearing form additionally relies on US1's boundary additions.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsFramelessNamedWindow() {
+    // No explicit frame, so this fails only on UnresolvedWindowExpression and
+    // remains red until US2, isolating that gate from US1's frame boundaries.
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT patient_id, min(value) OVER w AS worst_value FROM t"
+                        + " WINDOW w AS (PARTITION BY patient_id ORDER BY obs_time)",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsNamedWindowWithRangeFrame() {
+    // The reporter's ten-column case reduced to two aggregates that share one
+    // named window carrying a RANGE frame with a CURRENT ROW boundary.
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT patient_id,"
+                        + "  min(value) OVER w AS worst_min,"
+                        + "  max(value) OVER w AS worst_max"
+                        + " FROM t"
+                        + " WINDOW w AS ("
+                        + "  PARTITION BY patient_id"
+                        + "  ORDER BY obs_time"
+                        + "  RANGE BETWEEN INTERVAL '24' HOUR PRECEDING AND CURRENT ROW"
+                        + ")",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
   @Test
   void acceptsSelectWithDistinct() {
     assertThatCode(() -> validate("SELECT DISTINCT name FROM t", "t")).doesNotThrowAnyException();
