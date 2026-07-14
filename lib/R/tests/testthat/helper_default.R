@@ -7,7 +7,6 @@ def_spark <- function() {
     master = "local[1]",
     config = list(
       "sparklyr.shell.driver-memory" = "4G",
-      "sparklyr.shell.driver-java-options" = '"-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=7896"',
       "sparklyr.shell.conf" = c(
         "spark.sql.mapKeyDedupPolicy=LAST_WIN",
         "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
