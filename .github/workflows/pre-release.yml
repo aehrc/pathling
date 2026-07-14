@@ -115,7 +115,7 @@ jobs:
           -Dsonar.host.url=https://sonarcloud.io \
           -Dsonar.sarifReportPaths=trivy-results.sarif \
           -pl '!benchmark' -Pdocs,mavenPreRelease,check,sofComplianceReport
-        timeout-minutes: 60
+        timeout-minutes: 90
 
       - name: Upload test artifacts
         if: always()
