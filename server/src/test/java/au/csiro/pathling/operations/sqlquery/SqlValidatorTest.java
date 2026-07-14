@@ -25,6 +25,9 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.parser.ParseException;
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import org.apache.spark.sql.catalyst.plans.logical.WithWindowDefinition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -308,6 +311,55 @@ class SqlValidatorTest {
                         + ")",
                     "t"))
         .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
+  // Analysed-plan defence in depth for named windows (US2, #2649). Ordinary SQL
+  // substitutes named windows into Window nodes before analysis, so a
+  // WithWindowDefinition normally never reaches the analysed-plan walk, and its
+  // windowDefinitions map is not reachable through plan.expressions(). The walk
+  // nonetheless descends into any WithWindowDefinition that survives, so that a
+  // definition body cannot become a blind spot. These tests force that branch
+  // by wrapping a real named-window definition map around an already-validated
+  // child.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void walksCleanBodyOfSurvivingWithWindowDefinition() throws ParseException {
+    // A clean named-window body passes: the walk reaches into the definition and
+    // finds nothing disallowed.
+    final WithWindowDefinition node =
+        withWindowNode("SELECT 1 FROM t WINDOW w AS (PARTITION BY id ORDER BY ts)");
+    assertThatCode(() -> sqlValidator.validateAnalyzed(node, Set.of())).doesNotThrowAnyException();
+  }
+
+  @Test
+  void rejectsReflectionInBodyOfSurvivingWithWindowDefinition() throws ParseException {
+    // A reflection-style function hidden in a surviving named-window definition
+    // must still be rejected by the analysed-plan walk, mirroring the strict-walk
+    // carve-out.
+    final WithWindowDefinition node =
+        withWindowNode(
+            "SELECT 1 FROM t WINDOW w AS ("
+                + "PARTITION BY java_method('java.lang.Math', 'random') ORDER BY id)");
+    assertThatThrownBy(() -> sqlValidator.validateAnalyzed(node, Set.of()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function");
+  }
+
+  /**
+   * Builds a {@link WithWindowDefinition} that carries a real named-window definition map (parsed
+   * from the given WINDOW-clause SQL) but a trivial, already-validated child. This forces the
+   * analysed-plan walk through the WithWindowDefinition branch that ordinary SQL elides during
+   * analysis, where named windows are substituted into Window nodes before the walk runs.
+   */
+  @Nonnull
+  private WithWindowDefinition withWindowNode(@Nonnull final String windowSql)
+      throws ParseException {
+    final LogicalPlan source = sparkSession.sessionState().sqlParser().parsePlan(windowSql);
+    final WithWindowDefinition parsed = (WithWindowDefinition) source;
+    final LogicalPlan cleanChild = sparkSession.sql("SELECT 1 AS id").queryExecution().analyzed();
+    return new WithWindowDefinition(parsed.windowDefinitions(), cleanChild, false);
   }
 
   @Test
