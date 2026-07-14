@@ -171,18 +171,18 @@ error response and is excluded from the CapabilityStatement.
 
 ### SQL query
 
-These settings apply resource limits to the `$sqlquery-run` operation. Both
-limits are always applied; they cannot be disabled per request.
+These settings apply resource limits to the SQL query operations, both
+`$sqlquery-run` and `$sqlquery-export`. The limits are always applied; they
+cannot be disabled per request.
 
 - `pathling.sqlQuery.maxRows` - (default: `1000000`) The maximum number of rows
-  that a single `$sqlquery-run` response may stream. Always applied; clamps the
-  caller-supplied `_limit` when that value is larger.
+  that a single query may return. Always applied; clamps the caller-supplied
+  `_limit` when that value is larger.
 - `pathling.sqlQuery.timeoutSeconds` - (default: `60`) The maximum wall-clock
   time in seconds that a single query may run before its Spark job group is
-  cancelled. A timeout that fires before the response stream begins produces a
-  4xx response; a timeout that fires mid-stream aborts the connection and is
-  recorded as a server warning. Long-running queries should use the
-  asynchronous path.
+  cancelled. For `$sqlquery-run`, a timeout that fires before the response
+  stream begins produces a 4xx response; a timeout that fires mid-stream aborts
+  the connection and is recorded as a server warning.
 - `pathling.sqlQuery.maxDependencyDepth` - (default: `10`) The maximum nesting
   depth of the SQLView dependency graph resolved for a single query. The
   top-level query's direct dependencies sit at depth one; each further level of

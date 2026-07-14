@@ -390,7 +390,7 @@ subject to the metadata check. See the
 
 ## Resource limits
 
-Two server-configured limits are always applied to a `$sqlquery-run`
+The following server-configured limits are always applied to a `$sqlquery-run`
 invocation, regardless of any caller-supplied parameters:
 
 - `pathling.sqlQuery.maxRows` (default `1000000`) - the maximum number of rows
@@ -402,8 +402,8 @@ invocation, regardless of any caller-supplied parameters:
   depth of the SQLView dependency graph. A graph nested deeper is rejected with
   a `400` before any Spark work.
 
-Long-running queries should use the asynchronous bulk submit path rather than
-the synchronous `$sqlquery-run` endpoint. See the
+The same limits apply to the asynchronous
+[$sqlquery-export](./sql-export) operation. See the
 [configuration reference](../configuration.md) for the full list of options.
 
 ## Python example
