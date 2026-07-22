@@ -287,6 +287,26 @@ fs:
                     enabled: true
 ```
 
+When the warehouse is an S3 object store, the S3A magic committer avoids the
+rename-based commit that is unsafe on some stores by completing writes through
+S3 multipart uploads instead. Setting `fs.s3a.committer.name=magic` alone is not
+enough for Spark's Parquet writes to use it; the commit protocol classes must
+also be selected:
+
+```yaml
+spark:
+    sql:
+        sources:
+            commitProtocolClass: org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
+        parquet:
+            output:
+                committer:
+                    class: org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
+```
+
+These committer bindings ship with the server image, so no extra dependency is
+required to enable this configuration.
+
 ### Query
 
 - `pathling.query.explainQueries` - (default: `false`) If set to true, Spark
