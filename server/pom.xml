@@ -172,6 +172,14 @@
       <artifactId>hadoop-aws</artifactId>
       <version>${pathling.hadoopVersion}</version>
     </dependency>
+    <!-- Provides the S3A magic committer classes (PathOutputCommitProtocol and
+         BindingParquetOutputCommitter) used when the warehouse is an S3 object
+         store, avoiding rename-based commits. Version must match Spark. -->
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-hadoop-cloud_${pathling.scalaVersion}</artifactId>
+      <version>${pathling.sparkVersion}</version>
+    </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>bundle</artifactId>
