@@ -40,20 +40,24 @@ def build_banner() -> str:
     """Builds the banner shown before the console's first prompt.
 
     The banner identifies the Pathling and Python versions, lists the
-    variables in scope, notes that the Pathling public functions are
-    pre-imported (with the terminology display available as ``tx_display``),
-    and explains how to exit.
+    variables in scope, notes that the Pathling public functions (e.g.
+    ``member_of``, ``translate``, ``to_coding``) are pre-imported, points to
+    the Python API reference for the full list, notes that the terminology
+    display is available as ``tx_display`` rather than ``display``, and
+    explains how to exit.
 
     :return: the banner text.
     """
     return (
         f"Pathling console (version {__version__}, "
         f"Python {platform.python_version()})\n"
-        "Variables in scope: spark (SparkSession), pathling (PathlingContext)\n"
-        "Pathling public functions are pre-imported (member_of, translate, "
-        "to_coding, ...); see https://pathling.csiro.au/docs/python/pathling.html\n"
-        "The terminology display function is available as tx_display "
-        "(display is IPython's built-in).\n"
+        "Variables in scope: `spark` (SparkSession), `pathling` (PathlingContext)\n"
+        "Pathling public functions are pre-imported (`member_of`, `translate`, "
+        "`to_coding`, ...).\n"
+        "See https://pathling.csiro.au/docs/python/pathling.html#module-pathling "
+        "for the full list.\n"
+        "The terminology display function is available as `tx_display` "
+        "(`display` is IPython's built-in).\n"
         "Type exit or press Ctrl-D to leave.\n"
     )
 
