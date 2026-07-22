@@ -179,7 +179,8 @@ def output_options(func):
             "delimiter",
             default=",",
             callback=_delimiter_callback,
-            help="Field separator for CSV input and output (default: ',').",
+            help="Field separator for CSV input and output, including .tsv "
+            "(default: ','; not inferred from the file extension).",
         ),
         click.option(
             "--header/--no-header",
