@@ -146,6 +146,25 @@ public class JobDirectoryFileSystem {
   }
 
   /**
+   * Recursively deletes the per-job directory and all its contents. Deleting a directory that does
+   * not exist is a no-op.
+   *
+   * <p>This is a strict primitive: any I/O failure is thrown. Callers that want best-effort cleanup
+   * (for example, removing a partial output directory after an export fails) catch and log.
+   *
+   * @param jobId the job identifier
+   * @throws IllegalArgumentException if the job identifier contains traversal sequences
+   * @throws IOException if the directory exists but could not be deleted
+   */
+  public void deleteJobDirectory(@Nonnull final String jobId) throws IOException {
+    final FileSystem fs = getFileSystem();
+    final Path jobDir = jobDirectory(jobId);
+    if (fs.exists(jobDir) && !fs.delete(jobDir, /* recursive= */ true)) {
+      throw new IOException("Failed to delete job directory: " + jobDir);
+    }
+  }
+
+  /**
    * Resolves a file for reading, validating containment, existence and (for {@code file://}
    * schemes) symlink-aware containment, then opens an input stream.
    *

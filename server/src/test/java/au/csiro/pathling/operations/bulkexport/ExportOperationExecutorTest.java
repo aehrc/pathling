@@ -28,11 +28,14 @@ import static au.csiro.pathling.util.TestConstants.RESOLVE_ENCOUNTER;
 import static au.csiro.pathling.util.TestConstants.RESOLVE_PATIENT;
 import static au.csiro.pathling.util.TestConstants.WAREHOUSE_PLACEHOLDER;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
+import au.csiro.pathling.io.StubFileSystem;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -45,6 +48,7 @@ import au.csiro.pathling.util.TestDataSetup;
 import au.csiro.pathling.util.TestExportResponse;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -141,15 +145,29 @@ class ExportOperationExecutorTest {
    */
   private void setupDeltaLakeExecutor() {
     TestDataSetup.copyTestDataToTempDir(uniqueTempDir);
-    exportExecutor =
-        new ExportExecutor(
-            pathlingContext,
-            deltaLake,
-            fhirContext,
-            sparkSession,
-            "file://" + uniqueTempDir.toAbsolutePath(),
-            serverConfiguration,
-            patientCompartmentService);
+    exportExecutor = newExecutor(deltaLake, "file://" + uniqueTempDir.toAbsolutePath());
+  }
+
+  /**
+   * Builds an {@link ExportExecutor} whose per-job directories resolve against the given warehouse
+   * URL, using the Spark session's Hadoop configuration.
+   *
+   * @param dataSource the data source to export
+   * @param warehouseUrl the warehouse database URL (any Hadoop-compatible scheme)
+   * @return the configured executor
+   */
+  private ExportExecutor newExecutor(
+      final QueryableDataSource dataSource, final String warehouseUrl) {
+    final JobDirectoryFileSystem jobDirectoryFileSystem =
+        new JobDirectoryFileSystem(
+            java.net.URI.create(warehouseUrl), sparkSession.sparkContext().hadoopConfiguration());
+    return new ExportExecutor(
+        pathlingContext,
+        dataSource,
+        fhirContext,
+        jobDirectoryFileSystem,
+        serverConfiguration,
+        patientCompartmentService);
   }
 
   @ParameterizedTest
@@ -406,16 +424,76 @@ class ExportOperationExecutorTest {
   private ExportExecutor create_exec(final List<IBaseResource> resources) {
     final CustomObjectDataSource objectDataSource =
         new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
-    exportExecutor =
-        new ExportExecutor(
-            pathlingContext,
-            objectDataSource,
-            fhirContext,
-            sparkSession,
-            "file://" + uniqueTempDir.toAbsolutePath(),
-            serverConfiguration,
-            patientCompartmentService);
+    exportExecutor = newExecutor(objectDataSource, "file://" + uniqueTempDir.toAbsolutePath());
     return exportExecutor;
+  }
+
+  @Test
+  void exportCreatesJobDirectoryOnNonDefaultWarehouseFilesystem() {
+    // Regression for the Wrong FS defect: with a warehouse addressed through a scheme other than
+    // fs.defaultFS (stub:// here, standing in for s3a://), the export must create its job directory
+    // on the warehouse filesystem rather than the process default. Against the pre-fix executor
+    // this failed with IllegalArgumentException: Wrong FS.
+    sparkSession
+        .sparkContext()
+        .hadoopConfiguration()
+        .setClass("fs.stub.impl", StubFileSystem.class, org.apache.hadoop.fs.FileSystem.class);
+
+    final Patient patient = new Patient();
+    patient.setId("test-id");
+    patient.addIdentifier().setValue("test");
+    final CustomObjectDataSource objectDataSource =
+        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(patient));
+    exportExecutor = newExecutor(objectDataSource, "stub://" + uniqueTempDir.toAbsolutePath());
+
+    final ExportRequest req =
+        new ExportRequest(
+            BASE,
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.NDJSON,
+            null,
+            null,
+            List.of("Patient"),
+            Map.of(),
+            List.of(),
+            false,
+            ExportRequest.ExportLevel.SYSTEM,
+            Set.of());
+    final TestExportResponse response = execute(req);
+
+    assertThat(response.exportResponse().getWriteDetails().fileInfos()).isNotEmpty();
+    // The per-job directory must have been created on the stub warehouse filesystem, whose stub
+    // implementation stores data on the local disk under the temp directory.
+    assertThat(uniqueTempDir.resolve("jobs")).isDirectory();
+  }
+
+  @Test
+  void exportWrapsJobDirectoryFailureAsInternalError() {
+    // A warehouse addressed through an unregistered filesystem scheme cannot be resolved, so job
+    // directory creation fails; the executor must surface this as an InternalErrorException rather
+    // than leaking the underlying Hadoop exception.
+    final Patient patient = new Patient();
+    patient.setId("test-id");
+    final CustomObjectDataSource objectDataSource =
+        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(patient));
+    exportExecutor = newExecutor(objectDataSource, "bogus://" + uniqueTempDir.toAbsolutePath());
+
+    final ExportRequest req =
+        new ExportRequest(
+            BASE,
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.NDJSON,
+            null,
+            null,
+            List.of("Patient"),
+            Map.of(),
+            List.of(),
+            false,
+            ExportRequest.ExportLevel.SYSTEM,
+            Set.of());
+
+    assertThatThrownBy(() -> exportExecutor.execute(req, UUID.randomUUID().toString()))
+        .isInstanceOf(InternalErrorException.class);
   }
 
   @ParameterizedTest
@@ -428,15 +506,7 @@ class ExportOperationExecutorTest {
     patient.setMeta(new Meta().setLastUpdatedElement(patientLastUpdated));
     final CustomObjectDataSource objectDataSource =
         new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(patient));
-    exportExecutor =
-        new ExportExecutor(
-            pathlingContext,
-            objectDataSource,
-            fhirContext,
-            sparkSession,
-            "file://" + uniqueTempDir.toAbsolutePath(),
-            serverConfiguration,
-            patientCompartmentService);
+    exportExecutor = newExecutor(objectDataSource, "file://" + uniqueTempDir.toAbsolutePath());
 
     final TestExportResponse actualExportResponse = execute(exportRequest);
     expectedExportResponse =
