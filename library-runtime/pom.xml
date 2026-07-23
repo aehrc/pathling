@@ -121,6 +121,15 @@
                 <exclude>**</exclude>
               </excludes>
             </filter>
+            <!-- Servlet API classes belong to the runtime environment (server, Spark
+                 distribution); bundling them shadows the environment's own version and
+                 causes NoSuchMethodError on newer servlet API methods. -->
+            <filter>
+              <artifact>jakarta.servlet:jakarta.servlet-api</artifact>
+              <excludes>
+                <exclude>**</exclude>
+              </excludes>
+            </filter>
           </filters>
           <transformers>
             <transformer
