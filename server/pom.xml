@@ -43,10 +43,10 @@
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
     <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
-    <pathling.nettyVersion>4.1.135.Final</pathling.nettyVersion>
+    <pathling.nettyVersion>4.1.136.Final</pathling.nettyVersion>
     <pathling.testSetup.skip>false</pathling.testSetup.skip>
     <pathling.ui.skip>false</pathling.ui.skip>
-    <pathling.jacksonVersion>2.22.0</pathling.jacksonVersion>
+    <pathling.jacksonVersion>2.22.1</pathling.jacksonVersion>
     <pathling.testDataVersion>1.0.0</pathling.testDataVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
     <pathling.jibVersion>3.4.6</pathling.jibVersion>
