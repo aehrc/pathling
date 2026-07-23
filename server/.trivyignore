@@ -88,3 +88,10 @@ CVE-2026-43869
 # W3C Baggage propagators; the API jar is present only for HAPI FHIR instrumentation
 # annotations, so the vulnerable Baggage parsing code path is never reached.
 CVE-2026-45292
+
+# okhttp and ini4j are transitive dependencies of spark-hadoop-cloud (via the
+# Hadoop Aliyun/GCS cloud connectors), not on Pathling's request path. okhttp's
+# fix requires a 3.x->4.x major jump untested against Hadoop 3.4.1; ini4j has no
+# fixed release. Neither vulnerable code path is reachable in our usage.
+CVE-2021-0341
+CVE-2022-41404
