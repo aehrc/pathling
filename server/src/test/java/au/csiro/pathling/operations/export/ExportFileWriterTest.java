@@ -19,11 +19,13 @@ package au.csiro.pathling.operations.export;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.io.StubFileSystem;
+import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
@@ -85,6 +87,18 @@ class ExportFileWriterTest {
     writer.deleteJobDirectory("job1");
 
     assertThat(tempDir.resolve("default").resolve("jobs").resolve("job1")).doesNotExist();
+  }
+
+  @Test
+  void createJobDirectoryWrapsHelperFailureAsInternalError() throws IOException {
+    // A failure to create the directory must surface as an InternalErrorException, not the raw
+    // IOException.
+    final JobDirectoryFileSystem failingHelper = mock(JobDirectoryFileSystem.class);
+    doThrow(new IOException("boom")).when(failingHelper).ensureJobDirectory("job1");
+    final ExportFileWriter writer = new ExportFileWriter(mock(SparkSession.class), failingHelper);
+
+    assertThatThrownBy(() -> writer.createJobDirectory("job1"))
+        .isInstanceOf(InternalErrorException.class);
   }
 
   @Test

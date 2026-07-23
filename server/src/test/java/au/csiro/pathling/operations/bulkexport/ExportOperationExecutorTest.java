@@ -28,6 +28,7 @@ import static au.csiro.pathling.util.TestConstants.RESOLVE_ENCOUNTER;
 import static au.csiro.pathling.util.TestConstants.RESOLVE_PATIENT;
 import static au.csiro.pathling.util.TestConstants.WAREHOUSE_PLACEHOLDER;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -47,6 +48,7 @@ import au.csiro.pathling.util.TestDataSetup;
 import au.csiro.pathling.util.TestExportResponse;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -463,6 +465,35 @@ class ExportOperationExecutorTest {
     // The per-job directory must have been created on the stub warehouse filesystem, whose stub
     // implementation stores data on the local disk under the temp directory.
     assertThat(uniqueTempDir.resolve("jobs")).isDirectory();
+  }
+
+  @Test
+  void exportWrapsJobDirectoryFailureAsInternalError() {
+    // A warehouse addressed through an unregistered filesystem scheme cannot be resolved, so job
+    // directory creation fails; the executor must surface this as an InternalErrorException rather
+    // than leaking the underlying Hadoop exception.
+    final Patient patient = new Patient();
+    patient.setId("test-id");
+    final CustomObjectDataSource objectDataSource =
+        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(patient));
+    exportExecutor = newExecutor(objectDataSource, "bogus://" + uniqueTempDir.toAbsolutePath());
+
+    final ExportRequest req =
+        new ExportRequest(
+            BASE,
+            "http://localhost:8080/fhir",
+            ExportOutputFormat.NDJSON,
+            null,
+            null,
+            List.of("Patient"),
+            Map.of(),
+            List.of(),
+            false,
+            ExportRequest.ExportLevel.SYSTEM,
+            Set.of());
+
+    assertThatThrownBy(() -> exportExecutor.execute(req, UUID.randomUUID().toString()))
+        .isInstanceOf(InternalErrorException.class);
   }
 
   @ParameterizedTest
