@@ -19,18 +19,16 @@ package au.csiro.pathling.operations.export;
 
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.library.io.FileSystemPersistence;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
@@ -38,7 +36,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -56,52 +53,40 @@ public class ExportFileWriter {
 
   @Nonnull private final SparkSession sparkSession;
 
-  @Nonnull private final String databasePath;
+  @Nonnull private final JobDirectoryFileSystem jobDirectoryFileSystem;
 
   /**
    * Constructs a new ExportFileWriter.
    *
    * @param sparkSession the Spark session used to write the output files
-   * @param databasePath the warehouse database path under which the {@code jobs} directory lives
+   * @param jobDirectoryFileSystem the shared helper that resolves, creates, and deletes per-job
+   *     directories on the warehouse filesystem
    */
   @Autowired
   public ExportFileWriter(
       @Nonnull final SparkSession sparkSession,
-      @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          final String databasePath) {
+      @Nonnull final JobDirectoryFileSystem jobDirectoryFileSystem) {
     this.sparkSession = sparkSession;
-    this.databasePath = databasePath;
+    this.jobDirectoryFileSystem = jobDirectoryFileSystem;
   }
 
   /**
-   * Creates the per-job directory under the warehouse for storing output files.
+   * Creates the per-job directory under the warehouse for storing output files. The directory is
+   * created on the warehouse filesystem, resolved from the warehouse URI, so it works for any
+   * warehouse scheme.
    *
    * @param jobId the job id
-   * @return the job directory path
+   * @return the qualified job directory path
    */
   @Nonnull
   public Path createJobDirectory(@Nonnull final String jobId) {
-    final URI warehouseUri = URI.create(databasePath);
-    final Path warehousePath = new Path(warehouseUri);
-    final Path jobDirPath = new Path(new Path(warehousePath, "jobs"), jobId);
-    final Configuration configuration = sparkSession.sparkContext().hadoopConfiguration();
-
     try {
-      final FileSystem fs = FileSystem.get(configuration);
-      if (!fs.exists(jobDirPath)) {
-        final boolean created = fs.mkdirs(jobDirPath);
-        if (!created) {
-          throw new InternalErrorException(
-              "Failed to create subdirectory at %s for job %s.".formatted(databasePath, jobId));
-        }
-        log.debug("Created dir {}", jobDirPath);
-      }
+      jobDirectoryFileSystem.ensureJobDirectory(jobId);
+      return jobDirectoryFileSystem.jobDirectory(jobId);
     } catch (final IOException e) {
       throw new InternalErrorException(
-          "Failed to create subdirectory at %s for job %s.".formatted(databasePath, jobId));
+          "Failed to create job directory for job %s.".formatted(jobId), e);
     }
-
-    return jobDirPath;
   }
 
   /**
@@ -111,14 +96,9 @@ public class ExportFileWriter {
    * @param jobId the job id whose directory should be removed
    */
   public void deleteJobDirectory(@Nonnull final String jobId) {
-    final URI warehouseUri = URI.create(databasePath);
-    final Path jobDirPath = new Path(new Path(new Path(warehouseUri), "jobs"), jobId);
     try {
-      final FileSystem fs = FileSystem.get(sparkSession.sparkContext().hadoopConfiguration());
-      if (fs.exists(jobDirPath)) {
-        fs.delete(jobDirPath, /* recursive= */ true);
-        log.debug("Deleted partial output dir {}", jobDirPath);
-      }
+      jobDirectoryFileSystem.deleteJobDirectory(jobId);
+      log.debug("Deleted partial output dir for job {}", jobId);
     } catch (final IOException e) {
       log.warn("Failed to delete partial output directory for job {}", jobId, e);
     }

@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
@@ -466,8 +467,11 @@ class ViewDefinitionExportExecutorTest {
   private ViewDefinitionExportExecutor createExecutor(final IBaseResource... resources) {
     final QueryableDataSource dataSource =
         new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(resources));
-    final ExportFileWriter fileWriter =
-        new ExportFileWriter(sparkSession, "file://" + uniqueTempDir.toAbsolutePath());
+    final JobDirectoryFileSystem jobDirectoryFileSystem =
+        new JobDirectoryFileSystem(
+            java.net.URI.create("file://" + uniqueTempDir.toAbsolutePath()),
+            sparkSession.sparkContext().hadoopConfiguration());
+    final ExportFileWriter fileWriter = new ExportFileWriter(sparkSession, jobDirectoryFileSystem);
     final ExportDataSourceBuilder dataSourceBuilder =
         new ExportDataSourceBuilder(patientCompartmentService);
     return new ViewDefinitionExportExecutor(
