@@ -21,12 +21,13 @@
  * @author John Grimes
  */
 
-import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
-import { Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
+import { Cross2Icon } from "@radix-ui/react-icons";
+import { Box, Button, Card, Flex, Text } from "@radix-ui/themes";
 
 import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { BulkSubmitMonitorForm } from "../components/bulkSubmit/BulkSubmitMonitorForm";
 import { OperationOutcomeDisplay } from "../components/error/OperationOutcomeDisplay";
+import { JobProgressIndicator } from "../components/JobProgressIndicator";
 import { useAuth } from "../contexts/AuthContext";
 import { useBulkSubmit } from "../hooks";
 
@@ -89,27 +90,11 @@ export function BulkSubmit() {
                     )}
                   </Flex>
 
-                  {isActive && monitor.progress !== undefined && (
-                    <Box>
-                      <Flex justify="between" mb="1">
-                        <Text size="1" color="gray">
-                          Progress
-                        </Text>
-                        <Text size="1" color="gray">
-                          {monitor.progress}%
-                        </Text>
-                      </Flex>
-                      <Progress value={monitor.progress} />
-                    </Box>
-                  )}
-
-                  {isActive && monitor.progress === undefined && (
-                    <Flex align="center" gap="2">
-                      <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
-                      <Text size="2" color="gray">
-                        Monitoring...
-                      </Text>
-                    </Flex>
+                  {isActive && (
+                    <JobProgressIndicator
+                      progress={monitor.progress}
+                      pendingLabel="Monitoring..."
+                    />
                   )}
 
                   {isError && monitor.error && <OperationOutcomeDisplay error={monitor.error} />}
