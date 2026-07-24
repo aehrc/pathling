@@ -218,6 +218,30 @@ class ConformanceProviderTest {
   }
 
   @Test
+  void capabilityStatementIncludesJobsOperation() {
+    // When: Getting the capability statement.
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    // Then: The system-level operations should include the jobs list operation.
+    final Set<String> operationNames =
+        capabilityStatement.getRest().getFirst().getOperation().stream()
+            .map(CapabilityStatementRestResourceOperationComponent::getName)
+            .collect(Collectors.toSet());
+
+    assertThat(operationNames).as("System-level operations should include jobs").contains("jobs");
+  }
+
+  @Test
+  void jobsOperationDefinitionIsServed() {
+    // The Pathling-authored OperationDefinition for the jobs list operation is served.
+    assertThat(
+            conformanceProvider.getOperationDefinitionById(
+                new IdType("OperationDefinition/jobs-1")))
+        .isNotNull();
+  }
+
+  @Test
   void capabilityStatementIncludesViewDefinitionExportOperation() {
     // When: Getting the capability statement.
     final CapabilityStatement capabilityStatement =

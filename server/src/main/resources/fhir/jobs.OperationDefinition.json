@@ -1,0 +1,74 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "jobs",
+  "title": "Pathling Jobs Operation",
+  "status": "active",
+  "kind": "operation",
+  "experimental": false,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation lists the asynchronous jobs held in the server's in-memory registry. When authorisation is enabled, only jobs owned by the authenticated caller are returned and the caller must hold the 'operation:jobs' authority; when authorisation is disabled, all jobs are returned. The operation is available only when asynchronous processing is enabled.",
+  "affectsState": false,
+  "code": "jobs",
+  "system": true,
+  "type": false,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "job",
+      "use": "out",
+      "min": 0,
+      "max": "*",
+      "documentation": "One entry per job, newest first.",
+      "part": [
+        {
+          "name": "id",
+          "use": "out",
+          "min": 1,
+          "max": "1",
+          "type": "string",
+          "documentation": "The unique identifier of the job."
+        },
+        {
+          "name": "operation",
+          "use": "out",
+          "min": 1,
+          "max": "1",
+          "type": "code",
+          "documentation": "The name of the operation that initiated the job."
+        },
+        {
+          "name": "status",
+          "use": "out",
+          "min": 1,
+          "max": "1",
+          "type": "code",
+          "documentation": "The derived status of the job: in-progress, completed, failed or cancelled."
+        },
+        {
+          "name": "progress",
+          "use": "out",
+          "min": 0,
+          "max": "1",
+          "type": "integer",
+          "documentation": "The progress percentage (0-100), present only for in-progress jobs with known progress."
+        },
+        {
+          "name": "startTime",
+          "use": "out",
+          "min": 1,
+          "max": "1",
+          "type": "instant",
+          "documentation": "The time at which the job was started."
+        },
+        {
+          "name": "url",
+          "use": "out",
+          "min": 1,
+          "max": "1",
+          "type": "uri",
+          "documentation": "The absolute URL of the job's status-polling and cancellation endpoint."
+        }
+      ]
+    }
+  ]
+}
