@@ -73,6 +73,7 @@ graph TB
 | `pathling:export`                | Provides access to the export operation.                                        |
 | `pathling:view-run`              | Provides access to the $viewdefinition-run operation.                           |
 | `pathling:view-export`           | Provides access to the $viewdefinition-export operation.                        |
+| `pathling:jobs`                  | Provides access to the [jobs](operations/jobs) list operation.                  |
 
 In order to enable access to an operation, an operation authority (e.g.
 `pathling:search`) must be provided along with a `read` or `write` authority
@@ -89,6 +90,16 @@ The view operations (`view-run` and `view-export`) require `read` authority for
 the resource type specified in the ViewDefinition's `resource` element. For
 example, a ViewDefinition targeting `Patient` resources requires
 `pathling:read:Patient` authority in addition to the operation authority.
+
+### Job ownership
+
+Asynchronous jobs are owned by the token subject that started them. When
+authorisation is enabled, the [jobs](operations/jobs) list operation
+(`pathling:jobs`) returns only the caller's own jobs, and both polling a job's
+status and cancelling it (via `GET` and `DELETE` on the job's URL) require the
+caller to be the job's owner and to hold the authority for the operation that
+started the job. A request to cancel a job owned by a different subject is
+refused with an access-denied error and the job is left unaffected.
 
 ### Reading view definitions and queries from storage
 
