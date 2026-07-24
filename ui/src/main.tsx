@@ -32,7 +32,6 @@ import "./index.css";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
-import { JobProvider } from "./contexts/JobContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { UnauthorizedError } from "./types/errors";
 import { setupGlobalErrorHandlers } from "./utils/errorHandler";
@@ -107,11 +106,9 @@ function Root() {
         <QueryClientProvider client={queryClient}>
           <BrowserRouter basename="/admin">
             <AuthProvider>
-              <JobProvider>
-                <ErrorBoundary>
-                  <App />
-                </ErrorBoundary>
-              </JobProvider>
+              <ErrorBoundary>
+                <App />
+              </ErrorBoundary>
             </AuthProvider>
           </BrowserRouter>
         </QueryClientProvider>

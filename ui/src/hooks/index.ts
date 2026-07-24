@@ -27,6 +27,7 @@ export { useAsyncJob } from "./useAsyncJob";
 export { useBulkExport } from "./useBulkExport";
 export type { BulkExportType } from "./useBulkExport";
 export { useImport } from "./useImport";
+export { useJobsList, JOBS_QUERY_KEY } from "./useJobsList";
 export { useImportPnp } from "./useImportPnp";
 export { useBulkSubmit } from "./useBulkSubmit";
 /**

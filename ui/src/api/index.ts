@@ -39,6 +39,10 @@ export { importKickOff, importPnpKickOff } from "./import";
 // Job operations.
 export { jobStatus, jobCancel } from "./job";
 
+// Job list operation.
+export { listJobs, parseJobsResponse } from "./jobs";
+export type { JobSummary, JobSummaryStatus, ListJobsOptions } from "./jobs";
+
 // FHIR REST operations.
 export { search, read, create, update, deleteResource } from "./rest";
 export type { AuthOptions, ResourceType } from "./rest";

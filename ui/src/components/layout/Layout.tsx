@@ -24,6 +24,7 @@
 import {
   DownloadIcon,
   HamburgerMenuIcon,
+  ListBulletIcon,
   PaperPlaneIcon,
   ReaderIcon,
   TableIcon,
@@ -73,6 +74,7 @@ const navItems: NavItem[] = [
   { to: "/import", icon: <UploadIcon />, label: "Import" },
   { to: "/bulk-submit", icon: <PaperPlaneIcon />, label: "Bulk submit" },
   { to: "/sql-on-fhir", icon: <TableIcon />, label: "SQL on FHIR" },
+  { to: "/jobs", icon: <ListBulletIcon />, label: "Jobs" },
 ];
 
 interface MobileNavProps {
