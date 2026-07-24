@@ -22,18 +22,15 @@
  * @author John Grimes
  */
 
-import { Box, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { Box, Flex, Heading } from "@radix-ui/themes";
 import { useState } from "react";
 
-import { LoginRequired } from "../components/auth/LoginRequired";
-import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
+import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { SqlOnFhirForm } from "../components/sqlOnFhir/SqlOnFhirForm";
 import { SqlQueryCard } from "../components/sqlOnFhir/SqlQueryCard";
 import { extractRequestSql } from "../components/sqlOnFhir/sqlQueryFormHelpers";
 import { ViewCard } from "../components/sqlOnFhir/ViewCard";
-import { config } from "../config";
-import { useAuth } from "../contexts/AuthContext";
-import { useSaveSqlQueryLibrary, useSaveViewDefinition, useServerCapabilities } from "../hooks";
+import { useSaveSqlQueryLibrary, useSaveViewDefinition } from "../hooks";
 
 import type { SqlOnFhirMode } from "../components/sqlOnFhir/SqlOnFhirForm";
 import type { ViewRunRequest } from "../hooks";
@@ -52,9 +49,6 @@ interface PageJob {
  * @returns The SQL on FHIR page.
  */
 export function SqlOnFhir() {
-  const { fhirBaseUrl } = config;
-  const { isAuthenticated } = useAuth();
-
   const [mode, setMode] = useState<SqlOnFhirMode>("view-definition");
 
   // Track all view query jobs and SQL query jobs as a single timeline so
@@ -62,10 +56,6 @@ export function SqlOnFhir() {
   const [pageJobs, setPageJobs] = useState<PageJob[]>([]);
 
   const [, setError] = useState<string | null>(null);
-
-  // Fetch server capabilities to determine if auth is required.
-  const { data: capabilities, isLoading: isLoadingCapabilities } =
-    useServerCapabilities(fhirBaseUrl);
 
   // Mutations: ViewDefinition save and SQL query Library save.
   const { mutateAsync: saveViewDefinition, isPending: isSavingViewDefinition } =
@@ -115,71 +105,53 @@ export function SqlOnFhir() {
     setPageJobs((prev) => prev.filter((entry) => entry.job.id !== id));
   };
 
-  // Show loading state while checking server capabilities.
-  if (isLoadingCapabilities) {
-    return (
-      <>
-        <Flex align="center" gap="2">
-          <Spinner />
-          <Text>Checking server capabilities...</Text>
-        </Flex>
-        <SessionExpiredDialog />
-      </>
-    );
-  }
-
-  // Show login prompt if authentication is required but not authenticated.
-  if (capabilities?.authRequired && !isAuthenticated) {
-    return <LoginRequired />;
-  }
-
   return (
-    <>
-      <Flex direction="column" gap="4">
-        <Heading size="6">SQL on FHIR</Heading>
+    <CapabilityGuard>
+      {() => (
+        <Flex direction="column" gap="4">
+          <Heading size="6">SQL on FHIR</Heading>
 
-        <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-          {/* The min-width of zero lets the form column shrink to share width
-              evenly with the results column, rather than being held open by
-              wide content such as long view references. */}
-          <Box style={{ flex: 1, minWidth: 0 }}>
-            <SqlOnFhirForm
-              mode={mode}
-              onModeChange={setMode}
-              onExecuteViewDefinition={handleExecuteViewDefinition}
-              onSaveViewDefinition={saveViewDefinition}
-              onExecuteSqlQuery={handleExecuteSqlQuery}
-              onSaveSqlQueryLibrary={saveSqlQueryLibrary}
-              isViewDefinitionExecuting={false}
-              isViewDefinitionSaving={isSavingViewDefinition}
-              isSqlQueryExecuting={false}
-              isSqlQuerySaving={isSavingSqlQueryLibrary}
-            />
-          </Box>
+          <Flex gap="6" direction={{ initial: "column", md: "row" }}>
+            {/* The min-width of zero lets the form column shrink to share width
+                evenly with the results column, rather than being held open by
+                wide content such as long view references. */}
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <SqlOnFhirForm
+                mode={mode}
+                onModeChange={setMode}
+                onExecuteViewDefinition={handleExecuteViewDefinition}
+                onSaveViewDefinition={saveViewDefinition}
+                onExecuteSqlQuery={handleExecuteSqlQuery}
+                onSaveSqlQueryLibrary={saveSqlQueryLibrary}
+                isViewDefinitionExecuting={false}
+                isViewDefinitionSaving={isSavingViewDefinition}
+                isSqlQueryExecuting={false}
+                isSqlQuerySaving={isSavingSqlQueryLibrary}
+              />
+            </Box>
 
-          <Flex direction="column" gap="3" style={{ flex: 1, overflow: "hidden" }}>
-            {pageJobs.map((entry) =>
-              entry.type === "view" ? (
-                <ViewCard
-                  key={entry.job.id}
-                  job={entry.job as ViewJob}
-                  onError={(message) => setError(message)}
-                  onClose={() => handleCloseJob(entry.job.id)}
-                />
-              ) : (
-                <SqlQueryCard
-                  key={entry.job.id}
-                  job={entry.job as SqlQueryJob}
-                  onError={(message) => setError(message)}
-                  onClose={() => handleCloseJob(entry.job.id)}
-                />
-              ),
-            )}
+            <Flex direction="column" gap="3" style={{ flex: 1, overflow: "hidden" }}>
+              {pageJobs.map((entry) =>
+                entry.type === "view" ? (
+                  <ViewCard
+                    key={entry.job.id}
+                    job={entry.job as ViewJob}
+                    onError={(message) => setError(message)}
+                    onClose={() => handleCloseJob(entry.job.id)}
+                  />
+                ) : (
+                  <SqlQueryCard
+                    key={entry.job.id}
+                    job={entry.job as SqlQueryJob}
+                    onError={(message) => setError(message)}
+                    onClose={() => handleCloseJob(entry.job.id)}
+                  />
+                ),
+              )}
+            </Flex>
           </Flex>
         </Flex>
-      </Flex>
-
-      <SessionExpiredDialog />
-    </>
+      )}
+    </CapabilityGuard>
   );
 }

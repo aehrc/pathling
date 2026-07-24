@@ -22,18 +22,15 @@
  * @author John Grimes
  */
 
-import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
+import { Box, Flex } from "@radix-ui/themes";
 import { useState } from "react";
 
-import { LoginRequired } from "../components/auth/LoginRequired";
-import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
+import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { ExportCard } from "../components/export/ExportCard";
 import { ExportForm } from "../components/export/ExportForm";
-import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useServerCapabilities } from "../hooks";
+import { buildSearchParamMap } from "../hooks";
 
-import type { SearchParamCapability } from "../hooks/useServerCapabilities";
 import type { ExportRequest } from "../types/export";
 
 interface ExportJob {
@@ -48,22 +45,8 @@ interface ExportJob {
  * @returns The export page component.
  */
 export function Export() {
-  const { fhirBaseUrl } = config;
-  const { isAuthenticated, setError } = useAuth();
+  const { setError } = useAuth();
   const [exports, setExports] = useState<ExportJob[]>([]);
-
-  // Fetch server capabilities to determine if auth is required.
-  const { data: capabilities, isLoading: isLoadingCapabilities } =
-    useServerCapabilities(fhirBaseUrl);
-
-  // Build search parameters mapping from capabilities.
-  let searchParams: Record<string, SearchParamCapability[]> | undefined;
-  if (capabilities?.resources) {
-    searchParams = {};
-    for (const resource of capabilities.resources) {
-      searchParams[resource.type] = resource.searchParams;
-    }
-  }
 
   const handleExport = (request: ExportRequest) => {
     const newExport: ExportJob = {
@@ -79,49 +62,36 @@ export function Export() {
     setExports((prev) => prev.filter((exportJob) => exportJob.id !== id));
   };
 
-  // Show loading state while checking server capabilities.
-  if (isLoadingCapabilities) {
-    return (
-      <>
-        <Flex align="center" gap="2">
-          <Spinner />
-          <Text>Checking server capabilities...</Text>
-        </Flex>
-        <SessionExpiredDialog />
-      </>
-    );
-  }
-
-  // Show login prompt if authentication is required but not authenticated.
-  if (capabilities?.authRequired && !isAuthenticated) {
-    return <LoginRequired />;
-  }
-
   // Show export form and any active/completed export cards.
   return (
-    <>
-      <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-        <Box style={{ flex: 1 }}>
-          <ExportForm
-            onSubmit={handleExport}
-            resourceTypes={capabilities?.resourceTypes ?? []}
-            searchParams={searchParams}
-          />
-        </Box>
+    <CapabilityGuard>
+      {(capabilities) => {
+        const searchParams = buildSearchParamMap(capabilities);
 
-        <Flex direction="column" gap="3" style={{ flex: 1 }}>
-          {exports.map((exportJob) => (
-            <ExportCard
-              key={exportJob.id}
-              request={exportJob.request}
-              createdAt={exportJob.createdAt}
-              onError={(message) => setError(message)}
-              onClose={() => handleCloseExport(exportJob.id)}
-            />
-          ))}
-        </Flex>
-      </Flex>
-      <SessionExpiredDialog />
-    </>
+        return (
+          <Flex gap="6" direction={{ initial: "column", md: "row" }}>
+            <Box style={{ flex: 1 }}>
+              <ExportForm
+                onSubmit={handleExport}
+                resourceTypes={capabilities?.resourceTypes ?? []}
+                searchParams={searchParams}
+              />
+            </Box>
+
+            <Flex direction="column" gap="3" style={{ flex: 1 }}>
+              {exports.map((exportJob) => (
+                <ExportCard
+                  key={exportJob.id}
+                  request={exportJob.request}
+                  createdAt={exportJob.createdAt}
+                  onError={(message) => setError(message)}
+                  onClose={() => handleCloseExport(exportJob.id)}
+                />
+              ))}
+            </Flex>
+          </Flex>
+        );
+      }}
+    </CapabilityGuard>
   );
 }

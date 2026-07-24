@@ -22,20 +22,19 @@
  * @author John Grimes
  */
 
-import { Box, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { Box, Heading, Text } from "@radix-ui/themes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { jobCancel } from "../api";
-import { LoginRequired } from "../components/auth/LoginRequired";
-import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
+import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { CancelJobDialog } from "../components/jobs/CancelJobDialog";
 import { requiresCancelConfirmation } from "../components/jobs/jobsPresentation";
 import { JobsTable } from "../components/jobs/JobsTable";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
-import { JOBS_QUERY_KEY, useJobsList, useServerCapabilities } from "../hooks";
+import { JOBS_QUERY_KEY, useJobsList } from "../hooks";
 
 import type { JobSummary } from "../api";
 
@@ -46,13 +45,11 @@ import type { JobSummary } from "../api";
  */
 export function Jobs() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, client } = useAuth();
+  const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const { data: capabilities, isLoading: isLoadingCapabilities } =
-    useServerCapabilities(fhirBaseUrl);
   const jobsQuery = useJobsList();
 
   // The job awaiting cancellation confirmation, or null when no dialog is open.
@@ -91,55 +88,40 @@ export function Jobs() {
     }
   };
 
-  // Show loading state while checking server capabilities.
-  if (isLoadingCapabilities) {
-    return (
-      <>
-        <Flex align="center" gap="2">
-          <Spinner />
-          <Text>Checking server capabilities...</Text>
-        </Flex>
-        <SessionExpiredDialog />
-      </>
-    );
-  }
-
-  // Show login prompt if authentication is required but not authenticated.
-  if (capabilities?.authRequired && !isAuthenticated) {
-    return <LoginRequired />;
-  }
-
   return (
-    <>
-      <Box mb="4">
-        <Heading size="6" mb="1">
-          Jobs
-        </Heading>
-        <Text size="2" color="gray">
-          Background jobs you own on this server. The list refreshes automatically while jobs are
-          running.
-        </Text>
-      </Box>
+    <CapabilityGuard>
+      {() => (
+        <>
+          <Box mb="4">
+            <Heading size="6" mb="1">
+              Jobs
+            </Heading>
+            <Text size="2" color="gray">
+              Background jobs you own on this server. The list refreshes automatically while jobs
+              are running.
+            </Text>
+          </Box>
 
-      <JobsTable
-        jobs={jobsQuery.data ?? []}
-        isLoading={jobsQuery.isLoading}
-        error={jobsQuery.error}
-        onRetry={() => void jobsQuery.refetch()}
-        onCancelJob={handleCancelJob}
-      />
+          <JobsTable
+            jobs={jobsQuery.data ?? []}
+            isLoading={jobsQuery.isLoading}
+            error={jobsQuery.error}
+            onRetry={() => void jobsQuery.refetch()}
+            onCancelJob={handleCancelJob}
+          />
 
-      <CancelJobDialog
-        job={pendingJob}
-        isCancelling={cancelMutation.isPending}
-        onConfirm={handleConfirmCancel}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPendingJob(null);
-          }
-        }}
-      />
-      <SessionExpiredDialog />
-    </>
+          <CancelJobDialog
+            job={pendingJob}
+            isCancelling={cancelMutation.isPending}
+            onConfirm={handleConfirmCancel}
+            onOpenChange={(open) => {
+              if (!open) {
+                setPendingJob(null);
+              }
+            }}
+          />
+        </>
+      )}
+    </CapabilityGuard>
   );
 }
