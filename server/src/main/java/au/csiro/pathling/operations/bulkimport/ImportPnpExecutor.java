@@ -171,8 +171,11 @@ public class ImportPnpExecutor {
       return response;
 
     } catch (final IOException e) {
-      log.error("Failed to create temporary directory for ping and pull import", e);
-      throw new InvalidUserInputError("Failed to create temporary directory: " + e.getMessage(), e);
+      // This covers staging file system access anywhere in the operation, not just the creation of
+      // the temporary directory, so the message must not name a single step.
+      log.error("File system error during ping and pull import", e);
+      throw new InvalidUserInputError(
+          "File system error during ping and pull import: " + e.getMessage(), e);
     } catch (final Exception e) {
       log.error("Ping and pull import failed", e);
       final String errorMessage = extractRootCauseMessage(e);
@@ -261,12 +264,16 @@ public class ImportPnpExecutor {
     }
 
     // Build the client. The Hadoop FileStore factory routes writes through the same scheme
-    // handlers as the rest of the server, allowing s3a://, hdfs:// and other warehouses.
+    // handlers as the rest of the server, allowing s3a://, hdfs:// and other warehouses. The store
+    // is wrapped so that the export does not close the server's shared file system when it
+    // finishes, which would otherwise leave the warehouse unreachable.
+    final HdfsFileStoreFactory hdfsFileStoreFactory = new HdfsFileStoreFactory(hadoopConfiguration);
     final var clientBuilder =
         BulkExportClient.systemBuilder()
             .withFhirEndpointUrl(pnpRequest.exportUrl())
             .withOutputDir(outputDir.toString())
-            .withFileStoreFactory(new HdfsFileStoreFactory(hadoopConfiguration));
+            .withFileStoreFactory(
+                location -> new BorrowedFileStore(hdfsFileStoreFactory.createFileStore(location)));
 
     if (authConfig != null) {
       clientBuilder.withAuthConfig(authConfig);
