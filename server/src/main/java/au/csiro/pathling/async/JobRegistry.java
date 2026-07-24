@@ -23,6 +23,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -148,5 +149,17 @@ public class JobRegistry {
    */
   public boolean removedFromRegistryButStillWithSparkJobContains(final String jobId) {
     return removedFromRegistryButStillWithSparkJob.contains(jobId);
+  }
+
+  /**
+   * Returns a point-in-time snapshot of all jobs currently registered. The returned list is a safe
+   * copy that is not affected by subsequent registrations or removals, and callers cannot mutate
+   * the registry through it.
+   *
+   * @return an immutable list of the currently registered jobs
+   */
+  @Nonnull
+  public synchronized List<Job<?>> allJobs() {
+    return List.copyOf(jobsById.values());
   }
 }

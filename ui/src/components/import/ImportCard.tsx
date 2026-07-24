@@ -22,13 +22,14 @@
  * @author John Grimes
  */
 
-import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
-import { Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
+import { Cross2Icon } from "@radix-ui/react-icons";
+import { Box, Button, Card, Flex, Text } from "@radix-ui/themes";
 import { useEffect, useRef } from "react";
 
 import { OperationOutcomeDisplay } from "../../components/error/OperationOutcomeDisplay";
 import { useImport, useImportPnp } from "../../hooks";
 import { formatDateTime } from "../../utils";
+import { JobProgressIndicator } from "../JobProgressIndicator";
 
 import type { ImportJob, ImportRequest } from "../../types/import";
 import type { ImportPnpRequest } from "../../types/importPnp";
@@ -162,28 +163,7 @@ export function ImportCard({ job, onError, onClose }: Readonly<ImportCardProps>)
           )}
         </Flex>
 
-        {isRunning && progress !== undefined && (
-          <Box>
-            <Flex justify="between" mb="1">
-              <Text size="1" color="gray">
-                Progress
-              </Text>
-              <Text size="1" color="gray">
-                {progress}%
-              </Text>
-            </Flex>
-            <Progress value={progress} />
-          </Box>
-        )}
-
-        {isRunning && progress === undefined && (
-          <Flex align="center" gap="2">
-            <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
-            <Text size="2" color="gray">
-              Processing...
-            </Text>
-          </Flex>
-        )}
+        {isRunning && <JobProgressIndicator progress={progress} pendingLabel="Processing..." />}
 
         {error && <OperationOutcomeDisplay error={error} />}
 

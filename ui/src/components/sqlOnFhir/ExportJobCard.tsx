@@ -25,12 +25,13 @@
  * @author John Grimes
  */
 
-import { Cross2Icon, DownloadIcon, ReloadIcon, TrashIcon } from "@radix-ui/react-icons";
-import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
+import { Cross2Icon, DownloadIcon, TrashIcon } from "@radix-ui/react-icons";
+import { Badge, Box, Button, Card, Flex, Text } from "@radix-ui/themes";
 import { useState } from "react";
 
 import { OperationOutcomeDisplay } from "../../components/error/OperationOutcomeDisplay";
 import { formatDateTime } from "../../utils";
+import { JobProgressIndicator } from "../JobProgressIndicator";
 
 import type { JobStatus } from "../../types/job";
 import type { Parameters } from "fhir/r4";
@@ -121,7 +122,6 @@ export function ExportJobCard({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const isActive = job.status === "pending" || job.status === "in_progress";
-  const showProgress = isActive && job.progress !== null;
   const canDelete = job.status === "completed" && onDelete !== undefined;
   const canClose =
     job.status === "completed" || job.status === "cancelled" || job.status === "failed";
@@ -189,27 +189,8 @@ export function ExportJobCard({
           )}
         </Flex>
 
-        {showProgress && (
-          <Box>
-            <Flex justify="between" mb="1">
-              <Text size="1" color="gray">
-                Progress
-              </Text>
-              <Text size="1" color="gray">
-                {job.progress}%
-              </Text>
-            </Flex>
-            <Progress size="1" value={job.progress ?? 0} />
-          </Box>
-        )}
-
-        {isActive && !showProgress && (
-          <Flex align="center" gap="2">
-            <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
-            <Text size="2" color="gray">
-              Exporting...
-            </Text>
-          </Flex>
+        {isActive && (
+          <JobProgressIndicator progress={job.progress} pendingLabel="Exporting..." size="1" />
         )}
 
         {job.status === "failed" && job.error && <OperationOutcomeDisplay error={job.error} />}

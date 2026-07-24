@@ -19,6 +19,7 @@ package au.csiro.pathling;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
+import au.csiro.pathling.async.JobListProvider;
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.async.JobResultProvider;
 import au.csiro.pathling.cache.EntityTagInterceptor;
@@ -128,6 +129,8 @@ public class FhirServer extends RestfulServer {
 
   @Nonnull private final transient Optional<JobProvider> jobProvider;
 
+  @Nonnull private final transient Optional<JobListProvider> jobListProvider;
+
   @Nonnull private final transient Optional<JobResultProvider> jobResultProvider;
 
   @Nonnull private final transient SystemExportProvider exportProvider;
@@ -197,6 +200,7 @@ public class FhirServer extends RestfulServer {
    * @param configuration the server configuration
    * @param oidcConfiguration the optional OIDC configuration
    * @param jobProvider the optional job provider
+   * @param jobListProvider the optional job list provider
    * @param jobResultProvider the optional job result provider
    * @param exportProvider the export provider
    * @param exportResultProvider the export result provider
@@ -231,6 +235,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final Optional<JobProvider> jobProvider,
+      @Nonnull final Optional<JobListProvider> jobListProvider,
       @Nonnull final Optional<JobResultProvider> jobResultProvider,
       @Nonnull final SystemExportProvider exportProvider,
       @Nonnull final ExportResultProvider exportResultProvider,
@@ -268,6 +273,7 @@ public class FhirServer extends RestfulServer {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.jobProvider = jobProvider;
+    this.jobListProvider = jobListProvider;
     this.jobResultProvider = jobResultProvider;
     this.exportProvider = exportProvider;
     this.exportResultProvider = exportResultProvider;
@@ -315,6 +321,7 @@ public class FhirServer extends RestfulServer {
 
       // Register job providers, if async is enabled.
       jobProvider.ifPresent(this::registerProvider);
+      jobListProvider.ifPresent(this::registerProvider);
       jobResultProvider.ifPresent(this::registerProvider);
 
       // Register export providers based on configuration.

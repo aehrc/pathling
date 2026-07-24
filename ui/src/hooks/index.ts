@@ -27,6 +27,7 @@ export { useAsyncJob } from "./useAsyncJob";
 export { useBulkExport } from "./useBulkExport";
 export type { BulkExportType } from "./useBulkExport";
 export { useImport } from "./useImport";
+export { useJobsList, JOBS_QUERY_KEY } from "./useJobsList";
 export { useImportPnp } from "./useImportPnp";
 export { useBulkSubmit } from "./useBulkSubmit";
 /**
@@ -75,7 +76,10 @@ export type {
 export { useClipboard } from "./useClipboard";
 export { useDownloadFile } from "./useDownloadFile";
 export { useFhirPathSearch } from "./useFhirPathSearch";
-export { useServerCapabilities } from "./useServerCapabilities";
+export {
+  useServerCapabilities,
+  buildSearchParamMap,
+} from "./useServerCapabilities";
 
 // Re-export types from the base hook.
 export type { UseAsyncJobResult } from "./useAsyncJob";

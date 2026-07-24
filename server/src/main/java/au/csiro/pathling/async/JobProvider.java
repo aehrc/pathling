@@ -99,6 +99,18 @@ public class JobProvider {
    */
   public void deleteJob(final String jobId) {
     final Job<?> job = getJob(jobId);
+
+    if (configuration.getAuth().isEnabled()) {
+      // Mirror the ownership checks on the GET path: the caller must hold the authority for the
+      // operation that initiated the job, and must be the job's owner.
+      checkHasAuthority(PathlingAuthority.operationAccess(job.getOperation()));
+      final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+      final Optional<String> currentUserId = getCurrentUserId(authentication);
+      if (!job.getOwnerId().equals(currentUserId)) {
+        throw new AccessDeniedError("The requested job is not owned by the current user");
+      }
+    }
+
     handleJobDeleteRequest(job);
   }
 

@@ -132,7 +132,7 @@ public class ConformanceProvider
    * canonical and Pathling does not serve an OperationDefinition for them.
    */
   private static final List<String> BASE_SYSTEM_OPERATIONS =
-      Arrays.asList("job", "result", EXPORT_OPERATION, "import", "import-pnp");
+      Arrays.asList("job", "jobs", "result", EXPORT_OPERATION, "import", "import-pnp");
 
   /** Bulk submit operations, added when bulk submit is configured. */
   private static final List<String> BULK_SUBMIT_OPERATIONS =
@@ -508,8 +508,9 @@ public class ConformanceProvider
     final List<CapabilityStatementRestResourceOperationComponent> operations = new ArrayList<>();
     final OperationConfiguration ops = configuration.getOperations();
 
-    // Add job operation (always included when async is enabled).
+    // Add job operations (always included when async is enabled).
     addOperationIfEnabled(operations, "job", true);
+    addOperationIfEnabled(operations, "jobs", true);
 
     // Add result operation (needed for export results).
     addOperationIfEnabled(operations, "result", ops.isAnyExportEnabled());
