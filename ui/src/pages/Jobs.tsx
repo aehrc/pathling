@@ -24,10 +24,13 @@
 
 import { Box, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { jobCancel } from "../api";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
+import { CancelJobDialog } from "../components/jobs/CancelJobDialog";
+import { requiresCancelConfirmation } from "../components/jobs/jobsPresentation";
 import { JobsTable } from "../components/jobs/JobsTable";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
@@ -52,6 +55,9 @@ export function Jobs() {
     useServerCapabilities(fhirBaseUrl);
   const jobsQuery = useJobsList();
 
+  // The job awaiting cancellation confirmation, or null when no dialog is open.
+  const [pendingJob, setPendingJob] = useState<JobSummary | null>(null);
+
   const cancelMutation = useMutation<void, Error, JobSummary>({
     mutationFn: (job) => jobCancel(fhirBaseUrl, { pollingUrl: job.url, accessToken }),
     onSuccess: (_data, job) => {
@@ -62,12 +68,27 @@ export function Jobs() {
       );
     },
     onError: (error) => {
+      // On failure the job stays in the list; the toast explains why.
       showToast("Could not cancel job", error.message);
+    },
+    onSettled: () => {
+      setPendingJob(null);
     },
   });
 
   const handleCancelJob = (job: JobSummary) => {
-    cancelMutation.mutate(job);
+    // In-progress jobs are confirmed first; finished jobs are removed immediately.
+    if (requiresCancelConfirmation(job)) {
+      setPendingJob(job);
+    } else {
+      cancelMutation.mutate(job);
+    }
+  };
+
+  const handleConfirmCancel = () => {
+    if (pendingJob) {
+      cancelMutation.mutate(pendingJob);
+    }
   };
 
   // Show loading state while checking server capabilities.
@@ -106,6 +127,17 @@ export function Jobs() {
         error={jobsQuery.error}
         onRetry={() => void jobsQuery.refetch()}
         onCancelJob={handleCancelJob}
+      />
+
+      <CancelJobDialog
+        job={pendingJob}
+        isCancelling={cancelMutation.isPending}
+        onConfirm={handleConfirmCancel}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingJob(null);
+          }
+        }}
       />
       <SessionExpiredDialog />
     </>

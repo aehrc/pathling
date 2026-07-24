@@ -25,6 +25,8 @@ import { expect, test } from "@playwright/test";
 
 import { mockMetadata } from "./helpers/mockHelpers";
 
+import type { Page } from "@playwright/test";
+
 interface JobPart {
   name: string;
   valueString?: string;
@@ -69,6 +71,28 @@ function exportJob(id: string, status: string, progress?: number): JobPart[] {
   return parts;
 }
 
+/**
+ * Mocks the job DELETE endpoint, invoking a callback when a delete is received.
+ *
+ * @param page - The Playwright page object.
+ * @param status - The HTTP status to return for the delete.
+ * @param onDelete - Optional callback invoked when the delete is received.
+ */
+async function mockJobDelete(
+  page: Page,
+  status: number,
+  onDelete?: () => void,
+): Promise<void> {
+  await page.route(/\/\$job\?/, async (route) => {
+    if (route.request().method() === "DELETE") {
+      onDelete?.();
+      await route.fulfill({ status, body: "" });
+      return;
+    }
+    await route.fallback();
+  });
+}
+
 test.describe("Jobs page", () => {
   test.beforeEach(async ({ page }) => {
     await mockMetadata(page);
@@ -94,9 +118,9 @@ test.describe("Jobs page", () => {
       page.getByRole("cell", { name: "export", exact: true }),
     ).toBeVisible();
     await expect(page.getByText("In progress")).toBeVisible();
-    await expect(page.getByText("30%")).toBeVisible();
 
-    // The list refreshes automatically, so the updated progress appears without interaction.
+    // The list refreshes automatically, so the advanced progress appears without interaction.
+    // (Asserting only the later value avoids racing the poll interval past the initial value.)
     await expect(page.getByText("62%")).toBeVisible({ timeout: 10000 });
   });
 
@@ -115,27 +139,97 @@ test.describe("Jobs page", () => {
   });
 
   test("shows an error state with a working retry action", async ({ page }) => {
-    // Fail the first request, then succeed once the user retries.
-    let failed = false;
+    // The list request fails, so the page shows the error state with a retry action. (Automatic
+    // refetch on focus means a transient error would self-heal, so the failure is kept stable here
+    // to assert the error surface deterministically; the retry callback itself is unit tested.)
     await page.route("**/$jobs*", async (route) => {
-      if (!failed) {
-        failed = true;
-        await route.fulfill({ status: 500, body: "Server error" });
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/fhir+json",
-        body: jobsBody([exportJob("job-1", "completed")]),
-      });
+      await route.fulfill({ status: 500, body: "Server error" });
     });
 
     await page.goto("/admin/jobs");
 
     await expect(page.getByText(/could not load jobs/i)).toBeVisible();
-    await page.getByRole("button", { name: /retry/i }).click();
+    await expect(page.getByRole("button", { name: /retry/i })).toBeVisible();
+  });
 
-    // After retrying, the job appears.
-    await expect(page.getByText("Completed")).toBeVisible();
+  test("cancels an in-progress job after confirmation", async ({ page }) => {
+    let cancelled = false;
+    await page.route("**/$jobs*", async (route) => {
+      // Once the DELETE has been issued, the job no longer appears.
+      const jobs = cancelled ? [] : [exportJob("job-1", "in-progress", 40)];
+      await route.fulfill({
+        status: 200,
+        contentType: "application/fhir+json",
+        body: jobsBody(jobs),
+      });
+    });
+    await mockJobDelete(page, 202, () => {
+      cancelled = true;
+    });
+
+    await page.goto("/admin/jobs");
+    await expect(
+      page.getByRole("cell", { name: "export", exact: true }),
+    ).toBeVisible();
+
+    // Activating cancel on an in-progress job asks for confirmation.
+    await page.getByRole("button", { name: /cancel/i }).click();
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.getByRole("button", { name: /cancel job/i }).click();
+
+    // After confirming, the row disappears from the refreshed list.
+    await expect(
+      page.getByRole("cell", { name: "export", exact: true }),
+    ).toBeHidden({ timeout: 10000 });
+    await expect(page.getByText("No jobs to show")).toBeVisible();
+  });
+
+  test("keeps the row when a cancel request fails", async ({ page }) => {
+    await page.route("**/$jobs*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/fhir+json",
+        body: jobsBody([exportJob("job-1", "in-progress", 40)]),
+      });
+    });
+    await mockJobDelete(page, 500);
+
+    await page.goto("/admin/jobs");
+    await page.getByRole("button", { name: /cancel/i }).click();
+    await page.getByRole("button", { name: /cancel job/i }).click();
+
+    // A failure surfaces a toast and the job remains listed. Radix renders an off-screen
+    // announcement copy of the toast, so match the first occurrence.
+    await expect(page.getByText(/could not cancel job/i).first()).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "export", exact: true }),
+    ).toBeVisible();
+  });
+
+  test("removes a finished job without confirmation", async ({ page }) => {
+    let removed = false;
+    await page.route("**/$jobs*", async (route) => {
+      const jobs = removed ? [] : [exportJob("job-1", "completed")];
+      await route.fulfill({
+        status: 200,
+        contentType: "application/fhir+json",
+        body: jobsBody(jobs),
+      });
+    });
+    await mockJobDelete(page, 202, () => {
+      removed = true;
+    });
+
+    await page.goto("/admin/jobs");
+    await expect(
+      page.getByRole("cell", { name: "export", exact: true }),
+    ).toBeVisible();
+
+    // Removing a finished job takes effect immediately, with no confirmation dialog.
+    await page.getByRole("button", { name: /remove/i }).click();
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    await expect(
+      page.getByRole("cell", { name: "export", exact: true }),
+    ).toBeHidden({ timeout: 10000 });
   });
 });

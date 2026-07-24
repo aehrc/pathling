@@ -69,6 +69,17 @@ export function isJobInProgress(job: JobSummary): boolean {
 }
 
 /**
+ * Reports whether cancelling a job should be confirmed first. Only in-progress jobs need
+ * confirmation, since cancelling them discards work; finished jobs are simply removed.
+ *
+ * @param job - The job being acted on.
+ * @returns True if a confirmation dialog should be shown before cancelling.
+ */
+export function requiresCancelConfirmation(job: JobSummary): boolean {
+  return isJobInProgress(job);
+}
+
+/**
  * Chooses the query refetch interval based on whether any job is still running, so progress stays
  * current while jobs run without polling needlessly when they are all finished.
  *
