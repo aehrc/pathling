@@ -101,6 +101,35 @@ class JobListIT {
         .untilAsserted(() -> assertJobListed(jobId));
   }
 
+  @Test
+  void cancelledJobLeavesTheList() {
+    // Quickstart scenario 3: cancel a job and confirm it disappears, then a repeat delete is 404.
+    final String pollUrl = kickOffRequest(webTestClient, exportUri());
+    final String jobId = extractJobId(pollUrl);
+
+    // Wait until the job is listed before cancelling it.
+    await()
+        .atMost(10, TimeUnit.SECONDS)
+        .pollInterval(200, TimeUnit.MILLISECONDS)
+        .untilAsserted(() -> assertJobListed(jobId));
+
+    // Deleting the job as its owner (auth disabled in this profile) is accepted.
+    webTestClient.delete().uri(pollUrl).exchange().expectStatus().isAccepted();
+
+    // The job no longer appears in the list.
+    await()
+        .atMost(10, TimeUnit.SECONDS)
+        .pollInterval(200, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () -> {
+              final JsonNode job = findJob(getJobs(), jobId);
+              assertThat(job).as("Cancelled job %s should not be listed", jobId).isNull();
+            });
+
+    // Repeating the delete on the now-removed job returns 404.
+    webTestClient.delete().uri(pollUrl).exchange().expectStatus().isNotFound();
+  }
+
   private void assertJobListed(final String jobId) throws IOException {
     final String body = getJobs();
     final JsonNode job = findJob(body, jobId);
