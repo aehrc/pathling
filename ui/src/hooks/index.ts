@@ -76,7 +76,10 @@ export type {
 export { useClipboard } from "./useClipboard";
 export { useDownloadFile } from "./useDownloadFile";
 export { useFhirPathSearch } from "./useFhirPathSearch";
-export { useServerCapabilities } from "./useServerCapabilities";
+export {
+  useServerCapabilities,
+  buildSearchParamMap,
+} from "./useServerCapabilities";
 
 // Re-export types from the base hook.
 export type { UseAsyncJobResult } from "./useAsyncJob";
