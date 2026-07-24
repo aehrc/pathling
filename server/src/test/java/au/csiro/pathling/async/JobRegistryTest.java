@@ -17,12 +17,15 @@
 
 package au.csiro.pathling.async;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.async.Job.JobTag;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Future;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -73,6 +76,53 @@ class JobRegistryTest {
 
     assertNotEquals(firstJob, otherJob);
     assertNotEquals(firstJob.getId(), otherJob.getId());
+  }
+
+  @Test
+  void snapshotReturnsAllRegisteredJobs() {
+    final Job<?> firstJob =
+        registry.getOrCreate(
+            JOB_TAG_1, id -> new Job<>(id, "export", MOCK_FUTURE, Optional.empty()));
+    final Job<?> secondJob =
+        registry.getOrCreate(
+            JOB_TAG_2, id -> new Job<>(id, "import", MOCK_FUTURE, Optional.empty()));
+
+    assertThat(registry.allJobs()).containsExactlyInAnyOrder(firstJob, secondJob);
+  }
+
+  @Test
+  void snapshotIsEmptyWhenNoJobsRegistered() {
+    assertThat(registry.allJobs()).isEmpty();
+  }
+
+  @Test
+  void snapshotReflectsRemovals() {
+    final Job<?> firstJob =
+        registry.getOrCreate(
+            JOB_TAG_1, id -> new Job<>(id, "export", MOCK_FUTURE, Optional.empty()));
+    final Job<?> secondJob =
+        registry.getOrCreate(
+            JOB_TAG_2, id -> new Job<>(id, "import", MOCK_FUTURE, Optional.empty()));
+
+    registry.remove(firstJob);
+
+    assertThat(registry.allJobs()).containsExactly(secondJob);
+  }
+
+  @Test
+  void snapshotIsASafeCopy() {
+    final Job<?> firstJob =
+        registry.getOrCreate(
+            JOB_TAG_1, id -> new Job<>(id, "export", MOCK_FUTURE, Optional.empty()));
+
+    // The snapshot taken before a later registration must not observe the new job.
+    final List<Job<?>> snapshot = registry.allJobs();
+    registry.getOrCreate(JOB_TAG_2, id -> new Job<>(id, "import", MOCK_FUTURE, Optional.empty()));
+    assertThat(snapshot).containsExactly(firstJob);
+
+    // The returned list must be immutable so callers cannot mutate the registry through it.
+    assertThatThrownBy(() -> snapshot.add(firstJob))
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   interface FutureResource extends Future<IBaseResource> {}
