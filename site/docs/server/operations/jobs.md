@@ -69,7 +69,7 @@ started.
 ## Ownership
 
 When [authorisation](../authorization) is enabled, the caller must hold the
-`operation:jobs` authority, and the response contains only the jobs whose owner
+`pathling:jobs` authority, and the response contains only the jobs whose owner
 matches the caller's token subject. A caller whose token has no subject claim
 receives an empty list. When authorisation is disabled, all jobs in the
 registry are returned.

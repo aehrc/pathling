@@ -6,7 +6,7 @@
   "kind": "operation",
   "experimental": false,
   "publisher": "Australian e-Health Research Centre, CSIRO",
-  "description": "This operation lists the asynchronous jobs held in the server's in-memory registry. When authorisation is enabled, only jobs owned by the authenticated caller are returned and the caller must hold the 'operation:jobs' authority; when authorisation is disabled, all jobs are returned. The operation is available only when asynchronous processing is enabled.",
+  "description": "This operation lists the asynchronous jobs held in the server's in-memory registry. When authorisation is enabled, only jobs owned by the authenticated caller are returned and the caller must hold the 'pathling:jobs' authority; when authorisation is disabled, all jobs are returned. The operation is available only when asynchronous processing is enabled.",
   "affectsState": false,
   "code": "jobs",
   "system": true,
