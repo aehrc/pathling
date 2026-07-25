@@ -95,3 +95,10 @@ CVE-2026-45292
 # fixed release. Neither vulnerable code path is reachable in our usage.
 CVE-2021-0341
 CVE-2022-41404
+
+# lz4-java native XXHash JVM crash on invalid byte array ranges — a Spark transitive used
+# for internal shuffle and block compression. Spark passes only its own valid buffer ranges,
+# so the invalid-range path is not reachable from user input. There is no fixed release for
+# the org.lz4 coordinate; the fix exists only in the renamed at.yawk.lz4 fork, which Spark
+# does not use.
+CVE-2026-59949
