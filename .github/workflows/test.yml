@@ -315,6 +315,28 @@ jobs:
           -pl '!site,!benchmark,!lib/R'
         timeout-minutes: 10
 
+      # A module's cross-module coverage view can only be built where the whole reactor is present,
+      # which no longer holds in the individual test jobs. This job has every module's execution data
+      # restored, so the aggregate reports are regenerated here instead. It runs after the analysis so
+      # that what SonarCloud reads is left exactly as the test jobs produced it, and without
+      # -DskipTests, which would otherwise disable JaCoCo. The reported figures are identical to those
+      # of a single-reactor build; only the annotated source listings for the Scala and generated
+      # sources are absent, because their source roots are registered during a full build.
+      - name: Generate aggregate coverage reports
+        if: always()
+        run: |
+          mvn --batch-mode jacoco:report-aggregate \
+          -pl '!site,!benchmark,!lib/R'
+        timeout-minutes: 10
+
+      - name: Save aggregate coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aggregate-coverage-reports
+          path: "**/target/site/jacoco-aggregate/"
+          if-no-files-found: warn
+
   test-ui:
     name: Test UI
     needs: detect-changes
