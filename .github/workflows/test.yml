@@ -106,7 +106,11 @@ jobs:
       fail-fast: false
       matrix:
         module:
+          - utilities
+          - encoders
           - terminology
+          - fhirpath
+          - library-api
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -130,7 +134,7 @@ jobs:
       - name: Run tests
         run: |
           mvn --batch-mode verify \
-          -pl ${{ matrix.module }} -Dpathling.testForkCount=1
+          -pl ${{ matrix.module }}
         timeout-minutes: 40
 
       # The coverage and report files are collected into a single archive so that the SonarCloud job
@@ -259,7 +263,7 @@ jobs:
     needs: [detect-changes, test-core]
     # Analysis is only meaningful once every module has reported its coverage; a partial set would
     # be published as a drop in coverage.
-    if: false && needs.detect-changes.outputs.core == 'true' && needs.test-core.result == 'success'
+    if: needs.detect-changes.outputs.core == 'true' && needs.test-core.result == 'success'
     permissions:
       contents: read
     steps:
