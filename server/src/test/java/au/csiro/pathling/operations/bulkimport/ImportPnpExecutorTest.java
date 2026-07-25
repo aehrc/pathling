@@ -359,7 +359,7 @@ class ImportPnpExecutorTest {
 
     final ImportExecutor mockImportExecutor = mock(ImportExecutor.class);
     final ImportPnpExecutor spyExecutor = spy(newExecutor(config, mockImportExecutor, tempDir));
-    doReturn(mockClient).when(spyExecutor).buildBulkExportClient(any(), any(), any());
+    doReturn(mockClient).when(spyExecutor).buildBulkExportClient(any(), any(), any(), any());
 
     final ImportPnpRequest request =
         new ImportPnpRequest(
