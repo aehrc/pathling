@@ -91,6 +91,20 @@ operation, which retrieves data from external FHIR bulk export endpoints.
   resolve to internal or private IP addresses (loopback, link-local,
   site-local, and unique-local). Set to `true` only if your deployment
   legitimately uses internal FHIR bulk export endpoints.
+- `pathling.import.pnp.maxConcurrentDownloads` - (default: `4`) The number of
+  files to download concurrently. Each download is written to storage as it is
+  received, so a value higher than the storage can keep up with leaves
+  connections idle while they wait their turn to write.
+- `pathling.import.pnp.downloadSocketTimeout` - (default: `600000`) The number
+  of milliseconds a download may wait for more data before the connection is
+  treated as failed. A download that is blocked writing what it has already
+  received is not reading from its connection, so this needs to accommodate the
+  slowest write the storage will perform, not just network latency.
+
+If imports of large resource types fail with a download error while smaller
+ones succeed, lower `maxConcurrentDownloads` or raise
+`downloadSocketTimeout`: the symptom of exceeding what the storage can sustain
+is a connection closed part-way through a file.
 
 **Security note**: When PNP credentials are configured,
 `pathling.auth.enabled` must also be set to `true`. If authentication is

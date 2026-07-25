@@ -22,6 +22,7 @@ import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.fhir.export.BulkExportResult;
 import au.csiro.fhir.export.BulkExportResult.FileResult;
 import au.csiro.filestore.hdfs.HdfsFileStoreFactory;
+import au.csiro.http.HttpClientConfig;
 import au.csiro.pathling.config.PnpConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -269,11 +270,19 @@ public class ImportPnpExecutor {
     // same scheme handlers as the rest of the server, and so that the file system is still open
     // for the staging directory to be listed once the download is complete. Lending the file
     // system also avoids opening a second one for every import.
+    // Downloads are written to storage as they are received, so a download that is waiting on a
+    // slow write is not reading from its connection. Keep the number of concurrent downloads and
+    // the socket timeout in step with what the storage can sustain, or connections are closed
+    // part-way through a file.
+    final HttpClientConfig httpClientConfig =
+        HttpClientConfig.builder().socketTimeout(pnpConfig.getDownloadSocketTimeout()).build();
     final var clientBuilder =
         BulkExportClient.systemBuilder()
             .withFhirEndpointUrl(pnpRequest.exportUrl())
             .withOutputDir(outputDir.toString())
-            .withFileStoreFactory(HdfsFileStoreFactory.forFileSystem(fs));
+            .withFileStoreFactory(HdfsFileStoreFactory.forFileSystem(fs))
+            .withHttpClientConfig(httpClientConfig)
+            .withMaxConcurrentDownloads(pnpConfig.getMaxConcurrentDownloads());
 
     if (authConfig != null) {
       clientBuilder.withAuthConfig(authConfig);

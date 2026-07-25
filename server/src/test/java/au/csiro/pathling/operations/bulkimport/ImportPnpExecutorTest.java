@@ -69,6 +69,22 @@ class ImportPnpExecutorTest {
     return FileSystem.get(tempDir.toUri(), new Configuration());
   }
 
+  /** Constructs a minimal request against the given export URL. */
+  private static ImportPnpRequest requestFor(final String exportUrl) {
+    return new ImportPnpRequest(
+        "test-url",
+        exportUrl,
+        "dynamic",
+        SaveMode.OVERWRITE,
+        ImportFormat.NDJSON,
+        List.of(),
+        java.util.Optional.empty(),
+        java.util.Optional.empty(),
+        List.of(),
+        List.of(),
+        List.of());
+  }
+
   // ========================================
   // Error message extraction tests
   // ========================================
@@ -527,5 +543,66 @@ class ImportPnpExecutorTest {
   void normalisesOriginToLowercase() {
     assertThat(ImportPnpExecutor.originOf(URI.create("HTTPS://EXAMPLE.COM/path")))
         .isEqualTo("https://example.com");
+  }
+
+  // ========================================
+  // Download tuning tests
+  // ========================================
+
+  /**
+   * Downloads are written to storage as they arrive, so a download waiting on a slow write is not
+   * reading from its connection. The configured socket timeout must reach the client, otherwise the
+   * default is too short for slow storage and connections are closed part-way through a file.
+   */
+  @Test
+  void appliesConfiguredDownloadSocketTimeout(@TempDir final java.nio.file.Path tempDir) {
+    // Given
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setDownloadSocketTimeout(900_000);
+    final ServerConfiguration config = new ServerConfiguration();
+    final ImportPnpExecutor executor = newExecutor(config, mock(ImportExecutor.class), tempDir);
+
+    // When
+    final BulkExportClient client =
+        executor.buildBulkExportClient(
+            requestFor("https://source.example.com/fhir/$export"),
+            pnpConfig,
+            new Path(tempDir.toString(), "out"),
+            mock(FileSystem.class));
+
+    // Then
+    assertThat(client.getHttpClientConfig().getSocketTimeout()).isEqualTo(900_000);
+  }
+
+  /**
+   * Concurrency must be bounded by what the storage can absorb, so the configured value has to
+   * reach the client rather than leaving its higher default in place.
+   */
+  @Test
+  void appliesConfiguredMaxConcurrentDownloads(@TempDir final java.nio.file.Path tempDir) {
+    // Given
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    pnpConfig.setMaxConcurrentDownloads(2);
+    final ServerConfiguration config = new ServerConfiguration();
+    final ImportPnpExecutor executor = newExecutor(config, mock(ImportExecutor.class), tempDir);
+
+    // When
+    final BulkExportClient client =
+        executor.buildBulkExportClient(
+            requestFor("https://source.example.com/fhir/$export"),
+            pnpConfig,
+            new Path(tempDir.toString(), "out"),
+            mock(FileSystem.class));
+
+    // Then
+    assertThat(client.getMaxConcurrentDownloads()).isEqualTo(2);
+  }
+
+  /** The defaults must suit slow object storage rather than relying on the library defaults. */
+  @Test
+  void defaultsSuitSlowStorage() {
+    final PnpConfiguration pnpConfig = new PnpConfiguration();
+    assertThat(pnpConfig.getDownloadSocketTimeout()).isEqualTo(600_000);
+    assertThat(pnpConfig.getMaxConcurrentDownloads()).isEqualTo(4);
   }
 }
