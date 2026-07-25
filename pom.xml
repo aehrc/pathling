@@ -93,6 +93,12 @@
     <pathling.derbyVersion>10.16.1.1</pathling.derbyVersion>
     <pathling.bulkExportVersion>1.0.5-SNAPSHOT</pathling.bulkExportVersion>
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
+
+    <!-- The number of concurrent Surefire forks, expressed as a multiple of the available
+         processors. One fork per processor is the fastest setting measured for a build that has the
+         machine to itself: doubling it makes the fhirpath suite around 70% slower, because every
+         fork holds its own Spark session. Lower it when the build has to share the machine. -->
+    <pathling.testForkCount>1C</pathling.testForkCount>
   </properties>
 
   <modules>
@@ -742,7 +748,7 @@
             <!-- -Djava.security.manager=allow permits NoNetworkExtension to install a transient
                  security manager that verifies terminology tests make no external network calls -->
             <argLine>@{argLine} -Xshare:off -Xmx4g -ea -Duser.timezone=UTC -XX:+EnableDynamicAgentLoading -Djava.security.manager=allow --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED</argLine>
-            <forkCount>1C</forkCount>
+            <forkCount>${pathling.testForkCount}</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
         </plugin>
