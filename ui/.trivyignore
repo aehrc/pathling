@@ -1,0 +1,5 @@
+# React Router RSC mode CSRF bypass — the admin UI is a client-side single page application
+# using BrowserRouter, with no React Server Components, no server-side request handler and no
+# server actions, so the affected request handling does not exist in this build. The fix is
+# only available in a new major version.
+GHSA-qwww-vcr4-c8h2
