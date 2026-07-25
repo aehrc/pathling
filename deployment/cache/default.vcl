@@ -22,6 +22,13 @@ sub vcl_recv {
   // the download. Bypass the cache entirely so the response streams straight
   // through with the backend's Content-Length.
   if (req.url ~ "/\$result") {
+    // These clients read in bursts, stalling for as long as it takes to write
+    // each block to their own storage, which can exceed the default one minute
+    // allowed for sending to a client that is not reading. Without this, the
+    // connection is closed part-way through a large file and the download fails
+    // with a premature end of message body.
+    set sess.idle_send_timeout = 30m;
+    set sess.send_timeout = 2h;
     return (pass);
   }
   if (req.http.Cache-Control ~ "(private|no-cache|no-store)" || req.http.Pragma == "no-cache") {
