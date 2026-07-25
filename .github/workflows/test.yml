@@ -253,10 +253,12 @@ jobs:
           name: r-package
           path: lib/R/target/pathling_*.tar.gz
 
-  # SonarCloud needs coverage from every module at once, so it runs after the test jobs and
-  # restores their reports. The R module is excluded because SonarCloud does not analyse R, and
-  # building it would mean installing the whole R toolchain again. Python coverage is not imported
-  # by SonarCloud, so this job does not wait on the Python tests.
+  # SonarCloud needs coverage from every module at once, so it runs after the test jobs and restores
+  # their reports. The language library modules are left out of the reactor: SonarCloud indexes no
+  # files from either of them, because their sources sit outside the Maven source roots that the
+  # scanner derives its inputs from. Building them would mean installing the R toolchain and
+  # synchronising the Python environment for no analysis in return. For the same reason this job does
+  # not wait on the Python tests.
   sonar:
     name: SonarCloud analysis
     runs-on: ubuntu-latest
@@ -277,7 +279,6 @@ jobs:
         uses: ./.github/actions/setup-build-tools
         with:
           java: "true"
-          python: "true"
           sonar-cache: "true"
 
       - name: Download test reports and coverage
@@ -299,7 +300,7 @@ jobs:
       - name: Build without tests
         run: |
           mvn --batch-mode install -DskipTests \
-          -pl '!site,!benchmark,!lib/R'
+          -pl '!site,!benchmark,!lib/R,!lib/python'
         timeout-minutes: 30
 
       - name: Run SonarCloud analysis
@@ -312,7 +313,7 @@ jobs:
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
-          -pl '!site,!benchmark,!lib/R'
+          -pl '!site,!benchmark,!lib/R,!lib/python'
         timeout-minutes: 10
 
       # A module's cross-module coverage view can only be built where the whole reactor is present,
@@ -326,7 +327,7 @@ jobs:
         if: always()
         run: |
           mvn --batch-mode jacoco:report-aggregate \
-          -pl '!site,!benchmark,!lib/R'
+          -pl '!site,!benchmark,!lib/R,!lib/python'
         timeout-minutes: 10
 
       - name: Save aggregate coverage reports
