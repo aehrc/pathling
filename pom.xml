@@ -1096,6 +1096,14 @@
               <artifactId>license-maven-plugin-git</artifactId>
               <version>5.0.0</version>
             </dependency>
+            <!-- The JGit version bundled with the plugin cannot open a linked Git worktree, which
+                 makes the check fail with "Bare Repository has neither a working tree, nor an
+                 index" whenever the build runs outside the main checkout. -->
+            <dependency>
+              <groupId>org.eclipse.jgit</groupId>
+              <artifactId>org.eclipse.jgit</artifactId>
+              <version>7.4.0.202509020913-r</version>
+            </dependency>
           </dependencies>
         </plugin>
         <plugin>
