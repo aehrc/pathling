@@ -67,3 +67,7 @@ CVE-2026-53632
 
 # webpack-dev-server HMR WebSocket interception — dev server only, not deployed.
 CVE-2026-9595
+
+# brace-expansion out-of-memory DoS — build-time minimatch transitive used for file globbing,
+# not deployed. The only fix is a 1.x to 5.x major upgrade of a transitive dependency.
+CVE-2026-14257
