@@ -486,6 +486,31 @@ def test_stdout_stays_comma_separated_for_a_tsv_input(
     assert result.stdout.splitlines()[0] == "code,system,member_of"
 
 
+def test_invalid_output_path_fails_without_announcing_a_read(
+    runner, patched_context, delimited_csv, tmp_path
+):
+    """An unusable output path fails before the input-side notice is printed.
+
+    Announcing a read that the command then never performs would be misleading,
+    so the notice comes after the output options are resolved - while still
+    staying ahead of the Spark cold start.
+    """
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    result = runner.invoke(
+        cli, _member_of_args(dataset) + ["-o", str(tmp_path / "out.json")]
+    )
+
+    assert result.exit_code == 2
+    assert "ndjson" in result.stderr.lower()
+    assert "tab-separated" not in result.stderr
+
+
 def test_from_offers_no_tsv_value(runner, patched_context, delimited_csv):
     """--from gains no tsv value; the extension governs the delimiter only."""
     dataset = delimited_csv(

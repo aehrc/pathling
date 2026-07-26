@@ -346,19 +346,20 @@ def _execute(
     resolved_format = from_format or _detect_tabular_format(Path(dataset))
     # An omitted --delimiter takes its input-side default from the dataset path,
     # independently of the output side, so a .tsv input is read as tab-separated
-    # without the user naming the separator. Resolved here, alongside the other
-    # pre-Spark steps, so the notice appears before the cold start rather than
-    # after a multi-second pause.
+    # without the user naming the separator.
     input_delimiter = (
         default_delimiter_for_path(Path(dataset)) if delimiter is None else delimiter
     )
-    # Announce an inferred tab only where the delimiter is actually consulted:
-    # Parquet and Delta inputs carry their own schema and ignore it entirely.
-    if delimiter is None and resolved_format == "csv" and input_delimiter == "\t":
-        console.print(tab_inference_notice("Reading", dataset))
     output_spec = resolve_output(
         output, output_format, limit, overwrite, departition, delimiter, header
     )
+    # Announce an inferred tab only where the delimiter is actually consulted:
+    # Parquet and Delta inputs carry their own schema and ignore it entirely. This
+    # comes after the output options are resolved, so an invalid combination fails
+    # rather than announcing a read that never happens - and still before the
+    # multi-second Spark cold start, rather than after it.
+    if delimiter is None and resolved_format == "csv" and input_delimiter == "\t":
+        console.print(tab_inference_notice("Reading", dataset))
     pc = session.create_context(config, console)
     df = _read_dataset(pc, dataset, resolved_format, input_delimiter, input_header)
 
