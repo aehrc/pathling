@@ -237,23 +237,53 @@ public final class HierarchyIndexMemoryHarness {
       @Nonnull final Map<String, List<HierarchyVariantFootprint>> results) {
     final long baseline = total(results, MeasurementVariant.BASELINE);
     final long optimisedCodeOrder = total(results, MeasurementVariant.OPTIMISED_CODE_ORDER);
+    final long unoptimisedPreOrder = total(results, MeasurementVariant.UNOPTIMISED_PRE_ORDER);
     log.info("");
     log.info("Attribution (total retained bytes)");
     for (final MeasurementVariant variant : variants) {
       final long value = total(results, variant.getLabel());
-      final String against =
-          MeasurementVariant.BASELINE.equals(variant.getLabel())
-              ? "baseline"
-              : MeasurementVariant.PROPOSAL.equals(variant.getLabel())
-                  ? String.format(
-                      "%s vs A, %s vs B",
-                      percentChange(baseline, value), percentChange(optimisedCodeOrder, value))
-                  : String.format("%s vs A", percentChange(baseline, value));
       log.info(
           String.format(
               "  %-2s %-34s %18s   %s",
-              variant.getLabel(), variant.getDescription(), grouped(value), against));
+              variant.getLabel(),
+              variant.getDescription(),
+              grouped(value),
+              attribution(
+                  variant.getLabel(), baseline, optimisedCodeOrder, unoptimisedPreOrder, value)));
     }
+  }
+
+  /**
+   * Describes one variant's total against the comparisons that isolate a factor. The proposal is
+   * stated against both of the single-factor variants, so that what the reordering contributes over
+   * the change that costs nothing, and what optimisation contributes on top of the reordering, can
+   * each be read off directly.
+   *
+   * @param label the variant being described
+   * @param baseline variant A's total
+   * @param optimisedCodeOrder variant B's total
+   * @param unoptimisedPreOrder variant C's total
+   * @param value this variant's total
+   * @return the comparison text
+   */
+  @Nonnull
+  private static String attribution(
+      @Nonnull final String label,
+      final long baseline,
+      final long optimisedCodeOrder,
+      final long unoptimisedPreOrder,
+      final long value) {
+    if (MeasurementVariant.BASELINE.equals(label)) {
+      return "baseline";
+    }
+    if (MeasurementVariant.PROPOSAL.equals(label)) {
+      return String.format(
+          "%s vs A, %s vs B, %s vs C",
+          percentChange(baseline, value),
+          percentChange(optimisedCodeOrder, value),
+          percentChange(unoptimisedPreOrder, value));
+    }
+    return String.format("%s vs A", percentChange(baseline, value));
   }
 
   /**
@@ -348,15 +378,25 @@ public final class HierarchyIndexMemoryHarness {
               driverHeapRuleMet ? "met" : "not met", statusQuoHeap, winnerHeap);
     }
 
-    // Below the instrument's own spread two variants cannot be distinguished, so that is the floor
-    // for calling optimisation alone a benefit.
+    // Optimisation is worth adopting instead of the reordering only if it captures a material share
+    // of what the two factors together achieve. The share is measured against the same threshold
+    // the
+    // plan fixed for the reordering, because that is the only figure fixed before the measurement.
+    final long unoptimisedPreOrder = total(results, MeasurementVariant.UNOPTIMISED_PRE_ORDER);
     final double optimisationSaving = saving(baseline, optimisedCodeOrder);
+    final double combinedSaving = saving(baseline, proposal);
+    final double capturedShare = combinedSaving == 0 ? 0.0 : optimisationSaving / combinedSaving;
+    final boolean adoptOptimisationAlone = capturedShare >= REORDERING_THRESHOLD;
+
+    // Once the reordering is being made, optimisation costs nothing more, so any saving the
+    // instrument can resolve justifies it.
+    final double furtherSaving = saving(unoptimisedPreOrder, proposal);
     final double instrumentFloor =
         Math.max(
-                spread(results, MeasurementVariant.BASELINE),
-                spread(results, MeasurementVariant.OPTIMISED_CODE_ORDER))
+                spread(results, MeasurementVariant.UNOPTIMISED_PRE_ORDER),
+                spread(results, MeasurementVariant.PROPOSAL))
             / 100.0;
-    final boolean adoptOptimisation = optimisationSaving > instrumentFloor;
+    final boolean adoptOptimisationAsWell = furtherSaving > instrumentFloor;
 
     log.info("");
     log.info("Decision rule");
@@ -374,8 +414,14 @@ public final class HierarchyIndexMemoryHarness {
         adoptReordering(subRuleA, driverHeapRuleMet, statusQuoHeap != null));
     log.info(
         String.format(
-            "  Adopt runOptimize alone: %s (%+.1f%% vs A, instrument spread %.2f%%)",
-            adoptOptimisation ? "yes" : "no", -optimisationSaving * 100, instrumentFloor * 100));
+            "  Adopt runOptimize alone, in place of the reordering: %s"
+                + " (%+.1f%% vs A, which is %.1f%% of what A to D achieves)",
+            adoptOptimisationAlone ? "yes" : "no", -optimisationSaving * 100, capturedShare * 100));
+    log.info(
+        String.format(
+            "  Adopt runOptimize as well as the reordering: %s (%+.1f%% vs C, instrument spread"
+                + " %.2f%%)",
+            adoptOptimisationAsWell ? "yes" : "no", -furtherSaving * 100, instrumentFloor * 100));
     log.info("");
     log.info(
         "The four variants measured were: {}",
