@@ -348,9 +348,14 @@ pathling import-fhir-terminology /data/hl7.terminology.tgz /data/tx-store
 ```
 
 `import-snomed` accepts `--edition-uri` to override the detected SNOMED
-edition/version. `import-fhir-terminology` accepts a JSON file, a directory of
-JSON files, or a FHIR NPM package (`.tgz`), and imports CodeSystems of any size
-with bounded memory (for example, the multi-gigabyte OMOP vocabulary CodeSystem).
+edition/version, and `--dense-id-order pre-order` to assign internal concept
+identifiers by a depth-first traversal of the is-a hierarchy, which makes the
+hierarchy index materially smaller at query time in exchange for identifiers that
+shift more between releases - see
+[reducing the memory the hierarchy takes at query time](terminology#reducing-the-memory-the-hierarchy-takes-at-query-time).
+`import-fhir-terminology` accepts a JSON file, a directory of JSON files, or a
+FHIR NPM package (`.tgz`), and imports CodeSystems of any size with bounded
+memory (for example, the multi-gigabyte OMOP vocabulary CodeSystem).
 
 Large imports run for many minutes. With `--verbose`, the command streams a
 running count of parsed concepts and stage-transition messages so progress is

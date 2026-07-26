@@ -57,6 +57,7 @@ import static org.apache.spark.sql.functions.map_from_entries;
 import static org.apache.spark.sql.functions.min;
 import static org.apache.spark.sql.functions.row_number;
 import static org.apache.spark.sql.functions.struct;
+import static org.apache.spark.sql.functions.udf;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -87,13 +88,17 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.FilterFunction;
 import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.api.java.UDF1;
+import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.expressions.Window;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
@@ -151,12 +156,27 @@ public class SnomedRf2Importer {
    * @throws TerminologyImportException if the source is not a valid RF2 snapshot release
    */
   public void importFrom(@Nonnull final String source, @Nullable final String editionUriOverride) {
+    importFrom(source, editionUriOverride, DenseIdOrder.CODE_ORDER);
+  }
+
+  /**
+   * Imports an RF2 snapshot release, choosing how dense identifiers are assigned.
+   *
+   * @param source the release directory or archive, on any Hadoop-accessible filesystem
+   * @param editionUriOverride an explicit edition/version URI, or null to detect it
+   * @param denseIdOrder the rule for assigning dense identifiers
+   * @throws TerminologyImportException if the source is not a valid RF2 snapshot release
+   */
+  public void importFrom(
+      @Nonnull final String source,
+      @Nullable final String editionUriOverride,
+      @Nonnull final DenseIdOrder denseIdOrder) {
     // A zip archive is extracted to a temporary directory first, since the file discovery and Spark
     // readers operate on the extracted release layout. A plain directory is read in place.
     final java.nio.file.Path extracted = isZipArchive(source) ? extractArchive(source) : null;
     try {
       final String releaseRoot = extracted != null ? extracted.toString() : source;
-      importFromRelease(releaseRoot, source, editionUriOverride);
+      importFromRelease(releaseRoot, source, editionUriOverride, denseIdOrder);
     } finally {
       if (extracted != null) {
         deleteRecursively(extracted);
@@ -170,11 +190,13 @@ public class SnomedRf2Importer {
    * @param releaseRoot the directory holding the extracted release, scanned for the Snapshot files
    * @param source the original source path, recorded in the manifest for provenance
    * @param editionUriOverride an explicit edition/version URI, or null to detect it
+   * @param denseIdOrder the rule for assigning dense identifiers
    */
   private void importFromRelease(
       @Nonnull final String releaseRoot,
       @Nonnull final String source,
-      @Nullable final String editionUriOverride) {
+      @Nullable final String editionUriOverride,
+      @Nonnull final DenseIdOrder denseIdOrder) {
     final Rf2Files files = locateFiles(releaseRoot);
 
     log.info("Reading concepts from {}", files.concept);
@@ -191,7 +213,7 @@ public class SnomedRf2Importer {
     log.info("Detected SNOMED CT edition {} version {}", parsed.edition, version);
 
     // Concept dictionary with dense identifiers, ordered by code for determinism.
-    final Dataset<Row> concepts =
+    final Dataset<Row> codeOrdered =
         conceptRaw
             .select(
                 col("id").alias(COLUMN_CODE),
@@ -201,7 +223,14 @@ public class SnomedRf2Importer {
                 col("definitionStatusId").equalTo(DEFINED_STATUS).alias(COLUMN_DEFINED))
             .withColumn(COLUMN_DENSE_ID, row_number().over(Window.orderBy(COLUMN_CODE)).minus(1))
             .persist();
-    final long conceptCount = concepts.count();
+    final long conceptCount = codeOrdered.count();
+
+    // The pre-order is derived by permuting the code-order identifiers, so the code ordering is
+    // computed either way. Only the permuting variant costs anything extra.
+    final Dataset<Row> concepts =
+        DenseIdOrder.PRE_ORDER == denseIdOrder
+            ? reorderDenseIds(codeOrdered, files, conceptCount)
+            : codeOrdered;
 
     final Dataset<Row> denseByCode = concepts.select(COLUMN_CODE, COLUMN_DENSE_ID);
 
@@ -235,7 +264,83 @@ public class SnomedRf2Importer {
     writeManifest(writer, version, source);
     descriptions.cached.forEach(Dataset::unpersist);
     concepts.unpersist();
+    codeOrdered.unpersist();
     log.info("Import complete for {} version {} ({} concepts)", SNOMED_URI, version, conceptCount);
+  }
+
+  // --- Dense identifier ordering. ---
+
+  /**
+   * Reassigns dense identifiers in depth-first pre-order over the active is-a hierarchy, so that
+   * each subtree occupies a near-contiguous interval and the runtime hierarchy index needs
+   * materially less memory to represent it.
+   *
+   * <p>The traversal is computed on the driver from the code-order identifiers already assigned,
+   * then broadcast and applied. Collecting the edges rather than distributing the traversal is
+   * deliberate: a depth-first order is inherently sequential, and the edge list is small enough to
+   * hold on the driver.
+   *
+   * @param codeOrdered the concept dictionary with code-order dense identifiers
+   * @param files the located release files, for the relationship file holding the is-a edges
+   * @param conceptCount the number of concepts in the dictionary
+   * @return the dictionary with pre-order dense identifiers
+   */
+  @Nonnull
+  private Dataset<Row> reorderDenseIds(
+      @Nonnull final Dataset<Row> codeOrdered,
+      @Nonnull final Rf2Files files,
+      final long conceptCount) {
+    if (conceptCount > Integer.MAX_VALUE) {
+      throw new TerminologyImportException(
+          "Pre-order dense identifiers are not supported for a release of "
+              + conceptCount
+              + " concepts");
+    }
+    log.info("Assigning dense identifiers in pre-order over the is-a hierarchy");
+    final List<Row> edges = collectIsaEdges(codeOrdered, files);
+    final int[] children = new int[edges.size()];
+    final int[] parents = new int[edges.size()];
+    for (int index = 0; index < edges.size(); index++) {
+      children[index] = edges.get(index).getInt(0);
+      parents[index] = edges.get(index).getInt(1);
+    }
+    log.info("Traversing {} active is-a edges", edges.size());
+    final int[] permutation = DenseIdPreOrder.compute(children, parents, (int) conceptCount);
+
+    final Broadcast<int[]> broadcast =
+        JavaSparkContext.fromSparkContext(spark.sparkContext()).broadcast(permutation);
+    final UDF1<Integer, Integer> lookup = dense -> broadcast.value()[dense];
+    final UserDefinedFunction reassign = udf(lookup, DataTypes.IntegerType);
+    return codeOrdered.withColumn(COLUMN_DENSE_ID, reassign.apply(col(COLUMN_DENSE_ID))).persist();
+  }
+
+  /**
+   * Collects the active is-a edges of a release, expressed in code-order dense identifiers.
+   *
+   * @param codeOrdered the concept dictionary with code-order dense identifiers
+   * @param files the located release files
+   * @return one row per edge, holding the child's identifier then the parent's
+   */
+  @Nonnull
+  private List<Row> collectIsaEdges(
+      @Nonnull final Dataset<Row> codeOrdered, @Nonnull final Rf2Files files) {
+    if (files.relationship == null) {
+      return List.of();
+    }
+    final Dataset<Row> denseByCode = codeOrdered.select(COLUMN_CODE, COLUMN_DENSE_ID);
+    final Dataset<Row> childDense =
+        denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_SOURCE_DENSE_ID);
+    final Dataset<Row> parentDense =
+        denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_TARGET_DENSE_ID);
+    final Dataset<Row> isaRaw =
+        readRf2(files.relationship, "sourceId", "destinationId", "typeId")
+            .filter(col(COLUMN_ACTIVE).equalTo("1"))
+            .filter(col("typeId").equalTo(IS_A));
+    return isaRaw
+        .join(childDense, isaRaw.col("sourceId").equalTo(childDense.col(COLUMN_CODE)))
+        .join(parentDense, isaRaw.col("destinationId").equalTo(parentDense.col(COLUMN_CODE)))
+        .select(col(COLUMN_SOURCE_DENSE_ID), col(COLUMN_TARGET_DENSE_ID))
+        .collectAsList();
   }
 
   // --- Archive extraction. ---
