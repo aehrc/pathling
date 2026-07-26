@@ -93,6 +93,9 @@
     <pathling.derbyVersion>10.16.1.1</pathling.derbyVersion>
     <pathling.bulkExportVersion>1.0.5-SNAPSHOT</pathling.bulkExportVersion>
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
+    <!-- Spark brings in a Netty version with published vulnerabilities, so the whole family is
+         pinned to a patched release. -->
+    <pathling.nettyVersion>4.1.136.Final</pathling.nettyVersion>
 
     <!-- The number of concurrent Surefire forks, expressed as a multiple of the available
          processors. One fork per processor is the fastest setting measured for a build that has the
@@ -130,6 +133,15 @@
 
   <dependencyManagement>
     <dependencies>
+      <!-- Imported ahead of everything else so that the pinned Netty version wins over the one
+           Spark would otherwise bring in. -->
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${pathling.nettyVersion}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
         <artifactId>encoders</artifactId>
