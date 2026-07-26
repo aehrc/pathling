@@ -446,11 +446,11 @@ public class SnomedRf2Importer {
   @Nonnull
   private Rf2Files locateFiles(@Nonnull final String source) {
     final Path root = new Path(source);
-    String concept = null;
+    final List<String> concepts = new ArrayList<>();
     final List<String> descriptions = new ArrayList<>();
-    String relationship = null;
+    final List<String> relationships = new ArrayList<>();
     final List<String> languages = new ArrayList<>();
-    String moduleDependency = null;
+    final List<String> moduleDependencies = new ArrayList<>();
     final List<String> otherRefsets = new ArrayList<>();
     boolean sawNonSnapshotRelease = false;
 
@@ -471,16 +471,16 @@ public class SnomedRf2Importer {
           continue;
         }
         if (name.startsWith("sct2_Concept_")) {
-          concept = path;
+          concepts.add(path);
         } else if (name.startsWith("sct2_Description_")
             || name.startsWith("sct2_TextDefinition_")) {
           descriptions.add(path);
         } else if (name.startsWith("sct2_Relationship_")) {
-          relationship = path;
+          relationships.add(path);
         } else if (name.contains("Refset_Language")) {
           languages.add(path);
         } else if (name.contains("Refset_ModuleDependency")) {
-          moduleDependency = path;
+          moduleDependencies.add(path);
         } else if (name.startsWith("der2_") && name.contains("Refset")) {
           otherRefsets.add(path);
         }
@@ -489,7 +489,7 @@ public class SnomedRf2Importer {
       throw new TerminologyImportException("Unable to read the RF2 source at " + source, e);
     }
 
-    if (concept == null) {
+    if (concepts.isEmpty()) {
       final String detail =
           sawNonSnapshotRelease
               ? " Only snapshot releases are supported; this appears to be a full or delta release."
@@ -497,8 +497,51 @@ public class SnomedRf2Importer {
       throw new TerminologyImportException(
           "No SNOMED CT snapshot concept file was found under " + source + "." + detail);
     }
+    // The concept, relationship and module dependency roles are single-valued. More than one file
+    // filling one of them means two release trees have been placed in the same directory, in which
+    // case the import would otherwise proceed against one tree's content and silently ignore the
+    // other's.
+    requireSingle("concept", concepts, source);
+    requireSingle("relationship", relationships, source);
+    requireSingle("module dependency", moduleDependencies, source);
     return new Rf2Files(
-        concept, descriptions, relationship, languages, moduleDependency, otherRefsets);
+        concepts.get(0),
+        descriptions,
+        relationships.isEmpty() ? null : relationships.get(0),
+        languages,
+        moduleDependencies.isEmpty() ? null : moduleDependencies.get(0),
+        otherRefsets);
+  }
+
+  /**
+   * Rejects a source in which more than one file fills a single-valued role, naming every candidate
+   * in a stable order so the offending files can be found. No file content has been read at this
+   * point, so the store is untouched.
+   *
+   * @param role the name of the role, as it appears in the failure message
+   * @param candidates the paths of the files found for the role
+   * @param source the source path the release was discovered under
+   * @throws TerminologyImportException if more than one candidate was found
+   */
+  private static void requireSingle(
+      @Nonnull final String role,
+      @Nonnull final List<String> candidates,
+      @Nonnull final String source) {
+    if (candidates.size() > 1) {
+      final List<String> sorted = new ArrayList<>(candidates);
+      sorted.sort(Comparator.naturalOrder());
+      throw new TerminologyImportException(
+          "Multiple SNOMED CT snapshot "
+              + role
+              + " files were found under "
+              + source
+              + ": "
+              + String.join(", ", sorted)
+              + ". A single "
+              + role
+              + " file is expected. If you are combining releases, concatenate them into one file"
+              + " rather than placing both release trees in the same directory.");
+    }
   }
 
   // --- RF2 parsing. ---

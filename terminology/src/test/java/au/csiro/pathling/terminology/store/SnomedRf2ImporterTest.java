@@ -86,7 +86,8 @@ import org.slf4j.LoggerFactory;
  * Verifies the SNOMED CT RF2 importer against the rf2-mini fixture: the store tables carry the
  * expected content, dense identifiers are contiguous, edition and version are detected (and
  * overridable), every file joined against the concept dictionary reports how much of it resolved,
- * and a source that is not a snapshot release is rejected without touching the store.
+ * more than one file matching a single-valued role is rejected, and a source that is not a snapshot
+ * release is rejected without touching the store.
  *
  * @author John Grimes
  */
@@ -105,6 +106,7 @@ class SnomedRf2ImporterTest {
   private static final String DESCRIPTION_PREFIX = "sct2_Description_";
   private static final String RELATIONSHIP_PREFIX = "sct2_Relationship_";
   private static final String LANGUAGE_PREFIX = "der2_cRefset_Language";
+  private static final String SIMPLE_REFSET_PREFIX = "der2_Refset_Simple";
 
   private static final String MODULE_DEPENDENCY_REFSET = "900000000000534007";
   private static final String MODEL_MODULE = "900000000000012004";
@@ -634,6 +636,127 @@ class SnomedRf2ImporterTest {
     assertEquals(BASELINE_SPARK_JOBS, jobs.get());
   }
 
+  // --- Ambiguous file discovery (User Story 2). ---
+
+  @Test
+  void rejectsTwoConceptFiles(@TempDir final Path work) throws Exception {
+    // Two release trees dropped into one directory: the concept role is single-valued, so the
+    // import must fail rather than silently keep one tree's content.
+    final Path release = work.resolve("release");
+    copyDirectory(Rf2Mini.baseRelease(), release);
+    final String duplicate = "sct2_Concept_Snapshot_INT_20240601.txt";
+    duplicateFile(terminologyDirectory(release), CONCEPT_PREFIX, duplicate);
+
+    final String store = work.resolve("store").toString();
+    final SnomedRf2Importer importer = new SnomedRf2Importer(spark, store);
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class, () -> importer.importFrom(release.toString(), null));
+    assertAmbiguousDiscovery(e, "concept", release, CONCEPT_FILE, duplicate);
+    // Nothing was written to the store, because the failure precedes any content being read.
+    assertThrows(
+        TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
+  }
+
+  @Test
+  void rejectsTwoRelationshipFiles(@TempDir final Path work) throws Exception {
+    final Path release = work.resolve("release");
+    copyDirectory(Rf2Mini.baseRelease(), release);
+    final String duplicate = "sct2_Relationship_Snapshot_INT_20240601.txt";
+    duplicateFile(terminologyDirectory(release), RELATIONSHIP_PREFIX, duplicate);
+
+    final String store = work.resolve("store").toString();
+    final SnomedRf2Importer importer = new SnomedRf2Importer(spark, store);
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class, () -> importer.importFrom(release.toString(), null));
+    assertAmbiguousDiscovery(e, "relationship", release, RELATIONSHIP_FILE, duplicate);
+    assertThrows(
+        TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
+  }
+
+  @Test
+  void rejectsTwoModuleDependencyFiles(@TempDir final Path work) throws Exception {
+    final Path release = work.resolve("release");
+    copyDirectory(Rf2Mini.baseRelease(), release);
+    final String first = "der2_ssRefset_ModuleDependencySnapshot_INT_20230601.txt";
+    final String second = "der2_ssRefset_ModuleDependencySnapshot_INT_20240601.txt";
+    final String[][] edges = {{Rf2Mini.CORE_MODULE, MODEL_MODULE}};
+    writeModuleDependencyRefset(release, first, edges);
+    writeModuleDependencyRefset(release, second, edges);
+
+    final String store = work.resolve("store").toString();
+    final SnomedRf2Importer importer = new SnomedRf2Importer(spark, store);
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class, () -> importer.importFrom(release.toString(), null));
+    assertAmbiguousDiscovery(e, "module dependency", release, first, second);
+    assertThrows(
+        TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
+  }
+
+  @Test
+  void acceptsSeveralFilesForMultiValuedRoles(@TempDir final Path work) throws Exception {
+    // Descriptions, text definitions, language reference sets and other reference sets are all
+    // legitimately multi-valued, so several files of each must continue to import.
+    final Path release = work.resolve("release");
+    copyDirectory(Rf2Mini.baseRelease(), release);
+    splitFile(
+        terminologyDirectory(release),
+        DESCRIPTION_PREFIX,
+        "sct2_TextDefinition_Snapshot-en_INT_20230601.txt");
+    splitFile(
+        languageRefsetDirectory(release),
+        LANGUAGE_PREFIX,
+        "der2_cRefset_LanguageSnapshot-en-XX_INT_20230601.txt");
+    splitFile(
+        contentRefsetDirectory(release),
+        SIMPLE_REFSET_PREFIX,
+        "der2_Refset_SimpleSnapshot-XX_INT_20230601.txt");
+
+    final String store = work.resolve("store").toString();
+    new SnomedRf2Importer(spark, store).importFrom(release.toString(), null);
+
+    // Discovery accepted every multi-valued role, and the whole concept set landed.
+    final TerminologyStoreReader multiReader = TerminologyStoreReader.open(store, Map.of());
+    final AtomicInteger concepts = new AtomicInteger();
+    multiReader.readTable(CONCEPT, row -> concepts.incrementAndGet());
+    assertEquals(Rf2Mini.CONCEPT_COUNT_20230601, concepts.get());
+  }
+
+  @Test
+  void reportsAMissingConceptFileUnchanged(@TempDir final Path work) throws Exception {
+    // The existing error for a source with no snapshot concept file, and its full or delta release
+    // hint, are both untouched by the ambiguity checks.
+    final Path emptySource = work.resolve("empty");
+    Files.createDirectories(emptySource);
+    final SnomedRf2Importer importer =
+        new SnomedRf2Importer(spark, work.resolve("store").toString());
+    final TerminologyImportException missing =
+        assertThrows(
+            TerminologyImportException.class,
+            () -> importer.importFrom(emptySource.toString(), null));
+    assertEquals(
+        "No SNOMED CT snapshot concept file was found under " + emptySource + ".",
+        missing.getMessage());
+
+    final Path fullSource = work.resolve("full");
+    final Path fullTerminology = fullSource.resolve("Full").resolve("Terminology");
+    Files.createDirectories(fullTerminology);
+    Files.writeString(
+        fullTerminology.resolve("sct2_Concept_Full_INT_20230601.txt"),
+        "id\teffectiveTime\tactive\tmoduleId\tdefinitionStatusId\n");
+    final TerminologyImportException full =
+        assertThrows(
+            TerminologyImportException.class,
+            () -> importer.importFrom(fullSource.toString(), null));
+    assertEquals(
+        "No SNOMED CT snapshot concept file was found under "
+            + fullSource
+            + ". Only snapshot releases are supported; this appears to be a full or delta release.",
+        full.getMessage());
+  }
+
   // --- Log capture. ---
 
   /**
@@ -705,6 +828,35 @@ class SnomedRf2ImporterTest {
     assertTrue(
         Integer.parseInt(figures[0]) < expectedInput,
         () -> file + " reported " + reported + ", expecting a shortfall");
+  }
+
+  /**
+   * Asserts that {@code e} is the ambiguous discovery failure for {@code role}, naming {@code
+   * source}, both candidate file names in a stable order, and the advice to concatenate.
+   */
+  private static void assertAmbiguousDiscovery(
+      final TerminologyImportException e,
+      final String role,
+      final Path source,
+      final String firstFile,
+      final String secondFile) {
+    final String message = e.getMessage();
+    assertTrue(
+        message.startsWith(
+            "Multiple SNOMED CT snapshot " + role + " files were found under " + source + ": "),
+        () -> "Unexpected message: " + message);
+    assertTrue(message.contains("A single " + role + " file is expected."), message);
+    assertTrue(
+        message.endsWith(
+            "If you are combining releases, concatenate them into one file rather than placing"
+                + " both release trees in the same directory."),
+        message);
+    // Both candidates are named, in a stable order.
+    final String earlier = firstFile.compareTo(secondFile) <= 0 ? firstFile : secondFile;
+    final String later = firstFile.compareTo(secondFile) <= 0 ? secondFile : firstFile;
+    assertTrue(message.contains(earlier), message);
+    assertTrue(message.contains(later), message);
+    assertTrue(message.indexOf(earlier) < message.indexOf(later), message);
   }
 
   // --- Fixture shaping. ---
@@ -786,6 +938,15 @@ class SnomedRf2ImporterTest {
       lines.set(i, String.join("\t", fields));
     }
     Files.write(file, lines);
+  }
+
+  /**
+   * Copies the single file in {@code directory} starting with {@code prefix} to a sibling named
+   * {@code newName}, producing two files filling the same role.
+   */
+  private static void duplicateFile(final Path directory, final String prefix, final String newName)
+      throws Exception {
+    Files.copy(fileStartingWith(directory, prefix), directory.resolve(newName));
   }
 
   /**
