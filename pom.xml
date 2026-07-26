@@ -96,6 +96,12 @@
     <!-- Spark brings in a Netty version with published vulnerabilities, so the whole family is
          pinned to a patched release. -->
     <pathling.nettyVersion>4.1.136.Final</pathling.nettyVersion>
+
+    <!-- The number of concurrent Surefire forks, expressed as a multiple of the available
+         processors. One fork per processor is the fastest setting measured for a build that has the
+         machine to itself: doubling it makes the fhirpath suite around 70% slower, because every
+         fork holds its own Spark session. Lower it when the build has to share the machine. -->
+    <pathling.testForkCount>1C</pathling.testForkCount>
   </properties>
 
   <modules>
@@ -754,7 +760,7 @@
             <!-- -Djava.security.manager=allow permits NoNetworkExtension to install a transient
                  security manager that verifies terminology tests make no external network calls -->
             <argLine>@{argLine} -Xshare:off -Xmx4g -ea -Duser.timezone=UTC -XX:+EnableDynamicAgentLoading -Djava.security.manager=allow --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED</argLine>
-            <forkCount>1C</forkCount>
+            <forkCount>${pathling.testForkCount}</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
         </plugin>
@@ -1107,6 +1113,14 @@
               <groupId>com.mycila</groupId>
               <artifactId>license-maven-plugin-git</artifactId>
               <version>5.0.0</version>
+            </dependency>
+            <!-- The JGit version bundled with the plugin cannot open a linked Git worktree, which
+                 makes the check fail with "Bare Repository has neither a working tree, nor an
+                 index" whenever the build runs outside the main checkout. -->
+            <dependency>
+              <groupId>org.eclipse.jgit</groupId>
+              <artifactId>org.eclipse.jgit</artifactId>
+              <version>7.4.0.202509020913-r</version>
             </dependency>
           </dependencies>
         </plugin>
