@@ -67,15 +67,15 @@ specify `--from`.
 Tabular results (from `view`, `fhirpath`, and the terminology commands) render
 as a human-readable table by default.
 
-| Option                           | Behaviour                                                                                                                     |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `--format`                       | `table` (default), `csv`, `ndjson`; with `-o` also `parquet`, `delta`.                                                        |
-| `-o PATH`                        | Write to a file instead of stdout; the format is inferred from the extension (`.csv`/`.tsv`, `.ndjson`/`.jsonl`, `.parquet`). |
-| `--limit N`                      | Row cap for stdout table output (default 50).                                                                                 |
-| `--overwrite`                    | Allow replacing an existing output path.                                                                                      |
-| `--departition/--no-departition` | Write file output as a single file (default) or as a Spark directory of part files. No effect on Delta.                       |
-| `--delimiter CHAR`               | Field separator for CSV input and output (default `,`). Accepts a backslash escape such as `\t` for a tab.                    |
-| `--header/--no-header`           | Include a header row in CSV output (default enabled).                                                                         |
+| Option                           | Behaviour                                                                                                                                                    |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--format`                       | `table` (default), `csv`, `ndjson`; with `-o` also `parquet`, `delta`.                                                                                       |
+| `-o PATH`                        | Write to a file instead of stdout; the format, and for `.tsv` the delimiter, is inferred from the extension (`.csv`/`.tsv`, `.ndjson`/`.jsonl`, `.parquet`). |
+| `--limit N`                      | Row cap for stdout table output (default 50).                                                                                                                |
+| `--overwrite`                    | Allow replacing an existing output path.                                                                                                                     |
+| `--departition/--no-departition` | Write file output as a single file (default) or as a Spark directory of part files. No effect on Delta.                                                      |
+| `--delimiter CHAR`               | Field separator for CSV input and output (default: a tab for a `.tsv` path, otherwise `,`). Accepts an escape such as `\t`.                                  |
+| `--header/--no-header`           | Include a header row in CSV output (default enabled).                                                                                                        |
 
 File output is produced by Spark's distributed writers, so results larger than
 driver memory can be written. By default the output is departitioned to a
@@ -88,13 +88,25 @@ full result.
 The `--delimiter` and `--header/--no-header` options apply to CSV output for
 `view`, `fhirpath`, and the terminology commands, and are ignored for non-CSV
 formats. The delimiter is also used to read CSV input in the terminology
-commands, so a tab-separated dataset round-trips in a single invocation:
+commands.
+
+`--delimiter` has no fixed default. When it is omitted, the input side and the
+output side each take their default from their own path: a `.tsv` extension (in
+any letter case) means a tab, and anything else means a comma. CSV written to
+standard output, where there is no path, is comma-separated. A tab-separated
+dataset therefore round-trips with no delimiter flag at all:
 
 ```bash
 pathling member-of codes.tsv --code-column code \
   --system http://snomed.info/sct --value-set <uri> \
-  --delimiter '\t' --format csv
+  -o out.tsv
 ```
+
+Because the two sides resolve independently, `codes.tsv -o out.csv` reads with a
+tab and writes with a comma. A delimiter given explicitly applies to both sides
+and overrides both extensions, so `--delimiter ','` on a `.tsv` path yields a
+comma. Whenever a tab is derived from an extension rather than typed, the CLI
+says so on standard error, naming the path.
 
 ## Commands
 
@@ -173,7 +185,7 @@ environment variables so that they need not appear in shell history.
 ### run
 
 Execute Python code with the Pathling environment ready. The code runs with
-two variables already in scope: `spark` (the Spark session) and `pathling`
+two variables already in scope: `spark` (the Spark session) and `pc`
 (the configured Pathling context), built with the same configuration
 resolution as every other command.
 
@@ -186,9 +198,11 @@ coding functions (`to_coding`, `to_snomed_coding`, `to_loinc_coding`,
 [Python API reference](https://pathling.csiro.au/docs/python/pathling.html) for
 the full list. The terminology
 display function is bound under both its natural name `display` and the alias
-`tx_display`. Any pre-imported name is only a default: assigning or defining the
-same name in your own code takes precedence, and an explicit
-`from pathling import ...` continues to work unchanged.
+`tx_display`. The name `pathling` is bound to the package module itself, so a
+bare `import pathling` is a harmless no-op that leaves `pc` intact. Any
+pre-imported name is only a default: assigning or defining the same name in your
+own code takes precedence, and an explicit `from pathling import ...` continues
+to work unchanged.
 
 ```bash
 # Run a script file.
@@ -208,7 +222,7 @@ For example, a script that projects a tabular view of patients and then
 summarises it with Spark SQL:
 
 ```python
-patients = pathling.read.ndjson("data").view(
+patients = pc.read.ndjson("data").view(
     "Patient",
     select=[{"column": [{"path": "gender", "name": "gender"}]}],
 )
@@ -235,7 +249,7 @@ passes through unmodified.
 ### console
 
 Open an interactive [IPython](https://ipython.org/) console with the same
-`spark` and `pathling` variables in scope, and the Pathling public functions
+`spark` and `pc` variables in scope, and the Pathling public functions
 pre-imported just as in [`run`](#run).
 
 ```bash
@@ -295,8 +309,9 @@ The default result column names (`member_of`, `translated_system` and
 `translated_code`, `subsumes`, `subsumed_by`, `display`, `property`,
 `designation`) can be overridden with `--result-column`.
 
-CSV input is read with the shared `--delimiter` (so a tab- or semicolon-separated
-dataset is read correctly); a `.tsv` file is read as CSV. Pass `--no-input-header`
+CSV input is read with the shared `--delimiter` (so a semicolon-separated
+dataset is read correctly); a `.tsv` file is read as CSV and, with no
+`--delimiter`, as tab-separated. Pass `--no-input-header`
 to read a headerless CSV; its columns are then addressable by the positional names
 Spark assigns (`_c0`, `_c1`, ...), which you reference via `--code-column`,
 `--system-column`, and the other column options.
