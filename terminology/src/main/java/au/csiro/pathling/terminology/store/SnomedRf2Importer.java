@@ -671,10 +671,9 @@ public class SnomedRf2Importer {
     // file per dialect), so all of them are combined.
     //
     // Each file is carried separately through the join to the concept dictionary so that its own
-    // share of the rows that resolved can be reported, and the joined results are then combined. An
-    // inner join distributes over a union, so the same rows pass through the same join as they
-    // would
-    // have had the files been combined first and joined once.
+    // share of the rows that resolved can be reported, and the joined results are then combined.
+    // An inner join distributes over a union, so the same rows pass through the same join as they
+    // would have done had the files been combined first and joined once.
     final List<Dataset<Row>> descriptionFiles = new ArrayList<>();
     final List<Dataset<Row>> resolvedFiles = new ArrayList<>();
     final List<Resolution> resolutions = new ArrayList<>();
@@ -835,9 +834,8 @@ public class SnomedRf2Importer {
     final Dataset<Row> targetDense =
         denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_TARGET_DENSE_ID);
 
-    // A relationship resolves only when both its source and its destination concepts are present,
-    // so
-    // the resolved count is taken after both joins.
+    // A relationship resolves only when both its source and its destination concept are present,
+    // so the resolved count is taken after both joins.
     final Dataset<Row> mapped =
         observeRowCount(
                 relRaw
