@@ -30,12 +30,18 @@ fast.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 import platform
+from typing import TYPE_CHECKING
 
 import click
 
 from pathling._version import __version__
 from pathling.cli import session
+
+if TYPE_CHECKING:
+    from pathling.cli.main import CliContext
 
 
 def build_banner() -> str:
@@ -63,7 +69,7 @@ def build_banner() -> str:
 
 @click.command(name="console")
 @click.pass_obj
-def console(obj):
+def console(obj: CliContext) -> None:
     """Open an interactive console with the Pathling environment ready.
 
     Starts an IPython session with spark (the Spark session) and pc

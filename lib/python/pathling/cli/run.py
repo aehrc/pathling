@@ -31,11 +31,13 @@ fidelity, and ``SystemExit`` propagation) are reproduced.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import traceback
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import click
 
@@ -77,7 +79,7 @@ class RunCommand(click.Command):
     with trailing arguments), which parse to the same option values.
     """
 
-    def parse_args(self, ctx, args):
+    def parse_args(self, ctx: click.Context, args: Tuple[str, ...]) -> List[str]:
         """Stores the raw arguments on the context, then parses as normal.
 
         :param ctx: the Click context.
@@ -88,7 +90,7 @@ class RunCommand(click.Command):
         return super().parse_args(ctx, args)
 
 
-def _positional_precedes_code_flag(raw_args) -> bool:
+def _positional_precedes_code_flag(raw_args: Sequence[str]) -> bool:
     """Determines whether a positional argument appears before ``-c``.
 
     A positional (a script path or ``-``) before the inline-code flag means
@@ -108,7 +110,12 @@ def _positional_precedes_code_flag(raw_args) -> bool:
     return False
 
 
-def _resolve_source(ctx, script, code, args) -> Tuple[CodeSource, list]:
+def _resolve_source(
+    ctx: click.Context,
+    script: Optional[str],
+    code: Optional[str],
+    args: Tuple[str, ...],
+) -> Tuple[CodeSource, list]:
     """Validates the code-source rules and reads the program text.
 
     Exactly one source is required: a script path, ``-`` (stdin), or
@@ -176,7 +183,7 @@ def _resolve_source(ctx, script, code, args) -> Tuple[CodeSource, list]:
     )
 
 
-def _execute(source: CodeSource, program_args, namespace) -> None:
+def _execute(source: CodeSource, program_args: Sequence[str], namespace: dict) -> None:
     """Compiles and executes the program with interpreter semantics.
 
     ``sys.argv`` and ``sys.path`` are set for the duration of execution and
@@ -235,7 +242,12 @@ def _execute(source: CodeSource, program_args, namespace) -> None:
 @click.option("-c", "--code", "code", help="Inline Python code to execute.")
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
-def run(ctx, script, code, args):
+def run(
+    ctx: click.Context,
+    script: Optional[str],
+    code: Optional[str],
+    args: Tuple[str, ...],
+) -> None:
     """Run Python code with the Pathling environment ready.
 
     Executes a script file (or '-' for standard input, or inline code via

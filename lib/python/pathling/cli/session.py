@@ -26,17 +26,24 @@ its defaults.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 import atexit
 import os
 import sys
 from contextlib import ExitStack
 from importlib.resources import as_file, files
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from rich.console import Console
 
 from pathling.cli.config import CliConfig
 from pathling.cli.render import progress_status, stderr_console
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
+
+    from pathling import PathlingContext
 
 # The packaged log4j2 configuration that silences Spark and JVM logging. It is
 # supplied to the driver JVM before launch so that startup noise, and
@@ -92,7 +99,7 @@ def quiet_log4j2_path() -> str:
     return str(path)
 
 
-def _build_quiet_spark(config: CliConfig):
+def _build_quiet_spark(config: CliConfig) -> SparkSession:
     """Builds a Spark session with logging suppressed before JVM launch.
 
     The Pathling and Delta package configuration is shared with
@@ -133,7 +140,7 @@ def _build_quiet_spark(config: CliConfig):
     return _build_spark_session(extra_configs)
 
 
-def _create_pathling_context(config: CliConfig):
+def _create_pathling_context(config: CliConfig) -> PathlingContext:
     """Builds the Spark session and Pathling context from the configuration.
 
     :param config: the resolved CLI configuration.
@@ -177,7 +184,9 @@ def _create_pathling_context(config: CliConfig):
     )
 
 
-def create_context(config: CliConfig, console: Optional[Console] = None):
+def create_context(
+    config: CliConfig, console: Optional[Console] = None
+) -> PathlingContext:
     """Creates a :class:`PathlingContext` configured from the CLI settings.
 
     In the default (non-verbose) mode the JVM launcher's startup banner and Ivy

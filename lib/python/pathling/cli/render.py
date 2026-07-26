@@ -27,6 +27,8 @@ piped output stays clean.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 import codecs
 import csv
 import io
@@ -35,7 +37,7 @@ import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Sequence, Union
 
 import click
 from rich.console import Console
@@ -43,6 +45,9 @@ from rich.table import Table
 
 from pathling.cli.departition import departition, remove_path
 from pathling.cli.errors import EXIT_USAGE, CliError
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame
 
 # The default cap on rows collected for stdout table rendering.
 DEFAULT_LIMIT = 50
@@ -148,7 +153,7 @@ def default_delimiter_for_path(path: Optional[Path]) -> str:
     return ","
 
 
-def tab_inference_notice(action: str, path) -> str:
+def tab_inference_notice(action: str, path: Union[str, Path]) -> str:
     """Builds the notice announcing a tab delimiter derived from a path.
 
     A default the user did not type, derived from their filename, is announced
@@ -166,7 +171,9 @@ def tab_inference_notice(action: str, path) -> str:
     return f"{action} {path} as tab-separated CSV, inferred from the .tsv extension."
 
 
-def _delimiter_callback(ctx, param, value: Optional[str]) -> Optional[str]:
+def _delimiter_callback(
+    ctx: click.Context, param: click.Parameter, value: Optional[str]
+) -> Optional[str]:
     """Click callback that decodes and validates the ``--delimiter`` value.
 
     An absent value is passed through untouched, meaning "not supplied - infer
@@ -184,7 +191,7 @@ def _delimiter_callback(ctx, param, value: Optional[str]) -> Optional[str]:
     return decode_delimiter(value)
 
 
-def output_options(func):
+def output_options(func: Callable) -> Callable:
     """Applies the shared output options to a command callback.
 
     These options form the common output surface of every command that emits a
@@ -506,7 +513,9 @@ def stderr_console() -> Console:
 
 
 @contextmanager
-def progress_status(console: Console, message: str, verbose: bool = False):
+def progress_status(
+    console: Console, message: str, verbose: bool = False
+) -> Iterator[None]:
     """Shows a status spinner on stderr for a long-running stage.
 
     :param console: the stderr console.
@@ -522,7 +531,7 @@ def progress_status(console: Console, message: str, verbose: bool = False):
         yield
 
 
-def write_output(df, spec: OutputSpec, console: Console) -> None:
+def write_output(df: DataFrame, spec: OutputSpec, console: Console) -> None:
     """Writes a result DataFrame to stdout or a file per the output spec.
 
     For stdout, the table format is capped at ``spec.limit`` rows; other
@@ -563,7 +572,7 @@ def write_output(df, spec: OutputSpec, console: Console) -> None:
     console.print(f"Wrote {spec.format} output to {spec.path}.")
 
 
-def _write_file(df, spec: OutputSpec) -> None:
+def _write_file(df: DataFrame, spec: OutputSpec) -> None:
     """Writes a result DataFrame to a file using Spark's native writers.
 
     CSV, NDJSON, and Parquet are written by Spark rather than collected onto
@@ -620,7 +629,11 @@ def _write_file(df, spec: OutputSpec) -> None:
 
 
 def _write_spark_directory(
-    frame, fmt: str, target_dir, delimiter: str = ",", header: bool = True
+    frame: DataFrame,
+    fmt: str,
+    target_dir: Union[str, Path],
+    delimiter: str = ",",
+    header: bool = True,
 ) -> None:
     """Writes a frame to a Spark directory of part files in the given format.
 

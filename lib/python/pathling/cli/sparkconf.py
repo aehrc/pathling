@@ -31,7 +31,9 @@ Spark session starts.
 Author: John Grimes.
 """
 
-from typing import Callable, Optional
+from __future__ import annotations
+
+from typing import Callable, Iterable, Optional
 
 from pathling._spark_defaults import (
     CATALOG_KEY,
@@ -43,7 +45,7 @@ from pathling._spark_defaults import (
 from pathling.cli.errors import EXIT_USAGE, CliError
 
 
-def parse_spark_conf_flags(flags) -> dict:
+def parse_spark_conf_flags(flags: Optional[Iterable[str]]) -> dict:
     """Parses repeatable ``--spark-conf KEY=VALUE`` flags into a mapping.
 
     Each flag is split on the first ``=`` only, so a value may itself contain
@@ -66,7 +68,7 @@ def parse_spark_conf_flags(flags) -> dict:
     return result
 
 
-def validate_and_coerce(key: str, value) -> str:
+def validate_and_coerce(key: str, value: object) -> str:
     """Validates a Spark configuration key and coerces its value to a string.
 
     The key must begin with ``spark.``. Scalar values (string, integer, float,

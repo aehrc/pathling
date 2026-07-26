@@ -30,6 +30,8 @@ reference, or via an environment variable.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 from dataclasses import dataclass, field
