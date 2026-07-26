@@ -25,6 +25,9 @@
 #' @param storage_path The terminology store location, created if absent.
 #' @param edition_uri An explicit SNOMED edition/version URI, overriding detection. Defaults to
 #'   NULL.
+#' @param dense_id_order How dense identifiers are assigned to concepts, either "code-order" (the
+#'   default) or "pre-order". The pre-order makes the runtime hierarchy index materially smaller, in
+#'   exchange for identifiers that shift more between releases. Defaults to NULL.
 #'
 #' @return The PathlingContext object, invisibly.
 #'
@@ -33,15 +36,25 @@
 #' @importFrom sparklyr j_invoke j_invoke_static spark_connection
 #'
 #' @export
-pathling_import_snomed <- function(pc, source, storage_path, edition_uri = NULL) {
+pathling_import_snomed <- function(pc, source, storage_path, edition_uri = NULL,
+                                   dense_id_order = NULL) {
   options <- NULL
-  if (!is.null(edition_uri)) {
-    options <- j_invoke_static(
+  if (!is.null(edition_uri) || !is.null(dense_id_order)) {
+    builder <- j_invoke_static(
       spark_connection(pc),
       "au.csiro.pathling.library.terminology.TerminologyImportOptions", "builder"
-    ) %>%
-      j_invoke("editionUri", edition_uri) %>%
-      j_invoke("build")
+    )
+    if (!is.null(edition_uri)) {
+      builder <- j_invoke(builder, "editionUri", edition_uri)
+    }
+    if (!is.null(dense_id_order)) {
+      order <- j_invoke_static(
+        spark_connection(pc),
+        "au.csiro.pathling.terminology.store.DenseIdOrder", "fromValue", dense_id_order
+      )
+      builder <- j_invoke(builder, "denseIdOrder", order)
+    }
+    options <- j_invoke(builder, "build")
   }
   j_invoke(pc, "importSnomed", source, storage_path, options)
   invisible(pc)

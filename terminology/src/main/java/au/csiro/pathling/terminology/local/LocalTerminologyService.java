@@ -32,6 +32,7 @@ import jakarta.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -314,6 +315,45 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   }
 
   /**
+   * Returns the members of a bitmap ordered by their concept code.
+   *
+   * <p>Every multi-valued lookup result must be ordered this way rather than by iterating the
+   * bitmap directly. A bitmap is ordered by the store's internal dense identifiers, which are an
+   * implementation detail whose assignment depends on how the store was imported, so emitting in
+   * bitmap order would let that internal choice show through in a result a caller can see.
+   *
+   * @param members the concepts, by dense identifier
+   * @param dictionary the concept dictionary, for translating identifiers to codes
+   * @return the members' dense identifiers, ordered by concept code
+   */
+  @Nonnull
+  private static List<Integer> byConceptCode(
+      @Nonnull final RoaringBitmap members, @Nonnull final ConceptDictionary dictionary) {
+    final List<Integer> ordered = new ArrayList<>(members.getCardinality());
+    members.forEach((IntConsumer) ordered::add);
+    ordered.sort(Comparator.comparing(dictionary::code));
+    return ordered;
+  }
+
+  /**
+   * Emits one property per related concept, in ascending code order.
+   *
+   * @param propertyCode the property to emit, {@code parent} or {@code child}
+   * @param related the related concepts, by dense identifier
+   * @param dictionary the concept dictionary, for translating identifiers to codes
+   * @param result the list to append to
+   */
+  private static void addRelatedCodes(
+      @Nonnull final String propertyCode,
+      @Nonnull final RoaringBitmap related,
+      @Nonnull final ConceptDictionary dictionary,
+      @Nonnull final List<PropertyOrDesignation> result) {
+    for (final int dense : byConceptCode(related, dictionary)) {
+      result.add(Property.of(propertyCode, new CodeType(dictionary.code(dense))));
+    }
+  }
+
+  /**
    * Builds the property and designation list for a resolved concept, honouring an optional property
    * filter and display language.
    */
@@ -337,24 +377,10 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       addDesignations(systemUrl, indexes, dense, result);
     }
     if (wants(propertyCode, PROPERTY_PARENT)) {
-      indexes
-          .hierarchy()
-          .parentsOf(dense)
-          .forEach(
-              (IntConsumer)
-                  parent ->
-                      result.add(
-                          Property.of(PROPERTY_PARENT, new CodeType(dictionary.code(parent)))));
+      addRelatedCodes(PROPERTY_PARENT, indexes.hierarchy().parentsOf(dense), dictionary, result);
     }
     if (wants(propertyCode, PROPERTY_CHILD)) {
-      indexes
-          .hierarchy()
-          .childrenOf(dense)
-          .forEach(
-              (IntConsumer)
-                  child ->
-                      result.add(
-                          Property.of(PROPERTY_CHILD, new CodeType(dictionary.code(child)))));
+      addRelatedCodes(PROPERTY_CHILD, indexes.hierarchy().childrenOf(dense), dictionary, result);
     }
     if (wants(propertyCode, PROPERTY_INACTIVE)) {
       result.add(Property.of(PROPERTY_INACTIVE, new BooleanType(!dictionary.isActive(dense))));
@@ -428,18 +454,15 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       if (!wants(propertyCode, type)) {
         continue;
       }
-      relationships
-          .targetsOf(type, source)
-          .forEach(
-              (IntConsumer)
-                  target ->
-                      result.add(
-                          Property.of(
-                              type,
-                              new Coding()
-                                  .setSystem(systemUrl)
-                                  .setCode(dictionary.code(target))
-                                  .setDisplay(dictionary.display(target)))));
+      for (final int target : byConceptCode(relationships.targetsOf(type, source), dictionary)) {
+        result.add(
+            Property.of(
+                type,
+                new Coding()
+                    .setSystem(systemUrl)
+                    .setCode(dictionary.code(target))
+                    .setDisplay(dictionary.display(target))));
+      }
     }
   }
 

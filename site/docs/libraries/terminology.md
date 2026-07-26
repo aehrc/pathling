@@ -984,6 +984,163 @@ pathling import-fhir-terminology /data/hl7.terminology.tgz /data/tx-store
 </TabItem>
 </Tabs>
 
+#### RF2 sources must be self-contained
+
+An RF2 source is imported on its own terms: the concepts it ships are the
+dictionary that every other file is resolved against. A description,
+relationship or reference set row referencing a concept the source does not ship
+has nothing to attach to, so it is dropped. A relationship needs both its source
+and its destination concept, so one missing destination drops the row.
+
+This is the ordinary shape of a **derived** or **extension** package. Such a
+package declares its dependency on another edition through the Module Dependency
+reference set and ships only its own modules' components, so most of what it
+references lives in the edition it extends. Imported alone, it succeeds while
+carrying almost none of the content you expected. Two published examples: the
+SNOMED CT International Patient Summary ships no concepts of its own at all, and
+the SNOMED CT Netherlands Patient Friendly Extension ships two bookkeeping
+concepts alongside 1,287 active descriptions, of which 7 resolve.
+
+To tell whether this has happened, read the per-file resolution counts in the
+import log. Every file resolved against the concept dictionary reports one line:
+
+```text
+.../sct2_Description_Snapshot-en_NL_20200930.txt: 7 of 1287 active rows resolved against the concept dictionary.
+```
+
+A line is reported for every such file, including the files that resolve
+completely, so a file whose two figures are equal is never confused with one that
+was absent. Both figures count active rows only, because rows excluded for being
+inactive are excluded by design rather than for want of a concept. The concept
+file itself, the language reference sets and the Module Dependency reference set
+produce no line, since none of them is resolved against the concept dictionary.
+
+Unresolved rows are reported informationally and never fail the import:
+importing a package whose references are mostly external is a legitimate thing to
+do if that is what you intend. The lines are logged at `INFO` by the importer, so
+they appear wherever logging for `au.csiro.pathling` is enabled at that level.
+
+#### Combining a derived package with its dependency
+
+To import a derived package's content in full, combine it with the release it
+declares a dependency on and import the combination as a single source.
+
+Three roles are single-valued, so their files must be **concatenated** into one
+file each, keeping only the first file's header row:
+
+- the concept file (`sct2_Concept_Snapshot_*`)
+- the relationship file (`sct2_Relationship_Snapshot_*`)
+- the Module Dependency reference set (`der2_ssRefset_ModuleDependencySnapshot_*`)
+
+Every other role is multi-valued, so those files are **left as they are**, each
+keeping its own header, in the directory layout the import expects:
+
+- descriptions and text definitions (`sct2_Description_*`, `sct2_TextDefinition_*`)
+- language reference sets (`der2_cRefset_Language*`)
+- all other reference sets (`der2_*Refset*`)
+
+```bash
+INT=/data/SnomedCT_InternationalRF2_PRODUCTION_20250601T120000Z/Snapshot
+EXT=/data/SnomedCT_ExtensionRF2_PRODUCTION_20250930T120000Z/Snapshot
+OUT=/data/merged/Snapshot
+
+mkdir -p "$OUT/Terminology" "$OUT/Refset/Language" "$OUT/Refset/Content" \
+         "$OUT/Refset/Metadata"
+
+# Single-valued roles: concatenate, keeping only the first file's header row.
+concat() {
+  cat "$1" > "$3"
+  tail -n +2 "$2" >> "$3"
+}
+concat "$INT"/Terminology/sct2_Concept_Snapshot_*.txt \
+       "$EXT"/Terminology/sct2_Concept_Snapshot_*.txt \
+       "$OUT/Terminology/sct2_Concept_Snapshot_MERGED.txt"
+concat "$INT"/Terminology/sct2_Relationship_Snapshot_*.txt \
+       "$EXT"/Terminology/sct2_Relationship_Snapshot_*.txt \
+       "$OUT/Terminology/sct2_Relationship_Snapshot_MERGED.txt"
+concat "$INT"/Refset/Metadata/der2_ssRefset_ModuleDependencySnapshot_*.txt \
+       "$EXT"/Refset/Metadata/der2_ssRefset_ModuleDependencySnapshot_*.txt \
+       "$OUT/Refset/Metadata/der2_ssRefset_ModuleDependencySnapshot_MERGED.txt"
+
+# Multi-valued roles: copy every file as it is. The two releases name their files
+# by edition and date, so nothing is overwritten.
+cp "$INT"/Terminology/sct2_Description_*.txt \
+   "$INT"/Terminology/sct2_TextDefinition_*.txt \
+   "$EXT"/Terminology/sct2_Description_*.txt "$OUT/Terminology/"
+cp "$INT"/Refset/Language/*.txt "$EXT"/Refset/Language/*.txt "$OUT/Refset/Language/"
+cp "$INT"/Refset/Content/*.txt "$EXT"/Refset/Content/*.txt "$OUT/Refset/Content/"
+
+pathling import-snomed /data/merged /data/tx-store
+```
+
+Adjust the copies for the roles a given package actually ships; an extension
+without text definitions, for instance, contributes none.
+
+Do not simply extract both releases side by side into one directory. The import
+rejects a source in which more than one file fills a single-valued role, naming
+the role and every candidate path, because it cannot tell which tree's content
+you meant and would otherwise proceed against one and silently ignore the other.
+
+Combine a package only with the release it declares a dependency on. An
+extension ships only its own modules' components, so a package and its
+dependency do not overlap. Two overlapping editions do: the same concept code
+would arrive twice, be given two internal identifiers, and fan out every join
+built on it. Nothing detects that, so it is yours to avoid.
+
+#### Reducing the memory the hierarchy takes at query time
+
+The largest structure a local store loads into memory is the hierarchy index,
+which holds the transitive closure of the is-a graph as compressed bitmaps
+addressed by an internal identifier per concept. By default those identifiers are
+assigned in concept code order, and a code's numeric value bears no relation to
+the concept's place in the hierarchy, so a concept's descendants scatter across
+the whole identifier range and compress poorly.
+
+The `pre-order` setting instead assigns identifiers by a depth-first traversal of
+the is-a hierarchy, so each subtree occupies a near-contiguous interval. Measured
+over a full SNOMED CT UK edition of 1,115,237 concepts, this reduces the
+hierarchy index from 738 MB to 536 MB of retained heap, a saving of 27%.
+
+The trade-off is identifier stability. Under the default ordering a concept keeps
+its identifier across re-imports of any release that contains it, and identifiers
+change only where codes are added or removed. Under the pre-order, a change
+anywhere in the shape of the hierarchy shifts the identifiers of everything that
+follows it, so identifiers vary much more between releases. Identifiers are
+internal to a store and never appear in query results, so this affects nothing a
+user can observe directly; it matters only if you compare or reuse the internal
+identifiers of two separately imported stores. Repeated imports of the same
+release remain reproducible under both orderings, and all seven terminology
+functions return identical results either way.
+
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+pc.import_snomed(
+    "/data/rf2.zip",
+    "/data/tx-store",
+    dense_id_order="pre-order",
+)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+pathling_import_snomed(pc, "/data/rf2.zip", "/data/tx-store",
+  dense_id_order = "pre-order")
+```
+
+</TabItem>
+<TabItem value="cli" label="CLI">
+
+```bash
+pathling import-snomed /data/rf2.zip /data/tx-store --dense-id-order pre-order
+```
+
+</TabItem>
+</Tabs>
+
 #### Large CodeSystems
 
 CodeSystems are imported with bounded memory regardless of their size. The

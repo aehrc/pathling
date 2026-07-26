@@ -64,6 +64,33 @@
       <artifactId>jmh-generator-annprocess</artifactId>
       <version>${pathling.jmhVersion}</version>
     </dependency>
+    <!-- Java Object Layout, used to measure the true retained heap of an object graph. The bitmap
+         library's own size estimate is documented as unreliable for sparse data spanning a wide
+         range of values, which is exactly the shape the hierarchy index measurement examines. -->
+    <dependency>
+      <groupId>org.openjdk.jol</groupId>
+      <artifactId>jol-core</artifactId>
+      <version>${pathling.jolVersion}</version>
+    </dependency>
+    <!-- The module ships a logback configuration, so it needs an SLF4J binding for the harness to
+         report anything. Spark contributes only the API and the log4j bridges. -->
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- Testing -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
