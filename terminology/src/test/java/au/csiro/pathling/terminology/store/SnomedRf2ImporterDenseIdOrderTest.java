@@ -324,9 +324,8 @@ class SnomedRf2ImporterDenseIdOrderTest {
 
       // display, property_of and designation are all served by lookup, so each is asked for
       // separately as well as together. This fixture is a tree with no repeated attribute type, so
-      // it
-      // cannot by itself prove the multi-valued properties are ordered independently of the dense
-      // identifiers - emitsEveryMultiValuedPropertyInTheSameOrderUnderBothOrderings does that.
+      // by itself it cannot prove the multi-valued properties are ordered independently of the
+      // dense identifiers - that is what the next test exists for.
       for (final String property :
           List.of("display", "parent", "child", "designation", "moduleId", "inactive")) {
         assertEquals(
@@ -347,8 +346,7 @@ class SnomedRf2ImporterDenseIdOrderTest {
     // type, so neither can make the two orderings disagree about the order a property list comes
     // back in. This uses a purpose-built release where a concept's two parents sit at different
     // depths, and where the same two concepts are also the targets of two same-type attribute
-    // relationships - which is routine in a full edition, and is where an internal ordering can
-    // show
+    // relationships - routine in a full edition, and where an internal ordering can otherwise show
     // through in a result a caller sees.
     final Path release = writeDiamondRelease();
     final String codeOrder = diamondStore.resolve("code-order").toString();
