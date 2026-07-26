@@ -60,6 +60,7 @@ def _spec(
     overwrite: bool = False,
     departition: bool = True,
     delimiter: str = ",",
+    delimiter_inferred: bool = False,
     header: bool = True,
 ) -> OutputSpec:
     """Builds an :class:`OutputSpec` for a file path and format.
@@ -69,6 +70,8 @@ def _spec(
     :param overwrite: whether an existing target may be replaced.
     :param departition: whether single-file departitioning is applied.
     :param delimiter: the CSV field separator.
+    :param delimiter_inferred: whether the delimiter was derived from the path
+           rather than supplied explicitly.
     :param header: whether CSV output includes a header row.
     :return: the output specification.
     """
@@ -78,6 +81,7 @@ def _spec(
         overwrite=overwrite,
         departition=departition,
         delimiter=delimiter,
+        delimiter_inferred=delimiter_inferred,
         header=header,
     )
 
@@ -382,3 +386,95 @@ def test_confirmation_names_format_and_path_without_row_count(spark, tmp_path):
     message = buffer.getvalue()
     assert message.strip() == f"Wrote csv output to {out}."
     assert "row" not in message.lower()
+
+
+# ========== Inferred-tab notice on the output side (T005) ==========
+
+
+def test_inferred_tab_prints_the_output_side_notice(spark, tmp_path):
+    """An inferred tab delimiter is announced on stderr before the confirmation."""
+    df = spark.createDataFrame([("1", "Smith")], "id string, family string")
+    out = tmp_path / "out.tsv"
+    console, buffer = _capture_console()
+
+    write_output(
+        df,
+        _spec(out, OutputFormat.CSV, delimiter="\t", delimiter_inferred=True),
+        console,
+    )
+
+    lines = [line for line in buffer.getvalue().splitlines() if line]
+    assert lines == [
+        f"Writing {out} as tab-separated CSV, inferred from the .tsv extension.",
+        f"Wrote csv output to {out}.",
+    ]
+
+
+def test_inferred_comma_prints_no_notice(spark, tmp_path):
+    """An inferred comma is the base default and needs no announcement."""
+    df = spark.createDataFrame([("1", "Smith")], "id string, family string")
+    out = tmp_path / "out.csv"
+    console, buffer = _capture_console()
+
+    write_output(
+        df,
+        _spec(out, OutputFormat.CSV, delimiter=",", delimiter_inferred=True),
+        console,
+    )
+
+    assert buffer.getvalue().strip() == f"Wrote csv output to {out}."
+
+
+def test_explicit_tab_prints_no_notice(spark, tmp_path):
+    """An explicitly requested tab was not inferred, so nothing is announced."""
+    df = spark.createDataFrame([("1", "Smith")], "id string, family string")
+    out = tmp_path / "out.tsv"
+    console, buffer = _capture_console()
+
+    write_output(
+        df,
+        _spec(out, OutputFormat.CSV, delimiter="\t", delimiter_inferred=False),
+        console,
+    )
+
+    assert buffer.getvalue().strip() == f"Wrote csv output to {out}."
+
+
+def test_non_csv_format_prints_no_notice(spark, tmp_path):
+    """A non-CSV format never consults the delimiter, so nothing is announced.
+
+    ``--format ndjson -o out.tsv`` reaches this state: the explicit format wins
+    over the extension, so the inferred tab is irrelevant to the write.
+    """
+    df = spark.createDataFrame([("1", "Smith")], "id string, family string")
+    out = tmp_path / "out.tsv"
+    console, buffer = _capture_console()
+
+    write_output(
+        df,
+        _spec(out, OutputFormat.NDJSON, delimiter="\t", delimiter_inferred=True),
+        console,
+    )
+
+    assert buffer.getvalue().strip() == f"Wrote ndjson output to {out}."
+
+
+def test_stdout_prints_no_notice(spark, capsys):
+    """CSV to stdout resolves to a comma, so no notice is printed."""
+    df = spark.createDataFrame([("1", "Smith")], "id string, family string")
+    console, buffer = _capture_console()
+
+    write_output(
+        df,
+        OutputSpec(
+            path=None,
+            format=OutputFormat.CSV,
+            delimiter=",",
+            delimiter_inferred=True,
+        ),
+        console,
+    )
+
+    # Nothing on the stderr console, and the stdout rows are comma-separated.
+    assert buffer.getvalue() == ""
+    assert "1,Smith" in capsys.readouterr().out

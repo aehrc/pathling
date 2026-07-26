@@ -38,9 +38,11 @@ from pathling.cli.errors import (
     unwrap_java_exception,
 )
 from pathling.cli.render import (
+    default_delimiter_for_path,
     output_options,
     progress_status,
     resolve_output,
+    tab_inference_notice,
     write_output,
 )
 
@@ -115,7 +117,8 @@ def _detect_tabular_format(path):
             exit_code=EXIT_USAGE,
         )
     suffix = path.suffix.lower()
-    # A .tsv file is treated as CSV; the tab separator is supplied via --delimiter.
+    # A .tsv file is treated as CSV; its extension governs the delimiter rather
+    # than the format, defaulting it to a tab (see default_delimiter_for_path).
     if suffix in (".csv", ".tsv"):
         return "csv"
     if suffix == ".parquet":
@@ -130,17 +133,18 @@ def _detect_tabular_format(path):
 def _read_dataset(pc, dataset, from_format, delimiter=",", input_header=True):
     """Reads a tabular dataset into a Spark DataFrame using a resolved format.
 
-    The format is resolved earlier, before the Spark session starts (see
-    :func:`_execute`), so this function only dispatches to the matching reader.
-    CSV is read with no schema inference; the delimiter and header options apply
-    to CSV inputs only, since Parquet and Delta carry their own schema. Parquet
-    and Delta accept both single-file and directory inputs.
+    The format and the delimiter are both resolved earlier, before the Spark
+    session starts (see :func:`_execute`), so this function only dispatches to
+    the matching reader. CSV is read with no schema inference; the delimiter and
+    header options apply to CSV inputs only, since Parquet and Delta carry their
+    own schema. Parquet and Delta accept both single-file and directory inputs.
 
     :param pc: the Pathling context.
     :param dataset: the path to the dataset file or directory.
     :param from_format: the resolved format, one of ``csv``, ``parquet``, or
            ``delta``.
-    :param delimiter: the CSV field separator; applied to ``csv`` inputs only.
+    :param delimiter: the resolved CSV field separator, a concrete character;
+           applied to ``csv`` inputs only.
     :param input_header: whether the first line of a CSV input is a header row;
            applied to ``csv`` inputs only. When False, Spark assigns positional
            column names ``_c0``, ``_c1``, ... referenced via ``--code-column``.
@@ -290,8 +294,9 @@ def _execute(
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
     :param departition: whether file output is departitioned to a single file.
-    :param delimiter: the CSV field separator for both the input read and the
-           output write.
+    :param delimiter: the CSV field separator applied to both the input read and
+           the output write, or None to resolve each side independently from its
+           own path.
     :param header: whether CSV output includes a header row.
     :param input_header: whether the first line of a CSV input is a header row.
     :param build: a callback ``(pc, df) -> result_df`` performing the operation.
@@ -306,11 +311,23 @@ def _execute(
     # wins; otherwise the format is detected from the path (FR-002/FR-003).
     _validate_coding_source(dataset, system, system_column)
     resolved_format = from_format or _detect_tabular_format(Path(dataset))
+    # An omitted --delimiter takes its input-side default from the dataset path,
+    # independently of the output side, so a .tsv input is read as tab-separated
+    # without the user naming the separator. Resolved here, alongside the other
+    # pre-Spark steps, so the notice appears before the cold start rather than
+    # after a multi-second pause.
+    input_delimiter = (
+        default_delimiter_for_path(Path(dataset)) if delimiter is None else delimiter
+    )
+    # Announce an inferred tab only where the delimiter is actually consulted:
+    # Parquet and Delta inputs carry their own schema and ignore it entirely.
+    if delimiter is None and resolved_format == "csv" and input_delimiter == "\t":
+        console.print(tab_inference_notice("Reading", dataset))
     output_spec = resolve_output(
         output, output_format, limit, overwrite, departition, delimiter, header
     )
     pc = session.create_context(config, console)
-    df = _read_dataset(pc, dataset, resolved_format, delimiter, input_header)
+    df = _read_dataset(pc, dataset, resolved_format, input_delimiter, input_header)
 
     try:
         with progress_status(
@@ -547,7 +564,8 @@ def _run_subsumption(
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
     :param departition: whether file output is departitioned to a single file.
-    :param delimiter: the CSV field separator for the input read and output write.
+    :param delimiter: the CSV field separator for the input read and output
+           write, or None to resolve each side from its own path.
     :param header: whether CSV output includes a header row.
     :param input_header: whether the first line of a CSV input is a header row.
     :param other_code: a fixed target code applied to every row, or None.

@@ -263,6 +263,241 @@ def test_member_of_tab_separated_round_trip(
     assert file_rows[0] == ["code", "system", "member_of"]
 
 
+# ========== Extension-derived delimiter inference (T006) ==========
+
+
+def _member_of_args(dataset):
+    """Builds the common member-of argument list for a dataset path.
+
+    :param dataset: the dataset path to read.
+    :return: the argument list, ready for further options to be appended.
+    """
+    return [
+        "member-of",
+        str(dataset),
+        "--code-column",
+        "code",
+        "--system",
+        SNOMED,
+        "--value-set",
+        VALUE_SET,
+    ]
+
+
+def test_tsv_input_parses_without_a_delimiter_flag(
+    runner, patched_context, delimited_csv
+):
+    """A .tsv input parses into its columns with no --delimiter (FR-002)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["--format", "csv"])
+
+    # Without the inference the whole tabbed line would collapse into one
+    # column and the --code-column lookup would fail.
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[0] == ["code", "system", "member_of"]
+
+
+def test_tsv_input_prints_the_input_side_notice(
+    runner, patched_context, delimited_csv, wide_stderr
+):
+    """The inferred tab on the input side is announced on stderr (FR-007)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["--format", "csv"])
+
+    assert result.exit_code == 0, result.stderr
+    assert (
+        f"Reading {dataset} as tab-separated CSV, inferred from the .tsv extension."
+        in result.stderr
+    )
+
+
+def test_csv_input_reads_with_a_comma_and_no_notice(runner, patched_context, codes_csv):
+    """A .csv input keeps the comma default and prints no notice (FR-008)."""
+    result = runner.invoke(cli, _member_of_args(codes_csv) + ["--format", "csv"])
+
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[0] == ["code", "system", "member_of"]
+    assert "tab-separated" not in result.stderr
+
+
+def test_explicit_delimiter_overrides_the_extension_on_both_sides(
+    runner, patched_context, delimited_csv, tmp_path
+):
+    """An explicit --delimiter wins over both path extensions (FR-003)."""
+    # A semicolon-separated file deliberately named .tsv: the explicit flag must
+    # win, otherwise the read would fail to find the code column.
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter=";",
+        name="codes.tsv",
+    )
+    out = tmp_path / "out.tsv"
+
+    result = runner.invoke(
+        cli, _member_of_args(dataset) + ["--delimiter", ";", "-o", str(out)]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    # Both sides used the semicolon; no inference occurred on either.
+    rows = list(csv.reader(io.StringIO(out.read_text()), delimiter=";"))
+    assert rows[0] == ["code", "system", "member_of"]
+    assert "tab-separated" not in result.stderr
+
+
+def test_explicit_comma_on_a_tsv_path_yields_a_comma(
+    runner, patched_context, codes_csv, tmp_path
+):
+    """An explicit comma on a .tsv output path is honoured with no notice."""
+    out = tmp_path / "out.tsv"
+
+    result = runner.invoke(
+        cli, _member_of_args(codes_csv) + ["--delimiter", ",", "-o", str(out)]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text())))
+    assert rows[0] == ["code", "system", "member_of"]
+    assert "tab-separated" not in result.stderr
+
+
+def test_tsv_path_with_from_parquet_involves_no_delimiter(
+    runner, patched_context, tmp_path, pathling_ctx
+):
+    """A .tsv path read as Parquet uses no delimiter and prints no notice (FR-005)."""
+    # A Parquet dataset directory deliberately named .tsv, read with an explicit
+    # --from, so the resolved format is not CSV.
+    dataset = _write_parquet(
+        pathling_ctx.spark,
+        tmp_path / "data.tsv",
+        "code string, system string",
+        [["368529001", SNOMED]],
+    )
+
+    result = runner.invoke(
+        cli, _member_of_args(dataset) + ["--from", "parquet", "--format", "csv"]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[0] == ["code", "system", "member_of"]
+    assert "tab-separated" not in result.stderr
+
+
+def test_tsv_path_with_from_csv_still_infers_a_tab(
+    runner, patched_context, delimited_csv
+):
+    """Inference is independent of --from, so an explicit csv still infers a tab.
+
+    The extension governs the delimiter; ``--from`` governs only the format
+    (FR-006).
+    """
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    result = runner.invoke(
+        cli, _member_of_args(dataset) + ["--from", "csv", "--format", "csv"]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[0] == ["code", "system", "member_of"]
+    assert "tab-separated" in result.stderr
+
+
+def test_zero_flag_tsv_round_trip(
+    runner, patched_context, delimited_csv, tmp_path, wide_stderr
+):
+    """A .tsv in and .tsv out round trip needs no delimiter flag (SC-001).
+
+    This is quickstart Scenario 1: both sides infer a tab from their own path,
+    and both announce it.
+    """
+    dataset = delimited_csv(
+        [["368529001", SNOMED], ["439319006", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+    out = tmp_path / "out.tsv"
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["-o", str(out)])
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    assert rows[0] == ["code", "system", "member_of"]
+    assert len(rows[0]) == 3
+    # Both sides announced their inference.
+    assert f"Reading {dataset} as tab-separated CSV" in result.stderr
+    assert f"Writing {out} as tab-separated CSV" in result.stderr
+
+
+def test_tsv_in_csv_out_resolves_each_side_independently(
+    runner, patched_context, delimited_csv, tmp_path, wide_stderr
+):
+    """A .tsv input and .csv output resolve separately (quickstart Scenario 2)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+    out = tmp_path / "out.csv"
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["-o", str(out)])
+
+    assert result.exit_code == 0, result.stderr
+    # The input was read as tab-separated and the output written comma-separated.
+    rows = list(csv.reader(io.StringIO(out.read_text())))
+    assert rows[0] == ["code", "system", "member_of"]
+    # Only the input side announced an inference.
+    assert f"Reading {dataset} as tab-separated CSV" in result.stderr
+    assert "Writing" not in result.stderr
+
+
+def test_stdout_stays_comma_separated_for_a_tsv_input(
+    runner, patched_context, delimited_csv
+):
+    """With no -o there is no path to infer from, so stdout is comma-separated."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["--format", "csv"])
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "code,system,member_of"
+
+
+def test_from_offers_no_tsv_value(runner, patched_context, delimited_csv):
+    """--from gains no tsv value; the extension governs the delimiter only."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED]], header=["code", "system"], name="codes.tsv"
+    )
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["--from", "tsv"])
+
+    assert result.exit_code == 2
+    assert "is not one of" in result.stderr
+
+
 # ========== Headerless CSV input (US3) ==========
 
 

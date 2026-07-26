@@ -154,6 +154,48 @@ def test_view_to_csv_file(runner, patched_context, ndjson_source, view_file, tmp
     assert "rows" not in result.stderr
 
 
+def test_view_to_tsv_file_is_tab_separated(
+    runner, patched_context, ndjson_source, view_file, tmp_path, wide_stderr
+):
+    """``view -o out.tsv`` writes tab-separated output with no --delimiter (T007).
+
+    ``view`` reads FHIR data rather than CSV, so only the ``-o`` extension takes
+    part in delimiter resolution.
+    """
+    out = tmp_path / "results.tsv"
+
+    result = runner.invoke(
+        cli, ["view", ndjson_source, "--view", str(view_file), "-o", str(out)]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    # The header parses into its separate columns rather than one tabbed field.
+    assert len(rows[0]) > 1
+    assert "family_name" in rows[0]
+    assert (
+        f"Writing {out} as tab-separated CSV, inferred from the .tsv extension."
+        in result.stderr
+    )
+
+
+def test_view_to_csv_file_stays_comma_separated(
+    runner, patched_context, ndjson_source, view_file, tmp_path
+):
+    """``view -o out.csv`` still writes commas and announces nothing (T007)."""
+    out = tmp_path / "results.csv"
+
+    result = runner.invoke(
+        cli, ["view", ndjson_source, "--view", str(view_file), "-o", str(out)]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text())))
+    assert len(rows[0]) > 1
+    assert "family_name" in rows[0]
+    assert "tab-separated" not in result.stderr
+
+
 def test_view_to_parquet_file(
     runner, patched_context, ndjson_source, view_file, tmp_path
 ):

@@ -123,16 +123,64 @@ def decode_delimiter(value: str) -> str:
     return decoded
 
 
-def _delimiter_callback(ctx, param, value: str) -> str:
+def default_delimiter_for_path(path: Optional[Path]) -> str:
+    """Resolves the default field separator implied by a path's extension.
+
+    A ``.tsv`` path means tab-separated, matched case-insensitively as format
+    inference is; every other path, and the absence of a path (stdout), takes the
+    base comma default. This is consulted only when ``--delimiter`` was not
+    supplied, and independently for the input and the output side, so each side's
+    default comes from its own path.
+
+    :param path: the path for the side being resolved, or None when there is no
+           path (CSV to stdout).
+    :return: the default single-character field separator for that side.
+    :example:
+        >>> default_delimiter_for_path(Path("codes.tsv"))
+        '\\t'
+        >>> default_delimiter_for_path(Path("codes.csv"))
+        ','
+        >>> default_delimiter_for_path(None)
+        ','
+    """
+    if path is not None and path.suffix.lower() == ".tsv":
+        return "\t"
+    return ","
+
+
+def tab_inference_notice(action: str, path) -> str:
+    """Builds the notice announcing a tab delimiter derived from a path.
+
+    A default the user did not type, derived from their filename, is announced
+    rather than assumed. Both sides share this wording so they cannot drift; only
+    the leading verb differs.
+
+    :param action: the leading verb, ``Reading`` for the input side or
+           ``Writing`` for the output side.
+    :param path: the path the delimiter was inferred from, as the user gave it.
+    :return: the notice text, for printing on standard error.
+    :example:
+        >>> tab_inference_notice("Reading", "codes.tsv")
+        'Reading codes.tsv as tab-separated CSV, inferred from the .tsv extension.'
+    """
+    return f"{action} {path} as tab-separated CSV, inferred from the .tsv extension."
+
+
+def _delimiter_callback(ctx, param, value: Optional[str]) -> Optional[str]:
     """Click callback that decodes and validates the ``--delimiter`` value.
+
+    An absent value is passed through untouched, meaning "not supplied - infer
+    each side from its own path" (see :func:`default_delimiter_for_path`).
 
     :param ctx: the Click context (unused).
     :param param: the Click parameter (unused).
-    :param value: the raw option value.
-    :return: the decoded single-character delimiter.
-    :raises click.BadParameter: when the value is invalid (see
+    :param value: the raw option value, or None when the option was omitted.
+    :return: the decoded single-character delimiter, or None when omitted.
+    :raises click.BadParameter: when a supplied value is invalid (see
             :func:`decode_delimiter`).
     """
+    if value is None:
+        return None
     return decode_delimiter(value)
 
 
@@ -145,6 +193,9 @@ def output_options(func):
     ``--header/--no-header`` - and are resolved together by
     :func:`resolve_output` and consumed by :func:`write_output`. The delimiter
     and header apply to CSV output only and are no-ops for other formats.
+    ``--delimiter`` has no fixed default: when it is omitted each side resolves
+    its own separator from its own path (see
+    :func:`default_delimiter_for_path`), and a supplied value applies to both.
 
     :param func: the command callback to decorate.
     :return: the decorated callback.
@@ -177,9 +228,9 @@ def output_options(func):
         click.option(
             "--delimiter",
             "delimiter",
-            default=",",
             callback=_delimiter_callback,
-            help="Field separator for CSV input and output (default: ',').",
+            help="Field separator for CSV input and output (default: a tab for "
+            "a .tsv path, otherwise ',').",
         ),
         click.option(
             "--header/--no-header",
@@ -197,7 +248,8 @@ def output_options(func):
 # Maps file extensions to output formats for inference.
 _EXTENSION_FORMATS = {
     ".csv": OutputFormat.CSV,
-    # A .tsv file is CSV output; tab separation is selected with --delimiter.
+    # A .tsv file is CSV output; the extension governs the delimiter rather than
+    # the format, defaulting it to a tab (see default_delimiter_for_path).
     ".tsv": OutputFormat.CSV,
     ".ndjson": OutputFormat.NDJSON,
     ".jsonl": OutputFormat.NDJSON,
@@ -215,8 +267,12 @@ class OutputSpec:
     :param overwrite: whether an existing output path may be replaced.
     :param departition: whether file output is departitioned to a single file
            (the default) rather than left as a Spark directory of part files.
-    :param delimiter: the field separator for CSV output (stdout and file);
-           applies to CSV only, a no-op for other formats.
+    :param delimiter: the resolved field separator for CSV output (stdout and
+           file), always a concrete character; applies to CSV only, a no-op for
+           other formats.
+    :param delimiter_inferred: whether the delimiter was resolved from the output
+           path rather than supplied as a flag. Only an inference is announced to
+           the user, since an explicit value needs no announcement.
     :param header: whether CSV output includes a header row; applies to CSV
            only, a no-op for other formats.
     """
@@ -227,6 +283,7 @@ class OutputSpec:
     overwrite: bool = False
     departition: bool = True
     delimiter: str = ","
+    delimiter_inferred: bool = False
     header: bool = True
 
 
@@ -245,7 +302,7 @@ def resolve_output(
     limit: int = DEFAULT_LIMIT,
     overwrite: bool = False,
     departition: bool = True,
-    delimiter: str = ",",
+    delimiter: Optional[str] = None,
     header: bool = True,
 ) -> OutputSpec:
     """Resolves and validates output options.
@@ -256,7 +313,8 @@ def resolve_output(
     :param overwrite: whether replacing an existing output path is allowed.
     :param departition: whether file output is departitioned to a single file.
     :param delimiter: the CSV field separator, already decoded and validated by
-           the option callback; a no-op for non-CSV formats.
+           the option callback, or None to derive the output-side default from
+           the output path; a no-op for non-CSV formats.
     :param header: whether CSV output includes a header row; a no-op for non-CSV
            formats.
     :return: the resolved :class:`OutputSpec`.
@@ -298,13 +356,22 @@ def resolve_output(
             exit_code=EXIT_USAGE,
         )
 
+    # An omitted delimiter takes its default from the output path, so a .tsv
+    # target is tab-separated without the user naming the separator. Recording
+    # that it was inferred lets the impure layer announce it.
+    delimiter_inferred = delimiter is None
+    resolved_delimiter = (
+        default_delimiter_for_path(path) if delimiter_inferred else delimiter
+    )
+
     return OutputSpec(
         path=path,
         format=fmt,
         limit=limit,
         overwrite=overwrite,
         departition=departition,
-        delimiter=delimiter,
+        delimiter=resolved_delimiter,
+        delimiter_inferred=delimiter_inferred,
         header=header,
     )
 
@@ -461,11 +528,12 @@ def write_output(df, spec: OutputSpec, console: Console) -> None:
     For stdout, the table format is capped at ``spec.limit`` rows; other
     formats stream the full result. File output is produced by Spark's native
     writers (see :func:`_write_file`) and confirmed with a single stderr line
-    naming the format and path.
+    naming the format and path. A tab delimiter derived from a ``.tsv`` target is
+    announced on stderr before the write begins, since the user did not name it.
 
     :param df: the result Spark DataFrame.
     :param spec: the resolved output specification.
-    :param console: the stderr console for the confirmation message.
+    :param console: the stderr console for the notice and confirmation messages.
     :raises CliError: when the output path exists without ``--overwrite``.
     """
     columns = list(df.columns)
@@ -482,6 +550,15 @@ def write_output(df, spec: OutputSpec, console: Console) -> None:
         return
 
     check_overwrite(spec.path, spec.overwrite)
+    # Announce an inferred tab before writing, and only where the delimiter is
+    # actually consulted: a non-CSV format ignores it entirely, and an explicit
+    # value was the user's own choice.
+    if (
+        spec.format == OutputFormat.CSV
+        and spec.delimiter_inferred
+        and spec.delimiter == "\t"
+    ):
+        console.print(tab_inference_notice("Writing", spec.path))
     _write_file(df, spec)
     console.print(f"Wrote {spec.format} output to {spec.path}.")
 
