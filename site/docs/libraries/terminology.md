@@ -1017,7 +1017,8 @@ produce no line, since none of them is resolved against the concept dictionary.
 
 Unresolved rows are reported informationally and never fail the import:
 importing a package whose references are mostly external is a legitimate thing to
-do if that is what you intend. The CLI surfaces these lines under `--verbose`.
+do if that is what you intend. The lines are logged at `INFO` by the importer, so
+they appear wherever logging for `au.csiro.pathling` is enabled at that level.
 
 #### Combining a derived package with its dependency
 
