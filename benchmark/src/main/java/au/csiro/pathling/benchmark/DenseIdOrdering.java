@@ -103,8 +103,7 @@ public final class DenseIdOrdering {
     // popped, so the stack is sized by the number of edges, not the number of concepts.
     final int[] stack = new int[roots.size() + edgeCount(children)];
     int depth = 0;
-    // Push the roots in descending order so that the smallest is popped, and therefore visited,
-    // first.
+    // Push the roots in descending order so the smallest is popped, and visited, first.
     for (int index = roots.size() - 1; index >= 0; index--) {
       stack[depth++] = roots.get(index);
     }

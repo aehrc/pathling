@@ -378,10 +378,9 @@ public final class HierarchyIndexMemoryHarness {
               driverHeapRuleMet ? "met" : "not met", statusQuoHeap, winnerHeap);
     }
 
-    // Optimisation is worth adopting instead of the reordering only if it captures a material share
-    // of what the two factors together achieve. The share is measured against the same threshold
-    // the
-    // plan fixed for the reordering, because that is the only figure fixed before the measurement.
+    // Optimisation is worth adopting instead of the reordering only if it captures a material
+    // share of what the two factors together achieve. The share is measured against the same
+    // threshold the plan fixed for the reordering, that being the only figure fixed in advance.
     final long unoptimisedPreOrder = total(results, MeasurementVariant.UNOPTIMISED_PRE_ORDER);
     final double optimisationSaving = saving(baseline, optimisedCodeOrder);
     final double combinedSaving = saving(baseline, proposal);
