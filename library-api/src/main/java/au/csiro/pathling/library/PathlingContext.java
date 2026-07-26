@@ -38,6 +38,7 @@ import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.local.LocalTerminologyServiceFactory;
+import au.csiro.pathling.terminology.store.DenseIdOrder;
 import au.csiro.pathling.terminology.store.FhirTerminologyImporter;
 import au.csiro.pathling.terminology.store.SnomedRf2Importer;
 import au.csiro.pathling.terminology.store.TerminologyStoreException;
@@ -636,7 +637,11 @@ public class PathlingContext {
       @Nonnull final String storagePath,
       @Nullable final TerminologyImportOptions options) {
     final String editionUri = options == null ? null : options.getEditionUri();
-    new SnomedRf2Importer(spark, storagePath).importFrom(source, editionUri);
+    final DenseIdOrder denseIdOrder =
+        options == null || options.getDenseIdOrder() == null
+            ? DenseIdOrder.CODE_ORDER
+            : options.getDenseIdOrder();
+    new SnomedRf2Importer(spark, storagePath).importFrom(source, editionUri, denseIdOrder);
     return this;
   }
 

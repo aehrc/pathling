@@ -405,6 +405,7 @@ class PathlingContext:
         source: str,
         storage_path: str,
         edition_uri: Optional[str] = None,
+        dense_id_order: Optional[str] = None,
     ) -> None:
         """
         Imports a SNOMED CT RF2 snapshot release into a local terminology store.
@@ -413,17 +414,26 @@ class PathlingContext:
                accessible through the Hadoop FileSystem API
         :param storage_path: the terminology store location, created if absent
         :param edition_uri: an explicit SNOMED edition/version URI, overriding detection
+        :param dense_id_order: how dense identifiers are assigned to concepts, either
+               ``"code-order"`` (the default) or ``"pre-order"``. The pre-order makes the runtime
+               hierarchy index materially smaller, in exchange for identifiers that shift more
+               between releases
         :raises: the mapped JVM ``TerminologyImportException`` if the source is not a valid RF2
                  snapshot release; the store is left unmodified
         """
         jvm = self._spark._jvm
         options = None
-        if edition_uri is not None:
-            options = (
-                jvm.au.csiro.pathling.library.terminology.TerminologyImportOptions.builder()
-                .editionUri(edition_uri)
-                .build()
-            )
+        if edition_uri is not None or dense_id_order is not None:
+            builder = jvm.au.csiro.pathling.library.terminology.TerminologyImportOptions.builder()
+            if edition_uri is not None:
+                builder = builder.editionUri(edition_uri)
+            if dense_id_order is not None:
+                builder = builder.denseIdOrder(
+                    jvm.au.csiro.pathling.terminology.store.DenseIdOrder.fromValue(
+                        dense_id_order
+                    )
+                )
+            options = builder.build()
         self._jpc.importSnomed(source, storage_path, options)
 
     def import_fhir_terminology(self, source: str, storage_path: str) -> None:

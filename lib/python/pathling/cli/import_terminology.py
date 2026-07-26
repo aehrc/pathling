@@ -81,8 +81,20 @@ def _resolve_storage_path(config, storage_path):
 @click.option(
     "--edition-uri", "edition_uri", help="Override the SNOMED edition/version URI."
 )
+@click.option(
+    "--dense-id-order",
+    "dense_id_order",
+    type=click.Choice(["code-order", "pre-order"]),
+    default="code-order",
+    show_default=True,
+    help=(
+        "How internal concept identifiers are assigned. 'pre-order' makes the "
+        "hierarchy index materially smaller, in exchange for identifiers that "
+        "shift more between releases."
+    ),
+)
 @click.pass_obj
-def import_snomed(obj, source, storage_path, edition_uri):
+def import_snomed(obj, source, storage_path, edition_uri, dense_id_order):
     """Import a SNOMED CT RF2 snapshot release into a local terminology store.
 
     STORAGE_PATH may be omitted when 'tx-store.path' (or --tx-store) is set.
@@ -96,7 +108,7 @@ def import_snomed(obj, source, storage_path, edition_uri):
     resolved_path = _resolve_storage_path(config, storage_path)
     pc = _import_context(config, console)
     with progress_status(console, "Importing SNOMED CT...", config.verbose):
-        pc.import_snomed(source, resolved_path, edition_uri)
+        pc.import_snomed(source, resolved_path, edition_uri, dense_id_order)
     click.echo(f"Imported SNOMED CT from {source} into {resolved_path}")
 
 

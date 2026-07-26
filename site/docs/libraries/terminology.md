@@ -1087,6 +1087,60 @@ dependency do not overlap. Two overlapping editions do: the same concept code
 would arrive twice, be given two internal identifiers, and fan out every join
 built on it. Nothing detects that, so it is yours to avoid.
 
+#### Reducing the memory the hierarchy takes at query time
+
+The largest structure a local store loads into memory is the hierarchy index,
+which holds the transitive closure of the is-a graph as compressed bitmaps
+addressed by an internal identifier per concept. By default those identifiers are
+assigned in concept code order, and a code's numeric value bears no relation to
+the concept's place in the hierarchy, so a concept's descendants scatter across
+the whole identifier range and compress poorly.
+
+The `pre-order` setting instead assigns identifiers by a depth-first traversal of
+the is-a hierarchy, so each subtree occupies a near-contiguous interval. Measured
+over a full SNOMED CT UK edition of 1,115,237 concepts, this reduces the
+hierarchy index from 738 MB to 536 MB of retained heap, a saving of 27%.
+
+The trade-off is identifier stability. Under the default ordering a concept keeps
+its identifier across re-imports of any release that contains it, and identifiers
+change only where codes are added or removed. Under the pre-order, a change
+anywhere in the shape of the hierarchy shifts the identifiers of everything that
+follows it, so identifiers vary much more between releases. Identifiers are
+internal to a store and never appear in query results, so this affects nothing a
+user can observe directly; it matters only if you compare or reuse the internal
+identifiers of two separately imported stores. Repeated imports of the same
+release remain reproducible under both orderings, and all seven terminology
+functions return identical results either way.
+
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+pc.import_snomed(
+    "/data/rf2.zip",
+    "/data/tx-store",
+    dense_id_order="pre-order",
+)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+pathling_import_snomed(pc, "/data/rf2.zip", "/data/tx-store",
+  dense_id_order = "pre-order")
+```
+
+</TabItem>
+<TabItem value="cli" label="CLI">
+
+```bash
+pathling import-snomed /data/rf2.zip /data/tx-store --dense-id-order pre-order
+```
+
+</TabItem>
+</Tabs>
+
 #### Large CodeSystems
 
 CodeSystems are imported with bounded memory regardless of their size. The
