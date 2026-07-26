@@ -25,11 +25,20 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.config.LocalTerminologyConfiguration;
+import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.config.TerminologyMode;
+import au.csiro.pathling.terminology.TerminologyService.Property;
+import au.csiro.pathling.terminology.local.LocalTerminologyService;
 import au.csiro.pathling.terminology.local.index.CodeSystemIndexes;
 import au.csiro.pathling.terminology.local.index.ConceptDictionary;
 import au.csiro.pathling.terminology.local.index.HierarchyIndex;
 import au.csiro.pathling.test.Rf2Mini;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,6 +48,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Coding;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -60,15 +70,35 @@ import org.roaringbitmap.RoaringBitmap;
  */
 class SnomedRf2ImporterDenseIdOrderTest {
 
+  // Codes for the purpose-built non-tree release. They are equal length so that string order, which
+  // is what the importer sorts by, matches numeric order. The branch sorts before the deep parent,
+  // so the traversal descends the branch and reaches the shallow parent first, even though the
+  // shallow parent's code sorts after the deep parent's.
+  private static final String DIAMOND_ROOT = "100000";
+  private static final String DIAMOND_BRANCH = "200000";
+  private static final String DIAMOND_DEEP_PARENT = "500000";
+  private static final String DIAMOND_SHALLOW_PARENT = "600000";
+  private static final String DIAMOND_CHILD = "900000";
+  private static final String DIAMOND_TIME = "20240101";
+  private static final String DIAMOND_VERSION =
+      "http://snomed.info/sct/900000000000207008/version/20240101";
+
   private static SparkSession spark;
   private static Map<String, Integer> codeOrderIds;
   private static Map<String, Integer> preOrderIds;
   private static Map<String, Integer> repeatedPreOrderIds;
   private static CodeSystemIndexes codeOrderIndexes;
   private static CodeSystemIndexes preOrderIndexes;
+  private static LocalTerminologyService codeOrderService;
+  private static LocalTerminologyService preOrderService;
+  private static Path diamondRelease;
+  private static Path diamondStore;
 
   @BeforeAll
-  static void setUp(@TempDir final Path warehouse, @TempDir final Path storeDir) {
+  static void setUp(
+      @TempDir final Path warehouse, @TempDir final Path storeDir, @TempDir final Path diamondDir) {
+    diamondRelease = diamondDir.resolve("release");
+    diamondStore = diamondDir.resolve("stores");
     spark =
         SparkSession.builder()
             .appName("SnomedRf2ImporterDenseIdOrderTest")
@@ -89,8 +119,7 @@ class SnomedRf2ImporterDenseIdOrderTest {
     final String preOrderStore = storeDir.resolve("pre-order").toString();
     final String repeatedStore = storeDir.resolve("pre-order-again").toString();
 
-    // The two-argument overload takes no ordering at all, which is how an existing caller reaches
-    // it.
+    // The two-argument overload takes no ordering, which is how an existing caller reaches it.
     new SnomedRf2Importer(spark, codeOrderStore).importFrom(release, null);
     new SnomedRf2Importer(spark, preOrderStore).importFrom(release, null, DenseIdOrder.PRE_ORDER);
     new SnomedRf2Importer(spark, repeatedStore).importFrom(release, null, DenseIdOrder.PRE_ORDER);
@@ -100,10 +129,14 @@ class SnomedRf2ImporterDenseIdOrderTest {
     repeatedPreOrderIds = readDenseIds(repeatedStore);
     codeOrderIndexes = loadIndexes(codeOrderStore);
     preOrderIndexes = loadIndexes(preOrderStore);
+    codeOrderService = serviceOver(codeOrderStore);
+    preOrderService = serviceOver(preOrderStore);
   }
 
   @AfterAll
   static void tearDown() {
+    closeQuietly(codeOrderService);
+    closeQuietly(preOrderService);
     if (spark != null) {
       spark.stop();
       spark = null;
@@ -249,6 +282,202 @@ class SnomedRf2ImporterDenseIdOrderTest {
       assertEquals(codeOrder.isDefined(underCodeOrder), preOrder.isDefined(underPreOrder));
       assertEquals(codeOrder.moduleId(underCodeOrder), preOrder.moduleId(underPreOrder));
       assertEquals(codeOrder.effectiveTime(underCodeOrder), preOrder.effectiveTime(underPreOrder));
+    }
+  }
+
+  @Test
+  void returnsIdenticalResultsFromAllSevenTerminologyFunctionsUnderBothOrderings() {
+    // The hierarchy-level comparison above tests set membership, which cannot see a difference in
+    // the
+    // order results are returned in. This compares what the functions actually return, as ordered
+    // lists, because a lookup answer is a sequence and a caller can observe its order. Dense
+    // identifiers are internal, so nothing about how the store was imported may show through here.
+    for (final String code : new TreeSet<>(codeOrderIds.keySet())) {
+      final Coding coding = new Coding().setSystem(Rf2Mini.SNOMED_URI).setCode(code);
+
+      // member_of, over an implicit value set of the concept's own descendants.
+      final String valueSet = Rf2Mini.SNOMED_URI + "?fhir_vs=isa/" + Rf2Mini.DIABETES;
+      assertEquals(
+          codeOrderService.validateCode(valueSet, coding),
+          preOrderService.validateCode(valueSet, coding),
+          "member_of differs for " + code);
+
+      // translate, over the fixture's SAME AS association reference set.
+      final String conceptMap = Rf2Mini.SNOMED_URI + "?fhir_cm=" + Rf2Mini.SAME_AS_REFSET;
+      assertEquals(
+          codeOrderService.translate(coding, conceptMap, false, null),
+          preOrderService.translate(coding, conceptMap, false, null),
+          "translate differs for " + code);
+
+      // subsumes and subsumed_by, which are the two directions of the same call.
+      final Coding other = new Coding().setSystem(Rf2Mini.SNOMED_URI).setCode(Rf2Mini.DIABETES);
+      assertEquals(
+          codeOrderService.subsumes(other, coding),
+          preOrderService.subsumes(other, coding),
+          "subsumes differs for " + code);
+      assertEquals(
+          codeOrderService.subsumes(coding, other),
+          preOrderService.subsumes(coding, other),
+          "subsumed_by differs for " + code);
+
+      // display, property_of and designation are all served by lookup. property_of is asked for the
+      // parent and child properties specifically, because those are the multi-valued ones derived
+      // from the hierarchy and so the only ones whose order could follow the dense identifiers.
+      for (final String property :
+          List.of("display", "parent", "child", "designation", "moduleId", "inactive")) {
+        assertEquals(
+            codeOrderService.lookup(coding, property),
+            preOrderService.lookup(coding, property),
+            "lookup of " + property + " differs for " + code);
+      }
+      assertEquals(
+          codeOrderService.lookup(coding, null),
+          preOrderService.lookup(coding, null),
+          "an unfiltered lookup differs for " + code);
+    }
+  }
+
+  @Test
+  void emitsMultiParentPropertiesInTheSameOrderUnderBothOrderings() {
+    // The rf2-mini hierarchy is a tree, so no concept there has two parents and the two orderings
+    // cannot disagree about the order a parent list comes back in. This uses a purpose-built
+    // release
+    // where a concept's two parents sit at different depths, so their pre-order positions bear no
+    // relation to their codes - which is the case a full edition is full of, and the case that once
+    // let the internal ordering show through in a lookup result.
+    final Path release = writeDiamondRelease();
+    final String codeOrder = diamondStore.resolve("code-order").toString();
+    final String preOrder = diamondStore.resolve("pre-order").toString();
+    new SnomedRf2Importer(spark, codeOrder).importFrom(release.toString(), DIAMOND_VERSION);
+    new SnomedRf2Importer(spark, preOrder)
+        .importFrom(release.toString(), DIAMOND_VERSION, DenseIdOrder.PRE_ORDER);
+
+    // The two parents of the multi-parent concept are ordered differently by dense identifier under
+    // the two orderings, which is what makes this a real test rather than a tautology.
+    final Map<String, Integer> underCodeOrder = readDenseIds(codeOrder);
+    final Map<String, Integer> underPreOrder = readDenseIds(preOrder);
+    assertNotEquals(
+        underCodeOrder.get(DIAMOND_SHALLOW_PARENT) < underCodeOrder.get(DIAMOND_DEEP_PARENT),
+        underPreOrder.get(DIAMOND_SHALLOW_PARENT) < underPreOrder.get(DIAMOND_DEEP_PARENT),
+        "The release does not order the two parents differently under the two orderings");
+
+    try (final LocalTerminologyService codeOrderService = serviceOver(codeOrder);
+        final LocalTerminologyService preOrderService = serviceOver(preOrder)) {
+      final Coding coding = new Coding().setSystem(Rf2Mini.SNOMED_URI).setCode(DIAMOND_CHILD);
+      assertEquals(
+          codeOrderService.lookup(coding, "parent"),
+          preOrderService.lookup(coding, "parent"),
+          "The parent property list differs between the orderings");
+      assertEquals(
+          List.of(DIAMOND_DEEP_PARENT, DIAMOND_SHALLOW_PARENT),
+          codeOrderService.lookup(coding, "parent").stream()
+              .map(property -> ((Property) property).getValue().primitiveValue())
+              .toList(),
+          "The parent property list is not in ascending code order");
+    }
+  }
+
+  /**
+   * Writes a minimal RF2 snapshot release whose hierarchy is not a tree. The root has two children,
+   * one of which has a child of its own, and a fifth concept is a child of both the shallow branch
+   * and the deep one. Codes are chosen so that the deep parent sorts before the shallow one, while
+   * a depth-first traversal reaches the shallow one first.
+   *
+   * @return the release directory
+   */
+  @Nonnull
+  private static Path writeDiamondRelease() {
+    final Path terminology = diamondRelease.resolve("Snapshot").resolve("Terminology");
+    final String module = Rf2Mini.CORE_MODULE;
+    final StringBuilder concepts = new StringBuilder("id\teffectiveTime\tactive\tmoduleId\t");
+    concepts.append("definitionStatusId\r\n");
+    final StringBuilder descriptions =
+        new StringBuilder(
+            "id\teffectiveTime\tactive\tmoduleId\tconceptId\tlanguageCode\ttypeId\tterm\t"
+                + "caseSignificanceId\r\n");
+    final StringBuilder relationships =
+        new StringBuilder(
+            "id\teffectiveTime\tactive\tmoduleId\tsourceId\tdestinationId\trelationshipGroup\t"
+                + "typeId\tcharacteristicTypeId\tmodifierId\r\n");
+    int identifier = 0;
+    for (final String code :
+        List.of(
+            DIAMOND_ROOT,
+            DIAMOND_DEEP_PARENT,
+            DIAMOND_SHALLOW_PARENT,
+            DIAMOND_BRANCH,
+            DIAMOND_CHILD)) {
+      concepts.append(
+          String.join("\t", code, DIAMOND_TIME, "1", module, "900000000000074008") + "\r\n");
+      descriptions.append(
+          String.join(
+                  "\t",
+                  "d" + ++identifier,
+                  DIAMOND_TIME,
+                  "1",
+                  module,
+                  code,
+                  "en",
+                  "900000000000003001",
+                  "Concept " + code + " (finding)",
+                  "900000000000448009")
+              + "\r\n");
+    }
+    // Edges, as child to parent: the branch and the deep parent hang off the root, the shallow
+    // parent hangs off the branch, and the child has both the shallow and the deep parent.
+    for (final String[] edge :
+        new String[][] {
+          {DIAMOND_BRANCH, DIAMOND_ROOT},
+          {DIAMOND_DEEP_PARENT, DIAMOND_ROOT},
+          {DIAMOND_SHALLOW_PARENT, DIAMOND_BRANCH},
+          {DIAMOND_CHILD, DIAMOND_SHALLOW_PARENT},
+          {DIAMOND_CHILD, DIAMOND_DEEP_PARENT}
+        }) {
+      relationships.append(
+          String.join(
+                  "\t",
+                  "r" + ++identifier,
+                  DIAMOND_TIME,
+                  "1",
+                  module,
+                  edge[0],
+                  edge[1],
+                  "0",
+                  "116680003",
+                  "900000000000011006",
+                  "900000000000451002")
+              + "\r\n");
+    }
+    try {
+      Files.createDirectories(terminology);
+      Files.writeString(
+          terminology.resolve("sct2_Concept_Snapshot_INT_" + DIAMOND_TIME + ".txt"),
+          concepts.toString());
+      Files.writeString(
+          terminology.resolve("sct2_Description_Snapshot-en_INT_" + DIAMOND_TIME + ".txt"),
+          descriptions.toString());
+      Files.writeString(
+          terminology.resolve("sct2_Relationship_Snapshot_INT_" + DIAMOND_TIME + ".txt"),
+          relationships.toString());
+    } catch (final IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    return diamondRelease;
+  }
+
+  @Nonnull
+  private static LocalTerminologyService serviceOver(@Nonnull final String storagePath) {
+    return new LocalTerminologyService(
+        TerminologyConfiguration.builder()
+            .mode(TerminologyMode.LOCAL)
+            .local(LocalTerminologyConfiguration.builder().storagePath(storagePath).build())
+            .build(),
+        Map.of());
+  }
+
+  private static void closeQuietly(@Nullable final LocalTerminologyService service) {
+    if (service != null) {
+      service.close();
     }
   }
 

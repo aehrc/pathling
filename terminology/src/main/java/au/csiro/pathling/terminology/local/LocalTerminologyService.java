@@ -314,6 +314,30 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   }
 
   /**
+   * Emits one property per related concept, in ascending code order.
+   *
+   * <p>The order is taken from the codes rather than from the bitmap, whose order is that of the
+   * store's internal dense identifiers. Those identifiers are an implementation detail whose
+   * assignment depends on how the store was imported, so ordering by them would let an internal
+   * choice show through in a lookup result.
+   *
+   * @param propertyCode the property to emit, {@code parent} or {@code child}
+   * @param related the related concepts, by dense identifier
+   * @param dictionary the concept dictionary, for translating identifiers to codes
+   * @param result the list to append to
+   */
+  private static void addRelatedCodes(
+      @Nonnull final String propertyCode,
+      @Nonnull final RoaringBitmap related,
+      @Nonnull final ConceptDictionary dictionary,
+      @Nonnull final List<PropertyOrDesignation> result) {
+    final List<String> codes = new ArrayList<>(related.getCardinality());
+    related.forEach((IntConsumer) dense -> codes.add(dictionary.code(dense)));
+    Collections.sort(codes);
+    codes.forEach(code -> result.add(Property.of(propertyCode, new CodeType(code))));
+  }
+
+  /**
    * Builds the property and designation list for a resolved concept, honouring an optional property
    * filter and display language.
    */
@@ -337,24 +361,10 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       addDesignations(systemUrl, indexes, dense, result);
     }
     if (wants(propertyCode, PROPERTY_PARENT)) {
-      indexes
-          .hierarchy()
-          .parentsOf(dense)
-          .forEach(
-              (IntConsumer)
-                  parent ->
-                      result.add(
-                          Property.of(PROPERTY_PARENT, new CodeType(dictionary.code(parent)))));
+      addRelatedCodes(PROPERTY_PARENT, indexes.hierarchy().parentsOf(dense), dictionary, result);
     }
     if (wants(propertyCode, PROPERTY_CHILD)) {
-      indexes
-          .hierarchy()
-          .childrenOf(dense)
-          .forEach(
-              (IntConsumer)
-                  child ->
-                      result.add(
-                          Property.of(PROPERTY_CHILD, new CodeType(dictionary.code(child)))));
+      addRelatedCodes(PROPERTY_CHILD, indexes.hierarchy().childrenOf(dense), dictionary, result);
     }
     if (wants(propertyCode, PROPERTY_INACTIVE)) {
       result.add(Property.of(PROPERTY_INACTIVE, new BooleanType(!dictionary.isActive(dense))));
