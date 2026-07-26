@@ -352,6 +352,14 @@ edition/version. `import-fhir-terminology` accepts a JSON file, a directory of
 JSON files, or a FHIR NPM package (`.tgz`), and imports CodeSystems of any size
 with bounded memory (for example, the multi-gigabyte OMOP vocabulary CodeSystem).
 
+An RF2 source given to `import-snomed` must be
+[self-contained](terminology#rf2-sources-must-be-self-contained): rows
+referencing concepts the source does not itself ship are dropped, which is the
+ordinary shape of a derived or extension package supplied without the release it
+depends on. The import reports, for each file, how many of its active rows
+resolved, which is how a shortfall is detected. The same section gives a
+[recipe for combining a package with its dependency](terminology#combining-a-derived-package-with-its-dependency).
+
 Large imports run for many minutes. With `--verbose`, the command streams a
 running count of parsed concepts and stage-transition messages so progress is
 visible; without it, the startup spinner covers the wait. If an import fails
