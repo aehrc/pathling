@@ -93,6 +93,31 @@ TYPE2_DIABETES → TYPE2_WITH_COMPLICATION` is five levels below the root.
   implicit value set membership but remains resolvable for lookup.
 - **Designations**: `TYPE2_DIABETES` carries an extra acceptable synonym so
   designation filtering by acceptability can be tested.
+- **Rows that do not resolve**: `138875005` is the is-a parent of the four
+  top-level concepts but is not itself shipped in the concept file, so four
+  relationship rows have no destination concept to attach to. This is what the
+  base release's resolution figures below reflect.
+
+## Resolution figures of the base release
+
+The importer reports, per file, how many of its active rows resolved against the
+concept dictionary. `SnomedRf2ImporterTest` asserts these figures for
+`international-20230601`, so a regeneration that changes the fixture's shape
+means updating that test:
+
+| File                                     | Resolved | Active rows |
+| ---------------------------------------- | -------- | ----------- |
+| `sct2_Description_Snapshot-en_INT_*`     | 401      | 401         |
+| `sct2_Relationship_Snapshot_INT_*`       | 199      | 203         |
+| `der2_Refset_SimpleSnapshot_INT_*`       | 3        | 3           |
+| `der2_cRefset_AssociationSnapshot_INT_*` | 1        | 1           |
+
+The concept file, the language reference set and (where a test adds one) the
+Module Dependency reference set produce no figures, because none of them is
+resolved against the concept dictionary. Tests derive further shapes from these
+releases at run time rather than checking in more trees; `SnomedRf2ImporterTest`
+carries the helpers that copy a release and then truncate, split, append to,
+deactivate or duplicate one of its files.
 
 ## Well-known codes
 

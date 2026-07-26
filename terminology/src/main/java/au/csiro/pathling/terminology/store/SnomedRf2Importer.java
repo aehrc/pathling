@@ -52,6 +52,7 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.RELATIO
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.collect_list;
+import static org.apache.spark.sql.functions.count;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.map_from_entries;
 import static org.apache.spark.sql.functions.min;
@@ -77,6 +78,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -94,6 +97,7 @@ import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
+import org.apache.spark.sql.Observation;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
@@ -102,6 +106,9 @@ import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.expressions.Window;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
+import scala.Option;
+import scala.concurrent.Await;
+import scala.concurrent.duration.Duration;
 
 /**
  * Imports a SNOMED CT RF2 snapshot release into the terminology store. The release is read through
@@ -128,6 +135,18 @@ public class SnomedRf2Importer {
   private static final String DEFINED_STATUS = "900000000000073002";
   private static final String TARGET_COMPONENT_ID = "targetComponentId";
   private static final String ACCEPTABILITY_ID = "acceptabilityId";
+  private static final String DESCRIPTION_ID = "descriptionId";
+
+  /** The name of the row count metric carried by every resolution observation. */
+  private static final String OBSERVED_ROWS = "rows";
+
+  /**
+   * How long to wait, in total, for a batch of observed row counts to arrive before abandoning
+   * their lines. Spark delivers observed metrics through the asynchronous listener bus, whose
+   * events may be dropped under load, so waiting indefinitely would risk stalling an otherwise
+   * complete import for the sake of a diagnostic.
+   */
+  private static final long METRIC_TIMEOUT_SECONDS = 60;
 
   private static final Pattern SNOMED_VERSION =
       Pattern.compile("http://snomed.info/x?sct/(?<edition>\\d+)/version/(?<time>\\d{8})");
@@ -244,7 +263,7 @@ public class SnomedRf2Importer {
     final Relationships relationships = readRelationships(files, denseByCode, systemVersionId);
 
     // Reference set membership.
-    final Dataset<Row> refsetMembers = readRefsets(files, denseByCode, systemVersionId);
+    final Refsets refsets = readRefsets(files, denseByCode, systemVersionId);
 
     final Dataset<Row> codeSystemRow =
         codeSystemRow(systemVersionId, version, parsed, conceptCount);
@@ -255,12 +274,15 @@ public class SnomedRf2Importer {
     writer.writePartitionedBySystemVersion(codeSystemRow, CODE_SYSTEM, systemVersionId);
     writer.writePartitionedBySystemVersion(conceptTable, CONCEPT, systemVersionId);
     writer.writePartitionedBySystemVersion(descriptions.table, DESCRIPTION, systemVersionId);
+    logResolutions(descriptions.resolutions);
     writer.writePartitionedBySystemVersion(relationships.attributes, RELATIONSHIP, systemVersionId);
+    logResolutions(relationships.resolutions);
     log.info("Computing the transitive closure");
     final Dataset<Row> closure = new TransitiveClosureBuilder().build(relationships.isa);
     writer.writePartitionedBySystemVersion(closure, CLOSURE, systemVersionId);
     closure.unpersist();
-    writer.writePartitionedBySystemVersion(refsetMembers, REFSET_MEMBER, systemVersionId);
+    writer.writePartitionedBySystemVersion(refsets.members, REFSET_MEMBER, systemVersionId);
+    logResolutions(refsets.resolutions);
     writeManifest(writer, version, source);
     descriptions.cached.forEach(Dataset::unpersist);
     concepts.unpersist();
@@ -341,6 +363,92 @@ public class SnomedRf2Importer {
         .join(parentDense, isaRaw.col("destinationId").equalTo(parentDense.col(COLUMN_CODE)))
         .select(col(COLUMN_SOURCE_DENSE_ID), col(COLUMN_TARGET_DENSE_ID))
         .collectAsList();
+  }
+
+  // --- Resolution reporting. ---
+
+  /**
+   * The row count metrics of one RF2 file: how many active rows it contributed, and how many of
+   * them resolved against the concept dictionary. Each metric is named from the file's path,
+   * because Spark requires the collected metric names within a query plan to be unique.
+   */
+  private static final class Resolution {
+    @Nonnull final String path;
+    @Nonnull final Observation input;
+    @Nonnull final Observation resolved;
+
+    Resolution(@Nonnull final String path) {
+      this.path = path;
+      this.input = new Observation("input: " + path);
+      this.resolved = new Observation("resolved: " + path);
+    }
+  }
+
+  /**
+   * Attaches a row count metric to a data frame. The rows are unchanged and no action is added: the
+   * count is aggregated as the rows pass through the write the import already performs, so no
+   * further pass is made over any RF2 file.
+   *
+   * @param data the rows to count
+   * @param observation the observation that will hold the count
+   * @return the same rows, with the metric attached
+   */
+  @Nonnull
+  private static Dataset<Row> observeRowCount(
+      @Nonnull final Dataset<Row> data, @Nonnull final Observation observation) {
+    return data.observe(observation, count(lit(1)).alias(OBSERVED_ROWS));
+  }
+
+  /**
+   * Reports, for each file, how many of its active rows resolved against the concept dictionary.
+   * This is called once the write that materialises the corresponding table has completed, so the
+   * counts are available. A source that is not self-contained, such as a derived package imported
+   * without its declared dependency, is a legitimate thing to import, so the shortfall is reported
+   * informationally and the import's outcome is unchanged.
+   *
+   * @param resolutions the resolution metrics to report, one per file
+   */
+  private static void logResolutions(@Nonnull final List<Resolution> resolutions) {
+    // Every metric of a batch is fulfilled by the same query's completion, so they all arrive
+    // together or not at all. One deadline therefore bounds the whole batch, rather than a release
+    // with dozens of reference set files being able to wait once per file.
+    final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(METRIC_TIMEOUT_SECONDS);
+    for (final Resolution resolution : resolutions) {
+      final Long input = rowCount(resolution.input, deadline);
+      final Long resolved = input == null ? null : rowCount(resolution.resolved, deadline);
+      if (input != null && resolved != null) {
+        log.info(
+            "{}: {} of {} active rows resolved against the concept dictionary.",
+            resolution.path,
+            resolved,
+            input);
+      }
+    }
+  }
+
+  /**
+   * Reads an observed row count, waiting no later than a deadline for it to arrive.
+   *
+   * @param observation the observation to read
+   * @param deadline the {@link System#nanoTime()} value to stop waiting at
+   * @return the row count, or null if it did not arrive
+   */
+  @Nullable
+  private static Long rowCount(@Nonnull final Observation observation, final long deadline) {
+    try {
+      final scala.collection.immutable.Map<String, Object> metrics =
+          Await.result(
+              observation.future(),
+              Duration.create(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
+      final Option<Object> rows = metrics.get(OBSERVED_ROWS);
+      return rows.isDefined() ? (Long) rows.get() : null;
+    } catch (final TimeoutException e) {
+      log.debug("Row count metric '{}' was not reported.", observation.name());
+      return null;
+    } catch (final InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
+    }
   }
 
   // --- Archive extraction. ---
@@ -450,11 +558,11 @@ public class SnomedRf2Importer {
   @Nonnull
   private Rf2Files locateFiles(@Nonnull final String source) {
     final Path root = new Path(source);
-    String concept = null;
+    final List<String> concepts = new ArrayList<>();
     final List<String> descriptions = new ArrayList<>();
-    String relationship = null;
+    final List<String> relationships = new ArrayList<>();
     final List<String> languages = new ArrayList<>();
-    String moduleDependency = null;
+    final List<String> moduleDependencies = new ArrayList<>();
     final List<String> otherRefsets = new ArrayList<>();
     boolean sawNonSnapshotRelease = false;
 
@@ -475,16 +583,16 @@ public class SnomedRf2Importer {
           continue;
         }
         if (name.startsWith("sct2_Concept_")) {
-          concept = path;
+          concepts.add(path);
         } else if (name.startsWith("sct2_Description_")
             || name.startsWith("sct2_TextDefinition_")) {
           descriptions.add(path);
         } else if (name.startsWith("sct2_Relationship_")) {
-          relationship = path;
+          relationships.add(path);
         } else if (name.contains("Refset_Language")) {
           languages.add(path);
         } else if (name.contains("Refset_ModuleDependency")) {
-          moduleDependency = path;
+          moduleDependencies.add(path);
         } else if (name.startsWith("der2_") && name.contains("Refset")) {
           otherRefsets.add(path);
         }
@@ -493,7 +601,7 @@ public class SnomedRf2Importer {
       throw new TerminologyImportException("Unable to read the RF2 source at " + source, e);
     }
 
-    if (concept == null) {
+    if (concepts.isEmpty()) {
       final String detail =
           sawNonSnapshotRelease
               ? " Only snapshot releases are supported; this appears to be a full or delta release."
@@ -501,8 +609,51 @@ public class SnomedRf2Importer {
       throw new TerminologyImportException(
           "No SNOMED CT snapshot concept file was found under " + source + "." + detail);
     }
+    // The concept, relationship and module dependency roles are single-valued. More than one file
+    // filling one of them means two release trees have been placed in the same directory, in which
+    // case the import would otherwise proceed against one tree's content and silently ignore the
+    // other's.
+    requireSingle("concept", concepts, source);
+    requireSingle("relationship", relationships, source);
+    requireSingle("module dependency", moduleDependencies, source);
     return new Rf2Files(
-        concept, descriptions, relationship, languages, moduleDependency, otherRefsets);
+        concepts.get(0),
+        descriptions,
+        relationships.isEmpty() ? null : relationships.get(0),
+        languages,
+        moduleDependencies.isEmpty() ? null : moduleDependencies.get(0),
+        otherRefsets);
+  }
+
+  /**
+   * Rejects a source in which more than one file fills a single-valued role, naming every candidate
+   * in a stable order so the offending files can be found. No file content has been read at this
+   * point, so the store is untouched.
+   *
+   * @param role the name of the role, as it appears in the failure message
+   * @param candidates the paths of the files found for the role
+   * @param source the source path the release was discovered under
+   * @throws TerminologyImportException if more than one candidate was found
+   */
+  private static void requireSingle(
+      @Nonnull final String role,
+      @Nonnull final List<String> candidates,
+      @Nonnull final String source) {
+    if (candidates.size() > 1) {
+      final List<String> sorted = new ArrayList<>(candidates);
+      sorted.sort(Comparator.naturalOrder());
+      throw new TerminologyImportException(
+          "Multiple SNOMED CT snapshot "
+              + role
+              + " files were found under "
+              + source
+              + ": "
+              + String.join(", ", sorted)
+              + ". A single "
+              + role
+              + " file is expected. If you are combining releases, concatenate them into one file"
+              + " rather than placing both release trees in the same directory.");
+    }
   }
 
   // --- RF2 parsing. ---
@@ -587,13 +738,18 @@ public class SnomedRf2Importer {
      */
     @Nonnull final List<Dataset<Row>> cached;
 
+    /** The resolution metrics of each description and text definition file read. */
+    @Nonnull final List<Resolution> resolutions;
+
     Descriptions(
         @Nonnull final Dataset<Row> table,
         @Nonnull final Dataset<Row> display,
-        @Nonnull final List<Dataset<Row>> cached) {
+        @Nonnull final List<Dataset<Row>> cached,
+        @Nonnull final List<Resolution> resolutions) {
       this.table = table;
       this.display = display;
       this.cached = cached;
+      this.resolutions = resolutions;
     }
   }
 
@@ -609,7 +765,7 @@ public class SnomedRf2Importer {
           concepts
               .select(col(COLUMN_CODE), lit(null).cast("string").alias(COLUMN_DISPLAY))
               .limit(0);
-      return new Descriptions(emptyTable, emptyDisplay, List.of());
+      return new Descriptions(emptyTable, emptyDisplay, List.of(), List.of());
     }
 
     // The description and language reference set files are each consumed several times below (the
@@ -618,13 +774,40 @@ public class SnomedRf2Importer {
     // files in a release, so the parsed rows are cached to read and parse each file only once. A
     // release may ship several files of each kind (descriptions plus text definitions, one language
     // file per dialect), so all of them are combined.
+    //
+    // Each file is carried separately through the join to the concept dictionary so that its own
+    // share of the rows that resolved can be reported, and the joined results are then combined.
+    // An inner join distributes over a union, so the same rows pass through the same join as they
+    // would have done had the files been combined first and joined once.
+    final List<Dataset<Row>> descriptionFiles = new ArrayList<>();
+    final List<Dataset<Row>> resolvedFiles = new ArrayList<>();
+    final List<Resolution> resolutions = new ArrayList<>();
+    for (final String path : files.descriptions) {
+      final Dataset<Row> active =
+          readRf2(path, "id", "conceptId", "typeId", COLUMN_TERM)
+              .filter(col(COLUMN_ACTIVE).equalTo("1"))
+              .persist();
+      descriptionFiles.add(active);
+      final Resolution resolution = new Resolution(path);
+      resolutions.add(resolution);
+      // The metrics are attached above the cache boundary, so that they are collected by the write
+      // of the description table rather than by whichever action first populates the cache.
+      final Dataset<Row> observed = observeRowCount(active, resolution.input);
+      final Dataset<Row> resolved =
+          observed
+              .join(denseByCode, observed.col("conceptId").equalTo(denseByCode.col(COLUMN_CODE)))
+              .select(
+                  observed.col("id").alias(DESCRIPTION_ID),
+                  col(COLUMN_DENSE_ID),
+                  observed.col(COLUMN_TERM),
+                  observed.col("languageCode").alias(COLUMN_LANGUAGE),
+                  observed.col("typeId").alias(COLUMN_TYPE_CODE));
+      resolvedFiles.add(observeRowCount(resolved, resolution.resolved));
+    }
     final Dataset<Row> descRaw =
-        files.descriptions.stream()
-            .map(path -> readRf2(path, "id", "conceptId", "typeId", COLUMN_TERM))
-            .reduce(Dataset::unionByName)
-            .orElseThrow()
-            .filter(col(COLUMN_ACTIVE).equalTo("1"))
-            .persist();
+        descriptionFiles.stream().reduce(Dataset::unionByName).orElseThrow();
+    final Dataset<Row> resolvedDescriptions =
+        resolvedFiles.stream().reduce(Dataset::unionByName).orElseThrow();
 
     // Active language reference set rows: description id -> (refset, acceptability).
     final Dataset<Row> langActive =
@@ -650,17 +833,20 @@ public class SnomedRf2Importer {
                 map_from_entries(collect_list(struct(col("refsetId"), col(ACCEPTABILITY_ID))))
                     .alias(COLUMN_ACCEPTABILITY));
 
+    // The acceptability map is a left join keyed on the description, so it neither adds nor drops
+    // rows and the resolved count above remains the count written to the table.
     final Dataset<Row> table =
-        descRaw
-            .join(denseByCode, descRaw.col("conceptId").equalTo(denseByCode.col(COLUMN_CODE)))
+        resolvedDescriptions
             .join(
-                acceptability, descRaw.col("id").equalTo(acceptability.col("descId")), "left_outer")
+                acceptability,
+                resolvedDescriptions.col(DESCRIPTION_ID).equalTo(acceptability.col("descId")),
+                "left_outer")
             .select(
                 lit(systemVersionId).alias(COLUMN_SYSTEM_VERSION_ID),
                 col(COLUMN_DENSE_ID).alias(COLUMN_CONCEPT_DENSE_ID),
                 col(COLUMN_TERM),
-                col("languageCode").alias(COLUMN_LANGUAGE),
-                col("typeId").alias(COLUMN_TYPE_CODE),
+                col(COLUMN_LANGUAGE),
+                col(COLUMN_TYPE_CODE),
                 lit(SNOMED_URI).alias(COLUMN_TYPE_SYSTEM),
                 col(COLUMN_ACCEPTABILITY));
 
@@ -690,7 +876,9 @@ public class SnomedRf2Importer {
                 coalesce(col("preferredTerm"), col("fsnTerm"), col(COLUMN_CODE))
                     .alias(COLUMN_DISPLAY));
 
-    return new Descriptions(table, display, List.of(descRaw, langActive));
+    final List<Dataset<Row>> cached = new ArrayList<>(descriptionFiles);
+    cached.add(langActive);
+    return new Descriptions(table, display, cached, resolutions);
   }
 
   @Nonnull
@@ -718,9 +906,16 @@ public class SnomedRf2Importer {
     @Nonnull final Dataset<Row> isa;
     @Nonnull final Dataset<Row> attributes;
 
-    Relationships(@Nonnull final Dataset<Row> isa, @Nonnull final Dataset<Row> attributes) {
+    /** The resolution metrics of the relationship file, empty when the release ships none. */
+    @Nonnull final List<Resolution> resolutions;
+
+    Relationships(
+        @Nonnull final Dataset<Row> isa,
+        @Nonnull final Dataset<Row> attributes,
+        @Nonnull final List<Resolution> resolutions) {
       this.isa = isa;
       this.attributes = attributes;
+      this.resolutions = resolutions;
     }
   }
 
@@ -730,26 +925,35 @@ public class SnomedRf2Importer {
       @Nonnull final Dataset<Row> denseByCode,
       @Nonnull final String systemVersionId) {
     if (files.relationship == null) {
-      return new Relationships(emptyIsa(), emptyRelationshipTable());
+      return new Relationships(emptyIsa(), emptyRelationshipTable(), List.of());
     }
+    final Resolution resolution = new Resolution(files.relationship);
     final Dataset<Row> relRaw =
-        readRf2(files.relationship, "sourceId", "destinationId", "typeId")
-            .filter(col(COLUMN_ACTIVE).equalTo("1"));
+        observeRowCount(
+            readRf2(files.relationship, "sourceId", "destinationId", "typeId")
+                .filter(col(COLUMN_ACTIVE).equalTo("1")),
+            resolution.input);
 
     final Dataset<Row> sourceDense =
         denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_SOURCE_DENSE_ID);
     final Dataset<Row> targetDense =
         denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_TARGET_DENSE_ID);
 
+    // A relationship resolves only when both its source and its destination concept are present,
+    // so the resolved count is taken after both joins.
     final Dataset<Row> mapped =
-        relRaw
-            .join(sourceDense, relRaw.col("sourceId").equalTo(sourceDense.col(COLUMN_CODE)))
-            .join(targetDense, relRaw.col("destinationId").equalTo(targetDense.col(COLUMN_CODE)))
-            .select(
-                col("typeId"),
-                col("relationshipGroup"),
-                col(COLUMN_SOURCE_DENSE_ID),
-                col(COLUMN_TARGET_DENSE_ID))
+        observeRowCount(
+                relRaw
+                    .join(sourceDense, relRaw.col("sourceId").equalTo(sourceDense.col(COLUMN_CODE)))
+                    .join(
+                        targetDense,
+                        relRaw.col("destinationId").equalTo(targetDense.col(COLUMN_CODE)))
+                    .select(
+                        col("typeId"),
+                        col("relationshipGroup"),
+                        col(COLUMN_SOURCE_DENSE_ID),
+                        col(COLUMN_TARGET_DENSE_ID)),
+                resolution.resolved)
             .persist();
 
     final Dataset<Row> isa =
@@ -768,39 +972,59 @@ public class SnomedRf2Importer {
                 col("typeId").alias(COLUMN_TYPE_CODE),
                 col(COLUMN_TARGET_DENSE_ID),
                 col("relationshipGroup").cast(DataTypes.IntegerType).alias(COLUMN_ROLE_GROUP));
-    return new Relationships(isa, attributes);
+    return new Relationships(isa, attributes, List.of(resolution));
   }
 
   // --- Reference sets. ---
 
+  /** The reference set membership rows, and the resolution metrics of each file read. */
+  private static final class Refsets {
+    @Nonnull final Dataset<Row> members;
+    @Nonnull final List<Resolution> resolutions;
+
+    Refsets(@Nonnull final Dataset<Row> members, @Nonnull final List<Resolution> resolutions) {
+      this.members = members;
+      this.resolutions = resolutions;
+    }
+  }
+
   @Nonnull
-  private Dataset<Row> readRefsets(
+  private Refsets readRefsets(
       @Nonnull final Rf2Files files,
       @Nonnull final Dataset<Row> denseByCode,
       @Nonnull final String systemVersionId) {
     Dataset<Row> members = null;
+    final List<Resolution> resolutions = new ArrayList<>();
     for (final String path : files.otherRefsets) {
+      final Resolution resolution = new Resolution(path);
+      resolutions.add(resolution);
       final Dataset<Row> raw =
-          readRf2(path, "refsetId", "referencedComponentId")
-              .filter(col(COLUMN_ACTIVE).equalTo("1"));
+          observeRowCount(
+              readRf2(path, "refsetId", "referencedComponentId")
+                  .filter(col(COLUMN_ACTIVE).equalTo("1")),
+              resolution.input);
       final boolean hasTarget = raw.schema().getFieldIndex(TARGET_COMPONENT_ID).isDefined();
       final Dataset<Row> targetColumn =
           hasTarget
               ? raw.withColumn(COLUMN_TARGET_CODE, col(TARGET_COMPONENT_ID))
               : raw.withColumn(COLUMN_TARGET_CODE, lit(null).cast(DataTypes.StringType));
       final Dataset<Row> mapped =
-          targetColumn
-              .join(
-                  denseByCode,
-                  targetColumn.col("referencedComponentId").equalTo(denseByCode.col(COLUMN_CODE)))
-              .select(
-                  lit(systemVersionId).alias(COLUMN_SYSTEM_VERSION_ID),
-                  col("refsetId").alias(COLUMN_REFSET_CODE),
-                  col(COLUMN_DENSE_ID).alias(COLUMN_REFERENCED_DENSE_ID),
-                  col(COLUMN_TARGET_CODE));
+          observeRowCount(
+              targetColumn
+                  .join(
+                      denseByCode,
+                      targetColumn
+                          .col("referencedComponentId")
+                          .equalTo(denseByCode.col(COLUMN_CODE)))
+                  .select(
+                      lit(systemVersionId).alias(COLUMN_SYSTEM_VERSION_ID),
+                      col("refsetId").alias(COLUMN_REFSET_CODE),
+                      col(COLUMN_DENSE_ID).alias(COLUMN_REFERENCED_DENSE_ID),
+                      col(COLUMN_TARGET_CODE)),
+              resolution.resolved);
       members = members == null ? mapped : members.unionByName(mapped);
     }
-    return members == null ? emptyRefsetTable(systemVersionId) : members;
+    return new Refsets(members == null ? emptyRefsetTable(systemVersionId) : members, resolutions);
   }
 
   // --- Metadata rows. ---

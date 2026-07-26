@@ -1,6 +1,11 @@
 # This workflow will build the software and documentation to ensure there are no errors, and also
 # execute the tests. It also deploys a pre-release version of the library API to Maven Central (as
 # long as the POM versions are correctly set to a SNAPSHOT version).
+#
+# The test suites run ahead of the deployment, one job per core module and one for each language
+# library, so that they run at the same time rather than one after another. The deployment then
+# builds with the tests skipped and restores the coverage the test jobs produced, which SonarCloud
+# needs to see all at once.
 
 name: Pre-release
 
@@ -35,11 +40,154 @@ jobs:
             server:
               - 'server/**'
 
+  test-core:
+    name: Test ${{ matrix.module }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      # Report every module's result, rather than cancelling the siblings on the first failure.
+      fail-fast: false
+      matrix:
+        module:
+          - utilities
+          - encoders
+          - terminology
+          - fhirpath
+          - library-api
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # The full history is required by the license header check, which derives the copyright
+          # years from the commit history.
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+
+      - name: Build dependencies
+        run: |
+          mvn --batch-mode install -DskipTests \
+          -pl ${{ matrix.module }} -am
+        timeout-minutes: 20
+
+      # The SQL on FHIR compliance report is produced by an extra Surefire execution in the fhirpath
+      # module, so the profile that adds it is only enabled there.
+      - name: Run tests
+        run: |
+          mvn --batch-mode verify \
+          -pl ${{ matrix.module }} \
+          ${{ matrix.module == 'fhirpath' && '-PsofComplianceReport' || '' }}
+        timeout-minutes: 40
+
+      # The coverage and report files are collected into a single archive so that the deployment job
+      # can restore them at their original paths. Uploading them directly would strip the leading
+      # directories, because the artifact is rooted at the paths' common ancestor.
+      - name: Archive test reports and coverage
+        if: always()
+        run: |
+          paths=()
+          for path in "${{ matrix.module }}/target/jacoco.exec" \
+                      "${{ matrix.module }}/target/site/jacoco" \
+                      "${{ matrix.module }}/target/site/jacoco-aggregate" \
+                      "${{ matrix.module }}/target/surefire-reports" \
+                      "${{ matrix.module }}/target/fhir-view-compliance-test.json"; do
+            if [ -e "${path}" ]; then
+              paths+=("${path}")
+            fi
+          done
+          if [ ${#paths[@]} -eq 0 ]; then
+            echo "::warning::No test reports or coverage were produced."
+            exit 0
+          fi
+          tar --create --file "reports-${{ matrix.module }}.tar" "${paths[@]}"
+
+      - name: Save test reports and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ matrix.module }}
+          path: reports-${{ matrix.module }}.tar
+          if-no-files-found: warn
+
+  test-python:
+    name: Test Python API
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+          python: "true"
+          spark: "true"
+
+      - name: Build core libraries
+        run: |
+          mvn --batch-mode install -DskipTests \
+          -pl library-runtime -am
+        timeout-minutes: 20
+
+      - name: Build and test Python API
+        run: mvn --batch-mode install -pl lib/python
+        timeout-minutes: 30
+
+      - name: Save coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage-reports
+          path: lib/python/target/coverage/
+
+  test-r:
+    name: Test R API
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+          r: "true"
+          spark: "true"
+
+      - name: Build core libraries
+        run: |
+          mvn --batch-mode install -DskipTests \
+          -pl library-runtime -am
+        timeout-minutes: 20
+
+      - name: Build and test R API
+        env:
+          R_KEEP_PKG_SOURCE: yes
+        run: mvn --batch-mode install -pl lib/R
+        timeout-minutes: 45
+
   pre-release:
     name: Pre-release to Maven Central
     environment: maven-central
     runs-on: ubuntu-latest
-    needs: detect-changes
+    # The artefacts are only published once every suite has passed, which is the same guarantee the
+    # single job gave when it ran the tests itself.
+    needs: [detect-changes, test-core, test-python, test-r]
     permissions:
       id-token: write
       contents: read
@@ -103,18 +251,36 @@ jobs:
           skip-db-update: "true"
           sarif-output: trivy-results-site.sarif
 
+      - name: Download test reports and coverage
+        uses: actions/download-artifact@v4
+        with:
+          pattern: reports-*
+          merge-multiple: true
+          path: reports
+
+      # Restoring these at their original paths gives SonarCloud the coverage from every module at
+      # once, and puts the SQL on FHIR compliance report where the upload below expects it.
+      - name: Restore test reports and coverage
+        run: |
+          for archive in reports/*.tar; do
+            echo "Restoring ${archive}"
+            tar --extract --file "${archive}"
+          done
+
+      # The tests have already run in the jobs above, so they are skipped here. That also disables
+      # JaCoCo, which leaves the restored coverage reports untouched.
       - name: Run deploy goal (pre-release)
         env:
           R_KEEP_PKG_SOURCE: yes
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          mvn --batch-mode deploy \
+          mvn --batch-mode deploy -DskipTests \
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
           -Dsonar.sarifReportPaths=trivy-results.sarif \
-          -pl '!benchmark' -Pdocs,mavenPreRelease,check,sofComplianceReport
+          -pl '!benchmark' -Pdocs,mavenPreRelease,check
         timeout-minutes: 90
 
       - name: Upload test artifacts
