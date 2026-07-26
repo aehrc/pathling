@@ -136,9 +136,10 @@ public class SnomedRf2Importer {
   private static final String OBSERVED_ROWS = "rows";
 
   /**
-   * How long to wait for an observed row count to arrive before abandoning its line. Spark delivers
-   * observed metrics through the asynchronous listener bus, whose events may be dropped under load,
-   * so waiting indefinitely would risk stalling an otherwise complete import for a diagnostic.
+   * How long to wait, in total, for a batch of observed row counts to arrive before abandoning
+   * their lines. Spark delivers observed metrics through the asynchronous listener bus, whose
+   * events may be dropped under load, so waiting indefinitely would risk stalling an otherwise
+   * complete import for the sake of a diagnostic.
    */
   private static final long METRIC_TIMEOUT_SECONDS = 60;
 
@@ -303,9 +304,13 @@ public class SnomedRf2Importer {
    * @param resolutions the resolution metrics to report, one per file
    */
   private static void logResolutions(@Nonnull final List<Resolution> resolutions) {
+    // Every metric of a batch is fulfilled by the same query's completion, so they all arrive
+    // together or not at all. One deadline therefore bounds the whole batch, rather than a release
+    // with dozens of reference set files being able to wait once per file.
+    final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(METRIC_TIMEOUT_SECONDS);
     for (final Resolution resolution : resolutions) {
-      final Long input = rowCount(resolution.input);
-      final Long resolved = rowCount(resolution.resolved);
+      final Long input = rowCount(resolution.input, deadline);
+      final Long resolved = input == null ? null : rowCount(resolution.resolved, deadline);
       if (input != null && resolved != null) {
         log.info(
             "{}: {} of {} active rows resolved against the concept dictionary.",
@@ -317,17 +322,19 @@ public class SnomedRf2Importer {
   }
 
   /**
-   * Reads an observed row count, waiting a bounded time for it to arrive.
+   * Reads an observed row count, waiting no later than a deadline for it to arrive.
    *
    * @param observation the observation to read
+   * @param deadline the {@link System#nanoTime()} value to stop waiting at
    * @return the row count, or null if it did not arrive
    */
   @Nullable
-  private static Long rowCount(@Nonnull final Observation observation) {
+  private static Long rowCount(@Nonnull final Observation observation, final long deadline) {
     try {
       final scala.collection.immutable.Map<String, Object> metrics =
           Await.result(
-              observation.future(), Duration.create(METRIC_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+              observation.future(),
+              Duration.create(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
       final Option<Object> rows = metrics.get(OBSERVED_ROWS);
       return rows.isDefined() ? (Long) rows.get() : null;
     } catch (final TimeoutException e) {
