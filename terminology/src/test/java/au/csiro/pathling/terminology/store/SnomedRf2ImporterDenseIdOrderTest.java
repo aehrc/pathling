@@ -43,6 +43,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.roaringbitmap.ContainerPointer;
 import org.roaringbitmap.IntConsumer;
 import org.roaringbitmap.RoaringBitmap;
 
@@ -168,6 +169,31 @@ class SnomedRf2ImporterDenseIdOrderTest {
   @Test
   void assignsIdenticalIdentifiersWhenTheSameSourceIsImportedTwice() {
     assertEquals(preOrderIds, repeatedPreOrderIds);
+  }
+
+  @Test
+  void representsAContiguousSubtreeAsASingleRun() {
+    // The two changes only pay off together: a contiguous subtree is what run-length encoding can
+    // compress, and the index has to ask for that encoding to get it. The largest subtree in the
+    // fixture is contiguous under the pre-order, so it must be held as a run rather than as a list
+    // of its members.
+    final HierarchyIndex hierarchy = preOrderIndexes.hierarchy();
+    RoaringBitmap descendants = new RoaringBitmap();
+    for (final int dense : preOrderIds.values()) {
+      final RoaringBitmap candidate = hierarchy.descendantsOf(dense);
+      if (candidate.getCardinality() > descendants.getCardinality()) {
+        descendants = candidate;
+      }
+    }
+    assertTrue(descendants.getCardinality() > 1, "The fixture has no subtree to compress");
+
+    final ContainerPointer pointer = descendants.getContainerPointer();
+    boolean sawRun = false;
+    while (pointer.getContainer() != null) {
+      sawRun |= pointer.isRunContainer();
+      pointer.advance();
+    }
+    assertTrue(sawRun, "The root's contiguous subtree was not run-length encoded");
   }
 
   @Test
