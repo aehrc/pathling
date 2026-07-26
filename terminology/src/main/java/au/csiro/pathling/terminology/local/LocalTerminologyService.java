@@ -32,6 +32,7 @@ import jakarta.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -314,12 +315,28 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   }
 
   /**
-   * Emits one property per related concept, in ascending code order.
+   * Returns the members of a bitmap ordered by their concept code.
    *
-   * <p>The order is taken from the codes rather than from the bitmap, whose order is that of the
-   * store's internal dense identifiers. Those identifiers are an implementation detail whose
-   * assignment depends on how the store was imported, so ordering by them would let an internal
-   * choice show through in a lookup result.
+   * <p>Every multi-valued lookup result must be ordered this way rather than by iterating the
+   * bitmap directly. A bitmap is ordered by the store's internal dense identifiers, which are an
+   * implementation detail whose assignment depends on how the store was imported, so emitting in
+   * bitmap order would let that internal choice show through in a result a caller can see.
+   *
+   * @param members the concepts, by dense identifier
+   * @param dictionary the concept dictionary, for translating identifiers to codes
+   * @return the members' dense identifiers, ordered by concept code
+   */
+  @Nonnull
+  private static List<Integer> byConceptCode(
+      @Nonnull final RoaringBitmap members, @Nonnull final ConceptDictionary dictionary) {
+    final List<Integer> ordered = new ArrayList<>(members.getCardinality());
+    members.forEach((IntConsumer) ordered::add);
+    ordered.sort(Comparator.comparing(dictionary::code));
+    return ordered;
+  }
+
+  /**
+   * Emits one property per related concept, in ascending code order.
    *
    * @param propertyCode the property to emit, {@code parent} or {@code child}
    * @param related the related concepts, by dense identifier
@@ -331,10 +348,9 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       @Nonnull final RoaringBitmap related,
       @Nonnull final ConceptDictionary dictionary,
       @Nonnull final List<PropertyOrDesignation> result) {
-    final List<String> codes = new ArrayList<>(related.getCardinality());
-    related.forEach((IntConsumer) dense -> codes.add(dictionary.code(dense)));
-    Collections.sort(codes);
-    codes.forEach(code -> result.add(Property.of(propertyCode, new CodeType(code))));
+    for (final int dense : byConceptCode(related, dictionary)) {
+      result.add(Property.of(propertyCode, new CodeType(dictionary.code(dense))));
+    }
   }
 
   /**
@@ -438,18 +454,15 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       if (!wants(propertyCode, type)) {
         continue;
       }
-      relationships
-          .targetsOf(type, source)
-          .forEach(
-              (IntConsumer)
-                  target ->
-                      result.add(
-                          Property.of(
-                              type,
-                              new Coding()
-                                  .setSystem(systemUrl)
-                                  .setCode(dictionary.code(target))
-                                  .setDisplay(dictionary.display(target)))));
+      for (final int target : byConceptCode(relationships.targetsOf(type, source), dictionary)) {
+        result.add(
+            Property.of(
+                type,
+                new Coding()
+                    .setSystem(systemUrl)
+                    .setCode(dictionary.code(target))
+                    .setDisplay(dictionary.display(target))));
+      }
     }
   }
 

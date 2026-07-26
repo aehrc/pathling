@@ -79,7 +79,9 @@ class SnomedRf2ImporterDenseIdOrderTest {
   private static final String DIAMOND_DEEP_PARENT = "500000";
   private static final String DIAMOND_SHALLOW_PARENT = "600000";
   private static final String DIAMOND_CHILD = "900000";
+  private static final String DIAMOND_ATTRIBUTE = "700000";
   private static final String DIAMOND_TIME = "20240101";
+  private static final String IS_A = "116680003";
   private static final String DIAMOND_VERSION =
       "http://snomed.info/sct/900000000000207008/version/20240101";
 
@@ -320,9 +322,11 @@ class SnomedRf2ImporterDenseIdOrderTest {
           preOrderService.subsumes(coding, other),
           "subsumed_by differs for " + code);
 
-      // display, property_of and designation are all served by lookup. property_of is asked for the
-      // parent and child properties specifically, because those are the multi-valued ones derived
-      // from the hierarchy and so the only ones whose order could follow the dense identifiers.
+      // display, property_of and designation are all served by lookup, so each is asked for
+      // separately as well as together. This fixture is a tree with no repeated attribute type, so
+      // it
+      // cannot by itself prove the multi-valued properties are ordered independently of the dense
+      // identifiers - emitsEveryMultiValuedPropertyInTheSameOrderUnderBothOrderings does that.
       for (final String property :
           List.of("display", "parent", "child", "designation", "moduleId", "inactive")) {
         assertEquals(
@@ -338,13 +342,14 @@ class SnomedRf2ImporterDenseIdOrderTest {
   }
 
   @Test
-  void emitsMultiParentPropertiesInTheSameOrderUnderBothOrderings() {
-    // The rf2-mini hierarchy is a tree, so no concept there has two parents and the two orderings
-    // cannot disagree about the order a parent list comes back in. This uses a purpose-built
-    // release
-    // where a concept's two parents sit at different depths, so their pre-order positions bear no
-    // relation to their codes - which is the case a full edition is full of, and the case that once
-    // let the internal ordering show through in a lookup result.
+  void emitsEveryMultiValuedPropertyInTheSameOrderUnderBothOrderings() {
+    // The rf2-mini hierarchy is a tree, and no fixture concept has two attribute targets of one
+    // type, so neither can make the two orderings disagree about the order a property list comes
+    // back in. This uses a purpose-built release where a concept's two parents sit at different
+    // depths, and where the same two concepts are also the targets of two same-type attribute
+    // relationships - which is routine in a full edition, and is where an internal ordering can
+    // show
+    // through in a result a caller sees.
     final Path release = writeDiamondRelease();
     final String codeOrder = diamondStore.resolve("code-order").toString();
     final String preOrder = diamondStore.resolve("pre-order").toString();
@@ -370,18 +375,51 @@ class SnomedRf2ImporterDenseIdOrderTest {
           "The parent property list differs between the orderings");
       assertEquals(
           List.of(DIAMOND_DEEP_PARENT, DIAMOND_SHALLOW_PARENT),
-          codeOrderService.lookup(coding, "parent").stream()
-              .map(property -> ((Property) property).getValue().primitiveValue())
-              .toList(),
+          propertyValues(codeOrderService, coding, "parent"),
           "The parent property list is not in ascending code order");
+
+      // The same must hold for a defining relationship's targets, which reach the result by a
+      // different path from the hierarchy's parents and children.
+      assertEquals(
+          codeOrderService.lookup(coding, DIAMOND_ATTRIBUTE),
+          preOrderService.lookup(coding, DIAMOND_ATTRIBUTE),
+          "The attribute property list differs between the orderings");
+      assertEquals(
+          List.of(DIAMOND_DEEP_PARENT, DIAMOND_SHALLOW_PARENT),
+          propertyValues(codeOrderService, coding, DIAMOND_ATTRIBUTE),
+          "The attribute property list is not in ascending code order");
+
+      // An unfiltered lookup returns every property at once, so it catches anything the individual
+      // filters above miss.
+      assertEquals(
+          codeOrderService.lookup(coding, null),
+          preOrderService.lookup(coding, null),
+          "An unfiltered lookup differs between the orderings");
     }
   }
 
   /**
+   * Returns the codes carried by one property of a concept, in the order they are emitted. A
+   * hierarchy property carries a bare code, while an attribute property carries a whole Coding.
+   */
+  @Nonnull
+  private static List<String> propertyValues(
+      @Nonnull final LocalTerminologyService service,
+      @Nonnull final Coding coding,
+      @Nonnull final String propertyCode) {
+    return service.lookup(coding, propertyCode).stream()
+        .map(property -> ((Property) property).getValue())
+        .map(value -> value instanceof Coding target ? target.getCode() : value.primitiveValue())
+        .toList();
+  }
+
+  /**
    * Writes a minimal RF2 snapshot release whose hierarchy is not a tree. The root has two children,
-   * one of which has a child of its own, and a fifth concept is a child of both the shallow branch
-   * and the deep one. Codes are chosen so that the deep parent sorts before the shallow one, while
-   * a depth-first traversal reaches the shallow one first.
+   * a branch and a deep parent; the branch has the shallow parent beneath it; and a further concept
+   * is a child of both the shallow parent and the deep one, and also carries two attribute
+   * relationships of one type targeting the same pair. Codes are chosen so that the traversal
+   * reaches the shallow parent first while the deep parent's code sorts first, which is what makes
+   * the two orderings disagree about the order the pair comes back in.
    *
    * @return the release directory
    */
@@ -406,6 +444,7 @@ class SnomedRf2ImporterDenseIdOrderTest {
             DIAMOND_DEEP_PARENT,
             DIAMOND_SHALLOW_PARENT,
             DIAMOND_BRANCH,
+            DIAMOND_ATTRIBUTE,
             DIAMOND_CHILD)) {
       concepts.append(
           String.join("\t", code, DIAMOND_TIME, "1", module, "900000000000074008") + "\r\n");
@@ -427,11 +466,15 @@ class SnomedRf2ImporterDenseIdOrderTest {
     // parent hangs off the branch, and the child has both the shallow and the deep parent.
     for (final String[] edge :
         new String[][] {
-          {DIAMOND_BRANCH, DIAMOND_ROOT},
-          {DIAMOND_DEEP_PARENT, DIAMOND_ROOT},
-          {DIAMOND_SHALLOW_PARENT, DIAMOND_BRANCH},
-          {DIAMOND_CHILD, DIAMOND_SHALLOW_PARENT},
-          {DIAMOND_CHILD, DIAMOND_DEEP_PARENT}
+          {DIAMOND_BRANCH, DIAMOND_ROOT, IS_A},
+          {DIAMOND_DEEP_PARENT, DIAMOND_ROOT, IS_A},
+          {DIAMOND_SHALLOW_PARENT, DIAMOND_BRANCH, IS_A},
+          {DIAMOND_CHILD, DIAMOND_SHALLOW_PARENT, IS_A},
+          {DIAMOND_CHILD, DIAMOND_DEEP_PARENT, IS_A},
+          // Two targets of one attribute type, which is the other way a property list can be
+          // multi-valued.
+          {DIAMOND_CHILD, DIAMOND_SHALLOW_PARENT, DIAMOND_ATTRIBUTE},
+          {DIAMOND_CHILD, DIAMOND_DEEP_PARENT, DIAMOND_ATTRIBUTE}
         }) {
       relationships.append(
           String.join(
@@ -443,7 +486,7 @@ class SnomedRf2ImporterDenseIdOrderTest {
                   edge[0],
                   edge[1],
                   "0",
-                  "116680003",
+                  edge[2],
                   "900000000000011006",
                   "900000000000451002")
               + "\r\n");
