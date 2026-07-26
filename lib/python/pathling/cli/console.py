@@ -17,13 +17,15 @@
 
 """The ``pathling console`` command.
 
-Opens an interactive IPython session with ``spark`` (the Spark session),
-``pathling`` (the configured Pathling context), and the Pathling package's
-public API pre-imported into the user namespace, after a banner identifying the
-version and the variables in scope. The terminology display function is bound as
-``tx_display`` rather than ``display`` so that IPython's built-in ``display``
-remains reachable at the prompt. IPython is imported inside the command body so
-that ``--help`` stays fast.
+Opens an interactive IPython session with ``spark`` (the Spark session), ``pc``
+(the configured Pathling context), and the Pathling package's public API
+pre-imported into the user namespace, after a banner identifying the version and
+the variables in scope. The ``pathling`` name is bound to the package module
+itself, so typing ``import pathling`` at the prompt cannot clobber the context.
+The terminology display function is bound as ``tx_display`` rather than
+``display`` so that IPython's built-in ``display`` remains reachable at the
+prompt. IPython is imported inside the command body so that ``--help`` stays
+fast.
 
 Author: John Grimes.
 """
@@ -40,7 +42,8 @@ def build_banner() -> str:
     """Builds the banner shown before the console's first prompt.
 
     The banner identifies the Pathling and Python versions, lists the
-    variables in scope, notes that the Pathling public functions are
+    variables in scope - naming the context ``pc``, the name a user copies into
+    their next command - notes that the Pathling public functions are
     pre-imported (with the terminology display available as ``tx_display``),
     and explains how to exit.
 
@@ -49,7 +52,7 @@ def build_banner() -> str:
     return (
         f"Pathling console (version {__version__}, "
         f"Python {platform.python_version()})\n"
-        "Variables in scope: spark (SparkSession), pathling (PathlingContext)\n"
+        "Variables in scope: spark (SparkSession), pc (PathlingContext)\n"
         "Pathling public functions are pre-imported (member_of, translate, "
         "to_coding, ...); see https://pathling.csiro.au/docs/python/pathling.html\n"
         "The terminology display function is available as tx_display "
@@ -63,7 +66,7 @@ def build_banner() -> str:
 def console(obj):
     """Open an interactive console with the Pathling environment ready.
 
-    Starts an IPython session with spark (the Spark session) and pathling
+    Starts an IPython session with spark (the Spark session) and pc
     (the configured Pathling context) in scope. The Pathling public functions
     (member_of, translate, to_coding, and so on) are pre-imported, so no
     "from pathling import ..." is needed; the terminology display is available
@@ -88,7 +91,7 @@ def console(obj):
     user_ns = session.public_namespace()
     user_ns["tx_display"] = user_ns.pop("display")
     user_ns["spark"] = pc.spark
-    user_ns["pathling"] = pc
+    user_ns["pc"] = pc
 
     import IPython
     from traitlets.config import Config

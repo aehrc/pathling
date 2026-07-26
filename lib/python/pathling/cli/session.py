@@ -58,17 +58,24 @@ def public_namespace() -> dict:
 
     The set of names is derived from the ``pathling`` package's public API list
     (``pathling.__all__``) so that it stays in sync automatically and no second,
-    hand-maintained list exists. The ``pathling`` package is imported inside the
-    function so that the ``--help`` and ``--version`` fast paths are not slowed
-    and do not trigger the JVM-backed imports; resolving the names here forces
-    those imports, which is only appropriate after a command has decided to
-    start the environment.
+    hand-maintained list exists. The package module itself is included under the
+    name ``pathling``, so a reflexive ``import pathling`` in a script or at the
+    console rebinds that name to the object it already holds and is therefore a
+    genuine no-op. Both commands consume this function, so they are identical by
+    construction rather than by convention. The ``pathling`` package is imported
+    inside the function so that the ``--help`` and ``--version`` fast paths are
+    not slowed and do not trigger the JVM-backed imports; resolving the names
+    here forces those imports, which is only appropriate after a command has
+    decided to start the environment.
 
-    :return: a mapping of each public name to the object it exports.
+    :return: a mapping of each public name to the object it exports, together
+             with the ``pathling`` module under its own name.
     """
     import pathling
 
-    return {name: getattr(pathling, name) for name in pathling.__all__}
+    namespace = {name: getattr(pathling, name) for name in pathling.__all__}
+    namespace["pathling"] = pathling
+    return namespace
 
 
 def quiet_log4j2_path() -> str:

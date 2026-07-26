@@ -280,11 +280,22 @@ def test_remote_mode_passes_existing_parameters_unchanged(monkeypatch):
 # ========== Public namespace helper ==========
 
 
-def test_public_namespace_keys_equal_all():
-    """The helper's keys are exactly the package's public API list (FR-003)."""
+def test_public_namespace_keys_equal_all_plus_the_module():
+    """The keys are the public API list plus the package module itself (FR-014)."""
     namespace = public_namespace()
 
-    assert set(namespace) == set(pathling.__all__)
+    assert set(namespace) == set(pathling.__all__) | {"pathling"}
+
+
+def test_public_namespace_binds_the_pathling_module():
+    """``pathling`` is bound to the module, so a bare import cannot clobber it.
+
+    Binding the module makes ``import pathling`` in a script or at the console a
+    genuine no-op: it rebinds the name to the object it already holds (FR-014).
+    """
+    namespace = public_namespace()
+
+    assert namespace["pathling"] is pathling
 
 
 def test_public_namespace_values_are_the_resolved_objects():
@@ -311,12 +322,12 @@ def test_public_namespace_covers_every_public_name():
 
 def test_run_namespace_is_superset_of_public_api():
     """The run namespace is derived from __all__ plus the run-only extras (INV-1)."""
-    expected = set(pathling.__all__) | {"spark", "pathling", "tx_display"}
+    expected = set(pathling.__all__) | {"spark", "pc", "pathling", "tx_display"}
 
     namespace = dict(public_namespace())
     namespace["tx_display"] = namespace["display"]
     namespace["spark"] = object()
-    namespace["pathling"] = object()
+    namespace["pc"] = object()
 
     assert set(namespace) >= expected
 
@@ -326,6 +337,7 @@ def test_console_namespace_equals_public_api_minus_display():
     (INV-2)."""
     expected = (set(pathling.__all__) - {"display"}) | {
         "spark",
+        "pc",
         "pathling",
         "tx_display",
     }
@@ -333,6 +345,6 @@ def test_console_namespace_equals_public_api_minus_display():
     namespace = dict(public_namespace())
     namespace["tx_display"] = namespace.pop("display")
     namespace["spark"] = object()
-    namespace["pathling"] = object()
+    namespace["pc"] = object()
 
     assert set(namespace) == expected
