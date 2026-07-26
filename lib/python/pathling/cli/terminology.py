@@ -142,7 +142,7 @@ def _detect_tabular_format(path: Path) -> str:
 def _read_dataset(
     pc: PathlingContext,
     dataset: str,
-    from_format: Optional[str],
+    from_format: str,
     delimiter: str = ",",
     input_header: bool = True,
 ) -> DataFrame:

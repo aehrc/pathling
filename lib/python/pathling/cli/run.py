@@ -79,7 +79,7 @@ class RunCommand(click.Command):
     with trailing arguments), which parse to the same option values.
     """
 
-    def parse_args(self, ctx: click.Context, args: Tuple[str, ...]) -> List[str]:
+    def parse_args(self, ctx: click.Context, args: List[str]) -> List[str]:
         """Stores the raw arguments on the context, then parses as normal.
 
         :param ctx: the Click context.
