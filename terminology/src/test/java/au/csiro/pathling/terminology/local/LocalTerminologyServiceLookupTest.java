@@ -245,6 +245,23 @@ class LocalTerminologyServiceLookupTest {
   }
 
   @Test
+  void ordersAttributeRelationshipPropertiesByTypeCode() {
+    // The relationship index is keyed by type code in a hash map. Two codes that share a bucket
+    // iterate in the order they were inserted, which is the order their rows were read from the
+    // store, so emitting the types in that order would let the store's physical layout show
+    // through in a result a caller can see. The fixture's two attribute types collide, which is
+    // what makes this assertion load-bearing.
+    final List<String> attributeTypes =
+        service.lookup(snomed(Rf2Mini.DIABETES), null, null).stream()
+            .filter(Property.class::isInstance)
+            .map(Property.class::cast)
+            .map(Property::getCode)
+            .filter(code -> FINDING_SITE.equals(code) || ASSOCIATED_MORPHOLOGY.equals(code))
+            .toList();
+    assertEquals(List.of(ASSOCIATED_MORPHOLOGY, FINDING_SITE), attributeTypes);
+  }
+
+  @Test
   void returnsInactivePropertyForInactiveConcept() {
     // property_of on an inactive concept still resolves its content (inactive = true).
     assertEquals(

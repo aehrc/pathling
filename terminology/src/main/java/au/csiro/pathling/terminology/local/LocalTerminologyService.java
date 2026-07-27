@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -450,7 +451,15 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     };
   }
 
-  /** Adds each defining-relationship attribute of the concept as a Coding-valued property. */
+  /**
+   * Adds each defining-relationship attribute of the concept as a Coding-valued property.
+   *
+   * <p>The attribute types are visited in ascending code order. The relationship index holds them
+   * in a hash map, and two codes that share a bucket iterate in the order they were inserted, which
+   * is the order their rows were read from the store, so visiting them as the index presents them
+   * would let the store's physical layout show through in a result a caller can see. This is the
+   * same rule as {@link #byConceptCode}, which already orders the targets within each type.
+   */
   private void addAttributeProperties(
       @Nonnull final String systemUrl,
       @Nonnull final CodeSystemIndexes indexes,
@@ -460,7 +469,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     final RelationshipIndex relationships = indexes.relationships();
     final ConceptDictionary dictionary = indexes.dictionary();
     final RoaringBitmap source = RoaringBitmap.bitmapOf(dense);
-    for (final String type : relationships.typeCodes()) {
+    for (final String type : new TreeSet<>(relationships.typeCodes())) {
       if (!wants(propertyCode, type)) {
         continue;
       }
