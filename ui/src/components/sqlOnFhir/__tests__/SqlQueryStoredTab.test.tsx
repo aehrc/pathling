@@ -33,8 +33,7 @@ import { SqlQueryStoredTab } from "../SqlQueryStoredTab";
 
 import type { SqlQueryLibrarySummary } from "../../../types/sqlQuery";
 
-// The hooks barrel transitively imports main.tsx (via AuthContext), which
-// runs createRoot at load. Mock it; the tab only needs useClipboard.
+// Mock the hooks barrel; the tab only needs useClipboard.
 vi.mock("../../../hooks", () => ({
   useClipboard: () => vi.fn(),
 }));

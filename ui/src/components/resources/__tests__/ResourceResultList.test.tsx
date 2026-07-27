@@ -106,7 +106,8 @@ describe("ResourceResultList", () => {
       );
 
       expect(screen.getByText("Results")).toBeInTheDocument();
-      expect(screen.getByText("Failed to fetch resources")).toBeInTheDocument();
+      // The shared error presentation announces every error as an alert.
+      expect(screen.getByRole("alert")).toHaveTextContent("Failed to fetch resources");
     });
   });
 

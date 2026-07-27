@@ -33,8 +33,7 @@ import { SqlPreview } from "../SqlPreview";
 
 const mockCopy = vi.fn();
 
-// The hooks barrel transitively imports main.tsx (via AuthContext), which
-// runs createRoot at load. Mock it; the preview only needs useClipboard.
+// Mock the hooks barrel; the preview only needs useClipboard.
 vi.mock("../../../hooks", () => ({
   useClipboard: () => mockCopy,
 }));

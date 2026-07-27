@@ -27,7 +27,6 @@ import { CopyIcon, PlayIcon, UploadIcon } from "@radix-ui/react-icons";
 import {
   Box,
   Button,
-  Callout,
   Card,
   Flex,
   Heading,
@@ -43,6 +42,7 @@ import { useState } from "react";
 
 import { useClipboard } from "../../hooks";
 import { useViewDefinitions } from "../../hooks/useViewDefinitions";
+import { ErrorCallout } from "../error/ErrorCallout";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
 
@@ -229,11 +229,7 @@ export function ViewDefinitionForm({
                 <FieldGuidance mt="2">
                   Enter a valid view definition resource in JSON format.
                 </FieldGuidance>
-                {saveError && (
-                  <Callout.Root color="red" mt="2" size="1">
-                    <Callout.Text>{saveError.message}</Callout.Text>
-                  </Callout.Root>
-                )}
+                {saveError && <ErrorCallout message={saveError.message} size="1" mt="2" />}
               </Box>
             </Tabs.Content>
           </Box>

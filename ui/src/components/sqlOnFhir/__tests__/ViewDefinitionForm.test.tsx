@@ -471,8 +471,9 @@ describe("ViewDefinitionForm", () => {
       // Click save.
       await user.click(screen.getByRole("button", { name: /save to server/i }));
 
+      // The shared error presentation announces every error as an alert.
       await waitFor(() => {
-        expect(screen.getByText(/save failed/i)).toBeInTheDocument();
+        expect(screen.getByRole("alert")).toHaveTextContent(/save failed/i);
       });
     });
 

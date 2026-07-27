@@ -21,11 +21,11 @@
  * @author John Grimes
  */
 
-import { CrossCircledIcon } from "@radix-ui/react-icons";
-import { Box, Callout, Flex, Spinner, Text } from "@radix-ui/themes";
+import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
+import { ErrorCallout } from "../components/error/ErrorCallout";
 import { useAuth } from "../contexts/AuthContext";
 import { clearReturnUrl, completeAuth, getReturnUrl } from "../services/auth";
 
@@ -65,16 +65,7 @@ export function Callback() {
   if (localError) {
     return (
       <Box p="6">
-        <Callout.Root color="red">
-          <Callout.Icon>
-            <CrossCircledIcon />
-          </Callout.Icon>
-          <Callout.Text>
-            <Text weight="bold">Authentication Failed</Text>
-            <br />
-            {localError}
-          </Callout.Text>
-        </Callout.Root>
+        <ErrorCallout title="Authentication failed" message={localError} />
       </Box>
     );
   }

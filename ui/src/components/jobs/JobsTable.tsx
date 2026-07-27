@@ -22,20 +22,11 @@
  * @author John Grimes
  */
 
-import { Cross2Icon, InfoCircledIcon, TrashIcon } from "@radix-ui/react-icons";
-import {
-  Badge,
-  Box,
-  Button,
-  Callout,
-  Flex,
-  Progress,
-  Spinner,
-  Table,
-  Text,
-} from "@radix-ui/themes";
+import { Cross2Icon, TrashIcon } from "@radix-ui/react-icons";
+import { Badge, Box, Button, Flex, Progress, Spinner, Table, Text } from "@radix-ui/themes";
 
 import { formatJobStartTime, isJobInProgress, statusBadge } from "./jobsPresentation";
+import { ErrorCallout } from "../error/ErrorCallout";
 
 import type { JobSummary } from "../../api/jobs";
 
@@ -77,17 +68,11 @@ export function JobsTable({
 }: Readonly<JobsTableProps>) {
   if (error) {
     return (
-      <Callout.Root color="red" role="alert">
-        <Callout.Icon>
-          <InfoCircledIcon />
-        </Callout.Icon>
-        <Flex direction="column" gap="2" align="start">
-          <Callout.Text>Could not load jobs: {error.message}</Callout.Text>
-          <Button size="1" variant="soft" onClick={onRetry}>
-            Retry
-          </Button>
-        </Flex>
-      </Callout.Root>
+      <ErrorCallout message={`Could not load jobs: ${error.message}`}>
+        <Button size="1" variant="soft" onClick={onRetry}>
+          Retry
+        </Button>
+      </ErrorCallout>
     );
   }
 

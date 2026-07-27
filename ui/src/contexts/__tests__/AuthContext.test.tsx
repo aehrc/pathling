@@ -24,7 +24,7 @@
 
 import userEvent from "@testing-library/user-event";
 import { act } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { notifyUnauthorized } from "../../services/sessionExpiry";
 import { render, screen } from "../../test/testUtils";
@@ -41,12 +41,21 @@ const stubClient = { state: {} } as Client;
  * @returns The harness component.
  */
 function Harness() {
-  const { isAuthenticated, sessionExpired, setClient, setSessionExpired } = useAuth();
+  const {
+    isAuthenticated,
+    sessionExpired,
+    authRequired,
+    setClient,
+    setSessionExpired,
+    setAuthRequired,
+    logout,
+  } = useAuth();
 
   return (
     <>
       <div data-testid="authenticated">{String(isAuthenticated)}</div>
       <div data-testid="expired">{String(sessionExpired)}</div>
+      <div data-testid="auth-required">{String(authRequired)}</div>
       <button
         onClick={() => {
           setClient(stubClient);
@@ -61,6 +70,14 @@ function Harness() {
       >
         Dismiss
       </button>
+      <button
+        onClick={() => {
+          setAuthRequired(true);
+        }}
+      >
+        Require auth
+      </button>
+      <button onClick={logout}>Log out</button>
     </>
   );
 }
@@ -160,5 +177,46 @@ describe("AuthContext", () => {
     await user.click(screen.getByRole("button", { name: "Dismiss" }));
 
     expect(screen.getByTestId("expired")).toHaveTextContent("false");
+  });
+
+  it("records whether the server requires authentication", async () => {
+    const user = userEvent.setup();
+    renderHarness();
+
+    expect(screen.getByTestId("auth-required")).toHaveTextContent("null");
+
+    await user.click(screen.getByRole("button", { name: "Require auth" }));
+
+    expect(screen.getByTestId("auth-required")).toHaveTextContent("true");
+  });
+
+  // Logging out drops the session, clears the stored key and reloads so no
+  // stale state survives.
+  it("clears the session and reloads the page on logout", async () => {
+    const user = userEvent.setup();
+    const reload = vi.fn();
+    vi.spyOn(window, "location", "get").mockReturnValue({
+      ...window.location,
+      reload,
+    } as unknown as Location);
+    sessionStorage.setItem("SMART_KEY", "some-key");
+    renderHarness();
+
+    await user.click(screen.getByRole("button", { name: "Authenticate" }));
+    await user.click(screen.getByRole("button", { name: "Log out" }));
+
+    expect(screen.getByTestId("authenticated")).toHaveTextContent("false");
+    expect(screen.getByTestId("expired")).toHaveTextContent("false");
+    expect(sessionStorage.getItem("SMART_KEY")).toBeNull();
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws when the hook is used outside a provider", () => {
+    // Suppress the error React logs for the thrown render.
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(() => render(<Harness />)).toThrow("useAuth must be used within an AuthProvider");
+
+    consoleError.mockRestore();
   });
 });

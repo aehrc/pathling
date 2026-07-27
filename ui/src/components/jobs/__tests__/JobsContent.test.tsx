@@ -158,5 +158,68 @@ describe("JobsContent", () => {
       expect(mockJobCancel).toHaveBeenCalledTimes(1);
     });
     expect(screen.queryByText("Cancel job?")).not.toBeInTheDocument();
+    expect(mockShowToast).toHaveBeenCalledWith("Job removed", "The import job has been removed.");
+  });
+
+  // Confirming the dialog issues the cancellation and reports it.
+  it("cancels an in-progress job once confirmed", async () => {
+    const user = userEvent.setup();
+    mockJobsQuery = { data: [runningJob], isLoading: false, error: null };
+
+    renderJobsContent();
+
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+    await user.click(screen.getByRole("button", { name: /cancel job/i }));
+
+    await waitFor(() => {
+      expect(mockJobCancel).toHaveBeenCalledTimes(1);
+    });
+    expect(mockShowToast).toHaveBeenCalledWith("Job cancelled", "The export job has been removed.");
+  });
+
+  // Dismissing the confirmation leaves the job alone.
+  it("leaves the job alone when the confirmation is dismissed", async () => {
+    const user = userEvent.setup();
+    mockJobsQuery = { data: [runningJob], isLoading: false, error: null };
+
+    renderJobsContent();
+
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+    await user.click(screen.getByRole("button", { name: /keep running/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Cancel job?")).not.toBeInTheDocument();
+    });
+    expect(mockJobCancel).not.toHaveBeenCalled();
+  });
+
+  // A failed cancellation is reported and the job stays in the list.
+  it("reports a failed cancellation", async () => {
+    const user = userEvent.setup();
+    mockJobsQuery = { data: [finishedJob], isLoading: false, error: null };
+    mockJobCancel.mockRejectedValue(new Error("Job could not be deleted"));
+
+    renderJobsContent();
+
+    await user.click(screen.getByRole("button", { name: /remove/i }));
+
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(
+        "Could not cancel job",
+        "Job could not be deleted",
+      );
+    });
+  });
+
+  // The error state offers a retry that refetches the list.
+  it("refetches the list when the retry action is used", async () => {
+    const user = userEvent.setup();
+    mockJobsQuery = { data: undefined, isLoading: false, error: new Error("request timed out") };
+
+    renderJobsContent();
+
+    await user.click(screen.getByRole("button", { name: /retry/i }));
+
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 });

@@ -316,7 +316,9 @@ test.describe("Authentication", () => {
       await page.goto("/admin/callback");
 
       // Should show authentication failed error.
-      await expect(page.getByText("Authentication Failed")).toBeVisible();
+      await expect(page.getByRole("alert")).toContainText(
+        "Authentication failed",
+      );
     });
 
     test("shows error with missing OAuth parameters", async ({ page }) => {
@@ -326,7 +328,9 @@ test.describe("Authentication", () => {
       await page.goto("/admin/callback?state=invalid-state");
 
       // Should show authentication failed error.
-      await expect(page.getByText("Authentication Failed")).toBeVisible();
+      await expect(page.getByRole("alert")).toContainText(
+        "Authentication failed",
+      );
     });
 
     test("redirects to stored return URL after successful auth", async ({
