@@ -28,6 +28,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -232,7 +233,7 @@ class SqlQueryExecutorTest {
             mock(DataSource.class),
             REQUEST_ID,
             dataset -> consumedPlan.set(dataset.queryExecution().analyzed()));
-    return java.util.Objects.requireNonNull(consumedPlan.get());
+    return Objects.requireNonNull(consumedPlan.get());
   }
 
   /**
