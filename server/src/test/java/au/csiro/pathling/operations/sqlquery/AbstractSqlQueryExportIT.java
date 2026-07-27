@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -213,6 +214,24 @@ abstract class AbstractSqlQueryExportIT {
   @Nonnull
   protected String download(@Nonnull final String location) {
     return new String(downloadBytes(location), StandardCharsets.UTF_8);
+  }
+
+  /**
+   * Downloads every file of a manifest output and concatenates their contents. A query whose result
+   * spans several Spark partitions is written as one file per partition, and the manifest repeats
+   * the {@code location} part once per file, so an assertion about the exported rows has to
+   * consider all of them. Reading only the first file makes a {@code contains} assertion fail
+   * whenever the row it is looking for lands in another partition, and makes a {@code
+   * doesNotContain} assertion pass without proving anything.
+   *
+   * @param output a single {@code output} parameter from the completion manifest
+   * @return the concatenated contents of every file the output names
+   */
+  @Nonnull
+  protected String downloadAll(@Nonnull final Map<String, Object> output) {
+    final List<String> locations = partValues(output, "location", "valueUri");
+    assertThat(locations).as("Expected the output to name at least one file").isNotEmpty();
+    return locations.stream().map(this::download).collect(Collectors.joining());
   }
 
   // -------------------------------------------------------------------------

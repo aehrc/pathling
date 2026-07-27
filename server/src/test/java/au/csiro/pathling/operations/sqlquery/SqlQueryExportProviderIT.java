@@ -96,7 +96,8 @@ class SqlQueryExportProviderIT extends AbstractSqlQueryExportIT {
     final String location = partValue(outputs.get(0), "location", "valueUri");
     assertThat(location).contains("$result");
 
-    final String content = download(location);
+    // Every row of the result must reach the output, however many partitions it was written across.
+    final String content = downloadAll(outputs.get(0));
     final String[] lines = content.trim().split("\n");
     assertThat(lines).hasSize(3);
     assertThat(content)
@@ -148,7 +149,7 @@ class SqlQueryExportProviderIT extends AbstractSqlQueryExportIT {
     final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
     final List<Map<String, Object>> outputs = paramsByName(manifest, "output");
     assertThat(outputs).hasSize(1);
-    final String content = download(partValue(outputs.get(0), "location", "valueUri"));
+    final String content = downloadAll(outputs.get(0));
     assertThat(content).contains("\"family_name\":\"Smith\"");
   }
 
@@ -233,8 +234,7 @@ class SqlQueryExportProviderIT extends AbstractSqlQueryExportIT {
 
     final Map<String, Object> manifest =
         exportToCompletion(systemLevelUri(), parametersWith(queryPart));
-    final String content =
-        download(partValue(paramsByName(manifest, "output").get(0), "location", "valueUri"));
+    final String content = downloadAll(paramsByName(manifest, "output").get(0));
     assertThat(content).contains("\"family_name\":\"Smith\"");
     assertThat(content).doesNotContain("Johnson").doesNotContain("Williams");
   }

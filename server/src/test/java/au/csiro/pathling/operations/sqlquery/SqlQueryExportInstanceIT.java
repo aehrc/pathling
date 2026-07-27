@@ -60,8 +60,7 @@ class SqlQueryExportInstanceIT extends AbstractSqlQueryExportIT {
 
     assertThat(findParamValue(manifest, "status", "valueCode")).isEqualTo("completed");
     assertThat(paramsByName(manifest, "output")).hasSize(1);
-    final String content =
-        download(partValue(paramsByName(manifest, "output").get(0), "location", "valueUri"));
+    final String content = downloadAll(paramsByName(manifest, "output").get(0));
     assertThat(content).contains("\"family_name\":\"Smith\"");
   }
 
