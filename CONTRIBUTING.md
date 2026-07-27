@@ -174,15 +174,33 @@ mvn clean install -pl lib/R -am
 
 ### Clearing the Ivy cache
 
-When rebuilding after making changes to upstream modules, you may need to clear
-the local Ivy cache before the changes will be picked up by the Python and R
-libraries. The Ivy cache is typically located at `~/.ivy2/cache`.
+When rebuilding after making changes to upstream modules, you need to clear the
+local Ivy state before the changes will be picked up by the Python and R
+libraries.
 
-To clear the cache:
+Spark resolves `--packages` through Ivy, which keeps two directories per Ivy
+version: `cache` (the resolved module metadata and artifacts) and `jars` (the
+jars retrieved for the run). Both must be cleared. Removing only `cache` leaves
+`au.csiro.pathling_library-runtime-<version>-SNAPSHOT.jar` in `jars`, and
+because the SNAPSHOT filename never changes, Ivy reports `0 artifacts copied, N
+already retrieved` and silently reuses the stale build. The tests still run and
+pass; they just do not exercise the new code.
+
+Spark also uses a home directory suffixed with its bundled Ivy version (for
+example `~/.ivy2.5.2`) in addition to the conventional `~/.ivy2`, so both trees
+need to be cleared:
 
 ```bash
-rm -rf ~/.ivy2/cache
+rm -rf ~/.ivy2/cache ~/.ivy2/jars ~/.ivy2.5.2/cache ~/.ivy2.5.2/jars
+mkdir -p ~/.ivy2/cache ~/.ivy2/jars ~/.ivy2.5.2/cache ~/.ivy2.5.2/jars
 ```
+
+Run `ls -d ~/.ivy2*` to confirm which version-suffixed directories exist on your
+machine, as the suffix follows the Spark version in use.
+
+The `mkdir` step matters. With the `jars` directory missing, Ivy fails to
+retrieve `delta-spark`, `delta-storage` and `antlr4-runtime` from the local
+Maven resolver, and the run fails with `JAVA_GATEWAY_EXITED`.
 
 After clearing the cache, rebuild the libraries:
 
