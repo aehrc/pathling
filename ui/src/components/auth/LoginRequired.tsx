@@ -22,7 +22,7 @@
  */
 
 import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout } from "@radix-ui/themes";
+import { Box, Button, Callout, Spinner } from "@radix-ui/themes";
 
 import { SessionExpiredDialog } from "./SessionExpiredDialog";
 import { config } from "../../config";
@@ -50,8 +50,12 @@ export function LoginRequired() {
       </Callout.Root>
 
       <Box mt="4">
-        <Button size="3" loading={isPending} onClick={() => void login()}>
-          <LockClosedIcon />
+        {/* The spinner replaces the icon rather than the whole label, so the
+            button still says what it does while the attempt is under way. */}
+        <Button size="3" disabled={isPending} onClick={() => void login()}>
+          <Spinner loading={isPending}>
+            <LockClosedIcon />
+          </Spinner>
           Login to {capabilities?.serverName ?? window.location.hostname}
         </Button>
       </Box>

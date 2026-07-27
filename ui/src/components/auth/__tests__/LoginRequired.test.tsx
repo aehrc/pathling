@@ -159,6 +159,8 @@ describe("LoginRequired", () => {
         expect(loginButton).toBeDisabled();
       });
       expect(container.querySelector(".rt-Spinner")).toBeInTheDocument();
+      // The label stays visible alongside the spinner, per the wireframe.
+      expect(loginButton).toHaveTextContent(/login to/i);
 
       attempt.resolve();
     });

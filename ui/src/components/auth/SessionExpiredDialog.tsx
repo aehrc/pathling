@@ -23,7 +23,7 @@
  */
 
 import { LockClosedIcon } from "@radix-ui/react-icons";
-import { AlertDialog, Box, Button, Flex } from "@radix-ui/themes";
+import { AlertDialog, Box, Button, Flex, Spinner } from "@radix-ui/themes";
 
 import { useAuth } from "../../contexts/AuthContext";
 import { useLogin } from "../../hooks/useLogin";
@@ -65,8 +65,12 @@ export function SessionExpiredDialog() {
               Dismiss
             </Button>
           </AlertDialog.Cancel>
-          <Button loading={isPending} onClick={() => void login()}>
-            <LockClosedIcon />
+          {/* The spinner replaces the icon rather than the whole label, so the
+              button still says what it does while the attempt is under way. */}
+          <Button disabled={isPending} onClick={() => void login()}>
+            <Spinner loading={isPending}>
+              <LockClosedIcon />
+            </Spinner>
             Log in
           </Button>
         </Flex>
