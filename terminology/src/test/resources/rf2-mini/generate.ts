@@ -324,8 +324,21 @@ const simpleMembers: SimpleMember[] = [
   { refset: simpleRefset, referenced: gestational },
 ];
 
+// Four concepts are associated with the same target, so that reverse translation through this
+// reference set has several results and their order is observable. Three filler concepts stand in
+// as the additional sources, written in an order that is neither ascending nor descending by source
+// code so that nothing downstream can take its order from this file by accident. Note that the
+// importer does not carry this order into the store: it resolves these rows against the concept
+// dictionary with a join that streams the dictionary, so the rows land in concept code order
+// whatever order they were written in here.
 const associationMembers: AssociationMember[] = [
   { refset: SAME_AS_REFSET, referenced: inactiveDiabetes, target: type2 },
+  // DISORDER_FILLER_56, code 1159005.
+  { refset: SAME_AS_REFSET, referenced: fillerDisorder[55], target: type2 },
+  // DIABETES_FILLER_86, code 1099005.
+  { refset: SAME_AS_REFSET, referenced: fillerDiabetes[85], target: type2 },
+  // DISORDER_FILLER_36, code 1139006.
+  { refset: SAME_AS_REFSET, referenced: fillerDisorder[35], target: type2 },
 ];
 
 // --- RF2 line assembly. ---

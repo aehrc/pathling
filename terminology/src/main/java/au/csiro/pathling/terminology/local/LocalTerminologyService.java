@@ -208,7 +208,16 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     return queryString.startsWith("fhir_cm=") ? queryString.substring("fhir_cm=".length()) : null;
   }
 
-  /** Translates through a SNOMED association reference set, forward or reversed. */
+  /**
+   * Translates through a SNOMED association reference set, forward or reversed.
+   *
+   * <p>The reversed direction returns its matches ordered by concept code. The association map is
+   * iterated in the store's physical row order, which is an implementation detail that follows from
+   * the join strategy the importer's optimiser happened to choose, so emitting in that order would
+   * let how the store was written show through in a result a caller can see. This is the same rule
+   * as {@link #byConceptCode}. The forward direction returns at most one match, because a concept
+   * has at most one association target, so there is nothing there to order.
+   */
   @Nonnull
   private List<Translation> translateSnomedAssociation(
       @Nonnull final String conceptMapUrl,
@@ -237,6 +246,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
           translations.add(snomedTranslation(dictionary.code(entry.getKey())));
         }
       }
+      translations.sort(Comparator.comparing(translation -> translation.getConcept().getCode()));
     } else {
       final Integer dense = dictionary.denseId(coding.getCode());
       if (dense != null && associations.containsKey(dense)) {

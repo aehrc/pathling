@@ -28,6 +28,8 @@ import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.test.FhirFixtures;
 import au.csiro.pathling.test.NoNetworkExtension;
 import au.csiro.pathling.test.Rf2Mini;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,10 +45,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * with equivalences preserved), the unknown-content fallback, and SNOMED implicit concept maps
  * derived from association reference sets.
  *
+ * <p>The ordering assertions here pin the contract, but they do not by themselves prove the service
+ * imposes it, because this store's reference set rows already happen to be laid out in code order.
+ * {@link LocalTerminologyServiceRefsetLayoutTest} is what proves that, against a store laid out the
+ * other way round.
+ *
  * @author John Grimes
  */
 @ExtendWith(NoNetworkExtension.class)
 class LocalTerminologyServiceTranslateTest {
+
+  /** The fixture's SAME AS association reference set, as an implicit concept map URL. */
+  private static final String SAME_AS_CONCEPT_MAP =
+      Rf2Mini.SNOMED_URI + "?fhir_cm=" + Rf2Mini.SAME_AS_REFSET;
 
   private static TerminologyService fhirService;
   private static TerminologyService snomedService;
@@ -79,6 +90,15 @@ class LocalTerminologyServiceTranslateTest {
 
   private static Set<String> targetCodes(final List<Translation> translations) {
     return translations.stream().map(t -> t.getConcept().getCode()).collect(Collectors.toSet());
+  }
+
+  /** The translated codes in the order they were returned, for assertions that are about order. */
+  private static List<String> orderedTargetCodes(final List<Translation> translations) {
+    return translations.stream().map(t -> t.getConcept().getCode()).toList();
+  }
+
+  private static String eclValueSet(final String ecl) {
+    return Rf2Mini.SNOMED_URI + "?fhir_vs=ecl/" + URLEncoder.encode(ecl, StandardCharsets.UTF_8);
   }
 
   @Test
@@ -156,9 +176,48 @@ class LocalTerminologyServiceTranslateTest {
 
   @Test
   void translatesSnomedAssociationRefsetReverse() {
-    final String conceptMap = Rf2Mini.SNOMED_URI + "?fhir_cm=" + Rf2Mini.SAME_AS_REFSET;
+    // Four concepts are associated with this target, and the results must come back in ascending
+    // code order.
     final List<Translation> result =
-        snomedService.translate(snomed(Rf2Mini.TYPE2_DIABETES), conceptMap, true, null);
-    assertEquals(Set.of(Rf2Mini.DIABETES_INACTIVE), targetCodes(result));
+        snomedService.translate(snomed(Rf2Mini.TYPE2_DIABETES), SAME_AS_CONCEPT_MAP, true, null);
+    assertEquals(
+        List.of(
+            Rf2Mini.DIABETES_INACTIVE,
+            Rf2Mini.ASSOCIATED_FILLER_1,
+            Rf2Mini.ASSOCIATED_FILLER_2,
+            Rf2Mini.ASSOCIATED_FILLER_3),
+        orderedTargetCodes(result));
+  }
+
+  @Test
+  void targetValueSetFilterPreservesTheReverseTranslationOrder() {
+    // The two survivors are non-adjacent in the unfiltered result, so this asserts that filtering
+    // preserves the established sequence rather than merely selecting the right members.
+    final String valueSet =
+        eclValueSet(Rf2Mini.ASSOCIATED_FILLER_1 + " OR " + Rf2Mini.ASSOCIATED_FILLER_3);
+    final List<Translation> result =
+        snomedService.translate(
+            snomed(Rf2Mini.TYPE2_DIABETES), SAME_AS_CONCEPT_MAP, true, valueSet);
+    assertEquals(
+        List.of(Rf2Mini.ASSOCIATED_FILLER_1, Rf2Mini.ASSOCIATED_FILLER_3),
+        orderedTargetCodes(result));
+  }
+
+  @Test
+  void reverseTranslationOfAnUnassociatedTargetReturnsEmpty() {
+    // No concept is associated with this one, so there is nothing to translate back to.
+    assertTrue(
+        snomedService
+            .translate(snomed(Rf2Mini.HYPERTENSION), SAME_AS_CONCEPT_MAP, true, null)
+            .isEmpty());
+  }
+
+  @Test
+  void snomedAssociationRefsetRejectsACodingFromAnotherSystem() {
+    // A reference set relates SNOMED concepts, so a coding from elsewhere cannot be a member of one
+    // in either direction.
+    final Coding loinc = new Coding().setSystem("http://loinc.org").setCode("1234-5");
+    assertTrue(snomedService.translate(loinc, SAME_AS_CONCEPT_MAP, false, null).isEmpty());
+    assertTrue(snomedService.translate(loinc, SAME_AS_CONCEPT_MAP, true, null).isEmpty());
   }
 }

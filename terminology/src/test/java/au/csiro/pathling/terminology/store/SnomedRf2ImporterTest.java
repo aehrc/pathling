@@ -455,7 +455,7 @@ class SnomedRf2ImporterTest {
             DESCRIPTION_FILE, "401 of 401",
             RELATIONSHIP_FILE, "199 of 203",
             SIMPLE_REFSET_FILE, "3 of 3",
-            ASSOCIATION_REFSET_FILE, "1 of 1"),
+            ASSOCIATION_REFSET_FILE, "4 of 4"),
         resolutionCounts(events));
 
     // Each line names the source file path, not merely its name, and is reported informationally.
@@ -521,7 +521,7 @@ class SnomedRf2ImporterTest {
     // Every affected file resolves less than it took in, and the reference sets resolve nothing.
     final Map<String, String> reported = resolutionCounts(events);
     assertEquals("0 of 3", reported.get(SIMPLE_REFSET_FILE));
-    assertEquals("0 of 1", reported.get(ASSOCIATION_REFSET_FILE));
+    assertEquals("0 of 4", reported.get(ASSOCIATION_REFSET_FILE));
     assertResolvedBelowInput(reported, DESCRIPTION_FILE, 401);
     assertResolvedBelowInput(reported, RELATIONSHIP_FILE, 203);
   }

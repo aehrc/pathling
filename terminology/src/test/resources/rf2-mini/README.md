@@ -88,7 +88,13 @@ TYPE2_DIABETES → TYPE2_WITH_COMPLICATION` is five levels below the root.
   `TYPE1_DIABETES`, `TYPE2_DIABETES`, `GESTATIONAL_DIABETES`), the US English
   language reference set (`900000000000509007`, ranking descriptions), and a
   SAME AS association reference set (`900000000000527005`) mapping the inactive
-  concept to its replacement.
+  concept to its replacement. Three filler concepts (`1099005`, `1139006` and
+  `1159005`) are associated with the same target, so that reverse translation
+  returns several results and their order is observable. Their rows are written
+  in an order that is neither ascending nor descending by source code, although
+  the importer does not carry that order into the store - it resolves reference
+  set rows against the concept dictionary with a join that streams the
+  dictionary, so they land in concept code order regardless.
 - **Inactive concepts**: `DIABETES_INACTIVE` is inactive and is excluded from
   implicit value set membership but remains resolvable for lookup.
 - **Designations**: `TYPE2_DIABETES` carries an extra acceptable synonym so
@@ -110,7 +116,7 @@ means updating that test:
 | `sct2_Description_Snapshot-en_INT_*`     | 401      | 401         |
 | `sct2_Relationship_Snapshot_INT_*`       | 199      | 203         |
 | `der2_Refset_SimpleSnapshot_INT_*`       | 3        | 3           |
-| `der2_cRefset_AssociationSnapshot_INT_*` | 1        | 1           |
+| `der2_cRefset_AssociationSnapshot_INT_*` | 4        | 4           |
 
 The concept file, the language reference set and (where a test adds one) the
 Module Dependency reference set produce no figures, because none of them is
