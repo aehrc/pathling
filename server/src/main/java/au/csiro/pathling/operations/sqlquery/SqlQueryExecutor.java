@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
-import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.config.SqlQueryConfiguration;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
@@ -56,33 +54,21 @@ public class SqlQueryExecutor {
 
   @Nonnull private final SqlValidator sqlValidator;
 
-  @Nonnull private final SqlQueryConfiguration sqlQueryConfig;
-
-  @Nonnull private final SqlQueryWatchdog watchdog;
-
   /**
    * Constructs a new SqlQueryExecutor.
    *
    * @param sparkSession the Spark session
    * @param viewRegistrationService manages temp-view registration / cleanup and SQL rewriting
    * @param sqlValidator validates the SQL before execution
-   * @param serverConfiguration the server configuration, used to resolve the resource limits
-   *     applied to each query
-   * @param watchdog the watchdog used to schedule wall-clock timeouts and Spark job-group
-   *     cancellation for each query
    */
   @Autowired
   public SqlQueryExecutor(
       @Nonnull final SparkSession sparkSession,
       @Nonnull final ViewRegistrationService viewRegistrationService,
-      @Nonnull final SqlValidator sqlValidator,
-      @Nonnull final ServerConfiguration serverConfiguration,
-      @Nonnull final SqlQueryWatchdog watchdog) {
+      @Nonnull final SqlValidator sqlValidator) {
     this.sparkSession = sparkSession;
     this.viewRegistrationService = viewRegistrationService;
     this.sqlValidator = sqlValidator;
-    this.sqlQueryConfig = serverConfiguration.getSqlQuery();
-    this.watchdog = watchdog;
   }
 
   /**
@@ -110,6 +96,10 @@ public class SqlQueryExecutor {
    * with the result dataset before the temp views are dropped, so streaming and other terminal
    * operations can complete before cleanup.
    *
+   * <p>The only row limit applied is the caller's {@code _limit}, when they supply one. Execution
+   * runs under whatever Spark job group the caller established, so an asynchronous job's Spark
+   * stages remain attributed to it and a cancellation of that group reaches the work in flight.
+   *
    * @param request the parsed and validated request
    * @param graph the resolved dependency graph the SQL references
    * @param dataSource the data source backing FhirView execution
@@ -125,13 +115,7 @@ public class SqlQueryExecutor {
 
     validateStatically(request, graph);
 
-    final String jobGroupId = "sqlquery-" + requestId;
-    sparkSession
-        .sparkContext()
-        .setJobGroup(jobGroupId, "$sqlquery-run " + requestId, /* interruptOnCancel= */ true);
-
     final Map<String, String> registeredByKey = new LinkedHashMap<>();
-    final SqlQueryWatchdog.Watch watch = watchdog.start(jobGroupId);
     try {
       for (final ResolvedDependency node : graph.getOrderedNodes()) {
         materialiseNode(node, dataSource, requestId, registeredByKey);
@@ -147,20 +131,13 @@ public class SqlQueryExecutor {
       sqlValidator.validateAnalyzed(
           result.queryExecution().analyzed(), Set.copyOf(topLevelViews.values()));
 
-      result = result.limit(effectiveLimit(request.getLimit(), requestId));
+      final Integer callerLimit = request.getLimit();
+      if (callerLimit != null) {
+        result = result.limit(callerLimit);
+      }
 
       consumer.accept(result);
-    } catch (final RuntimeException e) {
-      if (watch.timedOut()) {
-        throw new InvalidRequestException(
-            "Query exceeded the configured timeout of "
-                + sqlQueryConfig.getTimeoutSeconds()
-                + " seconds.");
-      }
-      throw e;
     } finally {
-      watch.complete();
-      sparkSession.sparkContext().clearJobGroup();
       viewRegistrationService.dropViews(registeredByKey.values());
     }
   }
@@ -217,28 +194,6 @@ public class SqlQueryExecutor {
       labelToViewName.put(entry.getKey(), viewName);
     }
     return labelToViewName;
-  }
-
-  /**
-   * Resolves the row limit applied to the result dataset. The configured server cap is always
-   * applied; when the caller supplies a {@code _limit}, the lower of the two values wins. The
-   * server cap is clamped to {@link Integer#MAX_VALUE} so that it can be passed to Spark's {@code
-   * Dataset.limit(int)} API.
-   */
-  int effectiveLimit(final Integer callerLimit, @Nonnull final String requestId) {
-    final int cap = (int) Math.min(sqlQueryConfig.getMaxRows(), Integer.MAX_VALUE);
-    if (callerLimit == null) {
-      return cap;
-    }
-    if (callerLimit > cap) {
-      log.info(
-          "Caller-supplied _limit of {} clamped to server cap of {} for request {}.",
-          callerLimit,
-          cap,
-          requestId);
-      return cap;
-    }
-    return callerLimit;
   }
 
   @Nonnull

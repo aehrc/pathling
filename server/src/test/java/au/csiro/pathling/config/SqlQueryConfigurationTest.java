@@ -22,13 +22,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link SqlQueryConfiguration}, covering the {@code maxDependencyDepth} default and
- * its {@code @Min(1)} validation.
+ * its {@code @Min(1)} validation, and guarding against the reintroduction of a server-side row cap
+ * or query timeout.
  *
  * @author John Grimes
  */
@@ -39,6 +43,21 @@ class SqlQueryConfigurationTest {
   @BeforeEach
   void setUp() {
     validator = Validation.buildDefaultValidatorFactory().getValidator();
+  }
+
+  @Test
+  void exposesOnlyTheDependencyDepthSetting() {
+    // The dependency-depth limit is the only resource limit this configuration carries. A row cap
+    // silently truncates results and a wall-clock timeout aborts legitimate long-running work, so
+    // neither may return: this test fails if a new setting is added here.
+    final Set<String> declaredSettings =
+        Arrays.stream(SqlQueryConfiguration.class.getDeclaredFields())
+            .filter(field -> !field.isSynthetic())
+            .filter(field -> !Modifier.isStatic(field.getModifiers()))
+            .map(Field::getName)
+            .collect(java.util.stream.Collectors.toSet());
+
+    assertThat(declaredSettings).containsExactly("maxDependencyDepth");
   }
 
   @Test

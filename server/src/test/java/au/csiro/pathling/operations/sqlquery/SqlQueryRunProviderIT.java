@@ -424,6 +424,42 @@ class SqlQueryRunProviderIT {
     postOk("/fhir/$sqlquery-run", GSON.toJson(ndjsonParameters), SqlQueryOutputFormat.NDJSON);
   }
 
+  // -------------------------------------------------------------------------
+  // The caller-supplied _limit is the only row limit applied.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void limitBoundsTheResponseToTheRequestedRowCount() {
+    // _limit is the caller's means of bounding a synchronous response, and the server never narrows
+    // it further. The source has five rows; a _limit of two must yield exactly two.
+    final String body =
+        postOk(
+            "/fhir/$sqlquery-run",
+            parametersJson(
+                sqlQueryLibrary("SELECT * FROM (VALUES (1), (2), (3), (4), (5)) AS t(id)"),
+                SqlQueryOutputFormat.NDJSON,
+                null,
+                2),
+            SqlQueryOutputFormat.NDJSON);
+
+    assertThat(body.lines().filter(line -> !line.isBlank())).hasSize(2);
+  }
+
+  @Test
+  void omittingLimitReturnsEveryRowOfTheResult() {
+    // With no _limit there is no server-side ceiling left to truncate the result, so every row of
+    // the query result must be returned (spec 041 US1 / US4).
+    final String body =
+        postOk(
+            "/fhir/$sqlquery-run",
+            parametersJson(
+                sqlQueryLibrary("SELECT * FROM (VALUES (1), (2), (3), (4), (5)) AS t(id)"),
+                SqlQueryOutputFormat.NDJSON),
+            SqlQueryOutputFormat.NDJSON);
+
+    assertThat(body.lines().filter(line -> !line.isBlank())).hasSize(5);
+  }
+
   /** Issues a GET and asserts the given status code. */
   private void getExpectStatus(@Nonnull final String path, final int status) {
     webTestClient
@@ -496,6 +532,15 @@ class SqlQueryRunProviderIT {
       @Nonnull final Library library,
       @Nonnull final SqlQueryOutputFormat format,
       @Nullable final Boolean includeHeader) {
+    return parametersJson(library, format, includeHeader, null);
+  }
+
+  @Nonnull
+  private String parametersJson(
+      @Nonnull final Library library,
+      @Nonnull final SqlQueryOutputFormat format,
+      @Nullable final Boolean includeHeader,
+      @Nullable final Integer limit) {
     final String libraryJson = jsonParser.encodeResourceToString(library);
     final Map<String, Object> parameters = new LinkedHashMap<>();
     parameters.put("resourceType", "Parameters");
@@ -516,6 +561,13 @@ class SqlQueryRunProviderIT {
       headerParam.put("name", "header");
       headerParam.put("valueBoolean", includeHeader);
       parameterList.add(headerParam);
+    }
+
+    if (limit != null) {
+      final Map<String, Object> limitParam = new LinkedHashMap<>();
+      limitParam.put("name", "_limit");
+      limitParam.put("valueInteger", limit);
+      parameterList.add(limitParam);
     }
 
     parameters.put("parameter", parameterList);
