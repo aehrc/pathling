@@ -50,6 +50,11 @@ CVE-2025-12383
 # LZ4-Java is provided via Spark, not bundled in distribution.
 CVE-2025-12183
 CVE-2025-66566
+# Native XXHash JVM crash on invalid byte array ranges. No fixed version is published for the
+# org.lz4:lz4-java coordinate that Spark 4.0.2 pins. Pathling never calls the XXHash API, and the
+# vulnerable path requires the caller to supply a null array or an out-of-range offset or length,
+# which only Spark's own internal compression code does.
+CVE-2026-59949
 
 # Commons Lang3 is provided via Spark, not bundled in distribution.
 CVE-2025-48924
