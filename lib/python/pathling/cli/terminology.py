@@ -26,7 +26,10 @@ options.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING, Callable, Optional, Sequence, Tuple
 
 import click
 
@@ -38,14 +41,22 @@ from pathling.cli.errors import (
     unwrap_java_exception,
 )
 from pathling.cli.render import (
+    default_delimiter_for_path,
     output_options,
     progress_status,
     resolve_output,
+    tab_inference_notice,
     write_output,
 )
 
+if TYPE_CHECKING:
+    from pyspark.sql import Column, DataFrame
 
-def _common_options(func):
+    from pathling import PathlingContext
+    from pathling.cli.main import CliContext
+
+
+def _common_options(func: Callable) -> Callable:
     """Applies the dataset argument, coding options, and output options.
 
     :param func: the command callback to decorate.
@@ -86,7 +97,7 @@ def _common_options(func):
     return func
 
 
-def _detect_tabular_format(path):
+def _detect_tabular_format(path: Path) -> str:
     """Detects the tabular format of a dataset from its name and layout.
 
     Detection inspects only the path's suffix and, for directories, the names
@@ -115,7 +126,8 @@ def _detect_tabular_format(path):
             exit_code=EXIT_USAGE,
         )
     suffix = path.suffix.lower()
-    # A .tsv file is treated as CSV; the tab separator is supplied via --delimiter.
+    # A .tsv file is treated as CSV; its extension governs the delimiter rather
+    # than the format, defaulting it to a tab (see default_delimiter_for_path).
     if suffix in (".csv", ".tsv"):
         return "csv"
     if suffix == ".parquet":
@@ -127,20 +139,27 @@ def _detect_tabular_format(path):
     )
 
 
-def _read_dataset(pc, dataset, from_format, delimiter=",", input_header=True):
+def _read_dataset(
+    pc: PathlingContext,
+    dataset: str,
+    from_format: str,
+    delimiter: str = ",",
+    input_header: bool = True,
+) -> DataFrame:
     """Reads a tabular dataset into a Spark DataFrame using a resolved format.
 
-    The format is resolved earlier, before the Spark session starts (see
-    :func:`_execute`), so this function only dispatches to the matching reader.
-    CSV is read with no schema inference; the delimiter and header options apply
-    to CSV inputs only, since Parquet and Delta carry their own schema. Parquet
-    and Delta accept both single-file and directory inputs.
+    The format and the delimiter are both resolved earlier, before the Spark
+    session starts (see :func:`_execute`), so this function only dispatches to
+    the matching reader. CSV is read with no schema inference; the delimiter and
+    header options apply to CSV inputs only, since Parquet and Delta carry their
+    own schema. Parquet and Delta accept both single-file and directory inputs.
 
     :param pc: the Pathling context.
     :param dataset: the path to the dataset file or directory.
     :param from_format: the resolved format, one of ``csv``, ``parquet``, or
            ``delta``.
-    :param delimiter: the CSV field separator; applied to ``csv`` inputs only.
+    :param delimiter: the resolved CSV field separator, a concrete character;
+           applied to ``csv`` inputs only.
     :param input_header: whether the first line of a CSV input is a header row;
            applied to ``csv`` inputs only. When False, Spark assigns positional
            column names ``_c0``, ``_c1``, ... referenced via ``--code-column``.
@@ -156,7 +175,9 @@ def _read_dataset(pc, dataset, from_format, delimiter=",", input_header=True):
     return pc.spark.read.format("delta").load(path)
 
 
-def _validate_columns(df, required, dataset):
+def _validate_columns(
+    df: DataFrame, required: Sequence[Optional[str]], dataset: str
+) -> None:
     """Validates that the named columns exist, listing the actual columns.
 
     :param df: the dataset DataFrame.
@@ -179,7 +200,15 @@ def _validate_columns(df, required, dataset):
         )
 
 
-def _coding_column(pc, code_column, system, system_column, version, *, code=None):
+def _coding_column(
+    pc: PathlingContext,
+    code_column: str,
+    system: Optional[str],
+    system_column: Optional[str],
+    version: Optional[str],
+    *,
+    code: Optional[str] = None,
+) -> Column:
     """Builds a Coding struct column from a code source and a system source.
 
     The struct's field names and order are derived from the library's own Coding
@@ -219,7 +248,13 @@ def _coding_column(pc, code_column, system, system_column, version, *, code=None
     return struct(*[overrides.get(name, lit(None)).alias(name) for name in field_names])
 
 
-def _require_exactly_one(first, first_name, second, second_name, neither_message):
+def _require_exactly_one(
+    first: Optional[str],
+    first_name: str,
+    second: Optional[str],
+    second_name: str,
+    neither_message: str,
+) -> None:
     """Validates that exactly one of a pair of options is provided.
 
     :param first: the first option's value, falsey when the option is absent.
@@ -239,7 +274,9 @@ def _require_exactly_one(first, first_name, second, second_name, neither_message
         raise CliError(neither_message, exit_code=EXIT_USAGE)
 
 
-def _validate_coding_source(dataset, system, system_column):
+def _validate_coding_source(
+    dataset: str, system: Optional[str], system_column: Optional[str]
+) -> None:
     """Validates the dataset path and code system options before Spark starts.
 
     :param dataset: the dataset path.
@@ -263,21 +300,21 @@ def _validate_coding_source(dataset, system, system_column):
 
 
 def _execute(
-    obj,
-    dataset,
-    from_format,
-    system,
-    system_column,
-    output_format,
-    output,
-    limit,
-    overwrite,
-    departition,
-    delimiter,
-    header,
-    input_header,
-    build,
-):
+    obj: CliContext,
+    dataset: str,
+    from_format: Optional[str],
+    system: Optional[str],
+    system_column: Optional[str],
+    output_format: Optional[str],
+    output: Optional[str],
+    limit: int,
+    overwrite: bool,
+    departition: bool,
+    delimiter: Optional[str],
+    header: bool,
+    input_header: bool,
+    build: Callable[[PathlingContext, DataFrame], DataFrame],
+) -> None:
     """Runs a terminology operation and emits the augmented dataset.
 
     :param obj: the CLI context object.
@@ -290,8 +327,9 @@ def _execute(
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
     :param departition: whether file output is departitioned to a single file.
-    :param delimiter: the CSV field separator for both the input read and the
-           output write.
+    :param delimiter: the CSV field separator applied to both the input read and
+           the output write, or None to resolve each side independently from its
+           own path.
     :param header: whether CSV output includes a header row.
     :param input_header: whether the first line of a CSV input is a header row.
     :param build: a callback ``(pc, df) -> result_df`` performing the operation.
@@ -306,11 +344,24 @@ def _execute(
     # wins; otherwise the format is detected from the path (FR-002/FR-003).
     _validate_coding_source(dataset, system, system_column)
     resolved_format = from_format or _detect_tabular_format(Path(dataset))
+    # An omitted --delimiter takes its input-side default from the dataset path,
+    # independently of the output side, so a .tsv input is read as tab-separated
+    # without the user naming the separator.
+    input_delimiter = (
+        default_delimiter_for_path(Path(dataset)) if delimiter is None else delimiter
+    )
     output_spec = resolve_output(
         output, output_format, limit, overwrite, departition, delimiter, header
     )
+    # Announce an inferred tab only where the delimiter is actually consulted:
+    # Parquet and Delta inputs carry their own schema and ignore it entirely. This
+    # comes after the output options are resolved, so an invalid combination fails
+    # rather than announcing a read that never happens - and still before the
+    # multi-second Spark cold start, rather than after it.
+    if delimiter is None and resolved_format == "csv" and input_delimiter == "\t":
+        console.print(tab_inference_notice("Reading", dataset))
     pc = session.create_context(config, console)
-    df = _read_dataset(pc, dataset, resolved_format, delimiter, input_header)
+    df = _read_dataset(pc, dataset, resolved_format, input_delimiter, input_header)
 
     try:
         with progress_status(
@@ -341,24 +392,24 @@ def _execute(
 @click.option("--value-set", "value_set", required=True, help="Value set URI.")
 @click.pass_obj
 def member_of(
-    obj,
-    dataset,
-    from_format,
-    code_column,
-    system,
-    system_column,
-    system_version,
-    result_column,
-    output_format,
-    output,
-    limit,
-    overwrite,
-    departition,
-    delimiter,
-    header,
-    input_header,
-    value_set,
-):
+    obj: CliContext,
+    dataset: str,
+    from_format: Optional[str],
+    code_column: str,
+    system: Optional[str],
+    system_column: Optional[str],
+    system_version: Optional[str],
+    result_column: Optional[str],
+    output_format: Optional[str],
+    output: Optional[str],
+    limit: int,
+    overwrite: bool,
+    departition: bool,
+    delimiter: Optional[str],
+    header: bool,
+    input_header: bool,
+    value_set: str,
+) -> None:
     """Test codes for membership of a value set.
 
     Example:
@@ -368,7 +419,7 @@ def member_of(
     """
     name = result_column or "member_of"
 
-    def build(pc, df):
+    def build(pc: PathlingContext, df: DataFrame) -> DataFrame:
         from pathling import udfs
 
         _validate_columns(df, [code_column, system_column], dataset)
@@ -405,26 +456,26 @@ def member_of(
 )
 @click.pass_obj
 def translate(
-    obj,
-    dataset,
-    from_format,
-    code_column,
-    system,
-    system_column,
-    system_version,
-    result_column,
-    output_format,
-    output,
-    limit,
-    overwrite,
-    departition,
-    delimiter,
-    header,
-    input_header,
-    concept_map,
-    reverse,
-    equivalences,
-):
+    obj: CliContext,
+    dataset: str,
+    from_format: Optional[str],
+    code_column: str,
+    system: Optional[str],
+    system_column: Optional[str],
+    system_version: Optional[str],
+    result_column: Optional[str],
+    output_format: Optional[str],
+    output: Optional[str],
+    limit: int,
+    overwrite: bool,
+    departition: bool,
+    delimiter: Optional[str],
+    header: bool,
+    input_header: bool,
+    concept_map: str,
+    reverse: bool,
+    equivalences: Tuple[str, ...],
+) -> None:
     """Translate codes using a concept map.
 
     Example:
@@ -436,7 +487,7 @@ def translate(
     system_name = f"{base}_system"
     code_name = f"{base}_code"
 
-    def build(pc, df):
+    def build(pc: PathlingContext, df: DataFrame) -> DataFrame:
         from pyspark.sql.functions import col, explode_outer
 
         from pathling import udfs
@@ -477,7 +528,7 @@ def translate(
 # ========== subsumes / subsumed-by ==========
 
 
-def _second_coding_options(func):
+def _second_coding_options(func: Callable) -> Callable:
     """Adds the second coding options used by subsumes and subsumed-by.
 
     :param func: the command callback to decorate.
@@ -507,29 +558,29 @@ def _second_coding_options(func):
 
 
 def _run_subsumption(
-    obj,
-    operation,
-    default_name,
-    dataset,
-    from_format,
-    code_column,
-    system,
-    system_column,
-    system_version,
-    result_column,
-    output_format,
-    output,
-    limit,
-    overwrite,
-    departition,
-    delimiter,
-    header,
-    input_header,
-    other_code,
-    other_code_column,
-    other_system,
-    other_system_column,
-):
+    obj: CliContext,
+    operation: str,
+    default_name: str,
+    dataset: str,
+    from_format: Optional[str],
+    code_column: str,
+    system: Optional[str],
+    system_column: Optional[str],
+    system_version: Optional[str],
+    result_column: Optional[str],
+    output_format: Optional[str],
+    output: Optional[str],
+    limit: int,
+    overwrite: bool,
+    departition: bool,
+    delimiter: Optional[str],
+    header: bool,
+    input_header: bool,
+    other_code: Optional[str],
+    other_code_column: Optional[str],
+    other_system: Optional[str],
+    other_system_column: Optional[str],
+) -> None:
     """Shared implementation for subsumes and subsumed-by.
 
     :param obj: the CLI context object.
@@ -547,7 +598,8 @@ def _run_subsumption(
     :param limit: the table row cap.
     :param overwrite: whether to replace an existing output path.
     :param departition: whether file output is departitioned to a single file.
-    :param delimiter: the CSV field separator for the input read and output write.
+    :param delimiter: the CSV field separator for the input read and output
+           write, or None to resolve each side from its own path.
     :param header: whether CSV output includes a header row.
     :param input_header: whether the first line of a CSV input is a header row.
     :param other_code: a fixed target code applied to every row, or None.
@@ -578,7 +630,7 @@ def _run_subsumption(
 
     name = result_column or default_name
 
-    def build(pc, df):
+    def build(pc: PathlingContext, df: DataFrame) -> DataFrame:
         from pathling import udfs
 
         _validate_columns(
@@ -620,27 +672,27 @@ def _run_subsumption(
 @_second_coding_options
 @click.pass_obj
 def subsumes(
-    obj,
-    dataset,
-    from_format,
-    code_column,
-    system,
-    system_column,
-    system_version,
-    result_column,
-    output_format,
-    output,
-    limit,
-    overwrite,
-    departition,
-    delimiter,
-    header,
-    input_header,
-    other_code,
-    other_code_column,
-    other_system,
-    other_system_column,
-):
+    obj: CliContext,
+    dataset: str,
+    from_format: Optional[str],
+    code_column: str,
+    system: Optional[str],
+    system_column: Optional[str],
+    system_version: Optional[str],
+    result_column: Optional[str],
+    output_format: Optional[str],
+    output: Optional[str],
+    limit: int,
+    overwrite: bool,
+    departition: bool,
+    delimiter: Optional[str],
+    header: bool,
+    input_header: bool,
+    other_code: Optional[str],
+    other_code_column: Optional[str],
+    other_system: Optional[str],
+    other_system_column: Optional[str],
+) -> None:
     """Test subsumption against another code column or a fixed target coding.
 
     Compare a column of codes against either a second code column or a single
@@ -685,27 +737,27 @@ def subsumes(
 @_second_coding_options
 @click.pass_obj
 def subsumed_by(
-    obj,
-    dataset,
-    from_format,
-    code_column,
-    system,
-    system_column,
-    system_version,
-    result_column,
-    output_format,
-    output,
-    limit,
-    overwrite,
-    departition,
-    delimiter,
-    header,
-    input_header,
-    other_code,
-    other_code_column,
-    other_system,
-    other_system_column,
-):
+    obj: CliContext,
+    dataset: str,
+    from_format: Optional[str],
+    code_column: str,
+    system: Optional[str],
+    system_column: Optional[str],
+    system_version: Optional[str],
+    result_column: Optional[str],
+    output_format: Optional[str],
+    output: Optional[str],
+    limit: int,
+    overwrite: bool,
+    departition: bool,
+    delimiter: Optional[str],
+    header: bool,
+    input_header: bool,
+    other_code: Optional[str],
+    other_code_column: Optional[str],
+    other_system: Optional[str],
+    other_system_column: Optional[str],
+) -> None:
     """Test reverse subsumption against another code column or a fixed target.
 
     Compare a column of codes against either a second code column or a single
@@ -753,24 +805,24 @@ def subsumed_by(
 @click.option("--accept-language", "accept_language", help="Preferred language(s).")
 @click.pass_obj
 def display(
-    obj,
-    dataset,
-    from_format,
-    code_column,
-    system,
-    system_column,
-    system_version,
-    result_column,
-    output_format,
-    output,
-    limit,
-    overwrite,
-    departition,
-    delimiter,
-    header,
-    input_header,
-    accept_language,
-):
+    obj: CliContext,
+    dataset: str,
+    from_format: Optional[str],
+    code_column: str,
+    system: Optional[str],
+    system_column: Optional[str],
+    system_version: Optional[str],
+    result_column: Optional[str],
+    output_format: Optional[str],
+    output: Optional[str],
+    limit: int,
+    overwrite: bool,
+    departition: bool,
+    delimiter: Optional[str],
+    header: bool,
+    input_header: bool,
+    accept_language: Optional[str],
+) -> None:
     """Look up display names for codes.
 
     Example:
@@ -779,7 +831,7 @@ def display(
     """
     name = result_column or "display"
 
-    def build(pc, df):
+    def build(pc: PathlingContext, df: DataFrame) -> DataFrame:
         from pathling import udfs
 
         _validate_columns(df, [code_column, system_column], dataset)
@@ -820,26 +872,26 @@ def display(
 @click.option("--accept-language", "accept_language", help="Preferred language(s).")
 @click.pass_obj
 def property_of(
-    obj,
-    dataset,
-    from_format,
-    code_column,
-    system,
-    system_column,
-    system_version,
-    result_column,
-    output_format,
-    output,
-    limit,
-    overwrite,
-    departition,
-    delimiter,
-    header,
-    input_header,
-    property_code,
-    property_type,
-    accept_language,
-):
+    obj: CliContext,
+    dataset: str,
+    from_format: Optional[str],
+    code_column: str,
+    system: Optional[str],
+    system_column: Optional[str],
+    system_version: Optional[str],
+    result_column: Optional[str],
+    output_format: Optional[str],
+    output: Optional[str],
+    limit: int,
+    overwrite: bool,
+    departition: bool,
+    delimiter: Optional[str],
+    header: bool,
+    input_header: bool,
+    property_code: str,
+    property_type: str,
+    accept_language: Optional[str],
+) -> None:
     """Look up properties for codes.
 
     Example:
@@ -849,7 +901,7 @@ def property_of(
     """
     name = result_column or "property"
 
-    def build(pc, df):
+    def build(pc: PathlingContext, df: DataFrame) -> DataFrame:
         from pathling import udfs
 
         _validate_columns(df, [code_column, system_column], dataset)
@@ -886,25 +938,25 @@ def property_of(
 @click.option("--language", "language", help="Designation language.")
 @click.pass_obj
 def designation(
-    obj,
-    dataset,
-    from_format,
-    code_column,
-    system,
-    system_column,
-    system_version,
-    result_column,
-    output_format,
-    output,
-    limit,
-    overwrite,
-    departition,
-    delimiter,
-    header,
-    input_header,
-    use,
-    language,
-):
+    obj: CliContext,
+    dataset: str,
+    from_format: Optional[str],
+    code_column: str,
+    system: Optional[str],
+    system_column: Optional[str],
+    system_version: Optional[str],
+    result_column: Optional[str],
+    output_format: Optional[str],
+    output: Optional[str],
+    limit: int,
+    overwrite: bool,
+    departition: bool,
+    delimiter: Optional[str],
+    header: bool,
+    input_header: bool,
+    use: Optional[str],
+    language: Optional[str],
+) -> None:
     """Look up designations for codes.
 
     Example:
@@ -914,7 +966,7 @@ def designation(
     """
     name = result_column or "designation"
 
-    def build(pc, df):
+    def build(pc: PathlingContext, df: DataFrame) -> DataFrame:
         from pathling import udfs
         from pathling.coding import Coding
 

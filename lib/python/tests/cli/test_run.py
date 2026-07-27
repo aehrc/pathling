@@ -64,11 +64,11 @@ def _write_script(tmp_path, body, name="script.py"):
 # ========== Namespace binding ==========
 
 
-def test_spark_and_pathling_are_bound(runner, patched_context, tmp_path):
+def test_spark_and_pc_are_bound(runner, patched_context, tmp_path):
     """The script sees the context's Spark session and the context itself."""
     script = _write_script(
         tmp_path,
-        "print(id(spark))\nprint(id(pathling))\n",
+        "print(id(spark))\nprint(id(pc))\n",
     )
 
     result = runner.invoke(cli, ["run", script])
@@ -191,7 +191,7 @@ def test_sys_exit_message_prints_and_exits_1(runner, patched_context, tmp_path):
 
 def test_inline_code_executes_with_namespace(runner, patched_context):
     """-c code executes with both variables bound."""
-    result = runner.invoke(cli, ["run", "-c", "print(id(spark)); print(id(pathling))"])
+    result = runner.invoke(cli, ["run", "-c", "print(id(spark)); print(id(pc))"])
 
     assert result.exit_code == 0, result.stderr
     lines = result.stdout.splitlines()
@@ -223,7 +223,7 @@ def test_inline_syntax_error_names_string(runner, patched_context):
 
 def test_stdin_code_executes_with_namespace(runner, patched_context):
     """Code piped on stdin via '-' executes with both variables bound."""
-    result = runner.invoke(cli, ["run", "-"], input="print(type(pathling).__name__)\n")
+    result = runner.invoke(cli, ["run", "-"], input="print(type(pc).__name__)\n")
 
     assert result.exit_code == 0, result.stderr
     assert "PathlingContext" in result.stdout
@@ -409,3 +409,49 @@ def test_every_public_name_is_in_program_globals(runner, patched_context):
 
     assert result.exit_code == 0, result.stderr
     assert result.stdout.splitlines()[0] == "[]"
+
+
+def test_pathling_is_bound_to_the_module(runner, patched_context):
+    """``pathling`` is the package module, not the context (FR-013, FR-014)."""
+    result = runner.invoke(
+        cli,
+        ["run", "-c", "import types\nprint(isinstance(pathling, types.ModuleType))"],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "True"
+
+
+def test_import_pathling_leaves_the_context_usable(runner, patched_context, tmp_path):
+    """A bare ``import pathling`` is a no-op and pc still works afterwards (SC-003).
+
+    This is the failure this rename removes: with the context bound to
+    ``pathling``, the import silently rebound the name and the break surfaced
+    later as an AttributeError far from its cause.
+    """
+    script = _write_script(
+        tmp_path,
+        "import pathling\n"
+        "print(type(pathling).__name__)\n"
+        "print(type(pc).__name__)\n"
+        "print(pc.spark is spark)\n",
+    )
+
+    result = runner.invoke(cli, ["run", script])
+
+    assert result.exit_code == 0, result.stderr
+    lines = result.stdout.splitlines()
+    assert lines[0] == "module"
+    assert lines[1] == "PathlingContext"
+    assert lines[2] == "True"
+
+
+def test_module_attribute_resolves_without_an_import(runner, patched_context):
+    """``pathling.PathlingContext`` resolves with no import, since the module is
+    bound under its own name."""
+    result = runner.invoke(
+        cli, ["run", "-c", "print(pathling.PathlingContext.__name__)"]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "PathlingContext"

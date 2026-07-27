@@ -102,6 +102,20 @@ def runner():
 
 
 @fixture
+def wide_stderr(monkeypatch):
+    """Widens the CLI's stderr console so status messages are not wrapped.
+
+    Rich sizes a console from the ``COLUMNS`` environment variable, and hard-folds
+    a long unbroken run of characters - such as a temporary directory path - onto
+    the next line. Widening the console keeps each message on one line so tests
+    can assert on its content rather than on Rich's display-width wrapping.
+
+    :param monkeypatch: the pytest monkeypatch fixture.
+    """
+    monkeypatch.setenv("COLUMNS", "10000")
+
+
+@fixture
 def patched_context(monkeypatch, pathling_ctx):
     """Makes commands reuse the shared mock-backed ``PathlingContext``.
 

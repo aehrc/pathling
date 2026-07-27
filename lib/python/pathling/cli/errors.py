@@ -25,6 +25,8 @@ are shown only when the user passes ``--verbose``.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 import re
 import traceback
 from typing import Optional
