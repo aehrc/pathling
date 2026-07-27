@@ -68,12 +68,10 @@ public final class LanguagePreference {
     final List<String> tags = new ArrayList<>();
     final List<Double> weights = new ArrayList<>();
     for (final String entry : headerValue.split(",", -1)) {
+      // An entry of nothing but parameter separators splits to nothing at all, which reads the same
+      // way as an entry whose tag is empty: as one expressing nothing.
       final String[] parts = entry.split(";");
-      // An entry of nothing but parameter separators splits to nothing at all.
-      if (parts.length == 0) {
-        continue;
-      }
-      final String tag = parts[0].trim();
+      final String tag = parts.length == 0 ? "" : parts[0].trim();
       if (tag.isEmpty() || WILDCARD.equals(tag)) {
         continue;
       }
