@@ -139,6 +139,11 @@ public class SnomedRf2Importer {
   private static final String ACCEPTABILITY_ID = "acceptabilityId";
   private static final String DESCRIPTION_ID = "descriptionId";
 
+  /**
+   * The name of the column carrying a concept's fully specified name while the display is built.
+   */
+  private static final String FSN_TERM = "fsnTerm";
+
   /** The name of the row count metric carried by every resolution observation. */
   private static final String OBSERVED_ROWS = "rows";
 
@@ -914,11 +919,11 @@ public class SnomedRf2Importer {
         descRaw
             .filter(col("typeId").equalTo(FSN_TYPE))
             .groupBy(col("conceptId"))
-            .agg(min(COLUMN_TERM).alias("fsnTerm"));
+            .agg(min(COLUMN_TERM).alias(FSN_TERM));
     final Map<String, String> byName = new LinkedHashMap<>();
     for (final Row row :
         held.join(names, held.col("refsetId").equalTo(names.col("conceptId")), "left_outer")
-            .select(col("refsetId"), col("fsnTerm"))
+            .select(col("refsetId"), col(FSN_TERM))
             .collectAsList()) {
       byName.put(row.getString(0), row.getString(1));
     }
@@ -996,7 +1001,7 @@ public class SnomedRf2Importer {
         descRaw
             .filter(col("typeId").equalTo(FSN_TYPE))
             .groupBy(col("conceptId").alias(COLUMN_CODE))
-            .agg(min(COLUMN_TERM).alias("fsnTerm"));
+            .agg(min(COLUMN_TERM).alias(FSN_TERM));
 
     return concepts
         .select(COLUMN_CODE)
@@ -1010,7 +1015,7 @@ public class SnomedRf2Importer {
                     col("defaultTerm"),
                     col("otherTerm"),
                     col("preferredFsnTerm"),
-                    col("fsnTerm"),
+                    col(FSN_TERM),
                     col(COLUMN_CODE))
                 .alias(COLUMN_DISPLAY));
   }

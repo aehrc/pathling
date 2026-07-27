@@ -40,6 +40,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
@@ -90,6 +91,12 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
 
   /** The designation use code for a language reference set's preferred term. */
   private static final String PREFERRED_FOR_LANGUAGE_CODE = "preferredForLanguage";
+
+  /** The number of levels at which a designation can answer a language request. */
+  private static final int MATCH_LEVELS = 4;
+
+  /** The rating of a designation that does not answer a language request at all. */
+  private static final int NO_MATCH = -1;
 
   @Nonnull private final TerminologyConfiguration configuration;
   @Nonnull private final Map<String, String> hadoopConfiguration;
@@ -694,43 +701,40 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   @Nullable
   private static String fhirDisplayForLanguage(
       @Nonnull final CodeSystemIndexes indexes, final int dense, @Nonnull final String language) {
-    final String primary = primaryLanguageTag(language);
-    String exactDisplay = null;
-    String exactAny = null;
-    String primaryDisplay = null;
-    String primaryAny = null;
+    // The best term found at each match level, indexed by that level.
+    final String[] byMatchLevel = new String[MATCH_LEVELS];
     for (final Description description : indexes.descriptions().descriptionsOf(dense)) {
-      if (description.getLanguage() == null) {
-        continue;
-      }
-      final boolean exact = description.getLanguage().equalsIgnoreCase(language);
-      if (!exact && !primary.equals(primaryLanguageTag(description.getLanguage()))) {
-        continue;
-      }
-      final boolean isDisplay = DISPLAY_DESIGNATION_USE.equals(description.getTypeCode());
+      final int level = matchLevel(description, language);
       // The description list is ordered by content, so the first match at each level is stable.
-      if (exact && isDisplay) {
-        exactDisplay = exactDisplay == null ? description.getTerm() : exactDisplay;
-      } else if (exact) {
-        exactAny = exactAny == null ? description.getTerm() : exactAny;
-      } else if (isDisplay) {
-        primaryDisplay = primaryDisplay == null ? description.getTerm() : primaryDisplay;
-      } else {
-        primaryAny = primaryAny == null ? description.getTerm() : primaryAny;
+      if (level != NO_MATCH && byMatchLevel[level] == null) {
+        byMatchLevel[level] = description.getTerm();
       }
     }
-    return firstNonNull(exactDisplay, exactAny, primaryDisplay, primaryAny);
+    return Stream.of(byMatchLevel).filter(Objects::nonNull).findFirst().orElse(null);
   }
 
-  /** Returns the first of its arguments that is not null, or null if they all are. */
-  @Nullable
-  private static String firstNonNull(@Nullable final String... candidates) {
-    for (final String candidate : candidates) {
-      if (candidate != null) {
-        return candidate;
-      }
+  /**
+   * Rates how well a description answers a language request, lower being better.
+   *
+   * @param description the description to rate
+   * @param language the requested language tag
+   * @return 0 where the description's language equals the request and its use is {@code display}, 1
+   *     where it equals the request, 2 where it shares only the request's primary subtag and its
+   *     use is {@code display}, 3 where it shares only the primary subtag, and {@link #NO_MATCH}
+   *     where the description does not answer the request at all
+   */
+  private static int matchLevel(
+      @Nonnull final Description description, @Nonnull final String language) {
+    final String descriptionLanguage = description.getLanguage();
+    if (descriptionLanguage == null) {
+      return NO_MATCH;
     }
-    return null;
+    final boolean exact = descriptionLanguage.equalsIgnoreCase(language);
+    if (!exact && !primaryLanguageTag(language).equals(primaryLanguageTag(descriptionLanguage))) {
+      return NO_MATCH;
+    }
+    final boolean isDisplay = DISPLAY_DESIGNATION_USE.equals(description.getTypeCode());
+    return (exact ? 0 : 2) + (isDisplay ? 0 : 1);
   }
 
   @Nonnull

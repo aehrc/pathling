@@ -96,12 +96,11 @@ class DefaultDialectTest {
 
   @Test
   void refusesAnOptionNamingAReferenceSetTheReleaseDoesNotHold() {
+    final Map<String, String> held = candidates(US_ENGLISH, US_ENGLISH_NAME);
     final TerminologyImportException failure =
         assertThrows(
             TerminologyImportException.class,
-            () ->
-                DefaultDialect.choose(
-                    "en-GB", INTERNATIONAL_EDITION, candidates(US_ENGLISH, US_ENGLISH_NAME)));
+            () -> DefaultDialect.choose("en-GB", INTERNATIONAL_EDITION, held));
     // The message names the dialect as it was asked for, and the reference set it resolved to, so
     // the operator can see which of the two was wrong.
     assertTrue(failure.getMessage().contains("en-GB"), failure.getMessage());
@@ -113,12 +112,11 @@ class DefaultDialectTest {
   @ParameterizedTest
   @ValueSource(strings = {"en", "klingon", "12345", "en-x-sctlang-nonsense"})
   void refusesAnOptionThatNamesNoReferenceSetAtAll(final String requested) {
+    final Map<String, String> held = candidates(US_ENGLISH, US_ENGLISH_NAME);
     final TerminologyImportException failure =
         assertThrows(
             TerminologyImportException.class,
-            () ->
-                DefaultDialect.choose(
-                    requested, INTERNATIONAL_EDITION, candidates(US_ENGLISH, US_ENGLISH_NAME)));
+            () -> DefaultDialect.choose(requested, INTERNATIONAL_EDITION, held));
     assertTrue(failure.getMessage().contains(requested), failure.getMessage());
   }
 
@@ -157,20 +155,18 @@ class DefaultDialectTest {
 
   @Test
   void refusesAReleaseHoldingSeveralReferenceSetsThatIsNotTheInternationalEdition() {
+    final Map<String, String> held =
+        candidates(
+            NHS_CLINICAL,
+            "NHS realm language reference set (clinical part)",
+            GB_ENGLISH,
+            "GB English",
+            NHS_PHARMACY,
+            "National Health Service realm language reference set (pharmacy part)");
     final TerminologyImportException failure =
         assertThrows(
             TerminologyImportException.class,
-            () ->
-                DefaultDialect.choose(
-                    null,
-                    NATIONAL_EDITION,
-                    candidates(
-                        NHS_CLINICAL,
-                        "NHS realm language reference set (clinical part)",
-                        GB_ENGLISH,
-                        "GB English",
-                        NHS_PHARMACY,
-                        "National Health Service realm language reference set (pharmacy part)")));
+            () -> DefaultDialect.choose(null, NATIONAL_EDITION, held));
     // Candidates are listed in ascending identifier order so the message is itself reproducible,
     // whatever order the release's rows were read in.
     assertEquals(
@@ -189,14 +185,12 @@ class DefaultDialectTest {
     // The International default is a specific reference set, not merely a rule, so a partial
     // package
     // that does not carry it is as ambiguous as any other release holding several.
+    final Map<String, String> held =
+        candidates(GB_ENGLISH, "GB English", NHS_CLINICAL, "NHS realm");
     final TerminologyImportException failure =
         assertThrows(
             TerminologyImportException.class,
-            () ->
-                DefaultDialect.choose(
-                    null,
-                    INTERNATIONAL_EDITION,
-                    candidates(GB_ENGLISH, "GB English", NHS_CLINICAL, "NHS realm")));
+            () -> DefaultDialect.choose(null, INTERNATIONAL_EDITION, held));
     assertTrue(failure.getMessage().contains("2 language reference sets"), failure.getMessage());
   }
 
@@ -204,14 +198,12 @@ class DefaultDialectTest {
   void ordersCandidatesNumericallyRatherThanAsText() {
     // Identifiers of unequal length must order by value: a twelve-digit identifier is lower than an
     // eighteen-digit one even though it sorts after it as text.
+    final Map<String, String> held =
+        candidates(GB_ENGLISH, "GB English", "271000210107", "NZ English");
     final TerminologyImportException failure =
         assertThrows(
             TerminologyImportException.class,
-            () ->
-                DefaultDialect.choose(
-                    null,
-                    NATIONAL_EDITION,
-                    candidates(GB_ENGLISH, "GB English", "271000210107", "NZ English")));
+            () -> DefaultDialect.choose(null, NATIONAL_EDITION, held));
     assertEquals(
         """
         The release holds 2 language reference sets and none of them is a clear default. \

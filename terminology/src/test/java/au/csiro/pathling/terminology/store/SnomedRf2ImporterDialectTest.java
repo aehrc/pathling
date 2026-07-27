@@ -138,13 +138,12 @@ class SnomedRf2ImporterDialectTest {
   @Test
   void refusesADialectTheReleaseHoldsNoReferenceSetFor() {
     final String store = storeDir.resolve("missing-dialect").toString();
+    final SnomedRf2Importer importer = new SnomedRf2Importer(spark, store);
+    final String release = Rf2Mini.baseRelease().toString();
     final TerminologyImportException failure =
         assertThrows(
             TerminologyImportException.class,
-            () ->
-                new SnomedRf2Importer(spark, store)
-                    .importFrom(
-                        Rf2Mini.baseRelease().toString(), null, DenseIdOrder.CODE_ORDER, "es"));
+            () -> importer.importFrom(release, null, DenseIdOrder.CODE_ORDER, "es"));
     assertTrue(failure.getMessage().contains("'es'"), failure.getMessage());
     assertTrue(failure.getMessage().contains("448879004"), failure.getMessage());
     assertNothingWritten(store);
@@ -153,16 +152,12 @@ class SnomedRf2ImporterDialectTest {
   @Test
   void refusesADialectThatNamesNoReferenceSetAtAll() {
     final String store = storeDir.resolve("unknown-dialect").toString();
+    final SnomedRf2Importer importer = new SnomedRf2Importer(spark, store);
+    final String release = Rf2Mini.baseRelease().toString();
     final TerminologyImportException failure =
         assertThrows(
             TerminologyImportException.class,
-            () ->
-                new SnomedRf2Importer(spark, store)
-                    .importFrom(
-                        Rf2Mini.baseRelease().toString(),
-                        null,
-                        DenseIdOrder.CODE_ORDER,
-                        "not-a-dialect"));
+            () -> importer.importFrom(release, null, DenseIdOrder.CODE_ORDER, "not-a-dialect"));
     assertTrue(failure.getMessage().contains("'not-a-dialect'"), failure.getMessage());
     assertNothingWritten(store);
   }
@@ -201,12 +196,10 @@ class SnomedRf2ImporterDialectTest {
     // so no rule can choose between them. The failure names every candidate, by identifier and by
     // the name the release itself gives that reference set concept, in ascending identifier order.
     final String store = storeDir.resolve("ambiguous").toString();
+    final SnomedRf2Importer importer = new SnomedRf2Importer(spark, store);
+    final String release = Rf2Mini.nationalRelease().toString();
     final TerminologyImportException failure =
-        assertThrows(
-            TerminologyImportException.class,
-            () ->
-                new SnomedRf2Importer(spark, store)
-                    .importFrom(Rf2Mini.nationalRelease().toString(), null));
+        assertThrows(TerminologyImportException.class, () -> importer.importFrom(release, null));
     assertEquals(
         """
         The release holds 3 language reference sets and none of them is a clear default. \

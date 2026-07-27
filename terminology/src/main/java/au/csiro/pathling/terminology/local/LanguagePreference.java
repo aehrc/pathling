@@ -87,8 +87,7 @@ public final class LanguagePreference {
     // order they were written, leaves entries of equal weight in that order.
     final List<Integer> byWeight =
         new ArrayList<>(IntStream.range(0, tags.size()).boxed().toList());
-    byWeight.sort(
-        Comparator.comparingDouble((Integer position) -> weights.get(position)).reversed());
+    byWeight.sort(Comparator.<Integer>comparingDouble(weights::get).reversed());
     return byWeight.stream().map(tags::get).toList();
   }
 
