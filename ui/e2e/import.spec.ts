@@ -458,8 +458,12 @@ test.describe("Import page", () => {
         // Click cancel button.
         await page.getByRole("button", { name: "Cancel" }).click();
 
-        // Verify cancel was requested to the correct URL.
-        expect(cancelRequestUrl).toContain(`$job?id=${TEST_JOB_ID}`);
+        // Verify cancel was requested to the correct URL. The request is
+        // issued asynchronously, so poll rather than reading the captured URL
+        // straight after the click.
+        await expect
+          .poll(() => cancelRequestUrl)
+          .toContain(`$job?id=${TEST_JOB_ID}`);
       });
 
       test("shows cancelled status indicator when import is cancelled", async ({
