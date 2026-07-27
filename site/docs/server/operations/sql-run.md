@@ -32,7 +32,7 @@ type-level forms accept the Library inline or by reference.
 | `queryReference` | 0..1        | Reference  | A relative literal (`Library/[id]`) or canonical (`[url]` or `[url]\|[version]`) reference to a stored Library. Resolves against the server's Library store.   |
 | `_format`        | 0..1        | code       | Output format. Accepts `ndjson` (default), `csv`, `json`, `parquet`, or `fhir` (or the corresponding media type). An unsupported explicit value returns `400`. |
 | `header`         | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                                                                                      |
-| `_limit`         | 0..1        | integer    | Maximum number of rows to return. Always clamped to the server-configured `maxRows` ceiling.                                                                   |
+| `_limit`         | 0..1        | integer    | Maximum number of rows to return. When omitted, the complete result is returned.                                                                               |
 | `parameters`     | 0..1        | Parameters | Runtime parameter bindings. Each entry's name must match a `Library.parameter` declaration, and its `value[x]` must match the declared FHIR type.              |
 
 Exactly one of `queryResource` and `queryReference` must be supplied to the
@@ -390,21 +390,17 @@ subject to the metadata check. See the
 
 ## Resource limits
 
-The following server-configured limits are always applied to a `$sqlquery-run`
-invocation, regardless of any caller-supplied parameters:
+The number of rows returned is bounded only by the caller's `_limit`. When it is
+omitted, the complete result is returned.
 
-- `pathling.sqlQuery.maxRows` (default `1000000`) - the maximum number of rows
-  that a single response may stream. Clamps `_limit` when that value is larger.
-- `pathling.sqlQuery.timeoutSeconds` (default `60`) - the maximum wall-clock
-  time, in seconds, that a query may run before its Spark job group is
-  cancelled.
+One server-configured limit applies to every invocation:
+
 - `pathling.sqlQuery.maxDependencyDepth` (default `10`) - the maximum nesting
   depth of the SQLView dependency graph. A graph nested deeper is rejected with
   a `400` before any Spark work.
 
-The same limits apply to the asynchronous
-[$sqlquery-export](./sql-export) operation. See the
-[configuration reference](../configuration.md) for the full list of options.
+See the [configuration reference](../configuration.md) for the full list of
+options.
 
 ## Python example
 
