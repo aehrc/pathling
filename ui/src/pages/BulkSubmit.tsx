@@ -28,7 +28,7 @@ import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { BulkSubmitMonitorForm } from "../components/bulkSubmit/BulkSubmitMonitorForm";
 import { OperationOutcomeDisplay } from "../components/error/OperationOutcomeDisplay";
 import { JobProgressIndicator } from "../components/JobProgressIndicator";
-import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import { useBulkSubmit } from "../hooks";
 
 import type { SubmitterIdentifier } from "../types/bulkSubmit";
@@ -39,11 +39,11 @@ import type { SubmitterIdentifier } from "../types/bulkSubmit";
  * @returns The bulk submit page component.
  */
 export function BulkSubmit() {
-  const { setError } = useAuth();
+  const { showToast } = useToast();
 
   // Monitor bulk submit operations. 401 errors handled globally.
   const monitor = useBulkSubmit({
-    onError: (error) => setError(error.message),
+    onError: (error) => showToast("Bulk submit failed", error.message),
   });
 
   // Derive display state from the hook.

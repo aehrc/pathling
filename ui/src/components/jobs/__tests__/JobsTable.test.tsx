@@ -18,7 +18,7 @@
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { render, screen } from "../../../test/testUtils";
+import { render, screen, within } from "../../../test/testUtils";
 import { JobsTable } from "../JobsTable";
 
 import type { JobSummary } from "../../../api/jobs";
@@ -88,7 +88,12 @@ describe("JobsTable", () => {
     const onRetry = vi.fn();
     renderTable({ error: new Error("network down"), onRetry });
 
-    const retry = screen.getByRole("button", { name: /retry/i });
+    // The shared error presentation announces the error and keeps the recovery
+    // action inside the callout.
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Could not load jobs: network down");
+
+    const retry = within(alert).getByRole("button", { name: /retry/i });
     await userEvent.click(retry);
 
     expect(onRetry).toHaveBeenCalledTimes(1);

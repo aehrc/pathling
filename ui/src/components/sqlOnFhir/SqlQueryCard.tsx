@@ -25,12 +25,11 @@
  * @author John Grimes
  */
 
-import { Cross2Icon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { Cross2Icon } from "@radix-ui/react-icons";
 import {
   Badge,
   Box,
   Button,
-  Callout,
   Card,
   Code,
   Flex,
@@ -47,6 +46,7 @@ import { SqlQueryExportCardWrapper } from "./SqlQueryExportCardWrapper";
 import { useSqlQueryRun } from "../../hooks";
 import { OperationOutcomeError } from "../../types/errors";
 import { formatDateTime } from "../../utils";
+import { ErrorCallout } from "../error/ErrorCallout";
 
 import type { SqlQueryExportFormat, SqlQueryJob, SqlQueryResult } from "../../types/sqlQuery";
 
@@ -300,12 +300,7 @@ function SqlQueryErrorBody({ sql, error }: Readonly<SqlQueryErrorBodyProps>) {
         Submitted SQL:
       </Text>
       <SqlPreview sql={sql || "(empty)"} ariaLabel="Submitted SQL" />
-      <Callout.Root color="red" size="1">
-        <Callout.Icon>
-          <ExclamationTriangleIcon />
-        </Callout.Icon>
-        <Callout.Text>{message}</Callout.Text>
-      </Callout.Root>
+      <ErrorCallout message={message} size="1" />
     </Flex>
   );
 }

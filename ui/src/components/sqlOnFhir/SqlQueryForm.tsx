@@ -26,10 +26,11 @@
  */
 
 import { PlayIcon, UploadIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout, Card, Flex, Heading, Tabs } from "@radix-ui/themes";
+import { Box, Button, Card, Flex, Heading, Tabs } from "@radix-ui/themes";
 import { useState } from "react";
 
 import { useSqlQueryLibraries, useSqlViews, useViewDefinitions } from "../../hooks";
+import { ErrorCallout } from "../error/ErrorCallout";
 import { FieldLabel } from "../FieldLabel";
 import {
   areRuntimeBindingsValid,
@@ -246,11 +247,7 @@ export function SqlQueryForm({
                 }))}
                 disabled={disabled || isExecuting}
               />
-              {saveError && (
-                <Callout.Root color="red" mt="3" size="1">
-                  <Callout.Text>{saveError.message}</Callout.Text>
-                </Callout.Root>
-              )}
+              {saveError && <ErrorCallout message={saveError.message} size="1" mt="3" />}
             </Tabs.Content>
           </Box>
         </Tabs.Root>

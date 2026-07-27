@@ -21,11 +21,12 @@
  * @author John Grimes
  */
 
-import { ExclamationTriangleIcon, TableIcon } from "@radix-ui/react-icons";
-import { Badge, Box, Callout, Code, Flex, Heading, Spinner, Table, Text } from "@radix-ui/themes";
+import { TableIcon } from "@radix-ui/react-icons";
+import { Badge, Box, Code, Flex, Heading, Spinner, Table, Text } from "@radix-ui/themes";
 
 import { ExportControls } from "./ExportControls";
 import { ViewExportCard } from "./ViewExportCard";
+import { ErrorCallout } from "../error/ErrorCallout";
 
 import type { ViewExportJob } from "../../types/job";
 import type { ViewExportFormat } from "../../types/viewExport";
@@ -124,12 +125,7 @@ export function SqlOnFhirResultTable({
         <Heading size="4" mb="4">
           Results
         </Heading>
-        <Callout.Root color="red">
-          <Callout.Icon>
-            <ExclamationTriangleIcon />
-          </Callout.Icon>
-          <Callout.Text>{error.message}</Callout.Text>
-        </Callout.Root>
+        <ErrorCallout message={error.message} />
       </Box>
     );
   }

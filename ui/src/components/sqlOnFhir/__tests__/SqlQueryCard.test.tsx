@@ -246,7 +246,8 @@ describe("SqlQueryCard", () => {
         onClose={onClose}
       />,
     );
-    expect(screen.getByText(/sql contains a disallowed operation/i)).toBeInTheDocument();
+    // The shared error presentation announces every error as an alert.
+    expect(screen.getByRole("alert")).toHaveTextContent(/sql contains a disallowed operation/i);
     // The submitted SQL is echoed in the read-only preview area.
     expect(screen.getByRole("textbox", { name: /submitted sql/i })).toHaveValue(
       "DROP TABLE conditions",
@@ -258,7 +259,7 @@ describe("SqlQueryCard", () => {
     mockStatus = "error";
     mockError = new Error("Network error");
     render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
-    expect(screen.getByText(/network error/i)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(/network error/i);
   });
 
   // The close button only appears once the request has terminated.

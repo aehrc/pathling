@@ -33,36 +33,22 @@ import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
+import { notifyUnauthorized } from "./services/sessionExpiry";
 import { UnauthorizedError } from "./types/errors";
 import { setupGlobalErrorHandlers } from "./utils/errorHandler";
 
 setupGlobalErrorHandlers();
 
-// Module-level callback and deduplication flag for global 401 handling.
-let clearSession: (() => void) | null = null;
-let sessionCleared = false;
-
 /**
- * Registers the session clearing function from AuthContext. Called on mount
- * and after re-authentication to reset the deduplication flag.
- *
- * @param fn - The function to call when a 401 error is detected.
- */
-export function registerClearSession(fn: () => void): void {
-  clearSession = fn;
-  sessionCleared = false;
-}
-
-/**
- * Global error handler for TanStack Query. Triggers session clearing on
- * UnauthorizedError, with deduplication to prevent multiple dialogs.
+ * Global error handler for TanStack Query. Reports an authorisation failure to
+ * the authentication state, which decides whether it means the session expired
+ * or the user was never logged in.
  *
  * @param error - The error from a failed query or mutation.
  */
 function handleGlobalError(error: Error): void {
-  if (error instanceof UnauthorizedError && clearSession && !sessionCleared) {
-    sessionCleared = true;
-    clearSession();
+  if (error instanceof UnauthorizedError) {
+    notifyUnauthorized();
   }
 }
 

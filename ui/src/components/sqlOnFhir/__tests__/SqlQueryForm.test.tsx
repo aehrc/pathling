@@ -78,11 +78,12 @@ const PLAIN_QUERY = makeSummary({
 const SQL_VIEW = makeSummary({
   id: "sql-view",
   title: "Active patients view",
+  url: "http://example.org/Library/active-patients-view",
   parameters: [],
 });
 
-// The hooks barrel transitively imports main.tsx (via AuthContext). Mock it
-// with the stored lists the form and its picker consume.
+// Mock the hooks barrel with the stored lists the form and its picker
+// consume.
 vi.mock("../../../hooks", () => ({
   useSqlQueryLibraries: () => ({
     data: [PARAM_QUERY, PLAIN_QUERY],
@@ -204,5 +205,32 @@ describe("SqlQueryForm stored execution", () => {
         sql: "SELECT 1",
       }),
     );
+  });
+
+  // A failed save is reported through the shared error presentation, which
+  // announces it as an alert.
+  it("announces a failed save as an alert", async () => {
+    const user = userEvent.setup();
+    render(
+      <SqlQueryForm
+        onExecute={vi.fn()}
+        onSaveToServer={vi.fn().mockRejectedValue(new Error("Save rejected by the server"))}
+        isExecuting={false}
+        isSaving={false}
+      />,
+    );
+
+    // Saving requires a title, some SQL, and at least one resolved view.
+    await user.click(screen.getByRole("tab", { name: /provide sql/i }));
+    await user.type(screen.getByRole("textbox", { name: /library title/i }), "My query");
+    await user.type(screen.getByRole("textbox", { name: /^sql$/i }), "SELECT 1");
+    await user.click(screen.getByRole("button", { name: /add view/i }));
+    await user.type(screen.getByRole("textbox", { name: /label for view 1/i }), "patients");
+    await user.click(screen.getByRole("combobox", { name: /source for view 1/i }));
+    await user.click(screen.getByRole("option", { name: "Active patients view" }));
+
+    await user.click(screen.getByRole("button", { name: /save to server/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Save rejected by the server");
   });
 });

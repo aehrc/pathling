@@ -23,6 +23,7 @@
 
 import { expect, test } from "@playwright/test";
 
+import { mockCapabilityStatementWithAuth } from "./fixtures/fhirData";
 import { mockMetadata } from "./helpers/mockHelpers";
 
 import type { Page } from "@playwright/test";
@@ -204,6 +205,35 @@ test.describe("Jobs page", () => {
     await expect(
       page.getByRole("cell", { name: "export", exact: true }),
     ).toBeVisible();
+  });
+
+  // Regression for #2678: the page used to poll from the moment it loaded, so
+  // a logged-out visitor saw a "Session expired" dialog stacked on the login
+  // prompt and a stream of failing requests behind it.
+  test("shows only the login prompt when logged out, and issues no requests", async ({
+    page,
+  }) => {
+    await mockMetadata(page, mockCapabilityStatementWithAuth);
+
+    let jobsRequests = 0;
+    await page.route("**/$jobs*", async (route) => {
+      jobsRequests += 1;
+      await route.fulfill({ status: 401, body: "" });
+    });
+
+    await page.goto("/admin/jobs");
+
+    await expect(
+      page.getByText("You need to login before you can use this page."),
+    ).toBeVisible();
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+
+    // Wait past the slow refresh interval to confirm nothing polls behind the
+    // prompt.
+    await page.waitForTimeout(11000);
+
+    expect(jobsRequests).toBe(0);
+    await expect(page.getByRole("alertdialog")).toBeHidden();
   });
 
   test("removes a finished job without confirmation", async ({ page }) => {

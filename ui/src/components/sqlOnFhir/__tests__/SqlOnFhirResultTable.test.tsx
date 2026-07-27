@@ -113,7 +113,8 @@ describe("SqlOnFhirResultTable", () => {
       );
 
       expect(screen.getByText("Results")).toBeInTheDocument();
-      expect(screen.getByText("View execution failed")).toBeInTheDocument();
+      // The shared error presentation announces every error as an alert.
+      expect(screen.getByRole("alert")).toHaveTextContent("View execution failed");
     });
   });
 

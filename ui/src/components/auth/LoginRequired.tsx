@@ -22,13 +22,13 @@
  */
 
 import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout } from "@radix-ui/themes";
+import { Box, Button, Callout, Spinner } from "@radix-ui/themes";
 
 import { SessionExpiredDialog } from "./SessionExpiredDialog";
 import { config } from "../../config";
-import { useAuth } from "../../contexts/AuthContext";
+import { useLogin } from "../../hooks/useLogin";
 import { useServerCapabilities } from "../../hooks/useServerCapabilities";
-import { initiateAuth } from "../../services/auth";
+import { ErrorCallout } from "../error/ErrorCallout";
 
 /**
  * Displays a login prompt when authentication is required.
@@ -37,18 +37,8 @@ import { initiateAuth } from "../../services/auth";
  */
 export function LoginRequired() {
   const { fhirBaseUrl } = config;
-  const { setLoading, setError } = useAuth();
   const { data: capabilities } = useServerCapabilities(fhirBaseUrl);
-
-  const handleLogin = async () => {
-    if (!fhirBaseUrl) return;
-    setLoading(true);
-    try {
-      await initiateAuth(fhirBaseUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-    }
-  };
+  const { login, isPending, error } = useLogin();
 
   return (
     <Box>
@@ -60,11 +50,20 @@ export function LoginRequired() {
       </Callout.Root>
 
       <Box mt="4">
-        <Button size="3" onClick={handleLogin}>
-          <LockClosedIcon />
+        {/* The spinner replaces the icon rather than the whole label, so the
+            button still says what it does while the attempt is under way. */}
+        <Button size="3" disabled={isPending} onClick={() => void login()}>
+          <Spinner loading={isPending}>
+            <LockClosedIcon />
+          </Spinner>
           Login to {capabilities?.serverName ?? window.location.hostname}
         </Button>
       </Box>
+      {error && (
+        <Box mt="4">
+          <ErrorCallout message={error} />
+        </Box>
+      )}
       <SessionExpiredDialog />
     </Box>
   );

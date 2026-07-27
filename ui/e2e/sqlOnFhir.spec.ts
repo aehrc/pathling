@@ -459,8 +459,9 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("option", { name: "Patient Demographics" }).click();
       await page.getByRole("button", { name: "Execute" }).click();
 
-      // Verify error message is displayed.
-      await expect(page.getByText(/View run failed/)).toBeVisible();
+      // Verify error message is displayed. A notification carries the same text,
+      // so match the first occurrence, which is the card.
+      await expect(page.getByText(/View run failed/).first()).toBeVisible();
     });
 
     test("displays the 422 message for an invalid custom view definition", async ({
@@ -499,8 +500,12 @@ test.describe("SQL on FHIR page", () => {
 
       await page.getByRole("button", { name: "Execute" }).click();
 
-      // The OperationOutcome diagnostics are shown clearly.
-      await expect(page.getByText(/Invalid ViewDefinition/)).toBeVisible();
+      // The OperationOutcome diagnostics are shown clearly. A notification
+      // carries the same text, so match the first occurrence, which is the
+      // card.
+      await expect(
+        page.getByText(/Invalid ViewDefinition/).first(),
+      ).toBeVisible();
     });
   });
 
@@ -1123,8 +1128,9 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("option", { name: "Patient Demographics" }).click();
       await page.getByRole("button", { name: "Execute" }).click();
 
-      // Wait for error to appear.
-      await expect(page.getByText(/View run failed/)).toBeVisible({
+      // Wait for error to appear. A notification carries the same text, so match
+      // the first occurrence, which is the card.
+      await expect(page.getByText(/View run failed/).first()).toBeVisible({
         timeout: 10000,
       });
 
@@ -1152,7 +1158,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
 
       // Wait for error and close button.
-      await expect(page.getByText(/View run failed/)).toBeVisible({
+      await expect(page.getByText(/View run failed/).first()).toBeVisible({
         timeout: 10000,
       });
       await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
@@ -1160,8 +1166,10 @@ test.describe("SQL on FHIR page", () => {
       // Click close button.
       await page.getByRole("button", { name: "Close" }).click();
 
-      // Verify the query card is removed.
-      await expect(page.getByText(/View run failed/)).not.toBeVisible();
+      // Verify the query card is removed. The notification of the failure
+      // outlives the card, so assert on the card's own close action rather
+      // than on the message text.
+      await expect(page.getByRole("button", { name: "Close" })).toBeHidden();
     });
   });
 });

@@ -136,6 +136,17 @@ export (`ViewExportCard`) and the SQL query export (`SqlQueryExportCardWrapper`)
 flows. When adding a new export-style operation, reuse `ExportJobCard` rather
 than duplicating the status, progress, cancel, and download presentation.
 
+Every error message shown as a callout uses the shared
+`components/error/ErrorCallout.tsx`. It always renders the warning icon and
+always carries `role="alert"`, so errors look and behave the same wherever they
+appear. It takes a `message`, an optional bold `title`, optional `size` and
+`mt`, and children for recovery actions such as a retry button. Do not build a
+red `Callout.Root` directly.
+
+A transient failure from an operation, such as an export or import job failing,
+is reported with `showToast` from the toast context rather than with a callout.
+Never pass an error callback into state that nothing renders.
+
 ### Naming
 
 | Element               | Convention     | Example                         |
