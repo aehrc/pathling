@@ -28,6 +28,7 @@ import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { ImportCard } from "../components/import/ImportCard";
 import { ImportForm } from "../components/import/ImportForm";
 import { ImportPnpForm } from "../components/import/ImportPnpForm";
+import { useToast } from "../contexts/ToastContext";
 import { buildSearchParamMap } from "../hooks";
 
 import type { ImportJob, ImportRequest } from "../types/import";
@@ -42,8 +43,7 @@ export function Import() {
   // Track all import jobs.
   const [imports, setImports] = useState<ImportJob[]>([]);
 
-  // Track error messages for display.
-  const [, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   /**
    * Handles submission of a standard import.
@@ -125,7 +125,7 @@ export function Import() {
                 <ImportCard
                   key={job.id}
                   job={job}
-                  onError={(message) => setError(message)}
+                  onError={(message) => showToast("Import failed", message)}
                   onClose={() => handleCloseImport(job.id)}
                 />
               ))}

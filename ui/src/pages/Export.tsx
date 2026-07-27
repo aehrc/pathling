@@ -28,7 +28,7 @@ import { useState } from "react";
 import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { ExportCard } from "../components/export/ExportCard";
 import { ExportForm } from "../components/export/ExportForm";
-import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import { buildSearchParamMap } from "../hooks";
 
 import type { ExportRequest } from "../types/export";
@@ -45,7 +45,7 @@ interface ExportJob {
  * @returns The export page component.
  */
 export function Export() {
-  const { setError } = useAuth();
+  const { showToast } = useToast();
   const [exports, setExports] = useState<ExportJob[]>([]);
 
   const handleExport = (request: ExportRequest) => {
@@ -84,7 +84,7 @@ export function Export() {
                   key={exportJob.id}
                   request={exportJob.request}
                   createdAt={exportJob.createdAt}
-                  onError={(message) => setError(message)}
+                  onError={(message) => showToast("Export failed", message)}
                   onClose={() => handleCloseExport(exportJob.id)}
                 />
               ))}

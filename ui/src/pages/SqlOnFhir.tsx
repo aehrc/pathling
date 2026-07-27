@@ -30,6 +30,7 @@ import { SqlOnFhirForm } from "../components/sqlOnFhir/SqlOnFhirForm";
 import { SqlQueryCard } from "../components/sqlOnFhir/SqlQueryCard";
 import { extractRequestSql } from "../components/sqlOnFhir/sqlQueryFormHelpers";
 import { ViewCard } from "../components/sqlOnFhir/ViewCard";
+import { useToast } from "../contexts/ToastContext";
 import { useSaveSqlQueryLibrary, useSaveViewDefinition } from "../hooks";
 
 import type { SqlOnFhirMode } from "../components/sqlOnFhir/SqlOnFhirForm";
@@ -55,7 +56,7 @@ export function SqlOnFhir() {
   // they can be sorted by createdAt regardless of source.
   const [pageJobs, setPageJobs] = useState<PageJob[]>([]);
 
-  const [, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   // Mutations: ViewDefinition save and SQL query Library save.
   const { mutateAsync: saveViewDefinition, isPending: isSavingViewDefinition } =
@@ -136,14 +137,14 @@ export function SqlOnFhir() {
                   <ViewCard
                     key={entry.job.id}
                     job={entry.job as ViewJob}
-                    onError={(message) => setError(message)}
+                    onError={(message) => showToast("View execution failed", message)}
                     onClose={() => handleCloseJob(entry.job.id)}
                   />
                 ) : (
                   <SqlQueryCard
                     key={entry.job.id}
                     job={entry.job as SqlQueryJob}
-                    onError={(message) => setError(message)}
+                    onError={(message) => showToast("SQL query failed", message)}
                     onClose={() => handleCloseJob(entry.job.id)}
                   />
                 ),
