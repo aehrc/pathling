@@ -53,19 +53,31 @@ public class WebConfiguration implements WebMvcConfigurer {
 
   @Override
   public void addResourceHandlers(@Nonnull final ResourceHandlerRegistry registry) {
-    // Serve hashed assets with long cache duration (1 year). These files have content hashes in
-    // their filenames, so they can be cached indefinitely.
+    // Serve hashed assets with long cache duration (1 year). The content hash in each filename
+    // means that a given URL's body can never change, so these files can be cached indefinitely
+    // and revalidation is never necessary. Marking them immutable stops the browser revalidating
+    // them even on a user-initiated reload.
     registry
         .addResourceHandler(ADMIN_ASSETS_PATH)
         .addResourceLocations(ADMIN_ASSETS_LOCATION)
-        .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic());
+        .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic().immutable());
 
-    // Serve admin UI static resources with SPA fallback to index.html. No caching is applied so
-    // users always get the latest version, which references the current hashed assets.
+    // Serve admin UI static resources with SPA fallback to index.html. The entry document names
+    // the hashed assets of one specific build, so a stored copy pins the whole UI to the version
+    // it was built from and must not be stored at all.
+    //
+    // The validator is disabled deliberately. Jib stamps a fixed timestamp into the image for
+    // reproducibility, so every published image reported the same Last-Modified value. Browsers
+    // revalidating against it were answered with 304 and kept their old document indefinitely,
+    // which is what pinned upgraded servers to old bundles. Emitting no validator is also what
+    // lets an already-stuck client recover, because a handler that still emits one will match the
+    // client's conditional request whatever the directives say. Do not re-enable this. See
+    // https://github.com/aehrc/pathling/issues/2677.
     registry
         .addResourceHandler(ADMIN_UI_PATHS)
         .addResourceLocations(ADMIN_UI_RESOURCE_LOCATION)
-        .setCacheControl(CacheControl.noCache())
+        .setCacheControl(CacheControl.noStore().mustRevalidate())
+        .setUseLastModified(false)
         .resourceChain(true)
         .addResolver(
             new PathResourceResolver() {
