@@ -68,9 +68,9 @@ class WebConfigurationTest {
 
   private static final String HASHED_ASSET_CACHE_CONTROL = "max-age=31536000, public, immutable";
 
-  @Autowired WebApplicationContext webApplicationContext;
+  @Autowired @Nonnull WebApplicationContext webApplicationContext;
 
-  MockMvc mockMvc;
+  @Nonnull MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
