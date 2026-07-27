@@ -28,6 +28,12 @@
 #' @param dense_id_order How dense identifiers are assigned to concepts, either "code-order" (the
 #'   default) or "pre-order". The pre-order makes the runtime hierarchy index materially smaller, in
 #'   exchange for identifiers that shift more between releases. Defaults to NULL.
+#' @param default_dialect The dialect whose preferred synonyms become the stored display of every
+#'   concept, given as a dialect tag such as "en-GB", as a private-use dialect extension tag, or as a
+#'   language reference set identifier. When NULL, the dialect is chosen from the release: the sole
+#'   language reference set where there is only one, or US English for the International edition. A
+#'   release that holds several and is not the International edition fails the import, naming the
+#'   candidates. Defaults to NULL.
 #'
 #' @return The PathlingContext object, invisibly.
 #'
@@ -37,9 +43,9 @@
 #'
 #' @export
 pathling_import_snomed <- function(pc, source, storage_path, edition_uri = NULL,
-                                   dense_id_order = NULL) {
+                                   dense_id_order = NULL, default_dialect = NULL) {
   options <- NULL
-  if (!is.null(edition_uri) || !is.null(dense_id_order)) {
+  if (!is.null(edition_uri) || !is.null(dense_id_order) || !is.null(default_dialect)) {
     builder <- j_invoke_static(
       spark_connection(pc),
       "au.csiro.pathling.library.terminology.TerminologyImportOptions", "builder"
@@ -53,6 +59,9 @@ pathling_import_snomed <- function(pc, source, storage_path, edition_uri = NULL,
         "au.csiro.pathling.terminology.store.DenseIdOrder", "fromValue", dense_id_order
       )
       builder <- j_invoke(builder, "denseIdOrder", order)
+    }
+    if (!is.null(default_dialect)) {
+      builder <- j_invoke(builder, "defaultDialect", default_dialect)
     }
     options <- j_invoke(builder, "build")
   }

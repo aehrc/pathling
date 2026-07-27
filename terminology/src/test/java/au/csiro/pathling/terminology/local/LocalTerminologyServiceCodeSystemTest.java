@@ -26,6 +26,7 @@ import au.csiro.pathling.terminology.TerminologyService.Property;
 import au.csiro.pathling.test.FhirFixtures;
 import au.csiro.pathling.test.NoNetworkExtension;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Type;
@@ -66,6 +67,28 @@ class LocalTerminologyServiceCodeSystemTest {
         .toList();
   }
 
+  /** Returns the display of a concept for a language request, or null if it has none. */
+  @Nullable
+  private static String display(
+      @Nonnull final Coding coding, @Nullable final String acceptLanguage) {
+    return service.lookup(coding, "display", acceptLanguage).stream()
+        .filter(Property.class::isInstance)
+        .map(Property.class::cast)
+        .filter(p -> "display".equals(p.getCode()))
+        .map(Property::getValueAsString)
+        .findFirst()
+        .orElse(null);
+  }
+
+  /** Returns the designations of a concept, in the order they are emitted. */
+  @Nonnull
+  private static List<Designation> designations(@Nonnull final Coding coding) {
+    return service.lookup(coding, Designation.PROPERTY_CODE, null).stream()
+        .filter(Designation.class::isInstance)
+        .map(Designation.class::cast)
+        .toList();
+  }
+
   @Test
   void returnsDisplay() {
     final List<Type> display = propertyValues(species(FhirFixtures.DOG), "display");
@@ -75,16 +98,60 @@ class LocalTerminologyServiceCodeSystemTest {
   @Test
   void displayHonoursAcceptLanguage() {
     // Dog carries a German display designation; the default remains the English display.
-    final String german =
-        service.lookup(species(FhirFixtures.DOG), "display", "de").stream()
-            .filter(Property.class::isInstance)
-            .map(Property.class::cast)
-            .map(Property::getValueAsString)
-            .findFirst()
-            .orElse(null);
-    assertEquals("Hund", german);
+    assertEquals("Hund", display(species(FhirFixtures.DOG), "de"));
     assertEquals(
         "Dog", propertyValues(species(FhirFixtures.DOG), "display").get(0).primitiveValue());
+  }
+
+  // --- Language matching over a FHIR CodeSystem (User Story 4). ---
+
+  @Test
+  void prefersAnExactLanguageTagMatchOverAPrimarySubtagMatch() {
+    // A FHIR CodeSystem carries plain BCP-47 designation languages with no reference set to
+    // resolve,
+    // so an exact tag match is the only way en-GB and generic English can be told apart. Dog's
+    // en-GB
+    // designation wins over its two generic English ones, even though one of those is a display.
+    assertEquals("Hound", display(species(FhirFixtures.DOG), "en-GB"));
+    // Case is not significant in the tag.
+    assertEquals("Hound", display(species(FhirFixtures.DOG), "EN-gb"));
+  }
+
+  @Test
+  void fallsBackToAGenericDesignationWhereOnlyItMatches() {
+    // No en-AU designation exists, so matching falls to the primary subtag, where the designation
+    // whose use is display answers.
+    assertEquals("Domestic dog", display(species(FhirFixtures.DOG), "en-AU"));
+  }
+
+  @Test
+  void fallsBackToTheStoredDisplayWhereNoDesignationMatchesTheLanguage() {
+    assertEquals("Dog", display(species(FhirFixtures.DOG), "fr"));
+    assertEquals("Dog", display(species(FhirFixtures.DOG), null));
+    // A concept carrying no designation at all falls back the same way.
+    assertEquals("Cat", display(species(FhirFixtures.CAT), "en-GB"));
+  }
+
+  @Test
+  void readsADialectExtensionTagAsItsPlainLanguage() {
+    // A language reference set identifier has no meaning outside SNOMED CT, so the tag falls back
+    // to
+    // its primary subtag and the generic English designation answers.
+    assertEquals(
+        "Domestic dog", display(species(FhirFixtures.DOG), "en-x-sctlang-90000000-00005080-04"));
+  }
+
+  @Test
+  void honoursAWeightedLanguagePreference() {
+    assertEquals("Hund", display(species(FhirFixtures.DOG), "fr;q=0.9,de;q=0.5"));
+    assertEquals("Hound", display(species(FhirFixtures.DOG), "en-GB;q=0.9,de;q=0.5"));
+    assertEquals("Hund", display(species(FhirFixtures.DOG), "en-GB;q=0,de"));
+  }
+
+  @Test
+  void returnsAnIdenticalDesignationListOnEveryCall() {
+    // The list a caller sees is a sequence, so repeating the request must reproduce it exactly.
+    assertEquals(designations(species(FhirFixtures.DOG)), designations(species(FhirFixtures.DOG)));
   }
 
   @Test
@@ -105,12 +172,9 @@ class LocalTerminologyServiceCodeSystemTest {
 
   @Test
   void returnsDesignations() {
-    final List<Designation> designations =
-        service.lookup(species(FhirFixtures.DOG), Designation.PROPERTY_CODE, null).stream()
-            .filter(Designation.class::isInstance)
-            .map(Designation.class::cast)
-            .toList();
-    assertTrue(designations.stream().anyMatch(d -> "Canine".equals(d.getValue())));
+    assertTrue(
+        designations(species(FhirFixtures.DOG)).stream()
+            .anyMatch(d -> "Canine".equals(d.getValue())));
   }
 
   @Test

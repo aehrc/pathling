@@ -102,6 +102,15 @@ def _resolve_storage_path(config: CliConfig, storage_path: Optional[str]) -> str
         "shift more between releases."
     ),
 )
+@click.option(
+    "--default-dialect",
+    "default_dialect",
+    help=(
+        "The dialect whose preferred synonyms become the stored display: a tag "
+        "such as 'en-GB', or a language reference set identifier. Chosen from "
+        "the release when omitted."
+    ),
+)
 @click.pass_obj
 def import_snomed(
     obj: CliContext,
@@ -109,6 +118,7 @@ def import_snomed(
     storage_path: Optional[str],
     edition_uri: Optional[str],
     dense_id_order: str,
+    default_dialect: Optional[str],
 ) -> None:
     """Import a SNOMED CT RF2 snapshot release into a local terminology store.
 
@@ -123,7 +133,9 @@ def import_snomed(
     resolved_path = _resolve_storage_path(config, storage_path)
     pc = _import_context(config, console)
     with progress_status(console, "Importing SNOMED CT...", config.verbose):
-        pc.import_snomed(source, resolved_path, edition_uri, dense_id_order)
+        pc.import_snomed(
+            source, resolved_path, edition_uri, dense_id_order, default_dialect
+        )
     click.echo(f"Imported SNOMED CT from {source} into {resolved_path}")
 
 

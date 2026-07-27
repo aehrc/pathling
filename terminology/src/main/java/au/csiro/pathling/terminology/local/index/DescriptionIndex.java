@@ -79,6 +79,12 @@ public final class DescriptionIndex {
                       row.getString(COLUMN_TYPE_SYSTEM),
                       row.getStringMap(COLUMN_ACCEPTABILITY)));
         });
+    // Ordering each concept's descriptions here, rather than at each of the several places they are
+    // read, removes the dependency on store row order in one place. A concept carries about five
+    // descriptions, so this is one short sort per concept.
+    byConcept
+        .values()
+        .forEach(descriptions -> descriptions.sort(DescriptionOrder.byLanguageTypeAndTerm()));
     return new DescriptionIndex(byConcept);
   }
 
@@ -86,7 +92,8 @@ public final class DescriptionIndex {
    * Returns the descriptions of a concept.
    *
    * @param dense the dense identifier of the concept
-   * @return the descriptions, in the order they were loaded, empty if the concept has none
+   * @return the descriptions, ordered by language, then type, then term, empty if the concept has
+   *     none
    */
   @Nonnull
   public List<Description> descriptionsOf(final int dense) {

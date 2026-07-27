@@ -40,6 +40,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
@@ -91,6 +92,12 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   /** The designation use code for a language reference set's preferred term. */
   private static final String PREFERRED_FOR_LANGUAGE_CODE = "preferredForLanguage";
 
+  /** The number of levels at which a designation can answer a language request. */
+  private static final int MATCH_LEVELS = 4;
+
+  /** The rating of a designation that does not answer a language request at all. */
+  private static final int NO_MATCH = -1;
+
   @Nonnull private final TerminologyConfiguration configuration;
   @Nonnull private final Map<String, String> hadoopConfiguration;
   @Nonnull private final Map<String, CodeSystemIndexes> indexesCache = new ConcurrentHashMap<>();
@@ -102,6 +109,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   private ValueSetResolver valueSetResolver;
   private ExpansionCache expansionCache;
   private ConceptMapIndex conceptMapIndex;
+  private DialectResolver dialectResolver;
 
   /**
    * Creates a local terminology service.
@@ -490,7 +498,11 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
         // A description outside every language reference set carries no use.
         addDesignation(result, seen, null, description.getLanguage(), description.getTerm());
       } else {
-        for (final Map.Entry<String, String> entry : acceptability.entrySet()) {
+        // The acceptability map is iterated in ascending reference set identifier order, because
+        // map
+        // order is an implementation detail and a description preferred in several reference sets
+        // yields one designation for each.
+        for (final Map.Entry<String, String> entry : byReferenceSetIdentifier(acceptability)) {
           final boolean preferredSynonym =
               SYNONYM_TYPE.equals(description.getTypeCode())
                   && PREFERRED_ACCEPTABILITY.equals(entry.getValue());
@@ -524,6 +536,24 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
             display);
       }
     }
+  }
+
+  /**
+   * Returns the entries of an acceptability map in ascending reference set identifier order.
+   * Identifiers are digit strings without leading zeros, so ordering by length and then as text
+   * orders them by value.
+   *
+   * @param acceptability the acceptability of a description within each language reference set
+   * @return the entries, in ascending reference set identifier order
+   */
+  @Nonnull
+  private static List<Map.Entry<String, String>> byReferenceSetIdentifier(
+      @Nonnull final Map<String, String> acceptability) {
+    return acceptability.entrySet().stream()
+        .sorted(
+            Comparator.comparingInt((Map.Entry<String, String> entry) -> entry.getKey().length())
+                .thenComparing(Map.Entry::getKey))
+        .toList();
   }
 
   /** Adds a designation to the result unless an identical one has already been added. */
@@ -587,9 +617,14 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   }
 
   /**
-   * Selects the display term for a concept in the requested language, falling back to the stored
-   * default display. SNOMED CT uses the language reference set's preferred synonym; FHIR code
-   * systems use a matching-language designation.
+   * Selects the display term for a concept from a language preference, falling back to the stored
+   * display.
+   *
+   * <p>The request may name a weighted list of dialects rather than one, in which case they are
+   * tried in descending order of weight and the first that yields a term answers. For SNOMED CT a
+   * dialect is resolved to a language reference set and the term it marks as the concept's
+   * preferred synonym is taken; for a FHIR code system, which carries no reference set to resolve,
+   * a matching-language designation is taken instead.
    */
   @Nullable
   private String selectDisplay(
@@ -597,11 +632,8 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       @Nonnull final CodeSystemIndexes indexes,
       final int dense,
       @Nullable final String acceptLanguage) {
-    if (acceptLanguage != null && !acceptLanguage.isBlank()) {
-      final String preferred =
-          SNOMED_URI.equals(systemUrl)
-              ? preferredSynonym(indexes, dense, acceptLanguage)
-              : fhirDisplayForLanguage(indexes, dense, acceptLanguage);
+    for (final String tag : LanguagePreference.parse(acceptLanguage)) {
+      final String preferred = displayForTag(systemUrl, indexes, dense, tag);
       if (preferred != null) {
         return preferred;
       }
@@ -609,20 +641,46 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     return indexes.dictionary().display(dense);
   }
 
-  /** Finds the preferred synonym of a SNOMED concept in the given language, or null if none. */
+  /**
+   * Selects the display term for one dialect, or null where that dialect yields none.
+   *
+   * @param systemUrl the code system being queried
+   * @param indexes the indexes of the code system version being queried
+   * @param dense the dense identifier of the concept
+   * @param tag the requested language tag
+   * @return the term, or null
+   */
   @Nullable
-  private String preferredSynonym(
-      @Nonnull final CodeSystemIndexes indexes, final int dense, @Nonnull final String language) {
-    final String primary = primaryLanguageTag(language);
+  private String displayForTag(
+      @Nonnull final String systemUrl,
+      @Nonnull final CodeSystemIndexes indexes,
+      final int dense,
+      @Nonnull final String tag) {
+    return SNOMED_URI.equals(systemUrl)
+        ? dialectResolver
+            .resolve(tag)
+            .map(refsetId -> preferredSynonym(indexes, dense, refsetId))
+            .orElse(null)
+        : fhirDisplayForLanguage(indexes, dense, tag);
+  }
+
+  /**
+   * Finds the synonym that a language reference set marks as a SNOMED concept's preferred term, or
+   * null where it marks none.
+   *
+   * @param indexes the indexes of the code system version being queried
+   * @param dense the dense identifier of the concept
+   * @param refsetId the identifier of the language reference set to select by
+   * @return the preferred term, or null
+   */
+  @Nullable
+  private static String preferredSynonym(
+      @Nonnull final CodeSystemIndexes indexes, final int dense, @Nonnull final String refsetId) {
     for (final Description description : indexes.descriptions().descriptionsOf(dense)) {
-      final boolean languageMatches =
-          description.getLanguage() != null
-              && primary.equals(primaryLanguageTag(description.getLanguage()));
-      final boolean isPreferredSynonym =
-          SYNONYM_TYPE.equals(description.getTypeCode())
-              && description.getAcceptability() != null
-              && description.getAcceptability().containsValue(PREFERRED_ACCEPTABILITY);
-      if (languageMatches && isPreferredSynonym) {
+      final Map<String, String> acceptability = description.getAcceptability();
+      if (SYNONYM_TYPE.equals(description.getTypeCode())
+          && acceptability != null
+          && PREFERRED_ACCEPTABILITY.equals(acceptability.get(refsetId))) {
         return description.getTerm();
       }
     }
@@ -631,27 +689,52 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
 
   /**
    * Finds the display term of a FHIR CodeSystem concept in the given language from its
-   * designations, preferring a designation whose use is {@code display} over any other
-   * matching-language designation. Returns null when no designation matches the language.
+   * designations.
+   *
+   * <p>A FHIR CodeSystem carries plain BCP-47 designation languages with no reference set to
+   * resolve, so an exact tag match is the only way {@code en-GB} and {@code en-US} can be told
+   * apart there. A designation whose language equals the request exactly, without regard to case,
+   * is therefore preferred over one matching only on the primary subtag; within each of those, one
+   * whose use is {@code display} is preferred. Returns null when no designation matches the
+   * language at all.
    */
   @Nullable
-  private String fhirDisplayForLanguage(
+  private static String fhirDisplayForLanguage(
       @Nonnull final CodeSystemIndexes indexes, final int dense, @Nonnull final String language) {
-    final String primary = primaryLanguageTag(language);
-    String match = null;
+    // The best term found at each match level, indexed by that level.
+    final String[] byMatchLevel = new String[MATCH_LEVELS];
     for (final Description description : indexes.descriptions().descriptionsOf(dense)) {
-      if (description.getLanguage() == null
-          || !primary.equals(primaryLanguageTag(description.getLanguage()))) {
-        continue;
-      }
-      if (DISPLAY_DESIGNATION_USE.equals(description.getTypeCode())) {
-        return description.getTerm();
-      }
-      if (match == null) {
-        match = description.getTerm();
+      final int level = matchLevel(description, language);
+      // The description list is ordered by content, so the first match at each level is stable.
+      if (level != NO_MATCH && byMatchLevel[level] == null) {
+        byMatchLevel[level] = description.getTerm();
       }
     }
-    return match;
+    return Stream.of(byMatchLevel).filter(Objects::nonNull).findFirst().orElse(null);
+  }
+
+  /**
+   * Rates how well a description answers a language request, lower being better.
+   *
+   * @param description the description to rate
+   * @param language the requested language tag
+   * @return 0 where the description's language equals the request and its use is {@code display}, 1
+   *     where it equals the request, 2 where it shares only the request's primary subtag and its
+   *     use is {@code display}, 3 where it shares only the primary subtag, and {@link #NO_MATCH}
+   *     where the description does not answer the request at all
+   */
+  private static int matchLevel(
+      @Nonnull final Description description, @Nonnull final String language) {
+    final String descriptionLanguage = description.getLanguage();
+    if (descriptionLanguage == null) {
+      return NO_MATCH;
+    }
+    final boolean exact = descriptionLanguage.equalsIgnoreCase(language);
+    if (!exact && !primaryLanguageTag(language).equals(primaryLanguageTag(descriptionLanguage))) {
+      return NO_MATCH;
+    }
+    final boolean isDisplay = DISPLAY_DESIGNATION_USE.equals(description.getTypeCode());
+    return (exact ? 0 : 2) + (isDisplay ? 0 : 1);
   }
 
   @Nonnull
@@ -708,6 +791,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     valueSetResolver = null;
     expansionCache = null;
     conceptMapIndex = null;
+    dialectResolver = null;
     initialised = false;
   }
 
@@ -740,6 +824,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
               ValueSetStore.load(reader, versionResolver));
       expansionCache = new ExpansionCache(local.getExpansionCacheSize());
       conceptMapIndex = ConceptMapIndex.load(reader);
+      dialectResolver = new DialectResolver(local.getDialectAliases());
       initialised = true;
     }
   }

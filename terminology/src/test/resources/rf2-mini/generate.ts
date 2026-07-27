@@ -107,6 +107,7 @@ const PRIMITIVE = "900000000000074008"; // Not sufficiently defined (primitive).
 const FSN = "900000000000003001"; // Fully specified name.
 const SYNONYM = "900000000000013009"; // Synonym.
 const US_ENGLISH_REFSET = "900000000000509007"; // US English language reference set.
+const GB_ENGLISH_REFSET = "900000000000508004"; // GB English language reference set.
 const PREFERRED = "900000000000548007"; // Preferred.
 const ACCEPTABLE = "900000000000549004"; // Acceptable.
 const IS_A = "116680003"; // Is a (attribute).
@@ -116,6 +117,21 @@ const SAME_AS_REFSET = "900000000000527005"; // SAME AS association reference se
 
 const EFFECTIVE_TIME_V1 = "20230601";
 const EFFECTIVE_TIME_V2 = "20240601";
+
+/**
+ * A language reference set of a release. `divergent` marks a reference set that prefers a concept's
+ * dialect variant, where the concept declares one, rather than its default preferred term.
+ */
+interface LanguageRefset {
+  id: string;
+  divergent: boolean;
+}
+
+/** The language reference sets of the two International releases: US English, then GB English. */
+const INTERNATIONAL_REFSETS: LanguageRefset[] = [
+  { id: US_ENGLISH_REFSET, divergent: false },
+  { id: GB_ENGLISH_REFSET, divergent: true },
+];
 
 // --- In-memory model. ---
 
@@ -128,6 +144,11 @@ interface Concept {
   preferredTerm: string;
   /** Additional acceptable synonyms. */
   acceptableSynonyms: string[];
+  /**
+   * A synonym that a divergent language reference set prefers instead of `preferredTerm`, which that
+   * reference set then marks merely acceptable. Absent for a concept the reference sets agree about.
+   */
+  divergentTerm?: string;
   parents: string[];
   /** Attribute relationships as [typeId, targetConceptId, roleGroup]. */
   attributes: Array<[string, string, number]>;
@@ -145,10 +166,13 @@ function define(
     active?: boolean;
     defined?: boolean;
     acceptableSynonyms?: string[];
+    divergentTerm?: string;
     attributes?: Array<[string, string, number]>;
+    /** An identifier to use instead of allocating a synthetic one, for a real metadata concept. */
+    fixedId?: string;
   } = {},
 ): string {
-  const id = nextConceptId();
+  const id = options.fixedId ?? nextConceptId();
   byName.set(name, id);
   concepts.push({
     id,
@@ -157,6 +181,7 @@ function define(
     fsn,
     preferredTerm,
     acceptableSynonyms: options.acceptableSynonyms ?? [],
+    divergentTerm: options.divergentTerm,
     parents,
     attributes: options.attributes ?? [],
   });
@@ -227,17 +252,21 @@ const bodyStructure = define(
   "Mini body structure",
   [ROOT],
 );
+// The first of the three concepts the language reference sets disagree about.
 const endocrineStructure = define(
   "ENDOCRINE_STRUCTURE",
   "Endocrine system structure (body structure)",
   "Endocrine system structure",
   [bodyStructure],
+  { divergentTerm: "Structure of endocrine system" },
 );
+// The second of the three divergent concepts.
 const pancreas = define(
   "PANCREAS_STRUCTURE",
   "Pancreatic structure (body structure)",
   "Pancreatic structure",
   [endocrineStructure],
+  { divergentTerm: "Structure of pancreas" },
 );
 
 // Morphology subtree (targets of the associated-morphology attribute).
@@ -247,11 +276,13 @@ const morphology = define(
   "Mini morphologic abnormality",
   [ROOT],
 );
+// The third of the three divergent concepts.
 const degeneration = define(
   "DEGENERATION_MORPH",
   "Degeneration (morphologic abnormality)",
   "Degeneration",
   [morphology],
+  { divergentTerm: "Degenerative change" },
 );
 
 // An inactive concept with a historical SAME AS association to its active replacement.
@@ -339,13 +370,37 @@ interface DescriptionRow {
   term: string;
 }
 
-/** Builds the description rows for a concept and the language refset rows that rank them. */
-function descriptionsFor(concept: Concept): {
+/**
+ * Builds the description rows for a concept and the language refset rows that rank them, one set of
+ * rankings per language reference set the release holds.
+ *
+ * Every reference set prefers the fully specified name and marks each additional synonym acceptable.
+ * They differ only over a concept that declares a divergent term: a divergent reference set prefers
+ * that term and merely accepts the default preferred term, while the others do the reverse.
+ */
+function descriptionsFor(
+  concept: Concept,
+  refsets: LanguageRefset[],
+): {
   descriptions: DescriptionRow[];
   language: LanguageMember[];
 } {
   const descriptions: DescriptionRow[] = [];
   const language: LanguageMember[] = [];
+
+  /** Ranks one description within every language reference set of the release. */
+  function rank(
+    description: string,
+    acceptabilityFor: (refset: LanguageRefset) => string,
+  ): void {
+    for (const refset of refsets) {
+      language.push({
+        refset: refset.id,
+        description,
+        acceptability: acceptabilityFor(refset),
+      });
+    }
+  }
 
   const fsnId = nextDescriptionId();
   descriptions.push({
@@ -354,11 +409,7 @@ function descriptionsFor(concept: Concept): {
     typeId: FSN,
     term: concept.fsn,
   });
-  language.push({
-    refset: US_ENGLISH_REFSET,
-    description: fsnId,
-    acceptability: PREFERRED,
-  });
+  rank(fsnId, () => PREFERRED);
 
   const synId = nextDescriptionId();
   descriptions.push({
@@ -367,11 +418,9 @@ function descriptionsFor(concept: Concept): {
     typeId: SYNONYM,
     term: concept.preferredTerm,
   });
-  language.push({
-    refset: US_ENGLISH_REFSET,
-    description: synId,
-    acceptability: PREFERRED,
-  });
+  rank(synId, (refset) =>
+    refset.divergent && concept.divergentTerm ? ACCEPTABLE : PREFERRED,
+  );
 
   for (const extra of concept.acceptableSynonyms) {
     const extraId = nextDescriptionId();
@@ -381,16 +430,23 @@ function descriptionsFor(concept: Concept): {
       typeId: SYNONYM,
       term: extra,
     });
-    language.push({
-      refset: US_ENGLISH_REFSET,
-      description: extraId,
-      acceptability: ACCEPTABLE,
+    rank(extraId, () => ACCEPTABLE);
+  }
+
+  if (concept.divergentTerm !== undefined) {
+    const divergentId = nextDescriptionId();
+    descriptions.push({
+      id: divergentId,
+      conceptId: concept.id,
+      typeId: SYNONYM,
+      term: concept.divergentTerm,
     });
+    rank(divergentId, (refset) => (refset.divergent ? PREFERRED : ACCEPTABLE));
   }
   return { descriptions, language };
 }
 
-function conceptFile(effectiveTime: string): string {
+function conceptFile(effectiveTime: string, module: string): string {
   const header = [
     "id",
     "effectiveTime",
@@ -405,7 +461,7 @@ function conceptFile(effectiveTime: string): string {
         c.id,
         effectiveTime,
         c.active ? "1" : "0",
-        CORE_MODULE,
+        module,
         c.defined ? DEFINED : PRIMITIVE,
       ].join("\t"),
     );
@@ -413,7 +469,11 @@ function conceptFile(effectiveTime: string): string {
   return lines.join(CRLF) + CRLF;
 }
 
-function descriptionAndLanguage(effectiveTime: string): {
+function descriptionAndLanguage(
+  effectiveTime: string,
+  module: string,
+  refsets: LanguageRefset[],
+): {
   description: string;
   language: string;
 } {
@@ -441,14 +501,14 @@ function descriptionAndLanguage(effectiveTime: string): {
   const langLines = [langHeader];
   const caseSignificance = "900000000000448009"; // Entire term case insensitive.
   for (const c of concepts) {
-    const { descriptions, language } = descriptionsFor(c);
+    const { descriptions, language } = descriptionsFor(c, refsets);
     for (const d of descriptions) {
       descLines.push(
         [
           d.id,
           effectiveTime,
           "1",
-          CORE_MODULE,
+          module,
           d.conceptId,
           "en",
           d.typeId,
@@ -463,7 +523,7 @@ function descriptionAndLanguage(effectiveTime: string): {
           nextRefsetUuid(),
           effectiveTime,
           "1",
-          CORE_MODULE,
+          module,
           l.refset,
           l.description,
           l.acceptability,
@@ -477,7 +537,7 @@ function descriptionAndLanguage(effectiveTime: string): {
   };
 }
 
-function relationshipFile(effectiveTime: string): string {
+function relationshipFile(effectiveTime: string, module: string): string {
   const header = [
     "id",
     "effectiveTime",
@@ -500,7 +560,7 @@ function relationshipFile(effectiveTime: string): string {
           nextRelationshipId(),
           effectiveTime,
           c.active ? "1" : "0",
-          CORE_MODULE,
+          module,
           c.id,
           parent,
           "0",
@@ -516,7 +576,7 @@ function relationshipFile(effectiveTime: string): string {
           nextRelationshipId(),
           effectiveTime,
           "1",
-          CORE_MODULE,
+          module,
           c.id,
           target,
           String(group),
@@ -530,7 +590,7 @@ function relationshipFile(effectiveTime: string): string {
   return lines.join(CRLF) + CRLF;
 }
 
-function simpleRefsetFile(effectiveTime: string): string {
+function simpleRefsetFile(effectiveTime: string, module: string): string {
   const header = [
     "id",
     "effectiveTime",
@@ -546,7 +606,7 @@ function simpleRefsetFile(effectiveTime: string): string {
         nextRefsetUuid(),
         effectiveTime,
         "1",
-        CORE_MODULE,
+        module,
         m.refset,
         m.referenced,
       ].join("\t"),
@@ -555,7 +615,7 @@ function simpleRefsetFile(effectiveTime: string): string {
   return lines.join(CRLF) + CRLF;
 }
 
-function associationRefsetFile(effectiveTime: string): string {
+function associationRefsetFile(effectiveTime: string, module: string): string {
   const header = [
     "id",
     "effectiveTime",
@@ -572,7 +632,7 @@ function associationRefsetFile(effectiveTime: string): string {
         nextRefsetUuid(),
         effectiveTime,
         "1",
-        CORE_MODULE,
+        module,
         m.refset,
         m.referenced,
         m.target,
@@ -592,44 +652,63 @@ function write(relativePath: string, content: string): void {
   writeFileSync(path, content, "utf8");
 }
 
-function emitRelease(release: string, effectiveTime: string): void {
-  // The refset UUID sequence and description IDs are reset per release so that both
-  // releases carry a self-consistent, identical set of component identifiers.
+function emitRelease(
+  release: string,
+  effectiveTime: string,
+  options: {
+    module?: string;
+    namespaceToken?: string;
+    refsets?: LanguageRefset[];
+  } = {},
+): void {
+  // The refset UUID sequence and description IDs are reset per release so that every
+  // release carries a self-consistent, identical set of component identifiers.
   descriptionItem = 5000;
   relationshipItem = 80000;
   refsetSequence = 0;
 
+  const module = options.module ?? CORE_MODULE;
+  const token = options.namespaceToken ?? "INT";
+  const refsets = options.refsets ?? INTERNATIONAL_REFSETS;
   const terminology = `${release}/Snapshot/Terminology`;
   const refset = `${release}/Snapshot/Refset`;
   write(
-    `${terminology}/sct2_Concept_Snapshot_INT_${effectiveTime}.txt`,
-    conceptFile(effectiveTime),
+    `${terminology}/sct2_Concept_Snapshot_${token}_${effectiveTime}.txt`,
+    conceptFile(effectiveTime, module),
   );
-  const { description, language } = descriptionAndLanguage(effectiveTime);
+  const { description, language } = descriptionAndLanguage(
+    effectiveTime,
+    module,
+    refsets,
+  );
   write(
-    `${terminology}/sct2_Description_Snapshot-en_INT_${effectiveTime}.txt`,
+    `${terminology}/sct2_Description_Snapshot-en_${token}_${effectiveTime}.txt`,
     description,
   );
   write(
-    `${terminology}/sct2_Relationship_Snapshot_INT_${effectiveTime}.txt`,
-    relationshipFile(effectiveTime),
+    `${terminology}/sct2_Relationship_Snapshot_${token}_${effectiveTime}.txt`,
+    relationshipFile(effectiveTime, module),
   );
   write(
-    `${refset}/Language/der2_cRefset_LanguageSnapshot-en_INT_${effectiveTime}.txt`,
+    `${refset}/Language/der2_cRefset_LanguageSnapshot-en_${token}_${effectiveTime}.txt`,
     language,
   );
   write(
-    `${refset}/Content/der2_Refset_SimpleSnapshot_INT_${effectiveTime}.txt`,
-    simpleRefsetFile(effectiveTime),
+    `${refset}/Content/der2_Refset_SimpleSnapshot_${token}_${effectiveTime}.txt`,
+    simpleRefsetFile(effectiveTime, module),
   );
   write(
-    `${refset}/Content/der2_cRefset_AssociationSnapshot_INT_${effectiveTime}.txt`,
-    associationRefsetFile(effectiveTime),
+    `${refset}/Content/der2_cRefset_AssociationSnapshot_${token}_${effectiveTime}.txt`,
+    associationRefsetFile(effectiveTime, module),
   );
 }
 
 // Clean any previous output.
-for (const release of ["international-20230601", "international-20240601"]) {
+for (const release of [
+  "international-20230601",
+  "international-20240601",
+  "national-20240601",
+]) {
   try {
     rmSync(join(baseDir, release), { recursive: true, force: true });
   } catch {
@@ -649,11 +728,59 @@ define(
 );
 emitRelease("international-20240601", EFFECTIVE_TIME_V2);
 
+// --- The national release. ---
+//
+// A release in a module other than the International core, holding three language reference sets, so
+// that no rule can choose a default dialect for it and the import must ask the operator instead. The
+// module and the extension reference set carry synthetic SCTIDs, since no real national edition is
+// being imitated; the two English reference sets are the International ones, which a national
+// edition does inherit.
+//
+// The concepts naming the three reference sets are defined here, after both International releases
+// have been emitted, so that only this release carries them. Their fully specified names are what
+// the ambiguity failure quotes back to the operator.
+const NATIONAL_MODULE = withCheckDigit("199900");
+const NATIONAL_ENGLISH_REFSET = withCheckDigit("199901");
+
+define(
+  "GB_ENGLISH_REFSET_CONCEPT",
+  "Great Britain English language reference set (foundation metadata concept)",
+  "GB English",
+  [ROOT],
+  { fixedId: GB_ENGLISH_REFSET },
+);
+define(
+  "US_ENGLISH_REFSET_CONCEPT",
+  "United States of America English language reference set (foundation metadata concept)",
+  "US English",
+  [ROOT],
+  { fixedId: US_ENGLISH_REFSET },
+);
+define(
+  "NATIONAL_ENGLISH_REFSET_CONCEPT",
+  "Mini national English language reference set (foundation metadata concept)",
+  "Mini national English",
+  [ROOT],
+  { fixedId: NATIONAL_ENGLISH_REFSET },
+);
+
+emitRelease("national-20240601", EFFECTIVE_TIME_V2, {
+  module: NATIONAL_MODULE,
+  namespaceToken: "MINI",
+  refsets: [
+    { id: US_ENGLISH_REFSET, divergent: false },
+    { id: GB_ENGLISH_REFSET, divergent: true },
+    { id: NATIONAL_ENGLISH_REFSET, divergent: false },
+  ],
+});
+
 const totalConcepts = concepts.length;
 const activeConcepts = concepts.filter((c) => c.active).length;
 console.log(
-  `Generated rf2-mini: ${totalConcepts} concepts (${activeConcepts} active) across two releases.`,
+  `Generated rf2-mini: ${totalConcepts} concepts (${activeConcepts} active) in the national release.`,
 );
+console.log(`National module: ${NATIONAL_MODULE}`);
+console.log(`National language reference set: ${NATIONAL_ENGLISH_REFSET}`);
 console.log("Well-known codes:");
 for (const [name, id] of byName) {
   console.log(`  ${name} = ${id}`);

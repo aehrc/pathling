@@ -170,6 +170,8 @@ def _create_pathling_context(config: CliConfig) -> PathlingContext:
             local_kwargs["default_snomed_edition"] = store.default_snomed_edition
         if store.expansion_cache_size is not None:
             local_kwargs["expansion_cache_size"] = store.expansion_cache_size
+        if store.dialect_aliases:
+            local_kwargs["dialect_aliases"] = store.dialect_aliases
         return PathlingContext.create(spark, enable_auth=False, **local_kwargs)
 
     auth = config.tx_auth

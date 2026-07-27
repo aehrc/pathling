@@ -46,4 +46,18 @@ public class TerminologyImportOptions {
    * the hierarchy changes shape between releases.
    */
   @Nullable DenseIdOrder denseIdOrder;
+
+  /**
+   * The dialect whose preferred synonyms become the stored display of every concept in the release.
+   * May be given as a recognised dialect tag (for example {@code en-GB}), as a private-use dialect
+   * extension tag (for example {@code en-x-sctlang-90000000-00005080-04}), or as a bare language
+   * reference set identifier (for example {@code 900000000000508004}). Aliases configured on {@code
+   * LocalTerminologyConfiguration} are not consulted, because an import receives no service
+   * configuration.
+   *
+   * <p>When null, the dialect is chosen from the release: the sole language reference set where
+   * there is only one, or US English for the International edition. A release that holds several
+   * and is not the International edition fails the import, naming the candidates.
+   */
+  @Nullable String defaultDialect;
 }

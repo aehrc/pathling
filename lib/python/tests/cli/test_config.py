@@ -773,6 +773,65 @@ def test_tx_store_table_parsed_into_txstore(tmp_path):
     )
 
 
+def test_tx_store_dialect_aliases_parsed_into_txstore(tmp_path):
+    """A [tx-store.dialect-aliases] table is parsed into the TxStore."""
+    path = _write_config(
+        tmp_path,
+        "[tx-store]\n"
+        'path = "/data/tx-store"\n'
+        "\n"
+        "[tx-store.dialect-aliases]\n"
+        'en-NZ = "271000210107"\n'
+        'en-IE = "21000220103"\n',
+    )
+
+    config = resolve_config(config_path=path)
+
+    assert config.tx_store is not None
+    assert config.tx_store.dialect_aliases == {
+        "en-NZ": "271000210107",
+        "en-IE": "21000220103",
+    }
+
+
+def test_tx_store_malformed_dialect_aliases_warns_and_is_dropped(tmp_path):
+    """A dialect-aliases value that is not a table of strings warns rather than failing.
+
+    A malformed alias table cannot make a lookup wrong - the tag simply resolves
+    to nothing - so it is reported and dropped rather than being fatal.
+    """
+    path = _write_config(
+        tmp_path,
+        '[tx-store]\npath = "/data/tx-store"\ndialect-aliases = "en-NZ"\n',
+    )
+    warnings = []
+
+    config = resolve_config(config_path=path, on_warning=warnings.append)
+
+    assert config.tx_store is not None
+    assert config.tx_store.dialect_aliases is None
+    assert any("dialect-aliases" in message for message in warnings)
+
+
+def test_tx_store_dialect_aliases_with_non_string_value_warns(tmp_path):
+    """A reference set identifier that is not a string is reported the same way."""
+    path = _write_config(
+        tmp_path,
+        "[tx-store]\n"
+        'path = "/data/tx-store"\n'
+        "\n"
+        "[tx-store.dialect-aliases]\n"
+        "en-NZ = 271000210107\n",
+    )
+    warnings = []
+
+    config = resolve_config(config_path=path, on_warning=warnings.append)
+
+    assert config.tx_store is not None
+    assert config.tx_store.dialect_aliases is None
+    assert any("dialect-aliases" in message for message in warnings)
+
+
 def test_tx_store_tuning_keys_optional(tmp_path):
     """A [tx-store] table with only a path leaves the tuning fields unset."""
     path = _write_config(tmp_path, '[tx-store]\npath = "/data/tx-store"\n')
@@ -783,6 +842,7 @@ def test_tx_store_tuning_keys_optional(tmp_path):
     assert config.tx_store.path == "/data/tx-store"
     assert config.tx_store.default_snomed_edition is None
     assert config.tx_store.expansion_cache_size is None
+    assert config.tx_store.dialect_aliases is None
 
 
 def test_tx_store_flag_overrides_config_path(tmp_path):
@@ -894,6 +954,7 @@ def test_tx_store_unknown_key_warns(tmp_path):
     assert any(
         "default-snomed-edition" in message
         and "expansion-cache-size" in message
+        and "dialect-aliases" in message
         and "path" in message
         for message in warnings
     )

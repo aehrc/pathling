@@ -121,9 +121,12 @@ class SnomedRf2ImporterTest {
   /**
    * The number of Spark jobs one import of the base release into a fresh store runs. Measured three
    * times on the importer as it stood before the per-file resolution reporting was added, and
-   * asserted exactly so that any additional pass over an RF2 file fails the build.
+   * asserted exactly so that any additional pass over an RF2 file fails the build. It rose from 79
+   * to 88 when the display column gained the dialect fallback chain, which adds aggregations over
+   * the already-cached description rows and one collection of the release's language reference
+   * sets.
    */
-  private static final int BASELINE_SPARK_JOBS = 79;
+  private static final int BASELINE_SPARK_JOBS = 88;
 
   /** The per-file resolution line specified in {@code contracts/import-diagnostics.md}. */
   private static final Pattern RESOLUTION_LINE =
@@ -306,7 +309,11 @@ class SnomedRf2ImporterTest {
   void appliesTheEditionUriOverride(@TempDir final Path storeDir) {
     final String store = storeDir.resolve("store").toString();
     final String override = "http://snomed.info/sct/32506021000036107/version/20240101";
-    new SnomedRf2Importer(spark, store).importFrom(Rf2Mini.baseRelease().toString(), override);
+    // The override makes this a national edition, which no rule can choose a default dialect for,
+    // so
+    // one is named. That is orthogonal to what this test is about.
+    new SnomedRf2Importer(spark, store)
+        .importFrom(Rf2Mini.baseRelease().toString(), override, DenseIdOrder.CODE_ORDER, "en-US");
 
     final TerminologyStoreReader overrideReader = TerminologyStoreReader.open(store, Map.of());
     final Map<String, String> codeSystem = new HashMap<>();
@@ -344,9 +351,12 @@ class SnomedRf2ImporterTest {
           {mappingModule, MODEL_MODULE}
         });
 
-    // Act: import with detection (no override).
+    // Act: import with detection (no override). The detected edition is a derived one, which no
+    // rule
+    // can choose a default dialect for, so one is named.
     final String store = work.resolve("store").toString();
-    new SnomedRf2Importer(spark, store).importFrom(release.toString(), null);
+    new SnomedRf2Importer(spark, store)
+        .importFrom(release.toString(), null, DenseIdOrder.CODE_ORDER, "en-US");
 
     // Assert: the edition is the derived module at the top of the dependency graph.
     final TerminologyStoreReader derivedReader = TerminologyStoreReader.open(store, Map.of());
@@ -452,7 +462,7 @@ class SnomedRf2ImporterTest {
 
     assertEquals(
         Map.of(
-            DESCRIPTION_FILE, "401 of 401",
+            DESCRIPTION_FILE, "404 of 404",
             RELATIONSHIP_FILE, "199 of 203",
             SIMPLE_REFSET_FILE, "3 of 3",
             ASSOCIATION_REFSET_FILE, "1 of 1"),
@@ -522,7 +532,7 @@ class SnomedRf2ImporterTest {
     final Map<String, String> reported = resolutionCounts(events);
     assertEquals("0 of 3", reported.get(SIMPLE_REFSET_FILE));
     assertEquals("0 of 1", reported.get(ASSOCIATION_REFSET_FILE));
-    assertResolvedBelowInput(reported, DESCRIPTION_FILE, 401);
+    assertResolvedBelowInput(reported, DESCRIPTION_FILE, 404);
     assertResolvedBelowInput(reported, RELATIONSHIP_FILE, 203);
   }
 
@@ -547,7 +557,7 @@ class SnomedRf2ImporterTest {
                 .importFrom(release.toString(), null));
 
     // The two added rows are inactive, so the input figure does not grow beyond the base release's.
-    assertEquals("401 of 401", resolutionCounts(events).get(DESCRIPTION_FILE));
+    assertEquals("404 of 404", resolutionCounts(events).get(DESCRIPTION_FILE));
   }
 
   @Test
@@ -566,10 +576,10 @@ class SnomedRf2ImporterTest {
             new SnomedRf2Importer(spark, work.resolve("store").toString())
                 .importFrom(release.toString(), null));
 
-    // The 401 active rows are split across the two files, each reported on its own line.
+    // The 404 active rows are split across the two files, each reported on its own line.
     final Map<String, String> reported = resolutionCounts(events);
-    assertEquals("200 of 200", reported.get(DESCRIPTION_FILE));
-    assertEquals("201 of 201", reported.get(secondDescriptionFile));
+    assertEquals("202 of 202", reported.get(DESCRIPTION_FILE));
+    assertEquals("202 of 202", reported.get(secondDescriptionFile));
   }
 
   @Test

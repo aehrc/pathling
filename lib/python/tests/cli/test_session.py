@@ -227,6 +227,22 @@ def test_local_mode_threads_store_parameters(monkeypatch):
     assert captured["enable_auth"] is False
 
 
+def test_local_mode_threads_dialect_aliases(monkeypatch):
+    """A configured dialect alias table reaches ``PathlingContext.create``."""
+    captured = _capture_create(monkeypatch)
+    config = CliConfig(
+        verbose=True,
+        tx_store=TxStore(
+            path="/data/tx-store",
+            dialect_aliases={"en-NZ": "271000210107"},
+        ),
+    )
+
+    _create_pathling_context(config)
+
+    assert captured["dialect_aliases"] == {"en-NZ": "271000210107"}
+
+
 def test_local_mode_omits_cache_size_when_unset(monkeypatch):
     """An unset expansion-cache-size is not passed, leaving the library default."""
     captured = _capture_create(monkeypatch)
@@ -238,6 +254,7 @@ def test_local_mode_omits_cache_size_when_unset(monkeypatch):
     # The library default (100) must apply, so the key is not forwarded at all.
     assert "expansion_cache_size" not in captured
     assert "default_snomed_edition" not in captured
+    assert "dialect_aliases" not in captured
 
 
 def test_local_mode_ignores_configured_auth(monkeypatch):

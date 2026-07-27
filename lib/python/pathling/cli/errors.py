@@ -75,32 +75,39 @@ class CliError(Exception):
 
 
 def unwrap_java_exception(exc: BaseException) -> str:
-    """Extracts the most useful single-line message from an exception.
+    """Extracts the most useful message from an exception.
 
     Py4J wraps Java exceptions, whose ``str`` representation includes the full
-    stack trace. This returns the leading message line, stripping the Java
-    exception class prefix where present.
+    stack trace. Where the wrapped exception can report its own message, that
+    message is returned in full, because a library failure may deliberately span
+    several lines - the import failure that lists a release's language reference
+    sets, for example, is only useful if the operator can see the list. Otherwise
+    only the leading line is taken, since the rest would be stack frames. The
+    Java exception class prefix is stripped where present.
 
     :param exc: the exception to unwrap.
-    :return: a concise message describing the underlying problem.
+    :return: a message describing the underlying problem.
     """
     java_exception = getattr(exc, "java_exception", None)
+    own_message = False
     if java_exception is not None:
         get_message = getattr(java_exception, "getMessage", None)
         message = get_message() if callable(get_message) else None
+        own_message = bool(message)
         if not message:
             message = str(java_exception)
     else:
         message = str(exc)
 
-    # Take only the first non-empty line; Java traces span many lines.
-    first_line = next((line for line in message.splitlines() if line.strip()), message)
+    lines = [line for line in message.splitlines() if line.strip()] or [message]
     # Strip a leading fully-qualified Java exception class name, e.g.
     # "java.lang.IllegalArgumentException: actual message".
-    match = re.match(r"^(?:[\w.$]+Exception|[\w.$]+Error):\s*(.*)$", first_line)
-    if match and match.group(1):
-        return match.group(1).strip()
-    return first_line.strip()
+    match = re.match(r"^(?:[\w.$]+Exception|[\w.$]+Error):\s*(.*)$", lines[0])
+    lines[0] = match.group(1) if match and match.group(1) else lines[0]
+    if not own_message:
+        # The remaining lines are stack frames rather than part of the message.
+        return lines[0].strip()
+    return "\n".join([lines[0].strip(), *(line.rstrip() for line in lines[1:])])
 
 
 def _categorise(root_message: str) -> Optional[str]:
@@ -203,7 +210,12 @@ def friendly_message(
     else:
         message = root or f"{type(exc).__name__}"
         if not verbose:
-            message = f"{message} Re-run with --verbose for the full stack trace."
+            # A multi-line message ends in content the reader needs to see intact, so the hint goes
+            # on a line of its own rather than being run onto the last of them.
+            separator = "\n" if "\n" in message else " "
+            message = (
+                f"{message}{separator}Re-run with --verbose for the full stack trace."
+            )
 
     if verbose:
         # Use the three-argument form for Python 3.9 compatibility.

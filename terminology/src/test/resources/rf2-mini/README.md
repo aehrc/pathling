@@ -22,13 +22,16 @@ checkouts.
 
 ## Releases
 
-Two snapshot releases of `http://snomed.info/sct` are provided, both in the
-International core module (`900000000000207008`):
+Three snapshot releases of `http://snomed.info/sct` are provided. The first two
+are in the International core module (`900000000000207008`); the third is in a
+synthetic national module so that it is not recognised as the International
+edition.
 
-| Directory                 | Version                | Concepts (active) | Notes                       |
-| ------------------------- | ---------------------- | ----------------- | --------------------------- |
-| `international-20230601/` | `.../version/20230601` | 200 (199)         | Base release.               |
-| `international-20240601/` | `.../version/20240601` | 201 (200)         | Adds `GESTATIONAL_SUBTYPE`. |
+| Directory                 | Module               | Version                | Concepts (active) | Notes                                                                                                       |
+| ------------------------- | -------------------- | ---------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| `international-20230601/` | `900000000000207008` | `.../version/20230601` | 200 (199)         | Base release.                                                                                               |
+| `international-20240601/` | `900000000000207008` | `.../version/20240601` | 201 (200)         | Adds `GESTATIONAL_SUBTYPE`.                                                                                 |
+| `national-20240601/`      | `1999007`            | `.../version/20240601` | 204 (203)         | Three language reference sets, so no default dialect can be derived. Adds the three reference set concepts. |
 
 Each release has the standard package layout:
 
@@ -70,11 +73,13 @@ parent (is-a). All concepts are active unless marked inactive.
 │       ├── HYPERTENSION
 │       └── DISORDER_FILLER_1 .. DISORDER_FILLER_95
 ├── BODY_STRUCTURE
-│   └── ENDOCRINE_STRUCTURE
-│       └── PANCREAS_STRUCTURE
+│   └── ENDOCRINE_STRUCTURE  (GB and US English prefer different terms)
+│       └── PANCREAS_STRUCTURE  (GB and US English prefer different terms)
 ├── MORPHOLOGY_TOP
-│   └── DEGENERATION_MORPH
-└── SIMPLE_REFSET  (identifies the simple reference set below)
+│   └── DEGENERATION_MORPH  (GB and US English prefer different terms)
+├── SIMPLE_REFSET  (identifies the simple reference set below)
+└── GB_ENGLISH_REFSET_CONCEPT, US_ENGLISH_REFSET_CONCEPT,
+    NATIONAL_ENGLISH_REFSET_CONCEPT  (national-20240601 only)
 ```
 
 Features exercised by the fixture:
@@ -86,9 +91,11 @@ TYPE2_DIABETES → TYPE2_WITH_COMPLICATION` is five levels below the root.
   but not queried in v1).
 - **Reference sets**: a simple reference set (`SIMPLE_REFSET` containing
   `TYPE1_DIABETES`, `TYPE2_DIABETES`, `GESTATIONAL_DIABETES`), the US English
-  language reference set (`900000000000509007`, ranking descriptions), and a
-  SAME AS association reference set (`900000000000527005`) mapping the inactive
-  concept to its replacement.
+  (`900000000000509007`) and GB English (`900000000000508004`) language reference
+  sets ranking descriptions, and a SAME AS association reference set
+  (`900000000000527005`) mapping the inactive concept to its replacement.
+- **Dialects that disagree**: the two language reference sets prefer the same term
+  for every concept except three, described below.
 - **Inactive concepts**: `DIABETES_INACTIVE` is inactive and is excluded from
   implicit value set membership but remains resolvable for lookup.
 - **Designations**: `TYPE2_DIABETES` carries an extra acceptable synonym so
@@ -97,6 +104,38 @@ TYPE2_DIABETES → TYPE2_WITH_COMPLICATION` is five levels below the root.
   top-level concepts but is not itself shipped in the concept file, so four
   relationship rows have no destination concept to attach to. This is what the
   base release's resolution figures below reflect.
+
+## Language reference sets and dialects
+
+Every release ranks each description within every language reference set it
+holds. The fully specified name is preferred in all of them, and each additional
+synonym is merely acceptable in all of them. They differ over exactly three
+concepts, each of which carries a second synonym that GB English prefers and US
+English merely accepts, with the reverse holding for its default preferred term:
+
+| Concept               | US English preferred       | GB English preferred          |
+| --------------------- | -------------------------- | ----------------------------- |
+| `ENDOCRINE_STRUCTURE` | Endocrine system structure | Structure of endocrine system |
+| `PANCREAS_STRUCTURE`  | Pancreatic structure       | Structure of pancreas         |
+| `DEGENERATION_MORPH`  | Degeneration               | Degenerative change           |
+
+Because the International edition's default dialect is US English, an import of
+either International release with no dialect named stores exactly the displays it
+stored before GB English was added, so every pre-existing expectation still
+holds.
+
+The `national-20240601` release holds a third, synthetic language reference set
+(`1999011`) alongside those two, and its module (`1999007`) is not the
+International core module. No rule can therefore choose a default dialect for it,
+which is what makes it able to exercise the ambiguity failure. It is also the only
+release carrying the concepts that name the three reference sets, whose fully
+specified names the failure message quotes back:
+
+| Identifier           | Fully specified name                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| `900000000000508004` | Great Britain English language reference set (foundation metadata concept)            |
+| `900000000000509007` | United States of America English language reference set (foundation metadata concept) |
+| `1999011`            | Mini national English language reference set (foundation metadata concept)            |
 
 ## Resolution figures of the base release
 
@@ -107,7 +146,7 @@ means updating that test:
 
 | File                                     | Resolved | Active rows |
 | ---------------------------------------- | -------- | ----------- |
-| `sct2_Description_Snapshot-en_INT_*`     | 401      | 401         |
+| `sct2_Description_Snapshot-en_INT_*`     | 404      | 404         |
 | `sct2_Relationship_Snapshot_INT_*`       | 199      | 203         |
 | `der2_Refset_SimpleSnapshot_INT_*`       | 3        | 3           |
 | `der2_cRefset_AssociationSnapshot_INT_*` | 1        | 1           |

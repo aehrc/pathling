@@ -22,7 +22,7 @@ Author: John Grimes.
 
 # noinspection PyPackageRequirements
 
-from typing import TYPE_CHECKING, Optional, Sequence
+from typing import TYPE_CHECKING, Dict, Optional, Sequence
 
 from py4j.java_gateway import JavaObject
 from pyspark.sql import Column, DataFrame, SparkSession
@@ -34,6 +34,19 @@ if TYPE_CHECKING:
     from .datasource import DataSources
 
 __all__ = ["PathlingContext"]
+
+
+def _java_map(jvm, entries: Dict[str, str]) -> JavaObject:
+    """Converts a Python dict of strings to a Java map.
+
+    :param jvm: the Py4J JVM view used to construct the map
+    :param entries: the entries to copy into the map
+    :return: a ``java.util.HashMap`` holding the same entries
+    """
+    java_map = jvm.java.util.HashMap()
+    for key, value in entries.items():
+        java_map.put(key, value)
+    return java_map
 
 
 def _convert_java_value(value):
@@ -154,6 +167,7 @@ class PathlingContext:
         terminology_storage_path: Optional[str] = None,
         default_snomed_edition: Optional[str] = None,
         expansion_cache_size: Optional[int] = 100,
+        dialect_aliases: Optional[Dict[str, str]] = None,
         explain_queries: Optional[bool] = False,
         max_unbound_traversal_depth: Optional[int] = 10,
         enable_delta=False,
@@ -240,6 +254,11 @@ class PathlingContext:
                unversioned SNOMED reference when the local store holds multiple editions.
         :param expansion_cache_size: the maximum number of value set expansions cached per executor
                in local mode.
+        :param dialect_aliases: additional dialect tags recognised in local mode when a display or
+               designation is requested in a particular language, mapping a language tag to the
+               identifier of the SNOMED CT language reference set that serves it (for example
+               ``{"en-NZ": "271000210107"}``). An entry for a tag that is already recognised
+               replaces the built-in mapping for it.
         :param explain_queries: setting this option to `True` will enable additional logging relating
                to the query plan used to execute queries
         :param max_unbound_traversal_depth: maximum depth for self-referencing structure traversals
@@ -344,6 +363,10 @@ class PathlingContext:
                 local_builder = local_builder.defaultSnomedEdition(
                     default_snomed_edition
                 )
+            if dialect_aliases:
+                local_builder = local_builder.dialectAliases(
+                    _java_map(jvm, dialect_aliases)
+                )
             local_config = local_builder.build()
 
         # Build a terminology configuration object from the provided parameters.
@@ -406,6 +429,7 @@ class PathlingContext:
         storage_path: str,
         edition_uri: Optional[str] = None,
         dense_id_order: Optional[str] = None,
+        default_dialect: Optional[str] = None,
     ) -> None:
         """
         Imports a SNOMED CT RF2 snapshot release into a local terminology store.
@@ -418,12 +442,23 @@ class PathlingContext:
                ``"code-order"`` (the default) or ``"pre-order"``. The pre-order makes the runtime
                hierarchy index materially smaller, in exchange for identifiers that shift more
                between releases
+        :param default_dialect: the dialect whose preferred synonyms become the stored display of
+               every concept, given as a dialect tag such as ``"en-GB"``, as a private-use dialect
+               extension tag, or as a language reference set identifier. When omitted, the dialect is
+               chosen from the release: the sole language reference set where there is only one, or US
+               English for the International edition. A release that holds several and is not the
+               International edition fails the import, naming the candidates
         :raises: the mapped JVM ``TerminologyImportException`` if the source is not a valid RF2
-                 snapshot release; the store is left unmodified
+                 snapshot release, or the default dialect can be neither honoured nor derived; the
+                 store is left unmodified
         """
         jvm = self._spark._jvm
         options = None
-        if edition_uri is not None or dense_id_order is not None:
+        if (
+            edition_uri is not None
+            or dense_id_order is not None
+            or default_dialect is not None
+        ):
             builder = jvm.au.csiro.pathling.library.terminology.TerminologyImportOptions.builder()
             if edition_uri is not None:
                 builder = builder.editionUri(edition_uri)
@@ -433,6 +468,8 @@ class PathlingContext:
                         dense_id_order
                     )
                 )
+            if default_dialect is not None:
+                builder = builder.defaultDialect(default_dialect)
             options = builder.build()
         self._jpc.importSnomed(source, storage_path, options)
 

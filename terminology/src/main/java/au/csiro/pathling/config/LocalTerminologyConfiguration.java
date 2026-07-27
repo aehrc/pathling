@@ -19,8 +19,11 @@ package au.csiro.pathling.config;
 
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Data;
 
@@ -56,4 +59,16 @@ public class LocalTerminologyConfiguration implements Serializable {
   @Min(1)
   @Builder.Default
   private int expansionCacheSize = 100;
+
+  /**
+   * Additional dialect tags recognised when a caller asks for a display in a particular language,
+   * mapping a language tag to the identifier of the SNOMED CT language reference set that serves it
+   * (for example {@code en-NZ} to {@code 271000210107}). An entry for a tag that is already
+   * recognised replaces the built-in mapping for that tag. Tags outside both the built-in table and
+   * this map remain reachable through the private-use dialect extension form.
+   *
+   * <p>This affects the selection of a display and of designations only. It has no bearing on the
+   * import, or on value set expansion, subsumption, translation or validation.
+   */
+  @Nullable private Map<@NotBlank String, @Pattern(regexp = "\\d{6,18}") String> dialectAliases;
 }

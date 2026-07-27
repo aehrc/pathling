@@ -58,19 +58,33 @@ class LocalTerminologyServiceLookupTest {
   private static final String FINDING_SITE = "363698007";
   private static final String ASSOCIATED_MORPHOLOGY = "116676008";
 
+  /** The GB English dialect named directly, as the extension form of its reference set. */
+  private static final String GB_EXTENSION_TAG = "en-x-sctlang-90000000-00005080-04";
+
   private static TerminologyService service;
 
   @BeforeAll
   static void setUp() {
+    service = serviceWith(null);
+  }
+
+  /**
+   * Builds a service over the shared fixture store, optionally registering additional dialect
+   * aliases.
+   */
+  @Nonnull
+  private static TerminologyService serviceWith(
+      @Nullable final Map<String, String> dialectAliases) {
     final TerminologyConfiguration configuration =
         TerminologyConfiguration.builder()
             .mode(TerminologyMode.LOCAL)
             .local(
                 LocalTerminologyConfiguration.builder()
                     .storagePath(LocalTerminologyFixture.storagePath())
+                    .dialectAliases(dialectAliases)
                     .build())
             .build();
-    service = new LocalTerminologyService(configuration, Map.of());
+    return new LocalTerminologyService(configuration, Map.of());
   }
 
   private static Coding snomed(final String code) {
@@ -99,7 +113,15 @@ class LocalTerminologyServiceLookupTest {
   @Nullable
   private static String display(
       @Nonnull final Coding coding, @Nullable final String acceptLanguage) {
-    return service.lookup(coding, "display", acceptLanguage).stream()
+    return display(service, coding, acceptLanguage);
+  }
+
+  @Nullable
+  private static String display(
+      @Nonnull final TerminologyService over,
+      @Nonnull final Coding coding,
+      @Nullable final String acceptLanguage) {
+    return over.lookup(coding, "display", acceptLanguage).stream()
         .filter(Property.class::isInstance)
         .map(Property.class::cast)
         .filter(p -> "display".equals(p.getCode()))
@@ -117,6 +139,204 @@ class LocalTerminologyServiceLookupTest {
   void returnsPreferredDisplayForRequestedLanguage() {
     // The fixture carries English descriptions, so the English preferred term is returned.
     assertEquals("Diabetes mellitus", display(snomed(Rf2Mini.DIABETES), "en"));
+  }
+
+  // --- Dialect-aware display selection (User Story 1). ---
+
+  @Test
+  void returnsTheTermOfTheRequestedDialect() {
+    // The three fixture concepts the two language reference sets disagree about. Asking for British
+    // English and asking for American English return different terms, each the one its own
+    // reference
+    // set marks preferred.
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_ENDOCRINE, display(snomed(Rf2Mini.ENDOCRINE_STRUCTURE), "en-GB"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_ENDOCRINE, display(snomed(Rf2Mini.ENDOCRINE_STRUCTURE), "en-US"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-US"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_DEGENERATION, display(snomed(Rf2Mini.DEGENERATION_MORPH), "en-GB"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_DEGENERATION, display(snomed(Rf2Mini.DEGENERATION_MORPH), "en-US"));
+  }
+
+  @Test
+  void returnsTheSameTermForBothDialectsWhereTheReferenceSetsAgree() {
+    // Every other concept in the fixture has one term that both reference sets prefer.
+    assertEquals("Diabetes mellitus", display(snomed(Rf2Mini.DIABETES), "en-GB"));
+    assertEquals("Diabetes mellitus", display(snomed(Rf2Mini.DIABETES), "en-US"));
+  }
+
+  @Test
+  void returnsTheSameTermWhenTheDialectIsNamedByItsReferenceSetIdentifier() {
+    // A designation language reported on the way out can be requested on the way in, and answers
+    // identically to the familiar tag it is equivalent to.
+    assertEquals(
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB"),
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), GB_EXTENSION_TAG));
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_PANCREAS,
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), GB_EXTENSION_TAG));
+  }
+
+  @Test
+  void fallsBackToTheStoredDisplayForAReferenceSetTheStoreLacks() {
+    // The Spanish language reference set is not in this release, so the store's default display
+    // answers. The store was imported from the International edition, whose default is US English.
+    assertEquals(Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "es"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-AU"));
+  }
+
+  @Test
+  void fallsBackToTheStoredDisplayForAReferenceSetThatPrefersNoSynonym() {
+    // The fixture's simple reference set is present in the store but ranks no description, so a
+    // dialect resolving to it can name no preferred synonym and the stored display answers.
+    final TerminologyService aliased = serviceWith(Map.of("en-XX", Rf2Mini.SIMPLE_REFSET));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS,
+        display(aliased, snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-XX"));
+  }
+
+  @Test
+  void fallsBackToTheStoredDisplayWhenNoDialectIsNamed() {
+    assertEquals(Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), null));
+    assertEquals(Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), ""));
+    // A bare primary subtag names no single reference set, so it expresses no preference either.
+    assertEquals(Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en"));
+  }
+
+  @Test
+  void resolvesADialectRegisteredInTheConfiguration() {
+    // A deployment can register a tag the built-in table does not carry.
+    final TerminologyService aliased = serviceWith(Map.of("en-XX", Rf2Mini.GB_ENGLISH_REFSET));
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_PANCREAS,
+        display(aliased, snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-XX"));
+    // Without the alias the same tag resolves to nothing and the stored display answers.
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-XX"));
+  }
+
+  @Test
+  void prefersAConfiguredDialectOverABuiltInOne() {
+    // A configured entry for a built-in tag replaces it, so a deployment can correct one.
+    final TerminologyService aliased = serviceWith(Map.of("en-US", Rf2Mini.GB_ENGLISH_REFSET));
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_PANCREAS,
+        display(aliased, snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-US"));
+  }
+
+  @Test
+  void leavesEveryOtherPropertyUntouchedByADialectRequest() {
+    // Dialect selection affects the display and the designations only.
+    for (final String property :
+        List.of(
+            "parent", "child", "inactive", "moduleId", "effectiveTime", "sufficientlyDefined")) {
+      assertEquals(
+          service.lookup(snomed(Rf2Mini.TYPE2_DIABETES), property, null),
+          service.lookup(snomed(Rf2Mini.TYPE2_DIABETES), property, "en-GB"),
+          "The " + property + " property differs under a dialect request");
+    }
+  }
+
+  @Test
+  void leavesAnAttributePropertysCodingDisplayAsTheStoredDisplay() {
+    // The display carried by an attribute property's coding value is the target concept's stored
+    // display, and is not dialect-qualified, matching the behaviour of the reference server. The
+    // finding site of DIABETES is one of the divergent concepts, so a dialect-qualified request
+    // would otherwise show through here.
+    final List<Type> findingSites =
+        service.lookup(snomed(Rf2Mini.DIABETES), FINDING_SITE, "en-GB").stream()
+            .filter(Property.class::isInstance)
+            .map(Property.class::cast)
+            .map(Property::getValue)
+            .toList();
+    assertEquals(1, findingSites.size());
+    assertEquals(Rf2Mini.DIVERGENT_US_PANCREAS, ((Coding) findingSites.get(0)).getDisplay());
+  }
+
+  // --- Weighted language preferences (User Story 3). ---
+
+  @Test
+  void takesTheTermOfTheHighestWeightedDialectTheStoreCanSatisfy() {
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_PANCREAS,
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB;q=0.9,en-US;q=0.5"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS,
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB;q=0.5,en-US;q=0.9"));
+  }
+
+  @Test
+  void fallsToTheNextDialectInWeightOrderThatTheStoreCanSatisfy() {
+    // The Spanish reference set is not in this release, so the lower-weighted GB English answers
+    // rather than the stored display.
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_PANCREAS,
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "es;q=0.9,en-GB;q=0.5"));
+  }
+
+  @Test
+  void neverUsesADialectGivenZeroWeight() {
+    // Even as the only dialect the store could satisfy, a zero-weighted one is not used.
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB;q=0"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS,
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB;q=0,es;q=0.5"));
+  }
+
+  @Test
+  void triesDialectsOfEqualWeightInTheOrderTheyWereWritten() {
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB,en-US"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-US,en-GB"));
+  }
+
+  @Test
+  void readsAWildcardOrAnUnreadableListAsNoPreference() {
+    assertEquals(Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "*"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS,
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB;q=notanumber"));
+    assertEquals(Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), ";;;"));
+  }
+
+  // --- Determinism of designations (User Story 4). ---
+
+  @Test
+  void returnsAnIdenticalDesignationListOnEveryCall() {
+    // The list a caller sees is a sequence, so repeating the request must reproduce it exactly
+    // rather
+    // than merely returning the same set.
+    assertEquals(
+        designations(snomed(Rf2Mini.TYPE2_DIABETES)), designations(snomed(Rf2Mini.TYPE2_DIABETES)));
+    assertEquals(designations(snomed(Rf2Mini.DIABETES)), designations(snomed(Rf2Mini.DIABETES)));
+  }
+
+  @Test
+  void ordersTheDesignationsOfATermPreferredInSeveralReferenceSetsByReferenceSetIdentifier() {
+    // "Diabetes mellitus" is the preferred synonym in both of the fixture's language reference
+    // sets,
+    // so it yields one preferredForLanguage designation per reference set. Which comes first is
+    // otherwise decided by the order of a map, so it is fixed by reference set identifier: GB
+    // English
+    // (900000000000508004) before US English (900000000000509007).
+    final List<String> dialectLanguages =
+        designations(snomed(Rf2Mini.DIABETES)).stream()
+            .filter(d -> d.getUse() != null && PREFERRED_FOR_LANGUAGE.equals(d.getUse().getCode()))
+            .filter(d -> "Diabetes mellitus".equals(d.getValue()))
+            .map(Designation::getLanguage)
+            .filter(language -> language != null && language.contains("sctlang"))
+            .toList();
+    assertEquals(
+        List.of("en-x-sctlang-90000000-00005080-04", "en-x-sctlang-90000000-00005090-07"),
+        dialectLanguages);
   }
 
   @Test
