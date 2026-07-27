@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.library.terminology;
 
+import au.csiro.pathling.terminology.store.DenseIdOrder;
 import jakarta.annotation.Nullable;
 import lombok.Builder;
 import lombok.Value;
@@ -36,4 +37,13 @@ public class TerminologyImportOptions {
    * null, the edition and version are detected from the release's module and effectiveTime content.
    */
   @Nullable String editionUri;
+
+  /**
+   * Selects how dense identifiers are assigned to concepts. When null, they follow concept code
+   * order, which is the behaviour of every release before this option existed. {@link
+   * DenseIdOrder#PRE_ORDER} instead assigns them by a depth-first traversal of the is-a hierarchy,
+   * which makes the runtime hierarchy index materially smaller but means identifiers shift whenever
+   * the hierarchy changes shape between releases.
+   */
+  @Nullable DenseIdOrder denseIdOrder;
 }

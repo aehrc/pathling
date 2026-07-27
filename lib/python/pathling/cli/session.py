@@ -26,17 +26,24 @@ its defaults.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 import atexit
 import os
 import sys
 from contextlib import ExitStack
 from importlib.resources import as_file, files
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from rich.console import Console
 
 from pathling.cli.config import CliConfig
 from pathling.cli.render import progress_status, stderr_console
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
+
+    from pathling import PathlingContext
 
 # The packaged log4j2 configuration that silences Spark and JVM logging. It is
 # supplied to the driver JVM before launch so that startup noise, and
@@ -58,17 +65,24 @@ def public_namespace() -> dict:
 
     The set of names is derived from the ``pathling`` package's public API list
     (``pathling.__all__``) so that it stays in sync automatically and no second,
-    hand-maintained list exists. The ``pathling`` package is imported inside the
-    function so that the ``--help`` and ``--version`` fast paths are not slowed
-    and do not trigger the JVM-backed imports; resolving the names here forces
-    those imports, which is only appropriate after a command has decided to
-    start the environment.
+    hand-maintained list exists. The package module itself is included under the
+    name ``pathling``, so a reflexive ``import pathling`` in a script or at the
+    console rebinds that name to the object it already holds and is therefore a
+    genuine no-op. Both commands consume this function, so they are identical by
+    construction rather than by convention. The ``pathling`` package is imported
+    inside the function so that the ``--help`` and ``--version`` fast paths are
+    not slowed and do not trigger the JVM-backed imports; resolving the names
+    here forces those imports, which is only appropriate after a command has
+    decided to start the environment.
 
-    :return: a mapping of each public name to the object it exports.
+    :return: a mapping of each public name to the object it exports, together
+             with the ``pathling`` module under its own name.
     """
     import pathling
 
-    return {name: getattr(pathling, name) for name in pathling.__all__}
+    namespace = {name: getattr(pathling, name) for name in pathling.__all__}
+    namespace["pathling"] = pathling
+    return namespace
 
 
 def quiet_log4j2_path() -> str:
@@ -85,7 +99,7 @@ def quiet_log4j2_path() -> str:
     return str(path)
 
 
-def _build_quiet_spark(config: CliConfig):
+def _build_quiet_spark(config: CliConfig) -> SparkSession:
     """Builds a Spark session with logging suppressed before JVM launch.
 
     The Pathling and Delta package configuration is shared with
@@ -126,7 +140,7 @@ def _build_quiet_spark(config: CliConfig):
     return _build_spark_session(extra_configs)
 
 
-def _create_pathling_context(config: CliConfig):
+def _create_pathling_context(config: CliConfig) -> PathlingContext:
     """Builds the Spark session and Pathling context from the configuration.
 
     :param config: the resolved CLI configuration.
@@ -170,7 +184,9 @@ def _create_pathling_context(config: CliConfig):
     )
 
 
-def create_context(config: CliConfig, console: Optional[Console] = None):
+def create_context(
+    config: CliConfig, console: Optional[Console] = None
+) -> PathlingContext:
     """Creates a :class:`PathlingContext` configured from the CLI settings.
 
     In the default (non-verbose) mode the JVM launcher's startup banner and Ivy

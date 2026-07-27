@@ -26,10 +26,12 @@ execution so that ``--help`` and ``--version`` stay fast.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 from rich.console import Console
@@ -120,7 +122,7 @@ def _store_path_from(ctx: click.Context) -> Optional[str]:
 class PathlingCli(click.Group):
     """The root group with centralised error handling and exit codes."""
 
-    def invoke(self, ctx: click.Context):
+    def invoke(self, ctx: click.Context) -> object:
         """Invokes a command, mapping errors to friendly messages and codes.
 
         :param ctx: the Click context.
@@ -191,17 +193,17 @@ class PathlingCli(click.Group):
 @click.pass_context
 def cli(
     ctx: click.Context,
-    tx_server,
-    tx_store,
-    tx_client_id,
-    tx_client_secret,
-    tx_token_endpoint,
-    tx_scope,
-    fhir_version,
-    spark_conf,
-    config_path,
-    verbose,
-):
+    tx_server: Optional[str],
+    tx_store: Optional[str],
+    tx_client_id: Optional[str],
+    tx_client_secret: Optional[str],
+    tx_token_endpoint: Optional[str],
+    tx_scope: Optional[str],
+    fhir_version: Optional[str],
+    spark_conf: Tuple[str, ...],
+    config_path: Optional[Path],
+    verbose: bool,
+) -> None:
     """Pathling: a command line interface for FHIR analytics.
 
     Run a SQL on FHIR view, evaluate FHIRPath, convert FHIR data between

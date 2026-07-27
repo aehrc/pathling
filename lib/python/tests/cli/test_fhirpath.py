@@ -111,6 +111,61 @@ def test_fhirpath_accepts_delimiter_and_header_options(
     assert "Krajcik437" in result.stdout
 
 
+def test_fhirpath_to_tsv_file_is_tab_separated(
+    runner, patched_context, ndjson_source, tmp_path, wide_stderr
+):
+    """``fhirpath -o out.tsv`` writes tab-separated output with no --delimiter (T008)."""
+    out = tmp_path / "results.tsv"
+
+    result = runner.invoke(
+        cli,
+        [
+            "fhirpath",
+            ndjson_source,
+            "-t",
+            "Patient",
+            "-e",
+            "name.first().family",
+            "-o",
+            str(out),
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    assert rows[0] == ["id", "result"]
+    assert (
+        f"Writing {out} as tab-separated CSV, inferred from the .tsv extension."
+        in result.stderr
+    )
+
+
+def test_fhirpath_to_csv_file_stays_comma_separated(
+    runner, patched_context, ndjson_source, tmp_path
+):
+    """``fhirpath -o out.csv`` still writes commas and announces nothing (T008)."""
+    out = tmp_path / "results.csv"
+
+    result = runner.invoke(
+        cli,
+        [
+            "fhirpath",
+            ndjson_source,
+            "-t",
+            "Patient",
+            "-e",
+            "name.first().family",
+            "-o",
+            str(out),
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text())))
+    assert rows[0] == ["id", "result"]
+    assert "tab-separated" not in result.stderr
+
+
 def test_data_source_mode_requires_type(runner, patched_context, ndjson_source):
     """Omitting -t in data source mode is a usage error."""
     result = runner.invoke(cli, ["fhirpath", ndjson_source, "-e", "name.family"])

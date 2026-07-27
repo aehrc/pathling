@@ -25,3 +25,5 @@ command needs it.
 
 Author: John Grimes.
 """
+
+from __future__ import annotations

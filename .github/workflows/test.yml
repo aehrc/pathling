@@ -1,4 +1,8 @@
 # This workflow will build the software to ensure there are no errors, and also execute the tests.
+#
+# The core libraries are verified by a fan-out of one job per module. The module test suites are
+# independent of each other, so running them on separate runners multiplies the processors available
+# to the suite as a whole. Each job builds only the modules it depends upon, and skips their tests.
 
 name: Test
 
@@ -41,8 +45,10 @@ jobs:
             server:
               - 'server/**'
 
-  build-and-test:
-    name: Build and test
+  # Produces the JARs that the server and benchmark workflows consume. This is deliberately
+  # separate from the test jobs so that downstream workflows do not wait on the test suites.
+  build-core:
+    name: Build core libraries
     runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.core == 'true'
@@ -61,25 +67,241 @@ jobs:
         uses: ./.github/actions/setup-build-tools
         with:
           java: "true"
-          r: "true"
-          python: "true"
-          spark: "true"
-          sonar-cache: "true"
 
       - name: Get project version
         id: get-version
         run: |
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Pathling version: $VERSION"
 
-      - name: Run install goal
+      - name: Build core libraries
+        run: |
+          mvn --batch-mode install -DskipTests \
+          -pl library-runtime -am
+        timeout-minutes: 20
+
+      - name: Save built JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: jars
+          path: |
+            utilities/target/utilities-*.jar
+            encoders/target/encoders-*.jar
+            terminology/target/terminology-*.jar
+            fhirpath/target/fhirpath-*.jar
+            library-api/target/library-api-*.jar
+            library-runtime/target/library-runtime-*.jar
+          if-no-files-found: error
+
+  test-core:
+    name: Test ${{ matrix.module }}
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.core == 'true'
+    permissions:
+      contents: read
+    strategy:
+      # Report every module's result, rather than cancelling the siblings on the first failure.
+      fail-fast: false
+      matrix:
+        module:
+          - utilities
+          - encoders
+          - terminology
+          - fhirpath
+          - library-api
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # The full history is required by the license header check, which derives the copyright
+          # years from the commit history.
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+
+      - name: Build dependencies
+        run: |
+          mvn --batch-mode install -DskipTests \
+          -pl ${{ matrix.module }} -am
+        timeout-minutes: 20
+
+      - name: Run tests
+        run: |
+          mvn --batch-mode verify \
+          -pl ${{ matrix.module }}
+        timeout-minutes: 40
+
+      # The coverage and report files are collected into a single archive so that the SonarCloud job
+      # can restore them at their original paths. Uploading them directly would strip the leading
+      # directories, because the artifact is rooted at the paths' common ancestor. The generated
+      # coverage report is included, not just the execution data, because the SonarCloud job builds
+      # with the tests skipped and JaCoCo is disabled in that case.
+      - name: Archive test reports and coverage
+        if: always()
+        run: |
+          paths=()
+          for path in "${{ matrix.module }}/target/jacoco.exec" \
+                      "${{ matrix.module }}/target/site/jacoco" \
+                      "${{ matrix.module }}/target/site/jacoco-aggregate" \
+                      "${{ matrix.module }}/target/surefire-reports"; do
+            if [ -e "${path}" ]; then
+              paths+=("${path}")
+            fi
+          done
+          if [ ${#paths[@]} -eq 0 ]; then
+            echo "::warning::No test reports or coverage were produced."
+            exit 0
+          fi
+          tar --create --file "reports-${{ matrix.module }}.tar" "${paths[@]}"
+
+      - name: Save test reports and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ matrix.module }}
+          path: reports-${{ matrix.module }}.tar
+          if-no-files-found: warn
+
+  test-python:
+    name: Test Python API
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.core == 'true'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+          python: "true"
+          spark: "true"
+
+      - name: Build core libraries
+        run: |
+          mvn --batch-mode install -DskipTests \
+          -pl library-runtime -am
+        timeout-minutes: 20
+
+      - name: Build and test Python API
+        run: mvn --batch-mode install -pl lib/python
+        timeout-minutes: 30
+
+      - name: Save coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage-reports
+          path: lib/python/target/coverage/
+
+      - name: Save Python wheel
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheel
+          path: lib/python/target/py-dist/pathling-*.whl
+
+  test-r:
+    name: Test R API
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.core == 'true'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+          r: "true"
+          spark: "true"
+
+      - name: Build core libraries
+        run: |
+          mvn --batch-mode install -DskipTests \
+          -pl library-runtime -am
+        timeout-minutes: 20
+
+      - name: Build and test R API
         env:
           R_KEEP_PKG_SOURCE: yes
+        run: mvn --batch-mode install -pl lib/R
+        timeout-minutes: 45
+
+      - name: Save R package
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r-package
+          path: lib/R/target/pathling_*.tar.gz
+
+  # SonarCloud needs coverage from every module at once, so it runs after the test jobs and restores
+  # their reports. The language library modules are left out of the reactor: SonarCloud indexes no
+  # files from either of them, because their sources sit outside the Maven source roots that the
+  # scanner derives its inputs from. Building them would mean installing the R toolchain and
+  # synchronising the Python environment for no analysis in return. For the same reason this job does
+  # not wait on the Python tests.
+  sonar:
+    name: SonarCloud analysis
+    runs-on: ubuntu-latest
+    needs: [detect-changes, test-core]
+    # Analysis is only meaningful once every module has reported its coverage; a partial set would
+    # be published as a drop in coverage.
+    if: needs.detect-changes.outputs.core == 'true' && needs.test-core.result == 'success'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "true"
+          sonar-cache: "true"
+
+      - name: Download test reports and coverage
+        uses: actions/download-artifact@v4
+        with:
+          pattern: reports-*
+          merge-multiple: true
+          path: reports
+
+      - name: Restore test reports and coverage
         run: |
-          mvn --batch-mode install \
-          -pl '!site,!benchmark'
-        timeout-minutes: 60
+          for archive in reports/*.tar; do
+            echo "Restoring ${archive}"
+            tar --extract --file "${archive}"
+          done
+
+      # The tests are skipped, which also disables JaCoCo, so the restored coverage reports are left
+      # untouched by this build.
+      - name: Build without tests
+        run: |
+          mvn --batch-mode install -DskipTests \
+          -pl '!site,!benchmark,!lib/R,!lib/python'
+        timeout-minutes: 30
 
       - name: Run SonarCloud analysis
         # Secrets are not available for pull requests from forks.
@@ -91,16 +313,30 @@ jobs:
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
-          -pl '!site,!benchmark'
+          -pl '!site,!benchmark,!lib/R,!lib/python'
         timeout-minutes: 10
 
-      - name: Upload test artifacts
+      # A module's cross-module coverage view can only be built where the whole reactor is present,
+      # which no longer holds in the individual test jobs. This job has every module's execution data
+      # restored, so the aggregate reports are regenerated here instead. It runs after the analysis so
+      # that what SonarCloud reads is left exactly as the test jobs produced it, and without
+      # -DskipTests, which would otherwise disable JaCoCo. The reported figures are identical to those
+      # of a single-reactor build; only the annotated source listings for the Scala and generated
+      # sources are absent, because their source roots are registered during a full build.
+      - name: Generate aggregate coverage reports
         if: always()
-        uses: ./.github/actions/upload-test-artifacts
+        run: |
+          mvn --batch-mode jacoco:report-aggregate \
+          -pl '!site,!benchmark,!lib/R,!lib/python'
+        timeout-minutes: 10
+
+      - name: Save aggregate coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          include-jars: "true"
-          include-python: "true"
-          include-r: "true"
+          name: aggregate-coverage-reports
+          path: "**/target/site/jacoco-aggregate/"
+          if-no-files-found: warn
 
   test-ui:
     name: Test UI
@@ -110,14 +346,14 @@ jobs:
 
   test-server:
     name: Test server
-    needs: [detect-changes, build-and-test]
+    needs: [detect-changes, build-core]
     if: |
       always() &&
       needs.detect-changes.outputs.server == 'true' &&
       needs.detect-changes.result == 'success' &&
-      (needs.build-and-test.result == 'success' || needs.build-and-test.result == 'skipped')
+      (needs.build-core.result == 'success' || needs.build-core.result == 'skipped')
     uses: ./.github/workflows/server-test.yml
     secrets: inherit
     with:
       download-library-jars: ${{ needs.detect-changes.outputs.core == 'true' }}
-      pathling-version: ${{ needs.build-and-test.outputs.pathling-version }}
+      pathling-version: ${{ needs.build-core.outputs.pathling-version }}

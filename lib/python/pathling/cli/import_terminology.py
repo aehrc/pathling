@@ -25,16 +25,25 @@ mode, streamed to stderr.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 import dataclasses
+from typing import TYPE_CHECKING, Optional
 
 import click
+from rich.console import Console
 
 from pathling.cli import session
+from pathling.cli.config import CliConfig
 from pathling.cli.errors import EXIT_USAGE, CliError
 from pathling.cli.render import progress_status
 
+if TYPE_CHECKING:
+    from pathling import PathlingContext
+    from pathling.cli.main import CliContext
 
-def _import_context(config, console):
+
+def _import_context(config: CliConfig, console: Console) -> PathlingContext:
     """Creates a context for importing into a store.
 
     The import commands populate a store rather than query terminology, so the
@@ -51,7 +60,7 @@ def _import_context(config, console):
     return session.create_context(dataclasses.replace(config, tx_store=None), console)
 
 
-def _resolve_storage_path(config, storage_path):
+def _resolve_storage_path(config: CliConfig, storage_path: Optional[str]) -> str:
     """Resolves the target store path, falling back to the configured store.
 
     The explicit ``STORAGE_PATH`` positional wins; otherwise the configured
@@ -81,8 +90,26 @@ def _resolve_storage_path(config, storage_path):
 @click.option(
     "--edition-uri", "edition_uri", help="Override the SNOMED edition/version URI."
 )
+@click.option(
+    "--dense-id-order",
+    "dense_id_order",
+    type=click.Choice(["code-order", "pre-order"]),
+    default="code-order",
+    show_default=True,
+    help=(
+        "How internal concept identifiers are assigned. 'pre-order' makes the "
+        "hierarchy index materially smaller, in exchange for identifiers that "
+        "shift more between releases."
+    ),
+)
 @click.pass_obj
-def import_snomed(obj, source, storage_path, edition_uri):
+def import_snomed(
+    obj: CliContext,
+    source: str,
+    storage_path: Optional[str],
+    edition_uri: Optional[str],
+    dense_id_order: str,
+) -> None:
     """Import a SNOMED CT RF2 snapshot release into a local terminology store.
 
     STORAGE_PATH may be omitted when 'tx-store.path' (or --tx-store) is set.
@@ -96,7 +123,7 @@ def import_snomed(obj, source, storage_path, edition_uri):
     resolved_path = _resolve_storage_path(config, storage_path)
     pc = _import_context(config, console)
     with progress_status(console, "Importing SNOMED CT...", config.verbose):
-        pc.import_snomed(source, resolved_path, edition_uri)
+        pc.import_snomed(source, resolved_path, edition_uri, dense_id_order)
     click.echo(f"Imported SNOMED CT from {source} into {resolved_path}")
 
 
@@ -104,7 +131,9 @@ def import_snomed(obj, source, storage_path, edition_uri):
 @click.argument("source")
 @click.argument("storage_path", required=False)
 @click.pass_obj
-def import_fhir_terminology(obj, source, storage_path):
+def import_fhir_terminology(
+    obj: CliContext, source: str, storage_path: Optional[str]
+) -> None:
     """Import FHIR CodeSystem, ValueSet, and ConceptMap resources into a store.
 
     The source may be a JSON file, a directory of JSON files, or a FHIR NPM
