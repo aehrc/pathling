@@ -37,15 +37,16 @@ pathling --help
 The following options are accepted before any command and may also be supplied
 through a configuration file.
 
-| Option                                                                      | Config key           | Default                                 |
-| --------------------------------------------------------------------------- | -------------------- | --------------------------------------- |
-| `--tx-server`                                                               | `tx-server`          | the library default terminology server  |
-| `--tx-store`                                                                | `tx-store.path`      | none (remote mode)                      |
-| `--tx-client-id`, `--tx-client-secret`, `--tx-token-endpoint`, `--tx-scope` | `[terminology-auth]` | none                                    |
-| `--fhir-version`                                                            | `fhir-version`       | `R4`                                    |
-| `--spark-conf KEY=VALUE`                                                    | `[spark]`            | none                                    |
-| `--config PATH`                                                             | -                    | `$XDG_CONFIG_HOME/pathling/config.toml` |
-| `--verbose`                                                                 | -                    | off                                     |
+| Option                                                                      | Config key                   | Default                                 |
+| --------------------------------------------------------------------------- | ---------------------------- | --------------------------------------- |
+| `--tx-server`                                                               | `tx-server`                  | the library default terminology server  |
+| `--tx-store`                                                                | `tx-store.path`              | none (remote mode)                      |
+| -                                                                           | `[tx-store.dialect-aliases]` | none                                    |
+| `--tx-client-id`, `--tx-client-secret`, `--tx-token-endpoint`, `--tx-scope` | `[terminology-auth]`         | none                                    |
+| `--fhir-version`                                                            | `fhir-version`               | `R4`                                    |
+| `--spark-conf KEY=VALUE`                                                    | `[spark]`                    | none                                    |
+| `--config PATH`                                                             | -                            | `$XDG_CONFIG_HOME/pathling/config.toml` |
+| `--verbose`                                                                 | -                            | off                                     |
 
 Values are resolved with the precedence flag > config file > built-in default.
 The `--verbose` flag re-enables Spark and JVM logging and prints full stack
@@ -368,6 +369,18 @@ identifiers by a depth-first traversal of the is-a hierarchy, which makes the
 hierarchy index materially smaller at query time in exchange for identifiers that
 shift more between releases - see
 [reducing the memory the hierarchy takes at query time](terminology#reducing-the-memory-the-hierarchy-takes-at-query-time).
+
+It also accepts `--default-dialect`, which names the dialect whose preferred
+synonyms become each concept's stored display: a tag such as `en-GB`, or a
+language reference set identifier. Omit it and the dialect is chosen from the
+release. A release holding several language reference sets that is not the
+International edition fails the import, listing the candidates, so that one can
+be named - see [dialects](terminology#dialects).
+
+```bash
+pathling import-snomed --default-dialect en-GB /data/rf2.zip /data/tx-store
+```
+
 `import-fhir-terminology` accepts a JSON file, a directory of JSON files, or a
 FHIR NPM package (`.tgz`), and imports CodeSystems of any size with bounded
 memory (for example, the multi-gigabyte OMOP vocabulary CodeSystem).
@@ -426,7 +439,17 @@ values:
 path = "/data/tx-store"                      # selects local mode
 default-snomed-edition = "32506021000036107" # optional
 expansion-cache-size = 200                   # optional, positive integer
+
+[tx-store.dialect-aliases]                   # optional
+en-NZ = "271000210107"
 ```
+
+The `[tx-store.dialect-aliases]` table registers additional dialect tags,
+mapping a language tag to the identifier of the SNOMED CT language reference set
+that serves it. An entry for a tag that is already recognised replaces the
+built-in mapping for it. A value that is not a table of strings is reported and
+ignored rather than being fatal, since an unrecognised tag simply expresses no
+preference. See [dialects](terminology#dialects).
 
 The presence of a store selects local mode. When a store is configured, the
 store wins over any explicitly set `--tx-server` or terminology authentication:
@@ -460,6 +483,9 @@ token-endpoint = "https://auth.example.org/token"
 path = "/data/tx-store"
 default-snomed-edition = "32506021000036107"
 expansion-cache-size = 200
+
+[tx-store.dialect-aliases]
+en-NZ = "271000210107"
 ```
 
 Command-line flags always take precedence over the config file. Unknown keys

@@ -709,6 +709,11 @@ The server can use the header to return the result in the preferred language if
 it is able. The actual behaviour may depend on the server implementation and the
 code systems used.
 
+In local terminology mode the same value is read by Pathling itself rather than
+sent anywhere: weighted preferences are honoured, and each language is tried in
+turn until one yields a term. How a language selects a term there is described
+under [dialects](#dialects).
+
 The default value for the header can be configured during the creation of
 the `PathlingContext` with the `accept_language` or `acceptLanguage` parameter.
 The parameter with the same name can also be used to override the default value
@@ -1256,6 +1261,187 @@ The following configuration parameters control local mode:
   reference when the store holds multiple editions.
 - `expansion_cache_size` (`terminology.local.expansionCacheSize`): the maximum
   number of value set expansions cached per executor.
+- `dialect_aliases` (`terminology.local.dialectAliases`): additional dialect
+  tags recognised when a display or designation is requested in a particular
+  language. See [dialects](#dialects).
+
+### Dialects
+
+Within SNOMED CT, which of a concept's synonyms is its _preferred term_ is not a
+property of the concept but of a **language reference set**. Two reference sets
+of the same language routinely disagree: the International edition ships both GB
+English and US English, and `32849002` is "Oesophageal structure" in the first
+and "Esophageal structure" in the second. A **dialect** is the caller-facing name
+for one of those reference sets.
+
+#### Naming a dialect
+
+A dialect may be named in any of three ways, and all three are interchangeable:
+
+| Form                       | Example                             | Notes                                                                                                                                       |
+| -------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| A recognised tag           | `en-GB`                             | Matched without regard to case. The recognised tags are below.                                                                              |
+| An extension tag           | `en-x-sctlang-90000000-00005080-04` | The form Pathling reports as the language of a preferred designation, so a language reported on the way out can be requested on the way in. |
+| A reference set identifier | `900000000000508004`                | Accepted by the import option only, not by a query-time language request.                                                                   |
+
+The following tags are recognised out of the box. They cover the language
+reference sets defined in the SNOMED CT International edition; a reference set
+defined inside a national extension is reached through an alias or through the
+extension tag form.
+
+| Tag     | Language reference set |
+| ------- | ---------------------- |
+| `en-GB` | `900000000000508004`   |
+| `en-US` | `900000000000509007`   |
+| `en-AU` | `32570271000036106`    |
+| `es`    | `448879004`            |
+| `fr`    | `722131000`            |
+| `de`    | `722130004`            |
+| `ja`    | `722129009`            |
+| `zh`    | `722128001`            |
+
+A tag naming no reference set - a bare `en`, or a region nothing covers -
+expresses no preference rather than an error, and the stored display answers.
+
+#### Requesting a term in a dialect
+
+The `accept_language` context parameter, and the parameter of the same name on
+`display()` and `property_of()`, select by dialect:
+
+```python
+pc = PathlingContext.create(
+    spark,
+    terminology_mode="local",
+    terminology_storage_path="/data/tx-store",
+)
+
+# "Oesophageal structure", the term GB English prefers.
+british = property_of(coding, "display", accept_language="en-GB")
+
+# "Esophageal structure", the term US English prefers.
+american = property_of(coding, "display", accept_language="en-US")
+```
+
+A weighted list is read as RFC 9110 describes, and each dialect is tried in
+descending order of weight until one yields a term. With
+`accept_language="en-NZ;q=0.9,en-GB;q=0.5"` against a store holding no New
+Zealand reference set, the GB English term answers. A tag given zero weight is
+never used, and a lone `*` expresses no preference.
+
+#### The default dialect of a store
+
+Every concept in the store carries one **stored display**, which is what a
+request naming no dialect - or naming one the store cannot serve - receives. That
+display is the preferred synonym of a single dialect, chosen when the release is
+imported:
+
+1. The dialect named by the `default_dialect` import option, if one is given.
+2. The sole language reference set, where the release holds only one.
+3. US English, where the release is the SNOMED CT International edition.
+
+A release that holds several language reference sets and is not the International
+edition **fails the import**, listing every candidate by identifier and by the
+name the release itself gives it, so that one can be named:
+
+```text
+The release holds 3 language reference sets and none of them is a clear default. Name one with the defaultDialect import option:
+  900000000000508004  Great Britain English language reference set
+  999000691000001104  National Health Service realm language reference set (pharmacy part)
+  999001261000000100  NHS realm language reference set (clinical part)
+```
+
+No SNOMED CT release declares which of its language reference sets is the
+default, so where the release is genuinely ambiguous the choice is the
+operator's rather than a guess. Nothing is written to the store when the import
+fails this way.
+
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+pc.import_snomed("/data/rf2.zip", "/data/tx-store", default_dialect="en-GB")
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+pathling_import_snomed(pc, "/data/rf2.zip", "/data/tx-store", default_dialect = "en-GB")
+```
+
+</TabItem>
+<TabItem value="cli" label="CLI">
+
+```bash
+pathling import-snomed --default-dialect en-GB /data/rf2.zip /data/tx-store
+```
+
+</TabItem>
+</Tabs>
+
+Where the chosen dialect marks no preferred synonym for a concept, its display
+falls to the preferred synonym of the lowest-numbered other language reference
+set, then to its fully specified name, and finally to its own code.
+
+#### Registering additional dialects
+
+A deployment can register its own dialect tags, which is how a reference set
+defined inside a national extension is reached by a familiar name. An entry for a
+tag that is already recognised replaces the built-in mapping, so a built-in entry
+can be corrected.
+
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+pc = PathlingContext.create(
+    spark,
+    terminology_mode="local",
+    terminology_storage_path="/data/tx-store",
+    dialect_aliases={"en-NZ": "271000210107"},
+)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+pc <- pathling_connect(
+  terminology_mode = "local",
+  terminology_storage_path = "/data/tx-store",
+  dialect_aliases = c("en-NZ" = "271000210107")
+)
+```
+
+</TabItem>
+<TabItem value="cli" label="CLI">
+
+```toml
+[tx-store]
+path = "/data/tx-store"
+
+[tx-store.dialect-aliases]
+en-NZ = "271000210107"
+```
+
+</TabItem>
+</Tabs>
+
+Aliases affect the selection of a display and of designations only. They are not
+consulted by an import, which receives no service configuration; a reference set
+outside the recognised tags is named there by its identifier.
+
+The R binding can carry at most ten aliases, a limit of how sparklyr passes a map
+to the JVM. The Java, Python and command line surfaces have no such limit.
+
+#### Code systems that are not SNOMED CT
+
+A FHIR CodeSystem carries plain BCP-47 designation languages with no reference
+set to resolve, so there a language request is matched against the designation
+languages directly. A designation whose tag matches the request exactly is
+preferred over one matching only on the primary subtag, and within each of those
+one whose use is `display` is preferred. An extension tag has no meaning outside
+SNOMED CT, so it falls back to its plain language subtag.
 
 ### Supported expressions
 

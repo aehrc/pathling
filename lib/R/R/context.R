@@ -87,6 +87,11 @@ StorageType <- list(
 #'   SNOMED reference when the local store holds multiple editions
 #' @param expansion_cache_size The maximum number of value set expansions cached per executor in
 #'   local mode
+#' @param dialect_aliases Additional dialect tags recognised in local mode when a display or
+#'   designation is requested in a particular language, given as a named character vector or list
+#'   mapping a language tag to the identifier of the SNOMED CT language reference set that serves it
+#'   (for example c("en-NZ" = "271000210107")). An entry for a tag that is already recognised
+#'   replaces the built-in mapping for it. At most ten aliases can be configured from R
 #' @param explain_queries Setting this option to TRUE will enable additional logging relating
 #'   to the query plan used to execute queries
 #' @param max_unbound_traversal_depth Maximum depth for self-referencing structure traversals
@@ -142,6 +147,7 @@ pathling_connect <- function(
   terminology_storage_path = NULL,
   default_snomed_edition = NULL,
   expansion_cache_size = 100,
+  dialect_aliases = NULL,
   explain_queries = FALSE,
   max_unbound_traversal_depth = 10
 ) {
@@ -237,7 +243,13 @@ pathling_connect <- function(
     ) %>%
       j_invoke("storagePath", terminology_storage_path) %>%
       j_invoke("defaultSnomedEdition", default_snomed_edition) %>%
-      j_invoke("expansionCacheSize", as.integer(expansion_cache_size)) %>%
+      j_invoke("expansionCacheSize", as.integer(expansion_cache_size))
+    if (length(dialect_aliases) > 0) {
+      local_config <- j_invoke(
+        local_config, "dialectAliases", java_map_of(spark, dialect_aliases)
+      )
+    }
+    local_config <- local_config %>%
       j_invoke("build")
     terminology_config_builder <- terminology_config_builder %>%
       j_invoke("local", local_config)
@@ -261,6 +273,40 @@ pathling_connect <- function(
     j_invoke("terminologyConfiguration", terminology_config) %>%
     j_invoke("queryConfiguration", query_config) %>%
     j_invoke("build")
+}
+
+#' Build a Java map from a named vector or list
+#'
+#' Converts a named character vector or list into a \code{java.util.Map} for passing to a Java
+#' method. The map is built by a single call to \code{Map.of}, because sparklyr can neither pass an
+#' R map to a Java method (an R environment arrives as a Scala map, which does not match a
+#' \code{java.util.Map} parameter) nor build a Java map up entry by entry (a Java method returning
+#' void or null desynchronises sparklyr's protocol and brings the session down).
+#'
+#' \code{Map.of} is overloaded for up to ten entries, which is therefore the most this can carry.
+#'
+#' @param spark The Spark connection.
+#' @param entries A named character vector or list.
+#'
+#' @return A jobj referring to a \code{java.util.Map}.
+#'
+#' @noRd
+java_map_of <- function(spark, entries) {
+  if (length(entries) > 10) {
+    stop(
+      "At most 10 dialect aliases can be configured from R. Configure the remainder through the ",
+      "Java or Python API, or reach a dialect by its private-use extension tag."
+    )
+  }
+  # Interleave the tags and identifiers into the key, value, key, value order Map.of takes.
+  tags <- names(entries)
+  interleaved <- as.list(as.vector(rbind(
+    tags, vapply(tags, function(tag) as.character(entries[[tag]]), character(1))
+  )))
+  do.call(
+    j_invoke_static,
+    c(list(spark, "java.util.Map", "of"), interleaved)
+  )
 }
 
 #' Get the Spark session

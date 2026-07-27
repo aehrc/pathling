@@ -59,6 +59,63 @@ def test_import_fhir_terminology_reports_completion(runner, patched_context, tmp
     assert "Imported FHIR terminology" in result.stdout
 
 
+# ========== The default dialect option (043) ==========
+
+
+def test_import_snomed_passes_default_dialect(
+    runner, patched_context, tmp_path, monkeypatch
+):
+    """The --default-dialect flag reaches the library import call."""
+    captured = {}
+
+    def fake_import_snomed(*args):
+        captured["args"] = args
+
+    monkeypatch.setattr(patched_context, "import_snomed", fake_import_snomed)
+    store = str(tmp_path / "store")
+    result = runner.invoke(
+        cli, ["import-snomed", "--default-dialect", "en-GB", RF2_MINI, store]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["args"] == (RF2_MINI, store, None, "code-order", "en-GB")
+
+
+def test_import_snomed_omits_an_unnamed_default_dialect(
+    runner, patched_context, tmp_path, monkeypatch
+):
+    """Without the flag, no dialect is named and the release decides."""
+    captured = {}
+
+    def fake_import_snomed(*args):
+        captured["args"] = args
+
+    monkeypatch.setattr(patched_context, "import_snomed", fake_import_snomed)
+    store = str(tmp_path / "store")
+    result = runner.invoke(cli, ["import-snomed", RF2_MINI, store])
+
+    assert result.exit_code == 0, result.output
+    assert captured["args"][4] is None
+
+
+def test_import_snomed_rejects_a_dialect_the_release_does_not_hold(
+    runner, patched_context, tmp_path
+):
+    """A dialect the release holds no reference set for fails the import."""
+    store = str(tmp_path / "store")
+    result = runner.invoke(
+        cli, ["import-snomed", "--default-dialect", "es", RF2_MINI, store]
+    )
+    assert result.exit_code != 0
+
+
+def test_import_snomed_help_documents_the_default_dialect_flag(runner):
+    """The flag is discoverable from the command's help."""
+    result = runner.invoke(cli, ["import-snomed", "--help"])
+    assert result.exit_code == 0
+    assert "--default-dialect" in result.stdout
+
+
 def test_import_snomed_missing_source_fails(runner, patched_context, tmp_path):
     """A non-existent source produces a non-zero exit code."""
     store = str(tmp_path / "store")

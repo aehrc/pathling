@@ -65,7 +65,7 @@ VALID_AUTH_KEYS = frozenset(
 
 # Valid keys within the [tx-store] table.
 VALID_TX_STORE_KEYS = frozenset(
-    {"path", "default-snomed-edition", "expansion-cache-size"}
+    {"path", "default-snomed-edition", "expansion-cache-size", "dialect-aliases"}
 )
 
 
@@ -138,11 +138,15 @@ class TxStore:
            disambiguate an ambiguous edition, or None to use the library default.
     :param expansion_cache_size: the per-executor value set expansion cache size,
            or None to use the library default.
+    :param dialect_aliases: additional dialect tags recognised when a display or
+           designation is requested in a particular language, mapping a language
+           tag to a SNOMED CT language reference set identifier, or None.
     """
 
     path: str
     default_snomed_edition: Optional[str] = None
     expansion_cache_size: Optional[int] = None
+    dialect_aliases: Optional[dict] = None
 
 
 @dataclass
@@ -500,6 +504,18 @@ def _resolve_tx_store(
                 exit_code=EXIT_USAGE,
             )
 
+    aliases = table.get("dialect-aliases")
+    if aliases is not None and not _is_string_table(aliases):
+        # A malformed alias table is a mistake worth reporting, but it cannot make
+        # a lookup wrong, so it is warned about and dropped rather than fatal.
+        notify = on_warning or (lambda message: print(message, file=sys.stderr))
+        notify(
+            "Ignoring 'tx-store.dialect-aliases'; it must be a table mapping a "
+            "language tag to a SNOMED CT language reference set identifier, for "
+            'example [tx-store.dialect-aliases] with en-NZ = "271000210107".'
+        )
+        aliases = None
+
     # Without a path, tuning keys cannot activate local mode; warn that the
     # table is inert rather than silently ignoring it (FR-009).
     if resolved_path is None:
@@ -515,6 +531,18 @@ def _resolve_tx_store(
         path=resolved_path,
         default_snomed_edition=edition,
         expansion_cache_size=cache_size,
+        dialect_aliases=aliases,
+    )
+
+
+def _is_string_table(value: object) -> bool:
+    """Reports whether a config value is a table whose keys and values are strings.
+
+    :param value: the value read from the config file.
+    :return: True when the value is a dict of string to string.
+    """
+    return isinstance(value, dict) and all(
+        isinstance(key, str) and isinstance(entry, str) for key, entry in value.items()
     )
 
 
